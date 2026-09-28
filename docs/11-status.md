@@ -78,7 +78,7 @@ Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth
 ## Phase 0 acceptance (docs/10) · current state
 
 - [x] `docker compose up -d` on the VPS serves the site over HTTPS.
-- [ ] Alex logs in with Discord and lands on an admin page. *Blocked: no Discord OAuth app yet. Email admin account exists (above); Discord login for the same person will be a second user unless `ADMIN_DISCORD_ID` is set before that first Discord login.*
+- [ ] Alex logs in with Discord and lands on an admin page. *Unblocked 2026-09-28: Discord app, `ADMIN_DISCORD_ID`, `DISCORD_GUILD_ID` and `DISCORD_GUILD_AUTO_JOIN=1` are in `deploy/.env`; the signin redirect was verified (scope `identify guilds`, correct callback). Not yet clicked through. Note: the Discord login creates a separate ADMIN user from the email account `admin@example.com`; that's fine, or remove the email one in Users afterwards.*
 - [ ] Invite link lets a second account in; a third without an invite is refused. *Code paths exist; not clicked through.*
 - [ ] Email/password fallback works for one invite. *Renders; not clicked through end to end.*
 - [x] `/api/auth/verify` returns 401 without a session (200 with one not yet exercised).
@@ -91,7 +91,7 @@ Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth
 1. **Host firewall, one line each in two chains** (the build session's permission system refused to edit `/usr/local/sbin/host-firewall.sh`; UDP 51820 is dropped until this is done): after the `udp --dport 443` line in `HOST-IN` add `iptables -A HOST-IN -p udp --dport 51820 -j RETURN`, after the `udp --dport 443` line in `HOST-FWD` add `iptables -A HOST-FWD -p udp --dport 51820 -j RETURN`, then `systemctl restart host-firewall.service`.
 2. DNS: `map.deepslate.dsw.test → 198.51.100.20`.
 3. AMP: create instance `DeepslateWorks01`; create ADS user `webapp` with rights on that instance only; put `AMP_INSTANCE_ID` and `AMP_PASSWORD` in `deploy/.env`, set `AMP_MOCK=0`, `docker compose -f deploy/docker-compose.yml up -d api`.
-4. Discord OAuth app (redirect `https://deepslate.dsw.test/api/auth/callback/discord`, scope `identify`, plus `guilds` if using the server gate): `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `ADMIN_DISCORD_ID`, optionally `DISCORD_GUILD_ID` → `deploy/.env`, then `up -d web`.
+4. ~~Discord OAuth app~~ Done 2026-09-28. Server gate on, auto-join on: anyone in the Discord server can sign in without an invite link; invite links are now only for the person without Discord.
 5. Ferry the two keys above to the AMP host session; give this session the instance id and `webapp` password.
 6. Does anyone lack Discord? (docs/10 q5.) `server_address` Pangolin publishes? (docs/10 q6.)
 7. Click through Phase 0 acceptance, then the VPS session tags `phase-0`.
@@ -99,7 +99,7 @@ Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth
 ## Session log
 
 - **2026-09-28** · Phase 0 built and deployed (commit `374ea10`), handover doc added (`94471be`), repo moved into `/home/ladm/Minecraft-site` with the brief files kept at the root (`19d7abb`). Bootstrap invite issued.
-- **2026-09-28 late** · Planner docs 12 and 13 applied: doc edits (00/02/04/08/09/10, the working rules); `COOKIE_DOMAIN=.deepslate.dsw.test`; map host Caddy block; `wireguard` + `api` + two map relays in compose; VPS WireGuard keys and deploy key generated (public halves above); `api` skeleton with tests; web `api-client.ts`, health now reports the tunnel; Discord server gate. Firewall line left for Alex (permission refused). Tunnel `down` until the homelab enables its peer. Map-host 401→login redirect verified. Admin email account created via `scripts/admin.mjs`.
+- **2026-09-28 late** · Planner docs 12 and 13 applied: doc edits (00/02/04/08/09/10, the working rules); `COOKIE_DOMAIN=.deepslate.dsw.test`; map host Caddy block; `wireguard` + `api` + two map relays in compose; VPS WireGuard keys and deploy key generated (public halves above); `api` skeleton with tests; web `api-client.ts`, health now reports the tunnel; Discord server gate. Firewall line left for Alex (permission refused). Tunnel `down` until the homelab enables its peer. Map-host 401→login redirect verified. Admin email account created via `scripts/admin.mjs`. Alex added the Discord app values and the server id (auto-join on) and restarted `web`; OAuth redirect verified.
 
 ## Suggested plan updates for the next session
 

@@ -1,6 +1,6 @@
 # 11 · Status and handover
 
-Last updated 2026-09-28 late (after applying planner docs 12 and 13: tunnel, `api` service, map host). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
+Last updated 2026-09-28 late (planner docs 12 and 13 applied and deployed, commit `42d1c93`; admin account created). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
 
 ## Where things are
 
@@ -78,13 +78,13 @@ Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth
 ## Phase 0 acceptance (docs/10) · current state
 
 - [x] `docker compose up -d` on the VPS serves the site over HTTPS.
-- [ ] Alex logs in with Discord and lands on an admin page. *Blocked: no Discord OAuth app yet. Email route works; first account becomes ADMIN.*
+- [ ] Alex logs in with Discord and lands on an admin page. *Blocked: no Discord OAuth app yet. Email admin account exists (above); Discord login for the same person will be a second user unless `ADMIN_DISCORD_ID` is set before that first Discord login.*
 - [ ] Invite link lets a second account in; a third without an invite is refused. *Code paths exist; not clicked through.*
 - [ ] Email/password fallback works for one invite. *Renders; not clicked through end to end.*
 - [x] `/api/auth/verify` returns 401 without a session (200 with one not yet exercised).
 - [ ] `/api/health` reports `tunnel: ok`. *Currently `down`: waiting on the homelab side to enable its peer with our public key.*
 
-Bootstrap invite issued this session (14 days): `https://deepslate.dsw.test/join/2R97LWNC`.
+**Admin login (email route):** `admin@example.com`, created from the CLI; password handed to Alex in chat and recorded in `/root/HOSTING.md` (mode 600), never here. Reset any time with `docker exec deepslate-web node apps/web/scripts/admin.mjs admin@example.com Alex` (prints a new password; there is no GUI password change yet). First login lands on `/onboarding` (Minecraft name + PC tier), then Admin appears in the nav. The bootstrap invite `https://deepslate.dsw.test/join/2R97LWNC` (14 days) is still unused and can go to the first friend.
 
 ## Alex's to-do (blocking; docs/13 §7 plus what this session couldn't do)
 
@@ -99,7 +99,7 @@ Bootstrap invite issued this session (14 days): `https://deepslate.dsw.test/join
 ## Session log
 
 - **2026-09-28** · Phase 0 built and deployed (commit `374ea10`), handover doc added (`94471be`), repo moved into `/home/ladm/Minecraft-site` with the brief files kept at the root (`19d7abb`). Bootstrap invite issued.
-- **2026-09-28 late** · Planner docs 12 and 13 applied: doc edits (00/02/04/08/09/10, the working rules); `COOKIE_DOMAIN=.deepslate.dsw.test`; map host Caddy block; `wireguard` + `api` + two map relays in compose; VPS WireGuard keys and deploy key generated (public halves above); `api` skeleton with tests; web `api-client.ts`, health now reports the tunnel; Discord server gate. Firewall line left for Alex (permission refused). Tunnel `down` until the homelab enables its peer.
+- **2026-09-28 late** · Planner docs 12 and 13 applied: doc edits (00/02/04/08/09/10, the working rules); `COOKIE_DOMAIN=.deepslate.dsw.test`; map host Caddy block; `wireguard` + `api` + two map relays in compose; VPS WireGuard keys and deploy key generated (public halves above); `api` skeleton with tests; web `api-client.ts`, health now reports the tunnel; Discord server gate. Firewall line left for Alex (permission refused). Tunnel `down` until the homelab enables its peer. Map-host 401→login redirect verified. Admin email account created via `scripts/admin.mjs`.
 
 ## Suggested plan updates for the next session
 

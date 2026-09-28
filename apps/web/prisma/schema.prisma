@@ -35,6 +35,8 @@ model User {
   mcUsername   String?   @unique // Minecraft Java username, set by the player
   mcUuid       String?   @unique // resolved from the Mojang API
   pcTier       PcTier?
+  verifiedAt   DateTime? // when the in-game link (docs/14) or an admin verified the Minecraft account
+  guildMember  Boolean   @default(true) // cache of the last Discord server membership check
   createdAt    DateTime  @default(now())
   lastSeenAt   DateTime?
   invitedById  String?
@@ -73,6 +75,18 @@ model Ballot {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([voteId, userId])
+}
+
+// docs/14: one-time code shown in game to an unlinked player; binds their UUID to the portal account.
+model LinkCode {
+  code       String   @id // 8 chars, unambiguous alphabet
+  mcUuid     String
+  mcUsername String
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  usedById   String?
+
+  @@index([mcUuid])
 }
 
 model Announcement {

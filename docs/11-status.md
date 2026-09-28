@@ -87,6 +87,17 @@ Run from inside `deepslate-api` through the tunnel, `AMP_URL=http://10.77.0.2:80
 
 The ADS itself answers normally (a bogus method returns AMP's "Missing Method" error), so the tunnel, port and JSON shape are right. Things to check on the AMP host: the `webapp` user exists at **ADS** level (not inside the instance), the password matches what's in `deploy/.env`, and the user has the Login right. Re-run: `docker cp` the script `amp-smoke.mjs` (kept in `apps/api/scripts/`) into `deepslate-api` and `node /tmp/amp-smoke.mjs`. `AMP_MOCK` stays `1` until login works.
 
+## docs/14 (Discord-gated join) · what landed now (2026-09-28 late night)
+
+Per Alex's message: the Phase-1 data model bits and the onboarding change are in; the join hook, actions and `/link/<code>` are Phase 4 as scheduled.
+
+- Prisma: `LinkCode` model, `User.verifiedAt`, `User.guildMember` (migration `0002_link_codes`).
+- Onboarding is the PC question only. "Onboarded" now means `pcTier` set (`requireOnboardedUser`, nav). Nobody types a Minecraft username; the copy says the link happens in game.
+- `/me`: "Linked: <mcUsername>" once linked, otherwise "Join the server to link your Minecraft account" with the address. No input box.
+- Mojang lookup kept only as an admin tool: `/admin/users` has a "Link" box per unlinked member (checks with Mojang, sets `verifiedAt`) and "Unlink".
+- `.env.example`: `LIMBO_POS`, `SPAWN_POS` placeholders for Phase 4.
+- Alex's note on the launcher: the name people were reading is the Microsoft account name in the top left; the Minecraft name is the one to the right of the Play button. Moot now that nobody types it, but relevant for the admin fallback.
+
 ## Phase 2 · what was built (2026-09-28 late night)
 
 - `packages/modpack`: `lock` (Modrinth resolution with required deps, newest release else beta with a warning, NeoForge latest 21.1.x from the maven, sha256 pack hash, config hashes, diff vs previous, temp+rename), `build client` (`client.mrpack` with CDN URLs + `overrides/config`), `build server` (`dist/server/mods` downloaded and sha512-checked, stale jars removed, `PACK_VERSION`), `build installer` (`installer.zip` with the manifest URL + pack version stamped into `install.ps1`), `config.zip`. `pnpm modpack <cmd>` in the node container; `MODRINTH_USER_AGENT` needed.

@@ -15,7 +15,7 @@ export default async function HomePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Welcome back, {user.displayName}</h1>
-        <p className="text-muted-foreground">Playing as <span className="font-mono">{user.mcUsername}</span>. {members} {members === 1 ? "person" : "people"} in the group so far.</p>
+        <p className="text-muted-foreground">{user.mcUsername ? <>Linked to Minecraft account <span className="font-mono">{user.mcUsername}</span>.</> : <>Your Minecraft account gets linked the first time you join the server.</>} {members} {members === 1 ? "person" : "people"} in the group so far.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>

@@ -12,7 +12,7 @@ export async function loadCurrentUser() {
     where: { id: session.user.id },
     select: {
       id: true, displayName: true, role: true, discordId: true, email: true,
-      mcUsername: true, mcUuid: true, pcTier: true, createdAt: true, lastSeenAt: true,
+      mcUsername: true, mcUuid: true, pcTier: true, verifiedAt: true, guildMember: true, createdAt: true, lastSeenAt: true,
     },
   });
 }
@@ -24,9 +24,10 @@ export async function requireUser(next?: string) {
   return user;
 }
 
+/** "Onboarded" = answered the PC question. The Minecraft account is linked in game later (docs/14). */
 export async function requireOnboardedUser(next?: string) {
   const user = await requireUser(next);
-  if (!user.mcUsername) redirect("/onboarding");
+  if (!user.pcTier) redirect("/onboarding");
   return user;
 }
 

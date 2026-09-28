@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/install", label: "Install" },
   { href: "/map", label: "Map" },
   { href: "/players", label: "Players" },
+  { href: "/me", label: "Me" },
 ];
 
 export async function Nav() {
@@ -20,7 +21,7 @@ export async function Nav() {
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
         <Link href="/" className="font-semibold tracking-tight">{env.SITE_NAME}</Link>
         <nav className="ml-2 hidden gap-1 sm:flex" aria-label="Main">
-          {user?.mcUsername && LINKS.map((l) => (
+          {user?.pcTier && LINKS.map((l) => (
             <Link key={l.href} href={l.href} className="rounded-lg px-3 py-1.5 text-sm hover:bg-muted">{l.label}</Link>
           ))}
           {user?.role === "ADMIN" && (
@@ -36,7 +37,7 @@ export async function Nav() {
           )}
         </div>
       </div>
-      {user?.mcUsername && (
+      {user?.pcTier && (
         <nav className="flex gap-1 overflow-x-auto border-t px-2 py-1 sm:hidden" aria-label="Main (mobile)">
           {LINKS.map((l) => (
             <Link key={l.href} href={l.href} className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm hover:bg-muted">{l.label}</Link>

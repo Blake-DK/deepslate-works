@@ -20,7 +20,7 @@ Nobody hands out whitelist entries. A friend gets the server address, connects, 
 6. **Linking**: `/link/<code>` → Discord OAuth (guild check as usual, auto-join creates the User) → on success set `User.mcUuid` and `mcUsername` from the LinkCode's UUID (no Mojang lookup, no typos) → mark code used → `api` action `link.release`: `tag <name> add verified`, `effect clear <name>`, `gamemode survival <name>`, `tp <name> <SPAWN_POS>`, `whitelist add <name>` (kept for belt and braces and so an emergency `white-list=true` still works), `tellraw` welcome. If the player has logged off in the meantime, release happens on their next join (step 3 finds the link).
 7. **Revocation**: the guild-membership refresh runs every 5 min for online players and on every join. A user who left the guild: `tag remove verified`, next join goes to the room, `whitelist remove`. Admin "Remove" in `/admin/users` does the same and kicks with a message.
 8. **Timeout**: an unverified player idle in the room for 15 min is kicked: "Link your Discord at deepslate.dsw.test and come back."
-9. **Existing `/onboarding` Minecraft-username step** becomes optional: linked-in-game users skip it. Keep it for people who want to set the username before ever joining.
+9. ~~**Existing `/onboarding` Minecraft-username step** becomes optional~~ Superseded by Alex (2026-09-28): the username step is removed entirely, nobody types a username; only the PC question remains. The Mojang lookup survives only as the admin fallback in `/admin/users`.
 
 ## Data model additions (Phase 1)
 

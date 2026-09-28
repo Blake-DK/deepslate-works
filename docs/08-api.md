@@ -73,7 +73,7 @@ All calls go to the ADS (`AMP_URL=http://10.77.0.2:8080`) at `/API/ADSModule/Ser
 | `Core.GetUserList` | `{}` | `{}` while stopped; map of online players |
 | `Core.SendConsoleMessage` | `{message}` | used only by `apps/api/src/actions/` (Phase 4) |
 | `Core.Start` / `Stop` / `Restart` | `{}` | not yet exercised (the permission-classifier refused the probe; Alex to confirm from the admin page in Phase 3) |
-| `Core.SetConfig` | `{node, value}` | with a nonexistent node: `{"Status":false,"Reason":"No such node 'Meta.Description'"}`. **Not yet proven refused** for a real node: the probe was blocked; Alex to run `SetConfig` on a real node with its current value and expect `Unauthorized Access`. |
+| `Core.SetConfig` | `{node, value}` | Refused for `webapp`: "does not have permission to modify setting" (verified by Alex from the AMP host side, 2026-09-28). With a nonexistent node the answer is `{"Status":false,"Reason":"No such node …"}`. |
 | `FileManagerPlugin.GetDirectoryListing` | `{Dir:""}` | `[{"Filename":"mods","IsDirectory":true,…},…]` for the instance root (`AMP_Logs/ LocalBackups/ config/ defaultconfigs/ libraries/ logs/ mods/ plugins/ world/ …`) |
 | `LocalFileBackupPlugin.GetBackups` | `{}` | `{"Title":"Unauthorized Access","Message":"You do not have permission…"}` (webapp has no backup rights; use AMP's UI for backups, or grant `TakeBackup` later) |
 | `Core.GetAMPRolePermissions` | | `Unauthorized Access` (correct) |

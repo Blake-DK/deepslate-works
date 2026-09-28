@@ -83,7 +83,7 @@ Run from inside `deepslate-api` through the tunnel, `AMP_URL=http://10.77.0.2:80
 |---|---|
 | 1. `Core/Login` as `webapp` **through the instance proxy path** | `result: 10, success: true`, permissions `Instances.<id>.Manage` + settings denials. (First attempt against the ADS's own `/API/Core/Login` gave `result: 0`: `webapp` is instance-local, corrected by Alex.) |
 | 2. `Core/GetStatus` | 200, `State: 0` (instance stopped), Metrics `CPU Usage / Memory Usage (max 6144 MB) / Active Users`, Ports (game 25569 not listening) |
-| 3. `Core/SetConfig` | with node `Meta.Description`: `{"Status":false,"Reason":"No such node"}`, i.e. not a permission answer. A follow-up probe on a real node (plus `Core.Start`) was **refused by the build session's permission classifier** as a production change, so "SetConfig refused" is unproven. Alex: run `SetConfig` for a real node with its current value (via `apps/api/scripts/amp-smoke.mjs`, edit the node) and expect `Unauthorized Access`. |
+| 3. `Core/SetConfig` | **Refused**: "does not have permission to modify setting" (verified by Alex as `webapp` from the AMP host side, 2026-09-28). Smoke test complete. |
 
 Also recorded (read-only): `GetUpdates` shape, `GetUserList` (`{}` while stopped), `FileManagerPlugin.GetDirectoryListing` works, `LocalFileBackupPlugin.GetBackups` and `GetAMPRolePermissions` are `Unauthorized Access` for webapp. Details in docs/08. `AMP_MOCK=0` now: the mock is off, `api` talks to the real instance. **The instance is stopped**, so with Alex's download rule players can't download until it runs; admins still can.
 
@@ -155,7 +155,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Alex's to-do (blocking; docs/13 §7 plus what this session couldn't do)
 
-0. ~~AMP login~~ Works through the instance proxy path. Still owed: the `SetConfig`-refused proof (above) and, in Phase 3, a `Core.Start` from the admin page.
+0. ~~AMP smoke test~~ Complete: login, GetStatus, SetConfig refused. `Core.Start` gets exercised from the admin page in Phase 3.
 0b. ~~Deploy key restriction~~ **Verified 2026-09-28**: with the key pinned (`IdentitiesOnly=yes`, no agent, no other identity in the container) `rsync --list-only amp@10.77.0.2:` lists the instance's `Minecraft/` (server.properties, mods/, config/, world/ …), so rrsync roots the key correctly. The earlier "unrestricted" verdict came from `ssh … true` returning exit 0 with no rrsync message on that host, which turned out to be a poor test; the health probe now lists the remote root instead and reports `ok` / `wrong_root` / `no_key` / `down`. Real Sync is therefore allowed once Build has run. Fingerprint of our key: `SHA256:5g0kW7Zo+q0CBsMiD5/42qnkFIkJe2MVw8Nod3J/xtE`.
 1. ~~Host firewall UDP 51820~~ Done by Alex (in `host-firewall.sh`, survives restart).
 2. DNS: `map.deepslate.dsw.test → 198.51.100.20`.

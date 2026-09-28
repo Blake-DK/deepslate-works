@@ -3,8 +3,8 @@
 ## VPS layout
 
 ```
-/opt/deepslate/            git checkout of this repo
-/opt/deepslate/deploy/.env
+/home/ladm/Minecraft-site/            git checkout of this repo
+/home/ladm/Minecraft-site/deploy/.env
 /var/lib/deepslate/postgres
 <AMP instance dir>/Minecraft/   e.g. /home/amp/.ampdata/instances/DeepslateWorks01/Minecraft
 ```

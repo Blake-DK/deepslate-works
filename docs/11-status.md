@@ -6,10 +6,10 @@ Written 2026-09-28 at the end of the Phase 0 build session. Read this before tou
 
 | Thing | Where |
 |---|---|
-| Repo (git, branch `main`) | `/opt/deepslate` on vps-01v |
+| Repo (git, branch `main`) | `/home/ladm/Minecraft-site` on vps-01v (the folder Alex gave; the original brief files `00-overview.md`, `markdown`, `deepslate-works-design-docs.zip` stay at its root, the repo copy under `docs/` is canonical) |
 | Live site | https://deepslate.dsw.test (placeholder domain, see open questions) |
-| Compose stack `deepslate` | `/opt/deepslate/deploy/docker-compose.yml` → containers `deepslate-web`, `deepslate-db`, `deepslate-backups` |
-| Secrets | `/opt/deepslate/deploy/.env` (mode 600, git-ignored; template `deploy/.env.example`) |
+| Compose stack `deepslate` | `/home/ladm/Minecraft-site/deploy/docker-compose.yml` → containers `deepslate-web`, `deepslate-db`, `deepslate-backups` |
+| Secrets | `/home/ladm/Minecraft-site/deploy/.env` (mode 600, git-ignored; template `deploy/.env.example`) |
 | Postgres data / dumps | `/root/docker/deepslate/postgres`, `/root/docker/deepslate/backups` (nightly, keep 7) |
 | Reverse proxy | one block `deepslate.dsw.test` in `/root/docker/web-proxy/etc/Caddyfile` (backup of the pre-change file alongside it) |
 | Health | `GET /api/health` → `{ok, db, amp, missingEnv, discord}` |
@@ -18,13 +18,13 @@ The VPS has no Node. Everything runs through Docker:
 
 ```
 # checks (typecheck, lint, tests) without installing Node on the host
-docker run --rm -v /opt/deepslate:/app -w /app node:22-alpine sh -c \
+docker run --rm -v /home/ladm/Minecraft-site:/app -w /app node:22-alpine sh -c \
   'apk add --no-cache libc6-compat openssl >/dev/null && npm i -g pnpm@10 >/dev/null 2>&1 \
    && pnpm install --no-frozen-lockfile && cd apps/web && pnpm exec prisma generate \
    && pnpm typecheck && pnpm lint && pnpm test'
 
 # deploy
-cd /opt/deepslate && docker compose -f deploy/docker-compose.yml up -d --build
+cd /home/ladm/Minecraft-site && docker compose -f deploy/docker-compose.yml up -d --build
 
 # Caddy reload after editing the Caddyfile
 docker exec caddy sh -c 'caddy adapt --config /etc/caddy/Caddyfile --envfile /etc/caddy/caddy.env > /tmp/c.json \

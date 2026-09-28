@@ -1,7 +1,7 @@
 # Deploying on vps-01v
 
 ```
-cd /opt/deepslate
+cd /home/ladm/Minecraft-site
 cp deploy/.env.example deploy/.env   # fill in
 docker compose -f deploy/docker-compose.yml up -d --build
 # first admin without Discord configured:

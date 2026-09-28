@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
-import { clearMinecraftNameAction, removeUserAction, setMinecraftNameAction, setRoleAction } from "./actions";
+import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setMinecraftNameAction, setRoleAction } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 
@@ -52,6 +52,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       <input type="hidden" name="id" value={u.id} />
                       <input type="hidden" name="role" value={u.role === "ADMIN" ? "PLAYER" : "ADMIN"} />
                       <Button type="submit" variant="secondary" size="sm">{u.role === "ADMIN" ? "Make player" : "Make admin"}</Button>
+                    </form>
+                    <form action={revokeLauncherAction} title="Sign the installer out on all their PCs">
+                      <input type="hidden" name="id" value={u.id} />
+                      <Button type="submit" variant="ghost" size="sm">Sign out installer</Button>
                     </form>
                     <form action={removeUserAction}>
                       <input type="hidden" name="id" value={u.id} />

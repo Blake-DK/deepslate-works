@@ -3,13 +3,15 @@ import { getLock } from "@/server/modpack/lock";
 import { loadCurrentUser } from "@/server/auth/session";
 import { canDownload, manifestKeyOk } from "@/server/modpack/gate";
 import { env } from "@/env";
+import { bearer, userFromLauncherToken } from "@/server/launcher";
 
-// Gated: a session that may download (admin, or player while the server is online), or the private key
-// the Windows installer carries. Cache 60 s per client.
+// Gated: a launcher token or a session that may download (admin, or player while live and the server is online),
+// or the admin-only MANIFEST_KEY. Not cached beyond the client.
 export async function GET(req: Request) {
   const key = new URL(req.url).searchParams.get("key");
   if (!manifestKeyOk(key)) {
-    const user = await loadCurrentUser();
+    // The installer/updater authenticates with its launcher token (approved in the browser after a Discord login).
+    const user = (await userFromLauncherToken(bearer(req))) ?? (await loadCurrentUser());
     const gate = await canDownload(user);
     if (!gate.ok) {
       const code = gate.reason === "anonymous" ? "unauthorized" : gate.reason === "not_live" ? "not_live" : "server_offline";

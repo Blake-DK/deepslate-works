@@ -99,21 +99,21 @@ export async function buildConfigZip(paths: { dist: string; config: string }, lo
 }
 
 /** installer.zip: Setup.bat + install.ps1 with the manifest URL and pack version stamped in. */
-export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist: string; installer: string }, manifestUrl: string, log: (s: string) => void): Promise<string> {
+export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist: string; installer: string }, portalUrl: string, log: (s: string) => void): Promise<string> {
   const stage = path.join(paths.dist, "_installer");
   await rm(stage, { recursive: true, force: true });
   await mkdir(stage, { recursive: true });
   const ps1 = await readFile(path.join(paths.installer, "install.ps1"), "utf8");
   const stamped = ps1
-    .replace(/^\$ManifestUrl\s*=.*$/m, `$ManifestUrl = "${manifestUrl}"`)
+    .replace(/^\$PortalUrl\s*=.*$/m, `$PortalUrl = "${portalUrl}"`)
     .replace(/^\$PackName\s*=.*$/m, `$PackName = "${m.name}"`)
     .replace(/^\$PackVersion\s*=.*$/m, `$PackVersion = "${m.version}+${shortHash(lock)}"`);
   if (stamped === ps1) throw new Error("install.ps1: config block not found to stamp");
   await writeFile(path.join(stage, "install.ps1"), stamped);
-  for (const f of ["Setup.bat", "README.txt"]) await cp(path.join(paths.installer, f), path.join(stage, f));
+  for (const f of ["Setup.bat", "Update and Play.bat", "README.txt"]) await cp(path.join(paths.installer, f), path.join(stage, f));
   const out = path.join(paths.dist, "installer.zip");
   await zipDir([{ dir: stage, name: false as unknown as string }], out);
   await rm(stage, { recursive: true, force: true });
-  log(`installer.zip stamped with ${manifestUrl.replace(/key=[^&]+/, "key=<hidden>")} and version ${m.version}+${shortHash(lock)}`);
+  log(`installer.zip stamped with ${portalUrl} and version ${m.version}+${shortHash(lock)}`);
   return out;
 }

@@ -84,7 +84,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
             <ol className="space-y-3">
               <li className="rounded-lg border p-3"><span className="font-medium">1. Install the normal Minecraft Launcher</span> from <a className="underline" href="https://www.minecraft.net/download" target="_blank" rel="noreferrer">minecraft.net</a> if you don&apos;t have it, and open it once (log in, let it update, close it). Already have it? Skip this.</li>
               <li className="rounded-lg border p-3">
-                <span className="font-medium">2. Download the installer and double-click <span className="font-mono">Setup.bat</span></span> inside the zip. A black window shows green ticks; when it says Done, close it.
+                <span className="font-medium">2. Download the installer, unzip it somewhere you&apos;ll keep (Desktop is fine), double-click <span className="font-mono">Setup.bat</span></span>. Your browser opens once to sign you in with Discord and asks &quot;is this you?&quot;: say yes. Then a black window shows green ticks.
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <a href="/downloads/installer.zip" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")} aria-disabled={!ready}>Download installer{installer ? ` (${(installer.size / 1024).toFixed(0)} KB)` : ""}</a>
                   <span className="text-xs text-muted-foreground">Windows may warn about an unknown app: choose &quot;More info&quot; then &quot;Run anyway&quot;. It&apos;s a plain script; you can read it.</span>
@@ -92,7 +92,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
               </li>
               <li className="rounded-lg border p-3"><span className="font-medium">3. Open the Minecraft Launcher, pick &quot;{m.name}&quot;</span> in the dropdown next to Play, press Play. The server is already in your server list.</li>
             </ol>
-            <p className="text-sm text-muted-foreground">To update later: run <span className="font-mono">Setup.bat</span> again. It only downloads what changed and says &quot;Already up to date&quot; if nothing did.</p>
+            <p className="text-sm text-muted-foreground">From then on, double-click <span className="font-mono">Update and Play.bat</span> in the same folder: it signs you in with Discord in your browser the first time (then remembers you for a week), fetches any mod updates, and opens the launcher on the Deepslate Works profile. Keep the folder; that&apos;s your play button.</p>
           </CardContent>
         </Card>
       ) : (

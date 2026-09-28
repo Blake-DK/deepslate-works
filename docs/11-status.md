@@ -87,6 +87,10 @@ Run from inside `deepslate-api` through the tunnel, `AMP_URL=http://10.77.0.2:80
 
 Also recorded (read-only): `GetUpdates` shape, `GetUserList` (`{}` while stopped), `FileManagerPlugin.GetDirectoryListing` works, `LocalFileBackupPlugin.GetBackups` and `GetAMPRolePermissions` are `Unauthorized Access` for webapp. Details in docs/08. `AMP_MOCK=0` now: the mock is off, `api` talks to the real instance. **The instance is stopped**, so with Alex's download rule players can't download until it runs; admins still can.
 
+## Installer sign-in + "Update and Play" (Alex, 2026-09-28)
+
+`LauncherAuth` model (migration `0004_launcher_auth`), `POST /api/launcher/start`, `GET /api/launcher/poll`, `/launcher/<code>` approval page (login required, shows the code and hostname, Yes/No), launcher tokens accepted by the manifest and downloads, "Sign out installer" per user in Admin → Users. Installer: `install.ps1` signs in (token cached a week), `-Play` opens the launcher on the selected profile; `Update and Play.bat` added; `Setup.bat` unchanged. Details in docs/07. Verified end to end with curl (start → approve → poll hands the token out once → manifest 200 with it, 401 with a wrong or revoked one) and a `pwsh` dry run of the stamped script using the token. Still untested on a real Windows PC.
+
 ## Launch switch (Alex, 2026-09-28)
 
 `SiteSettings` row (`live`, `launchAt`; migration `0003_site_settings`), edited at **Admin → Settings**. Until `live`:

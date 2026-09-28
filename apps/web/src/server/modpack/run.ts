@@ -58,11 +58,7 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
       for (const l of lines.splice(0)) yield l;
       await buildServer(m, lock, P, log);
       for (const l of lines.splice(0)) yield l;
-      if (!env.MANIFEST_KEY) {
-        yield "ERROR MANIFEST_KEY is not set in deploy/.env; the installer would not be able to fetch the manifest";
-        return;
-      }
-      await buildInstaller(m, lock, P, `${env.AUTH_URL}/api/modpack/manifest?key=${env.MANIFEST_KEY}`, log);
+      await buildInstaller(m, lock, P, env.AUTH_URL, log);
       for (const l of lines.splice(0)) yield l;
       yield `done: ${P.dist}`;
     } else if (cmd === "sync" || cmd === "sync-dry") {

@@ -82,13 +82,13 @@ async function main() {
       const manifest = await loadManifest();
       const lock = await requireLock();
       await mkdir(P.dist, { recursive: true });
-      const manifestUrl = process.env.MANIFEST_URL ?? `${process.env.AUTH_URL ?? "https://deepslate.dsw.test"}/api/modpack/manifest`;
+      const portalUrl = process.env.AUTH_URL ?? "https://deepslate.dsw.test";
       if (what === "client" || what === "all") {
         await buildClient(manifest, lock, P, log);
         await buildConfigZip(P, log);
       }
       if (what === "server" || what === "all") await buildServer(manifest, lock, P, log);
-      if (what === "installer" || what === "all") await buildInstaller(manifest, lock, P, manifestUrl, log);
+      if (what === "installer" || what === "all") await buildInstaller(manifest, lock, P, portalUrl, log);
       if (!["client", "server", "installer", "all"].includes(what)) {
         console.error(`unknown build target ${what}`);
         process.exit(1);

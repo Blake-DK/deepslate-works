@@ -6,6 +6,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { lookupMinecraftUser } from "@/server/mojang";
 import { MC_USERNAME_RE } from "@/server/auth/constants";
+import { revokeLauncherTokens } from "@/server/launcher";
 
 export async function setRoleAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -47,6 +48,15 @@ export async function clearMinecraftNameAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const u = await db.user.update({ where: { id }, data: { mcUsername: null, mcUuid: null, verifiedAt: null } }).catch(() => null);
   if (u) await db.auditLog.create({ data: { userId: admin.id, action: "user.clearMinecraft", params: { id }, result: "OK" } });
+  revalidatePath("/admin/users");
+  redirect("/admin/users");
+}
+
+export async function revokeLauncherAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const n = await revokeLauncherTokens(id);
+  await db.auditLog.create({ data: { userId: admin.id, action: "launcher.revoke", params: { id, revoked: n }, result: "OK" } });
   revalidatePath("/admin/users");
   redirect("/admin/users");
 }

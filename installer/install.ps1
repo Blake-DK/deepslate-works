@@ -1,13 +1,15 @@
 # Deepslate Works client installer. PowerShell 5.1, no modules, no admin rights. See docs/07-installer.md.
 param(
-  [switch]$DryRun,          # no downloads, no writes outside -Root
+  [switch]$DryRun,          # no downloads, no writes outside -Root, no browser
+  [switch]$Play,            # after updating: open the Minecraft Launcher on our profile and exit
   [string]$Root = ""        # override %APPDATA% (tests)
 )
 # ---- config block (stamped by `modpack build installer`) ----
-$ManifestUrl = "https://deepslate.dsw.test/api/modpack/manifest"
+$PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
+$ManifestUrl = "$PortalUrl/api/modpack/manifest"
 
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -19,6 +21,13 @@ function Log($msg) { Add-Content -Path $LogFile -Value ("[{0}] {1}" -f (Get-Date
 function Step($msg) { $script:Step++; Write-Host ("`n{0}. {1}" -f $script:Step, $msg) -ForegroundColor Cyan; Log "STEP $msg" }
 function Tick($msg) { Write-Host ("   [OK] {0}" -f $msg) -ForegroundColor Green; Log "OK $msg" }
 function Note($msg) { Write-Host ("   {0}" -f $msg) -ForegroundColor Gray; Log $msg }
+function Gate-Message($err) {
+  $body = ""
+  try { $body = (New-Object IO.StreamReader($err.Exception.Response.GetResponseStream())).ReadToEnd() } catch {}
+  if ($body -match "not_live") { return "The server hasn't launched yet. Watch Discord for the date." }
+  if ($body -match "server_offline") { return "The server is offline right now, so updates are paused. Try again later." }
+  return "The site said no (" + $body.Substring(0, [Math]::Min(120, $body.Length)) + ")"
+}
 function Fail($msg) {
   Write-Host ""
   Write-Host ("   {0}" -f $msg) -ForegroundColor Red
@@ -42,10 +51,56 @@ try {
   }
   Tick "Launcher found"
 
-  # 2. manifest
+  # 2. sign in with Discord through the portal (device-style flow); token remembered for a week
+  Step "Signing in"
+  $token = $null
+  $tokenFile = Join-Path (Join-Path $Root ".minecraft-deepslate-works") "launcher.json"
+  if (Test-Path $tokenFile) { try { $token = (Get-Content $tokenFile -Raw | ConvertFrom-Json).token } catch {} }
+  if ($DryRun -and $env:DEEPSLATE_LAUNCHER_TOKEN) { $token = $env:DEEPSLATE_LAUNCHER_TOKEN }   # tests under pwsh on Linux
+  $headers = @{}
+  if ($token) {
+    $headers = @{ Authorization = "Bearer $token" }
+    try { $null = Invoke-RestMethod -Uri $ManifestUrl -Headers $headers -UseBasicParsing -TimeoutSec 30; Tick "Still signed in" }
+    catch {
+      $code = 0; try { $code = [int]$_.Exception.Response.StatusCode } catch {}
+      if ($code -eq 401) { $token = $null; Note "Your sign-in expired; signing in again" }
+      elseif ($code -eq 403) { Fail (Gate-Message $_) }
+      else { Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $PortalUrl) }
+    }
+  }
+  if (-not $token) {
+    if ($DryRun) { Note "(dry run) would open the browser to sign in"; $headers = @{} }
+    else {
+      try { $start = Invoke-RestMethod -Uri "$PortalUrl/api/launcher/start" -Method Post -ContentType "application/json" -Body (@{ hostname = $env:COMPUTERNAME } | ConvertTo-Json) -UseBasicParsing -TimeoutSec 30 }
+      catch { Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $PortalUrl) }
+      Write-Host ("   Your code is  {0}  - a browser window is opening. Sign in with Discord and press 'Yes, that's me'." -f $start.code) -ForegroundColor Yellow
+      Write-Host ("   If nothing opens, go to {0}" -f $start.url) -ForegroundColor Gray
+      Start-Process $start.url
+      $deadline = (Get-Date).AddSeconds([int]$start.expiresInSec)
+      while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds ([int]$start.pollEverySec)
+        try { $poll = Invoke-RestMethod -Uri ("{0}/api/launcher/poll?token={1}" -f $PortalUrl, $start.pollToken) -UseBasicParsing -TimeoutSec 30 } catch { continue }
+        if ($poll.status -eq "approved" -and $poll.launcherToken) { $token = $poll.launcherToken; break }
+        if ($poll.status -eq "denied") { Fail "Sign-in was denied in the browser." }
+        if ($poll.status -eq "expired") { Fail "The sign-in code expired. Run this again." }
+      }
+      if (-not $token) { Fail "Timed out waiting for the browser sign-in. Run this again." }
+      New-Item -ItemType Directory -Force -Path (Split-Path $tokenFile) | Out-Null
+      @{ token = $token; savedAt = (Get-Date).ToString("s") } | ConvertTo-Json | Set-Content -Path $tokenFile
+      $headers = @{ Authorization = "Bearer $token" }
+      Tick ("Signed in as {0}" -f $poll.displayName)
+    }
+  }
+
+  # 3. manifest
   Step "Fetching the mod list"
-  try { $manifest = Invoke-RestMethod -Uri $ManifestUrl -UseBasicParsing -TimeoutSec 60 }
-  catch { Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $ManifestUrl) }
+  try { $manifest = Invoke-RestMethod -Uri $ManifestUrl -Headers $headers -UseBasicParsing -TimeoutSec 60 }
+  catch {
+    $code = 0; try { $code = [int]$_.Exception.Response.StatusCode } catch {}
+    if ($code -eq 403) { Fail (Gate-Message $_) }
+    if ($code -eq 401 -and $DryRun) { Fail "(dry run) not signed in; the manifest needs a sign-in" }
+    Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $ManifestUrl)
+  }
   $neo = $manifest.neoforge
   $mc = $manifest.minecraft
   $profile = $manifest.profile
@@ -145,7 +200,7 @@ try {
   if ($manifest.config_url -and -not $DryRun) {
     $cz = Join-Path $Temp "deepslate-config.zip"
     try {
-      Invoke-WebRequest -Uri $manifest.config_url -OutFile $cz -UseBasicParsing
+      Invoke-WebRequest -Uri $manifest.config_url -Headers $headers -OutFile $cz -UseBasicParsing
       Expand-Archive -Path $cz -DestinationPath $GameDir -Force
       Remove-Item $cz -Force
       Tick "Config files updated"
@@ -196,6 +251,7 @@ try {
     $json.profiles.PSObject.Properties.Remove($profile.id)
   }
   $json.profiles | Add-Member -NotePropertyName $profile.id -NotePropertyValue ([pscustomobject]$entry)
+  if ($json.PSObject.Properties["selectedProfile"]) { $json.selectedProfile = $profile.id } else { $json | Add-Member -NotePropertyName selectedProfile -NotePropertyValue $profile.id }
   if (-not $DryRun) {
     Copy-Item $Profiles "$Profiles.bak" -Force
     $json | ConvertTo-Json -Depth 10 | Set-Content -Path $Profiles -Encoding UTF8
@@ -206,8 +262,23 @@ try {
 
   Write-Host ""
   if ($prev -and $prev.hash -eq $manifest.hash) { Write-Host "Already up to date." -ForegroundColor Green }
-  Write-Host ("Done. Open the Minecraft Launcher, choose {0}, press Play." -f $PackName) -ForegroundColor Green
   Write-Host ("Server address: {0}" -f $manifest.server_address) -ForegroundColor White
+  if ($Play -and -not $DryRun) {
+    Write-Host ("Opening the Minecraft Launcher on {0}. Press Play." -f $PackName) -ForegroundColor Green
+    Log "launching"
+    $launched = $false
+    foreach ($exe in @("$env:ProgramFiles(x86)\Minecraft Launcher\MinecraftLauncher.exe", "$env:ProgramFiles\Minecraft Launcher\MinecraftLauncher.exe", "$env:LOCALAPPDATA\Programs\Minecraft Launcher\MinecraftLauncher.exe")) {
+      if (Test-Path $exe) { Start-Process $exe; $launched = $true; break }
+    }
+    if (-not $launched) {
+      try { Start-Process "shell:AppsFolder\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft"; $launched = $true } catch {}   # Microsoft Store launcher
+    }
+    if (-not $launched) { try { Start-Process "minecraft://"; $launched = $true } catch {} }
+    if (-not $launched) { Write-Host "Couldn't find the launcher automatically; open it from the Start menu." -ForegroundColor Yellow }
+    Start-Sleep -Seconds 2
+  } else {
+    Write-Host ("Done. Open the Minecraft Launcher, choose {0}, press Play." -f $PackName) -ForegroundColor Green
+  }
   Log "=== done ==="
 } catch {
   Log ($_ | Out-String)

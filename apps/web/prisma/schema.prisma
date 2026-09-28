@@ -42,6 +42,7 @@ model User {
   invitedById  String?
   ballots      Ballot[]
   auditLogs    AuditLog[]
+  launcherAuth LauncherAuth[]
 }
 
 model Invite {
@@ -96,6 +97,22 @@ model SiteSettings {
   launchAt    DateTime?
   updatedAt   DateTime  @updatedAt
   updatedById String?
+}
+
+// Installer / updater sign-in ("device" flow): the script shows a code, the user approves it in the browser
+// after a Discord login, the script polls with pollToken and receives a launcher token (stored hashed).
+model LauncherAuth {
+  code            String    @id // 8 chars shown in the script and on the approval page
+  pollToken       String    @unique
+  tokenHash       String?   @unique // sha256 of the launcher token handed to the script
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          String    @default("pending") // pending | approved | denied | expired
+  hostname        String?
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime  // approval window (10 min) then, once approved, token lifetime (7 days)
+  approvedAt      DateTime?
+  lastUsedAt      DateTime?
 }
 
 model Announcement {

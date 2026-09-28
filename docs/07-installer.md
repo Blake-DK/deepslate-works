@@ -4,15 +4,20 @@
 
 A friend downloads one zip, double-clicks `Setup.bat`, waits, opens the normal Minecraft launcher and sees a **Deepslate Works** profile with the server already in the server list. Running it again later updates the mods. It never touches their vanilla installation.
 
+## Sign-in and "Update and Play" (Alex, 2026-09-28)
+
+The installer authenticates every run. `install.ps1` asks the portal for a code (`POST /api/launcher/start`), opens `https://deepslate.dsw.test/launcher/<code>` in the browser, where the user logs in with Discord (guild check, auto-join) and presses "Yes, that's me"; the script polls `GET /api/launcher/poll?token=…` and receives a launcher token (7 days, stored hashed server-side, kept in `%APPDATA%\.minecraft-deepslate-works\launcher.json`). The manifest and `config.zip` are fetched with `Authorization: Bearer <token>`; the portal applies the same gate as the site (admin always; players only when live and the server is online). `Update and Play.bat` runs `install.ps1 -Play`: sign in if needed, update mods, set the profile as `selectedProfile`, open the Minecraft Launcher (classic install paths, then the Store app id, then `minecraft://`) and exit. `Setup.bat` is the first-run variant that pauses so people read the ticks. Admins can sign a member's installers out from `/admin/users` ("Sign out installer"); removing a member revokes them too. The old shared `MANIFEST_KEY` is no longer stamped into the script (the server still accepts it for admin testing).
+
 ## Files
 
 - `Setup.bat`: `powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"` then `pause`. Exists so nobody has to know what an execution policy is.
+- `Update and Play.bat`: the same with `-Play`; pauses only on failure.
 - `install.ps1`: PowerShell 5.1 compatible (ships with Windows 10/11). No modules, no admin rights.
 - `README.txt`: three lines, same as the `/install` page.
 
 ## `install.ps1` behaviour, in order
 
-1. **Config block at the top**, stamped by `modpack build installer`: `$ManifestUrl`, `$PackName`, `$PackVersion`.
+1. **Config block at the top**, stamped by `modpack build installer`: `$PortalUrl`, `$PackName`, `$PackVersion`. Then the sign-in step above.
 2. **Console output**: friendly, numbered steps, green ticks, no stack traces. On any failure: one plain sentence saying what to do ("Install the Minecraft Launcher from minecraft.net, open it once, then run this again") and a log file path `%TEMP%\deepslate-install.log` with the details.
 3. **Check the Minecraft launcher**: `%APPDATA%\.minecraft\launcher_profiles.json` must exist. If not: stop with the message above and open `https://www.minecraft.net/download` in the browser.
 4. **Fetch the manifest** from `$ManifestUrl` (the app's `/api/modpack/manifest`, which is the lockfile plus profile settings). TLS 1.2 forced (`[Net.ServicePointManager]::SecurityProtocol`).

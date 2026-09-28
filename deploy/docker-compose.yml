@@ -1,5 +1,7 @@
-# Deepslate Works on vps-01v. Joins the shared `web` network; Caddy (stack web-proxy)
-# terminates TLS and proxies to deepslate-web:3000. No ports are published.
+# Deepslate Works on vps-01v. `web` joins the shared proxy network; Caddy (stack web-proxy)
+# terminates TLS. The WireGuard tunnel to the AMP host lives in its own container on the
+# `internal` network only; `api` and the inner map relay share its namespace (docs/13 §3).
+# The only published port is UDP 51820 (WireGuard).
 name: deepslate
 
 networks:
@@ -49,6 +51,67 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
+
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: deepslate-wg
+    restart: unless-stopped
+    mem_limit: 128m
+    cap_add: [NET_ADMIN]
+    sysctls:
+      net.ipv4.conf.all.src_valid_mark: 1
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: Europe/London
+    volumes:
+      - ./wireguard:/config          # wg_confs/wg0.conf (git-ignored)
+    ports:
+      - 51820:51820/udp
+    networks: [internal]             # never on `web`
+    healthcheck:
+      test: ["CMD", "ping", "-c1", "-W2", "10.77.0.2"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: deepslate-api:local
+    container_name: deepslate-api
+    restart: unless-stopped
+    mem_limit: 256m
+    network_mode: "service:wireguard"   # reachable as deepslate-wg:4000 on `internal` only
+    env_file: .env
+    volumes:
+      - ./keys/deploy.key:/run/keys/deploy.key:ro
+    depends_on:
+      wireguard:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  map-relay-inner:
+    image: alpine/socat:latest
+    container_name: deepslate-map-relay-inner
+    restart: unless-stopped
+    mem_limit: 32m
+    network_mode: "service:wireguard"
+    command: TCP-LISTEN:8100,fork,reuseaddr TCP:10.77.0.2:8100
+    depends_on: [wireguard]
+
+  map-relay-outer:
+    image: alpine/socat:latest
+    container_name: deepslate-map-relay-outer
+    restart: unless-stopped
+    mem_limit: 32m
+    networks: [web, internal]
+    command: TCP-LISTEN:8100,fork,reuseaddr TCP:deepslate-wg:8100
+    depends_on: [map-relay-inner]
 
   backups:
     image: postgres:16-alpine

@@ -3,53 +3,45 @@
 ## VPS layout
 
 ```
-/home/ladm/Minecraft-site/            git checkout of this repo
+/home/ladm/Minecraft-site/            git checkout of this repo (owned by ladm)
 /home/ladm/Minecraft-site/deploy/.env
-/var/lib/deepslate/postgres
-<AMP instance dir>/Minecraft/   e.g. /home/amp/.ampdata/instances/DeepslateWorks01/Minecraft
+/home/ladm/Minecraft-site/deploy/wireguard/wg_confs/wg0.conf   git-ignored
+/home/ladm/Minecraft-site/deploy/keys/deploy.key               git-ignored, mounted read-only into api
+/root/docker/deepslate/postgres, /root/docker/deepslate/backups
 ```
 
-`docker-compose.yml` services: `caddy`, `web`, `postgres`. AMP stays as it is installed today. `web` mounts the AMP instance directory read-write at `/amp-instance` **only** for `modpack sync-server` and stats reads; the mount is the single place the app touches the server's files.
+`deploy/docker-compose.yml` services: `web`, `api`, `wireguard`, `map-relay-inner`, `map-relay-outer`, `postgres`, `backups`. Caddy is the existing `web-proxy` stack; the app publishes no ports except UDP 51820 (WireGuard). AMP stays on the homelab.
 
-## Caddyfile (shape)
+## Caddy (blocks in `/root/docker/web-proxy/etc/Caddyfile`)
 
 ```
-deepslate.example.com {
-  reverse_proxy web:3000
-  rate_limit { zone login { key {remote_host} events 10 window 1m } }   # on /api/auth/* and /join/*
-  encode zstd gzip
+deepslate.dsw.test {
+	import common
+	header X-Frame-Options SAMEORIGIN
+	reverse_proxy deepslate-web:3000
 }
-map.deepslate.example.com {
-  forward_auth web:3000 { uri /api/auth/verify; copy_headers X-User }
-  reverse_proxy host.docker.internal:8100     # BlueMap webserver, bound to localhost on the host
-  @unauth expression `{http.error.status_code} == 401`
-  handle_errors { redir https://deepslate.example.com/login?next={uri} }
+map.deepslate.dsw.test {
+	import common
+	forward_auth deepslate-web:3000 { uri /api/auth/verify }
+	reverse_proxy deepslate-map-relay-outer:8100
+	handle_errors {
+		@unauth expression {http.error.status_code} == 401
+		redir @unauth https://deepslate.dsw.test/login?next=https://map.deepslate.dsw.test{uri}
+	}
 }
 ```
+
+Reload recipe in `deploy/README.md`. The map block 502s harmlessly until BlueMap exists (Phase 3).
 
 ## `.env.example`
 
-```
-DATABASE_URL=postgresql://deepslate:…@postgres:5432/deepslate
-AUTH_SECRET=                      # openssl rand -base64 32
-AUTH_URL=https://deepslate.example.com
-COOKIE_DOMAIN=.deepslate.example.com
-DISCORD_CLIENT_ID=
-DISCORD_CLIENT_SECRET=
-ADMIN_DISCORD_ID=                 # first login from this id becomes ADMIN
-AMP_URL=http://host.docker.internal:8081   # the Minecraft instance's own port, not ADS
-AMP_USERNAME=webapp
-AMP_PASSWORD=
-AMP_INSTANCE_DIR=/amp-instance
-AMP_MOCK=0
-MODRINTH_USER_AGENT=deepslate-works/0.1 (alex@example.com)
-MAP_URL=https://map.deepslate.example.com
-```
+See `deploy/.env.example` (kept current; every variable commented). Notables: `API_URL`/`API_SERVICE_TOKEN` (web → api), `AMP_URL=http://10.77.0.2:8080`, `AMP_INSTANCE_ID`, `AMP_TUNNEL_IP=10.77.0.2`, `RSYNC_TARGET=amp@10.77.0.2:`, `COOKIE_DOMAIN=.deepslate.dsw.test`, `MAP_URL=https://map.deepslate.dsw.test`, `DISCORD_GUILD_ID` (optional server gate). No `AMP_INSTANCE_DIR`.
 
 ## Security checklist
 
-- Only 80/443 (Caddy) and 25565 (Minecraft) and the voice chat UDP port (Simple Voice Chat, default 24454) open on the VPS firewall. AMP's web UI and BlueMap stay on localhost or behind a VPN/Tailscale.
-- AMP `webapp` user: least privilege, one instance, no file-manager delete, no ADS rights. Rotate the password if it ever leaks into a log.
+- VPS firewall (`/usr/local/sbin/host-firewall.sh`): 80/443 (Caddy), UDP 51820 (WireGuard, any source; unauthenticated packets are dropped by WireGuard), SSH rule unchanged. Game and voice ports are Pangolin's business on the homelab, not the VPS. AMP's web UI and BlueMap are reachable only over the tunnel.
+- Keys in `deploy/wireguard/` and `deploy/keys/` are git-ignored; the VPS host has no route into the tunnel, only the tunnel namespace does.
+- AMP `webapp` user: ADS-level login with rights on the one instance only, file manager read, no delete, no ADS admin rights. Rotate the password if it ever leaks into a log.
 - Players never see raw console lines; admins do.
 - All player-supplied strings that end up in a command are validated by a strict regex or an enum. There is no free-text command path for players.
 - CSRF: Auth.js handles its routes; app POSTs use same-site cookies + origin check in middleware.

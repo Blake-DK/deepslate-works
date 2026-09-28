@@ -9,3 +9,9 @@ coverage/
 !.env.example
 deploy/.env
 .DS_Store
+deploy/wireguard/wg_confs/
+deploy/wireguard/*.key
+deploy/wireguard/*.pub
+deploy/keys/
+deploy/wireguard/*
+!deploy/wireguard/wg0.conf.example

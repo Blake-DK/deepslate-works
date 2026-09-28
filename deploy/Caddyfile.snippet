@@ -1,8 +1,27 @@
-# Paste into /root/docker/web-proxy/etc/Caddyfile on vps-01v, then reload Caddy.
-# The map host block is added in phase 3 (forward_auth deepslate-web:3000 { uri /api/auth/verify }).
+# Blocks in /root/docker/web-proxy/etc/Caddyfile on vps-01v (reload recipe in deploy/README.md).
 
 deepslate.dsw.test {
 	import common
 	header X-Frame-Options SAMEORIGIN
 	reverse_proxy deepslate-web:3000
+}
+
+# Live map (BlueMap on the AMP host, via the WireGuard tunnel relays). Login enforced by the portal.
+map.deepslate.dsw.test {
+	import common
+	# forward_auth returns the 401 as-is, so spell it out: 2xx from /api/auth/verify -> map, 401 -> portal login.
+	reverse_proxy deepslate-web:3000 {
+		method GET
+		rewrite /api/auth/verify
+		header_up X-Forwarded-Method {method}
+		header_up X-Forwarded-Uri {uri}
+		@good status 2xx
+		handle_response @good {
+			reverse_proxy deepslate-map-relay-outer:8100
+		}
+		@unauth status 401
+		handle_response @unauth {
+			redir https://deepslate.dsw.test/login?next=https://map.deepslate.dsw.test{http.request.orig_uri}
+		}
+	}
 }

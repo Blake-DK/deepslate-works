@@ -26,7 +26,9 @@ The app's own API is small; most pages are server components. These are the rout
 | POST | `/api/admin/announce` | store + `say` in game |
 | GET | `/api/admin/audit?…` | audit log |
 
-## Server actions registry (`src/server/actions/registry.ts`)
+## Server actions registry (`apps/api/src/actions/registry.ts`)
+
+The registry lives in `api`, the only service with a route to AMP. `web` mirrors `POST /api/actions/<name>` for the browser and forwards to `api` with the service token and the user headers; `api` applies the role, rate limit and validation itself.
 
 Every action is an object; nothing runs a console command outside this registry.
 
@@ -60,6 +62,8 @@ Initial set:
 `mcUsername` is validated as `^[A-Za-z0-9_]{3,16}$` at save time and again in `build`. Console output is read via `Core.GetUpdates` and matched against `expect`; the raw lines never reach the browser except in the admin console tail.
 
 ## AMP methods used
+
+All calls go to the ADS (`AMP_URL=http://10.77.0.2:8080`) and address the instance via `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>` (docs/13 §4).
 
 Fill this in from the live instance's `/API` listing during Phase 3. Expected: `Core.Login`, `Core.GetStatus`, `Core.GetUpdates`, `Core.SendConsoleMessage`, `Core.Start`, `Core.Stop`, `Core.Restart`, `Core.GetUserList` or `MinecraftModule.GetPlayers`-style list, `FileManagerPlugin.*` for reading `stats/<uuid>.json` and `whitelist.json`, `LocalFileBackupPlugin.TakeBackup` if present. Record the exact names, argument shapes and one sample response each.
 

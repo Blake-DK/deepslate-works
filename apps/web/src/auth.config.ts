@@ -15,7 +15,7 @@ export const authConfig = {
         Discord({
           clientId: env.DISCORD_CLIENT_ID,
           clientSecret: env.DISCORD_CLIENT_SECRET,
-          authorization: { params: { scope: "identify" } },
+          authorization: { params: { scope: env.DISCORD_GUILD_ID ? "identify guilds" : "identify" } },
         }),
       ]
     : [],

@@ -16,6 +16,23 @@ class RateLimited extends CredentialsSignin {
   code = "rate_limited";
 }
 
+/** Discord `guilds` scope: list the user's servers and look for ours. Fails closed. */
+async function isGuildMember(accessToken: string | undefined, guildId: string): Promise<boolean> {
+  if (!accessToken) return false;
+  try {
+    const res = await fetch("https://discord.com/api/v10/users/@me/guilds", {
+      headers: { authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(6000),
+      cache: "no-store",
+    });
+    if (!res.ok) return false;
+    const guilds = (await res.json()) as Array<{ id: string }>;
+    return guilds.some((g) => g.id === guildId);
+  } catch {
+    return false;
+  }
+}
+
 const credentialsSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -49,6 +66,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account, profile }) {
       if (account?.provider !== "discord") return true;
       const discordId = account.providerAccountId;
+      // Optional gate: must be a member of Alex's Discord server (checked on every Discord sign-in).
+      let inGuild = false;
+      if (env.DISCORD_GUILD_ID) {
+        inGuild = await isGuildMember(account.access_token, env.DISCORD_GUILD_ID);
+        if (!inGuild) {
+          await db.auditLog.create({ data: { action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "not in discord server" } });
+          return "/login?error=not-in-server";
+        }
+      }
       const existing = await db.user.findUnique({ where: { discordId } });
       if (existing) {
         await touchLastSeen(existing.id);
@@ -58,7 +84,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const jar = await cookies();
       const inviteCode = jar.get(INVITE_COOKIE)?.value;
       const invite = inviteCode ? await findValidInvite(inviteCode) : null;
-      if (!bootstrapAdmin && !invite) {
+      const guildIsInvite = inGuild && env.DISCORD_GUILD_AUTO_JOIN;
+      if (!bootstrapAdmin && !invite && !guildIsInvite) {
         await db.auditLog.create({ data: { action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "no invite" } });
         return "/login?error=no-invite";
       }

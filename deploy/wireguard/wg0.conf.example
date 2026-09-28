@@ -1,0 +1,10 @@
+# Copy to deploy/wireguard/wg_confs/wg0.conf (git-ignored). Keys: `docker run --rm --entrypoint wg lscr.io/linuxserver/wireguard genkey`.
+[Interface]
+Address = 10.77.0.1/24
+ListenPort = 51820
+PrivateKey = <vps private key>
+
+[Peer]
+# AMP host (homelab). It initiates; no Endpoint here.
+PublicKey = <amp host public key>
+AllowedIPs = 10.77.0.2/32

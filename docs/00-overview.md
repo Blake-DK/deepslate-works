@@ -4,7 +4,7 @@
 
 A private website for a friends' modded Minecraft server called **Deepslate Works**. It starts as a mod catalogue and vote, becomes the place people download the one-click installer, and ends up as the control panel for the server: who is online, a live map, and self-service actions like "add me to the whitelist" or "take me home".
 
-The server itself runs on CubeCoders **AMP** (Minecraft Java module) on a VPS. The web app runs on the same VPS in Docker.
+The server itself runs on CubeCoders **AMP** (Minecraft Java module) **on Alex's homelab**; the portal runs on the VPS in Docker. Players reach the game through Pangolin; the portal reaches AMP through a WireGuard tunnel confined to Docker (docs/13).
 
 ## Who uses it
 

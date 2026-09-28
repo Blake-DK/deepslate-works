@@ -8,6 +8,7 @@ Build:
 - pnpm workspace, Next.js app, Prisma schema from 03, migrations, seed script (one admin from `ADMIN_DISCORD_ID`).
 - Auth.js with Discord + credentials, invite flow from 04, onboarding (Minecraft username → UUID via Mojang, PC tier).
 - `deploy/` compose + Caddyfile + `.env.example`; CI: lint, typecheck, test.
+- `apps/api` skeleton with `/health` and the service-token middleware, wired into compose with the `wireguard` container and map relays (docs/13).
 - Layout shell: top nav (Home, Mods, Vote, Install, Map, Players, Admin for admins), phone-friendly, dark and light themes.
 
 Done when:
@@ -16,6 +17,7 @@ Done when:
 - [ ] An invite link lets a second Discord account in; a third account without an invite is refused with the right message.
 - [ ] The email/password fallback works for one invite.
 - [ ] `/api/auth/verify` returns 200 with a session cookie and 401 without.
+- [ ] `/api/health` reports `tunnel: ok` once the AMP host side is up.
 
 ## Phase 1 · Catalogue and vote
 
@@ -60,15 +62,16 @@ Done when:
 - [ ] Home / set home / spawn / where am I / kill work for an online player and return a clear one-line result; each is rate limited and audited.
 - [ ] An offline player pressing an action gets "You need to be in the game for this".
 - [ ] Audit log shows who did what, when, and the server's reply.
-- [ ] No route exists that passes free text from a player into a console command (grep the codebase for `SendConsoleMessage` outside `src/server/actions/`; there must be none).
+- [ ] No route exists that passes free text from a player into a console command (grep the codebase for `SendConsoleMessage` outside `apps/api/src/actions/`; there must be none).
 
 ## Phase 5 · Later
 Discord bot (status, join/leave, chat relay, `/whitelist`), events page, season archive. Design when Phase 4 has been live for a couple of weeks and the group has opinions.
 
 ## Open questions for Alex (answer before Phase 2)
 
-1. Domain name for the site and the map subdomain.
-2. Is AMP on the same VPS as the web app? If not, the `sync-server` step needs SSH/rsync instead of a bind mount.
-3. Which port is the Minecraft instance's AMP API on (the instance port, not the ADS 8080)?
-4. Season 1 world settings if the vote doesn't settle them: difficulty, death rule, PvP.
-5. Does anyone not have Discord? If nobody, skip the credentials provider entirely.
+1. ~~Domain name~~ Answered (docs/13): `deepslate.dsw.test`, map `map.deepslate.dsw.test`.
+2. ~~Is AMP on the same VPS?~~ Answered (docs/13): no; ADS on the homelab over the WireGuard tunnel, `AMP_INSTANCE_ID` pending until the instance exists.
+3. ~~Which port is the instance's API on?~~ Answered (docs/13): none needed; calls go through the ADS proxy path.
+4. ~~Season 1 world settings~~ Answered (docs/12): from the vote; defaults Normal difficulty, Corpse keeps items (keepInventory off), PvP off.
+5. Does anyone not have Discord? If nobody, skip the credentials provider entirely. **Pending.**
+6. `server_address` for the manifest: whatever Pangolin publishes (placeholder `mc.dsw.test`). **Pending.**

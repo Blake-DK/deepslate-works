@@ -3,21 +3,24 @@
 ## Components
 
 ```
-                  Internet
-                     |
-               [Caddy :443]  automatic TLS, rate limiting, forward_auth
-                /        \
-  deepslate.example.com   map.deepslate.example.com
-        |                          |
-  [web  :3000]  ---forward_auth-->  [bluemap :8100]  (BlueMap webserver inside the MC instance)
-   Next.js app                       |
-        |                            |
-  [postgres :5432]            [AMP  :8080 + MC :25565]
-        |                     Minecraft Java instance, NeoForge 1.21.1
-  AMP HTTP API  <------------ (app talks to AMP over the docker/host network, never exposed)
+                       Internet                                  Alex's homelab
+                          |                                            |
+                    [Caddy :443]  (existing web-proxy stack)     [AMP host]  ADS :8080 (all instances proxied through it)
+                    /            \                                    |   BlueMap :8100 (bound to 10.77.0.2)
+   deepslate.dsw.test     map.deepslate.dsw.test                     |   sshd :22 (rrsync-restricted deploy key)
+          |                        | forward_auth web                 |
+    [web :3000] (web+internal)   [map-relay-outer :8100] (web+internal)
+    Next.js, Auth.js, pages        |                                  |
+          | bearer token           v                                  |
+          v                   [deepslate-wg :8100]  <-- map-relay-inner, in the tunnel namespace
+    [deepslate-wg :4000] = [api] Fastify, in the tunnel namespace ----+  WireGuard 10.77.0.1 <-> 10.77.0.2 (udp 51820, homelab initiates)
+          |
+    [postgres :5432] (internal)
 ```
 
-Everything runs on the one VPS. AMP is installed on the host (or in its own container, whichever is already the case); the web stack runs from `deploy/docker-compose.yml`.
+Everything on the VPS runs from `deploy/docker-compose.yml` and joins the existing `web` proxy network (Caddy) plus a private `internal` network. Players never touch the VPS for game traffic: Minecraft and voice chat go through Pangolin on the homelab, which this project does not configure.
+
+**Security boundary.** `web` is internet-facing and has no route to the homelab and no AMP credentials. `api` is the only code that talks to AMP, BlueMap or rsync; it runs inside the WireGuard container's network namespace (`network_mode: service:wireguard`), which is on `internal` only, so `api:4000` is reachable from `web` (bearer service token) and nothing on the `web` network. The map is relayed in two hops (`map-relay-inner` in the tunnel namespace → `map-relay-outer` on `web`+`internal`) so the tunnel namespace never joins `web`. See docs/13 §3.
 
 ## Stack and why
 
@@ -25,11 +28,13 @@ Everything runs on the one VPS. AMP is installed on the host (or in its own cont
 |---|---|---|
 | App | Next.js 15, App Router, TypeScript strict | One codebase for pages and API, server components keep AMP secrets server-side |
 | UI | Tailwind + shadcn/ui | Fast to build, looks fine on phones, easy for another session to extend |
-| Auth | Auth.js (next-auth v5) | Discord provider out of the box, credentials provider for the fallback, session cookies, CSRF handled |
+| Auth | Auth.js (next-auth v5) in `web`; random service token between `web` and `api` | Discord provider out of the box, credentials provider for the fallback, session cookies, CSRF handled; `api` re-checks role, username and rate limits itself |
+| Backend | Fastify 5 + TypeScript in `apps/api` | Only code with a route to the homelab: AMP client, status poller, action registry, rsync sync |
+| Tunnel | WireGuard (linuxserver image) confined to Docker | VPS host has no route to the homelab; UDP 51820 is the only extra host port |
 | DB | PostgreSQL 16 + Prisma | Small schema, migrations, typed queries |
 | Proxy | Caddy 2 | Auto TLS, `forward_auth` lets us put BlueMap behind the app's login with zero code in BlueMap |
 | Map | BlueMap (NeoForge server mod) | Live 3D map, player markers, no client mod |
-| Server control | AMP HTTP API | Already there; status, console, player list, restarts, file access |
+| Server control | AMP HTTP API via the ADS instance proxy | Instances bind their API to localhost on the AMP host; the ADS on 8080 proxies `/API/ADSModule/Servers/<id>/API/...` |
 | Modpack tooling | Node CLI in `packages/modpack` | Same language as the app, runs in CI and on the VPS |
 | Installer | PowerShell 5.1 script + `.bat` launcher, plus `.mrpack` | PowerShell is on every Windows PC; `.mrpack` covers Mac/Linux via the Modrinth App or Prism |
 
@@ -39,10 +44,11 @@ Everything runs on the one VPS. AMP is installed on the host (or in its own cont
 .
 ├── the working rules
 ├── docs/
-├── apps/web/                 Next.js app
+├── apps/api/                 Fastify backend (tunnel namespace): amp/, poller/, actions/, modpack/sync.ts
+├── apps/web/                 Next.js app (frontend + auth)
 │   ├── src/app/              routes (see 05-features.md for the page list)
 │   ├── src/server/           server-only code
-│   │   ├── amp/              AMP client wrappers (typed, timeouts, retries)
+│   │   ├── api-client.ts     thin bearer-token client for apps/api (no AMP code here)
 │   │   ├── actions/          named server actions players/admins can run
 │   │   ├── modpack/          reads mods.lock.json, serves manifest
 │   │   └── auth/
@@ -79,21 +85,21 @@ Everything runs on the one VPS. AMP is installed on the host (or in its own cont
 **Player action → server**
 - Player clicks "Add me to the whitelist" → server action `whitelist.addSelf` → permission check → builds `whitelist add <mcUsername>` → `SendConsoleMessage` → waits for the matching console line or 5 s → writes an `AuditLog` row → returns result.
 
-## AMP integration
+## AMP integration (docs/13 §4)
 
-- Create an AMP user `webapp` with only: Login, view instance, console access (send + read), player list, start/stop/restart of the one instance. Never the ADS admin account.
-- Auth flow: `POST /API/Core/Login {username, password, token:"", rememberMe:false}` → `sessionID`; every call posts JSON with `SESSIONID`. Sessions expire; the wrapper re-logs on `401`/`Unauthorized` once.
-- Calls are against the **instance** endpoint (`http://amp:8080/API/...` for the Minecraft instance's port, not ADS), so `Core.GetStatus`, `Core.SendConsoleMessage`, `Core.GetUpdates`, `Core.Start/Stop/Restart`, `MinecraftModule.*` for player lists where available.
-- Verify the exact method names and response shapes against the running AMP before writing types: AMP's API is self-documenting at `/API` on the instance. Record what you find in `docs/08-api.md` under "AMP methods used".
-- Fallback if AMP console is flaky: enable RCON in `server.properties` and use it for commands only. Keep status on AMP.
+- AMP lives on the homelab; every instance binds its API to `127.0.0.1`, only the ADS listens on `0.0.0.0:8080`. We therefore talk to the **ADS** at `AMP_URL=http://10.77.0.2:8080` and address the instance through the proxy path `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>` with the same JSON body and `SESSIONID` as a direct call. Login is `POST /API/Core/Login` against the ADS.
+- `webapp` is an ADS-level user with rights only on the `DeepslateWorks01` instance: login, console read/write, player list, start/stop/restart, file manager read. Never the ADS admin account.
+- The wrapper (`apps/api/src/amp/`) re-logs once on `401`/`Unauthorized`, times out at 10 s, and has a mock (`AMP_MOCK=1`) so everything runs before the instance exists.
+- Verify method names and response shapes against the ADS's `/API` listing once the tunnel is up; record them in docs/08 "AMP methods used".
+- `sync-server` = rsync over SSH through the tunnel from `api` to `amp@10.77.0.2` (rrsync rooted at the instance's `Minecraft/` dir, deploy key mounted read-only at `/run/keys/deploy.key`), then `Core.Restart` through the proxy if `mods/` changed. No bind mount.
 
 ## BlueMap behind login
 
-- BlueMap's built-in webserver listens on the instance's port 8100 (configure in `modpack/server/bluemap/webserver.conf`) and is bound to localhost.
-- Caddy serves `map.<domain>` with `forward_auth web:3000 { uri /api/auth/verify }`. The app answers 200 for a valid session cookie (shared parent domain cookie), 401 otherwise, and Caddy redirects to `/login?next=`.
-- The dashboard embeds the map in an `<iframe>` on the same parent domain, so the session cookie applies.
+- BlueMap on the AMP host listens on `10.77.0.2:8100` (tunnel address only).
+- Caddy serves `map.deepslate.dsw.test` with `forward_auth deepslate-web:3000 { uri /api/auth/verify }` and proxies to `deepslate-map-relay-outer:8100`, which forwards to the tunnel namespace, which forwards to BlueMap. 401 → redirect to the portal login with `next`.
+- The session cookie is scoped to `.deepslate.dsw.test`, so the dashboard iframe and the map host share it.
 
 ## Environments
 
 - `dev`: local, `docker compose -f deploy/docker-compose.dev.yml` runs Postgres only; AMP calls hit a mock (`AMP_MOCK=1`) so the app runs without a server.
-- `prod`: the VPS. Deploy = `git pull && docker compose up -d --build`. Migrations run on container start.
+- `prod`: the VPS. Deploy = `cd /home/ladm/Minecraft-site && docker compose -f deploy/docker-compose.yml up -d --build`. Migrations run on `web` start. Recreating `wireguard` recreates `api` and `map-relay-inner` (shared namespace).

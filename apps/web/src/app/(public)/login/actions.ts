@@ -3,11 +3,7 @@ import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 import { env } from "@/env";
-
-function safeNext(raw: FormDataEntryValue | null): string {
-  const s = typeof raw === "string" ? raw : "";
-  return s.startsWith("/") && !s.startsWith("//") ? s : "/";
-}
+import { safeNext } from "@/server/auth/next-url";
 
 export async function discordLogin(formData: FormData) {
   if (!env.discordEnabled) redirect("/login?error=discord-off");

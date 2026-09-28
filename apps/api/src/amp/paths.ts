@@ -1,5 +1,5 @@
-// AMP on the homelab: instances bind their API to localhost, so everything goes through the ADS
-// and the instance is addressed by the proxy path below (docs/13 §4).
+// AMP on the homelab: instances bind their API to localhost, so everything (including Login, since
+// `webapp` is an instance-local user) goes through the ADS and the proxy path below (docs/13 §4).
 
 export function adsPath(module: string, method: string): string {
   return `/API/${module}/${method}`;

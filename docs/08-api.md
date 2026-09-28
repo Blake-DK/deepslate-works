@@ -61,11 +61,24 @@ Initial set:
 
 `mcUsername` is validated as `^[A-Za-z0-9_]{3,16}$` at save time and again in `build`. Console output is read via `Core.GetUpdates` and matched against `expect`; the raw lines never reach the browser except in the admin console tail.
 
-## AMP methods used
+## AMP methods used (recorded from the live instance, 2026-09-28)
 
-All calls go to the ADS (`AMP_URL=http://10.77.0.2:8080`) and address the instance via `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>` (docs/13 §4).
+All calls go to the ADS (`AMP_URL=http://10.77.0.2:8080`) at `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>`, JSON body, `SESSIONID` in the body. `webapp` is an **instance-local** user, so `Core.Login` also goes through that proxy path (a login against the ADS's own `/API/Core/Login` answers `result: 0, success: false`). The AMP instance's API listing (`Core.GetAPISpec`) shows modules `Core, MinecraftModule, FileManagerPlugin, LocalFileBackupPlugin, EmailSenderPlugin, WebhookPlugin, CommonCorePlugin, AnalyticsPlugin, StorePlugin`.
 
-Fill this in from the live instance's `/API` listing during Phase 3. Expected: `Core.Login`, `Core.GetStatus`, `Core.GetUpdates`, `Core.SendConsoleMessage`, `Core.Start`, `Core.Stop`, `Core.Restart`, `Core.GetUserList` or `MinecraftModule.GetPlayers`-style list, `FileManagerPlugin.*` for reading `stats/<uuid>.json` and `whitelist.json`, `LocalFileBackupPlugin.TakeBackup` if present. Record the exact names, argument shapes and one sample response each.
+| Method | Args | Sample response (trimmed) |
+|---|---|---|
+| `Core.Login` | `{username, password, token:"", rememberMe:false}` | `{"result":10,"success":true,"sessionID":"…","permissions":["Instances.<id>.Manage", "-Settings.Core.Security.…", …]}`; failure is `result: 0, success: false` |
+| `Core.GetStatus` | `{}` | `{"State":0,"Uptime":"0:00:00:00","Metrics":{"CPU Usage":{"RawValue":0,"MaxValue":100,"Percent":0,"Units":"%"},"Memory Usage":{"RawValue":0,"MaxValue":6144,"Units":"MB"},"Active Users":{"RawValue":0,"MaxValue":20}},"Ports":[{"Port":25569,"Name":"Game Port","Listening":false},{"Port":2226,"Name":"SFTP Port","Listening":true}]}`. `State`: 0 Stopped, 10 Starting, 20 Ready (running), 40 Restarting, 45 Stopping, 100 Failed (mapping in `apps/api/src/amp/client.ts`). |
+| `Core.GetUpdates` | `{}` | `{"Status":{…same as GetStatus…},"ConsoleEntries":[…],"Messages":[],"Tasks":[],"Ports":[…]}` |
+| `Core.GetUserList` | `{}` | `{}` while stopped; map of online players |
+| `Core.SendConsoleMessage` | `{message}` | used only by `apps/api/src/actions/` (Phase 4) |
+| `Core.Start` / `Stop` / `Restart` | `{}` | not yet exercised (the permission-classifier refused the probe; Alex to confirm from the admin page in Phase 3) |
+| `Core.SetConfig` | `{node, value}` | with a nonexistent node: `{"Status":false,"Reason":"No such node 'Meta.Description'"}`. **Not yet proven refused** for a real node: the probe was blocked; Alex to run `SetConfig` on a real node with its current value and expect `Unauthorized Access`. |
+| `FileManagerPlugin.GetDirectoryListing` | `{Dir:""}` | `[{"Filename":"mods","IsDirectory":true,…},…]` for the instance root (`AMP_Logs/ LocalBackups/ config/ defaultconfigs/ libraries/ logs/ mods/ plugins/ world/ …`) |
+| `LocalFileBackupPlugin.GetBackups` | `{}` | `{"Title":"Unauthorized Access","Message":"You do not have permission…"}` (webapp has no backup rights; use AMP's UI for backups, or grant `TakeBackup` later) |
+| `Core.GetAMPRolePermissions` | | `Unauthorized Access` (correct) |
+
+Errors from AMP for missing rights come back as HTTP 200 with `{"Title":"Unauthorized Access","Message":…}`; the wrapper treats `Title` present as an error.
 
 ## Errors
 

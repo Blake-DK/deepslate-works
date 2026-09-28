@@ -81,11 +81,11 @@ Run from inside `deepslate-api` through the tunnel, `AMP_URL=http://10.77.0.2:80
 
 | Step | Result |
 |---|---|
-| 1. `POST /API/Core/Login` as `webapp` | HTTP 200, `{"result":0,"success":false,"resultReason":"","sessionID":null}` = AMP's bad-credentials answer. **Blocked here.** |
-| 2. `Core/GetStatus` via `/API/ADSModule/Servers/<id>/API/` | not reachable without a session |
-| 3. `Core/SetConfig` (expect refused) | not reachable without a session |
+| 1. `Core/Login` as `webapp` **through the instance proxy path** | `result: 10, success: true`, permissions `Instances.<id>.Manage` + settings denials. (First attempt against the ADS's own `/API/Core/Login` gave `result: 0`: `webapp` is instance-local, corrected by Alex.) |
+| 2. `Core/GetStatus` | 200, `State: 0` (instance stopped), Metrics `CPU Usage / Memory Usage (max 6144 MB) / Active Users`, Ports (game 25569 not listening) |
+| 3. `Core/SetConfig` | with node `Meta.Description`: `{"Status":false,"Reason":"No such node"}`, i.e. not a permission answer. A follow-up probe on a real node (plus `Core.Start`) was **refused by the build session's permission classifier** as a production change, so "SetConfig refused" is unproven. Alex: run `SetConfig` for a real node with its current value (via `apps/api/scripts/amp-smoke.mjs`, edit the node) and expect `Unauthorized Access`. |
 
-The ADS itself answers normally (a bogus method returns AMP's "Missing Method" error), so the tunnel, port and JSON shape are right. Things to check on the AMP host: the `webapp` user exists at **ADS** level (not inside the instance), the password matches what's in `deploy/.env`, and the user has the Login right. Re-run: `docker cp` the script `amp-smoke.mjs` (kept in `apps/api/scripts/`) into `deepslate-api` and `node /tmp/amp-smoke.mjs`. `AMP_MOCK` stays `1` until login works.
+Also recorded (read-only): `GetUpdates` shape, `GetUserList` (`{}` while stopped), `FileManagerPlugin.GetDirectoryListing` works, `LocalFileBackupPlugin.GetBackups` and `GetAMPRolePermissions` are `Unauthorized Access` for webapp. Details in docs/08. `AMP_MOCK=0` now: the mock is off, `api` talks to the real instance. **The instance is stopped**, so with Alex's download rule players can't download until it runs; admins still can.
 
 ## docs/14 (Discord-gated join) · what landed now (2026-09-28 late night)
 
@@ -113,7 +113,7 @@ Per Alex's message: the Phase-1 data model bits and the onboarding change are in
 - [ ] `client.mrpack` imports into the Modrinth App and launches to the main menu. *Built; needs a real client test.*
 - [ ] Clean Windows VM: Setup.bat → launcher → profile → main menu → server in list. *Script dry-run passes on Linux; needs Windows.*
 - [ ] Rerun says "already up to date"; bumping one mod replaces exactly that jar. *Logic present; needs Windows.*
-- [ ] `sync-server` puts the jar set on the AMP instance; server starts; client connects. *Dry run over the tunnel works (11 jars would be copied). Blocked on: the deploy key must be rrsync-restricted (currently unrestricted, so relative paths would land in `/home/amp` not the instance) and AMP login must work.*
+- [ ] `sync-server` puts the jar set on the AMP instance; server starts; client connects. *Dry run over the tunnel works (11 jars would be copied); key restriction verified; AMP login works. Ready for a real Sync once Alex says go (the instance is stopped right now).*
 - [ ] Alex's Mac or one friend's gets in via `.mrpack`.
 
 ### Mod list changes (Alex, 2026-09-28)
@@ -140,7 +140,7 @@ Two players hit it. The Mojang lookup was verified working from the container (N
 - [x] Results page shows per-mod yes % and per-tier breakdown; closing freezes results (`resultJson`).
 - [ ] "Apply results" produces a diff of `mods.json` and commits it on confirm. *Built; commit path not yet exercised end to end (needs a closed vote with ballots).*
 
-Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. Player address for the manifest is `mc.dsw.test` (Pangolin publishes it to the AMP host on 25569/tcp and 24454/udp for voice; confirm whether players connect on the default 25565 or need `mc.dsw.test:25569` in the server list).
+Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. Player address is plain `mc.dsw.test`: Pangolin publishes it on the default 25565 and forwards to the AMP host's 25569 (voice chat 24454/udp the same way). No port in the server list.
 
 ## Phase 0 acceptance (docs/10) · current state
 
@@ -155,9 +155,9 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Alex's to-do (blocking; docs/13 §7 plus what this session couldn't do)
 
-0. **AMP `webapp` login is refused** (see the smoke test above): confirm the user is ADS-level with that password, then tell this session to re-run the test and set `AMP_MOCK=0`.
-0b. **Restrict the deploy key on the AMP host**: the `authorized_keys` line for `deploy@portal` must be `command="/usr/bin/rrsync /home/amp/.ampdata/instances/DeepslateWorks01/Minecraft",restrict,from="10.77.0.1" ssh-ed25519 …`. Health shows `rsync: unrestricted` until then; the real Sync button must not be used before this.
-1. **Host firewall, one line each in two chains** (the build session's permission system refused to edit `/usr/local/sbin/host-firewall.sh`; UDP 51820 is dropped until this is done): after the `udp --dport 443` line in `HOST-IN` add `iptables -A HOST-IN -p udp --dport 51820 -j RETURN`, after the `udp --dport 443` line in `HOST-FWD` add `iptables -A HOST-FWD -p udp --dport 51820 -j RETURN`, then `systemctl restart host-firewall.service`.
+0. ~~AMP login~~ Works through the instance proxy path. Still owed: the `SetConfig`-refused proof (above) and, in Phase 3, a `Core.Start` from the admin page.
+0b. ~~Deploy key restriction~~ **Verified 2026-09-28**: with the key pinned (`IdentitiesOnly=yes`, no agent, no other identity in the container) `rsync --list-only amp@10.77.0.2:` lists the instance's `Minecraft/` (server.properties, mods/, config/, world/ …), so rrsync roots the key correctly. The earlier "unrestricted" verdict came from `ssh … true` returning exit 0 with no rrsync message on that host, which turned out to be a poor test; the health probe now lists the remote root instead and reports `ok` / `wrong_root` / `no_key` / `down`. Real Sync is therefore allowed once Build has run. Fingerprint of our key: `SHA256:5g0kW7Zo+q0CBsMiD5/42qnkFIkJe2MVw8Nod3J/xtE`.
+1. ~~Host firewall UDP 51820~~ Done by Alex (in `host-firewall.sh`, survives restart).
 2. DNS: `map.deepslate.dsw.test → 198.51.100.20`.
 3. AMP: create instance `DeepslateWorks01`; create ADS user `webapp` with rights on that instance only; put `AMP_INSTANCE_ID` and `AMP_PASSWORD` in `deploy/.env`, set `AMP_MOCK=0`, `docker compose -f deploy/docker-compose.yml up -d api`.
 4. ~~Discord OAuth app~~ Done 2026-09-28. Server gate on, auto-join on: anyone in the Discord server can sign in without an invite link; invite links are now only for the person without Discord.

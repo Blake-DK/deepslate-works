@@ -9,7 +9,7 @@
   "minecraft": "1.21.1",
   "loader": "neoforge",
   "neoforge": "latest",               // "latest" = newest stable 21.1.x from the NeoForged maven; or pin "21.1.xxx"
-  "server_address": "play.deepslate.example.com",
+  "server_address": "mc.dsw.test",          // Pangolin publishes it on 25565 -> AMP host 25569; players use it with no port
   "profile": { "id": "deepslate-works", "dir": ".minecraft-deepslate-works", "icon": "Furnace" },
   "ram": { "min_gb": 3, "max_gb": 6 },
   "categories": ["base", "factories", "mining", "guns", "world", "server"],

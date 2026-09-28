@@ -5,7 +5,9 @@ const post = async (path, body) => {
   const text = await res.text(); let json = null; try { json = JSON.parse(text); } catch {}
   return { status: res.status, json, text: text.slice(0, 300) };
 };
-const login = await post("/API/Core/Login", { username: AMP_USERNAME, password: AMP_PASSWORD, token: "", rememberMe: false });
+const inst0 = (m, method, p = {}) => post(`/API/ADSModule/Servers/${AMP_INSTANCE_ID}/API/${m}/${method}`, p);
+// webapp is an instance-local user: Login goes through the proxy path as well.
+const login = await inst0("Core", "Login", { username: AMP_USERNAME, password: AMP_PASSWORD, token: "", rememberMe: false });
 console.log("1. Login:", login.status, "success=" + login.json?.success, "reason=" + (login.json?.resultReason ?? ""), "sessionID=" + (login.json?.sessionID ? "yes" : "no"));
 const sid = login.json?.sessionID;
 if (!sid) process.exit(1);

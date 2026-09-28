@@ -27,7 +27,7 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean } 
   } catch {
     return { ok: false, lines: ["dist/server/mods not found: run Build first"], restarted: false, dryRun };
   }
-  const ssh = `ssh -i ${env.DEPLOY_KEY_PATH} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10`;
+  const ssh = `ssh -i ${env.DEPLOY_KEY_PATH} -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10`;
   const target = env.RSYNC_TARGET.endsWith(":") ? env.RSYNC_TARGET : `${env.RSYNC_TARGET}:`;
   // 1. mods: replaced wholesale (--delete), dry run first to learn whether anything changes
   const dry = await run("rsync", ["-rlt", "--delete", "--itemize-changes", "--dry-run", "-e", ssh, `${DIST_SERVER}/mods/`, `${target}mods/`], 120_000);

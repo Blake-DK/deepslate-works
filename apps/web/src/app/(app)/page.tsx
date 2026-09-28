@@ -2,13 +2,15 @@ import Link from "next/link";
 import { requireOnboardedUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { env } from "@/env";
+import { getOpenVote } from "@/server/vote/votes";
+import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 
 export default async function HomePage() {
   const user = await requireOnboardedUser();
-  const members = await db.user.count();
+  const [members, openVote] = await Promise.all([db.user.count(), getOpenVote()]);
   return (
     <div className="space-y-6">
       <div>
@@ -22,13 +24,14 @@ export default async function HomePage() {
             <CardDescription>Live status, who&apos;s online and the map arrive in phase 3. Address: <span className="font-mono">{env.SERVER_ADDRESS}</span></CardDescription>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className={openVote ? "border-primary" : undefined}>
           <CardHeader>
-            <CardTitle>What&apos;s next</CardTitle>
-            <CardDescription>The mod catalogue and the season vote are coming next. You&apos;ll get a nudge in Discord.</CardDescription>
+            <CardTitle>{openVote ? `Vote open: ${openVote.title}` : "The mod list"}</CardTitle>
+            <CardDescription>{openVote ? `Tick the mods you want${openVote.closesAt ? ` before ${formatDate(openVote.closesAt)}` : ""}. Takes two minutes on a phone.` : "Read up on every mod, with videos and wiki links. The season vote will show up here when it opens."}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Link href="/mods" className={buttonClasses("secondary", "sm")}>Peek at the mod list</Link>
+          <CardContent className="flex gap-2">
+            {openVote && <Link href="/vote" className={buttonClasses("primary", "sm")}>Vote now</Link>}
+            <Link href="/mods" className={buttonClasses("secondary", "sm")}>Mod list</Link>
           </CardContent>
         </Card>
       </div>

@@ -3,6 +3,7 @@ import { requireAdmin } from "@/server/auth/session";
 
 const LINKS = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/votes", label: "Votes" },
   { href: "/admin/invites", label: "Invites" },
   { href: "/admin/users", label: "Users" },
 ];

@@ -1,6 +1,6 @@
 # 11 · Status and handover
 
-Last updated 2026-09-28 late (planner docs 12 and 13 applied and deployed, commit `42d1c93`; admin account created). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
+Last updated 2026-09-28 night (Phase 1 catalogue + vote built and deployed). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
 
 ## Where things are
 
@@ -75,6 +75,24 @@ Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth
 
 `DISCORD_GUILD_ID` set → the Discord provider requests `identify guilds`, and every Discord sign-in is refused with "You need to be in the group's Discord server" unless `users/@me/guilds` contains that id. `DISCORD_GUILD_AUTO_JOIN=1` makes membership count as the invite (no link needed for Discord users); default `0` keeps invite links required. Members who leave the server are refused on their next sign-in; existing sessions last until they expire (30 days) unless removed in `/admin/users`.
 
+## Phase 1 · what was built (2026-09-28)
+
+- `modpack/mods.json`: 35 entries (33 visible + 2 hidden libraries), every slug verified against the Modrinth API for a NeoForge 1.21.1 build, every wiki and video link verified (`pnpm modpack verify-links`: 163 links, 0 failed). Dropped from docs/06: FTB Essentials and FTB Ultimine (CurseForge only, not on Modrinth; the docs rule excludes them), Advanced Mining Dimension (no NeoForge 1.21.1 build), Create Ultimine (only an addon for FTB Ultimine). VeinMiner (`veinminer`) replaces the Ultimine pair. Votable mods start `enabled: false`; base and server-only mods are on. `server_address` is the placeholder `mc.dsw.test`.
+- `packages/modpack`: shared zod schema, `lint` (cross-field rules from docs/06), load estimate (docs/05 points), `verify-links` (Modrinth via API with backoff, YouTube via oEmbed where 401 = exists but not embeddable, wikis via HEAD/GET with a retry). `lock`/`build`/`sync-server` are Phase 2 stubs. Run with `pnpm modpack <cmd>` inside the node container (no Node on the host).
+- Web: `/mods` (sections, cards with load/Suggested/pick-one chips, Mod page + Wiki + video thumbnails, "Will my PC run it?" with the user's row highlighted), `/vote` (client ballot form: checkboxes, radios per exclusive group with click-to-clear, suggested pre-ticked, live load estimate with the LOW-tier Heavy warning, settings questions, saves via server action, editable until close, auto-closes at `closesAt`), `/vote/results` (admins while open, everyone once closed; per-mod yes/%/per-tier bars, weak-PC-majority flag on Heavy mods, question counts; Close button), `/vote/results/apply` (diff at a chosen threshold; exclusive groups keep the winner; confirm writes `mods.json` atomically and commits `chore(modpack): apply ...`), `/admin/votes` (create draft with default questions JSON, open/close/delete; one open vote at a time). Home shows the open-vote banner.
+- Tally and decision logic are pure and tested (`apps/web/tests/tally.test.ts`); manifest schema/lint tested in the package.
+- Deploy: `deepslate-web` now runs as uid 1009 (= `ladm`) and mounts the live repo's `modpack/` and `.git` at `/repo` so "Apply results" can write and commit; `MODPACK_DIR=/repo/modpack`. Nothing else from the repo is mounted.
+
+## Phase 1 acceptance (docs/10)
+
+- [x] Every mod card has a working Mod page, Wiki and at least one real video link (`verify-links` passes).
+- [ ] A player can submit a ballot on a phone in under two minutes and edit it later. *Built; a ballot was saved through the real server action in a smoke test (exclusive group and unknown answers filtered server-side). Needs a real phone click-through.*
+- [x] Exclusive group (guns) allows one choice; load estimate updates live and warns LOW-tier users about Heavy sets.
+- [x] Results page shows per-mod yes % and per-tier breakdown; closing freezes results (`resultJson`).
+- [ ] "Apply results" produces a diff of `mods.json` and commits it on confirm. *Built; commit path not yet exercised end to end (needs a closed vote with ballots).*
+
+A draft vote "Season 1 mods" with the default questions exists: open it from Admin → Votes when the group is ready.
+
 ## Phase 0 acceptance (docs/10) · current state
 
 - [x] `docker compose up -d` on the VPS serves the site over HTTPS.
@@ -99,12 +117,13 @@ Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth
 ## Session log
 
 - **2026-09-28** · Phase 0 built and deployed (commit `374ea10`), handover doc added (`94471be`), repo moved into `/home/ladm/Minecraft-site` with the brief files kept at the root (`19d7abb`). Bootstrap invite issued.
+- **2026-09-28 night** · Phase 1 built: `packages/modpack`, `modpack/mods.json` (verified), `/mods`, `/vote`, `/vote/results` (+apply), `/admin/votes`; web container now uid 1009 with `modpack/` + `.git` mounted for the apply-and-commit step.
 - **2026-09-28 late** · Planner docs 12 and 13 applied: doc edits (00/02/04/08/09/10, the working rules); `COOKIE_DOMAIN=.deepslate.dsw.test`; map host Caddy block; `wireguard` + `api` + two map relays in compose; VPS WireGuard keys and deploy key generated (public halves above); `api` skeleton with tests; web `api-client.ts`, health now reports the tunnel; Discord server gate. Firewall line left for Alex (permission refused). Tunnel `down` until the homelab enables its peer. Map-host 401→login redirect verified. Admin email account created via `scripts/admin.mjs`. Alex added the Discord app values and the server id (auto-join on) and restarted `web`; OAuth redirect verified.
 
 ## Suggested plan updates for the next session
 
 - When the tunnel is up: confirm AMP method names against `http://10.77.0.2:8080/API` through `api` (docs/08 "AMP methods used"), then set `AMP_MOCK=0`.
-- Tick the Phase 0 boxes above with Alex, tag `phase-0`, then start Phase 1 (`/mods`, `/vote`, `/vote/results`, `/admin/votes`, `packages/modpack` with `lint` and `verify-links`, `modpack/mods.json` populated with verified Modrinth slugs and real video links).
+- Tick the Phase 0 boxes with Alex, tag `phase-0`; tick Phase 1 (phone click-through, one real apply-and-commit), tag `phase-1`; then Phase 2 (`modpack lock|build|sync-server`, `/install`, `/admin/modpack`, `installer/`). Phase 2 needs `server_address` from Alex (what Pangolin publishes) and the AMP instance for `sync-server`.
 - docs/06 `sync-server` still describes a bind mount; rewrite it for rsync over the tunnel when Phase 2 starts (docs/13 §4 has the command).
 - Decide whether the repo gets a GitHub remote (CI file is ready) and whether the stack goes into Dockhand.
 - Phase 3 prep: the map host needs a DNS name under the chosen domain and `COOKIE_DOMAIN` set; the Caddy block needs `forward_auth deepslate-web:3000 { uri /api/auth/verify }` and a `reverse_proxy` to BlueMap on the AMP host over Tailscale.

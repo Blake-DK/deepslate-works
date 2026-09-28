@@ -40,6 +40,11 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
+    volumes:
+      # The manifest is edited by "apply results" and committed, so the live repo's modpack/ and .git are mounted.
+      # Nothing else from the repo (no .env, no keys) is visible to the internet-facing container.
+      - ../modpack:/repo/modpack
+      - ../.git:/repo/.git
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,12 +1,16 @@
 # Build context is the repo root (pnpm workspace).
 FROM node:22-alpine AS base
-RUN apk add --no-cache libc6-compat openssl && npm install -g pnpm@10
+# APP_UID must match the owner of the bind-mounted repo (ladm on vps-01v) so "apply results" can write and commit mods.json.
+ARG APP_UID=1009
+RUN apk add --no-cache libc6-compat openssl git && npm install -g pnpm@10 \
+ && deluser node && addgroup -g ${APP_UID} app && adduser -D -u ${APP_UID} -G app app
 WORKDIR /app
 
 FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web/package.json apps/web/
-RUN pnpm install --frozen-lockfile
+COPY packages/modpack/package.json packages/modpack/
+RUN pnpm install --frozen-lockfile --filter web --filter modpack
 
 FROM deps AS build
 COPY . .
@@ -14,9 +18,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter web build
 
 FROM base AS run
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
-COPY --from=build --chown=node:node /app /app
-USER node
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 MODPACK_DIR=/repo/modpack REPO_DIR=/repo
+COPY --from=build --chown=app:app /app /app
+USER app
 EXPOSE 3000
 # Migrations run on every start (idempotent), then the app.
 CMD ["sh", "-c", "pnpm --filter web exec prisma migrate deploy && pnpm --filter web start"]

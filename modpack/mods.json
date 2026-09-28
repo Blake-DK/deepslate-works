@@ -1,0 +1,1055 @@
+{
+  "name": "Deepslate Works",
+  "version": "0.1.0",
+  "minecraft": "1.21.1",
+  "loader": "neoforge",
+  "neoforge": "latest",
+  "server_address": "mc.dsw.test",
+  "profile": {
+    "id": "deepslate-works",
+    "dir": ".minecraft-deepslate-works",
+    "icon": "Furnace"
+  },
+  "ram": {
+    "min_gb": 3,
+    "max_gb": 6
+  },
+  "categories": [
+    {
+      "id": "base",
+      "title": "Base pack",
+      "blurb": "Not up for vote. These make the game run better and easier, and most of them are invisible in play.",
+      "votable": false
+    },
+    {
+      "id": "factories",
+      "title": "Factories & power",
+      "blurb": "The industrial core. Create is the mechanical one (cogs, belts, steam), the others add electricity, cables and big machines.",
+      "votable": true
+    },
+    {
+      "id": "mining",
+      "title": "Mining & drilling",
+      "blurb": "Ways to dig out ore without spending every evening with a pickaxe. Create, Mekanism and Immersive Engineering each bring their own drill or miner too.",
+      "votable": true
+    },
+    {
+      "id": "guns",
+      "title": "Guns & combat",
+      "blurb": "Two solid choices. Vote for the one you'd rather have, not both.",
+      "votable": true
+    },
+    {
+      "id": "world",
+      "title": "Quality of life & world",
+      "blurb": "Small additions that make a friends server nicer. All light.",
+      "votable": true
+    },
+    {
+      "id": "server",
+      "title": "On the server only",
+      "blurb": "Runs on the server, nothing to install on your PC.",
+      "votable": false
+    }
+  ],
+  "mods": [
+    {
+      "slug": "sodium",
+      "name": "Sodium",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Rendering engine replacement. The single biggest FPS boost you can get.",
+      "wiki": "https://github.com/CaffeineMC/sodium/wiki",
+      "videos": [
+        {
+          "title": "Best Sodium Settings for Minecraft (2026)",
+          "url": "https://www.youtube.com/watch?v=DJ8I3tXZo-E"
+        },
+        {
+          "title": "Every Minecraft FPS Boosting mod Explained in 2 Minutes",
+          "url": "https://www.youtube.com/watch?v=L2xo8EmzJuw"
+        },
+        {
+          "title": "How I Made Minecraft So Optimized It Feels Illegal",
+          "url": "https://www.youtube.com/watch?v=xSECqzGSesk"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "lithium",
+      "name": "Lithium",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Speeds up game logic (mobs, redstone, chunks) without changing how anything behaves.",
+      "wiki": "https://github.com/CaffeineMC/lithium/wiki",
+      "videos": [
+        {
+          "title": "Every Minecraft FPS Boosting mod Explained in 2 Minutes",
+          "url": "https://www.youtube.com/watch?v=L2xo8EmzJuw"
+        },
+        {
+          "title": "How To Install Lithium On A Minecraft Server",
+          "url": "https://www.youtube.com/watch?v=kFKrotl1z04"
+        },
+        {
+          "title": "10 Server-Side Fabric & NeoForge Minecraft Mods",
+          "url": "https://www.youtube.com/watch?v=eUifBaPDa0c"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "ferrite-core",
+      "name": "FerriteCore",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Cuts memory use, which matters most on 8 GB machines.",
+      "wiki": "https://github.com/malte0811/FerriteCore",
+      "videos": [
+        {
+          "title": "Every Minecraft FPS Boosting mod Explained in 3 Minutes [Part 2]",
+          "url": "https://www.youtube.com/watch?v=zFXw0vgNxRY"
+        },
+        {
+          "title": "Best FPS Mods For Forge, Fabric AND NeoForge",
+          "url": "https://www.youtube.com/watch?v=RLLPZWa-Tc0"
+        },
+        {
+          "title": "How To Download And Install FerriteCore For Minecraft Java",
+          "url": "https://www.youtube.com/watch?v=pb7ovXHHX8k"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "modernfix",
+      "name": "ModernFix",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Faster loading and fewer stutters in big modpacks.",
+      "wiki": "https://github.com/embeddedt/ModernFix/wiki",
+      "videos": [
+        {
+          "title": "Every Minecraft optimization mod explained",
+          "url": "https://www.youtube.com/watch?v=S9n3W0yQhC8"
+        },
+        {
+          "title": "Best FPS Mods For Forge, Fabric AND NeoForge",
+          "url": "https://www.youtube.com/watch?v=RLLPZWa-Tc0"
+        },
+        {
+          "title": "How Every Minecraft FPS Boosting Mod Works",
+          "url": "https://www.youtube.com/watch?v=CX8r7nqNLQ0"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "entityculling",
+      "name": "Entity Culling",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Skips drawing mobs and players you can't see. Free frames.",
+      "wiki": "https://github.com/tr7zw/EntityCulling",
+      "videos": [
+        {
+          "title": "Every Minecraft FPS Boosting mod Explained in 2 Minutes",
+          "url": "https://www.youtube.com/watch?v=L2xo8EmzJuw"
+        },
+        {
+          "title": "I Tested 100 Minecraft Performance Mods, So Here's the Top 5",
+          "url": "https://www.youtube.com/watch?v=JKzjaRlXCZY"
+        },
+        {
+          "title": "How To Download And Install Entity Culling For Minecraft Java",
+          "url": "https://www.youtube.com/watch?v=anQSFxIT_5s"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "immediatelyfast",
+      "name": "ImmediatelyFast",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Speeds up drawing text, item icons and menus.",
+      "wiki": "https://github.com/RaphiMC/ImmediatelyFast",
+      "videos": [
+        {
+          "title": "Every Minecraft optimization mod explained",
+          "url": "https://www.youtube.com/watch?v=S9n3W0yQhC8"
+        },
+        {
+          "title": "Every Minecraft FPS Boosting mod Explained in 3 Minutes [Part 2]",
+          "url": "https://www.youtube.com/watch?v=zFXw0vgNxRY"
+        },
+        {
+          "title": "How To Download And Install ImmediatelyFast For Minecraft Java",
+          "url": "https://www.youtube.com/watch?v=KdO__efhGFM"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "dynamic-fps",
+      "name": "Dynamic FPS",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Drops the frame rate when the game is in the background so your PC stays cool.",
+      "wiki": "https://github.com/juliand665/Dynamic-FPS",
+      "videos": [
+        {
+          "title": "Every Minecraft FPS Mod Explained FAST",
+          "url": "https://www.youtube.com/watch?v=JY0lATek2IM"
+        },
+        {
+          "title": "How To Download And Install Dynamic FPS For Minecraft Java",
+          "url": "https://www.youtube.com/watch?v=udW_GBaRS3w"
+        },
+        {
+          "title": "How Every Minecraft FPS Boosting Mod Works",
+          "url": "https://www.youtube.com/watch?v=CX8r7nqNLQ0"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "jei",
+      "name": "Just Enough Items",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Press R on any item to see how it's made. Essential with tech mods.",
+      "wiki": "https://github.com/mezz/JustEnoughItems/wiki",
+      "videos": [
+        {
+          "title": "Just Enough Items JEI Complete Tutorial",
+          "url": "https://www.youtube.com/watch?v=3jGJFdickUU"
+        },
+        {
+          "title": "Mod Showcase: Just Enough Items (JEI)",
+          "url": "https://www.youtube.com/watch?v=oMzi-OGBy48"
+        },
+        {
+          "title": "Master Just Enough Items (JEI) in Seconds",
+          "url": "https://www.youtube.com/watch?v=tUTwa6LVS30"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "jade",
+      "name": "Jade",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Look at any block or mob and a little box tells you what it is.",
+      "wiki": "https://github.com/Snownee/Jade/wiki",
+      "videos": [
+        {
+          "title": "Minecraft Jade Mod Basics in 1 Minute",
+          "url": "https://www.youtube.com/watch?v=V_Jb5x0DG1E"
+        },
+        {
+          "title": "JADE MOD (HUD Mod) | Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=gWUIL8kJS1Y"
+        },
+        {
+          "title": "Jade Mod Minecraft Modded Showcase",
+          "url": "https://www.youtube.com/watch?v=HHzkAf17ses"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "xaeros-minimap",
+      "name": "Xaero's Minimap",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "A minimap in the corner with waypoints for your base and friends.",
+      "wiki": "https://chocolateminecraft.com/minimap2.php",
+      "videos": [
+        {
+          "title": "How To Get Xaero's Minimap - Minecraft Minimap Mod",
+          "url": "https://www.youtube.com/watch?v=o77BtL465Ug"
+        },
+        {
+          "title": "The Best Waypoints and Maps Mod For Minecraft - Xaero's Minimap and World Map",
+          "url": "https://www.youtube.com/watch?v=YhGCO5jL8Sw"
+        },
+        {
+          "title": "Xaero's Minimap & World Map: the best settings",
+          "url": "https://www.youtube.com/watch?v=_Saw8BCFDog"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "xaeros-world-map",
+      "name": "Xaero's World Map",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Press M for a full map of everywhere you've been.",
+      "wiki": "https://chocolateminecraft.com/worldmap.php",
+      "videos": [
+        {
+          "title": "Xaero's World Map | Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=7jsS7eMxd28"
+        },
+        {
+          "title": "The Best Waypoints and Maps Mod For Minecraft - Xaero's Minimap and World Map",
+          "url": "https://www.youtube.com/watch?v=YhGCO5jL8Sw"
+        },
+        {
+          "title": "How to Open the Full Map in Xaero's Minimap / World Map",
+          "url": "https://www.youtube.com/watch?v=jEqpdpEelPo"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "appleskin",
+      "name": "AppleSkin",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Shows how much hunger and saturation each food gives you.",
+      "wiki": "https://github.com/squeek502/AppleSkin",
+      "videos": [
+        {
+          "title": "Minecraft Mod Review | AppleSkin",
+          "url": "https://www.youtube.com/watch?v=jGqGH-R5t-M"
+        },
+        {
+          "title": "AppleSkin Mod - Restore Your Hunger Fast in Minecraft",
+          "url": "https://www.youtube.com/watch?v=__7s7arJrLw"
+        },
+        {
+          "title": "AppleSkin: Food Related Features | Mod Tutorial",
+          "url": "https://www.youtube.com/watch?v=k9_FeNzTONY"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "mouse-tweaks",
+      "name": "Mouse Tweaks",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Drag across inventory slots to move stacks. Saves a thousand clicks.",
+      "wiki": "https://github.com/YaLTeR/MouseTweaks",
+      "videos": [
+        {
+          "title": "Mouse Tweaks Mod | Collect without Clicking | Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=81OeyPUuC-I"
+        },
+        {
+          "title": "Mouse Tweaks - Mod Spotlight",
+          "url": "https://www.youtube.com/watch?v=TYs6w8yZHbc"
+        },
+        {
+          "title": "Minecraft Mouse Tweaks Mod - Mod Spotlight (1.21.3)",
+          "url": "https://www.youtube.com/watch?v=RgmVCpPVIOI"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "corpse",
+      "name": "Corpse",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "When you die your stuff waits in a corpse instead of vanishing into lava.",
+      "wiki": "https://github.com/henkelmax/corpse",
+      "videos": [
+        {
+          "title": "Corpse Mod | Collect Your Gear After Dying | Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=UznyJv7eL24"
+        },
+        {
+          "title": "CORPSE MOD (Corpses Keep Inventory) | Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=mJwqbN0aZvk"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "simple-voice-chat",
+      "name": "Simple Voice Chat",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Talk in game. Push to talk on V by default; people near you hear you.",
+      "wiki": "https://modrepo.de/minecraft/voicechat/wiki",
+      "videos": [
+        {
+          "title": "How to Use Simple Voice Chat Minecraft",
+          "url": "https://www.youtube.com/watch?v=KYk8r5T8Arg"
+        },
+        {
+          "title": "How To Install Simple Voice Chat In Minecraft - Step By Step",
+          "url": "https://www.youtube.com/watch?v=HuaWNDRaGPM"
+        },
+        {
+          "title": "Add Proximity Chat to Minecraft Using Simple Voice Chat",
+          "url": "https://www.youtube.com/watch?v=eJmvbMDr64E"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "create",
+      "name": "Create",
+      "category": "factories",
+      "side": "both",
+      "enabled": false,
+      "load": "M",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Cogs, belts, steam engines, trains, mechanical drills and presses. The heart of the pack.",
+      "wiki": "https://wiki.createmod.net/",
+      "videos": [
+        {
+          "title": "MINECRAFT CREATE MOD, FOR DUMMIES | lesson 1",
+          "url": "https://www.youtube.com/watch?v=aYCi6Cn6qp0"
+        },
+        {
+          "title": "3 Early Game Create Mod Farms You NEED in your World",
+          "url": "https://www.youtube.com/watch?v=go4i1OoJIvw"
+        },
+        {
+          "title": "Why Create is the Best Minecraft Mod Ever Made",
+          "url": "https://www.youtube.com/watch?v=RpYESCJW9uQ"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "createaddition",
+      "name": "Create: Crafts & Additions",
+      "category": "factories",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Adds electricity to Create: motors, generators, wires and a few gadgets.",
+      "note": "Needs Create",
+      "wiki": "https://github.com/mrh0/createaddition/wiki",
+      "videos": [
+        {
+          "title": "Create Crafts & Additions Guide: Electric Motor and all mechanics",
+          "url": "https://www.youtube.com/watch?v=Ql62srAndHc"
+        },
+        {
+          "title": "This mod makes Create Better with Electricity and More",
+          "url": "https://www.youtube.com/watch?v=9j3ZtHa5pE8"
+        },
+        {
+          "title": "Which Electricity Addon for Create is Right For You?",
+          "url": "https://www.youtube.com/watch?v=AZPL85Olrww"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "create"
+      ]
+    },
+    {
+      "slug": "create-big-cannons",
+      "name": "Create Big Cannons",
+      "category": "factories",
+      "side": "both",
+      "enabled": false,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Cast and fire big cannons built from Create parts. Loud, slow and glorious.",
+      "note": "Needs Create",
+      "wiki": "https://github.com/rbasamoyai/CreateBigCannons/wiki",
+      "videos": [
+        {
+          "title": "Create: Big Cannons For Dummies",
+          "url": "https://www.youtube.com/watch?v=0klw2HtICcU"
+        },
+        {
+          "title": "Full Cannon Crafting Tutorial For Create: Big Cannons",
+          "url": "https://www.youtube.com/watch?v=GZbANCqXY0s"
+        },
+        {
+          "title": "Create Mod Artillery Is REALISTIC Now",
+          "url": "https://www.youtube.com/watch?v=m4rUwcbO6zQ"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "create",
+        "rpl"
+      ]
+    },
+    {
+      "slug": "immersiveengineering",
+      "name": "Immersive Engineering",
+      "category": "factories",
+      "side": "both",
+      "enabled": false,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Realistic-looking industry: wires on pylons, big multiblock machines, excavators.",
+      "wiki": "https://ftbwiki.org/Immersive_Engineering",
+      "videos": [
+        {
+          "title": "IMMERSIVE ENGINEERING MOD \u2013 Part 1: Getting Started (1.21+)",
+          "url": "https://www.youtube.com/watch?v=8mRaO_q1GSE"
+        },
+        {
+          "title": "Basics | Immersive Engineering 1.21.1 #1",
+          "url": "https://www.youtube.com/watch?v=1k2hgI9HdSw"
+        },
+        {
+          "title": "Complete Beginners Guide to Immersive Engineering",
+          "url": "https://www.youtube.com/watch?v=BFJF9U7nHmE"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "mekanism",
+      "name": "Mekanism",
+      "category": "factories",
+      "side": "both",
+      "enabled": false,
+      "load": "H",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Electric tech from ore-doubling to fusion reactors and jetpacks. Deep, and heavy on weaker PCs.",
+      "wiki": "https://wiki.aidancbrady.com/wiki/Mekanism",
+      "videos": [
+        {
+          "title": "Mekanism Guide For Beginners | Minecraft 1.21",
+          "url": "https://www.youtube.com/watch?v=O2AuwNO_stQ"
+        },
+        {
+          "title": "Mekanism - Digital Miner Full Tutorial",
+          "url": "https://www.youtube.com/watch?v=FNnUq3qVjzA"
+        },
+        {
+          "title": "Mekanism Complete Beginner's Guide",
+          "url": "https://www.youtube.com/watch?v=sw2OxxtRft0"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "mekanism-generators",
+      "name": "Mekanism Generators",
+      "category": "factories",
+      "side": "both",
+      "enabled": false,
+      "load": "H",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Power for Mekanism: solar, wind, heat, gas and reactors.",
+      "note": "Only with Mekanism",
+      "wiki": "https://wiki.aidancbrady.com/wiki/Mekanism:_Generators",
+      "videos": [
+        {
+          "title": "Mekanism Generators Mod - Full Tutorial",
+          "url": "https://www.youtube.com/watch?v=_4pN1vFb1EI"
+        },
+        {
+          "title": "Mekanism: Generators - Heat Generator Setups",
+          "url": "https://www.youtube.com/watch?v=Xof7Z-UAwHQ"
+        },
+        {
+          "title": "Mekanism Ethylene Generator Setup Tutorial",
+          "url": "https://www.youtube.com/watch?v=-SZ3FjQ1WVY"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "mekanism"
+      ]
+    },
+    {
+      "slug": "mekanism-tools",
+      "name": "Mekanism Tools",
+      "category": "factories",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Tools and armour made from Mekanism's metals.",
+      "note": "Only with Mekanism",
+      "wiki": "https://wiki.aidancbrady.com/wiki/Mekanism:_Tools",
+      "videos": [
+        {
+          "title": "Learn Mekanism: Tools, Gear and Utility Systems",
+          "url": "https://www.youtube.com/watch?v=6Fge1S7fmh0"
+        },
+        {
+          "title": "MekaSuit and Mekanism: Tools - Mod Spotlight",
+          "url": "https://www.youtube.com/watch?v=iL4_OP5Bm-Y"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "mekanism"
+      ]
+    },
+    {
+      "slug": "industrial-foregoing",
+      "name": "Industrial Foregoing",
+      "category": "factories",
+      "side": "both",
+      "enabled": false,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Machines that farm, breed, mine and sort for you. Very automation-friendly.",
+      "wiki": "https://github.com/InnovativeOnlineIndustries/Industrial-Foregoing/wiki",
+      "videos": [
+        {
+          "title": "Industrial Foregoing Complete Beginners Guide (1.21.1)",
+          "url": "https://www.youtube.com/watch?v=nEPMI_eI3TM"
+        },
+        {
+          "title": "Industrial Foregoing Ore Laser Guide | 1.21.1",
+          "url": "https://www.youtube.com/watch?v=VHwioOxxEBU"
+        },
+        {
+          "title": "Mob Farms Guide - Industrial Foregoing 1.21.1",
+          "url": "https://www.youtube.com/watch?v=2QjWp1vzTT8"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "ae2",
+      "name": "Applied Energistics 2",
+      "category": "factories",
+      "side": "both",
+      "enabled": false,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Digital storage: put everything in one network and search it like a database. Autocrafting later.",
+      "wiki": "https://guide.appliedenergistics.org/",
+      "videos": [
+        {
+          "title": "Applied Energistics 2 - Part 1 - Basic System Setup (1.21.1)",
+          "url": "https://www.youtube.com/watch?v=3e50bnDY_aE"
+        },
+        {
+          "title": "Teaching 95% of AE2 in under 15 minutes",
+          "url": "https://www.youtube.com/watch?v=J8zRYlmlDII"
+        },
+        {
+          "title": "Applied Energistics 2 (1.21) Autocrafting - Basic Setup",
+          "url": "https://www.youtube.com/watch?v=Ngf06CAj4lw"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "veinminer",
+      "name": "VeinMiner",
+      "category": "mining",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Sneak and mine one ore, the whole vein comes out. Works on trees too.",
+      "wiki": "https://modrinth.com/mod/veinminer",
+      "videos": [
+        {
+          "title": "Instantly Mine Ore Veins & Trees In Minecraft Using VeinMiner",
+          "url": "https://www.youtube.com/watch?v=huM3sqK3IfA"
+        },
+        {
+          "title": "This Mod Fixes Minecraft Mining | All-in-One VeinMiner & TreeFeller",
+          "url": "https://www.youtube.com/watch?v=QBFhCoySa1U"
+        },
+        {
+          "title": "How to Download VeinMiner for Minecraft 1.21",
+          "url": "https://www.youtube.com/watch?v=yB9S8XDwBV0"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "sophisticated-backpacks",
+      "name": "Sophisticated Backpacks",
+      "category": "mining",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Backpacks with upgrades: auto-pickup, sorting, a crafting table inside.",
+      "wiki": "https://github.com/P3pp3rF1y/SophisticatedBackpacks/wiki",
+      "videos": [
+        {
+          "title": "Sophisticated Backpacks - Part 1 - Backpack Basics (1.21.1)",
+          "url": "https://www.youtube.com/watch?v=7YbTU60H8rM"
+        },
+        {
+          "title": "THE BEST BACKPACK MOD! - Sophisticated Backpacks",
+          "url": "https://www.youtube.com/watch?v=6WWkpfB-cys"
+        },
+        {
+          "title": "How To Get Sophisticated Backpacks in Minecraft 1.21.1",
+          "url": "https://www.youtube.com/watch?v=tGMjqovqMxg"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "sophisticated-core"
+      ]
+    },
+    {
+      "slug": "tacz-1.21.1",
+      "name": "TaCZ (Timeless and Classics Zero)",
+      "category": "guns",
+      "side": "both",
+      "enabled": false,
+      "load": "M",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": "guns",
+      "description": "Modern guns with proper animations, attachments and gun packs. Community NeoForge port.",
+      "note": "Pick this or Vic's, not both",
+      "wiki": "https://modrinth.com/mod/tacz-1.21.1",
+      "videos": [
+        {
+          "title": "TACZ 1.21.1 NeoForge",
+          "url": "https://www.youtube.com/watch?v=FWlE6-n5Vc4"
+        },
+        {
+          "title": "TIMELESS AND CLASSICS ZERO (TaCZ) MOD | Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=HjzKOp2zEao"
+        },
+        {
+          "title": "The BEST gun mod for Minecraft got BETTER | TaCZ Showcase",
+          "url": "https://www.youtube.com/watch?v=9xVwyA19bgc"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "vics-point-blank",
+      "name": "Vic's Point Blank",
+      "category": "guns",
+      "side": "both",
+      "enabled": false,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": "guns",
+      "description": "Slick modern guns with a strong default set. Simpler than TaCZ.",
+      "note": "Pick this or TaCZ, not both",
+      "wiki": "https://modrinth.com/mod/vics-point-blank",
+      "videos": [
+        {
+          "title": "Vic's Point Blank & TaCZ: fast showcase",
+          "url": "https://www.youtube.com/watch?v=TambWvwOI1A"
+        },
+        {
+          "title": "The Ultimate Minecraft Gun Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=Mx7bwXYFsD0"
+        },
+        {
+          "title": "ALL Vic's Point Blank Guns vs Every Strongest Boss Mob",
+          "url": "https://www.youtube.com/watch?v=nuDzJg1C3pI"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "waystones",
+      "name": "Waystones",
+      "category": "world",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Stone markers you can teleport between. Fast travel without commands.",
+      "wiki": "https://mods.twelveiterations.com/minecraft/waystones",
+      "videos": [
+        {
+          "title": "Waystones mod - Fast tutorial guide",
+          "url": "https://www.youtube.com/watch?v=3QyMGvhHPFI"
+        },
+        {
+          "title": "The Ultimate Minecraft Travel Mod \u2013 Waystones Showcase",
+          "url": "https://www.youtube.com/watch?v=7pnl0apon74"
+        },
+        {
+          "title": "Waystones - Minecraft Mod Review (1.21.1)",
+          "url": "https://www.youtube.com/watch?v=b2WYiZEKQBk"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "farmers-delight",
+      "name": "Farmer's Delight",
+      "category": "world",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Cooking, crops and proper meals. Cosy, and food actually matters.",
+      "wiki": "https://github.com/vectorwing/FarmersDelight/wiki",
+      "videos": [
+        {
+          "title": "Farmer's Delight [FULL TUTORIAL] (1.21.1)",
+          "url": "https://www.youtube.com/watch?v=QdK25AtMeGI"
+        },
+        {
+          "title": "Farmers Delight EXPLAINED In 60 Seconds",
+          "url": "https://www.youtube.com/watch?v=04SrETxN4jc"
+        },
+        {
+          "title": "Farmer's Delight (1.21.1) | Full Showcase",
+          "url": "https://www.youtube.com/watch?v=BY-c9gAiqMM"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "chunky",
+      "name": "Chunky",
+      "category": "server",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Pre-generates the world so nobody lags when exploring.",
+      "wiki": "https://github.com/pop4959/Chunky/wiki",
+      "videos": [
+        {
+          "title": "How to Pre-Generate Minecraft Worlds Using Chunky",
+          "url": "https://www.youtube.com/watch?v=anNbAvQ21Z4"
+        },
+        {
+          "title": "How to Install and Use Chunky",
+          "url": "https://www.youtube.com/watch?v=iiCxB_kiyaY"
+        },
+        {
+          "title": "How To Pre-Generate Minecraft Worlds with Chunky",
+          "url": "https://www.youtube.com/watch?v=KV-KzXIwIH4"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "spark",
+      "name": "spark",
+      "category": "server",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Performance profiler so Alex can see what's lagging.",
+      "wiki": "https://spark.lucko.me/docs",
+      "videos": [
+        {
+          "title": "How To Use Spark on Your Minecraft Server",
+          "url": "https://www.youtube.com/watch?v=-PAavGKyFGo"
+        },
+        {
+          "title": "How to Install and Use Spark on your Minecraft Server",
+          "url": "https://www.youtube.com/watch?v=ZqO003y50-U"
+        },
+        {
+          "title": "How to analyse a Spark report",
+          "url": "https://www.youtube.com/watch?v=1pSQ21kNREk"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "bluemap",
+      "name": "BlueMap",
+      "category": "server",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "The live 3D web map you'll see on this site.",
+      "wiki": "https://bluemap.bluecolored.de/wiki/",
+      "videos": [
+        {
+          "title": "How to Set Up BlueMap on your Minecraft Server",
+          "url": "https://www.youtube.com/watch?v=vZfWw-w4oFI"
+        },
+        {
+          "title": "The Best Minecraft Map Plugin? BlueMap Setup & Showcase",
+          "url": "https://www.youtube.com/watch?v=pdaUjBOOrhw"
+        },
+        {
+          "title": "BEST BlueMap Tutorial",
+          "url": "https://www.youtube.com/watch?v=_vAucQ56H1g"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "rpl",
+      "name": "Ritchie's Projectile Library",
+      "category": "base",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Create Big Cannons.",
+      "wiki": "https://modrinth.com/mod/rpl",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "sophisticated-core",
+      "name": "Sophisticated Core",
+      "category": "base",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Sophisticated Backpacks.",
+      "wiki": "https://modrinth.com/mod/sophisticated-core",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    }
+  ]
+}

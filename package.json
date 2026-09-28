@@ -12,7 +12,8 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "invite": "pnpm --filter web invite"
+    "invite": "pnpm --filter web invite",
+    "modpack": "MODPACK_DIR=$PWD/modpack pnpm --filter modpack cli"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -18,7 +18,7 @@ export default async function AdminHome() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card><CardHeader><CardTitle>{users}</CardTitle><CardDescription><Link href="/admin/users" className="underline">members</Link></CardDescription></CardHeader></Card>
         <Card><CardHeader><CardTitle>{openInvites}</CardTitle><CardDescription><Link href="/admin/invites" className="underline">open invites</Link></CardDescription></CardHeader></Card>
-        <Card><CardHeader><CardTitle>Phase 0</CardTitle><CardDescription>Votes, modpack, server and actions arrive in later phases.</CardDescription></CardHeader></Card>
+        <Card><CardHeader><CardTitle>Phase 1</CardTitle><CardDescription><Link href="/admin/votes" className="underline">Votes</Link> are live. Modpack build, server control and player actions arrive in later phases.</CardDescription></CardHeader></Card>
       </div>
       <Card>
         <CardHeader><CardTitle>Recent activity</CardTitle><CardDescription>Last 10 audit entries.</CardDescription></CardHeader>

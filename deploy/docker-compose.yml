@@ -45,6 +45,8 @@ services:
       # Nothing else from the repo (no .env, no keys) is visible to the internet-facing container.
       - ../modpack:/repo/modpack
       - ../.git:/repo/.git
+      - ../dist:/repo/dist            # built packs, served under /downloads
+      - ../installer:/repo/installer:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -92,6 +94,7 @@ services:
     env_file: .env
     volumes:
       - ./keys/deploy.key:/run/keys/deploy.key:ro
+      - ../dist:/repo/dist:ro          # sync-server rsyncs dist/server/ to the AMP host
     depends_on:
       wireguard:
         condition: service_started

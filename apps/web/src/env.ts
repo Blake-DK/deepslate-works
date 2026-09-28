@@ -13,6 +13,7 @@ export const env = {
   DISCORD_GUILD_AUTO_JOIN: str("DISCORD_GUILD_AUTO_JOIN", "0") === "1",
   API_URL: str("API_URL"),
   API_SERVICE_TOKEN: str("API_SERVICE_TOKEN"),
+  MANIFEST_KEY: str("MANIFEST_KEY"),
   MAP_URL: str("MAP_URL"),
   SERVER_ADDRESS: str("SERVER_ADDRESS", "play.example.com"),
   isProd: process.env.NODE_ENV === "production",

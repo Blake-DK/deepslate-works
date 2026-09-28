@@ -14,7 +14,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "zod": "^3"
+    "zod": "^3",
+    "archiver": "^7"
   },
   "devDependencies": {
     "@types/node": "^22",
@@ -22,6 +23,7 @@
     "tsx": "^4",
     "typescript": "^5",
     "typescript-eslint": "^8",
-    "vitest": "^3"
+    "vitest": "^3",
+    "@types/archiver": "^6"
   }
 }

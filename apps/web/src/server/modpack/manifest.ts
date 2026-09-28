@@ -62,10 +62,12 @@ function git(args: string[]): Promise<{ ok: boolean; output: string }> {
   });
 }
 
-/** Commits modpack/mods.json so the manifest history lives in git. Failure is reported, not thrown: the file is already written. */
-export async function commitManifest(message: string, author: { name: string; email?: string }): Promise<{ ok: boolean; output: string }> {
-  const add = await git(["add", "--", "modpack/mods.json"]);
+/** Commits manifest files so their history lives in git. Failure is reported, not thrown: the files are already written. */
+export async function commitManifest(message: string, author: { name: string; email?: string }, files: string[] = ["modpack/mods.json"]): Promise<{ ok: boolean; output: string }> {
+  const add = await git(["add", "--", ...files]);
   if (!add.ok) return add;
   const email = author.email ?? "portal@deepslate.invalid";
-  return git(["-c", `user.name=${author.name}`, "-c", `user.email=${email}`, "commit", "-q", "-m", message, "--", "modpack/mods.json"]);
+  const res = await git(["-c", `user.name=${author.name}`, "-c", `user.email=${email}`, "commit", "-q", "-m", message, "--", ...files]);
+  if (!res.ok && /nothing to commit|no changes added/i.test(res.output)) return { ok: true, output: "nothing to commit" };
+  return res;
 }

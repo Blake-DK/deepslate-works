@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Set up" };
 const ERRORS: Record<string, string> = {
   username: "Minecraft usernames are 3 to 16 letters, numbers or underscores.",
   invalid: "Minecraft usernames are 3 to 16 letters, numbers or underscores.",
-  not_found: "No Minecraft (Java Edition) account has that name. Check the spelling in your launcher.",
+  not_found: "Mojang has no Java Edition account with that name. It's the name shown in the top right of the Minecraft Launcher (not your Discord name, and not an Xbox or Bedrock gamertag). Check the spelling and try again.",
   unavailable: "Couldn't reach Mojang to check the name. Try again in a minute.",
   taken: "Someone in the group has already claimed that Minecraft account.",
   tier: "Pick the option closest to your PC.",
@@ -35,7 +35,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
         <Card>
           <CardHeader>
             <CardTitle>1. Your Minecraft name</CardTitle>
-            <CardDescription>The name shown in the top right of the Minecraft Launcher. Java Edition only.</CardDescription>
+            <CardDescription>The name shown in the top right of the Minecraft Launcher, exactly as spelt there. Java Edition only: not your Discord name, not an Xbox or Bedrock gamertag. We check it with Mojang.</CardDescription>
           </CardHeader>
           <CardContent>
             <Label htmlFor="mcUsername">Minecraft username</Label>

@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import type { Amp } from "./amp/client.js";
 import type { Env } from "./env.js";
 
-export type Health = { ok: boolean; tunnel: "ok" | "down"; amp: "ok" | "mock" | "unconfigured" | "unreachable" | "auth_failed"; rsync: "ok" | "no_key" | "refused" | "down" };
+export type Health = { ok: boolean; tunnel: "ok" | "down"; amp: "ok" | "mock" | "unconfigured" | "unreachable" | "auth_failed"; rsync: "ok" | "unrestricted" | "no_key" | "down" };
 
 /** TCP connect to sshd on the AMP host: up means the tunnel carries traffic. */
 export function tcpReachable(host: string, port: number, timeoutMs = 2000): Promise<boolean> {
@@ -16,17 +16,18 @@ export function tcpReachable(host: string, port: number, timeoutMs = 2000): Prom
   });
 }
 
-/** The deploy key may only run rrsync, so a bare `true` must be refused by the server, not by the network. */
+/** The deploy key should only be allowed to run rrsync: a bare `true` must be *refused by rrsync* (ok). Exit 0 means the key has a full shell (unrestricted). */
 function rsyncCheck(env: Env): Promise<Health["rsync"]> {
   return new Promise((resolve) => {
     const [user, host] = env.RSYNC_TARGET.replace(/:.*$/, "").split("@");
     execFile("ssh", ["-i", env.DEPLOY_KEY_PATH, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=3", `${user}@${host}`, "true"],
       { timeout: 8000 }, (err, _out, stderr) => {
-        if (!err) return resolve("ok");
+        if (!err) return resolve("unrestricted"); // a bare command ran: the key has a full shell
         const code = (err as { code?: number | string }).code;
-        if (/no such file|not accessible/i.test(String(stderr))) return resolve("no_key");
+        const text = String(stderr);
+        if (/no such file|not accessible|Load key/i.test(text)) return resolve("no_key");
         if (code === 255 || code === "ENOENT") return resolve("down");
-        return resolve(/rrsync|restricted/i.test(String(stderr)) || typeof code === "number" ? "refused" : "down");
+        return resolve("ok"); // refused by the rrsync forced command: exactly what we want
       });
   });
 }
@@ -44,7 +45,7 @@ export async function health(env: Env, amp: Amp): Promise<Health> {
     try { await amp.ping(); ampState = "ok"; } catch (e) { ampState = /login failed/i.test(String(e)) ? "auth_failed" : "unreachable"; }
   }
   const rsync = tunnelUp ? await rsyncCheck(env) : "down";
-  const value: Health = { ok: tunnelUp && (ampState === "ok" || ampState === "mock"), tunnel: tunnelUp ? "ok" : "down", amp: ampState, rsync };
+  const value: Health = { ok: tunnelUp && (ampState === "ok" || ampState === "mock") && (rsync === "ok" || rsync === "unrestricted"), tunnel: tunnelUp ? "ok" : "down", amp: ampState, rsync };
   cache = { at: Date.now(), value };
   return value;
 }

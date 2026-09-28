@@ -17,9 +17,16 @@ export async function completeOnboarding(formData: FormData) {
   if (!parsed.success) redirect(`/onboarding?error=${parsed.error.issues[0]?.message ?? "form"}`);
   const { mcUsername, pcTier } = parsed.data;
   const lookup = await lookupMinecraftUser(mcUsername);
-  if (!lookup.ok) redirect(`/onboarding?error=${lookup.reason}`);
+  if (!lookup.ok) {
+    // Audited so Alex can see what people actually typed when "no such account" comes up in Discord.
+    await db.auditLog.create({ data: { userId: user.id, action: "profile.onboard", params: { mcUsername, pcTier }, result: "DENIED", detail: `mojang: ${lookup.reason}` } });
+    redirect(`/onboarding?error=${lookup.reason}`);
+  }
   const taken = await db.user.findFirst({ where: { mcUuid: lookup.uuid, NOT: { id: user.id } }, select: { id: true } });
-  if (taken) redirect("/onboarding?error=taken");
+  if (taken) {
+    await db.auditLog.create({ data: { userId: user.id, action: "profile.onboard", params: { mcUsername: lookup.name }, result: "DENIED", detail: "already claimed by another member" } });
+    redirect("/onboarding?error=taken");
+  }
   await db.user.update({ where: { id: user.id }, data: { mcUsername: lookup.name, mcUuid: lookup.uuid, pcTier } });
   await db.auditLog.create({ data: { userId: user.id, action: "profile.onboard", params: { mcUsername: lookup.name, pcTier }, result: "OK" } });
   redirect("/");

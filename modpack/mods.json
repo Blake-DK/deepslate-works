@@ -815,6 +815,37 @@
       ]
     },
     {
+      "slug": "additional-enchanted-miner",
+      "name": "Quarry (Additional Enchanted Miner)",
+      "category": "mining",
+      "side": "both",
+      "enabled": false,
+      "load": "M",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Mark out an area and a framed quarry mines everything inside it down to bedrock, into a chest or pipe. Needs power.",
+      "wiki": "https://github.com/Kotori316/QuarryPlus/wiki",
+      "videos": [
+        {
+          "title": "Minecraft Quarry Plus - Full Beginners Guide (For Forge)",
+          "url": "https://www.youtube.com/watch?v=-zGE3Yt4jUI"
+        },
+        {
+          "title": "How To Build an AUTOMATIC Mining System In Minecraft (Quarry Mod Guide)",
+          "url": "https://www.youtube.com/watch?v=B6eEdf9dIAw"
+        },
+        {
+          "title": "Minecraft Quarry Plus - Complete Guide Forge",
+          "url": "https://www.youtube.com/watch?v=WLfT1gvlGoo"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "scalable-cats-force"
+      ]
+    },
+    {
       "slug": "tacz-1.21.1",
       "name": "TaCZ (Timeless and Classics Zero)",
       "category": "guns",
@@ -927,6 +958,35 @@
         {
           "title": "Farmer's Delight (1.21.1) | Full Showcase",
           "url": "https://www.youtube.com/watch?v=BY-c9gAiqMM"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "pipez",
+      "name": "Pipez",
+      "category": "world",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Simple pipes for items, fluids and power. One block each, no fuss.",
+      "wiki": "https://github.com/henkelmax/pipez/wiki",
+      "videos": [
+        {
+          "title": "Pipez Complete Mod Tutorial",
+          "url": "https://www.youtube.com/watch?v=Br8LOOMU7w8"
+        },
+        {
+          "title": "Minecraft Mod Pipez - Understanding Filters",
+          "url": "https://www.youtube.com/watch?v=IzI9BkL3e2c"
+        },
+        {
+          "title": "Pipez mod - Minecraft 1.18+ Bit-By-Bit",
+          "url": "https://www.youtube.com/watch?v=-UUor9ThmmQ"
         }
       ],
       "version": "latest",
@@ -1047,6 +1107,22 @@
       "exclusiveGroup": null,
       "description": "Library needed by Sophisticated Backpacks.",
       "wiki": "https://modrinth.com/mod/sophisticated-core",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "scalable-cats-force",
+      "name": "scalable-cats-force",
+      "category": "base",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by the Quarry mod.",
+      "wiki": "https://modrinth.com/mod/scalable-cats-force",
       "videos": [],
       "version": "latest",
       "requires": []

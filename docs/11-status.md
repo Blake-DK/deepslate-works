@@ -1,6 +1,6 @@
 # 11 · Status and handover
 
-Last updated 2026-09-28 night (Phase 1 catalogue + vote built and deployed). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
+Last updated 2026-09-28 late night (Phase 2 mostly built: lock, build, installer, /install, /admin/modpack, sync dry-run; AMP login still refused). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
 
 ## Where things are
 
@@ -75,6 +75,44 @@ Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth
 
 `DISCORD_GUILD_ID` set → the Discord provider requests `identify guilds`, and every Discord sign-in is refused with "You need to be in the group's Discord server" unless `users/@me/guilds` contains that id. `DISCORD_GUILD_AUTO_JOIN=1` makes membership count as the invite (no link needed for Discord users); default `0` keeps invite links required. Members who leave the server are refused on their next sign-in; existing sessions last until they expire (30 days) unless removed in `/admin/users`.
 
+## AMP smoke test (2026-09-28 night, per planner instructions)
+
+Run from inside `deepslate-api` through the tunnel, `AMP_URL=http://10.77.0.2:8080`, `AMP_INSTANCE_ID` (GUID) and `AMP_PASSWORD` from `deploy/.env` (verified byte-identical inside the container, no shell-special characters).
+
+| Step | Result |
+|---|---|
+| 1. `POST /API/Core/Login` as `webapp` | HTTP 200, `{"result":0,"success":false,"resultReason":"","sessionID":null}` = AMP's bad-credentials answer. **Blocked here.** |
+| 2. `Core/GetStatus` via `/API/ADSModule/Servers/<id>/API/` | not reachable without a session |
+| 3. `Core/SetConfig` (expect refused) | not reachable without a session |
+
+The ADS itself answers normally (a bogus method returns AMP's "Missing Method" error), so the tunnel, port and JSON shape are right. Things to check on the AMP host: the `webapp` user exists at **ADS** level (not inside the instance), the password matches what's in `deploy/.env`, and the user has the Login right. Re-run: `docker cp` the script `amp-smoke.mjs` (kept in `apps/api/scripts/`) into `deepslate-api` and `node /tmp/amp-smoke.mjs`. `AMP_MOCK` stays `1` until login works.
+
+## Phase 2 · what was built (2026-09-28 late night)
+
+- `packages/modpack`: `lock` (Modrinth resolution with required deps, newest release else beta with a warning, NeoForge latest 21.1.x from the maven, sha256 pack hash, config hashes, diff vs previous, temp+rename), `build client` (`client.mrpack` with CDN URLs + `overrides/config`), `build server` (`dist/server/mods` downloaded and sha512-checked, stale jars removed, `PACK_VERSION`), `build installer` (`installer.zip` with the manifest URL + pack version stamped into `install.ps1`), `config.zip`. `pnpm modpack <cmd>` in the node container; `MODRINTH_USER_AGENT` needed.
+- `installer/`: `Setup.bat`, `README.txt`, `install.ps1` per docs/07 (launcher check, manifest fetch, Java 21 from the launcher runtime / PATH / Temurin download, NeoForge installer with `--install-client` then `--installClient` fallback, separate game dir, sha512-checked mods with stale-jar removal, options.txt per tier, uncompressed-NBT `servers.dat`, RAM by installed memory clamped to the manifest, launcher profile written with a backup, `installed.json`). Dry-run tested under `pwsh` on Linux (`-DryRun -Root <fake>`): all 8 steps pass, nothing written. **Not yet tested on a real Windows PC.**
+- Web: `/install` (OS detection, Windows 3 steps / Mac-Linux 2 steps, pack version, copy address, PC hint), `GET /api/modpack/manifest`, `GET /downloads/{installer.zip,client.mrpack,config.zip}`, `/admin/modpack` (table with lock status per mod; Lock / Build / Sync (dry run) / Sync buttons streaming logs over SSE from `POST /api/admin/modpack/<cmd>`; lock commits `mods.lock.json`).
+- `api`: `POST /modpack/sync` (admin header + service token): rsync `dist/server/mods/` with `--delete` (dry run first to detect changes), then `config/`, `bluemap/`, `defaultconfigs/` merged, then `Core.Restart` through the ADS proxy if mods changed. `dryRun: true` reports only. Health now reports the deploy key state: `ok` = refused by rrsync (wanted), `unrestricted` = full shell (current), `no_key`, `down`.
+- **Download rule (Alex, 2026-09-28):** the manifest and `/downloads/*` are never public. Admins always; players only while the server is online (api `/status` state Running, cached 15 s); the Windows installer authenticates with `MANIFEST_KEY` (`deploy/.env`) stamped into its manifest URL at build time. With `AMP_MOCK=1` the mock reports Running, so players can download now; once the real AMP is wired, an offline server closes downloads for players.
+- Current pack: `0.1.0+47b0b579`, 18 locked files (base + server-only; votable mods are off until the vote is applied), NeoForge 21.1.252. Built and served.
+
+### Phase 2 acceptance (docs/10)
+
+- [x] `modpack lock` resolves every enabled mod plus dependencies for NeoForge 1.21.1 and fails loudly on a mod without a compatible version.
+- [ ] `client.mrpack` imports into the Modrinth App and launches to the main menu. *Built; needs a real client test.*
+- [ ] Clean Windows VM: Setup.bat → launcher → profile → main menu → server in list. *Script dry-run passes on Linux; needs Windows.*
+- [ ] Rerun says "already up to date"; bumping one mod replaces exactly that jar. *Logic present; needs Windows.*
+- [ ] `sync-server` puts the jar set on the AMP instance; server starts; client connects. *Dry run over the tunnel works (11 jars would be copied). Blocked on: the deploy key must be rrsync-restricted (currently unrestricted, so relative paths would land in `/home/amp` not the instance) and AMP login must work.*
+- [ ] Alex's Mac or one friend's gets in via `.mrpack`.
+
+### Mod list changes (Alex, 2026-09-28)
+
+Added `additional-enchanted-miner` ("Quarry (Additional Enchanted Miner)", mining, M, suggested) with its library `scalable-cats-force` (hidden), and `pipez` (world, L, suggested; 1.21.1 build is a beta). 38 entries, 173 links verified. Vote was open: the ballot reads the manifest live, so both appear pre-ticked for anyone who hasn't saved; saved ballots keep their picks.
+
+### Onboarding "no Minecraft account with that name" (Discord, 2026-09-28)
+
+Two players hit it. The Mojang lookup was verified working from the container (Notch, jeb_, bramble09, Dinnerbone all resolve) and another player onboarded successfully minutes later, so the likely causes are a typo, an Xbox/Bedrock gamertag, or a Discord name. Failed attempts are now audited (`profile.onboard` DENIED with the name typed) and the copy spells out "Java Edition name from the launcher". Check Admin → Overview → recent activity to see what they typed.
+
 ## Phase 1 · what was built (2026-09-28)
 
 - `modpack/mods.json`: 35 entries (33 visible + 2 hidden libraries), every slug verified against the Modrinth API for a NeoForge 1.21.1 build, every wiki and video link verified (`pnpm modpack verify-links`: 163 links, 0 failed). Dropped from docs/06: FTB Essentials and FTB Ultimine (CurseForge only, not on Modrinth; the docs rule excludes them), Advanced Mining Dimension (no NeoForge 1.21.1 build), Create Ultimine (only an addon for FTB Ultimine). VeinMiner (`veinminer`) replaces the Ultimine pair. Votable mods start `enabled: false`; base and server-only mods are on. `server_address` is the placeholder `mc.dsw.test`.
@@ -91,7 +129,7 @@ Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth
 - [x] Results page shows per-mod yes % and per-tier breakdown; closing freezes results (`resultJson`).
 - [ ] "Apply results" produces a diff of `mods.json` and commits it on confirm. *Built; commit path not yet exercised end to end (needs a closed vote with ballots).*
 
-A draft vote "Season 1 mods" with the default questions exists: open it from Admin → Votes when the group is ready.
+Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. Player address for the manifest is `mc.dsw.test` (Pangolin publishes it to the AMP host on 25569/tcp and 24454/udp for voice; confirm whether players connect on the default 25565 or need `mc.dsw.test:25569` in the server list).
 
 ## Phase 0 acceptance (docs/10) · current state
 
@@ -106,6 +144,8 @@ A draft vote "Season 1 mods" with the default questions exists: open it from Adm
 
 ## Alex's to-do (blocking; docs/13 §7 plus what this session couldn't do)
 
+0. **AMP `webapp` login is refused** (see the smoke test above): confirm the user is ADS-level with that password, then tell this session to re-run the test and set `AMP_MOCK=0`.
+0b. **Restrict the deploy key on the AMP host**: the `authorized_keys` line for `deploy@portal` must be `command="/usr/bin/rrsync /home/amp/.ampdata/instances/DeepslateWorks01/Minecraft",restrict,from="10.77.0.1" ssh-ed25519 …`. Health shows `rsync: unrestricted` until then; the real Sync button must not be used before this.
 1. **Host firewall, one line each in two chains** (the build session's permission system refused to edit `/usr/local/sbin/host-firewall.sh`; UDP 51820 is dropped until this is done): after the `udp --dport 443` line in `HOST-IN` add `iptables -A HOST-IN -p udp --dport 51820 -j RETURN`, after the `udp --dport 443` line in `HOST-FWD` add `iptables -A HOST-FWD -p udp --dport 51820 -j RETURN`, then `systemctl restart host-firewall.service`.
 2. DNS: `map.deepslate.dsw.test → 198.51.100.20`.
 3. AMP: create instance `DeepslateWorks01`; create ADS user `webapp` with rights on that instance only; put `AMP_INSTANCE_ID` and `AMP_PASSWORD` in `deploy/.env`, set `AMP_MOCK=0`, `docker compose -f deploy/docker-compose.yml up -d api`.
@@ -117,6 +157,7 @@ A draft vote "Season 1 mods" with the default questions exists: open it from Adm
 ## Session log
 
 - **2026-09-28** · Phase 0 built and deployed (commit `374ea10`), handover doc added (`94471be`), repo moved into `/home/ladm/Minecraft-site` with the brief files kept at the root (`19d7abb`). Bootstrap invite issued.
+- **2026-09-28 late night** · Phase 2: modpack lock/build/installer, `/install`, `/admin/modpack` with SSE runner, api sync (dry run verified), download gate (admin / online-only), MANIFEST_KEY, AMP smoke test (login refused), `phase-0` tagged, Quarry + Pipez added, onboarding audit.
 - **2026-09-28 night** · Phase 1 built: `packages/modpack`, `modpack/mods.json` (verified), `/mods`, `/vote`, `/vote/results` (+apply), `/admin/votes`; web container now uid 1009 with `modpack/` + `.git` mounted for the apply-and-commit step.
 - **2026-09-28 late** · Planner docs 12 and 13 applied: doc edits (00/02/04/08/09/10, the working rules); `COOKIE_DOMAIN=.deepslate.dsw.test`; map host Caddy block; `wireguard` + `api` + two map relays in compose; VPS WireGuard keys and deploy key generated (public halves above); `api` skeleton with tests; web `api-client.ts`, health now reports the tunnel; Discord server gate. Firewall line left for Alex (permission refused). Tunnel `down` until the homelab enables its peer. Map-host 401→login redirect verified. Admin email account created via `scripts/admin.mjs`. Alex added the Discord app values and the server id (auto-join on) and restarted `web`; OAuth redirect verified.
 

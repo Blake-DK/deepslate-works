@@ -89,6 +89,15 @@ model LinkCode {
   @@index([mcUuid])
 }
 
+// One row ("site"): the launch switch. Until `live`, players see a launch page, no address, no downloads.
+model SiteSettings {
+  id          String    @id @default("site")
+  live        Boolean   @default(false)
+  launchAt    DateTime?
+  updatedAt   DateTime  @updatedAt
+  updatedById String?
+}
+
 model Announcement {
   id        String   @id @default(cuid())
   body      String

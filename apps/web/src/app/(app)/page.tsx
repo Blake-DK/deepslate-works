@@ -4,24 +4,28 @@ import { db } from "@/server/db";
 import { env } from "@/env";
 import { getOpenVote } from "@/server/vote/votes";
 import { formatDate } from "@/lib/utils";
+import { canSeeServer, getSettings } from "@/server/settings";
+import { LaunchBanner } from "@/components/launch-banner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 
 export default async function HomePage() {
   const user = await requireOnboardedUser();
-  const [members, openVote] = await Promise.all([db.user.count(), getOpenVote()]);
+  const [members, openVote, settings] = await Promise.all([db.user.count(), getOpenVote(), getSettings()]);
+  const showServer = canSeeServer(user, settings);
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Welcome back, {user.displayName}</h1>
         <p className="text-muted-foreground">{user.mcUsername ? <>Linked to Minecraft account <span className="font-mono">{user.mcUsername}</span>.</> : <>Your Minecraft account gets linked the first time you join the server.</>} {members} {members === 1 ? "person" : "people"} in the group so far.</p>
       </div>
+      {!settings.live && <LaunchBanner launchAt={settings.launchAt} admin={user.role === "ADMIN"} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">Server <Badge>Not set up yet</Badge></CardTitle>
-            <CardDescription>Live status, who&apos;s online and the map arrive in phase 3. Address: <span className="font-mono">{env.SERVER_ADDRESS}</span></CardDescription>
+            <CardTitle className="flex items-center gap-2">Server <Badge>{settings.live ? "Live" : "Coming soon"}</Badge></CardTitle>
+            <CardDescription>Live status, who&apos;s online and the map arrive in phase 3.{showServer && <> Address: <span className="font-mono">{env.SERVER_ADDRESS}</span></>}</CardDescription>
           </CardHeader>
         </Card>
         <Card className={openVote ? "border-primary" : undefined}>

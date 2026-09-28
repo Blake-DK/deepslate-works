@@ -17,7 +17,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
     const user = await loadCurrentUser();
     const gate = await canDownload(user);
     if (gate.reason === "anonymous") redirect(`/login?next=${encodeURIComponent(`/downloads/${file}`)}`);
-    if (!gate.ok) redirect("/install?offline=1");
+    if (!gate.ok) redirect(gate.reason === "not_live" ? "/install" : "/install?offline=1");
   }
   const f = await distFile(file);
   if (!f) return new Response("Not built yet", { status: 404 });

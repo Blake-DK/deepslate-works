@@ -10,6 +10,8 @@ import { Alert } from "@/components/ui/alert";
 import { formatDate } from "@/lib/utils";
 import { CopyButton } from "./copy-button";
 import { canDownload } from "@/server/modpack/gate";
+import { canSeeServer, getSettings } from "@/server/settings";
+import { LaunchBanner } from "@/components/launch-banner";
 
 export const metadata: Metadata = { title: "Install" };
 
@@ -27,13 +29,34 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
   const os = osParam === "windows" || osParam === "mac" ? osParam : detectOs(ua);
   const [m, lock, installer, mrpack] = await Promise.all([getManifest(), getLock(), distFile("installer.zip"), distFile("client.mrpack")]);
   const version = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
+  const settings = await getSettings();
+  const showServer = canSeeServer(user, settings);
   const gate = await canDownload(user);
   const ready = Boolean(lock && installer && mrpack) && gate.ok;
   const windows = os === "windows";
   const rd = user.pcTier === "HIGH" ? 12 : user.pcTier === "MID" ? 10 : 8;
 
+  if (!showServer) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Join the server</h1>
+          <p className="mt-1 max-w-2xl text-muted-foreground">Not open yet. When it launches, this page turns into a one-click installer for Windows and a two-step guide for Mac and Linux, and the server address appears here.</p>
+        </div>
+        <LaunchBanner launchAt={settings.launchAt} admin={false} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Meanwhile</CardTitle>
+            <CardDescription>Have the normal Minecraft Launcher installed and opened once (Java Edition 1.21.1), read the mod list, and cast your vote if one is open.</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {!settings.live && <LaunchBanner launchAt={settings.launchAt} admin />}
       <div>
         <h1 className="text-2xl font-semibold">Join the server</h1>
         <p className="mt-1 max-w-2xl text-muted-foreground">

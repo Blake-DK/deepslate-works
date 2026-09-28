@@ -1,6 +1,6 @@
 # 11 · Status and handover
 
-Last updated 2026-09-28 late night (Phase 2 mostly built: lock, build, installer, /install, /admin/modpack, sync dry-run; AMP login still refused). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
+Last updated 2026-09-28 late night (Phase 2 built; AMP smoke test complete and mock off; launch switch added). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
 
 ## Where things are
 
@@ -86,6 +86,13 @@ Run from inside `deepslate-api` through the tunnel, `AMP_URL=http://10.77.0.2:80
 | 3. `Core/SetConfig` | **Refused**: "does not have permission to modify setting" (verified by Alex as `webapp` from the AMP host side, 2026-09-28). Smoke test complete. |
 
 Also recorded (read-only): `GetUpdates` shape, `GetUserList` (`{}` while stopped), `FileManagerPlugin.GetDirectoryListing` works, `LocalFileBackupPlugin.GetBackups` and `GetAMPRolePermissions` are `Unauthorized Access` for webapp. Details in docs/08. `AMP_MOCK=0` now: the mock is off, `api` talks to the real instance. **The instance is stopped**, so with Alex's download rule players can't download until it runs; admins still can.
+
+## Launch switch (Alex, 2026-09-28)
+
+`SiteSettings` row (`live`, `launchAt`; migration `0003_site_settings`), edited at **Admin → Settings**. Until `live`:
+- players never see the server address (`/install`, `/me`, Home) and `/downloads/*` + the manifest refuse them (`not_live`); Home and Install show a launch banner with the date ("Launching Sat 4 Oct 2026, 19:00, in 6 days" / "to be announced");
+- admins see everything, with a note that players see the launch page.
+Once live, the earlier rule applies: downloads open while the server is running. The launch date is entered as UK time (`src/lib/uk-time.ts`, tested for BST/GMT). Default: not live, no date.
 
 ## docs/14 (Discord-gated join) · what landed now (2026-09-28 late night)
 

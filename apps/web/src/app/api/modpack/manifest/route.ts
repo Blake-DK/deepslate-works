@@ -11,7 +11,11 @@ export async function GET(req: Request) {
   if (!manifestKeyOk(key)) {
     const user = await loadCurrentUser();
     const gate = await canDownload(user);
-    if (!gate.ok) return Response.json({ error: { code: gate.reason === "anonymous" ? "unauthorized" : "server_offline", message: gate.reason === "anonymous" ? "Sign in first" : "Downloads open when the server is online" } }, { status: gate.reason === "anonymous" ? 401 : 403 });
+    if (!gate.ok) {
+      const code = gate.reason === "anonymous" ? "unauthorized" : gate.reason === "not_live" ? "not_live" : "server_offline";
+      const message = gate.reason === "anonymous" ? "Sign in first" : gate.reason === "not_live" ? "Not launched yet" : "Downloads open when the server is online";
+      return Response.json({ error: { code, message } }, { status: gate.reason === "anonymous" ? 401 : 403 });
+    }
   }
   const [m, lock] = await Promise.all([getManifest(), getLock()]);
   if (!lock) return Response.json({ error: { code: "no_lock", message: "Pack not built yet" } }, { status: 503 });

@@ -2,6 +2,7 @@ import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { apiFetch } from "@/server/api-client";
 import { env } from "@/env";
+import { getSettings } from "@/server/settings";
 
 // Who may download the pack (Alex's rule): admins always; players only while the Minecraft server is
 // up and the site is connected to it; nobody anonymous. The Windows installer fetches the manifest
@@ -23,9 +24,10 @@ export async function serverOnline(): Promise<boolean> {
   return online;
 }
 
-export async function canDownload(user: { role: "ADMIN" | "PLAYER" } | null): Promise<{ ok: boolean; reason: "admin" | "online" | "offline" | "anonymous" }> {
+export async function canDownload(user: { role: "ADMIN" | "PLAYER" } | null): Promise<{ ok: boolean; reason: "admin" | "online" | "offline" | "anonymous" | "not_live" }> {
   if (!user) return { ok: false, reason: "anonymous" };
   if (user.role === "ADMIN") return { ok: true, reason: "admin" };
+  if (!(await getSettings()).live) return { ok: false, reason: "not_live" };
   return (await serverOnline()) ? { ok: true, reason: "online" } : { ok: false, reason: "offline" };
 }
 

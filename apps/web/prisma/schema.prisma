@@ -1,0 +1,109 @@
+// Deepslate Works · see docs/03-data-model.md
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PLAYER
+}
+
+enum PcTier {
+  LOW
+  MID
+  HIGH
+}
+
+enum VoteStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  displayName  String
+  role         Role      @default(PLAYER)
+  discordId    String?   @unique
+  email        String?   @unique // credentials fallback only
+  passwordHash String?   // credentials fallback only
+  mcUsername   String?   @unique // Minecraft Java username, set by the player
+  mcUuid       String?   @unique // resolved from the Mojang API
+  pcTier       PcTier?
+  createdAt    DateTime  @default(now())
+  lastSeenAt   DateTime?
+  invitedById  String?
+  ballots      Ballot[]
+  auditLogs    AuditLog[]
+}
+
+model Invite {
+  code      String   @id // 8 chars, human-readable
+  createdBy String
+  usedBy    String?  @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  note      String?
+}
+
+model Vote {
+  id         String     @id @default(cuid())
+  title      String
+  status     VoteStatus @default(DRAFT)
+  opensAt    DateTime?
+  closesAt   DateTime?
+  questions  Json
+  resultJson Json?
+  ballots    Ballot[]
+}
+
+model Ballot {
+  id          String   @id @default(cuid())
+  voteId      String
+  userId      String
+  modIds      String[]
+  answers     Json
+  submittedAt DateTime @updatedAt
+  vote        Vote     @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([voteId, userId])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  body      String
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  authorId  String
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  params    Json
+  result    String // OK | DENIED | FAILED | TIMEOUT
+  detail    String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model ServerSnapshot {
+  id      Int      @id @default(autoincrement())
+  at      DateTime @default(now())
+  state   String
+  players String[]
+  tps     Float?
+  cpu     Float?
+  memMb   Int?
+
+  @@index([at])
+}

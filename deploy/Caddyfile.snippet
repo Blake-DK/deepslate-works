@@ -1,0 +1,8 @@
+# Paste into /root/docker/web-proxy/etc/Caddyfile on vps-01v, then reload Caddy.
+# The map host block is added in phase 3 (forward_auth deepslate-web:3000 { uri /api/auth/verify }).
+
+deepslate.dsw.test {
+	import common
+	header X-Frame-Options SAMEORIGIN
+	reverse_proxy deepslate-web:3000
+}

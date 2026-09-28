@@ -1,0 +1,71 @@
+# Deepslate Works on vps-01v. Joins the shared `web` network; Caddy (stack web-proxy)
+# terminates TLS and proxies to deepslate-web:3000. No ports are published.
+name: deepslate
+
+networks:
+  web:
+    external: true
+  internal:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: deepslate-db
+    restart: unless-stopped
+    mem_limit: 256m
+    networks: [internal]
+    environment:
+      POSTGRES_USER: deepslate
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: deepslate
+    volumes:
+      - /root/docker/deepslate/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deepslate -d deepslate"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    image: deepslate-web:local
+    container_name: deepslate-web
+    restart: unless-stopped
+    mem_limit: 1g
+    networks: [web, internal]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  backups:
+    image: postgres:16-alpine
+    container_name: deepslate-backups
+    restart: unless-stopped
+    mem_limit: 64m
+    networks: [internal]
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /root/docker/deepslate/backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Nightly pg_dump, keep 7. Simple loop; no cron package needed.
+    command: >
+      sh -c 'while true; do
+        pg_dump -h postgres -U deepslate deepslate | gzip > /backups/deepslate-$$(date +%%F).sql.gz;
+        ls -1t /backups/*.sql.gz 2>/dev/null | tail -n +8 | xargs -r rm -f;
+        sleep 86400; done'

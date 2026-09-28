@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Deepslate palette: slate greys with a copper accent. Light and dark share the tokens. */
+:root {
+  --background: #f6f5f2;
+  --foreground: #1c1b19;
+  --card: #ffffff;
+  --card-foreground: #1c1b19;
+  --muted: #eceae4;
+  --muted-foreground: #6b6862;
+  --border: #dedbd3;
+  --primary: #b8652c;
+  --primary-foreground: #ffffff;
+  --accent: #2e7d5b;
+  --danger: #b3261e;
+  --ring: #b8652c;
+}
+
+:root[data-theme="dark"] {
+  --background: #16171a;
+  --foreground: #ebe9e4;
+  --card: #202226;
+  --card-foreground: #ebe9e4;
+  --muted: #2a2c31;
+  --muted-foreground: #a09d95;
+  --border: #33363c;
+  --primary: #d9823f;
+  --primary-foreground: #16171a;
+  --accent: #57b688;
+  --danger: #e5484d;
+  --ring: #d9823f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-ring: var(--ring);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+
+body {
+  @apply bg-background text-foreground font-sans antialiased;
+}
+
+* { border-color: var(--border); }

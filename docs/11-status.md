@@ -1,6 +1,6 @@
 # 11 · Status and handover
 
-Written 2026-09-28 at the end of the Phase 0 build session. Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
+Last updated 2026-09-28 (end of the Phase 0 build session, after the repo moved into Alex's folder). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
 
 ## Where things are
 
@@ -59,6 +59,7 @@ Matches `docs/10-roadmap.md` Phase 0 "Build" list. Files worth knowing:
 4. **Domain** is a placeholder (`deepslate.dsw.test`, wildcard already on this VPS). `COOKIE_DOMAIN` is empty until the map host exists (phase 3), so the session cookie is host-only.
 5. **Prisma 6** pinned (`^6`) rather than 7; the classic migrate workflow, boring on purpose.
 6. **No Dockhand registration** yet (this VPS's other stacks are managed there). Do it when the stack shape settles, or leave it git-driven.
+7. **Location.** The build first went to `/opt/deepslate` (docs/09 layout); Alex wants the project in the folder he supplied, so the whole repo now lives in `/home/ladm/Minecraft-site` (owned by `ladm`) and `/opt/deepslate` no longer exists. Containers were recreated so Compose tracks the new path. Nothing is installed on the host: pnpm, Prisma, the checks and the image build all run in Docker.
 
 ## Phase 0 acceptance (docs/10) · current state
 
@@ -77,6 +78,10 @@ Bootstrap invite issued this session (14 days): `https://deepslate.dsw.test/join
 3. **Domain** for the site and the map subdomain (docs/10 open question 1).
 4. Does anyone lack Discord? If nobody, the credentials provider can be removed (docs/10 open question 5).
 5. Season 1 world settings if the vote doesn't cover them (docs/10 open question 4).
+
+## Session log
+
+- **2026-09-28** · Phase 0 built and deployed (commit `374ea10`), handover doc added (`94471be`), repo moved into `/home/ladm/Minecraft-site` with the brief files kept at the root (`19d7abb`). Bootstrap invite issued. Waiting on Alex for AMP, Discord and domain (see open questions).
 
 ## Suggested plan updates for the next session
 

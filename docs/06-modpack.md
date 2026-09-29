@@ -117,6 +117,8 @@ Verified during planning: `create` (6.0.10 for 1.21.1 NeoForge, Apr 2026), `crea
 | `modpack sync-server` | rsync `dist/server/` into `$AMP_INSTANCE_DIR/Minecraft/` (mods dir replaced wholesale, configs merged), then `Core.Restart` via AMP if anything in `mods/` changed |
 | `modpack verify-links` | HEAD every `wiki` and `videos[].url`, report failures |
 
+In production `build` runs inside the `api` container (Admin → Modpack → Build), under its memory limit, and never on the VPS host (docs/09 "Memory limits"). Jars are streamed to disk and hashed in chunks.
+
 All commands are idempotent and print what they changed. Network failures retry 3× with backoff and then fail loudly; a half-written lockfile is never left behind (write to temp, rename).
 
 ## Config overrides worth shipping (`modpack/config/`)

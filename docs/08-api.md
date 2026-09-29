@@ -21,7 +21,7 @@ The app's own API is small; most pages are server components. These are the rout
 |---|---|---|
 | POST | `/api/admin/vote` `/open` `/close` `/apply` | vote lifecycle |
 | POST | `/api/admin/invites` | create |
-| POST | `/api/admin/modpack/lock` `/build` `/sync` | run the CLI as a child process, stream logs over SSE |
+| POST | `/api/admin/modpack/lock` `/build` `/sync` | stream logs over SSE. `lock` runs in `web`; `build` and `sync` are forwarded to `api` (`POST /modpack/build` runs the CLI as a memory-capped child process and answers with newline-delimited JSON, `{"line"}` … `{"done","ok","code"}`; `POST /modpack/sync`). One build or sync at a time (409 `busy`). |
 | POST | `/api/admin/server/start` `/stop` `/restart` | with optional `{delayMinutes}` |
 | POST | `/api/admin/announce` | store + `say` in game |
 | GET | `/api/admin/audit?…` | audit log |

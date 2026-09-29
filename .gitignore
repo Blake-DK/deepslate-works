@@ -15,3 +15,4 @@ deploy/wireguard/*.pub
 deploy/keys/
 deploy/wireguard/*
 !deploy/wireguard/wg0.conf.example
+*.tsbuildinfo

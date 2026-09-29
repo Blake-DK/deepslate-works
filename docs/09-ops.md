@@ -10,7 +10,41 @@
 /root/docker/deepslate/postgres, /root/docker/deepslate/backups
 ```
 
-`deploy/docker-compose.yml` services: `web`, `api`, `wireguard`, `map-relay-inner`, `map-relay-outer`, `postgres`, `backups`. Caddy is the existing `web-proxy` stack; the app publishes no ports except UDP 51820 (WireGuard). AMP stays on the homelab.
+`deploy/docker-compose.yml` (no `build:` sections, `pull_policy: always` on our two images) services: `web`, `api`, `wireguard`, `map-relay-inner`, `map-relay-outer`, `postgres`, `backups`. Caddy is the existing `web-proxy` stack; the app publishes no ports except UDP 51820 (WireGuard). AMP stays on the homelab.
+
+## Deploying (the only way)
+
+**The VPS never builds images.** It has 7.7 GB shared with every other site on the box; on 2026-09-29 a `docker compose up --build` here used all of it and the kernel killed live services (see docs/11 "OOM incident"). Images are built by GitHub Actions and pulled.
+
+```
+push to main ──► .github/workflows/ci.yml
+                   check:  lint, typecheck, test
+                   images: build apps/web + apps/api (docker/build-push-action, cache type=gha)
+                           push ghcr.io/blake-dk/deepslate-web:{sha,latest}
+                                ghcr.io/blake-dk/deepslate-api:{sha,latest}
+on the VPS  ──► sudo /home/ladm/Minecraft-site/deploy/deploy.sh
+                   git pull --ff-only  →  docker compose pull web api  →  docker compose up -d  →  docker image prune -f
+```
+
+- `deploy/deploy.sh` refuses to run without swap, with under 600 MB available, or without `GHCR_OWNER` in `deploy/.env`; it waits for `deepslate-web` to report healthy and prints the health JSON.
+- Roll back or pin: `sudo IMAGE_TAG=<commit sha> deploy/deploy.sh` (every push keeps its `:sha` image).
+- It pulls only `web` and `api`. Postgres, WireGuard and socat images are updated deliberately, never as a side effect of a deploy.
+- The images are private. The VPS is logged in to `ghcr.io` once (`docker login ghcr.io`, a token with `read:packages`); the login lives in `/root/.docker/config.json`.
+- Never run `docker compose up --build`, `docker compose build` or `docker build` on the VPS. tooling sessions on this host are blocked from doing so by a hook (`/root/.tooling/hooks/mem-guard.py`), which also refuses `docker run` without `--memory`.
+- If CI is down and a change cannot wait: build on another machine and `docker save | ssh vps docker load`, then `IMAGE_TAG` to match. A build on the VPS is the last resort and Alex's call: stop the non-essential stacks first, one image at a time, through the memory-capped builder (`docker buildx use capped`, 2 GB), then start the stacks again.
+
+## Memory limits
+
+| Service | `mem_limit` | Notes |
+|---|---|---|
+| `web` | 768m | Next.js server; no longer runs builds |
+| `api` | 512m | includes `modpack build`, a child process with a 256 MB heap that is first in line if the container runs out |
+| `postgres` | 256m | `shared_buffers=128MB` set explicitly |
+| `wireguard` 128m, relays 32m each, `backups` 64m | | |
+
+Host: 4 GB swapfile (`/swapfile`, `vm.swappiness=10`) so a spike slows the box down instead of killing things; `earlyoom` stops build tools and headless browsers first and spares the proxy, databases, Docker and SSH.
+
+`modpack build` (jar downloads, `.mrpack`, installer zip) runs inside `api`: Admin → Modpack → Build calls `POST /modpack/build` and streams the output line by line. Jars are streamed to disk and hashed in chunks, never held in memory. Measured 2026-09-29: 11 jars, 17.8 MB, peak 75 MB. `dist/` belongs to uid 1000 (api writes, web reads; `deploy.sh` sets the owner). Do not run the CLI's `build` in a one-off container on the host.
 
 ## Caddy (blocks in `/root/docker/web-proxy/etc/Caddyfile`)
 
@@ -60,4 +94,5 @@ See `deploy/.env.example` (kept current; every variable commented). Notables: `A
 - Server won't start after a mod change → `modpack sync-server --rollback` restores the previous `mods/` (keep the last two `dist/server` builds on disk).
 - A player can't connect ("mod mismatch") → check the pack version on `/install` vs `installed.json` on their PC; re-run installer.
 - Restore world from backup → AMP UI, backups tab, or documented CLI.
-- Rotate AMP password → `.env`, `docker compose up -d web`.
+- Rotate AMP password → `.env`, then `sudo deploy/deploy.sh`.
+- The box is short of memory → `free -m`, `docker stats --no-stream`, `journalctl -k | grep -i "killed process"`, `journalctl -u earlyoom`. Every container has a limit, so a container that grows is killed inside its own limit; look for something running outside one.

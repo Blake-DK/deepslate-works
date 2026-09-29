@@ -1,6 +1,6 @@
 # 11 · Status and handover
 
-Last updated 2026-09-29 (server build: must-have mods synced, wait room + Discord link flow live in `api`, admin Server page). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
+Last updated 2026-09-29 (OOM incident and the deploy change that follows from it: CI builds the images, the VPS only pulls; before that: must-have mods synced, wait room + Discord link flow live in `api`, admin Server page). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
 
 ## Where things are
 
@@ -14,17 +14,18 @@ Last updated 2026-09-29 (server build: must-have mods synced, wait room + Discor
 | Reverse proxy | blocks `deepslate.dsw.test` and `map.deepslate.dsw.test` in `/root/docker/web-proxy/etc/Caddyfile` (copy in `deploy/Caddyfile.snippet`; the map block uses an explicit reverse_proxy + handle_response because `forward_auth` alone returns the 401 instead of redirecting) |
 | Health | `GET /api/health` → `{ok, db, api:{ok,tunnel,amp,rsync}, missingEnv, discord, guildGate}`; `ok` is web's own health, tunnel state is reported not required |
 
-The VPS has no Node. Everything runs through Docker:
+The VPS has no Node, and **it never builds images** (see "OOM incident" below). Checks run in a throwaway container with a memory cap; images come from CI:
 
 ```
-# checks (typecheck, lint, tests) without installing Node on the host
-docker run --rm -v /home/ladm/Minecraft-site:/app -w /app node:22-alpine sh -c \
-  'apk add --no-cache libc6-compat openssl >/dev/null && npm i -g pnpm@10 >/dev/null 2>&1 \
-   && pnpm install --no-frozen-lockfile && cd apps/web && pnpm exec prisma generate \
-   && pnpm typecheck && pnpm lint && pnpm test'
+# checks (typecheck, lint, tests): capped, and as ladm so nothing in the repo ends up owned by root
+docker run --rm --memory=1500m --memory-swap=2500m --cpus=2 -u 1009:1009 -e HOME=/tmp -e CI=1 \
+  -v /home/ladm/Minecraft-site:/app -w /app node:22-alpine sh -c \
+  'npm i -g --prefix /tmp/pnpm pnpm@10 >/dev/null 2>&1 && export PATH=/tmp/pnpm/bin:$PATH \
+   && pnpm install --frozen-lockfile && (cd apps/web && pnpm exec prisma generate) \
+   && (cd apps/api && pnpm exec prisma generate) && pnpm typecheck && pnpm lint && pnpm test'
 
-# deploy
-cd /home/ladm/Minecraft-site && docker compose -f deploy/docker-compose.yml up -d --build
+# deploy: the only way (docs/09). Push to main, wait for CI, then:
+sudo /home/ladm/Minecraft-site/deploy/deploy.sh
 
 # Caddy reload after editing the Caddyfile
 docker exec caddy sh -c 'caddy adapt --config /etc/caddy/Caddyfile --envfile /etc/caddy/caddy.env > /tmp/c.json \
@@ -35,6 +36,23 @@ docker exec deepslate-web node apps/web/scripts/invite.mjs "for Alex" 14
 ```
 
 Gotchas found the hard way: `CI=1` makes pnpm default to `--frozen-lockfile`; pnpm 10 needs `pnpm.onlyBuiltDependencies` (root `package.json`) for Prisma/esbuild postinstalls; ESLint plugins need the `public-hoist-pattern` lines in `.npmrc`; if you change `.npmrc`, delete `node_modules` before reinstalling.
+
+## OOM incident, 2026-09-29 03:58 UTC
+
+**What happened.** `docker compose -f deploy/docker-compose.yml up -d --build` on the VPS, to ship the wait-room audit fix. The host has 7.7 GB and had no swap. From the kernel's own process table at the moment it ran out: `dockerd` (the built-in BuildKit) 1.9 GB, the `next build` step 0.7 GB, the 41 running containers and host services about 5.1 GB. Image builds sit outside every container memory limit and inherit Docker's protection from the OOM killer (`oom_score_adj -500`), so the kernel killed bystanders instead: the tooling session, an Authentik worker and a user session manager. `authentik-db` had already been killed inside its own 256 MB limit at 03:12. The build itself finished (images stamped 03:58 and 04:00); the box was rebooted at 04:07 and all 41 containers came back by themselves. Every site answered correctly afterwards; `/api/health` was fully green again by 04:20.
+
+**What changed, so it cannot happen the same way again.**
+
+| Layer | Change |
+|---|---|
+| Deploy | CI builds `web` and `api` and pushes them to GHCR; the compose file has no `build:`; `deploy/deploy.sh` is the only way to deploy (docs/09) |
+| tooling on this host | hook `/root/.tooling/hooks/mem-guard.py` refuses image builds outright, refuses `docker run` without `--memory`, refuses to start containers under 700 MB available |
+| Builder | default buildx builder is `capped` (2 GB RAM, 3 CPUs, own container), for the day a local build is unavoidable; a test build that tried to take 5 GB was stopped at the cap with the host never below 2 GB available |
+| Host | 4 GB swapfile, `vm.swappiness=10`; `earlyoom` (build tools and headless browsers go first; proxy, databases, Docker, SSH are spared) |
+| This stack | `mem_limit` web 768m (was 1g), api 512m (was 256m, it now runs `modpack build`), postgres `shared_buffers=128MB` explicit. Applied to the running containers with `docker update`; the compose file carries them from the next deploy |
+| `modpack build` | moved out of the `web` process into `api` as a child process: 256 MB heap, first to be killed if the container runs out, no secrets in its environment, output streamed line by line; jar downloads streamed to disk (they were read into memory whole). Peak 75 MB for the current pack |
+
+**Still open.** The first `deploy.sh` run needs the VPS logged in to `ghcr.io` (to-do 10 below). Until then the stack keeps running the images built locally on 2026-09-29 (`deepslate-web:local`, `deepslate-api:local`), which already contain the audit fix but not the `modpack build` move: **do not press Build in Admin → Modpack before the first deploy**, it still runs inside `web`.
 
 ## Phase 0 · what was built
 
@@ -96,6 +114,16 @@ Alex: "build the server with the must-have modpacks first and get the wait room 
 - **Portal**: `/link/<code>` (login → Discord → guild check → onboarding keeps the return URL) binds the UUID + username from the `LinkCode` to the account (refuses a second UUID per account and a UUID already owned by someone else), marks the code used, asks api to release. Discord sign-in now sets `guildMember` (false when refused, true on success). Admin → Users "Remove" also kicks. New **Admin → Server** page: state, online/held players, Start/Restart/Stop with an in-page confirmation, "Build the room", revoke by name, `say`, console tail (last 120 lines, reload to refresh).
 - Env: `LIMBO_POS` (default `0 250 0`), `SPAWN_POS` (empty = `spreadplayers` near 0,0 on the surface), `DISCORD_BOT_TOKEN` (optional), `DATABASE_URL` + `PORTAL_URL` passed to api by compose.
 - Tests: api 11 (console parsing incl. a chat line that mimics a join, join decision, action builders and input refusal).
+- **Done on the instance (2026-09-29 03:5x UTC):** first real Sync (11 jars + `config/bluemap`), `Core.Start` via api → `Done (1.756s)`, voice chat on 24454, BlueMap downloaded the client jar and bound its webserver to `10.77.0.2:8100`; **https://map.deepslate.dsw.test works behind the login** (anonymous → login redirect). Wait room built at `LIMBO_POS=0 250 0` (`limbo.build`: 847 + 405 + 81 blocks, 5 lights, chunks force-loaded). Spawn area is around 0,0 so `SPAWN_POS` can stay empty (`spreadplayers` near 0,0). Portal link flow exercised with a seeded `LinkCode` (bind, idempotent re-click, expired code, `/me` shows the link).
+- **Not yet exercised:** a real player joining (hold → chat link → release). Needs someone to connect to `mc.dsw.test`; watch Admin → Server (held players + console).
+
+### docs/14 acceptance · state
+
+- [ ] A fresh account joins, lands in the room, can't leave, sees the link within 5 s. *Engine live; needs a real join.*
+- [ ] Clicking the link with a Discord account in the server releases them to spawn within 5 s and `whitelist.json` gains them. *Portal side verified; release-on-online untested.*
+- [ ] A Discord account outside the server is refused and the player stays in the room. *Login refusal verified earlier; room hold untested.*
+- [ ] Leaving the Discord server puts the player back in the room next join. *Flag set at login; 5-min re-check needs `DISCORD_BOT_TOKEN`.*
+- [ ] api down 2 min then back: nobody unverified escaped. *Tags persist; on restart api holds unknown joins again; no in-game command block yet (docs/14 §4 belt-and-braces not done).*
 
 ## Installer sign-in + "Update and Play" (Alex, 2026-09-28)
 
@@ -184,9 +212,15 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 4. ~~Discord OAuth app~~ Done 2026-09-28. Server gate on, auto-join on: anyone in the Discord server can sign in without an invite link; invite links are now only for the person without Discord.
 5. Ferry the two keys above to the AMP host session; give this session the instance id and `webapp` password.
 6. Does anyone lack Discord? (docs/10 q5.) `server_address` Pangolin publishes? (docs/10 q6.)
-7. Click through Phase 0 acceptance, then the VPS session tags `phase-0`.
+7. ~~Phase 0 click-through~~ done.
+8. **Test the wait room** with one friend: connect to `mc.dsw.test`, confirm the room + chat link, click it, confirm release and `whitelist.json`. Then tick docs/14 acceptance.
+9. Optional `DISCORD_BOT_TOKEN` (a bot in the Discord server) so api re-checks membership every 5 min; without it, leaving the server only bites at the next Discord login.
+10. **GHCR login on the VPS** so `deploy/deploy.sh` can pull the private images: `docker login ghcr.io -u bramble09` with a token that has `read:packages` (GHCR does not accept fine-grained tokens; it needs a classic one). Then `sudo deploy/deploy.sh`.
+11. **Rotate the GitHub token** that was pasted into the chat on 2026-09-29 once the pipeline is proven; the VPS only needs `contents:read` for `git pull`.
 
 ## Session log
+
+- **2026-09-29 early morning** · OOM at 03:58 during `up --build`, reboot 04:07. Recovery check of every site, guardrails on the host (swap, earlyoom, capped builder, tooling hook), deploy moved to CI + GHCR + `deploy/deploy.sh`, `modpack build` moved into `api`, memory limits adjusted, `fetchJar` streams. api tests 21, modpack 9, web 20. Wait-room audit helper (`apps/api/src/audit.ts`: an audit row from a caller id that is not a user is kept with no user instead of failing the request) committed; it was already in the running image.
 
 - **2026-09-28** · Phase 0 built and deployed (commit `374ea10`), handover doc added (`94471be`), repo moved into `/home/ladm/Minecraft-site` with the brief files kept at the root (`19d7abb`). Bootstrap invite issued.
 - **2026-09-28 late night** · Phase 2: modpack lock/build/installer, `/install`, `/admin/modpack` with SSE runner, api sync (dry run verified), download gate (admin / online-only), MANIFEST_KEY, AMP smoke test (login refused), `phase-0` tagged, Quarry + Pipez added, onboarding audit.
@@ -198,5 +232,5 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 - When the tunnel is up: confirm AMP method names against `http://10.77.0.2:8080/API` through `api` (docs/08 "AMP methods used"), then set `AMP_MOCK=0`.
 - Tick the Phase 0 boxes with Alex, tag `phase-0`; tick Phase 1 (phone click-through, one real apply-and-commit), tag `phase-1`; then Phase 2 (`modpack lock|build|sync-server`, `/install`, `/admin/modpack`, `installer/`). Phase 2 needs `server_address` from Alex (what Pangolin publishes) and the AMP instance for `sync-server`.
 - docs/06 `sync-server` still describes a bind mount; rewrite it for rsync over the tunnel when Phase 2 starts (docs/13 §4 has the command).
-- Decide whether the repo gets a GitHub remote (CI file is ready) and whether the stack goes into Dockhand.
+- ~~GitHub remote~~ done 2026-09-29: `Blake-DK/deepslate-works` (private), CI builds the images. Dockhand: the stack is deployed by `deploy/deploy.sh`, not from Dockhand; if it is ever added there, as pull-only.
 - Phase 3 prep: the map host needs a DNS name under the chosen domain and `COOKIE_DOMAIN` set; the Caddy block needs `forward_auth deepslate-web:3000 { uri /api/auth/verify }` and a `reverse_proxy` to BlueMap on the AMP host over Tailscale.

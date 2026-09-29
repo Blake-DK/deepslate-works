@@ -2,6 +2,10 @@
 # terminates TLS. The WireGuard tunnel to the AMP host lives in its own container on the
 # `internal` network only; `api` and the inner map relay share its namespace (docs/13 §3).
 # The only published port is UDP 51820 (WireGuard).
+#
+# `web` and `api` are built by CI (.github/workflows/ci.yml) and pulled from GHCR. They have no build
+# section on purpose: this host must never build images (it ran out of memory doing so on 2026-09-29).
+# Deploy with deploy/deploy.sh and nothing else. Every service carries a memory limit.
 name: deepslate
 
 networks:
@@ -15,6 +19,7 @@ services:
     container_name: deepslate-db
     restart: unless-stopped
     mem_limit: 256m
+    command: ["postgres", "-c", "shared_buffers=128MB"]
     networks: [internal]
     environment:
       POSTGRES_USER: deepslate
@@ -29,13 +34,11 @@ services:
       retries: 10
 
   web:
-    build:
-      context: ..
-      dockerfile: apps/web/Dockerfile
-    image: deepslate-web:local
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-web:${IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: deepslate-web
     restart: unless-stopped
-    mem_limit: 1g
+    mem_limit: 768m
     networks: [web, internal]
     env_file: .env
     environment:
@@ -45,8 +48,7 @@ services:
       # Nothing else from the repo (no .env, no keys) is visible to the internet-facing container.
       - ../modpack:/repo/modpack
       - ../.git:/repo/.git
-      - ../dist:/repo/dist            # built packs, served under /downloads
-      - ../installer:/repo/installer:ro
+      - ../dist:/repo/dist:ro         # built packs, served under /downloads (api builds them)
     depends_on:
       postgres:
         condition: service_healthy
@@ -83,13 +85,11 @@ services:
       retries: 3
 
   api:
-    build:
-      context: ..
-      dockerfile: apps/api/Dockerfile
-    image: deepslate-api:local
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-api:${IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: deepslate-api
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m                     # also the cap for `modpack build`, which runs as a child of api
     network_mode: "service:wireguard"   # reachable as deepslate-wg:4000 on `internal` only
     env_file: .env
     environment:
@@ -97,7 +97,9 @@ services:
       PORTAL_URL: ${AUTH_URL}
     volumes:
       - ./keys/deploy.key:/run/keys/deploy.key:ro
-      - ../dist:/repo/dist:ro          # sync-server rsyncs dist/server/ to the AMP host
+      - ../dist:/repo/dist             # `modpack build` writes it (owner uid 1000); sync-server rsyncs dist/server/ to the AMP host
+      - ../modpack:/repo/modpack:ro
+      - ../installer:/repo/installer:ro
     depends_on:
       wireguard:
         condition: service_started

@@ -1,6 +1,6 @@
 # 11 · Status and handover
 
-Last updated 2026-09-28 late night (Phase 2 built; AMP smoke test complete and mock off; launch switch added). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
+Last updated 2026-09-29 (server build: must-have mods synced, wait room + Discord link flow live in `api`, admin Server page). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
 
 ## Where things are
 
@@ -86,6 +86,16 @@ Run from inside `deepslate-api` through the tunnel, `AMP_URL=http://10.77.0.2:80
 | 3. `Core/SetConfig` | **Refused**: "does not have permission to modify setting" (verified by Alex as `webapp` from the AMP host side, 2026-09-28). Smoke test complete. |
 
 Also recorded (read-only): `GetUpdates` shape, `GetUserList` (`{}` while stopped), `FileManagerPlugin.GetDirectoryListing` works, `LocalFileBackupPlugin.GetBackups` and `GetAMPRolePermissions` are `Unauthorized Access` for webapp. Details in docs/08. `AMP_MOCK=0` now: the mock is off, `api` talks to the real instance. **The instance is stopped**, so with Alex's download rule players can't download until it runs; admins still can.
+
+## Server build + wait room (2026-09-29)
+
+Alex: "build the server with the must-have modpacks first and get the wait room working and the discord auth all set up".
+
+- **Server files**: `server.properties` on the instance already matched docs/14 (online-mode on, white-list off, enforce-whitelist off, spawn-protection 0, port 25569 managed by AMP, seed `CubeCodersPowered`), so it is not synced. Shipped `modpack/server/config/bluemap/{core,webserver}.conf` (accept-download, webserver bound to `10.77.0.2:8100`). `eula=true` was already set.
+- **api** (`apps/api`, now with Prisma against the shared schema): `amp/console.ts` tails `Core.GetUpdates` (2 s while running, 15 s otherwise) and parses UUID/login/leave/list lines; `actions/registry.ts` holds every console command (`limbo.hold`, `limbo.remind`, `limbo.keep`, `link.release`, `limbo.kickIdle`, `limbo.build`, `player.revoke`, `server.say`, `server.list`) with zod-validated input, `actions/run.ts` sends and audits; `players/limbo.ts` decides on every join (`decideJoin`: release only when the UUID belongs to a user with `verifiedAt` and `guildMember`), holds with a 15-min `LinkCode` (reused while valid), drags held players back every 5 s, reminds every 60 s, kicks after 15 min idle, releases on request from the portal, revokes (kick + unwhitelist), and re-checks guild membership every 5 min **only if `DISCORD_BOT_TOKEN` is set** (otherwise membership is refreshed at each Discord login). Routes: `GET /players`, `POST /link/release`, `POST /player/revoke`, `POST /actions/:name` (admin), `GET /console/tail` (admin), `POST /server/start|stop|restart` (admin).
+- **Portal**: `/link/<code>` (login → Discord → guild check → onboarding keeps the return URL) binds the UUID + username from the `LinkCode` to the account (refuses a second UUID per account and a UUID already owned by someone else), marks the code used, asks api to release. Discord sign-in now sets `guildMember` (false when refused, true on success). Admin → Users "Remove" also kicks. New **Admin → Server** page: state, online/held players, Start/Restart/Stop with an in-page confirmation, "Build the room", revoke by name, `say`, console tail (last 120 lines, reload to refresh).
+- Env: `LIMBO_POS` (default `0 250 0`), `SPAWN_POS` (empty = `spreadplayers` near 0,0 on the surface), `DISCORD_BOT_TOKEN` (optional), `DATABASE_URL` + `PORTAL_URL` passed to api by compose.
+- Tests: api 11 (console parsing incl. a chat line that mimics a join, join decision, action builders and input refusal).
 
 ## Installer sign-in + "Update and Play" (Alex, 2026-09-28)
 

@@ -1,0 +1,122 @@
+import { z } from "zod";
+
+// docs/08 + docs/14: every console command the api ever sends is built here from validated input.
+// "system" actions are run by the api itself (join hook, timers); the rest need an ADMIN caller.
+
+export const MC_NAME = z.string().regex(/^[A-Za-z0-9_]{3,16}$/);
+const POS = /^(-?\d+) (-?\d+) (-?\d+)$/;
+
+export type Pos = { x: number; y: number; z: number };
+export function parsePos(s: string): Pos {
+  const m = POS.exec(s);
+  if (!m) throw new Error(`bad position "${s}"`);
+  return { x: Number(m[1]), y: Number(m[2]), z: Number(m[3]) };
+}
+
+export type ActionCtx = { limbo: Pos; spawn: Pos | null; portalUrl: string };
+
+export type Action<I> = {
+  name: string;
+  role: "system" | "ADMIN";
+  input: z.ZodType<I>;
+  build: (ctx: ActionCtx, input: I) => string[];
+};
+
+const define = <I,>(a: Action<I>) => a;
+
+// The room: a bedrock box 11 wide, 7 high, 11 long centred on LIMBO_POS; players stand at y+1.
+const roomBounds = (c: Pos) => ({ x1: c.x - 5, y1: c.y - 1, z1: c.z - 5, x2: c.x + 5, y2: c.y + 5, z2: c.z + 5 });
+const inside = (c: Pos) => `x=${c.x - 4},y=${c.y},z=${c.z - 4},dx=8,dy=5,dz=8`;
+const ow = (cmd: string) => `execute in minecraft:overworld run ${cmd}`;
+
+export function linkTellraw(name: string, portalUrl: string, code: string): string {
+  const url = `${portalUrl}/link/${code}`;
+  const short = url.replace(/^https?:\/\//, "");
+  const payload = [
+    "",
+    { text: "Welcome to Deepslate Works. Click to link your Discord: ", color: "gold" },
+    { text: short, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: url }, hoverEvent: { action: "show_text", value: "Opens the portal in your browser" } },
+    { text: `  (or open the site and enter ${code})`, color: "gray" },
+  ];
+  return `tellraw ${name} ${JSON.stringify(payload)}`;
+}
+
+export const actions = {
+  "limbo.hold": define({
+    name: "limbo.hold",
+    role: "system",
+    input: z.object({ name: MC_NAME, code: z.string().regex(/^[A-Z0-9]{8}$/) }),
+    build: (ctx, { name, code }) => [
+      `tag ${name} remove verified`,
+      `gamemode adventure ${name}`,
+      ow(`tp ${name} ${ctx.limbo.x} ${ctx.limbo.y + 1} ${ctx.limbo.z}`),
+      `effect give ${name} minecraft:slowness infinite 255 true`,
+      `effect give ${name} minecraft:jump_boost infinite 250 true`,
+      linkTellraw(name, ctx.portalUrl, code),
+    ],
+  }),
+  "limbo.remind": define({
+    name: "limbo.remind",
+    role: "system",
+    input: z.object({ name: MC_NAME, code: z.string().regex(/^[A-Z0-9]{8}$/) }),
+    build: (ctx, { name, code }) => [linkTellraw(name, ctx.portalUrl, code)],
+  }),
+  "limbo.keep": define({
+    name: "limbo.keep",
+    role: "system",
+    input: z.object({}),
+    build: (ctx) => [ow(`execute as @a[tag=!verified] at @s unless entity @s[${inside(ctx.limbo)}] run tp @s ${ctx.limbo.x} ${ctx.limbo.y + 1} ${ctx.limbo.z}`)],
+  }),
+  "link.release": define({
+    name: "link.release",
+    role: "ADMIN",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [
+      `tag ${name} add verified`,
+      `effect clear ${name}`,
+      `gamemode survival ${name}`,
+      ctx.spawn ? ow(`tp ${name} ${ctx.spawn.x} ${ctx.spawn.y} ${ctx.spawn.z}`) : ow(`spreadplayers 0 0 1 12 false ${name}`),
+      `whitelist add ${name}`,
+      `tellraw ${name} ${JSON.stringify([{ text: "Linked. Welcome in, ", color: "green" }, { text: name, color: "aqua" }, { text: ". Have fun.", color: "green" }])}`,
+    ],
+  }),
+  "limbo.kickIdle": define({
+    name: "limbo.kickIdle",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [`kick ${name} Link your Discord at ${ctx.portalUrl.replace(/^https?:\/\//, "")} and come back.`],
+  }),
+  "limbo.build": define({
+    name: "limbo.build",
+    role: "ADMIN",
+    input: z.object({}),
+    build: (ctx) => {
+      const b = roomBounds(ctx.limbo);
+      const c = ctx.limbo;
+      return [
+        ow(`forceload add ${b.x1} ${b.z1} ${b.x2} ${b.z2}`),
+        ow(`fill ${b.x1} ${b.y1} ${b.z1} ${b.x2} ${b.y2} ${b.z2} minecraft:bedrock`),
+        ow(`fill ${b.x1 + 1} ${b.y1 + 1} ${b.z1 + 1} ${b.x2 - 1} ${b.y2 - 1} ${b.z2 - 1} minecraft:air`),
+        ow(`fill ${b.x1 + 1} ${b.y1 + 1} ${b.z1 + 1} ${b.x2 - 1} ${b.y1 + 1} ${b.z2 - 1} minecraft:smooth_stone`),
+        ...[[b.x1 + 1, b.z1 + 1], [b.x2 - 1, b.z1 + 1], [b.x1 + 1, b.z2 - 1], [b.x2 - 1, b.z2 - 1]].map(([x, z]) => ow(`setblock ${x} ${b.y2 - 1} ${z} minecraft:glowstone`)),
+        ow(`setblock ${c.x} ${b.y2 - 1} ${c.z} minecraft:sea_lantern`),
+      ];
+    },
+  }),
+  "player.revoke": define({
+    name: "player.revoke",
+    role: "ADMIN",
+    input: z.object({ name: MC_NAME, reason: z.string().max(120).regex(/^[\w .,'!?-]*$/).default("Your Discord isn't in the group's server any more.") }),
+    build: (_ctx, { name, reason }) => [`tag ${name} remove verified`, `whitelist remove ${name}`, `kick ${name} ${reason}`],
+  }),
+  "server.say": define({
+    name: "server.say",
+    role: "ADMIN",
+    input: z.object({ text: z.string().min(1).max(200).regex(/^[^\n\r]+$/) }),
+    build: (_ctx, { text }) => [`say ${text.replace(/[§]/g, "")}`],
+  }),
+  "server.list": define({ name: "server.list", role: "system", input: z.object({}), build: () => ["list"] }),
+};
+
+export type ActionName = keyof typeof actions;
+export const ADMIN_ACTIONS: ActionName[] = (Object.keys(actions) as ActionName[]).filter((n) => actions[n].role === "ADMIN");

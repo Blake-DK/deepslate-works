@@ -15,14 +15,15 @@ const TIERS = [
   { value: "HIGH", title: "Proper gaming PC", hint: "16 GB RAM or more and a decent graphics card." },
 ] as const;
 
-export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
   const user = await requireUser();
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
   return (
     <div className="mx-auto max-w-md space-y-4 pt-4">
       <h1 className="text-2xl font-semibold">Hi {user.displayName}, one quick thing</h1>
       {error && <Alert tone="error">{ERRORS[error] ?? ERRORS.form}</Alert>}
       <form action={completeOnboarding} className="space-y-4">
+        <input type="hidden" name="next" value={next ?? "/"} />
         <Card>
           <CardHeader>
             <CardTitle>Your PC</CardTitle>

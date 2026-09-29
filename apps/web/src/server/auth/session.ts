@@ -27,7 +27,7 @@ export async function requireUser(next?: string) {
 /** "Onboarded" = answered the PC question. The Minecraft account is linked in game later (docs/14). */
 export async function requireOnboardedUser(next?: string) {
   const user = await requireUser(next);
-  if (!user.pcTier) redirect("/onboarding");
+  if (!user.pcTier) redirect(next ? `/onboarding?next=${encodeURIComponent(next)}` : "/onboarding");
   return user;
 }
 

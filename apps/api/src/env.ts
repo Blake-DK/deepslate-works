@@ -12,12 +12,20 @@ const schema = z.object({
   AMP_TUNNEL_IP: z.string().default("10.77.0.2"),
   RSYNC_TARGET: z.string().default("amp@10.77.0.2:"),
   DEPLOY_KEY_PATH: z.string().default("/run/keys/deploy.key"),
+  DATABASE_URL: z.string().min(1),
+  PORTAL_URL: z.string().url().default("https://deepslate.dsw.test"),
+  LIMBO_POS: z.string().regex(/^-?\d+ -?\d+ -?\d+$/).default("0 250 0"),
+  SPAWN_POS: z.string().regex(/^-?\d+ -?\d+ -?\d+$/).optional(),
+  DISCORD_BOT_TOKEN: z.string().optional(),
+  DISCORD_GUILD_ID: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const parsed = schema.safeParse(source);
+  // Empty values in deploy/.env (e.g. `SPAWN_POS=`) mean "unset".
+  const cleaned = Object.fromEntries(Object.entries(source).filter(([, v]) => v !== undefined && v !== ""));
+  const parsed = schema.safeParse(cleaned);
   if (!parsed.success) {
     const lines = parsed.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n");
     throw new Error(`api: bad environment\n${lines}`);

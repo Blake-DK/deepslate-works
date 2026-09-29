@@ -7,6 +7,7 @@ import { db } from "@/server/db";
 import { lookupMinecraftUser } from "@/server/mojang";
 import { MC_USERNAME_RE } from "@/server/auth/constants";
 import { revokeLauncherTokens } from "@/server/launcher";
+import { apiFetch } from "@/server/api-client";
 
 export async function setRoleAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -22,6 +23,11 @@ export async function removeUserAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id || id === admin.id) return;
   const removed = await db.user.delete({ where: { id } }).catch(() => null);
+  if (removed?.mcUuid) {
+    try {
+      await apiFetch("/player/revoke", { method: "POST", body: { uuid: removed.mcUuid, reason: "Removed from the group by an admin." }, caller: { id: admin.id, role: "ADMIN" } });
+    } catch {}
+  }
   if (removed) {
     await db.auditLog.create({ data: { userId: admin.id, action: "user.remove", params: { id, displayName: removed.displayName, mcUsername: removed.mcUsername }, result: "OK" } });
   }

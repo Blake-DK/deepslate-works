@@ -5,6 +5,7 @@ const LINKS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/votes", label: "Votes" },
   { href: "/admin/modpack", label: "Modpack" },
+  { href: "/admin/server", label: "Server" },
   { href: "/admin/invites", label: "Invites" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/settings", label: "Settings" },

@@ -92,6 +92,9 @@ services:
     mem_limit: 256m
     network_mode: "service:wireguard"   # reachable as deepslate-wg:4000 on `internal` only
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
+      PORTAL_URL: ${AUTH_URL}
     volumes:
       - ./keys/deploy.key:/run/keys/deploy.key:ro
       - ../dist:/repo/dist:ro          # sync-server rsyncs dist/server/ to the AMP host

@@ -71,6 +71,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (env.DISCORD_GUILD_ID) {
         inGuild = await isGuildMember(account.access_token, env.DISCORD_GUILD_ID);
         if (!inGuild) {
+          await db.user.updateMany({ where: { discordId }, data: { guildMember: false } }); // docs/14 §7: back to the room next join
           await db.auditLog.create({ data: { action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "not in discord server" } });
           return "/login?error=not-in-server";
         }
@@ -78,6 +79,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const existing = await db.user.findUnique({ where: { discordId } });
       if (existing) {
         await touchLastSeen(existing.id);
+        if (env.DISCORD_GUILD_ID && !existing.guildMember) await db.user.update({ where: { id: existing.id }, data: { guildMember: true } });
         return true;
       }
       const bootstrapAdmin = Boolean(env.ADMIN_DISCORD_ID) && discordId === env.ADMIN_DISCORD_ID;

@@ -10,6 +10,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@prisma/client':
+        specifier: ^6
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       fastify:
         specifier: ^5
         version: 5.12.5
@@ -23,6 +26,9 @@ importers:
       eslint:
         specifier: ^9
         version: 9.39.5(jiti@2.7.0)
+      prisma:
+        specifier: ^6
+        version: 6.19.3(typescript@5.9.3)
       tsx:
         specifier: ^4
         version: 4.23.15

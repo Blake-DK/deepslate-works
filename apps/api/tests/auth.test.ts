@@ -27,7 +27,7 @@ describe("ADS proxy path", () => {
 });
 
 describe("server", () => {
-  const env = loadEnv({ API_SERVICE_TOKEN: TOKEN, AMP_MOCK: "1", AMP_TUNNEL_IP: "127.0.0.1" });
+  const env = loadEnv({ API_SERVICE_TOKEN: TOKEN, AMP_MOCK: "1", AMP_TUNNEL_IP: "127.0.0.1", DATABASE_URL: "postgresql://x:y@localhost:5432/z" });
   it("rejects requests without the token and serves mock status with it", async () => {
     const app = buildServer(env);
     const denied = await app.inject({ method: "GET", url: "/status" });

@@ -10,6 +10,8 @@ RUN pnpm install --frozen-lockfile --filter api
 
 FROM deps AS build
 COPY apps/api apps/api
+COPY apps/web/prisma apps/web/prisma
+# apps/api/prisma/schema.prisma is a symlink to the web app's schema (one schema, two clients)
 RUN pnpm --filter api build
 
 FROM base AS run

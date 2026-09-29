@@ -12,18 +12,23 @@ import { CopyButton } from "./copy-button";
 import { canDownload } from "@/server/modpack/gate";
 import { canSeeServer, getSettings } from "@/server/settings";
 import { LaunchBanner } from "@/components/launch-banner";
+import { isWindows, WINDOWS_ONLY } from "@/lib/platform";
 
 export const metadata: Metadata = { title: "Install" };
 
-// Windows only (planner decision, 2026-09-29). Everything else gets one line.
-const onWindows = (ua: string) => /windows/i.test(ua);
-
-export default async function InstallPage({ searchParams }: { searchParams: Promise<{ os?: string; offline?: string }> }) {
+export default async function InstallPage({ searchParams }: { searchParams: Promise<{ offline?: string }> }) {
   const user = await requireOnboardedUser();
-  const { os: osParam, offline } = await searchParams;
-  const ua = (await headers()).get("user-agent") ?? "";
-  // ?os=windows shows the steps anyway: for someone reading on a phone before sitting down at the PC
-  const windows = osParam === "windows" || onWindows(ua);
+  const { offline } = await searchParams;
+  // Windows only (planner decision, 2026-09-29): any other browser gets one line and nothing else.
+  if (!isWindows((await headers()).get("user-agent"))) {
+    const name = (await getManifest()).name;
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold">Join the server</h1>
+        <Alert tone="info">{WINDOWS_ONLY(name)}</Alert>
+      </div>
+    );
+  }
   const [m, lock, installer] = await Promise.all([getManifest(), getLock(), distFile("installer.zip")]);
   const version = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const settings = await getSettings();
@@ -37,7 +42,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Join the server</h1>
-          <p className="mt-1 max-w-2xl text-muted-foreground">Not open yet. When it launches, this page turns into a one-click installer for Windows, and the server address appears here. It runs on Windows only.</p>
+          <p className="mt-1 max-w-2xl text-muted-foreground">Not open yet. When it launches, this page turns into a one-click installer for Windows, and the server address appears here.</p>
         </div>
         <LaunchBanner launchAt={settings.launchAt} admin={false} />
         <Card>
@@ -65,9 +70,6 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       {offline && gate.ok && <Alert tone="info">The server was offline a moment ago; it&apos;s reachable now, try again.</Alert>}
       {gate.reason === "admin" && <Alert tone="info">Admin: downloads are always open for you. Players only see them while the server is running or asleep.</Alert>}
 
-      {!windows && <Alert tone="info"><strong>{m.name} runs on Windows only.</strong> Open this page on your Windows PC. Reading ahead on another device? <a href="/install?os=windows" className="underline">Show the steps</a>.</Alert>}
-
-      {windows && (
         <Card>
           <CardHeader>
             <CardTitle>Windows: three steps</CardTitle>
@@ -88,7 +90,6 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
             <p className="text-sm text-muted-foreground">From then on, close the launcher and double-click <span className="font-mono">Update and Play.bat</span> in the same folder: it signs you in with Discord in your browser the first time (then remembers you for a week), fetches any mod updates, and opens the launcher on the Deepslate Works profile. Keep the folder; that&apos;s your play button.</p>
           </CardContent>
         </Card>
-      )}
 
       <Card>
         <CardHeader><CardTitle>Server address</CardTitle><CardDescription>The installer adds it to your server list; here it is in case you need it.</CardDescription></CardHeader>

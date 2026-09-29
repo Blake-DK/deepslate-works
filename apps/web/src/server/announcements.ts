@@ -1,5 +1,9 @@
 import "server-only";
 import { db } from "@/server/db";
+import { getBranding } from "@/server/branding";
+
+/** The author of what the portal itself announces (a new world, say): shown under the site's name. */
+export const SYSTEM_AUTHOR = "system";
 
 export type News = { id: string; body: string; pinned: boolean; createdAt: Date; author: string };
 
@@ -13,5 +17,6 @@ export async function getAnnouncements(recent: number): Promise<News[]> {
   if (rows.length === 0) return [];
   const authors = await db.user.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.authorId))] } }, select: { id: true, displayName: true } });
   const name = new Map(authors.map((a) => [a.id, a.displayName]));
-  return rows.map((r) => ({ id: r.id, body: r.body, pinned: r.pinned, createdAt: r.createdAt, author: name.get(r.authorId) ?? "someone who has left" }));
+  const site = rows.some((r) => r.authorId === SYSTEM_AUTHOR) ? (await getBranding()).name : "";
+  return rows.map((r) => ({ id: r.id, body: r.body, pinned: r.pinned, createdAt: r.createdAt, author: name.get(r.authorId) ?? (r.authorId === SYSTEM_AUTHOR ? site : "someone who has left") }));
 }

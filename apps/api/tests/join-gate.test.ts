@@ -87,3 +87,23 @@ describe("in the event log", () => {
     expect(describeAction("join.ready", who, { name: "bramble09", back: true })).toBe("Bramble09 pressed Play and was let in, back to where they were");
   });
 });
+
+describe("what the pre-generation does by itself, and who 'System' is", () => {
+  it("has no 'who' in front", () => {
+    const portal = { role: "system" as const, name: null };
+    expect(describeAction("world.pregenOff", portal, { reason: "done", percent: 100, radius: 1500 })).toBe("Pre-generation finished (100%, radius 1500)");
+    expect(describeAction("world.pregenOff", portal, { reason: "cap", percent: 81.2, radius: 5000 })).toBe("Pre-generation stopped: its hours are up (81.2%, radius 5000)");
+    expect(describeAction("world.pregenContinue", portal, {})).toBe("Pre-generation turned on again");
+  });
+  it("names the admin when an admin did it", () => {
+    const alex = { role: "ADMIN" as const, name: "Bramble09" };
+    expect(describeAction("world.pregenOff", alex, { reason: "asked", percent: 67.4, radius: 1500 })).toBe("Bramble09 stopped the pre-generation, at 67.4%");
+    expect(describeAction("world.pregenContinue", alex, {})).toBe("Bramble09 turned the pre-generation on again");
+  });
+  it("calls a caller with the service token and no portal account System", () => {
+    const system = { role: "system" as const, name: "System" };
+    expect(describeAction("world.pregenOn", system, { mode: "empty", x: 0, z: 0, radius: 1500 })).toBe("System turned the pre-generation on: when nobody's online; 1500 blocks around 0, 0");
+    expect(describeAction("server.start", system, {})).toBe("System started the server");
+    expect(describeAction("auth.login", { role: null, name: null }, {}, "DENIED")).toBe("Someone tried to sign in (refused)"); // a visitor nobody knows is still "Someone"
+  });
+});

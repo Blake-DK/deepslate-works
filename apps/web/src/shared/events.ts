@@ -85,7 +85,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "world.pregenOn": (p) => p.refused
     ? "tried to turn the pre-generation on; the control panel does not let the portal switch sleep mode off"
     : `turned the pre-generation on: ${p.mode === "now" ? "now, whoever is playing" : "when nobody's online"}${p.capHours ? `, ${s(p.capHours)} hours at most` : ""}; ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}${p.newArea ? " (a new area)" : ""}`,
-  "world.pregenOff": (p) => (p.reason === "done" ? "the pre-generation is finished" : p.reason === "cap" ? `the pre-generation's hours are up, at ${s(p.percent)}%` : `stopped the pre-generation, at ${s(p.percent)}%`),
+  "world.pregenOff": (p) => (p.reason === "done" ? `pre-generation finished (100%${p.radius ? `, radius ${s(p.radius)}` : ""})` : p.reason === "cap" ? `pre-generation stopped: its hours are up (${s(p.percent)}%${p.radius ? `, radius ${s(p.radius)}` : ""})` : `stopped the pre-generation, at ${s(p.percent)}%`),
   "world.pregen": (p) => `turned the pre-generation on: ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}`,
   "world.pregenContinue": "turned the pre-generation on again",
   "world.pregenPause": "paused the pre-generation",
@@ -119,7 +119,10 @@ export function describeAction(action: string, actor: Actor, params: unknown, re
   const who = actor.name ?? (actor.role === "system" ? "The portal" : "Someone");
   const auto = action === "vote.close" && p.auto;
   const planned = action === "server.restart" && p.scheduled;
-  const body = SELF_CONTAINED.has(action) || auto || planned ? text.charAt(0).toUpperCase() + text.slice(1) : phrase === undefined || POSSESSIVE.has(action) ? `${who}: ${text}` : `${who} ${text}`;
+  // what the pre-generation does by itself has no "who": "Pre-generation finished (100%, radius 1500)"
+  const byItself = (action === "world.pregenOff" && (p.reason === "done" || p.reason === "cap")) || (action === "world.pregenContinue" && !actor.name);
+  const said = byItself && action === "world.pregenContinue" ? "pre-generation turned on again" : text;
+  const body = byItself ? said.charAt(0).toUpperCase() + said.slice(1) : SELF_CONTAINED.has(action) || auto || planned ? text.charAt(0).toUpperCase() + text.slice(1) : phrase === undefined || POSSESSIVE.has(action) ? `${who}: ${text}` : `${who} ${text}`;
   const suffix = result === "OK" || OUTCOME_IN_PHRASE.has(action) ? "" : result === "DENIED" ? " (refused)" : result === "TIMEOUT" ? " (no answer)" : " (failed)";
   return `${body}${suffix}`.slice(0, 500);
 }

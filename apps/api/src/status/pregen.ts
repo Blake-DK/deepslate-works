@@ -275,7 +275,7 @@ export class Pregen {
     this.plan = { mode: "off", area: reason === "done" ? null : was.area };
     this.lastStep = "off";
     await this.store.save(this.plan);
-    await audit({ userId: by, action: "world.pregenOff", params: { reason, percent: this.watch.state.percent, chunks: this.watch.state.chunks, sleepRestored: was.sleepWas }, result: paused ? "OK" : "FAILED" });
+    await audit({ userId: by, action: "world.pregenOff", params: { reason, percent: this.watch.state.percent, chunks: this.watch.state.chunks, radius: was.area.radius, sleepRestored: was.sleepWas }, result: paused ? "OK" : "FAILED" });
   }
 
   /** Stop, and make chunky forget where it got to. */

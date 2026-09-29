@@ -11,7 +11,9 @@ export async function audit(data: { userId?: string | null; action: string; para
   try {
     const result = (["OK", "DENIED", "FAILED", "TIMEOUT"].includes(data.result) ? data.result : "OK") as AuditResult;
     const user = data.userId ? await db.user.findUnique({ where: { id: data.userId }, select: { role: true, displayName: true } }) : null;
-    const actor = user ? { role: user.role, name: user.displayName } : { role: data.userId ? null : ("system" as const), name: null };
+    // No caller: api itself ("The portal let bramble09 in"). A caller that is not a member of the portal is somebody
+    // using the service token directly, a script or a session on the VPS: "System".
+    const actor = user ? { role: user.role, name: user.displayName } : data.userId ? { role: "system" as const, name: "System" } : { role: "system" as const, name: null };
     const detail = data.userId && !user ? `${data.detail ?? ""} [caller ${data.userId} not a user]`.trim() : (data.detail ?? null);
     await db.event.create({
       data: {

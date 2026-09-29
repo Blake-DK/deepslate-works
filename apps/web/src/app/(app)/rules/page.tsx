@@ -25,6 +25,7 @@ export default async function RulesPage() {
             <li>{privacy.chat ? <>What is said in the in-game chat, for {retention.chatDays} days. Only admins can read it back.</> : "In-game chat is not stored."}</li>
             <li>The address you connect from, for {retention.ipDays} days. Only admins can see it.{privacy.geo ? " The country it belongs to is shown on the stats page." : ""}</li>
             <li>What you do on this site (voting, linking your account), for {retention.eventDays} days.</li>
+            <li>When you run the installer: how it went, its log, and what PC it ran on (Windows version, processor, memory, graphics card, free disk space), for {retention.installDays} days. Only admins can see it; you see your own last result on your page. It never includes your Windows user name, and the installer says so before it sends.</li>
           </ul>
         </CardContent>
       </Card>

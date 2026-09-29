@@ -4,7 +4,7 @@
 // docs/16 §4: what an audit entry becomes in the event log. Portal actions are ADMIN_ACTION or
 // PLAYER_ACTION rows with the action's name, parameters and result in `meta`; a few have a kind of their own.
 
-export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP"] as const;
+export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP", "INSTALL"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 /** What players may see at /events. Everything else is for admins. */
@@ -14,13 +14,13 @@ export type Severity = "info" | "player" | "warning" | "error" | "admin";
 export const SEVERITY: Record<EventKind, Severity> = {
   JOIN: "player", LEAVE: "player", DEATH: "player", CHAT: "player", ADVANCEMENT: "player",
   SERVER_START: "info", SERVER_STOP: "info", CRASH: "error", WARN: "warning", ERROR: "error",
-  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin",
+  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin", INSTALL: "player",
 };
 
 export const KIND_LABEL: Record<EventKind, string> = {
   JOIN: "Joined", LEAVE: "Left", DEATH: "Death", CHAT: "Chat", ADVANCEMENT: "Advancement",
   SERVER_START: "Server started", SERVER_STOP: "Server stopped", CRASH: "Crash", WARN: "Warning", ERROR: "Error",
-  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup",
+  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup", INSTALL: "Install",
 };
 
 export type AuditResult = "OK" | "DENIED" | "FAILED" | "TIMEOUT";
@@ -32,6 +32,7 @@ export function kindOf(action: string, role: Actor["role"]): EventKind {
   if (action === "player.revoke" || action === "user.remove" || action === "user.clearMinecraft") return "REVOKE";
   if (action.startsWith("modpack.sync")) return "SYNC";
   if (action === "server.backup") return "BACKUP";
+  if (action === "installer.report") return "INSTALL";
   return role === "ADMIN" || role === "system" ? "ADMIN_ACTION" : "PLAYER_ACTION";
 }
 
@@ -43,6 +44,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "auth.register": "joined the group",
   "auth.adminReset": "had their password reset from the command line",
   "profile.onboard": "answered the PC question",
+  "profile.tier.measured": (p) => (p.from && p.from !== p.to ? `their PC was measured by the installer: ${s(p.to)} (they had chosen ${s(p.from)})` : `their PC was measured by the installer: ${s(p.to)}`),
   "ballot.save": "saved their vote",
   "vote.create": (p) => `created the vote "${s(p.title)}"`,
   "vote.open": "opened the vote",
@@ -81,14 +83,18 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.restart.cancelled": "called off the planned restart",
   "server.backup": "started a backup",
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
+  "installer.report": (p) => (p.outcome === "ok" ? `installed ${s(p.packVersion, "the pack")}: all good` : p.outcome === "cancelled" ? `stopped the installer${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `ran the installer and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`),
   "files.download": (p) => `downloaded ${s(p.path)} from the server`,
-  "retention.prune": (p) => `old entries cleared: ${s(p.events, "0")} events, ${s(p.ips, "0")} addresses`,
+  "retention.prune": (p) => `old entries cleared: ${s(p.events, "0")} events, ${s(p.ips, "0")} addresses${p.installs ? `, ${s(p.installs)} install reports` : ""}`,
   "events.export": "exported the event log",
   "analytics.export": "exported the analytics",
 };
 
 // Phrases that already say who (or have no who).
 const SELF_CONTAINED = new Set(["limbo.held", "limbo.kickIdle", "retention.prune"]);
+const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
+// Phrases that already say how it went.
+const OUTCOME_IN_PHRASE = new Set(["installer.report"]);
 
 export function describeAction(action: string, actor: Actor, params: unknown, result: AuditResult = "OK"): string {
   const p = (params && typeof params === "object" ? params : {}) as P;
@@ -97,8 +103,8 @@ export function describeAction(action: string, actor: Actor, params: unknown, re
   const who = actor.name ?? (actor.role === "system" ? "The portal" : "Someone");
   const auto = action === "vote.close" && p.auto;
   const planned = action === "server.restart" && p.scheduled;
-  const body = SELF_CONTAINED.has(action) || auto || planned ? text.charAt(0).toUpperCase() + text.slice(1) : phrase === undefined ? `${who}: ${text}` : `${who} ${text}`;
-  const suffix = result === "OK" ? "" : result === "DENIED" ? " (refused)" : result === "TIMEOUT" ? " (no answer)" : " (failed)";
+  const body = SELF_CONTAINED.has(action) || auto || planned ? text.charAt(0).toUpperCase() + text.slice(1) : phrase === undefined || POSSESSIVE.has(action) ? `${who}: ${text}` : `${who} ${text}`;
+  const suffix = result === "OK" || OUTCOME_IN_PHRASE.has(action) ? "" : result === "DENIED" ? " (refused)" : result === "TIMEOUT" ? " (no answer)" : " (failed)";
   return `${body}${suffix}`.slice(0, 500);
 }
 

@@ -17,6 +17,7 @@ export const sections = {
     chatDays: z.number().int().min(1).max(3650).default(30),
     eventDays: z.number().int().min(7).max(3650).default(180),
     ipDays: z.number().int().min(1).max(365).default(30),
+    installDays: z.number().int().min(1).max(3650).default(90), // install reports (log and hardware)
   }),
   files: z.object({
     maxDownloadMb: z.number().int().min(1).max(500).default(50),

@@ -111,3 +111,16 @@ One place to change how the portal looks, editable by admins without a deploy.
 - [ ] `/admin/events` shows a join, a death, a chat line, a server restart and an admin action from a 10-minute test session, with live tail working; `/events` for a player hides IPs, raw lines and admin rows.
 - [ ] Changing the accent colour and logo in `/admin/branding` is visible on the next page load without a deploy; the login page shows the new banner.
 - [ ] Retention prune runs and is logged as an Event.
+
+## 8. Installer telemetry (planner spec, 2026-09-29; appended by the VPS session at the planner's request)
+
+1. At the end of every run (success or failure), `install.ps1` POSTs to `/api/installer/report`, authenticated with the same signed-in identity it already uses. Body: pack version, installer version, outcome (ok / failed / cancelled), the step that failed, duration; the full run log (the same text as `%TEMP%\deepslate-install.log`, ≤ 512 KB, truncated from the middle); system: Windows version and build, CPU name and core count, total RAM, GPU name(s) and driver version, free disk on the install drive, launcher version, Java found (which path, version), NeoForge present before/after. Redact before sending: any `C:\Users\<name>\` path becomes `C:\Users\~\`, no Windows username, no Microsoft account details, no launcher tokens, no IPs. Print one line before sending: "Sending the install log to deepslate.dsw.test so Alex can help if something went wrong." If the upload fails, say so and keep the local log; never block on it.
+2. Stored as `InstallReport {id, userId, at, packVersion, installerVersion, outcome, failedStep, durationSec, system Json, log Text}`. Retention 90 days, nightly prune.
+3. Admin → Installs page: table of reports (who, when, outcome, pack version, OS, RAM, GPU), filter by outcome, click to view the log with the failed step highlighted. On a player's page show their last install and their hardware summary; use the RAM/GPU to auto-suggest the PC tier and flag when the self-reported tier looks wrong.
+4. `/me` shows the player their own last report and nothing else.
+5. Event kind `INSTALL` added to the event log (one row per report, outcome in the message).
+6. A heartbeat from the launcher profile: no. Out of scope; the report at install time is enough.
+
+Acceptance: a failed run on a machine without the launcher produces a report with outcome=failed, failedStep="Checking the Minecraft Launcher", the OS/RAM/GPU fields filled, and no username anywhere in the stored log or system JSON.
+
+**As built**, with the differences, is in docs/07 "Install reports" and "The PC tier is measured". Two differences from the text above: the tier is not only suggested but **set** from the report (Alex, 2026-09-29: "the 'your PC' should be decided by a script too"), so there is no "self-reported tier looks wrong" flag, the report records the tier before and the tier measured instead; and signing in became the installer's first step, so that the acceptance case can be reported at all.

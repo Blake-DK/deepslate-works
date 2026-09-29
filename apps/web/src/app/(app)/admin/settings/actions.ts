@@ -43,7 +43,7 @@ export async function savePrivacyAction(formData: FormData) {
 
 export async function saveRetentionAction(formData: FormData) {
   const admin = await requireAdmin();
-  await save("retention", { chatDays: int(formData.get("chatDays")), eventDays: int(formData.get("eventDays")), ipDays: int(formData.get("ipDays")) }, admin.id);
+  await save("retention", { chatDays: int(formData.get("chatDays")), eventDays: int(formData.get("eventDays")), ipDays: int(formData.get("ipDays")), installDays: int(formData.get("installDays")) }, admin.id);
 }
 
 export async function saveFilesAction(formData: FormData) {

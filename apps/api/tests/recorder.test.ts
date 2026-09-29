@@ -197,6 +197,7 @@ describe("audit entries as events", () => {
     expect(kindOf("player.revoke", "ADMIN")).toBe("REVOKE");
     expect(kindOf("modpack.sync-dry", "ADMIN")).toBe("SYNC");
     expect(kindOf("server.backup", "ADMIN")).toBe("BACKUP");
+    expect(kindOf("installer.report", "PLAYER")).toBe("INSTALL");
     expect(kindOf("vote.open", "ADMIN")).toBe("ADMIN_ACTION");
     expect(kindOf("retention.prune", "system")).toBe("ADMIN_ACTION");
     expect(kindOf("ballot.save", "PLAYER")).toBe("PLAYER_ACTION");
@@ -217,8 +218,8 @@ describe("audit entries as events", () => {
 
 describe("settings", () => {
   it("fills in defaults and drops only the fields that are wrong", () => {
-    expect(parseSection("retention", undefined)).toEqual({ chatDays: 30, eventDays: 180, ipDays: 30 });
-    expect(parseSection("retention", { chatDays: 7, eventDays: "lots", ipDays: 0 })).toEqual({ chatDays: 7, eventDays: 180, ipDays: 30 });
+    expect(parseSection("retention", undefined)).toEqual({ chatDays: 30, eventDays: 180, ipDays: 30, installDays: 90 });
+    expect(parseSection("retention", { chatDays: 7, eventDays: "lots", ipDays: 0 })).toEqual({ chatDays: 7, eventDays: 180, ipDays: 30, installDays: 90 });
     expect(parseSection("privacy", { geo: false })).toEqual({ geo: false, chat: true, analyticsForPlayers: true });
     expect(parseSection("branding", { accent: "red", name: "  The Mine  " })).toMatchObject({ accent: "#b8652c", name: "The Mine" });
     expect(parseSection("privacy", "nonsense")).toEqual({ geo: true, chat: true, analyticsForPlayers: true });

@@ -81,10 +81,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </CardHeader>
         <CardContent>
           <form action={saveRetentionAction} className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-4">
               <div><Label htmlFor="chatDays">Chat, days</Label><Input id="chatDays" name="chatDays" type="number" min={1} max={3650} defaultValue={retention.chatDays} required /></div>
               <div><Label htmlFor="eventDays">Other events, days</Label><Input id="eventDays" name="eventDays" type="number" min={7} max={3650} defaultValue={retention.eventDays} required /></div>
               <div><Label htmlFor="ipDays">Players&apos; addresses, days</Label><Input id="ipDays" name="ipDays" type="number" min={1} max={365} defaultValue={retention.ipDays} required /></div>
+              <div><Label htmlFor="installDays">Install reports, days</Label><Input id="installDays" name="installDays" type="number" min={1} max={3650} defaultValue={retention.installDays} required /></div>
             </div>
             <Button type="submit">Save</Button>
           </form>

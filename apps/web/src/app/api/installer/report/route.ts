@@ -1,0 +1,48 @@
+import type { Prisma } from "@prisma/client";
+import { db } from "@/server/db";
+import { audit } from "@/server/events";
+import { bearer, userFromLauncherToken } from "@/server/launcher";
+import { RateLimiter } from "@/server/auth/rate-limit";
+import { reportSchema, sanitizeReport, suggestTier } from "@/lib/install-report";
+
+export const dynamic = "force-dynamic";
+
+// docs/07 "Install reports": the installer posts here at the end of every run, signed in with the same
+// launcher token it uses for the mod list. Nothing anonymous is accepted. What arrives is redacted again
+// before it is stored (the installer already did it once on the PC).
+const MAX_BODY = 1_300_000;
+const g = globalThis as unknown as { __dwInstallLimiter?: RateLimiter };
+const limiter = (g.__dwInstallLimiter ??= new RateLimiter(20, 3_600_000));
+
+const no = (status: number, code: string, message: string) => Response.json({ error: { code, message } }, { status });
+
+export async function POST(req: Request) {
+  const user = await userFromLauncherToken(bearer(req));
+  if (!user) return no(401, "unauthorized", "Sign in with the installer first");
+  if (!limiter.allow(user.id)) return no(429, "rate_limited", "Too many reports; try again in an hour");
+  const length = Number(req.headers.get("content-length") ?? 0);
+  if (length > MAX_BODY) return no(413, "too_large", "The report is too large");
+  const text = await req.text();
+  if (text.length > MAX_BODY) return no(413, "too_large", "The report is too large");
+  let body: unknown;
+  try {
+    body = JSON.parse(text.replace(/^﻿/, ""));
+  } catch {
+    return no(400, "validation", "Not JSON");
+  }
+  const parsed = reportSchema.safeParse(body);
+  if (!parsed.success) return no(400, "validation", parsed.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+  const r = sanitizeReport(parsed.data);
+  // The PC tier is measured, not asked (Alex, 2026-09-29): every report that says enough about the hardware sets it.
+  const measured = suggestTier(r.system);
+  const row = await db.installReport.create({
+    data: { userId: user.id, packVersion: r.packVersion, installerVersion: r.installerVersion, outcome: r.outcome, failedStep: r.failedStep, durationSec: r.durationSec, system: r.system as Prisma.InputJsonValue, log: r.log, tierBefore: user.pcTier, tierMeasured: measured?.tier ?? null },
+    select: { id: true },
+  });
+  if (measured) {
+    await db.user.update({ where: { id: user.id }, data: { pcTier: measured.tier, pcTierSource: "measured", pcTierWhy: measured.why.slice(0, 200), pcTierAt: new Date() } });
+    if (user.pcTier !== measured.tier || user.pcTierSource !== "measured") await audit({ userId: user.id, action: "profile.tier.measured", params: { from: user.pcTier, to: measured.tier, why: measured.why, reportId: row.id }, result: "OK" });
+  }
+  await audit({ userId: user.id, action: "installer.report", params: { reportId: row.id, outcome: r.outcome, failedStep: r.failedStep, packVersion: r.packVersion, installerVersion: r.installerVersion, durationSec: r.durationSec }, result: r.outcome === "ok" ? "OK" : "FAILED" });
+  return Response.json({ ok: true, id: row.id, tier: measured?.tier ?? null });
+}

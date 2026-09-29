@@ -21,6 +21,57 @@ So `install.ps1`:
 
 `install.ps1 -SelfTest` runs the profile code against a scratch copy of a fresh launcher's file (18 checks: written, no byte-order mark, the launcher's own profiles and settings kept, `.bak` kept, a second run updates in place, a launcher that rewrote the file is noticed, a broken or missing file is reported, a running launcher is found). It touches nothing else and runs under Windows PowerShell 5.1 and under `pwsh` on Linux.
 
+## Install reports (planner spec 2026-09-29; built the same day)
+
+At the end of every run, whether it went well, failed or was stopped, `install.ps1` sends a report to `POST /api/installer/report`, signed in with the launcher token it already holds. Before sending it prints: **"Sending the install log to deepslate.dsw.test so Alex can help if something went wrong."** If the upload fails it says so and leaves the local log where it is; a report never holds the install up (20 s at most).
+
+**What is sent**
+
+| Field | Holds |
+|---|---|
+| `packVersion`, `installerVersion` | what was being installed, and by which version of the script |
+| `outcome` | `ok`, `failed` or `cancelled` (the window was closed or Ctrl+C pressed part-way) |
+| `failedStep` | the title of the step in hand when it stopped, e.g. "Checking the Minecraft Launcher" |
+| `durationSec` | how long the run took |
+| `log` | this run's lines of `%TEMP%\deepslate-install.log`, 512 KB at most, cut in the middle if longer |
+| `system.os` | Windows edition, version, build, display version (24H2), 64-bit or not |
+| `system.cpu` | name, cores, threads |
+| `system.ramGb` | total memory |
+| `system.gpus` | each graphics adapter: name, driver version, memory (Windows reports at most 4 GB here) |
+| `system.disk` | free and total space on the drive the pack is installed on |
+| `system.launcher` | classic or Store, its version (from `launcher_profiles.json`, else the exe, else the Store package), the profile file's format number |
+| `system.java` | where Java came from (the launcher's own, PATH, downloaded), the path, the version line |
+| `system.neoforge` | the version, whether it was there before the run and after |
+
+**What is never sent.** The Windows user name, the PC's name, anything about the Microsoft account (the script never reads it), launcher tokens, e-mail addresses, network addresses. In every string, `C:\Users\<name>\` becomes `C:\Users\~\`. The redaction is done twice: on the PC before sending (`Redact` in `install.ps1`) and again by the portal before storing (`apps/web/src/lib/install-report.ts`), so an edited or buggy script cannot put a name into the database. Version numbers are left readable.
+
+**Order of the steps.** Signing in is now the first step and the launcher check the second. A report needs to know who it is from, and the acceptance case (no launcher installed) fails at the launcher check: with the old order that failure came before anyone had signed in and could not have been reported. A failure while signing in itself (site unreachable, sign-in refused) cannot be reported and is only in the local log.
+
+**Stored** as `InstallReport {id, userId, at, packVersion, installerVersion, outcome, failedStep, durationSec, system, log, tierBefore, tierMeasured}` (migration `0006_install_reports`), kept 90 days (Admin → Settings → "Install reports, days"), cleared by the nightly retention run. Each report is also one `INSTALL` row in the event log ("m1owl installed 0.1.0+47b0b579: all good"). At most 20 reports per member per hour.
+
+**Where it shows**
+
+- **Admin → Installs** (`/admin/installs`): "The group's PCs" (each member's latest report: measured tier, processor, memory, graphics) and every run (who, when, outcome, pack, Windows, memory, graphics), filtered by outcome. A run opens to the PC's details and the log, with the failed step and what followed it marked.
+- **A player's page** (`/players/<uuid>`), admins only: their last install and their PC.
+- **`/me`**: the member's own last result in one line ("Installed 0.1.0 on 29 Sep, all good") and nothing else.
+- **`/rules`** lists install reports under "What the site keeps".
+
+**No heartbeat.** Nothing is sent from the launcher profile or from the game; the report at install time is all there is.
+
+## The PC tier is measured (Alex, 2026-09-29)
+
+"The 'your PC' should be decided by a script too, so we get a real view of the power and capabilities of people's PCs." Every install report that says enough about the hardware sets the member's tier (`suggestTier` in `apps/web/src/lib/install-report.ts`):
+
+| Tier | When |
+|---|---|
+| LOW ("Older PC") | under 8 GB of memory, or built-in graphics only (Intel HD/UHD/Iris, Radeon Graphics, Vega) |
+| HIGH ("Gaming PC") | 16 GB or more **and** a strong card: RTX, GTX 1060/1070/1080/1660/970/980, RX 5500 and up, Intel Arc |
+| MID ("Decent PC") | everything between, e.g. a GTX 1050 Ti, or an RTX card with 8 GB of memory |
+
+Remote-desktop and virtual adapters (Parsec, Microsoft Basic Display, Hyper-V) are ignored; on a laptop with two adapters the real card counts. `User.pcTierSource` is `measured` from then on, `pcTierWhy` says what it was worked out from ("32 GB of memory, NVIDIA GeForce RTX 3070"), and the change is an event ("their PC was measured by the installer: LOW (they had chosen HIGH)"). Once measured, the choice on the onboarding page is replaced by what was measured; it is measured again at every install, so a new PC or graphics card is picked up by running the installer. The question is still asked at sign-up, as a first rough answer, and stays the answer for people on Mac or Linux, who have no installer.
+
+**Limits of the measurement.** It reads what Windows says is installed: memory and the names of the graphics adapters. It does not run a benchmark, so an old high-end card and a new one of the same name count the same, and thermal or driver trouble does not show. The processor is recorded and shown but does not move the tier.
+
 ## Files
 
 - `Setup.bat`: `powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"` then `pause`. Exists so nobody has to know what an execution policy is.
@@ -29,6 +80,8 @@ So `install.ps1`:
 - `README.txt`: three lines, same as the `/install` page.
 
 ## `install.ps1` behaviour, in order
+
+*(Since installer 1.2.0 signing in comes first and the launcher check second; see "Install reports". The numbering below is the original design.)*
 
 1. **Config block at the top**, stamped by `modpack build installer`: `$PortalUrl`, `$PackName`, `$PackVersion`. Then the sign-in step above.
 2. **Console output**: friendly, numbered steps, green ticks, no stack traces. On any failure: one plain sentence saying what to do ("Install the Minecraft Launcher from minecraft.net, open it once, then run this again") and a log file path `%TEMP%\deepslate-install.log` with the details.
@@ -58,6 +111,13 @@ Run on a real Windows 10 or 11 PC with the normal Minecraft Launcher installed. 
 
 Before anything:
 - [ ] `powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 -SelfTest` says "All checks passed."
+
+Install report:
+- [ ] Every run ends with "Sending the install log to deepslate.dsw.test so Alex can help if something went wrong." and "Sent."
+- [ ] Admin → Installs shows the run with Windows, memory and graphics filled in; opening it shows the log. Search the page for your Windows user name and your PC's name: neither is there.
+- [ ] `/me` shows "Installed … all good"; "My PC" says "Measured by the installer" with your memory and graphics card.
+- [ ] Rename `%APPDATA%\.minecraft\launcher_profiles.json` for a moment and run `Setup.bat`: it fails at step 2, and Admin → Installs shows a failed run at "Checking the Minecraft Launcher". Rename the file back.
+- [ ] Pull the network cable after signing in: the install says the log could not be sent and carries on; the local log is still there.
 
 Launcher open (the bug of 2026-09-29):
 - [ ] With the launcher open: `Setup.bat` stops at step 1 with "Close the Minecraft Launcher (including the tray icon) and run this again". `launcher_profiles.json` has the same date and size as before.

@@ -41,6 +41,8 @@ Gotchas found the hard way: `CI=1` makes pnpm default to `--frozen-lockfile`; pn
 
 **Fix (`installer/install.ps1`, docs/07 "The launcher must be closed"):** the script refuses to run while a launcher is running (checked at the first step, before the NeoForge installer and before the profile is written), reads the profile back after writing it and fails loudly with the log path if it is not there, and offers to open the launcher at the end. It also writes the file without a byte-order mark, which the first version did not; that may have been a second cause of the same symptom and has not been tested separately. `installer.zip` on the site was rebuilt with the fix.
 
+**Since then (installer 1.2.0):** every run ends with an install report (docs/07 "Install reports"), and the PC tier is set from it (docs/07 "The PC tier is measured"). Signing in is now the first step.
+
 **To retest:** the "Windows test checklist" in docs/07. The line that matters most: close the launcher, open it again, the profile is still there.
 
 ## Phase 3 · dashboard (2026-09-29, started on the planner's go-ahead; Phase 2's last boxes wait on the vote and Alex's first install)
@@ -88,6 +90,13 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 - **Deviation from docs/16, forced.** The message of the day is **not pushed** to the server. AMP writes `server.properties` from its own settings on every start and `webapp` may not change AMP settings (`Core.SetConfig` is refused), so a file written by the portal would be overwritten. Admin → Files shows whether the server matches; the change is made in AMP. To lift this, Alex would have to give `webapp` the right to change that one setting.
 - **Not built:** the installer's launcher profile *icon* from branding (the profile icon is one of Minecraft's built-in names, `Furnace`, not a picture).
 - Tests: api 83, web 97, modpack 9.
+
+### Install reports and the measured PC tier (2026-09-29)
+
+- Built as docs/07 describes: the installer collects, redacts and sends; the portal redacts again, stores (`InstallReport`, migration `0006_install_reports`), records an `INSTALL` event and sets the member's PC tier from the hardware. Admin → Installs, the admin card on a player's page, one line on `/me`, a line on `/rules`.
+- **The PC tier is measured, not asked** (Alex). The onboarding question stays as a first answer and for Mac and Linux.
+- Tests: the redaction (names in paths, tokens, mail and network addresses; versions left readable), the cut in the middle, the schema (unknown fields such as a host name are dropped), the tier rules (two adapters, remote-desktop adapters, Intel Arc), the log marks; and in `install.ps1 -SelfTest` the same redaction on the PC side. api 85, web 116, modpack 9; installer self test 27 checks.
+- **Acceptance** ("a failed run on a machine without the launcher … no username anywhere"): run end to end from a Linux container against the live site, see the session log. **Not checked there: the OS, RAM and GPU fields**, which come from Windows (`Get-CimInstance`) and are empty on Linux. They need Alex's next run on Windows.
 
 ### docs/16 acceptance · state
 

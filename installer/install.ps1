@@ -12,6 +12,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
+$InstallerVersion = "1.2.0"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 
 $ErrorActionPreference = "Stop"
@@ -19,9 +20,22 @@ $ErrorActionPreference = "Stop"
 $Temp = if ($env:TEMP) { $env:TEMP } else { [IO.Path]::GetTempPath() }   # $env:TEMP is unset when testing under pwsh on Linux
 $LogFile = Join-Path $Temp "deepslate-install.log"
 $script:Step = 0
+$script:StepName = ""          # the step in hand: what a report calls "the step that failed"
+$script:Started = Get-Date
+$script:RunLog = New-Object System.Collections.Generic.List[string]   # this run's lines of the log file
+$script:Token = $null
+$script:Reported = $false
+$script:PackSeen = $PackVersion
+$script:Facts = @{ java = $null; neoforge = $null; launcher = $null }
+# Words that would identify the person or the PC. They are blanked in everything that is sent.
+$script:Personal = @(@($env:USERNAME, [Environment]::UserName, $env:COMPUTERNAME, [Environment]::MachineName) | Where-Object { $_ -and ([string]$_).Length -ge 3 } | Select-Object -Unique)
 
-function Log($msg) { Add-Content -Path $LogFile -Value ("[{0}] {1}" -f (Get-Date -Format s), $msg) }
-function Step($msg) { $script:Step++; Write-Host ("`n{0}. {1}" -f $script:Step, $msg) -ForegroundColor Cyan; Log "STEP $msg" }
+function Log($msg) {
+  $line = "[{0}] {1}" -f (Get-Date -Format s), $msg
+  $script:RunLog.Add($line)
+  try { Add-Content -Path $LogFile -Value $line } catch {}
+}
+function Step($msg) { $script:Step++; $script:StepName = [string]$msg; Write-Host ("`n{0}. {1}" -f $script:Step, $msg) -ForegroundColor Cyan; Log "STEP $msg" }
 function Tick($msg) { Write-Host ("   [OK] {0}" -f $msg) -ForegroundColor Green; Log "OK $msg" }
 function Note($msg) { Write-Host ("   {0}" -f $msg) -ForegroundColor Gray; Log $msg }
 function Gate-Message($err) {
@@ -36,7 +50,110 @@ function Fail($msg) {
   Write-Host ("   {0}" -f $msg) -ForegroundColor Red
   Write-Host ("   Details are in {0}" -f $LogFile) -ForegroundColor DarkGray
   Log "FAIL $msg"
+  Send-Report "failed"
   exit 1
+}
+
+# ---- the install report (docs/07 "Install reports") ----------------------------------------------------
+# At the end of every run the log of that run and a description of the PC go to the portal, so Alex can
+# see what went wrong without asking for screenshots, and so the PC tier is measured instead of guessed.
+# Before anything is sent: the name in C:\Users\<name>\ becomes ~, the Windows user name and the PC's
+# name are blanked wherever they appear, and tokens, e-mail addresses and network addresses are removed.
+# Nothing about the Microsoft account is read at all. The portal does the same again before it stores it.
+
+function Redact([string]$t, [switch]$Addresses) {
+  if (-not $t) { return "" }
+  $t = [regex]::Replace($t, '(?i)\b([A-Z]):(\\{1,4}|/)(Users|Documents and Settings)(\\{1,4}|/)[^\\/:*?"<>|\r\n]+', '$1:$2$3$4~')
+  $t = [regex]::Replace($t, '(^|[\s"''=(])/(home|Users)/[^/\s"'']+', '$1/$2/~')
+  foreach ($n in $script:Personal) { $t = [regex]::Replace($t, '(?i)(?<![A-Za-z0-9])' + [regex]::Escape([string]$n) + '(?![A-Za-z0-9])', '~') }
+  if ($script:Token) { $t = $t.Replace([string]$script:Token, '~') }
+  $t = [regex]::Replace($t, '(?i)\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{4,}', '$1 ~')
+  $t = [regex]::Replace($t, '(?i)((?:launcherToken|pollToken|token|password)"?\s*[:=]\s*"?)(?!(?:Bearer|Basic)\s)[^"\s,;}]{4,}', '$1~')
+  $t = [regex]::Replace($t, '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '~@~')
+  if ($Addresses) {
+    $t = [regex]::Replace($t, '(?i)(?<![\w:])(?:(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}|(?:[0-9a-f]{1,4}:){1,6}:(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,5})?)(?![\w:])', '~ip~')
+    $t = [regex]::Replace($t, '(?<![\w.])(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)(?![\w.]|\.\d)', '~ip~')
+  }
+  return $t
+}
+
+function Shorten([string]$t, [int]$maxBytes) {
+  if ([Text.Encoding]::UTF8.GetByteCount($t) -le $maxBytes) { return $t }
+  $note = "`n`n[... the middle of the log was cut to fit ...]`n`n"
+  $half = [int](($maxBytes - 80) / 2 / 2)   # characters; two bytes each at the very worst for what a log holds
+  return $t.Substring(0, $half) + $note + $t.Substring($t.Length - $half)
+}
+
+function Get-SystemInfo {
+  $s = [ordered]@{ os = $null; cpu = $null; ramGb = $null; gpus = @(); disk = $null; launcher = $script:Facts.launcher; java = $script:Facts.java; neoforge = $script:Facts.neoforge; powershell = [string]$PSVersionTable.PSVersion }
+  try {
+    $os = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+    $display = $null
+    try { $display = [string](Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -ErrorAction Stop).DisplayVersion } catch {}
+    $s.os = [ordered]@{ caption = [string]$os.Caption; version = [string]$os.Version; build = [string]$os.BuildNumber; display = $display; arch = [string]$os.OSArchitecture }
+  } catch {}
+  try {
+    $c = @(Get-CimInstance Win32_Processor -ErrorAction Stop)[0]
+    $s.cpu = [ordered]@{ name = ([string]$c.Name).Trim(); cores = [int]$c.NumberOfCores; threads = [int]$c.NumberOfLogicalProcessors }
+  } catch {}
+  try { $s.ramGb = [math]::Round((Get-CimInstance Win32_ComputerSystem -ErrorAction Stop).TotalPhysicalMemory / 1GB, 1) } catch {}
+  try {
+    $list = @()
+    foreach ($g in @(Get-CimInstance Win32_VideoController -ErrorAction Stop)) {
+      $vram = $null
+      try { if ($g.AdapterRAM) { $vram = [int]([double]$g.AdapterRAM / 1MB) } } catch {}   # Windows reports at most 4 GB here
+      $list += [ordered]@{ name = [string]$g.Name; driver = [string]$g.DriverVersion; vramMb = $vram }
+    }
+    $s.gpus = @($list | Select-Object -First 8)
+  } catch {}
+  try {
+    $drive = Split-Path -Qualifier $Root
+    $d = Get-CimInstance Win32_LogicalDisk -Filter ("DeviceID='{0}'" -f $drive) -ErrorAction Stop
+    $s.disk = [ordered]@{ drive = [string]$drive; freeGb = [math]::Round($d.FreeSpace / 1GB, 1); totalGb = [math]::Round($d.Size / 1GB, 1) }
+  } catch {}
+  return $s
+}
+
+function Redact-Tree($v) {
+  if ($null -eq $v) { return $null }
+  if ($v -is [string]) { return (Redact $v) }
+  if ($v -is [System.Collections.IDictionary]) { $o = [ordered]@{}; foreach ($k in @($v.Keys)) { $o[$k] = Redact-Tree $v[$k] }; return $o }
+  if ($v -is [array]) { return ,@($v | ForEach-Object { Redact-Tree $_ }) }
+  return $v
+}
+
+function New-Report([string]$outcome) {
+  $failed = $null
+  if ($outcome -ne "ok" -and $script:StepName) { $failed = $script:StepName }
+  return [ordered]@{
+    packVersion      = [string]$script:PackSeen
+    installerVersion = $InstallerVersion
+    outcome          = $outcome
+    failedStep       = $failed
+    durationSec      = [int]((Get-Date) - $script:Started).TotalSeconds
+    log              = Shorten (Redact (($script:RunLog.ToArray()) -join "`n") -Addresses) (512 * 1024)
+    system           = Redact-Tree (Get-SystemInfo)
+  }
+}
+
+function Send-Report([string]$outcome) {
+  if ($script:Reported) { return }
+  $script:Reported = $true
+  if ($DryRun -or $SelfTest) { return }
+  if (-not $script:Token) { Log "not signed in, so no install report was sent"; return }
+  $site = $PortalUrl
+  try { $site = ([uri]$PortalUrl).Host } catch {}
+  Write-Host ""
+  Write-Host ("Sending the install log to {0} so Alex can help if something went wrong." -f $site) -ForegroundColor Gray
+  try {
+    $json = (New-Report $outcome) | ConvertTo-Json -Depth 8 -Compress
+    $null = Invoke-RestMethod -Uri "$PortalUrl/api/installer/report" -Method Post -Headers @{ Authorization = "Bearer $($script:Token)" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($json)) -UseBasicParsing -TimeoutSec 20
+    Write-Host "   Sent." -ForegroundColor Gray
+    Log "install report sent"
+  } catch {
+    Write-Host ("   That didn't go through. No harm done: the log is still on this PC, at {0}" -f $LogFile) -ForegroundColor Yellow
+    Log ("install report not sent: " + $_.Exception.Message)
+  }
 }
 
 # ---- the launcher and its profile file -----------------------------------------------------------------
@@ -112,6 +229,20 @@ function Test-LauncherProfile($path, $id, $versionId) {
   return ""
 }
 
+function Get-LauncherFacts {
+  $f = [ordered]@{ kind = "unknown"; version = $null; profilesFormat = $null }
+  try {
+    $j = Read-Json $Profiles
+    if ($j.PSObject.Properties["version"]) { $f.profilesFormat = [int]$j.version }
+    if ($j.PSObject.Properties["launcherVersion"] -and $j.launcherVersion.PSObject.Properties["name"]) { $f.version = [string]$j.launcherVersion.name }
+  } catch {}
+  foreach ($exe in @("$env:ProgramFiles(x86)\Minecraft Launcher\MinecraftLauncher.exe", "$env:ProgramFiles\Minecraft Launcher\MinecraftLauncher.exe", "$env:LOCALAPPDATA\Programs\Minecraft Launcher\MinecraftLauncher.exe")) {
+    try { if (Test-Path $exe) { $f.kind = "classic"; if (-not $f.version) { $f.version = [string](Get-Item $exe).VersionInfo.ProductVersion }; return $f } } catch {}
+  }
+  try { $pkg = Get-AppxPackage -Name "Microsoft.4297127D64EC6" -ErrorAction Stop; if ($pkg) { $f.kind = "store"; if (-not $f.version) { $f.version = [string]$pkg.Version } } } catch {}
+  return $f
+}
+
 function Open-Launcher {
   Log "launching"
   foreach ($exe in @("$env:ProgramFiles(x86)\Minecraft Launcher\MinecraftLauncher.exe", "$env:ProgramFiles\Minecraft Launcher\MinecraftLauncher.exe", "$env:LOCALAPPDATA\Programs\Minecraft Launcher\MinecraftLauncher.exe")) {
@@ -178,6 +309,29 @@ if ($SelfTest) {
   $PretendRunning = @("MinecraftLauncher")
   Check "a running launcher is found" (@(Find-Launcher) -contains "MinecraftLauncher")
 
+  Write-Host "Self test: what an install report leaves out" -ForegroundColor White
+  $script:Personal = @("player", "ALEX-PC")
+  $script:Token = "Q2hhbmdlTWVQbGVhc2VUaGlzSXNBVG9rZW5fMTIzNDU2Nzg5MA"
+  $r = Redact "[t] looked in C:\Users\player\AppData\Roaming\.minecraft on ALEX-PC for player, token Q2hhbmdlTWVQbGVhc2VUaGlzSXNBVG9rZW5fMTIzNDU2Nzg5MA, mail a@b.co, from 203.0.113.10 and 2a01:4b00::1 at 07:26:01" -Addresses
+  Check ("the name in the path, the user, the PC, the token, the mail and the addresses are gone: " + $r) (($r -notmatch "(?i)player|alex-pc|Q2hhbmdl|a@b\.co|88\.202|2a01") -and ($r -match "C:\\Users\\~\\AppData") -and ($r -match "07:26:01"))
+  Check "versions are left readable" ((Redact "NeoForge 21.1.252 on Windows 10.0.26100, driver 32.0.15.6094" -Addresses) -eq "NeoForge 21.1.252 on Windows 10.0.26100, driver 32.0.15.6094")
+  Check "a path outside Users is left alone" ((Redact "C:\Program Files\Java\bin\java.exe") -eq "C:\Program Files\Java\bin\java.exe")
+  $tree = Redact-Tree ([ordered]@{ java = [ordered]@{ path = "C:\Users\player\scoop\java.exe"; version = "21.0.4" }; gpus = @([ordered]@{ name = "NVIDIA GeForce RTX 3070"; driver = "32.0.15.6094" }); ramGb = 31.9 })
+  $tj = $tree | ConvertTo-Json -Depth 8 -Compress
+  Check ("the description of the PC is cleaned the same way: " + $tj) (($tj -notmatch "player") -and ($tj -match "RTX 3070") -and ($tj -match "31.9") -and ($tj -match '"gpus":\['))
+  $long = ("START " + ("x" * 700000) + " END")
+  $cut = Shorten $long (512 * 1024)
+  Check "a long log is cut in the middle and keeps both ends" (([Text.Encoding]::UTF8.GetByteCount($cut) -le 512 * 1024) -and $cut.StartsWith("START") -and $cut.EndsWith("END") -and ($cut -match "was cut to fit"))
+  $script:RunLog.Clear(); $script:StepName = "Checking the Minecraft Launcher"
+  Log "STEP Checking the Minecraft Launcher"; Log "FAIL Install the Minecraft Launcher, player"
+  $rep = New-Report "failed"
+  $rj = $rep | ConvertTo-Json -Depth 8 -Compress
+  Check "a failed run names the step it failed at" ($rep.failedStep -eq "Checking the Minecraft Launcher" -and $rep.outcome -eq "failed")
+  Check "a run that went well names no step" ((New-Report "ok").failedStep -eq $null)
+  Check "the report holds no user name, PC name or token" ($rj -notmatch "(?i)player|alex-pc|Q2hhbmdl")
+  Check "the report says what ran" ($rep.installerVersion -eq $InstallerVersion -and $rep.durationSec -ge 0 -and $rep.system.powershell)
+  $script:Token = $null
+
   Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
   if ($script:SelfTestBad -gt 0) { Write-Host ("{0} check(s) failed" -f $script:SelfTestBad) -ForegroundColor Red; exit 1 }
   Write-Host "All checks passed." -ForegroundColor Green
@@ -191,16 +345,8 @@ $Minecraft = Join-Path $Root ".minecraft"
 $Profiles = Join-Path $Minecraft "launcher_profiles.json"
 
 try {
-  # 1. launcher present?
-  Step "Checking the Minecraft Launcher"
-  if (-not (Test-Path $Profiles)) {
-    if (-not $DryRun) { Start-Process "https://www.minecraft.net/download" }
-    Fail "Install the Minecraft Launcher from minecraft.net, open it once, then run this again."
-  }
-  Require-LauncherClosed "anything is changed"   # asked for before NeoForge and before the profile; said first, so nobody waits through the downloads to hear it
-  Tick "Launcher found, and closed"
-
-  # 2. sign in with Discord through the portal (device-style flow); token remembered for a week
+  # 1. sign in with Discord through the portal (device-style flow); token remembered for a week.
+  #    First, so that whatever goes wrong afterwards can be reported under their name.
   Step "Signing in"
   $token = $null
   $tokenFile = Join-Path (Join-Path $Root ".minecraft-deepslate-works") "launcher.json"
@@ -241,6 +387,19 @@ try {
     }
   }
 
+  $script:Token = $token
+
+  # 2. launcher present, and closed?
+  Step "Checking the Minecraft Launcher"
+  if (-not (Test-Path $Profiles)) {
+    $script:Facts.launcher = [ordered]@{ kind = "not found"; version = $null; profilesFormat = $null }
+    if (-not $DryRun) { try { Start-Process "https://www.minecraft.net/download" } catch {} }
+    Fail "Install the Minecraft Launcher from minecraft.net, open it once, then run this again."
+  }
+  $script:Facts.launcher = Get-LauncherFacts
+  Require-LauncherClosed "anything is changed"   # asked for before NeoForge and before the profile; said first, so nobody waits through the downloads to hear it
+  Tick "Launcher found, and closed"
+
   # 3. manifest
   Step "Fetching the mod list"
   try { $manifest = Invoke-RestMethod -Uri $ManifestUrl -Headers $headers -UseBasicParsing -TimeoutSec 60 }
@@ -250,6 +409,7 @@ try {
     if ($code -eq 401 -and $DryRun) { Fail "(dry run) not signed in; the manifest needs a sign-in" }
     Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $ManifestUrl)
   }
+  if ($manifest.version) { $script:PackSeen = [string]$manifest.version }
   $neo = $manifest.neoforge
   $mc = $manifest.minecraft
   $profile = $manifest.profile
@@ -266,19 +426,20 @@ try {
   Step "Finding Java 21"
   $java = $null
   $bundled = Join-Path $Minecraft "runtime\java-runtime-delta\windows-x64\java-runtime-delta\bin\java.exe"
-  if (Test-Path $bundled) { $java = $bundled; Tick "Using the launcher's own Java" }
+  $javaSource = $null
+  if (Test-Path $bundled) { $java = $bundled; $javaSource = "the launcher's own"; Tick "Using the launcher's own Java" }
   if (-not $java) {
     $cmd = Get-Command java -ErrorAction SilentlyContinue
     if ($cmd) {
       $ver = (& $cmd.Source -version 2>&1 | Select-Object -First 1) -replace '[^0-9.]', ' '
       $major = [int](($ver.Trim() -split '[ .]')[0])
-      if ($major -ge 21) { $java = $cmd.Source; Tick ("Using Java {0} from PATH" -f $major) }
+      if ($major -ge 21) { $java = $cmd.Source; $javaSource = "on PATH"; Tick ("Using Java {0} from PATH" -f $major) }
     }
   }
   if (-not $java) {
     $jreDir = Join-Path $GameDir "runtime"
     $found = Get-ChildItem -Path $jreDir -Filter java.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($found) { $java = $found.FullName; Tick "Using the Java we downloaded last time" }
+    if ($found) { $java = $found.FullName; $javaSource = "downloaded on an earlier run"; Tick "Using the Java we downloaded last time" }
   }
   if (-not $java) {
     if ($DryRun) { $java = "java"; Note "(dry run) would download Temurin 21" }
@@ -292,14 +453,20 @@ try {
       $found = Get-ChildItem -Path (Join-Path $GameDir "runtime") -Filter java.exe -Recurse | Select-Object -First 1
       if (-not $found) { Fail "Java download didn't work. Run this again, or ask Alex." }
       $java = $found.FullName
+      $javaSource = "downloaded on this run"
       Tick "Java 21 downloaded"
     }
   }
+  $javaVersion = $null
+  if (-not $DryRun) { try { $javaVersion = [string](& $java -version 2>&1 | Select-Object -First 1) } catch {} }
+  $script:Facts.java = [ordered]@{ source = $javaSource; path = [string]$java; version = $javaVersion }
 
   # 4. NeoForge
   Step ("Installing NeoForge {0}" -f $neo)
   $versionId = "neoforge-$neo"
-  if (Test-Path (Join-Path $Minecraft ("versions\{0}" -f $versionId))) { Tick "Already installed" }
+  $neoBefore = Test-Path (Join-Path $Minecraft ("versions\{0}" -f $versionId))
+  $script:Facts.neoforge = [ordered]@{ version = [string]$neo; before = [bool]$neoBefore; after = [bool]$neoBefore }
+  if ($neoBefore) { Tick "Already installed" }
   elseif ($DryRun) { Note "(dry run) would run the NeoForge installer" }
   else {
     Require-LauncherClosed "the NeoForge installer"
@@ -312,6 +479,7 @@ try {
     Get-Content (Join-Path $Temp "neoforge-install.out") -ErrorAction SilentlyContinue | ForEach-Object { Log ("neoforge: " + $_) }
     Remove-Item $jar -Force -ErrorAction SilentlyContinue
     if (-not (Test-Path (Join-Path $Minecraft ("versions\{0}" -f $versionId)))) { Fail "NeoForge didn't install. Open the Minecraft Launcher, make sure vanilla 1.21.1 has been run once, then try again." }
+    $script:Facts.neoforge.after = $true
     Tick "NeoForge installed"
   }
 
@@ -414,6 +582,8 @@ try {
       Write-Host "   Close the Minecraft Launcher completely (also its icon next to the clock), then run this again." -ForegroundColor Yellow
       Write-Host "   The mods are in place; only the profile is missing." -ForegroundColor Gray
       Write-Host ("   Log file: {0}" -f $LogFile) -ForegroundColor White
+      Log "FAIL the launcher profile was not saved"
+      Send-Report "failed"
       exit 1
     }
     $profileSaved = $true
@@ -447,7 +617,12 @@ try {
     }
   }
   Log "=== done ==="
+  $script:StepName = ""
+  Send-Report "ok"
 } catch {
   Log ($_ | Out-String)
   Fail "Something went wrong. Send Alex the log file and he'll sort it."
+} finally {
+  # Reached without a report having gone: the window was closed or Ctrl+C was pressed part-way.
+  if (-not $script:Reported) { Log "stopped before the end"; Send-Report "cancelled" }
 }

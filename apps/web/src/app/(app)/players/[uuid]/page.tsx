@@ -16,6 +16,7 @@ import { PlayerHead } from "@/components/server/player-head";
 import { Tile } from "@/components/analytics/tile";
 import { AreaChart } from "@/components/analytics/area-chart";
 import { EventItem } from "@/components/events/event-list";
+import { suggestTier, summary, type SystemInfo } from "@/lib/install-report";
 
 export const metadata: Metadata = { title: "Player" };
 
@@ -30,7 +31,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
   if (!ID.test(id)) notFound();
   const now = new Date();
   const [member, rows, status] = await Promise.all([
-    db.user.findFirst({ where: { mcUuid: id }, select: { id: true, displayName: true, pcTier: true, mcUsername: true, verifiedAt: true, guildMember: true, role: true } }),
+    db.user.findFirst({ where: { mcUuid: id }, select: { id: true, displayName: true, pcTier: true, pcTierSource: true, mcUsername: true, verifiedAt: true, guildMember: true, role: true } }),
     db.session.findMany({ where: { mcUuid: id }, orderBy: { joinedAt: "desc" }, take: 2000 }),
     getStatus(),
   ]);
@@ -47,6 +48,10 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
     db.event.findMany({ where: { kind: "ADVANCEMENT", actor: id }, orderBy: { at: "desc" }, take: 12, select: { id: true, at: true, meta: true, message: true } }),
     listEvents({ ...readFilter({}, admin), player: id }, admin, 40),
   ]);
+  // Admins only: what the installer last reported from this member's PC (docs/07 "Install reports").
+  const install = admin && member ? await db.installReport.findFirst({ where: { userId: member.id }, orderBy: { at: "desc" }, select: { id: true, at: true, outcome: true, failedStep: true, packVersion: true, system: true } }) : null;
+  const pc = install ? summary(install.system as SystemInfo) : null;
+  const guess = install ? suggestTier(install.system as SystemInfo) : null;
   const countries = [...new Set(sessions.map((s) => s.country).filter((c): c is string => Boolean(c)))];
   const addresses = admin ? rows.filter((r) => r.ip).slice(0, 40) : [];
   return (
@@ -56,7 +61,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold"><span className="font-mono">{name}</span>{online && <Badge tone="good">Playing now</Badge>}</h1>
           <p className="text-muted-foreground">
-            {member ? <>{member.displayName}{member.pcTier && <> · {TIER[member.pcTier]}</>}{member.role === "ADMIN" && <> · admin</>}</> : "Not linked to anyone in the group."}
+            {member ? <>{member.displayName}{member.pcTier && <> · {TIER[member.pcTier]}{member.pcTierSource === "measured" ? " (measured)" : " (their own pick)"}</>}{member.role === "ADMIN" && <> · admin</>}</> : "Not linked to anyone in the group."}
             {countries.length > 0 && <> · {countries.map((c) => `${flag(c)} ${COUNTRIES[c]?.[0] ?? c}`).join(", ")}</>}
           </p>
           <p className="text-sm text-muted-foreground">
@@ -102,6 +107,24 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
         <CardHeader><CardTitle>What they have been up to</CardTitle><CardDescription>{admin ? "Their latest 40 events. Open a row for the console line." : "Joins, leaves, deaths and advancements."}</CardDescription></CardHeader>
         <CardContent className="p-0">{history.rows.length === 0 ? <p className="p-4 text-sm text-muted-foreground">Nothing yet.</p> : <ul className="divide-y">{history.rows.map((e) => <EventItem key={e.id} e={e} admin={admin} />)}</ul>}</CardContent>
       </Card>
+
+      {admin && member && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Their PC and last install</CardTitle>
+            <CardDescription>Admins only. From the installer&apos;s last report.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {!install || !pc ? <p className="text-muted-foreground">No install report from them yet.</p> : (
+              <>
+                <p><Link href={`/admin/installs/${install.id}`} className="underline">{install.outcome === "ok" ? `Installed ${install.packVersion}` : install.outcome === "cancelled" ? "Stopped the installer" : "The installer failed"}{install.failedStep ? ` at "${install.failedStep}"` : ""}</Link> <span className="text-muted-foreground">{timeAgo(install.at, now)}</span></p>
+                <p className="text-muted-foreground">{pc.os} · {pc.cpu} · {pc.ram} · {pc.gpu}</p>
+                {guess ? <p>Tier, measured: <strong>{TIER[guess.tier]}</strong> <span className="text-muted-foreground">({guess.why})</span></p> : <p className="text-muted-foreground">Not enough in the report to work out the tier.</p>}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {admin && (
         <Card>

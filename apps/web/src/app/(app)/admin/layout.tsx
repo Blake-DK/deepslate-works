@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/admin/modpack", label: "Modpack" },
   { href: "/admin/server", label: "Server" },
   { href: "/admin/events", label: "Events" },
+  { href: "/admin/installs", label: "Installs" },
   { href: "/admin/files", label: "Files" },
   { href: "/admin/branding", label: "Branding" },
   { href: "/admin/invites", label: "Invites" },

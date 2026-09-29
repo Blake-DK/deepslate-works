@@ -37,6 +37,7 @@ enum EventKind {
   REVOKE
   SYNC
   BACKUP
+  INSTALL
 }
 
 enum VoteStatus {
@@ -55,6 +56,9 @@ model User {
   mcUsername   String?   @unique // Minecraft Java username, set by the player
   mcUuid       String?   @unique // resolved from the Mojang API
   pcTier       PcTier?
+  pcTierSource String    @default("self") // "self": what they picked; "measured": worked out from the installer's report of their PC
+  pcTierWhy    String?   // what it was worked out from, e.g. "32 GB of memory, NVIDIA GeForce RTX 3070"
+  pcTierAt     DateTime? // when it was last measured
   verifiedAt   DateTime? // when the in-game link (docs/14) or an admin verified the Minecraft account
   guildMember  Boolean   @default(true) // cache of the last Discord server membership check
   createdAt    DateTime  @default(now())
@@ -62,6 +66,7 @@ model User {
   invitedById  String?
   ballots      Ballot[]
   launcherAuth LauncherAuth[]
+  installs     InstallReport[]
 }
 
 model Invite {
@@ -173,6 +178,28 @@ model Event {
   @@index([at])
   @@index([kind, at])
   @@index([actor, at])
+}
+
+// What the Windows installer sends at the end of every run (docs/07 "Install reports"). The log and the
+// system description are redacted on the PC before they are sent and again here before they are stored:
+// no Windows user name, no paths under C:\Users\<name>, no tokens, no addresses. Kept for 90 days.
+model InstallReport {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  at               DateTime @default(now())
+  packVersion      String
+  installerVersion String
+  outcome          String   // ok | failed | cancelled
+  failedStep       String?
+  durationSec      Int
+  system           Json
+  log              String
+  tierBefore       String?  // the member's PC tier when the report arrived
+  tierMeasured     String?  // the tier worked out from this report's hardware
+
+  @@index([at])
+  @@index([userId, at])
 }
 
 // Key/value settings edited from the admin pages (docs/16 §5, §6): "branding", "privacy", "retention", "files".

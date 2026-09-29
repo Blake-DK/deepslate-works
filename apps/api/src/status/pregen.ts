@@ -487,6 +487,15 @@ export class Pregen {
           this.plan = { ...this.plan, mapStopped: false };
           await this.store.save(this.plan);
         }
+        // BlueMap was still loading when it was asked (a server start takes it half a minute): it is asked again.
+        const loadingAt = this.map.state.loadingAt ? Date.parse(this.map.state.loadingAt) : 0;
+        if (this.plan.mapAsked !== null && loadingAt >= Date.parse(this.plan.mapAsked) - 1_000) {
+          this.plan = { ...this.plan, mapAsked: null };
+          this.lastMapCommand = now;
+          this.updatedInARow = 0;
+          await this.store.save(this.plan);
+          return;
+        }
         if (this.plan.mapAsked === null) {
           if (now - this.lastMapCommand < 15_000 && this.lastMapCommand !== now) return;
           this.lastMapCommand = now;

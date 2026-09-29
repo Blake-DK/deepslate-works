@@ -44,6 +44,7 @@ export type MapLine =
   | { what: "pending"; tasks: number }
   | { what: "frozen" }
   | { what: "said"; threads: "running" | "stopped" }
+  | { what: "loading" } // BlueMap is not up yet and has done nothing of what it was asked
   | { what: "other" }; // a line of an answer that says nothing the portal uses
 
 const NAME = "[A-Za-z0-9_]{3,16}";
@@ -125,6 +126,7 @@ const MAP = {
   summary: /^[\u2714\u2744\u231b] (?:map \S+ (?:has pending updates|is updated|is frozen)|\d+ maps (?:have pending updates|are updated|are frozen))$/,
   map: new RegExp(`^([\u2714\u2744\u231b\u26cf]) (${MAP_ID})$`),
   said: /^[\u26cf\u274c] Render-Threads are now (running|stopped)$/,
+  loading: /^\u231b BlueMap is still loading!$/,
   asked: /^(?:Creating update-tasks \.\.\.|Created new update-task for map \S+|Use \/bluemap to see the progress)$/,
 };
 
@@ -138,6 +140,7 @@ export function parseMapLine(message: string): MapLine | null {
   if ((m = MAP.threads.exec(t))) return { what: "threads", state: m[1] as "running" | "idle" };
   if ((m = MAP.current.exec(t))) return { what: "current", map: m[1]!, doing: m[2] as "updated" | "purged" };
   if ((m = MAP.said.exec(t))) return { what: "said", threads: m[1] as "running" | "stopped" };
+  if (MAP.loading.test(t)) return { what: "loading" };
   if (MAP.summary.test(t) || MAP.asked.test(t)) return { what: "other" };
   if ((m = MAP.map.exec(t))) return { what: "map", map: m[2]!, icon: ICONS[m[1]!]! };
   if ((m = MAP.detail.exec(t))) {

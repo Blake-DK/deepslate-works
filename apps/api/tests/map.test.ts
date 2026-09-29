@@ -33,6 +33,7 @@ describe("what BlueMap says", () => {
     expect(parseMapLine(" ⌛ render-threads are paused")).toEqual({ what: "threads", state: "paused" });
     expect(parseMapLine("❌ Render-Threads are now stopped")).toEqual({ what: "said", threads: "stopped" });
     expect(parseMapLine("⛏ Render-Threads are now running")).toEqual({ what: "said", threads: "running" });
+    expect(parseMapLine(" ⌛ BlueMap is still loading!")).toEqual({ what: "loading" });
     expect(parse(" ⛏ world")).toEqual([{ type: "map", line: { what: "map", map: "world", icon: "rendering" } }]);
   });
   it("is not taken from chat, from `say`, or from lines that only look alike", () => {
@@ -300,6 +301,24 @@ describe("the render step, from turning it on to the finished map", () => {
     await r.on();
     expect(r.amp.console).toEqual(["bluemap update world 0 0 1500", ...ASK]);
     expect(r.amp.asked.filter((m) => FORBIDDEN.includes(m))).toEqual([]);
+  });
+
+  it("BlueMap is still loading when it is asked (2026-09-29 17:24:49, seconds after a start): it is asked again, and only then counted on", async () => {
+    const r = rig();
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "empty", what: "render", area: AREA, window: null, capHours: null }, null);
+    expect(r.amp.console).toEqual(["bluemap update world 0 0 1500", ...ASK]);
+    r.say([" ⌛ BlueMap is still loading!", " ⌛ BlueMap is still loading!", " ⌛ BlueMap is still loading!"]);
+    await r.on(10_000);
+    expect(r.saved()).toMatchObject({ mapAsked: null });
+    expect(r.amp.console.length).toBe(3); // not in the same breath
+    await r.on(20_000);
+    expect(r.amp.console.slice(3)).toEqual(["bluemap update world 0 0 1500", ...ASK]);
+    r.say(["Creating update-tasks ...", "Created new update-task for map world", "Use /bluemap to see the progress", ...STATUS, ...MAPS]);
+    await r.on();
+    expect(r.saved()).toMatchObject({ mapAsked: expect.any(String) });
+    expect(r.amp.console.filter((c) => c.startsWith("bluemap update")).length).toBe(2);
   });
 
   it("a plan saved before there was a render step is one that generates", async () => {

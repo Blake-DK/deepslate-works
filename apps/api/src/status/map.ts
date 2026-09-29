@@ -20,6 +20,8 @@ export type MapState = {
   /** When BlueMap last gave its status, and when it last listed its maps. */
   statusAt: string | null;
   listAt: string | null;
+  /** When BlueMap last said that it was still loading: what it was asked then, it has not done. */
+  loadingAt: string | null;
   /** How many lists have been read. */
   lists: number;
   /** Which answer the next lines belong to, and which map. */
@@ -27,7 +29,7 @@ export type MapState = {
   cursor: string | null;
 };
 
-export const NO_MAP: MapState = { threads: null, current: null, percent: null, remaining: null, maps: {}, statusAt: null, listAt: null, lists: 0, block: null, cursor: null };
+export const NO_MAP: MapState = { threads: null, current: null, percent: null, remaining: null, maps: {}, statusAt: null, listAt: null, loadingAt: null, lists: 0, block: null, cursor: null };
 
 /** Pure: the state after one more line of BlueMap's. */
 export function nextMap(s: MapState, l: MapLine, at: Date): MapState {
@@ -57,6 +59,8 @@ export function nextMap(s: MapState, l: MapLine, at: Date): MapState {
       const now: MapInfo = l.what === "rendering" ? { ...was, status: "rendering", percent: l.percent } : l.what === "pending" ? { ...was, status: was.status === "rendering" ? "rendering" : "pending", pending: l.tasks } : { ...was, status: was.status === "updated" ? "frozen" : was.status };
       return { ...s, maps: { ...s.maps, [s.cursor]: now } };
     }
+    case "loading":
+      return { ...s, loadingAt: when, block: null, cursor: null };
     case "other":
       return s;
   }

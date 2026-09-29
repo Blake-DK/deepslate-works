@@ -15,25 +15,21 @@ import { LaunchBanner } from "@/components/launch-banner";
 
 export const metadata: Metadata = { title: "Install" };
 
-function detectOs(ua: string): "windows" | "mac" | "linux" | "other" {
-  if (/windows/i.test(ua)) return "windows";
-  if (/mac os|macintosh/i.test(ua)) return "mac";
-  if (/linux|x11/i.test(ua) && !/android/i.test(ua)) return "linux";
-  return "other";
-}
+// Windows only (planner decision, 2026-09-29). Everything else gets one line.
+const onWindows = (ua: string) => /windows/i.test(ua);
 
 export default async function InstallPage({ searchParams }: { searchParams: Promise<{ os?: string; offline?: string }> }) {
   const user = await requireOnboardedUser();
   const { os: osParam, offline } = await searchParams;
   const ua = (await headers()).get("user-agent") ?? "";
-  const os = osParam === "windows" || osParam === "mac" ? osParam : detectOs(ua);
-  const [m, lock, installer, mrpack] = await Promise.all([getManifest(), getLock(), distFile("installer.zip"), distFile("client.mrpack")]);
+  // ?os=windows shows the steps anyway: for someone reading on a phone before sitting down at the PC
+  const windows = osParam === "windows" || onWindows(ua);
+  const [m, lock, installer] = await Promise.all([getManifest(), getLock(), distFile("installer.zip")]);
   const version = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const settings = await getSettings();
   const showServer = canSeeServer(user, settings);
   const gate = await canDownload(user);
-  const ready = Boolean(lock && installer && mrpack) && gate.ok;
-  const windows = os === "windows";
+  const ready = Boolean(lock && installer) && gate.ok;
   const rd = user.pcTier === "HIGH" ? 12 : user.pcTier === "MID" ? 10 : 8;
 
   if (!showServer) {
@@ -41,7 +37,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Join the server</h1>
-          <p className="mt-1 max-w-2xl text-muted-foreground">Not open yet. When it launches, this page turns into a one-click installer for Windows and a two-step guide for Mac and Linux, and the server address appears here.</p>
+          <p className="mt-1 max-w-2xl text-muted-foreground">Not open yet. When it launches, this page turns into a one-click installer for Windows, and the server address appears here. It runs on Windows only.</p>
         </div>
         <LaunchBanner launchAt={settings.launchAt} admin={false} />
         <Card>
@@ -64,17 +60,14 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
           {version && <> Current pack: <span className="font-mono">{version}</span>{lock && <> · built {formatDate(new Date(lock.generatedAt))}</>}.</>}
         </p>
       </div>
-      {!(lock && installer && mrpack) && <Alert tone="info">The pack hasn&apos;t been built yet. Alex will post in Discord when the download is up.</Alert>}
-      {lock && installer && mrpack && !gate.ok && <Alert tone="info">Downloads open when the server is online. It&apos;s off right now (or the site can&apos;t reach it); check back later or ask in Discord.</Alert>}
+      {!(lock && installer) && <Alert tone="info">The pack hasn&apos;t been built yet. Alex will post in Discord when the download is up.</Alert>}
+      {lock && installer && !gate.ok && <Alert tone="info">Downloads open when the server is up. It&apos;s off right now (or the site can&apos;t reach it); check back later or ask in Discord.</Alert>}
       {offline && gate.ok && <Alert tone="info">The server was offline a moment ago; it&apos;s reachable now, try again.</Alert>}
-      {gate.reason === "admin" && <Alert tone="info">Admin: downloads are always open for you. Players only see them while the server is online.</Alert>}
+      {gate.reason === "admin" && <Alert tone="info">Admin: downloads are always open for you. Players only see them while the server is running or asleep.</Alert>}
 
-      <div className="flex gap-2 text-sm">
-        <a href="/install?os=windows" className={buttonClasses(windows ? "primary" : "secondary", "sm")}>Windows</a>
-        <a href="/install?os=mac" className={buttonClasses(!windows ? "primary" : "secondary", "sm")}>Mac / Linux</a>
-      </div>
+      {!windows && <Alert tone="info"><strong>{m.name} runs on Windows only.</strong> Open this page on your Windows PC. Reading ahead on another device? <a href="/install?os=windows" className="underline">Show the steps</a>.</Alert>}
 
-      {windows ? (
+      {windows && (
         <Card>
           <CardHeader>
             <CardTitle>Windows: three steps</CardTitle>
@@ -95,27 +88,10 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
             <p className="text-sm text-muted-foreground">From then on, close the launcher and double-click <span className="font-mono">Update and Play.bat</span> in the same folder: it signs you in with Discord in your browser the first time (then remembers you for a week), fetches any mod updates, and opens the launcher on the Deepslate Works profile. Keep the folder; that&apos;s your play button.</p>
           </CardContent>
         </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Mac and Linux: two steps</CardTitle>
-            <CardDescription>The one-click installer is Windows only; this route takes a couple of minutes more.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ol className="space-y-3">
-              <li className="rounded-lg border p-3"><span className="font-medium">1. Install the Modrinth App</span> from <a className="underline" href="https://modrinth.com/app" target="_blank" rel="noreferrer">modrinth.com/app</a> and sign in with your Minecraft account.</li>
-              <li className="rounded-lg border p-3">
-                <span className="font-medium">2. Download the pack and drag it into the Modrinth App</span> (or use &quot;Import&quot;). Then press Play on the {m.name} card.
-                <div className="mt-2"><a href="/downloads/client.mrpack" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")} aria-disabled={!ready}>Download client.mrpack</a></div>
-              </li>
-            </ol>
-            <p className="text-sm">Add the server by hand: Multiplayer → Add Server → address below. Set render distance to about {rd} for your PC.</p>
-          </CardContent>
-        </Card>
       )}
 
       <Card>
-        <CardHeader><CardTitle>Server address</CardTitle><CardDescription>The Windows installer adds it for you; everyone else copies it.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Server address</CardTitle><CardDescription>The installer adds it to your server list; here it is in case you need it.</CardDescription></CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
           <span className="rounded-lg border bg-muted px-3 py-2 font-mono">{m.server_address}</span>
           <CopyButton text={m.server_address} label="Copy address" />
@@ -126,7 +102,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       <Card>
         <CardHeader><CardTitle>Your PC</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          You told us: <strong className="text-foreground">{user.pcTier === "LOW" ? "older laptop / no graphics card" : user.pcTier === "HIGH" ? "proper gaming PC" : "normal desktop or gaming laptop"}</strong>. The installer picks RAM automatically from what your PC has; if the game stutters, set render distance to {rd} in Video Settings.
+          {user.pcTierSource === "measured" ? "The installer measured your PC" : "You told us"}: <strong className="text-foreground">{user.pcTier === "LOW" ? "older laptop / no graphics card" : user.pcTier === "HIGH" ? "proper gaming PC" : "normal desktop or gaming laptop"}</strong>{user.pcTierSource === "measured" && user.pcTierWhy ? <> ({user.pcTierWhy})</> : null}. The installer picks RAM automatically from what your PC has{user.pcTierSource === "measured" ? "" : ", and checks what kind of PC it is when it runs"}; if the game stutters, set render distance to {rd} in Video Settings.
         </CardContent>
       </Card>
     </div>

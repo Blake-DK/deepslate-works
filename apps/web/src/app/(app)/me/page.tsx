@@ -61,7 +61,7 @@ export default async function MePage() {
             {user.pcTier ? TIER[user.pcTier] : "not set"}. Recommended render distance: {user.pcTier === "HIGH" ? 12 : user.pcTier === "MID" ? 10 : 8}.{" "}
             {user.pcTierSource === "measured"
               ? <>Measured by the installer{user.pcTierWhy ? <> ({user.pcTierWhy})</> : null}{user.pcTierAt ? <> on {formatDate(user.pcTierAt)}</> : null}. It is checked again each time you run it.</>
-              : <>This is what you picked. On Windows the installer measures your PC and sets it for you. <Link href="/onboarding" className="underline">Change</Link>.</>}
+              : <>This is what you picked. The installer measures your PC and sets it for you. <Link href="/onboarding" className="underline">Change</Link>.</>}
           </CardDescription>
         </CardHeader>
       </Card>

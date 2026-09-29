@@ -6,8 +6,8 @@ import { loadCurrentUser } from "@/server/auth/session";
 import { canDownload, manifestKeyOk } from "@/server/modpack/gate";
 import { bearer, userFromLauncherToken } from "@/server/launcher";
 
-const TYPES: Record<string, string> = { ".mrpack": "application/x-modrinth-modpack+zip", ".zip": "application/zip" };
-const ALLOWED = new Set(["installer.zip", "client.mrpack", "config.zip"]);
+const TYPES: Record<string, string> = { ".zip": "application/zip" };
+const ALLOWED = new Set(["installer.zip", "config.zip"]); // Windows only since 2026-09-29: no client.mrpack
 
 // Gated like the manifest: admin, or player while the server is online; config.zip also with the installer's key.
 export async function GET(req: Request, { params }: { params: Promise<{ file: string }> }) {

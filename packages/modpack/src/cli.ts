@@ -2,7 +2,7 @@ import { readFile, rename, writeFile, mkdir } from "node:fs/promises";
 import { lintManifest } from "./lint";
 import { verifyLinks } from "./verify-links";
 import { buildLock, diffLocks, type LockFile } from "./lock";
-import { buildClient, buildConfigZip, buildInstaller, buildServer } from "./build";
+import { buildConfigZip, buildInstaller, buildServer, removeClientPack } from "./build";
 import { modpackPaths } from "./paths";
 import type { Manifest } from "./schema";
 
@@ -85,13 +85,11 @@ async function main() {
       const lock = await requireLock();
       await mkdir(P.dist, { recursive: true });
       const portalUrl = process.env.AUTH_URL ?? "https://deepslate.dsw.test";
-      if (what === "client" || what === "all") {
-        await buildClient(manifest, lock, P, log);
-        await buildConfigZip(P, log);
-      }
+      await removeClientPack(P, log);
+      if (what === "config" || what === "all") await buildConfigZip(P, log);
       if (what === "server" || what === "all") await buildServer(manifest, lock, P, log);
       if (what === "installer" || what === "all") await buildInstaller(manifest, lock, P, portalUrl, log);
-      if (!["client", "server", "installer", "all"].includes(what)) {
+      if (!["config", "server", "installer", "all"].includes(what)) {
         console.error(`unknown build target ${what}`);
         process.exit(1);
       }
@@ -104,7 +102,7 @@ async function main() {
       process.exit(2);
     // falls through never
     default:
-      log(`usage: modpack <lint|verify-links|lock [--force]|build [client|server|installer|all]> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
+      log(`usage: modpack <lint|verify-links|lock [--force]|build [config|server|installer|all]> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
       process.exit(cmd === "help" ? 0 : 1);
   }
 }

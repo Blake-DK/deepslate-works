@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Modpack" };
 
 export default async function ModpackAdminPage() {
   const { manifest, lock, issues, rows } = await modpackStatus();
-  const [installer, mrpack] = await Promise.all([distFile("installer.zip"), distFile("client.mrpack")]);
+  const installer = await distFile("installer.zip");
   const tone = (s: string) => (s === "ok" ? "good" : s === "off" ? "neutral" : s === "beta" || s === "alpha" ? "warn" : "bad");
   return (
     <div className="space-y-4">
@@ -22,12 +22,11 @@ export default async function ModpackAdminPage() {
           <CardDescription>
             {lock ? <>Locked {formatDate(new Date(lock.generatedAt))}: {lock.files.length} files, NeoForge {lock.neoforge}.</> : "Not locked yet."}{" "}
             {installer ? <>Installer built {formatDate(installer.mtime)}.</> : "Installer not built."}{" "}
-            {mrpack ? <>Client pack built {formatDate(mrpack.mtime)}.</> : ""}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground"><strong>Lock</strong> resolves mods.json against Modrinth and commits mods.lock.json. <strong>Build</strong> makes client.mrpack, installer.zip and dist/server. <strong>Sync server</strong> copies dist/server to the AMP host over the tunnel and restarts the server if the mods changed.</p>
-          <Runner canBuild={!!lock} canSync={!!lock && !!mrpack} />
+          <p className="text-sm text-muted-foreground"><strong>Lock</strong> resolves mods.json against Modrinth and commits mods.lock.json. <strong>Build</strong> makes installer.zip, config.zip and dist/server (inside the site&apos;s backend, under its memory limit). <strong>Sync server</strong> copies dist/server to the AMP host over the tunnel and restarts the server if the mods changed.</p>
+          <Runner canBuild={!!lock} canSync={!!lock && !!installer} />
           {issues.length > 0 && <ul className="text-sm">{issues.map((i, k) => <li key={k} className={i.level === "error" ? "text-danger" : "text-muted-foreground"}>{i.level}: {i.message}</li>)}</ul>}
         </CardContent>
       </Card>

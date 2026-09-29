@@ -7,9 +7,8 @@ import type { Manifest } from "./schema";
 import { fetchJar } from "./download";
 import { shortHash } from "./lock";
 
-// docs/06 + docs/07: dist/client.mrpack, dist/server/, dist/installer.zip
+// docs/06 + docs/07: dist/server/, dist/config.zip, dist/installer.zip
 
-const forClient = (e: LockEntry) => e.side !== "server";
 const forServer = (e: LockEntry) => e.side !== "client";
 
 async function exists(p: string) {
@@ -36,33 +35,15 @@ function zipDir(entries: Array<{ dir?: string; file?: string; name: string }>, o
   });
 }
 
-/** Modrinth pack format: modrinth.index.json points at CDN URLs; overrides/ carries our configs. */
-export async function buildClient(m: Manifest, lock: LockFile, paths: { dist: string; config: string }, log: (s: string) => void): Promise<string> {
-  const stage = path.join(paths.dist, "_mrpack");
-  await rm(stage, { recursive: true, force: true });
-  await mkdir(path.join(stage, "overrides"), { recursive: true });
-  const index = {
-    formatVersion: 1,
-    game: "minecraft",
-    versionId: `${m.version}+${shortHash(lock)}`,
-    name: m.name,
-    summary: `Private modded server pack · Minecraft ${m.minecraft} · NeoForge ${lock.neoforge}`,
-    files: lock.files.filter(forClient).map((e) => ({
-      path: `mods/${e.filename}`,
-      hashes: { sha1: e.sha1, sha512: e.sha512 },
-      env: { client: "required", server: e.side === "client" ? "unsupported" : "required" },
-      downloads: [e.url],
-      fileSize: e.size,
-    })),
-    dependencies: { minecraft: m.minecraft, neoforge: lock.neoforge },
-  };
-  await writeFile(path.join(stage, "modrinth.index.json"), JSON.stringify(index, null, 2));
-  if (await exists(paths.config)) await cp(paths.config, path.join(stage, "overrides", "config"), { recursive: true });
-  const out = path.join(paths.dist, "client.mrpack");
-  await zipDir([{ dir: stage, name: false as unknown as string }], out);
-  await rm(stage, { recursive: true, force: true });
-  log(`client.mrpack: ${index.files.length} mods, NeoForge ${lock.neoforge}`);
-  return out;
+/** The pack runs on Windows only since 2026-09-29: no .mrpack is built. A pack left from an earlier build is removed, so nothing stale is on offer. */
+export async function removeClientPack(paths: { dist: string }, log: (s: string) => void): Promise<void> {
+  for (const name of ["client.mrpack", "_mrpack"]) {
+    const p = path.join(paths.dist, name);
+    if (await exists(p)) {
+      await rm(p, { recursive: true, force: true });
+      log(`removed ${name} (Windows only: the installer downloads the mods itself)`);
+    }
+  }
 }
 
 /** dist/server/mods + configs + server-only files; jars are downloaded and hash-checked. */
@@ -89,7 +70,7 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
   return out;
 }
 
-/** config.zip: the config overrides for the Windows installer (the .mrpack carries them as overrides/). */
+/** config.zip: the config overrides for the Windows installer. */
 export async function buildConfigZip(paths: { dist: string; config: string }, log: (s: string) => void): Promise<string | null> {
   if (!(await exists(paths.config))) return null;
   const out = path.join(paths.dist, "config.zip");

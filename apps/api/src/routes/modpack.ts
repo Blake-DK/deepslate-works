@@ -32,7 +32,7 @@ export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: t
   app.post("/modpack/build", async (req, reply) => {
     if (!requireAdmin(req, reply)) return;
     const body = z.object({ target: z.enum(BUILD_TARGETS).default("all") }).safeParse(req.body ?? {});
-    if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "target: all|client|server|installer" } });
+    if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "target: all|config|server|installer" } });
     if (busy) return reply.code(409).send({ error: { code: "busy", message: `a ${busy} is already running` } });
     busy = "build";
     const packName = chatSafe((await getSection("branding")).name, "");

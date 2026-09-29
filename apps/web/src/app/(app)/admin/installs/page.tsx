@@ -39,7 +39,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
         <CardContent className="space-y-3 p-4">
           <div>
             <h2 className="text-lg font-semibold">The group&apos;s PCs</h2>
-            <p className="text-sm text-muted-foreground">Measured by the installer, the latest run of each member. {latest.length} of {members} members measured: {tiers.HIGH} gaming PC, {tiers.MID} decent, {tiers.LOW} older. People on Mac or Linux have no installer and keep the tier they picked.</p>
+            <p className="text-sm text-muted-foreground">Measured by the installer, the latest run of each member. {latest.length} of {members} members measured: {tiers.HIGH} gaming PC, {tiers.MID} decent, {tiers.LOW} older. Members who have not run the installer yet keep the tier they picked.</p>
           </div>
           {latest.length > 0 && (
             <div className="overflow-x-auto">

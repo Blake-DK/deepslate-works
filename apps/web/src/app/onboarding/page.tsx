@@ -44,7 +44,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
         <Card>
           <CardHeader>
             <CardTitle>Your PC</CardTitle>
-            <CardDescription>So the mod list can go easy on weaker machines. A rough answer is fine: on Windows the installer looks at your PC and sets this for you.</CardDescription>
+            <CardDescription>So the mod list can go easy on weaker machines. A rough answer is fine: the installer looks at your PC and sets this for you.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {TIERS.map((t) => (

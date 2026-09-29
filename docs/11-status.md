@@ -94,7 +94,8 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 ### Install reports and the measured PC tier (2026-09-29)
 
 - Built as docs/07 describes: the installer collects, redacts and sends; the portal redacts again, stores (`InstallReport`, migration `0006_install_reports`), records an `INSTALL` event and sets the member's PC tier from the hardware. Admin → Installs, the admin card on a player's page, one line on `/me`, a line on `/rules`.
-- **The PC tier is measured, not asked** (Alex). The onboarding question stays as a first answer and for Mac and Linux.
+- **The PC tier is measured, not asked** (Alex). The onboarding question stays as a first answer until the installer has run.
+- **Windows only** (planner commit `8c6670f`, 2026-09-29): the code follows. `modpack build` no longer makes `client.mrpack` and removes one left from an earlier build; `/downloads/client.mrpack` is gone; `/install` shows the Windows steps, and on anything else one line ("runs on Windows only") with a link to read the steps anyway; the build target `client` is refused.
 - Tests: the redaction (names in paths, tokens, mail and network addresses; versions left readable), the cut in the middle, the schema (unknown fields such as a host name are dropped), the tier rules (two adapters, remote-desktop adapters, Intel Arc), the log marks; and in `install.ps1 -SelfTest` the same redaction on the PC side. api 85, web 116, modpack 9; installer self test 27 checks.
 - **Acceptance** ("a failed run on a machine without the launcher … no username anywhere"): run end to end from a Linux container against the live site, see the session log. **Not checked there: the OS, RAM and GPU fields**, which come from Windows (`Get-CimInstance`) and are empty on Linux. They need Alex's next run on Windows.
 

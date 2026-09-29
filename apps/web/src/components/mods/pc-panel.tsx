@@ -22,7 +22,7 @@ export function PcPanel({ tier }: { tier: PcTier | null }) {
           </li>
         ))}
         <li className="rounded-lg border p-3 text-sm"><span className="font-medium">Older than 2016, or 4 GB RAM</span><span className="block text-muted-foreground">Tell Alex before the vote closes. A cut-down pack or an upgrade may be needed.</span></li>
-        <li className="rounded-lg border p-3 text-sm"><span className="font-medium">Mac or Linux</span><span className="block text-muted-foreground">The one-click installer is Windows only. There&apos;s a short manual route on the Install page.</span></li>
+        <li className="rounded-lg border p-3 text-sm"><span className="font-medium">Mac or Linux</span><span className="block text-muted-foreground">The server pack runs on Windows only.</span></li>
       </ul>
       <div className="mt-3 flex flex-wrap gap-2 text-xs"><LoadChip load="L" withHint /><LoadChip load="M" withHint /><LoadChip load="H" withHint /></div>
     </section>

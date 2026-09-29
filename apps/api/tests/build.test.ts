@@ -105,13 +105,14 @@ describe("POST /modpack/build", () => {
     expect((await app.inject({ method: "POST", url: "/modpack/build" })).statusCode).toBe(401);
     expect((await app.inject({ method: "POST", url: "/modpack/build", headers: { ...admin, "x-user-role": "PLAYER" } })).statusCode).toBe(403);
     expect((await app.inject({ method: "POST", url: "/modpack/build", headers: admin, payload: { target: "everything; rm -rf /" } })).statusCode).toBe(400);
+    expect((await app.inject({ method: "POST", url: "/modpack/build", headers: admin, payload: { target: "client" } })).statusCode).toBe(400); // Windows only: no .mrpack
     await app.close();
   });
 
   it("streams newline-delimited JSON and frees the lock afterwards", async () => {
     const app = buildServer(env, undefined, { build: twoLines });
     for (let i = 0; i < 2; i++) {
-      const res = await app.inject({ method: "POST", url: "/modpack/build", headers: admin, payload: { target: "client" } });
+      const res = await app.inject({ method: "POST", url: "/modpack/build", headers: admin, payload: { target: "installer" } });
       expect(res.statusCode).toBe(200);
       expect(res.headers["content-type"]).toMatch(/application\/x-ndjson/);
       expect(res.body.trim().split("\n").map((l) => JSON.parse(l))).toEqual([{ line: "client.mrpack: 3 mods" }, { done: true, ok: true, code: 0 }]);

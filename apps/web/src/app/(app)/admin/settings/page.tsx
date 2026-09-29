@@ -8,7 +8,8 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { launchText } from "@/components/launch-banner";
 import { getSection } from "@/server/site-settings";
-import { saveFilesAction, savePrivacyAction, saveRetentionAction, saveSettingsAction } from "./actions";
+import { serverPack } from "@/server/play";
+import { saveFilesAction, savePrivacyAction, saveRetentionAction, saveSettingsAction, saveJoiningAction } from "./actions";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -20,7 +21,7 @@ function toLocalInput(d: Date | null): string {
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
 
-const SECTION: Record<string, string> = { privacy: "Privacy", retention: "How long things are kept", files: "File browser", "1": "Launch" };
+const SECTION: Record<string, string> = { privacy: "Privacy", retention: "How long things are kept", files: "File browser", joining: "Joining", "1": "Launch" };
 
 function Tick({ name, checked, title, children }: { name: string; checked: boolean; title: string; children: React.ReactNode }) {
   return (
@@ -32,7 +33,7 @@ function Tick({ name, checked, title, children }: { name: string; checked: boole
 }
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string; detail?: string }> }) {
-  const [{ saved, error, detail }, settings, manifest, privacy, retention, files] = await Promise.all([searchParams, getSettings(), getManifest(), getSection("privacy"), getSection("retention"), getSection("files")]);
+  const [{ saved, error, detail }, settings, manifest, privacy, retention, files, joining, pack] = await Promise.all([searchParams, getSettings(), getManifest(), getSection("privacy"), getSection("retention"), getSection("files"), getSection("joining"), serverPack()]);
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Settings</h1>
@@ -55,6 +56,22 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <Label htmlFor="launchAt">Launch date (UK time, optional)</Label>
               <Input id="launchAt" name="launchAt" type="datetime-local" defaultValue={toLocalInput(settings.launchAt)} />
               <p className="mt-1 text-xs text-muted-foreground">Players see: &quot;{launchText(settings.launchAt)}&quot;. Leave empty for &quot;to be announced&quot;.</p>
+            </div>
+            <Button type="submit">Save</Button>
+          </form>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Joining</CardTitle>
+          <CardDescription>Members press Play on the site before they join, so that their mods are the server&apos;s. Whoever has not is kept in the entrance room with a line that says so, and is let through, back to where they stood, within seconds of pressing it. Admins are never kept. The server runs <span className="font-mono">{pack ?? "a pack nobody has written down yet (it is after the next sync)"}</span>.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={saveJoiningAction} className="space-y-3">
+            <Tick name="requirePlay" checked={joining.requirePlay} title="Play first">Off: every linked member comes straight in, as before. Switch it off if the site&apos;s reports ever stop arriving; nobody could join otherwise.</Tick>
+            <div className="max-w-xs">
+              <Label htmlFor="windowMin">A run of Play counts for, minutes</Label>
+              <Input id="windowMin" name="windowMin" type="number" min={5} max={1440} defaultValue={joining.windowMin} required />
             </div>
             <Button type="submit">Save</Button>
           </form>

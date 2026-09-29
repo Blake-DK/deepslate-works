@@ -63,3 +63,34 @@ model LinkCode {
 - [ ] A Discord account outside the server is refused and the player stays in the room.
 - [ ] Leaving the Discord server puts the player back in the room on their next join.
 - [ ] `api` down for 2 min then back: nobody unverified escaped.
+
+## Play first (planner spec, 2026-09-29; appended by the VPS session at the planner's request)
+
+1. Every Play run already sends an install report (mode=play) tied to the user. Record on it the pack version present after the run.
+2. On join (the hook above), before release: look up the linked user's most recent mode=play report. Allow if it is newer than JOIN_WINDOW (default 30 min, settings page) AND its pack version equals the server's current pack version. Otherwise hold in the white room with: "Press Play on deepslate.dsw.test to join. That checks your mods are up to date." (tellraw with the clickable link, repeated every 60 s like the link message).
+3. A player already in the world when a new pack is synced is fine until they leave; the next join applies the check. Admins are never held.
+4. `/me` and Home show "Ready to join until <time>" after a Play run, so the window is visible.
+5. Event kind JOIN_BLOCKED with the reason (no report / stale / wrong version) for the event log and Stats.
+
+Acceptance: launch from the launcher without pressing Play -> held with the message; press Play, join -> released; sync a new pack version, join without Play -> held with "stale"; admins never held.
+
+Later, if needed: a client mod that carries a one-time join token minted by Play (docs/19, not now).
+
+### As built (2026-09-29)
+
+- **The rule** is one function, `playGate` (`apps/web/src/shared/join-gate.ts`, the same file in `api`), used by `api` at the door and by the portal for "Ready to join until 10:35". The run that counts is the member's latest `mode=play` report with outcome `ok`; its `packVersion` is the pack that run left on the PC (it was already on the report). **Time is looked at first**, then the pack: a run from before the window is "stale" whatever its pack, which is what the acceptance case asks for; "wrong version" is a run inside the window with another pack than the server's.
+- **The server's pack** is written down by `api` at every real sync (Setting `_packSynced`, from `dist/server/PACK_VERSION`), because what has been built and what has been synced differ between a Build and the Sync after it. While nothing is written down the pack is not looked at, only the time.
+- **Settings → Joining**: "Play first" on or off (on by default), and the window in minutes (5 to 1440, default 30). Read by `api` within half a minute.
+- **At the door.** A linked member who may not come in yet is asked where they stand (`data get entity <name> Pos` and `Dimension`, answer read from the console, six seconds at most), then held in the room like anyone who waits there, with the planner's line as a clickable link, repeated every 60 s. Every five seconds `api` looks whether they have pressed Play since; when they have, they are let out **back to where they stood**, in the dimension they were in ("Mods checked. Welcome back"). Without an answer about the place they go to spawn. After 15 minutes in the room they are disconnected ("Press Play on deepslate.dsw.test and join again.").
+- **Why "back to where they stood" was added:** the room is at 0 250 0 and being let out of it means spawn. Without it, everyone who once forgets Play would find themselves at spawn instead of at their base.
+- **Not held:** admins; anyone while "Play first" is off; someone being let in by the link they have just clicked (first time in: the next join is the first that is checked); anyone already in the world, whatever is synced meanwhile (item 3). After a restart of `api` only people who are not linked are put in the room.
+- **Events:** `JOIN_BLOCKED` ("bramble09 was held in the entrance room: has not pressed Play on the site"), admins only in the event log (migration `0010_join_blocked`); being let in afterwards is a `LINK` row ("pressed Play and was let in, back to where they were"). Stats has "Held at the door", by reason, when there is anything to show.
+- **The portal:** Home, `/install` and `/me` say "Ready to join until 10:35" (UK time), or "Press Play before you join…", "…the last time was a while ago", "The pack has changed since you pressed Play…". Admins see no such line.
+
+### What this makes depend on what (for the planner)
+
+- **Joining now depends on the portal.** A report that does not arrive (site down, the PC offline at that moment, more than 20 reports in an hour) means no entry. The installer's rule was "never block on the report"; the install still is not blocked, the join is. The switch in Settings → Joining is the way out, and admins can always join.
+- **Installers before 1.3.0 do not say `mode=play`.** Everyone needs the current installer once.
+- **A change to a server-only mod changes the pack's version** (the hash is over the whole lock), so after adding TabTPS everyone has to press Play once although nothing changes on their PC.
+- **The check is "pressed Play", not "has the mods".** Someone can press Play and then start another profile. What a wrong set of mods does is the mod loader's business: it refuses the connection before the player is in the world.
+- **`data get entity` is a guess at this server's wording** until a member has been held once: the patterns are the game's standard answers. If the place is not read, the member goes to spawn, nothing worse.

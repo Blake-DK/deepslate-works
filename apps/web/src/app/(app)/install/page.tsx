@@ -15,6 +15,8 @@ import { LaunchBanner } from "@/components/launch-banner";
 import { isWindows, WINDOWS_ONLY } from "@/lib/platform";
 import { getPlayInfo } from "@/server/play";
 import { PlayButton } from "@/components/server/play-button";
+import { joinLine } from "@/lib/play";
+import { clock } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Install" };
 
@@ -78,7 +80,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
           <CardDescription>Once installed, use the Play button here to launch. It checks for updates every time.</CardDescription>
         </CardHeader>
         <CardContent>
-          <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} stepsHere />
+          <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null)} stepsHere />
         </CardContent>
       </Card>
 

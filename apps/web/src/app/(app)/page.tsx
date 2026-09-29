@@ -19,6 +19,8 @@ import { buttonClasses } from "@/components/ui/button";
 import { isWindows, WINDOWS_ONLY } from "@/lib/platform";
 import { getPlayInfo } from "@/server/play";
 import { PlayButton } from "@/components/server/play-button";
+import { joinLine } from "@/lib/play";
+import { clock } from "@/lib/utils";
 
 export default async function HomePage() {
   const user = await requireOnboardedUser();
@@ -53,7 +55,7 @@ export default async function HomePage() {
               </CardHeader>
               <CardContent>
                 {isWindows(agent)
-                  ? <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} />
+                  ? <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null)} />
                   : <p className="text-sm text-muted-foreground">{WINDOWS_ONLY(play.name)}</p>}
               </CardContent>
             </Card>

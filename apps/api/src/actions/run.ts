@@ -20,7 +20,7 @@ export async function runAction(amp: Amp, ctx: ActionCtx, name: ActionName, rawI
       await amp.call("Core", "SendConsoleMessage", { message: cmd });
       sent++;
     }
-    if (name !== "limbo.keep" && name !== "server.list" && name !== "server.pings") {
+    if (name !== "limbo.keep" && name !== "server.list" && name !== "server.pings" && name !== "player.where" && name !== "limbo.remindPlay") {
       await audit({ userId: callerId, action: name, params: input as object, result: "OK", detail: `${sent} command(s)` });
     }
     return { ok: true, commands: sent };

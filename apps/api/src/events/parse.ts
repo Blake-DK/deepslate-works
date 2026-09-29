@@ -21,6 +21,8 @@ export type GameEvent =
   | { type: "started"; seconds: number }
   | { type: "stopping" }
   | { type: "ping"; name: string; ms: number }
+  | { type: "pos"; name: string; x: number; y: number; z: number }
+  | { type: "dimension"; name: string; dimension: string }
   | { type: "problem"; level: "WARN" | "ERROR"; text: string; logger: string | null };
 
 const NAME = "[A-Za-z0-9_]{3,16}";
@@ -59,6 +61,9 @@ const RE = {
   advancement: new RegExp(`^(${NAME}) has (made the advancement|completed the challenge|reached the goal) \\[(.+)\\]$`),
   started: /^Done \(([\d.]+)s\)!/,
   stopping: /^Stopping server$/,
+  // `data get entity <name> Pos` and `... Dimension`, asked before a member is moved to the entrance room
+  pos: new RegExp(`^(${NAME}) has the following entity data: \\[(-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d, (-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d, (-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d\\]$`),
+  dimension: new RegExp(`^(${NAME}) has the following entity data: "([a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64})"$`),
   // TabTPS, `pingall`: " - Bramble09: 23ms", one line for each player, then "Average ping: 23ms (1 player)"
   ping: new RegExp(`^-\\s+(${NAME}):\\s+(\\d{1,6})\\s?ms$`),
   death: new RegExp(
@@ -127,6 +132,11 @@ export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) =
     const how = m[2] === "made the advancement" ? "advancement" : m[2] === "completed the challenge" ? "challenge" : "goal";
     return [{ type: "advancement", name: m[1]!, how, title: m[3]! }];
   }
+  if ((m = RE.pos.exec(message))) {
+    const [x, y, z] = [Number(m[2]), Number(m[3]), Number(m[4])];
+    return [x, y, z].every(Number.isFinite) ? [{ type: "pos", name: m[1]!, x: x!, y: y!, z: z! }] : [];
+  }
+  if ((m = RE.dimension.exec(message))) return [{ type: "dimension", name: m[1]!, dimension: m[2]! }];
   if ((m = RE.ping.exec(message.trim()))) return [{ type: "ping", name: m[1]!, ms: Number(m[2]) }];
   if ((m = RE.started.exec(message))) return [{ type: "started", seconds: Number(m[1]) }];
   if (RE.stopping.test(message)) return [{ type: "stopping" }];

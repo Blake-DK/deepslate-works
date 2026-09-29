@@ -41,6 +41,13 @@ export async function pingByPlayer(from: Date, to: Date): Promise<PlayerPing[]> 
     GROUP BY e.key ORDER BY ms`;
 }
 
+/** docs/14 "Play first": how often someone was held at the door in the period, by reason. */
+export async function heldAtTheDoor(from: Date, to: Date): Promise<Array<{ reason: string; n: number; people: number }>> {
+  return db.$queryRaw<Array<{ reason: string; n: number; people: number }>>`
+    SELECT coalesce(meta->'params'->>'reason', '?') AS reason, count(*)::int AS n, count(DISTINCT actor)::int AS people
+    FROM "Event" WHERE kind = 'JOIN_BLOCKED' AND at >= ${from} AND at < ${to} GROUP BY 1 ORDER BY n DESC`;
+}
+
 /** The lowest the server's speed has been in the last 24 hours, while it was running. */
 export async function tpsLow(now: Date = new Date()): Promise<{ tps: number; at: Date } | null> {
   const rows = await db.$queryRaw<Array<{ tps: number; at: Date }>>`

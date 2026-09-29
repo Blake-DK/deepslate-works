@@ -13,6 +13,8 @@ type Props = {
   /** Already written out on the server, so that the clock of the browser plays no part. */
   last: { version: string; on: string } | null;
   update: boolean;
+  /** docs/14 "Play first": "Ready to join until 10:35", or what to do first. Null when Play is not asked of them. */
+  join?: { text: string; ready: boolean } | null;
   /** On /install the steps are on the page already; elsewhere the prompt links to them. */
   stepsHere?: boolean;
 };
@@ -21,7 +23,7 @@ type Props = {
  * docs/05 "Play from the site". A plain link to deepslate://play. After the click the page waits 2.5 s: if it is
  * still in front and never lost focus, nothing on this PC took the link, and the installer download is offered.
  */
-export function PlayButton({ name, current, ready, last, update, stepsHere = false }: Props) {
+export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false }: Props) {
   const [state, setState] = useState<"idle" | "waiting" | "missing">("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lostFocus = useRef(false);
@@ -77,6 +79,7 @@ export function PlayButton({ name, current, ready, last, update, stepsHere = fal
             {current ? <>{name} <span className="font-mono">{current}</span></> : <>The pack hasn&apos;t been built yet</>}
             {update && <Badge tone="warn" className="ml-2">Update available</Badge>}
           </p>
+          {join && <p data-testid="join-window" className={join.ready ? "font-medium text-accent" : "font-medium text-foreground"}>{join.text}</p>}
           <p data-testid="last-launch">{last ? <>Your last launch: <span className="font-mono">{last.version}</span> on {last.on}</> : <>You haven&apos;t launched from this account yet</>}</p>
         </div>
       </div>

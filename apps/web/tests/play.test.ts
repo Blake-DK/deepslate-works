@@ -96,3 +96,20 @@ describe("the installer updates itself", () => {
     expect(markLog("[t] STEP Updating the installer 1.3.0 → 1.4.0\n[t] UPDATE NOT APPLIED: the checksum of the download (55f8...) is not the one the site gave (0000...)", null)[1]!.mark).toBe("fail");
   });
 });
+
+describe("Play first (docs/14)", () => {
+  it("says until when they may join, or what to do first", async () => {
+    const { joinLine } = await import("@/lib/play");
+    expect(joinLine({ ok: true, time: "10:35" })).toEqual({ text: "Ready to join until 10:35", ready: true });
+    expect(joinLine({ ok: false, reason: "no report" })?.ready).toBe(false);
+    expect(joinLine({ ok: false, reason: "no report" })?.text).toMatch(/^Press Play before you join/);
+    expect(joinLine({ ok: false, reason: "stale" })?.text).toMatch(/a while ago/);
+    expect(joinLine({ ok: false, reason: "wrong version" })?.text).toMatch(/pack has changed/);
+    expect(joinLine(null)).toBeNull(); // admins, or Play first switched off
+  });
+  it("writes the time in UK time", async () => {
+    const { clock } = await import("@/lib/utils");
+    expect(clock(new Date("2026-09-29T09:35:00Z"))).toBe("10:35"); // summer time
+    expect(clock(new Date("2026-12-01T09:35:00Z"))).toBe("09:35");
+  });
+});

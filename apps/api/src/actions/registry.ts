@@ -44,6 +44,19 @@ export function linkTellraw(name: string, portalUrl: string, code: string, siteN
   return `tellraw ${name} ${JSON.stringify(payload)}`;
 }
 
+const COORD = z.number().finite().min(-30_000_000).max(30_000_000);
+
+export function playTellraw(name: string, portalUrl: string): string {
+  const host = portalUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const payload = [
+    "",
+    { text: "Press Play on ", color: "gold" },
+    { text: host, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: portalUrl }, hoverEvent: { action: "show_text", value: "Opens the portal in your browser" } },
+    { text: " to join. That checks your mods are up to date.", color: "gold" },
+  ];
+  return `tellraw ${name} ${JSON.stringify(payload)}`;
+}
+
 export const actions = {
   "limbo.hold": define({
     name: "limbo.hold",
@@ -87,6 +100,60 @@ export const actions = {
         `tag ${name} add verified`, // last: everything above looks for its absence
       ];
     },
+  }),
+  // docs/14 "Play first": a member who has not pressed Play waits in the room too, and goes back to where they stood.
+  "player.where": define({
+    name: "player.where",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (_ctx, { name }) => [`data get entity ${name} Pos`, `data get entity ${name} Dimension`],
+  }),
+  "limbo.holdPlay": define({
+    name: "limbo.holdPlay",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [
+      `tag ${name} remove verified`,
+      `gamemode adventure ${name}`,
+      ow(`tp ${name} ${ctx.limbo.x} ${ctx.limbo.y + 1} ${ctx.limbo.z}`),
+      `effect give ${name} minecraft:slowness infinite 255 true`,
+      `effect give ${name} minecraft:jump_boost infinite 250 true`,
+      playTellraw(name, ctx.portalUrl),
+    ],
+  }),
+  "limbo.remindPlay": define({
+    name: "limbo.remindPlay",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [playTellraw(name, ctx.portalUrl)],
+  }),
+  "limbo.releaseBack": define({
+    name: "limbo.releaseBack",
+    role: "system",
+    input: z.object({
+      name: MC_NAME,
+      // where they stood when they joined; without it they go to spawn like anyone let out of the room
+      back: z.object({ dimension: z.string().regex(/^[a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64}$/), x: COORD, y: z.number().finite().min(-2048).max(4096), z: COORD }).nullable(),
+    }),
+    build: (ctx, { name, back }) => {
+      const held = `@a[name=${name},tag=!verified]`;
+      const n = (v: number) => (Math.round(v * 100) / 100).toFixed(2);
+      return [
+        `effect clear ${held}`,
+        `gamemode survival ${held}`,
+        back
+          ? `execute in ${back.dimension} run tp ${held} ${n(back.x)} ${n(back.y)} ${n(back.z)}`
+          : ctx.spawn ? ow(`tp ${held} ${ctx.spawn.x} ${ctx.spawn.y} ${ctx.spawn.z}`) : ow(`spreadplayers 0 0 1 12 false ${held}`),
+        `tellraw ${held} ${JSON.stringify([{ text: "Mods checked. Welcome back, ", color: "green" }, { text: name, color: "aqua" }, { text: ".", color: "green" }])}`,
+        `tag ${name} add verified`,
+      ];
+    },
+  }),
+  "limbo.kickIdlePlay": define({
+    name: "limbo.kickIdlePlay",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [`kick ${name} Press Play on ${ctx.portalUrl.replace(/^https?:\/\//, "")} and join again.`],
   }),
   "limbo.kickIdle": define({
     name: "limbo.kickIdle",

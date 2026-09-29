@@ -13,6 +13,9 @@ import { getStatus } from "@/server/status";
 import { averagePing } from "@/server/ping";
 import { pingTone } from "@/lib/ping";
 import { tpsTone } from "@/lib/series";
+import { getPlayInfo } from "@/server/play";
+import { joinLine } from "@/lib/play";
+import { clock } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Me" };
 
@@ -30,6 +33,8 @@ export default async function MePage() {
     db.installReport.findFirst({ where: { userId: user.id }, orderBy: { at: "desc" }, select: { at: true, outcome: true, packVersion: true, failedStep: true } }),
   ]);
   const showServer = canSeeServer(user, settings);
+  const play = showServer ? await getPlayInfo(user) : null;
+  const join = play ? joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null) : null;
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">{user.displayName}</h1>
@@ -40,6 +45,12 @@ export default async function MePage() {
             : install.outcome === "cancelled"
               ? <>The installer was stopped on {formatDate(install.at)}{install.failedStep ? <> at &quot;{install.failedStep}&quot;</> : null}. Run it again when you are ready.</>
               : <>The installer ran into trouble on {formatDate(install.at)}{install.failedStep ? <> at &quot;{install.failedStep}&quot;</> : null}. Alex has the log; run it again, or ask him.</>}
+        </p>
+      )}
+      {join && (
+        <p className="text-sm" data-testid="join-window">
+          <span className={join.ready ? "font-medium text-accent" : "font-medium"}>{join.text}</span>{" "}
+          <Link href="/" className="underline">{join.ready ? "Home" : "The Play button is on Home"}</Link>
         </p>
       )}
       <Card>

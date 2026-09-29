@@ -29,16 +29,21 @@ export async function saveSettingsAction(formData: FormData) {
 const on = (v: FormDataEntryValue | null) => v === "on";
 const int = (v: FormDataEntryValue | null) => (typeof v === "string" && /^\d{1,5}$/.test(v.trim()) ? Number(v) : Number.NaN);
 
-async function save(section: "privacy" | "retention" | "files", value: unknown, adminId: string) {
+async function save(section: "privacy" | "retention" | "files" | "joining", value: unknown, adminId: string) {
   const r = await setSection(section, value, adminId);
   await audit({ userId: adminId, action: "settings.save", params: { section, ...(r.ok ? { value: r.value } : { problems: r.problems }) }, result: r.ok ? "OK" : "DENIED" });
-  for (const p of ["/admin/settings", "/analytics", "/admin/files"]) revalidatePath(p);
+  for (const p of ["/admin/settings", "/analytics", "/admin/files", "/", "/me", "/install"]) revalidatePath(p);
   redirect(r.ok ? `/admin/settings?saved=${section}` : `/admin/settings?error=${section}&detail=${encodeURIComponent(r.problems.join("; ").slice(0, 300))}`);
 }
 
 export async function savePrivacyAction(formData: FormData) {
   const admin = await requireAdmin();
   await save("privacy", { geo: on(formData.get("geo")), chat: on(formData.get("chat")), analyticsForPlayers: on(formData.get("analyticsForPlayers")) }, admin.id);
+}
+
+export async function saveJoiningAction(formData: FormData) {
+  const admin = await requireAdmin();
+  await save("joining", { requirePlay: on(formData.get("requirePlay")), windowMin: int(formData.get("windowMin")) }, admin.id);
 }
 
 export async function saveRetentionAction(formData: FormData) {

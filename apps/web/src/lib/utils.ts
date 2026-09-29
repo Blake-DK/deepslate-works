@@ -7,6 +7,11 @@ export function formatDate(d: Date | null | undefined): string {
   return d.toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 }
 
+/** "10:35", UK time. */
+export function clock(d: Date): string {
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
+}
+
 export function timeAgo(d: Date | null | undefined, now = new Date()): string {
   if (!d) return "never";
   const s = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 1000));

@@ -19,6 +19,11 @@ export const sections = {
     ipDays: z.number().int().min(1).max(365).default(30),
     installDays: z.number().int().min(1).max(3650).default(90), // install reports (log and hardware)
   }),
+  // docs/14 "Play first"
+  joining: z.object({
+    requirePlay: z.boolean().default(true), // members press Play on the site before they join; admins never need to
+    windowMin: z.number().int().min(5).max(1440).default(30), // how long a run of Play counts for
+  }),
   files: z.object({
     maxDownloadMb: z.number().int().min(1).max(500).default(50),
     maxPreviewKb: z.number().int().min(16).max(8192).default(2048),

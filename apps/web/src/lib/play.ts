@@ -9,6 +9,15 @@ export const PLAY_WAIT_MS = 2500;
 
 export type LastLaunch = { version: string; at: Date };
 
+/** docs/14 "Play first": the line next to the Play button. `time` is the end of the window, already written out. */
+export function joinLine(join: { ok: true; time: string } | { ok: false; reason: "no report" | "stale" | "wrong version" } | null): { text: string; ready: boolean } | null {
+  if (!join) return null;
+  if (join.ok) return { text: `Ready to join until ${join.time}`, ready: true };
+  if (join.reason === "wrong version") return { text: "The pack has changed since you pressed Play. Press it again before you join.", ready: false };
+  if (join.reason === "stale") return { text: "Press Play before you join: the last time was a while ago.", ready: false };
+  return { text: "Press Play before you join. That checks your mods are up to date.", ready: false };
+}
+
 /** "Update available": there is a pack, they have launched before, and what they launched is not what is current. */
 export function updateAvailable(current: string | null | undefined, last: string | null | undefined): boolean {
   return Boolean(current && last && current !== last);

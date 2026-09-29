@@ -4,7 +4,7 @@
 // docs/16 §4: what an audit entry becomes in the event log. Portal actions are ADMIN_ACTION or
 // PLAYER_ACTION rows with the action's name, parameters and result in `meta`; a few have a kind of their own.
 
-export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP", "INSTALL"] as const;
+export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP", "INSTALL", "JOIN_BLOCKED"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 /** What players may see at /events. Everything else is for admins. */
@@ -14,13 +14,13 @@ export type Severity = "info" | "player" | "warning" | "error" | "admin";
 export const SEVERITY: Record<EventKind, Severity> = {
   JOIN: "player", LEAVE: "player", DEATH: "player", CHAT: "player", ADVANCEMENT: "player",
   SERVER_START: "info", SERVER_STOP: "info", CRASH: "error", WARN: "warning", ERROR: "error",
-  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin", INSTALL: "player",
+  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin", INSTALL: "player", JOIN_BLOCKED: "warning",
 };
 
 export const KIND_LABEL: Record<EventKind, string> = {
   JOIN: "Joined", LEAVE: "Left", DEATH: "Death", CHAT: "Chat", ADVANCEMENT: "Advancement",
   SERVER_START: "Server started", SERVER_STOP: "Server stopped", CRASH: "Crash", WARN: "Warning", ERROR: "Error",
-  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup", INSTALL: "Install",
+  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup", INSTALL: "Install", JOIN_BLOCKED: "Held at the door",
 };
 
 export type AuditResult = "OK" | "DENIED" | "FAILED" | "TIMEOUT";
@@ -28,11 +28,12 @@ export type Actor = { role: "ADMIN" | "PLAYER" | "system" | null; name: string |
 
 /** Must agree with the CASE in prisma/migrations/0005_events_sessions_settings. */
 export function kindOf(action: string, role: Actor["role"]): EventKind {
-  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.kickIdle") return "LINK";
+  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "join.ready") return "LINK";
   if (action === "player.revoke" || action === "user.remove" || action === "user.clearMinecraft") return "REVOKE";
   if (action.startsWith("modpack.sync")) return "SYNC";
   if (action === "server.backup") return "BACKUP";
   if (action === "installer.report") return "INSTALL";
+  if (action === "join.blocked") return "JOIN_BLOCKED";
   return role === "ADMIN" || role === "system" ? "ADMIN_ACTION" : "PLAYER_ACTION";
 }
 
@@ -62,6 +63,9 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "link.bind": (p) => `linked their Minecraft account ${s(p.mcUsername)}`,
   "link.release": (p) => `let ${s(p.name)} in`,
   "limbo.held": (p) => `${s(p.name)} is waiting in the entrance room`,
+  "join.blocked": (p) => `${s(p.name)} was held in the entrance room: ${p.reason === "no report" ? "has not pressed Play on the site" : p.reason === "stale" ? "pressed Play too long ago" : p.reason === "wrong version" ? "pressed Play before the pack changed" : s(p.reason, "Play first")}`,
+  "join.ready": (p) => `${s(p.name)} pressed Play and was let in${p.back ? ", back to where they were" : ""}`,
+  "limbo.kickIdlePlay": (p) => `${s(p.name)} waited too long in the entrance room without pressing Play and was disconnected`,
   "limbo.kickIdle": (p) => `${s(p.name)} waited too long in the entrance room and was disconnected`,
   "limbo.build": "built the entrance room",
   "player.revoke": (p) => `kicked ${s(p.name)} and took them off the whitelist`,
@@ -93,7 +97,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
 };
 
 // Phrases that already say who (or have no who).
-const SELF_CONTAINED = new Set(["limbo.held", "limbo.kickIdle", "retention.prune"]);
+const SELF_CONTAINED = new Set(["limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
 const OUTCOME_IN_PHRASE = new Set(["installer.report"]);

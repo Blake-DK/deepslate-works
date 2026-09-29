@@ -17,7 +17,8 @@ import { WorldMap } from "@/components/analytics/world-map";
 import { Heatmap } from "@/components/analytics/heatmap";
 import { Badge } from "@/components/ui/badge";
 import { getStatus } from "@/server/status";
-import { pingByPlayer, tpsLow } from "@/server/ping";
+import { heldAtTheDoor, pingByPlayer, tpsLow } from "@/server/ping";
+import { GATE_TEXT, type GateReason } from "@/shared/join-gate";
 import { pingTone, worstPing } from "@/lib/ping";
 import { tpsTone } from "@/lib/series";
 
@@ -35,7 +36,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const data = await loadAnalytics(q.range);
   const { range, now, sessions, firstSeen, people } = data;
   // docs/05 "Connection"
-  const [status, low, pings] = await Promise.all([getStatus(), tpsLow(now), pingByPlayer(range.from, range.to)]);
+  const [status, low, pings, held] = await Promise.all([getStatus(), tpsLow(now), pingByPlayer(range.from, range.to), heldAtTheDoor(range.from, range.to)]);
   const worst = status?.availability === "online" ? worstPing(status.online) : null;
 
   const t = totals(sessions, range.from, range.to, now, firstSeen);
@@ -154,6 +155,15 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           </CardContent>
         </Card>
       </div>
+
+      {held.length > 0 && (
+        <Card data-testid="held">
+          <CardHeader><CardTitle>Held at the door</CardTitle><CardDescription>Members who joined without pressing Play first, in this period. They wait in the entrance room until they have.</CardDescription></CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">{held.map((h) => <li key={h.reason} className="flex items-center justify-between gap-3"><span>{GATE_TEXT[h.reason as GateReason] ?? h.reason}</span><span className="tabular-nums text-muted-foreground">{h.n} {h.n === 1 ? "time" : "times"}, {h.people} {h.people === 1 ? "person" : "people"}</span></li>)}</ul>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader><CardTitle>Most active players</CardTitle><CardDescription>Click a column to sort by it, a name for that player&apos;s page.</CardDescription></CardHeader>

@@ -6,6 +6,7 @@ import type { Env } from "../env.js";
 import { requireAdmin } from "../auth.js";
 import { BUILD_TARGETS, runBuild, type BuildEvent } from "../modpack/build.js";
 import { syncServer } from "../modpack/sync.js";
+import { recordSynced } from "../players/pack.js";
 import { getSection } from "../settings.js";
 import { chatSafe } from "../actions/registry.js";
 
@@ -22,6 +23,8 @@ export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: t
     try {
       const res = await syncServer(env, amp, { dryRun: body.data.dryRun });
       req.log.info({ ok: res.ok, restarted: res.restarted, packVersion: body.data.packVersion, by: req.caller.userId }, "modpack sync");
+      // docs/14 "Play first": from now on this is the pack a member's run of Play has to have installed
+      if (res.ok && !body.data.dryRun) await recordSynced().catch((err) => req.log.warn({ err: String(err) }, "could not record the synced pack"));
       return res.ok ? res : reply.code(502).send({ ...res, error: { code: "amp_error", message: res.lines.at(-1) ?? "sync failed" } });
     } finally {
       busy = null;

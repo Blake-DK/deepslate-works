@@ -105,4 +105,6 @@ Added 2026-09-29 (checked against `Core.GetAPISpec` on the live instance): `Core
 
 JSON `{ error: { code, message } }`. Codes: `unauthorized`, `forbidden`, `rate_limited` (with `retryAfterSec`), `server_offline`, `not_online` (player not in game), `timeout`, `validation`, `amp_error`. The UI maps each to a one-line message a player understands.
 
+Play first (docs/14): no new routes. `api` reads the member's latest `mode=play` report and the Setting `_packSynced` at every join; `POST /modpack/sync` writes `_packSynced` after a real sync. Console commands added to the registry: `player.where`, `limbo.holdPlay`, `limbo.remindPlay`, `limbo.releaseBack`, `limbo.kickIdlePlay`, `server.pings`.
+
 Mod list (docs/07 "The installer updates itself"): `GET /api/modpack/manifest` also answers `installer: { version, sha256, size } | null`, the installer in `/downloads/installer.zip` and the SHA-256 of that zip; `null` when `dist/installer.json` is missing or does not describe the zip on disk. `GET /downloads/installer.zip` takes the launcher token (`Authorization: Bearer …`) as it always did.

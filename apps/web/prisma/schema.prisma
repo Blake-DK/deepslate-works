@@ -38,6 +38,7 @@ enum EventKind {
   SYNC
   BACKUP
   INSTALL
+  JOIN_BLOCKED
 }
 
 enum VoteStatus {

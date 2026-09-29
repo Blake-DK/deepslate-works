@@ -257,6 +257,27 @@ Alex: "I want an option in the GUI to turn on pregen … run for 8 hours, or alw
 - The guide's FallingTree line shows by itself (it carries `<!-- mod: fallingtree -->`).
 - **Started once with it before anything was built on it** (the lesson of TabTPS): see the session log.
 
+### The recommended mods are on; the map is rendered from the portal (planner's two notes, 2026-09-29 16:4x to 17:4x UTC)
+
+| Asked for | Result |
+|---|---|
+| Recommended set on, vote left open | `1e67dcb`. Pack `0.1.0+b5d461ea`. docs/06 "The recommended set is switched on" |
+| Lock, Build, Sync, start once | Done, in that order. Server stopped first (graceful), synced 16:49:22, started 16:49:24, `Done` 16:49:40. 31 entries in the loader's list, all of the set among them; nothing failed, nothing switched off |
+| Guide sections | Create, Electricity, Quarry, Pipes, Guns, Backpacks, Waystones, VeinMiner, FallingTree show by themselves; the Tab line and "Take me to spawn" stay hidden |
+| Settings | `pvp=false`; TaCZ has no setting for damage between players; the quarry's speed is the mod's default. `ExplosiveAmmoDestroysBlock = true` (TaCZ's default) is for the planner to rule on |
+| Map: purge, nothing from before | The three map folders emptied with the server stopped, 16:48:52 UTC (9,711 entries). At 17:35 UTC: 4,724 files, the oldest from 16:49:50. None predates the purge |
+| "Render the map" as a step of the pre-generation | `8782f1c`, `7803f74`. docs/05. api 183 tests (23 new in `tests/map.test.ts`), web 217 (5 new) |
+| Run it now, radius 1500 | Turned on through the portal at 17:24:28 UTC (*when nobody's online*, *render the map only*), AMP's sleep switched off by the portal; the server started once by hand, as an admin, at 17:24:3x. BlueMap at one thread needs about an hour for the area |
+| BlueMap's settings | Nothing to change: no limits set, only chunks that exist are rendered, low resolution is made from the new high resolution. docs/09 |
+
+**What the first live run showed**
+
+1. **BlueMap was still loading when it was asked for the area** (17:24:49, nine seconds after `Done`), answered "BlueMap is still loading!" and did nothing. The area was asked for again by hand at 17:26; the step now notices that answer and asks again by itself (`7803f74`).
+2. **The pause works**: bramble09 joined at 17:3x, the portal sent `bluemap stop` and the card said "waiting: somebody is playing". It starts BlueMap again when the server is empty.
+3. **The deploy could not pull**: `/home/ladm/.config/deepslate/git-credentials` had become root's, because git had been run as root against the remote and the credential store rewrites its file. Given back to `ladm`; fetch, pull and push are run as `ladm` from now on.
+
+**Open:** the area was pre-generated before the new mods were on and has none of their terrain features (docs/06). The final picture of the map is taken when the render has finished.
+
 ### docs/16 acceptance · state
 
 - [ ] `/analytics` shows the ten tiles, the chart, countries with the map, most active players for every period, and matches AMP within ±1 session. *Built and rendering; the comparison needs people to have played.*

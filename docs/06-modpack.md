@@ -134,6 +134,16 @@ All commands are idempotent and print what they changed. Network failures retry 
 
 Added at 09:42 UTC, taken out at 10:52 UTC the same day. With BlueMap in the pack the server does not start: `java.lang.module.ResolutionException: Modules bluemap and net.kyori.adventure.text.serializer.gson export package net.kyori.adventure.text.serializer.gson.impl to module corpse`. Both mods carry the same library. **Check a server-side mod against BlueMap before adding it** when it is by the same authors' circle (anything built on Adventure: TabTPS, MiniMOTD, squaremap and the like). The portal gets its pings from spark instead; see docs/05 "Connection".
 
+## The recommended set is switched on (planner, 2026-09-29 16:4x UTC); the vote stays open
+
+`enabled: true` on every mod with `recommended: true`: create, createaddition, veinminer, sophisticated-backpacks, additional-enchanted-miner, tacz-1.21.1, waystones, farmers-delight, pipez; and on what they need: sophisticated-core, scalable-cats-force (it loads as `kuma_api`). The lock added balm and kotlin-lang-forge by itself. 30 of the 40 mods in the catalogue are on; the pack is `0.1.0+b5d461ea`, 32 files in the lock, 25 on the server, 29 on a player's PC. The mods stay votable and the vote was not closed.
+
+Started once with all of them, nobody on (16:49:24 to `Done (1.370s)` at 16:49:40 by the server's clock, 16 s): 31 entries in the loader's list, no ERROR line, nothing switched off. VeinMiner and FallingTree load side by side; what they do to the same tree in the game has not been tried.
+
+Settings, as shipped: `pvp=false` in `server.properties`. TaCZ has no setting for damage between players (`tacz-server.toml` has multipliers only), so `pvp=false` is what keeps guns from hurting players; **`ExplosiveAmmoDestroysBlock = true` in `tacz-common.toml` is TaCZ's default and means explosive ammunition breaks blocks**. The quarry has no settings file in the pack: its speed is the mod's default.
+
+**The area that was pre-generated that morning (radius 1500, 35,721 chunks) was made before these mods were on.** What they add to new terrain (Create's zinc ore, Farmer's Delight's wild crops, the villages' waystones) is missing inside it and present in every chunk made from now on. To have it near spawn the world would have to be made again; that is Alex's to decide.
+
 ## FallingTree (2026-09-29)
 
 `fallingtree` on Modrinth. **Part of the default pack since 2026-09-29** (Alex: "tree felling is a default mod pack"): category base, switched on, not voted on. Works next to VeinMiner: FallingTree is the axe, VeinMiner is the key you hold.

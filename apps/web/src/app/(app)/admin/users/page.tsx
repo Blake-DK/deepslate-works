@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { db } from "@/server/db";
 import { requireAdmin } from "@/server/auth/session";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { timeAgo } from "@/lib/utils";
-import Link from "next/link";
-import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setEarlyAccessAction, setMinecraftNameAction, setRoleAction } from "./actions";
 import { getSettings } from "@/server/settings";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
+import { buttonClasses } from "@/components/ui/button";
+import { timeAgo } from "@/lib/utils";
+import { memberRows, SHOW, type Show } from "@/lib/admin-lists";
+import { RowMenu, menuItem } from "@/components/admin/row-menu";
+import { ConfirmItem, LinkByName } from "@/components/admin/menu-actions";
+import { cell, Clip, Field, FixedTable, menuCell, Switch } from "@/components/admin/parts";
+import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setEarlyAccessAction, setMinecraftNameAction, setRoleAction } from "./actions";
 
 const ERRORS: Record<string, string> = {
   name: "Minecraft names are 3 to 16 letters, numbers or underscores.",
@@ -20,74 +23,128 @@ const ERRORS: Record<string, string> = {
 
 export const metadata: Metadata = { title: "Players" };
 
-const SHOW = { all: "Everyone", early: "Early access", rest: "Without" } as const;
+const PC = { HIGH: ["high", "good"], MID: ["mid", "neutral"], LOW: ["low", "warn"] } as const;
+const WIDTHS = ["30%", "24%", "9%", "13%", "14%", "56px"];
 
-export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; show?: string }> }) {
+export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; show?: string; q?: string }> }) {
   const me = await requireAdmin();
-  const { error, show } = await searchParams;
-  const only = show === "early" || show === "rest" ? show : "all";
+  const { error, show, q } = await searchParams;
   const [all, settings] = await Promise.all([db.user.findMany({ orderBy: [{ role: "asc" }, { createdAt: "asc" }] }), getSettings()]);
-  const users = all.filter((u) => only === "all" || (only === "early" ? u.earlyAccess : !u.earlyAccess));
-  const count = { all: all.length, early: all.filter((u) => u.earlyAccess).length, rest: all.filter((u) => !u.earlyAccess).length };
+  const { rows, only, query, count } = memberRows(all, show, q);
+  const early = `While "We're live" is off, a member with early access can download, press Play and join like any player once it is on. Nothing of an admin's.${settings.live ? " The site is live, so it changes nothing right now." : ""}`;
+  const href = (k: Show) => {
+    const sp = new URLSearchParams();
+    if (k !== "all") sp.set("show", k);
+    if (query) sp.set("q", query);
+    const s = sp.toString();
+    return s ? `/admin/users?${s}` : "/admin/users";
+  };
+
+  const parts = (u: (typeof rows)[number]) => {
+    const admin = u.role === "ADMIN";
+    return {
+      role: <Badge tone={admin ? "warn" : "neutral"} className="shrink-0">{u.role.toLowerCase()}</Badge>,
+      minecraft: u.mcUsername ? (
+        <span className="flex min-w-0 items-center gap-2"><Clip text={u.mcUsername} mono />{u.verifiedAt && <Badge tone="good" className="shrink-0">verified</Badge>}</span>
+      ) : <Badge className="shrink-0">Unlinked</Badge>,
+      pc: u.pcTier ? <Badge tone={PC[u.pcTier][1]} className="shrink-0" title={`${PC[u.pcTier][0]} PC${u.pcTierSource === "measured" ? ", measured by the installer" : ", their own pick"}`}>{PC[u.pcTier][0]} PC</Badge> : <span className="text-muted-foreground" title="No tier yet">–</span>,
+      seen: <span className="text-muted-foreground" title={u.lastSeenAt ? u.lastSeenAt.toISOString() : "never"}>{timeAgo(u.lastSeenAt)}</span>,
+      early: <Switch action={setEarlyAccessAction} fields={{ id: u.id, on: u.earlyAccess ? "0" : "1" }} on={u.earlyAccess} label={`Early access for ${u.displayName}`} disabled={admin} why={admin ? "Admins don't need it" : early} />,
+      menu: (
+        <RowMenu label={`Actions for ${u.displayName}`}>
+          {u.id !== me.id && (
+            <form action={setRoleAction}>
+              <input type="hidden" name="id" value={u.id} />
+              <input type="hidden" name="role" value={admin ? "PLAYER" : "ADMIN"} />
+              <button type="submit" role="menuitem" className={menuItem}>{admin ? "Make player" : "Make admin"}</button>
+            </form>
+          )}
+          {u.mcUsername && (
+            <form action={clearMinecraftNameAction}>
+              <input type="hidden" name="id" value={u.id} />
+              <button type="submit" role="menuitem" className={menuItem}>Unlink</button>
+            </form>
+          )}
+          <LinkByName action={setMinecraftNameAction} id={u.id} who={u.displayName} />
+          <form action={revokeLauncherAction} title="Signs the installer out on all their PCs">
+            <input type="hidden" name="id" value={u.id} />
+            <button type="submit" role="menuitem" className={menuItem}>Sign out installer</button>
+          </form>
+          {u.id !== me.id && <ConfirmItem action={removeUserAction} fields={{ id: u.id }} question={`Remove ${u.displayName} from the group? Their votes and their link to Minecraft go with them.`}>Remove</ConfirmItem>}
+        </RowMenu>
+      ),
+    };
+  };
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Players</h1>
-      {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
-      <p className="text-sm text-muted-foreground">Minecraft accounts link themselves in game (docs/14). The name box below is the admin fallback: it checks the name with Mojang and links it by hand.</p>
-      <div className="flex flex-wrap items-center gap-3">
-        <nav className="flex flex-wrap gap-1 rounded-lg bg-muted p-1 text-sm" aria-label="Filter by early access">
-          {(Object.keys(SHOW) as Array<keyof typeof SHOW>).map((k) => <Link key={k} href={k === "all" ? "/admin/users" : `/admin/users?show=${k}`} aria-current={only === k ? "page" : undefined} className={`rounded-md px-3 py-1.5 ${only === k ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{SHOW[k]} ({count[k]})</Link>)}
-        </nav>
-        <p className="text-sm text-muted-foreground">Early access: while &quot;We&apos;re live&quot; is off, the member can download, press Play and join like any player once it is on. Nothing of an admin&apos;s. {settings.live ? "The site is live, so the flag changes nothing right now." : "The site is not live."}</p>
+      <div>
+        <h1 className="text-2xl font-semibold">Players</h1>
+        <p className="text-sm text-muted-foreground">Minecraft accounts link themselves in game; &quot;Link by name…&quot; in a row&apos;s menu is the fallback.</p>
       </div>
-      <Card>
-        <CardContent className="pt-5">
-          {users.length === 0 && <p className="pb-4 text-sm text-muted-foreground">Nobody.</p>}
-          <ul className="divide-y">
-            {users.map((u) => (
-              <li key={u.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 text-sm">
-                <span className="font-medium">{u.displayName}</span>
-                <Badge tone={u.role === "ADMIN" ? "warn" : "neutral"}>{u.role.toLowerCase()}</Badge>
-                {u.earlyAccess && <Badge tone="good" data-testid="early">early access</Badge>}
-                {u.mcUsername ? (
-                  <span className="flex items-center gap-2"><span className="font-mono">{u.mcUsername}</span>{u.verifiedAt && <Badge tone="good">verified</Badge>}
-                    <form action={clearMinecraftNameAction}><input type="hidden" name="id" value={u.id} /><Button type="submit" variant="ghost" size="sm" title="Unlink the Minecraft account">Unlink</Button></form>
-                  </span>
-                ) : (
-                  <form action={setMinecraftNameAction} className="flex items-center gap-1">
-                    <input type="hidden" name="id" value={u.id} />
-                    <Input name="mcUsername" placeholder="Minecraft name" className="h-8 w-40 text-sm" pattern="[A-Za-z0-9_]{3,16}" required />
-                    <Button type="submit" variant="secondary" size="sm">Link</Button>
-                  </form>
-                )}
-                <span className="text-muted-foreground">{u.pcTier ? `${u.pcTier.toLowerCase()} PC` : "no tier"} · {u.discordId ? "Discord" : "email"}{u.discordId && !u.guildMember ? " · left the server" : ""} · seen {timeAgo(u.lastSeenAt)}</span>
-                <form action={setEarlyAccessAction} className={u.id === me.id ? "ml-auto" : undefined}>
-                  <input type="hidden" name="id" value={u.id} />
-                  <input type="hidden" name="on" value={u.earlyAccess ? "0" : "1"} />
-                  <Button type="submit" variant={u.earlyAccess ? "ghost" : "secondary"} size="sm" title={u.role === "ADMIN" ? "Admins can do all of it anyway; the flag counts if they are made a player" : undefined}>{u.earlyAccess ? "Take early access away" : "Early access"}</Button>
-                </form>
-                {u.id !== me.id && (
-                  <span className="ml-auto flex gap-2">
-                    <form action={setRoleAction}>
-                      <input type="hidden" name="id" value={u.id} />
-                      <input type="hidden" name="role" value={u.role === "ADMIN" ? "PLAYER" : "ADMIN"} />
-                      <Button type="submit" variant="secondary" size="sm">{u.role === "ADMIN" ? "Make player" : "Make admin"}</Button>
-                    </form>
-                    <form action={revokeLauncherAction} title="Sign the installer out on all their PCs">
-                      <input type="hidden" name="id" value={u.id} />
-                      <Button type="submit" variant="ghost" size="sm">Sign out installer</Button>
-                    </form>
-                    <form action={removeUserAction}>
-                      <input type="hidden" name="id" value={u.id} />
-                      <Button type="submit" variant="ghost" size="sm">Remove</Button>
-                    </form>
-                  </span>
-                )}
-              </li>
-            ))}
+      {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
+      <div className="flex flex-wrap items-center gap-3">
+        <nav className="flex gap-1 rounded-lg bg-muted p-1 text-sm" aria-label="Filter by early access">
+          {(Object.keys(SHOW) as Show[]).map((k) => <Link key={k} href={href(k)} aria-current={only === k ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${only === k ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{SHOW[k]} ({count[k]})</Link>)}
+        </nav>
+        <form method="get" action="/admin/users" className="flex min-w-0 flex-1 items-center gap-2" role="search">
+          {only !== "all" && <input type="hidden" name="show" value={only} />}
+          <input name="q" type="search" defaultValue={query} placeholder="Search by name" aria-label="Search by name" className="h-9 min-w-0 flex-1 rounded-lg border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[800px]:max-w-xs" />
+          <button type="submit" className={buttonClasses("secondary", "sm")}>Search</button>
+          {query && <Link href={href(only).replace(/[?&]q=[^&]*/, "").replace(/\?$/, "")} className="whitespace-nowrap text-sm underline">Clear</Link>}
+        </form>
+      </div>
+
+      {rows.length === 0 ? (
+        <Card><CardContent className="p-5 text-sm text-muted-foreground">Nobody{query ? ` with "${query}" in their name` : ""}.</CardContent></Card>
+      ) : (
+        <>
+          <Card className="hidden min-[800px]:block" data-testid="players-table">
+            <CardContent className="p-2">
+              <FixedTable label="Players" widths={WIDTHS} head={[{ text: "Member" }, { text: "Minecraft" }, { text: "PC" }, { text: "Seen", right: true }, { text: "Early access", center: true, title: early }, { text: "Actions", hidden: true }]}>
+                {rows.map((u) => {
+                  const p = parts(u);
+                  return (
+                    <tr key={u.id} data-row>
+                      <td className={cell}><span className="flex min-w-0 items-center gap-2"><Clip text={u.displayName} className="font-medium" />{p.role}</span></td>
+                      <td className={cell}>{p.minecraft}</td>
+                      <td className={cell}>{p.pc}</td>
+                      <td className={`${cell} text-right`}>{p.seen}</td>
+                      <td className={`${cell} text-center`}>{p.early}</td>
+                      <td className={menuCell}>{p.menu}</td>
+                    </tr>
+                  );
+                })}
+              </FixedTable>
+            </CardContent>
+          </Card>
+
+          <ul className="space-y-3 min-[800px]:hidden" data-testid="players-cards">
+            {rows.map((u) => {
+              const p = parts(u);
+              return (
+                <li key={u.id}>
+                  <Card data-row>
+                    <CardContent className="p-4">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Clip text={u.displayName} className="font-medium" />
+                        {p.role}
+                        <span className="ml-auto shrink-0">{p.menu}</span>
+                      </div>
+                      <dl className="mt-2 divide-y text-sm">
+                        <Field name="Minecraft">{p.minecraft}</Field>
+                        <Field name="PC">{p.pc}</Field>
+                        <Field name="Seen">{p.seen}</Field>
+                        <Field name="Early access">{p.early}</Field>
+                      </dl>
+                    </CardContent>
+                  </Card>
+                </li>
+              );
+            })}
           </ul>
-        </CardContent>
-      </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { OUTCOMES, summary, type SystemInfo } from "@/lib/install-report";
 import { timeAgo } from "@/lib/series";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cell, Clip, Field, FixedTable } from "@/components/admin/parts";
 
 export const metadata: Metadata = { title: "Installs" };
 
@@ -29,6 +30,25 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   const members = await db.user.count();
   const tiers = { HIGH: 0, MID: 0, LOW: 0 } as Record<string, number>;
   for (const l of latest) if (l.tierMeasured) tiers[l.tierMeasured] = (tiers[l.tierMeasured] ?? 0) + 1;
+  // One line for each thing; what does not fit is cut with an ellipsis and whole on hover.
+  const pc = (l: (typeof latest)[number]) => ({
+    s: summary(l.system as SystemInfo),
+    who: <Link href={`/admin/installs/${l.id}`} className="block min-w-0 font-medium hover:underline"><Clip text={l.user.displayName} /></Link>,
+    tier: l.tierMeasured ? <Badge tone={l.tierMeasured === "HIGH" ? "good" : l.tierMeasured === "LOW" ? "warn" : "neutral"} className="whitespace-nowrap">{TIER[l.tierMeasured]}</Badge> : <span className="text-muted-foreground" title="Not enough in the report to go on">–</span>,
+    when: <span title={l.at.toISOString()}>{timeAgo(l.at, now)}</span>,
+  });
+  const run = (r: (typeof rows)[number]) => {
+    const changed = r.tierMeasured && r.tierBefore && r.tierMeasured !== r.tierBefore;
+    const about = [r.failedStep ? `at "${r.failedStep}"` : null, r.updatedFrom ? `the installer updated itself, ${r.updatedFrom} to ${r.installerVersion}` : null, r.updateProblem ? "the installer could not update itself" : null].filter(Boolean).join("; ");
+    return {
+      s: summary(r.system as SystemInfo),
+      who: <Link href={`/admin/installs/${r.id}`} className="block min-w-0 font-medium hover:underline"><Clip text={r.user.displayName} /></Link>,
+      changed: changed ? <Badge tone="warn" className="shrink-0 whitespace-nowrap" title={`was ${TIER[r.tierBefore!]}, measured ${TIER[r.tierMeasured!]}`}>PC re-measured</Badge> : null,
+      when: <span title={r.at.toISOString()}>{timeAgo(r.at, now)}</span>,
+      from: <span title={r.updatedFrom ? `updated itself, ${r.updatedFrom} to ${r.installerVersion}` : `installer ${r.installerVersion}`}>{r.mode === "play" ? "Play" : "Installer"}{r.updateProblem ? <span className="text-danger" title="The installer could not update itself"> !</span> : null}</span>,
+      outcome: <Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"} className="whitespace-nowrap" title={about || undefined}>{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}{r.failedStep ? " …" : ""}</Badge>,
+    };
+  };
   return (
     <div className="space-y-4">
       <div>
@@ -42,17 +62,41 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
             <p className="text-sm text-muted-foreground">Measured by the installer, the latest run of each member. {latest.length} of {members} members measured: {tiers.HIGH} gaming PC, {tiers.MID} decent, {tiers.LOW} older. Members who have not run the installer yet keep the tier they picked.</p>
           </div>
           {latest.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[44rem] text-sm">
-                <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1 pr-4 font-normal">Who</th><th className="py-1 pr-4 font-normal">Tier</th><th className="py-1 pr-4 font-normal">Processor</th><th className="py-1 pr-4 font-normal">Memory</th><th className="py-1 pr-4 font-normal">Graphics</th><th className="py-1 font-normal">Measured</th></tr></thead>
-                <tbody className="divide-y">
+            <>
+              <div className="hidden min-[800px]:block" data-testid="pcs-table">
+                <FixedTable label="The group's PCs" widths={["24%", "13%", "24%", "9%", "19%", "11%"]} head={[{ text: "Who" }, { text: "Tier" }, { text: "Processor" }, { text: "Memory", right: true }, { text: "Graphics" }, { text: "Measured", right: true }]}>
                   {latest.map((l) => {
-                    const s = summary(l.system as SystemInfo);
-                    return <tr key={l.id}><td className="py-1.5 pr-4"><Link href={`/admin/installs/${l.id}`} className="font-medium hover:underline">{l.user.displayName}</Link></td><td className="py-1.5 pr-4">{l.tierMeasured ? <Badge tone={l.tierMeasured === "HIGH" ? "good" : l.tierMeasured === "LOW" ? "warn" : "neutral"}>{TIER[l.tierMeasured]}</Badge> : <span className="text-muted-foreground">not enough to go on</span>}</td><td className="py-1.5 pr-4">{s.cpu}</td><td className="py-1.5 pr-4 tabular-nums">{s.ram}</td><td className="py-1.5 pr-4">{s.gpu}</td><td className="py-1.5 text-muted-foreground">{timeAgo(l.at, now)}</td></tr>;
+                    const p = pc(l);
+                    return (
+                      <tr key={l.id} data-row>
+                        <td className={cell}>{p.who}</td>
+                        <td className={cell}>{p.tier}</td>
+                        <td className={cell}><Clip text={p.s.cpu} /></td>
+                        <td className={`${cell} text-right tabular-nums`}>{p.s.ram}</td>
+                        <td className={cell}><Clip text={p.s.gpu} /></td>
+                        <td className={`${cell} text-right text-muted-foreground`}>{p.when}</td>
+                      </tr>
+                    );
                   })}
-                </tbody>
-              </table>
-            </div>
+                </FixedTable>
+              </div>
+              <ul className="space-y-2 min-[800px]:hidden" data-testid="pcs-cards">
+                {latest.map((l) => {
+                  const p = pc(l);
+                  return (
+                    <li key={l.id} data-row className="rounded-lg border p-3">
+                      <div className="flex min-w-0 items-center gap-2">{p.who}<span className="ml-auto shrink-0">{p.tier}</span></div>
+                      <dl className="mt-1 divide-y text-sm">
+                        <Field name="Processor"><Clip text={p.s.cpu} /></Field>
+                        <Field name="Memory"><span className="tabular-nums">{p.s.ram}</span></Field>
+                        <Field name="Graphics"><Clip text={p.s.gpu} /></Field>
+                        <Field name="Measured"><span className="text-muted-foreground">{p.when}</span></Field>
+                      </dl>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </CardContent>
       </Card>
@@ -61,36 +105,55 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
         <Link href="/admin/installs" aria-current={!only ? "page" : undefined} className={`rounded-md px-3 py-1.5 ${!only ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>All ({total})</Link>
         {OUTCOMES.map((o) => <Link key={o} href={`/admin/installs?outcome=${o}`} aria-current={only === o ? "page" : undefined} className={`rounded-md px-3 py-1.5 ${only === o ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{LABEL[o]} ({n(o)})</Link>)}
       </nav>
-      <Card>
-        <CardContent className="p-0">
-          {rows.length === 0 ? <p className="p-4 text-sm text-muted-foreground">{only ? "No reports with that outcome." : "No reports yet. They arrive when someone runs the installer."}</p> : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[56rem] text-sm">
-                <thead className="text-left text-xs text-muted-foreground"><tr><th className="px-4 py-2 font-normal">Who</th><th className="px-4 py-2 font-normal">When</th><th className="px-4 py-2 font-normal">From</th><th className="px-4 py-2 font-normal">Outcome</th><th className="px-4 py-2 font-normal">Pack</th><th className="px-4 py-2 font-normal">Windows</th><th className="px-4 py-2 font-normal">Memory</th><th className="px-4 py-2 font-normal">Graphics</th></tr></thead>
-                <tbody className="divide-y">
-                  {rows.map((r) => {
-                    const sys = r.system as SystemInfo;
-                    const s = summary(sys);
-                    const changed = r.tierMeasured && r.tierBefore && r.tierMeasured !== r.tierBefore;
-                    return (
-                      <tr key={r.id}>
-                        <td className="px-4 py-2"><Link href={`/admin/installs/${r.id}`} className="font-medium hover:underline">{r.user.displayName}</Link>{changed && <span className="block text-xs text-primary">was {TIER[r.tierBefore!]}, measured {TIER[r.tierMeasured!]}</span>}</td>
-                        <td className="px-4 py-2 text-muted-foreground" title={r.at.toISOString()}>{timeAgo(r.at, now)}</td>
-                        <td className="px-4 py-2">{r.mode === "play" ? "Play" : "Installer"}{r.updatedFrom && <span className="block text-xs text-muted-foreground">updated itself, {r.updatedFrom} to {r.installerVersion}</span>}{r.updateProblem && <span className="block text-xs text-danger">could not update itself</span>}</td>
-                        <td className="px-4 py-2"><Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"}>{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}</Badge>{r.failedStep && <span className="block text-xs text-muted-foreground">at &quot;{r.failedStep}&quot;</span>}</td>
-                        <td className="px-4 py-2 font-mono text-xs">{r.packVersion}</td>
-                        <td className="px-4 py-2">{s.os}</td>
-                        <td className="px-4 py-2 tabular-nums">{s.ram}</td>
-                        <td className="px-4 py-2">{s.gpu}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {rows.length === 0 ? (
+        <Card><CardContent className="p-4 text-sm text-muted-foreground">{only ? "No reports with that outcome." : "No reports yet. They arrive when someone runs the installer."}</CardContent></Card>
+      ) : (
+        <>
+          <Card className="hidden min-[800px]:block" data-testid="runs-table">
+            <CardContent className="p-2">
+              <FixedTable label="Every run" widths={["23%", "10%", "9%", "11%", "14%", "13%", "8%", "12%"]} head={[{ text: "Who" }, { text: "When", right: true }, { text: "From" }, { text: "Outcome" }, { text: "Pack" }, { text: "Windows" }, { text: "Memory", right: true }, { text: "Graphics" }]}>
+                {rows.map((r) => {
+                  const p = run(r);
+                  return (
+                    <tr key={r.id} data-row>
+                      <td className={cell}><span className="flex min-w-0 items-center gap-2">{p.who}{p.changed}</span></td>
+                      <td className={`${cell} text-right text-muted-foreground`}>{p.when}</td>
+                      <td className={cell}>{p.from}</td>
+                      <td className={cell}>{p.outcome}</td>
+                      <td className={cell}><Clip text={r.packVersion} mono className="text-xs" /></td>
+                      <td className={cell}><Clip text={p.s.os} /></td>
+                      <td className={`${cell} text-right tabular-nums`}>{p.s.ram}</td>
+                      <td className={cell}><Clip text={p.s.gpu} /></td>
+                    </tr>
+                  );
+                })}
+              </FixedTable>
+            </CardContent>
+          </Card>
+          <ul className="space-y-3 min-[800px]:hidden" data-testid="runs-cards">
+            {rows.map((r) => {
+              const p = run(r);
+              return (
+                <li key={r.id}>
+                  <Card data-row>
+                    <CardContent className="p-4">
+                      <div className="flex min-w-0 items-center gap-2">{p.who}<span className="ml-auto shrink-0">{p.outcome}</span></div>
+                      <dl className="mt-2 divide-y text-sm">
+                        <Field name="When"><span className="text-muted-foreground">{p.when}</span></Field>
+                        <Field name="From">{p.from}{p.changed}</Field>
+                        <Field name="Pack"><Clip text={r.packVersion} mono className="text-xs" /></Field>
+                        <Field name="Windows"><Clip text={p.s.os} /></Field>
+                        <Field name="Memory"><span className="tabular-nums">{p.s.ram}</span></Field>
+                        <Field name="Graphics"><Clip text={p.s.gpu} /></Field>
+                      </dl>
+                    </CardContent>
+                  </Card>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

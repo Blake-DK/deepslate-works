@@ -14,7 +14,7 @@ export default auth((req) => {
       return NextResponse.json({ error: { code: "unauthorized", message: "Sign in first" } }, { status: 401 });
     }
     const login = new URL("/login", req.nextUrl);
-    if (pathname !== "/") login.searchParams.set("next", pathname);
+    if (pathname !== "/") login.searchParams.set("next", pathname + req.nextUrl.search); // e.g. /join?code=ABC123
     return NextResponse.redirect(login);
   }
   return NextResponse.next();

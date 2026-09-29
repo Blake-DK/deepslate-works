@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { joinWithDiscord } from "./actions";
 import { getBranding } from "@/server/branding";
+import { CODE_RE } from "@/shared/join-code";
 
 export const metadata: Metadata = { title: "Join" };
 
@@ -20,10 +21,12 @@ const STATE_TEXT = {
 } as const;
 
 export default async function JoinPage({ params }: { params: Promise<{ code: string }> }) {
-  const session = await auth();
-  if (session?.user) redirect("/");
   const { code: raw } = await params;
   const code = normaliseInviteCode(raw);
+  // A join code from the white room (6 characters) typed after /join/ instead of into the box on /join.
+  if (CODE_RE.test(code)) redirect(`/join?code=${code}`);
+  const session = await auth();
+  if (session?.user) redirect("/");
   const invite = code ? await db.invite.findUnique({ where: { code } }) : null;
   const state = inviteState(invite);
 

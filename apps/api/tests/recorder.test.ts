@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseConsoleLine } from "../src/amp/console.js";
 import { duration, Recorder, type NewEvent, type NewSession, type OpenSession, type RecorderStore } from "../src/events/recorder.js";
@@ -282,7 +282,7 @@ describe("settings", () => {
 
 describe("shared files", () => {
   it("are identical in web and api", () => {
-    for (const f of ["events.ts", "settings.ts"]) {
+    for (const f of readdirSync(new URL("../src/shared/", import.meta.url))) {
       expect(readFileSync(new URL(`../src/shared/${f}`, import.meta.url), "utf8")).toBe(readFileSync(new URL(`../../web/src/shared/${f}`, import.meta.url), "utf8"));
     }
   });

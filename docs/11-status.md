@@ -32,6 +32,8 @@ Last updated 2026-09-29, 19:00 UTC (the evening the first player who is not an a
 
 **Handed over by the planner on 2026-09-29 evening, not begun** (named in `ROADMAP.md`; the specs themselves have not reached this session): Better Tab Info in the base pack; the installer's version on every report with an "outdated" badge and a nudge on `/me`; fuller logs with the last game session's log and crash reports; the entrance room's prompt every 15 s with a title on screen and a short code for `deepslate.dsw.test/join`.
 
+- **2026-09-29 evening, planner's three items.** (1) Better Tab Info in the base pack (client only, pulls in craft-config); TabTPS removed from `mods.json`; pack `0.1.0+dbcbe9e1`; guide's Tab line tagged `bettertabinfo`. (2) Installer version on every report compared with the current one (docs/07 "Which installer ran"); installer 1.4.3. (3) The white room's prompt: chat line every 15 s and on chat, title/subtitle/action bar, 6-character join code for 30 min, `/join`, guess limit, second sign (docs/14 "The prompt, and the join code"). **Deviation:** `limbo.build` sets `gamerule logAdminCommands false` (otherwise ops see every `title`); the room must be rebuilt once (Admin → Server → Build room). The action bar is refreshed every 5 s, not only every 15 s (the game fades it after ~3 s). If Admin → Branding has a custom guide, its Tab line is not changed by this.
+
 ## Where things are
 
 | Thing | Where |

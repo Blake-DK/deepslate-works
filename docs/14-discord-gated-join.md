@@ -133,3 +133,24 @@ Until 2026-09-29 the room was a bedrock box in the overworld's sky, at 0 250 0, 
 4. In.
 
 A member held at 2 or 3 is asked where they stand before they are moved, and is put back there. Every five seconds `api` looks again: the site may have gone live, the flag may have been given, they may have pressed Play. The line in chat changes when the reason does. `JOIN_BLOCKED` carries the reason: `not live`, `no report`, `stale`, `wrong version`.
+
+## The prompt, and the join code (planner, 2026-09-29; built the same day; appended by the VPS session)
+
+People missed the first link line and could not get it back (chat fades after 10 s). Since then, for everyone held in the room:
+
+- **Chat.** One line, all of it clickable (`/link/<code>`): "Click here to sign in, or go to deepslate.dsw.test/join and enter ABC-123". It is sent when they are held (0 s), again every **15 s** while they are held, and at once whenever the held player says anything in chat (the 15 s then start from there). `PROMPT_EVERY_MS` in `apps/api/src/players/limbo.ts`; a timer of its own looks every second.
+- **On screen.** `title … times 0 400 0` (20 s, no fading) with the title and subtitle, refreshed with every chat line so it never goes; the subtitle's words on the action bar too, sent again every 5 s with the room's round (the game fades the action bar after about 3 s). All screen commands target `@a[name=X,tag=!verified]`, so one still on its way when they are let in shows nothing. `link.release` and `limbo.releaseBack` send `title … clear`, `title … reset` and an empty action bar before the tag is set.
+- **The three states**, each with its own words (`screenText` in `apps/api/src/actions/registry.ts`):
+
+  | held for | title | subtitle and action bar | chat line |
+  |---|---|---|---|
+  | linking | Sign in to play | Click the link in chat, or go to deepslate.dsw.test/join and enter ABC-123 | the link line above |
+  | not open yet | Not open yet | You'll be let in when the server goes live | "Not open yet. You'll be let in when the server goes live." |
+  | Play first | Press Play first | Press Play on deepslate.dsw.test and you'll be let in | "Press Play on deepslate.dsw.test to join. …" |
+
+  When the reason changes while they wait (the site goes live, but Play first is not met) the new words go at once.
+- **The join code** (`apps/{web,api}/src/shared/join-code.ts`): 6 characters from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (no 0/O, 1/I), shown as `ABC-123`, **30 minutes**, one live code per Minecraft account. Every join ends the old code and makes a new one; while they stay it does not change (a code that runs out while they wait is replaced at the next prompt). It is the same code as in the chat link; `LinkCode.code` holds 6 characters now (8 before; the column did not change).
+- **`/join`** (`apps/web/src/app/(public)/join/page.tsx`): signed in with Discord (the middleware sends them to `/login` first and back, query included), a box for the code, a plain GET form, works on a phone. Same effect as the link: `linkWithCode` in `apps/web/src/server/link.ts` serves both. `/join/ABC123` (a code typed after the slash) goes to `/join?code=ABC123`; 8-character paths there stay invites.
+- **Guessing** (`GuessLimiter`): only wrong or expired codes count, 5 per member and 30 for everyone together in 15 minutes, the same for `/link/<code>`. Over that: "Too many wrong codes. Wait N minutes", and an event `link.bind` refused.
+- **The room**: a second sign to the right of the name, "Sign in at / deepslate. / dsw.test/join / code in chat" (the name sign moved one block left). `limbo.build` also sets `gamerule logAdminCommands false`: every `title` sent from the console would otherwise be echoed to each operator in game ("[Server: Showing new title for …]"), several times a minute. **The room needs Admin → Server → Build room once** for the sign and the gamerule.
+- **Tests**: `apps/api/tests/prompt.test.ts` (15 s repeat, chat resend, nothing while the server is down or after they left, what each state shows, the clear on release, the signs, code length/alphabet/expiry, a new code on rejoin), `apps/web/tests/installer-version.test.ts` (the guess limit).

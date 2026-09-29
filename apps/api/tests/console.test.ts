@@ -30,10 +30,10 @@ describe("decideJoin", () => {
 describe("actions", () => {
   const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
   it("builds the hold sequence with a clickable link", () => {
-    const cmds = actions["limbo.hold"].build(ctx, { name: "Bramble09", code: "ABCD2345" });
+    const cmds = actions["limbo.hold"].build(ctx, { name: "Bramble09", code: "ABC234" });
     expect(cmds[0]).toBe("tag Bramble09 remove verified");
     expect(cmds.some((c) => c === "execute in deepslate:limbo run tp Bramble09 0.5 65 0.5")).toBe(true);
-    expect(cmds.at(-1)).toContain('"action":"open_url","value":"https://deepslate.dsw.test/link/ABCD2345"');
+    expect(cmds.at(-1)).toContain('"action":"open_url","value":"https://deepslate.dsw.test/link/ABC234"');
   });
   it("refuses unsafe names and free text", () => {
     expect(actions["link.release"].input.safeParse({ name: "a b; op me" }).success).toBe(false);
@@ -52,17 +52,17 @@ describe("actions", () => {
     expect(cmds[cmds.length - 1]).toBe("tag x_1 add verified");
     expect(cmds).toContain("whitelist add x_1");
   });
-  it("welcomes with the name from Admin > Branding, stripped of anything that could break the chat line", () => {
-    expect(linkTellraw("p", "https://deepslate.dsw.test", "ABCD2345", "The Mine")).toContain('"text":"Welcome to The Mine. Click to link your Discord: "');
-    expect(linkTellraw("p", "https://deepslate.dsw.test", "ABCD2345")).toContain("Welcome to Deepslate Works.");
-    const odd = linkTellraw("p", "https://deepslate.dsw.test", "ABCD2345", 'X"},{"text":"pwn","clickEvent":{"action":"run_command","value":"/op p"}} \n§k');
-    expect(JSON.parse(odd.slice("tellraw p ".length))).toHaveLength(4);
+  it("names the site from Admin > Branding on hover, stripped of anything that could break the chat line", () => {
+    expect(linkTellraw("p", "https://deepslate.dsw.test", "ABC234", "The Mine")).toContain('"value":"Sign in to The Mine: opens deepslate.dsw.test/link/ABC234"');
+    expect(linkTellraw("p", "https://deepslate.dsw.test", "ABC234")).toContain("Sign in to Deepslate Works:");
+    const odd = linkTellraw("p", "https://deepslate.dsw.test", "ABC234", 'X"},{"text":"pwn","clickEvent":{"action":"run_command","value":"/op p"}} \n§k');
+    expect(JSON.parse(odd.slice("tellraw p ".length))).toHaveLength(3);
     expect(odd).not.toContain("run_command");
     expect(odd).not.toContain("§");
-    expect(actions["limbo.hold"].build({ ...ctx, siteName: "Blake & Co" }, { name: "Bramble09", code: "ABCD2345" }).at(-1)).toContain("Welcome to Blake & Co.");
+    expect(actions["limbo.hold"].build({ ...ctx, siteName: "Blake & Co" }, { name: "Bramble09", code: "ABC234" }).at(-1)).toContain("Sign in to Blake & Co:");
   });
   it("tellraw keeps the code visible as a fallback", () => {
-    expect(linkTellraw("p", "https://deepslate.dsw.test", "ABCD2345")).toContain("enter ABCD2345");
+    expect(linkTellraw("p", "https://deepslate.dsw.test", "ABC234")).toContain("enter ABC-234");
   });
 });
 
@@ -75,7 +75,7 @@ describe("the entrance room in a dimension of its own (docs/14)", () => {
     expect(() => parsePlace("Deepslate:Limbo 0 65 0")).toThrow();
   });
   it("holds in the room's dimension, in adventure mode", () => {
-    const cmds = actions["limbo.hold"].build(ctx, { name: "Bramble09", code: "ABCD2345" });
+    const cmds = actions["limbo.hold"].build(ctx, { name: "Bramble09", code: "ABC234" });
     expect(cmds).toContain("execute in deepslate:limbo run tp Bramble09 0.5 65 0.5");
     expect(cmds).toContain("gamemode adventure Bramble09");
     expect(actions["limbo.holdPlay"].build(ctx, { name: "Bramble09" })).toContain("execute in deepslate:limbo run tp Bramble09 0.5 65 0.5");
@@ -94,13 +94,15 @@ describe("the entrance room in a dimension of its own (docs/14)", () => {
       "execute as @a[tag=!verified] at @s if dimension deepslate:limbo unless entity @s[x=-4,y=65,z=-4,dx=8,dy=4,dz=8] run tp @s 0.5 65 0.5",
     ]);
   });
-  it("is glass, with a floor of sea lanterns under the feet and a sign with the server's name, the size it always was", () => {
+  it("is glass, with a floor of sea lanterns under the feet and two signs (the server's name, where to sign in), the size it always was", () => {
     expect(roomBounds(ctx.limbo)).toEqual({ x1: -5, y1: 64, z1: -5, x2: 5, y2: 70, z2: 5 });
     expect(actions["limbo.build"].build({ ...ctx, siteName: "Alex's Works" }, {})).toEqual([
       "execute in deepslate:limbo run forceload add -5 -5 5 5",
       "execute in deepslate:limbo run fill -5 64 -5 5 70 5 minecraft:glass hollow",
       "execute in deepslate:limbo run fill -5 64 -5 5 64 5 minecraft:sea_lantern",
-      `execute in deepslate:limbo run setblock 0 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":""}','{"text":"Alexs Works"}','{"text":""}','{"text":""}']},is_waxed:1b}`,
+      `execute in deepslate:limbo run setblock -1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":""}','{"text":"Alexs Works"}','{"text":""}','{"text":""}']},is_waxed:1b}`,
+      `execute in deepslate:limbo run setblock 1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":"Sign in at"}','{"text":"deepslate."}','{"text":"dsw.test/join"}','{"text":"code in chat"}']},is_waxed:1b}`,
+      "gamerule logAdminCommands false",
     ]);
   });
   it("clears the room of before, the same box it was built as, and never the one that is in use", () => {

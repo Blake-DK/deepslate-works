@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PLAY_MODES, playGate, type BlockReason } from "../src/shared/join-gate.js";
 import { doorReason } from "../src/players/limbo.js";
 import { parse } from "../src/events/parse.js";
-import { actions, closedTellraw, parsePlace, playTellraw } from "../src/actions/registry.js";
+import { actions, closedTellraw, parsePlace, playTellraw, screenCommands } from "../src/actions/registry.js";
 import { doorRule } from "../src/shared/access.js";
 import { describeAction, kindOf } from "../src/shared/events.js";
 import { parseSection } from "../src/shared/settings.js";
@@ -128,7 +128,7 @@ describe("the door checks live or early access before anything else (docs/13 §9
     expect(cmds[0]).toBe("tag bramble09 remove verified");
     expect(cmds).toContain("execute in deepslate:limbo run tp bramble09 0.5 65 0.5");
     expect(cmds).toContain("gamemode adventure bramble09");
-    expect(actions["limbo.remindClosed"].build(ctx, { name: "bramble09" })).toEqual([closedTellraw("bramble09")]);
+    expect(actions["limbo.remindClosed"].build(ctx, { name: "bramble09" })).toEqual([...screenCommands("bramble09", "closed", ctx.portalUrl), closedTellraw("bramble09")]);
     expect(actions["limbo.kickIdleClosed"].build(ctx, { name: "bramble09" })).toEqual(["kick bramble09 Not open yet. You'll be let in when the server goes live."]);
   });
   it("is in the event log with its reason", () => {

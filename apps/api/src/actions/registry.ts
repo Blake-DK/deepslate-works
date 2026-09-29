@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NOT_OPEN_TEXT } from "../shared/access.js";
+import { CODE_RE, showCode } from "../shared/join-code.js";
 
 // docs/08 + docs/14: every console command the api ever sends is built here from validated input.
 // "system" actions are run by the api itself (join hook, timers); the rest need an ADMIN caller.
@@ -51,21 +52,64 @@ const inDim = (dimension: string, cmd: string) => `execute in ${dimension} run $
 const ow = (cmd: string) => inDim("minecraft:overworld", cmd);
 /** Into the room, from whichever dimension they are in. */
 const toRoom = (ctx: ActionCtx, who: string) => inDim(ctx.limbo.dimension, `tp ${who} ${at(ctx.limbo)}`);
+/** Into the room, whatever they wait for: adventure mode, and they cannot walk or jump. */
+const intoRoom = (ctx: ActionCtx, name: string) => [
+  `tag ${name} remove verified`,
+  `gamemode adventure ${name}`,
+  toRoom(ctx, name),
+  `effect give ${name} minecraft:slowness infinite 255 true`,
+  `effect give ${name} minecraft:jump_boost infinite 250 true`,
+];
 
 /** Only what is safe to show in chat: the name comes from a settings page, not from code. */
 export const chatSafe = (s: string | undefined, fallback: string) => (s ?? "").replace(/[^\p{L}\p{N} .,'!&()+-]/gu, "").trim().slice(0, 40) || fallback;
 
+const hostOf = (portalUrl: string) => portalUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
+
+/**
+ * The link line: one chat message, all of it clickable (the first part is the parent, the rest inherit its click).
+ * Sent again every 15 s while they wait, and at once when they say something (players/limbo.ts), so it is kept to
+ * one message: the chat fades after 10 s and would otherwise fill with it.
+ */
 export function linkTellraw(name: string, portalUrl: string, code: string, siteName?: string): string {
   const url = `${portalUrl}/link/${code}`;
-  const short = url.replace(/^https?:\/\//, "");
+  const host = hostOf(portalUrl);
   const payload = [
-    "",
-    { text: `Welcome to ${chatSafe(siteName, "Deepslate Works")}. Click to link your Discord: `, color: "gold" },
-    { text: short, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: url }, hoverEvent: { action: "show_text", value: "Opens the portal in your browser" } },
-    { text: `  (or open the site and enter ${code})`, color: "gray" },
+    { text: "", clickEvent: { action: "open_url", value: url }, hoverEvent: { action: "show_text", value: `Sign in to ${chatSafe(siteName, "Deepslate Works")}: opens ${host}/link/${code}` } },
+    { text: "Click here to sign in", color: "gold", underlined: true },
+    { text: `, or go to ${host}/join and enter ${showCode(code)}`, color: "gray" },
   ];
   return `tellraw ${name} ${JSON.stringify(payload)}`;
 }
+
+/** Who waits in the room, and for what: to link their Discord, for Play first, or for the server to open. */
+export type HeldKind = "link" | "play" | "closed";
+
+/** What stays on their screen while they wait (docs/14 "The prompt"). */
+export function screenText(kind: HeldKind, portalUrl: string, code = ""): { title: string; subtitle: string } {
+  const host = hostOf(portalUrl);
+  if (kind === "link") return { title: "Sign in to play", subtitle: `Click the link in chat, or go to ${host}/join and enter ${showCode(code)}` };
+  if (kind === "play") return { title: "Press Play first", subtitle: `Press Play on ${host} and you'll be let in` };
+  return { title: "Not open yet", subtitle: "You'll be let in when the server goes live" };
+}
+
+const component = (text: string, color: string) => JSON.stringify({ text, color });
+
+/** Title and subtitle that stay 20 s (400 ticks, no fading) and are sent again every 15 s, so they never go; the same words on the action bar. */
+/** Only while they are held: a prompt still on its way when they are let in (they have the tag by then) shows nothing. */
+export function screenCommands(name: string, kind: HeldKind, portalUrl: string, code = ""): string[] {
+  const t = screenText(kind, portalUrl, code);
+  const who = `@a[name=${name},tag=!verified]`;
+  return [
+    `title ${who} times 0 400 0`,
+    `title ${who} subtitle ${component(t.subtitle, "white")}`,
+    `title ${who} title ${component(t.title, "gold")}`,
+    `title ${who} actionbar ${component(t.subtitle, "yellow")}`,
+  ];
+}
+
+/** Title, subtitle and action bar gone, and the title times back to the game's own. */
+export const clearScreen = (who: string) => [`title ${who} clear`, `title ${who} reset`, `title ${who} actionbar ""`];
 
 const COORD = z.number().finite().min(-30_000_000).max(30_000_000);
 
@@ -74,7 +118,7 @@ export function closedTellraw(name: string): string {
 }
 
 export function playTellraw(name: string, portalUrl: string): string {
-  const host = portalUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const host = hostOf(portalUrl);
   const payload = [
     "",
     { text: "Press Play on ", color: "gold" },
@@ -90,21 +134,21 @@ export const actions = {
   "limbo.hold": define({
     name: "limbo.hold",
     role: "system",
-    input: z.object({ name: MC_NAME, code: z.string().regex(/^[A-Z0-9]{8}$/) }),
-    build: (ctx, { name, code }) => [
-      `tag ${name} remove verified`,
-      `gamemode adventure ${name}`,
-      toRoom(ctx, name),
-      `effect give ${name} minecraft:slowness infinite 255 true`,
-      `effect give ${name} minecraft:jump_boost infinite 250 true`,
-      linkTellraw(name, ctx.portalUrl, code, ctx.siteName),
-    ],
+    input: z.object({ name: MC_NAME, code: z.string().regex(CODE_RE) }),
+    build: (ctx, { name, code }) => [...intoRoom(ctx, name), ...screenCommands(name, "link", ctx.portalUrl, code), linkTellraw(name, ctx.portalUrl, code, ctx.siteName)],
   }),
   "limbo.remind": define({
     name: "limbo.remind",
     role: "system",
-    input: z.object({ name: MC_NAME, code: z.string().regex(/^[A-Z0-9]{8}$/) }),
-    build: (ctx, { name, code }) => [linkTellraw(name, ctx.portalUrl, code, ctx.siteName)],
+    input: z.object({ name: MC_NAME, code: z.string().regex(CODE_RE) }),
+    build: (ctx, { name, code }) => [...screenCommands(name, "link", ctx.portalUrl, code), linkTellraw(name, ctx.portalUrl, code, ctx.siteName)],
+  }),
+  // Between two prompts: the action bar fades after about three seconds, so it is sent again with every round of the room (5 s).
+  "limbo.bar": define({
+    name: "limbo.bar",
+    role: "system",
+    input: z.object({ name: MC_NAME, kind: z.enum(["link", "play", "closed"]), code: z.string().regex(CODE_RE).optional() }),
+    build: (ctx, { name, kind, code }) => [`title @a[name=${name},tag=!verified] actionbar ${component(screenText(kind, ctx.portalUrl, code).subtitle, "yellow")}`],
   }),
   "limbo.keep": define({
     name: "limbo.keep",
@@ -129,6 +173,7 @@ export const actions = {
         `gamemode survival ${held}`,
         ctx.spawn ? ow(`tp ${held} ${ctx.spawn.x} ${ctx.spawn.y} ${ctx.spawn.z}`) : ow(`spreadplayers 0 0 1 12 false ${held}`),
         `tellraw ${held} ${JSON.stringify([{ text: "Linked. Welcome in, ", color: "green" }, { text: name, color: "aqua" }, { text: ". Have fun.", color: "green" }])}`,
+        ...clearScreen(held),
         `whitelist add ${name}`,
         `tag ${name} add verified`, // last: everything above looks for its absence
       ];
@@ -145,20 +190,13 @@ export const actions = {
     name: "limbo.holdPlay",
     role: "system",
     input: z.object({ name: MC_NAME }),
-    build: (ctx, { name }) => [
-      `tag ${name} remove verified`,
-      `gamemode adventure ${name}`,
-      toRoom(ctx, name),
-      `effect give ${name} minecraft:slowness infinite 255 true`,
-      `effect give ${name} minecraft:jump_boost infinite 250 true`,
-      playTellraw(name, ctx.portalUrl),
-    ],
+    build: (ctx, { name }) => [...intoRoom(ctx, name), ...screenCommands(name, "play", ctx.portalUrl), playTellraw(name, ctx.portalUrl)],
   }),
   "limbo.remindPlay": define({
     name: "limbo.remindPlay",
     role: "system",
     input: z.object({ name: MC_NAME }),
-    build: (ctx, { name }) => [playTellraw(name, ctx.portalUrl)],
+    build: (ctx, { name }) => [...screenCommands(name, "play", ctx.portalUrl), playTellraw(name, ctx.portalUrl)],
   }),
   "limbo.releaseBack": define({
     name: "limbo.releaseBack",
@@ -178,6 +216,7 @@ export const actions = {
           ? `execute in ${back.dimension} run tp ${held} ${n(back.x)} ${n(back.y)} ${n(back.z)}`
           : ctx.spawn ? ow(`tp ${held} ${ctx.spawn.x} ${ctx.spawn.y} ${ctx.spawn.z}`) : ow(`spreadplayers 0 0 1 12 false ${held}`),
         `tellraw ${held} ${JSON.stringify([{ text: "Mods checked. Welcome back, ", color: "green" }, { text: name, color: "aqua" }, { text: ".", color: "green" }])}`,
+        ...clearScreen(held),
         `tag ${name} add verified`,
       ];
     },
@@ -187,16 +226,9 @@ export const actions = {
     name: "limbo.holdClosed",
     role: "system",
     input: z.object({ name: MC_NAME }),
-    build: (ctx, { name }) => [
-      `tag ${name} remove verified`,
-      `gamemode adventure ${name}`,
-      toRoom(ctx, name),
-      `effect give ${name} minecraft:slowness infinite 255 true`,
-      `effect give ${name} minecraft:jump_boost infinite 250 true`,
-      closedTellraw(name),
-    ],
+    build: (ctx, { name }) => [...intoRoom(ctx, name), ...screenCommands(name, "closed", ctx.portalUrl), closedTellraw(name)],
   }),
-  "limbo.remindClosed": define({ name: "limbo.remindClosed", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [closedTellraw(name)] }),
+  "limbo.remindClosed": define({ name: "limbo.remindClosed", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [...screenCommands(name, "closed", ctx.portalUrl), closedTellraw(name)] }),
   "limbo.kickIdleClosed": define({ name: "limbo.kickIdleClosed", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${NOT_OPEN_TEXT}`] }),
   "limbo.kickIdlePlay": define({
     name: "limbo.kickIdlePlay",
@@ -214,18 +246,28 @@ export const actions = {
     name: "limbo.build",
     role: "ADMIN",
     input: z.object({}),
-    // Glass all round, so that the void and the stars are seen; a floor of sea lanterns; a sign with the server's name.
+    // Glass all round, so that the void and the stars are seen; a floor of sea lanterns; two signs in front of
+    // whoever stands there: the server's name, and where to sign in from a phone (docs/14 "The prompt"). `hollow`
+    // empties the inside, so a sign of an earlier build does not stay behind.
+    // logAdminCommands off: the room's prompt uses `title` every few seconds, and every `title` sent from the console
+    // would otherwise be repeated to each operator in game ("[Server: Showing new title for …]").
     build: (ctx) => {
       const b = roomBounds(ctx.limbo);
       const c = block(ctx.limbo);
       const d = ctx.limbo.dimension;
       const name = chatSafe(ctx.siteName, "Deepslate Works").replace(/'/g, "");
       const line = (t: string) => `'${JSON.stringify({ text: t })}'`;
+      const sign = (x: number, lines: string[]) => inDim(d, `setblock ${x} ${c.y} ${c.z - 3} minecraft:oak_sign[rotation=0]{front_text:{messages:[${lines.map(line).join(",")}]},is_waxed:1b}`);
+      const host = hostOf(ctx.portalUrl).replace(/'/g, "");
+      const dot = host.indexOf(".");
+      const where = dot > 0 ? [host.slice(0, dot + 1), `${host.slice(dot + 1)}/join`] : [host, "/join"];
       return [
         inDim(d, `forceload add ${b.x1} ${b.z1} ${b.x2} ${b.z2}`),
         inDim(d, `fill ${b.x1} ${b.y1} ${b.z1} ${b.x2} ${b.y2} ${b.z2} minecraft:glass hollow`),
         inDim(d, `fill ${b.x1} ${b.y1} ${b.z1} ${b.x2} ${b.y1} ${b.z2} minecraft:sea_lantern`),
-        inDim(d, `setblock ${c.x} ${c.y} ${c.z - 3} minecraft:oak_sign[rotation=0]{front_text:{messages:[${line("")},${line(name)},${line("")},${line("")}]},is_waxed:1b}`),
+        sign(c.x - 1, ["", name, "", ""]),
+        sign(c.x + 1, ["Sign in at", where[0]!, where[1]!, "code in chat"]),
+        "gamerule logAdminCommands false",
       ];
     },
   }),

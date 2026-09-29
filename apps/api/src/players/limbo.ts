@@ -10,13 +10,15 @@ import { getSection } from "../settings.js";
 import { PLAY_MODES, playGate, type BlockReason, type PlayRun } from "../shared/join-gate.js";
 import { serverPack } from "./pack.js";
 import { doorRule, type Member } from "../shared/access.js";
+import { CODE_TTL_MS, makeCode } from "../shared/join-code.js";
 
 // docs/14: the white room. Unlinked joins are held in the room with a clickable link; linking releases them.
 
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const codeGen = () => Array.from({ length: 8 }, () => ALPHABET[randomInt(ALPHABET.length)]).join("");
-const CODE_TTL_MS = 15 * 60_000;
-const REMIND_MS = 60_000;
+const codeGen = () => makeCode(randomInt);
+/** The prompt (chat line, title, subtitle, action bar) again every 15 s: the chat fades after 10 s. */
+export const PROMPT_EVERY_MS = 15_000;
+/** The action bar fades after about 3 s: it is sent again with every round of the room, unless the prompt just went. */
+const BAR_GAP_MS = 4_000;
 const IDLE_KICK_MS = 15 * 60_000;
 const GUILD_REFRESH_MS = 5 * 60_000;
 const SAME_JOIN_MS = 15_000; // "logged in with entity id" and "joined the game" are two lines for one join
@@ -25,6 +27,7 @@ const SAME_JOIN_MS = 15_000; // "logged in with entity id" and "joined the game"
 export type Back = { dimension: string; x: number; y: number; z: number };
 /** `kind`: waiting to link their Discord, or (docs/14 "Play first") a member who has not pressed Play. */
 /** "closed": a member for whom the server is not open yet (not live, no early access; docs/13 §9). */
+/** `lastReminder`: when the prompt last went to them (docs/14 "The prompt"). */
 type Held = { uuid: string; code: string; since: number; lastReminder: number; kind: "link" | "play" | "closed"; userId?: string; back?: Back | null };
 type Known = Member & { id: string };
 
@@ -73,6 +76,7 @@ export class Limbo {
     this.tail.on((e, info) => void this.onEvent(e, info).catch((err) => this.log({ err: String(err) }, "limbo event failed")));
     this.tail.onResync(() => void this.resync().catch((err) => this.log({ err: String(err) }, "limbo resync failed")));
     this.timers.push(setInterval(() => void this.tick().catch((err) => this.log({ err: String(err) }, "limbo tick failed")), 5000));
+    this.timers.push(setInterval(() => void this.promptRound().catch((err) => this.log({ err: String(err) }, "limbo prompt failed")), 1000));
     this.timers.push(setInterval(() => void this.refreshGuild().catch((err) => this.log({ err: String(err) }, "guild refresh failed")), GUILD_REFRESH_MS));
   }
 
@@ -90,6 +94,11 @@ export class Limbo {
     }
     if (e.type === "pos" && !info.replay) this.lastPos.set(e.name, { x: e.x, y: e.y, z: e.z, at: Date.now() });
     if (e.type === "dimension" && !info.replay) this.lastDim.set(e.name, { dimension: e.dimension, at: Date.now() });
+    // Somebody in the room who says anything has probably not seen the link: it goes again at once, and the 15 s start over.
+    if (e.type === "chat" && !info.replay) {
+      const h = this.held.get(e.name);
+      if (h) await this.prompt(e.name, h, Date.now());
+    }
     if (e.type === "leave") {
       this.held.delete(e.name);
       this.lastJoin.delete(e.name);
@@ -197,26 +206,58 @@ export class Limbo {
 
   private async hold(name: string, uuid: string, reason: string) {
     this.ctx.siteName = (await getSection("branding")).name; // Admin → Branding; read again for every newcomer
-    const code = uuid ? await this.codeFor(uuid, name) : codeGen();
+    const code = uuid ? await this.codeFor(uuid, name, true) : codeGen(); // a new code for every join
     this.held.set(name, { uuid, code, since: Date.now(), lastReminder: Date.now(), kind: "link" });
     await runAction(this.amp, this.ctx, "limbo.hold", { name, code }, null);
     await audit({ action: "limbo.held", params: { name, uuid, reason }, result: "OK" });
   }
 
-  /** One live code per UUID; reused while valid so the chat link stays the same. */
-  private async codeFor(uuid: string, name: string): Promise<string> {
-    const existing = await db.linkCode.findFirst({ where: { mcUuid: uuid, usedById: null, expiresAt: { gt: new Date() } }, orderBy: { createdAt: "desc" } });
-    if (existing) return existing.code;
+  /**
+   * One live code per UUID, 30 minutes long (docs/14 "The join code"). While they stay it is the same code, so the
+   * link and the code on screen do not change under them; `fresh` (each join) ends the old one and makes another.
+   */
+  protected async codeFor(uuid: string, name: string, fresh = false, now = new Date()): Promise<string> {
+    if (fresh) {
+      await db.linkCode.updateMany({ where: { mcUuid: uuid, usedById: null, expiresAt: { gt: now } }, data: { expiresAt: now } });
+    } else {
+      const existing = await db.linkCode.findFirst({ where: { mcUuid: uuid, usedById: null, expiresAt: { gt: now } }, orderBy: { createdAt: "desc" } });
+      if (existing) return existing.code;
+    }
     for (let i = 0; i < 5; i++) {
       const code = codeGen();
       if (await db.linkCode.findUnique({ where: { code } })) continue;
-      await db.linkCode.create({ data: { code, mcUuid: uuid, mcUsername: name, expiresAt: new Date(Date.now() + CODE_TTL_MS) } });
+      await db.linkCode.create({ data: { code, mcUuid: uuid, mcUsername: name, expiresAt: new Date(now.getTime() + CODE_TTL_MS) } });
       return code;
     }
     throw new Error("could not allocate a link code");
   }
 
-  /** Every 5 s while anyone is held: drag them back, remind them, kick the idle. */
+  private prompting = false;
+
+  /** Every second: the prompt to whoever has not had it for 15 s. */
+  async promptRound(now = Date.now()) {
+    if (this.held.size === 0 || this.tail.state !== 20 || this.prompting) return;
+    this.prompting = true; // a slow AMP must not have two rounds send the same prompt twice
+    try {
+      for (const [name, h] of [...this.held]) if (this.held.get(name) === h && now - h.lastReminder >= PROMPT_EVERY_MS) await this.prompt(name, h, now);
+    } finally {
+      this.prompting = false;
+    }
+  }
+
+  /** The chat line, and the title, subtitle and action bar, for what they wait for. */
+  protected async prompt(name: string, h: Held, now: number) {
+    h.lastReminder = now;
+    if (h.kind === "link") {
+      if (h.uuid) h.code = await this.codeFor(h.uuid, name); // the same code, or a new one if it ran out meanwhile
+      if (this.held.get(name) !== h) return; // let in, or gone, while the code was looked up
+      await runAction(this.amp, this.ctx, "limbo.remind", { name, code: h.code }, null);
+    } else {
+      await runAction(this.amp, this.ctx, h.kind === "closed" ? "limbo.remindClosed" : "limbo.remindPlay", { name }, null);
+    }
+  }
+
+  /** Every 5 s while anyone is held: drag them back, open the door when it may, the action bar, kick the idle. (The prompt has a timer of its own.) */
   private async tick() {
     if (this.held.size === 0 || this.tail.state !== 20) return;
     await runAction(this.amp, this.ctx, "limbo.keep", {}, null);
@@ -238,22 +279,13 @@ export class Limbo {
         }
         const kind = blocked === "not live" ? "closed" : "play";
         if (user && blocked && kind !== h.kind) {
-          // open for them now, but Play first has not been met (or the other way round): the other line
+          // open for them now, but Play first has not been met (or the other way round): the other words, at once
           h.kind = kind;
-          h.lastReminder = 0;
+          await this.prompt(name, h, now);
+          continue;
         }
-        if (now - h.lastReminder > REMIND_MS) {
-          h.lastReminder = now;
-          await runAction(this.amp, this.ctx, h.kind === "closed" ? "limbo.remindClosed" : "limbo.remindPlay", { name }, null);
-        }
-        continue;
       }
-      if (now - h.lastReminder > REMIND_MS) {
-        // refresh the code if it expired meanwhile
-        if (h.uuid) h.code = await this.codeFor(h.uuid, name);
-        h.lastReminder = now;
-        await runAction(this.amp, this.ctx, "limbo.remind", { name, code: h.code }, null);
-      }
+      if (now - h.lastReminder >= BAR_GAP_MS) await runAction(this.amp, this.ctx, "limbo.bar", h.kind === "link" ? { name, kind: h.kind, code: h.code } : { name, kind: h.kind }, null);
     }
   }
 

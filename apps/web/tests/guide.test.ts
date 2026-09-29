@@ -90,6 +90,29 @@ describe("the guide as it ships", () => {
     expect(out).not.toMatch(/<!--/);
     expect(out).not.toContain("Take me to spawn"); // the buttons on the Me page are not built yet
   });
+  it("brings the votable mods' lines back the moment Apply results switches them on", () => {
+    // Apply results writes `enabled: true` into mods.json; the guide reads mods.json again whenever the file changes.
+    const before = filterGuide(DEFAULT_GUIDE, { mods: on });
+    const votable: Array<[string, string[]]> = [
+      ["sophisticated-backpacks", ["**Backpacks**", "Craft a backpack as soon as you have leather or wool."]],
+      ["waystones", ["**Waystones**", "Find a waystone or build one so you can always get home."]],
+      ["veinminer", ["**VeinMiner**"]],
+      ["fallingtree", ["**FallingTree**"]],
+    ];
+    for (const [slug, lines] of votable) {
+      expect(slugs.has(slug)).toBe(true);
+      const after = filterGuide(DEFAULT_GUIDE, { mods: new Set([...on, slug]) });
+      for (const l of lines) {
+        expect([slug, l, before.includes(l)]).toEqual([slug, l, on.has(slug)]);
+        expect([slug, l, after.includes(l)]).toEqual([slug, l, true]);
+      }
+      // and nothing else moved
+      const others = votable.filter(([s]) => s !== slug && !on.has(s)).flatMap(([, ls]) => ls);
+      for (const l of others) expect([slug, l, after.includes(l)]).toEqual([slug, l, false]);
+    }
+    const all = filterGuide(DEFAULT_GUIDE, { mods: new Set([...on, ...votable.map(([s]) => s)]) });
+    expect(all).toMatch(/1\. Punch a tree[^\n]*\n2\. Craft a backpack[^\n]*\n3\. Find a waystone[^\n]*\n4\. Pick a spot/);
+  });
   it("fits in the settings, and reads as Markdown", () => {
     expect(DEFAULT_GUIDE.length).toBeLessThan(20000);
     const blocks = markdown(filterGuide(DEFAULT_GUIDE, { mods: slugs }));

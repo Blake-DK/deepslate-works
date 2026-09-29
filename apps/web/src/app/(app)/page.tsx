@@ -81,6 +81,8 @@ export default async function HomePage() {
                   {news.map((n) => (
                     <li key={n.id} className="text-sm">
                       <p className="whitespace-pre-line">{n.pinned && <Badge tone="warn" className="mr-2">Pinned</Badge>}{n.body}</p>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded picture, served by our own route */}
+                      {n.image && <a href={n.image} target="_blank" rel="noreferrer" className="mt-2 block"><img src={n.image} alt="" loading="lazy" className="max-h-72 w-full rounded-lg border object-cover" data-testid="news-image" /></a>}
                       <p className="text-xs text-muted-foreground">{n.author} · {timeAgo(n.createdAt)}</p>
                     </li>
                   ))}

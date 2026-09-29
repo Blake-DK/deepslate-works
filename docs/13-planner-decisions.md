@@ -178,7 +178,7 @@ Print both in `11-status.md` so Alex can copy them:
 | Sees the server's address, the Install page, the Play button | yes | yes | no: the launch date instead | yes |
 | Downloads the installer and the pack, fetches the mod list | always | while the server is available | no (`not_live`) | while the server is available |
 | Presses Play | always | while the server is available | no | while the server is available |
-| Play first at the door | never held | applies | applies, and cannot be met | applies |
+| At the door | always in | Play first applies | held: "Not open yet. You'll be let in when the server goes live." | Play first applies |
 | Let out of the entrance room once linked | yes | like anyone else | like anyone else | like anyone else |
 | Admin pages, addresses, console lines | yes | no | no | no |
 | Banner "Early access: things may still break. Tell Alex in Discord if they do." | no | yes | no | no |
@@ -189,4 +189,4 @@ Print both in `11-status.md` so Alex can copy them:
 - A report that a run "went through" is refused (403 `not_live`) from a player the portal is not open for: they cannot have fetched the mod list, and the report would open the door. Found by the live test on the day it was built. Reports of failed runs are taken from every member.
 - The rules are one file, `apps/web/src/shared/access.ts` (the same in `api`), and one table of tests, `apps/web/tests/access.test.ts`.
 
-**What "Player, not live" means at the door.** Nothing in the game server knows whether the site is live. A player without the flag is kept out by Play first: they cannot press Play, so no run of Play can come from them, so they wait in the room. **If Play first is switched off (Settings → Joining) while the site is not live, a linked player who knows the address comes straight in.** That was so before this decision and has not been changed ("unflagged players keep the current not-live experience"). For the planner: say if the door should also know "not live".
+**The door knows "not live"** (planner, 2026-09-29, the same evening; this closes the gap that stood here). Before anything else the door asks whether the server is open for the member: live, or early access, or an admin. While the site is not live, a linked player without the flag is held in the room with "Not open yet. You'll be let in when the server goes live.", **whatever Play first says and whether or not they have pressed Play**. Only then comes Play first. The rule is `doorRule` in `shared/access.ts`; its table of tests is live on/off × flag on/off × Play first on/off × Play pressed or not. Whoever waits is let in within seconds of the site going live or of the flag being given (then Play first applies, if it is on), back to where they stood. Somebody who links their account while the site is not live stays in the room, with that line instead of the link.

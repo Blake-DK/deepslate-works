@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { playGate } from "../src/shared/join-gate.js";
 import { parse } from "../src/events/parse.js";
-import { actions, parsePlace, playTellraw } from "../src/actions/registry.js";
+import { actions, closedTellraw, parsePlace, playTellraw } from "../src/actions/registry.js";
+import { doorRule } from "../src/shared/access.js";
 import { describeAction, kindOf } from "../src/shared/events.js";
 import { parseSection } from "../src/shared/settings.js";
 
@@ -105,5 +106,33 @@ describe("what the pre-generation does by itself, and who 'System' is", () => {
     expect(describeAction("world.pregenOn", system, { mode: "empty", x: 0, z: 0, radius: 1500 })).toBe("System turned the pre-generation on: when nobody's online; 1500 blocks around 0, 0");
     expect(describeAction("server.start", system, {})).toBe("System started the server");
     expect(describeAction("auth.login", { role: null, name: null }, {}, "DENIED")).toBe("Someone tried to sign in (refused)"); // a visitor nobody knows is still "Someone"
+  });
+});
+
+describe("the door checks live or early access before anything else (docs/13 §9)", () => {
+  const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
+  it("holds a linked player without the flag while the site is not live, Play first or not, Play pressed or not", () => {
+    for (const requirePlay of [true, false]) for (const hasPlayed of [true, false]) expect(doorRule({ role: "PLAYER", earlyAccess: false }, { live: false, requirePlay, hasPlayed })).toBe("not open");
+  });
+  it("then Play first, for whoever the server is open for", () => {
+    expect(doorRule({ role: "PLAYER", earlyAccess: true }, { live: false, requirePlay: true, hasPlayed: false })).toBe("play first");
+    expect(doorRule({ role: "PLAYER", earlyAccess: true }, { live: false, requirePlay: true, hasPlayed: true })).toBe("in");
+    expect(doorRule({ role: "PLAYER", earlyAccess: false }, { live: true, requirePlay: false, hasPlayed: false })).toBe("in");
+    expect(doorRule({ role: "ADMIN", earlyAccess: false }, { live: false, requirePlay: true, hasPlayed: false })).toBe("in");
+  });
+  it("says so in the room, in the planner's words, in the room's dimension", () => {
+    const parts = JSON.parse(closedTellraw("bramble09").replace(/^tellraw bramble09 /, "")) as Array<string | { text: string }>;
+    expect(parts.map((p) => (typeof p === "string" ? p : p.text)).join("")).toBe("Not open yet. You'll be let in when the server goes live.");
+    const cmds = actions["limbo.holdClosed"].build(ctx, { name: "bramble09" });
+    expect(cmds[0]).toBe("tag bramble09 remove verified");
+    expect(cmds).toContain("execute in deepslate:limbo run tp bramble09 0.5 65 0.5");
+    expect(cmds).toContain("gamemode adventure bramble09");
+    expect(actions["limbo.remindClosed"].build(ctx, { name: "bramble09" })).toEqual([closedTellraw("bramble09")]);
+    expect(actions["limbo.kickIdleClosed"].build(ctx, { name: "bramble09" })).toEqual(["kick bramble09 Not open yet. You'll be let in when the server goes live."]);
+  });
+  it("is in the event log with its reason", () => {
+    expect(kindOf("join.blocked", "PLAYER")).toBe("JOIN_BLOCKED");
+    expect(describeAction("join.blocked", { role: "PLAYER", name: "Pabulum" }, { name: "pabulum", reason: "not live" })).toBe("Pabulum was held in the entrance room: the server is not open yet");
+    expect(describeAction("join.ready", { role: "PLAYER", name: "Pabulum" }, { name: "pabulum", was: "not live", back: true })).toBe("Pabulum was let in: the server is open for them now, back to where they were");
   });
 });

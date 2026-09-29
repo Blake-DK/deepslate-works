@@ -143,6 +143,7 @@ model LauncherAuth {
 
 model Announcement {
   id        String   @id @default(cuid())
+  image     String?  // a picture's file name under data/news (docs/05)
   body      String
   pinned    Boolean  @default(false)
   createdAt DateTime @default(now())

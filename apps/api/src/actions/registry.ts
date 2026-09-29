@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NOT_OPEN_TEXT } from "../shared/access.js";
 
 // docs/08 + docs/14: every console command the api ever sends is built here from validated input.
 // "system" actions are run by the api itself (join hook, timers); the rest need an ADMIN caller.
@@ -67,6 +68,10 @@ export function linkTellraw(name: string, portalUrl: string, code: string, siteN
 }
 
 const COORD = z.number().finite().min(-30_000_000).max(30_000_000);
+
+export function closedTellraw(name: string): string {
+  return `tellraw ${name} ${JSON.stringify(["", { text: NOT_OPEN_TEXT, color: "gold" }])}`;
+}
 
 export function playTellraw(name: string, portalUrl: string): string {
   const host = portalUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -177,6 +182,22 @@ export const actions = {
       ];
     },
   }),
+  // docs/13 §9: while the site is not live, a member without early access waits, whatever Play first says.
+  "limbo.holdClosed": define({
+    name: "limbo.holdClosed",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [
+      `tag ${name} remove verified`,
+      `gamemode adventure ${name}`,
+      toRoom(ctx, name),
+      `effect give ${name} minecraft:slowness infinite 255 true`,
+      `effect give ${name} minecraft:jump_boost infinite 250 true`,
+      closedTellraw(name),
+    ],
+  }),
+  "limbo.remindClosed": define({ name: "limbo.remindClosed", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [closedTellraw(name)] }),
+  "limbo.kickIdleClosed": define({ name: "limbo.kickIdleClosed", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${NOT_OPEN_TEXT}`] }),
   "limbo.kickIdlePlay": define({
     name: "limbo.kickIdlePlay",
     role: "system",

@@ -124,3 +124,12 @@ Until 2026-09-29 the room was a bedrock box in the overworld's sky, at 0 250 0, 
 **The old room** at 0 250 0 in the overworld was cleared after the new one had been checked (`limbo.clear`: 528 blocks to air; it had survived the morning's forced stop). `limbo.clear` refuses the room that is in use.
 
 **The map.** BlueMap has three maps, `world`, `world_the_nether`, `world_the_end`, and made none for `deepslate:limbo` (it makes its map files once, at its first start). It shows the players of a map's own world, so whoever waits in the room is on none of them. **Not seen with a player in the room**: nobody has been in it yet.
+
+## The order at the door (2026-09-29, after docs/13 §9)
+
+1. **Known and linked?** Not linked, or no longer in the Discord server: the room, with the link.
+2. **Open for them?** An admin, or the site is live, or they have early access. If not: the room, with "Not open yet. You'll be let in when the server goes live." Nothing about Play is looked at.
+3. **Play first**, if it is on and they are not an admin: the room, with "Press Play on deepslate.dsw.test to join. That checks your mods are up to date."
+4. In.
+
+A member held at 2 or 3 is asked where they stand before they are moved, and is put back there. Every five seconds `api` looks again: the site may have gone live, the flag may have been given, they may have pressed Play. The line in chat changes when the reason does. `JOIN_BLOCKED` carries the reason: `not live`, `no report`, `stale`, `wrong version`.

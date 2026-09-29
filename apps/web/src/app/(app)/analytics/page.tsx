@@ -18,7 +18,7 @@ import { Heatmap } from "@/components/analytics/heatmap";
 import { Badge } from "@/components/ui/badge";
 import { getStatus } from "@/server/status";
 import { heldAtTheDoor, pingByPlayer, tpsLow } from "@/server/ping";
-import { GATE_TEXT, type GateReason } from "@/shared/join-gate";
+import { GATE_TEXT, type BlockReason } from "@/shared/join-gate";
 import { pingTone, worstPing } from "@/lib/ping";
 import { tpsTone } from "@/lib/series";
 
@@ -158,9 +158,9 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
       {held.length > 0 && (
         <Card data-testid="held">
-          <CardHeader><CardTitle>Held at the door</CardTitle><CardDescription>Members who joined without pressing Play first, in this period. They wait in the entrance room until they have.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Held at the door</CardTitle><CardDescription>Members who joined before the server was open for them, or without pressing Play first, in this period. They wait in the entrance room.</CardDescription></CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-sm">{held.map((h) => <li key={h.reason} className="flex items-center justify-between gap-3"><span>{GATE_TEXT[h.reason as GateReason] ?? h.reason}</span><span className="tabular-nums text-muted-foreground">{h.n} {h.n === 1 ? "time" : "times"}, {h.people} {h.people === 1 ? "person" : "people"}</span></li>)}</ul>
+            <ul className="space-y-2 text-sm">{held.map((h) => <li key={h.reason} className="flex items-center justify-between gap-3"><span>{GATE_TEXT[h.reason as BlockReason] ?? h.reason}</span><span className="tabular-nums text-muted-foreground">{h.n} {h.n === 1 ? "time" : "times"}, {h.people} {h.people === 1 ? "person" : "people"}</span></li>)}</ul>
           </CardContent>
         </Card>
       )}

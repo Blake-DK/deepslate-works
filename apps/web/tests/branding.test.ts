@@ -117,3 +117,31 @@ describe("markdown", () => {
     expect(safeHref("https://discord.gg/abc")).toBe("https://discord.gg/abc");
   });
 });
+
+describe("pictures of news items", () => {
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+  const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+  const webp = new TextEncoder().encode("RIFF\u0000\u0000\u0000\u0000WEBPVP8 ");
+  it("are PNG, JPEG or WebP, by what is in the file", async () => {
+    const { photoKind } = await import("@/lib/image-kind");
+    expect(photoKind(png)).toBe("png");
+    expect(photoKind(jpg)).toBe("jpg");
+    expect(photoKind(webp)).toBe("webp");
+  });
+  it("are never SVG, and never anything that only claims to be a picture", async () => {
+    const { photoKind } = await import("@/lib/image-kind");
+    expect(photoKind(new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'))).toBeNull();
+    expect(photoKind(new TextEncoder().encode("<html><script>alert(1)</script></html>"))).toBeNull();
+    expect(photoKind(new TextEncoder().encode("not a picture at all"))).toBeNull();
+    expect(photoKind(new Uint8Array([0xff, 0xd8]))).toBeNull();
+    expect(photoKind(new Uint8Array([]))).toBeNull();
+  });
+  it("get a name from what is in them, and only such names are ever read or served", async () => {
+    const { photoName, PHOTO_NAME } = await import("@/lib/image-kind");
+    const name = photoName("a".repeat(64), "png");
+    expect(name).toBe("news-aaaaaaaaaaaaaaaa.png");
+    expect(PHOTO_NAME.test(name)).toBe(true);
+    for (const bad of ["../../deploy/.env", "news-aaaaaaaaaaaaaaaa.svg", "news-aaaaaaaaaaaaaaaa.png/../x", "logo-aaaaaaaaaaaa.png", "news-AAAAAAAAAAAAAAAA.png", "news-aaaaaaaaaaaaaaaa.png.exe", ""]) expect([bad, PHOTO_NAME.test(bad)]).toEqual([bad, false]);
+    expect(() => photoName("not a hash", "png")).toThrow();
+  });
+});

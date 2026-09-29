@@ -28,7 +28,7 @@ export type Actor = { role: "ADMIN" | "PLAYER" | "system" | null; name: string |
 
 /** Must agree with the CASE in prisma/migrations/0005_events_sessions_settings. */
 export function kindOf(action: string, role: Actor["role"]): EventKind {
-  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "join.ready") return "LINK";
+  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "limbo.kickIdleClosed" || action === "join.ready") return "LINK";
   if (action === "player.revoke" || action === "user.remove" || action === "user.clearMinecraft") return "REVOKE";
   if (action.startsWith("modpack.sync")) return "SYNC";
   if (action === "server.backup") return "BACKUP";
@@ -64,8 +64,9 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "link.bind": (p) => `linked their Minecraft account ${s(p.mcUsername)}`,
   "link.release": (p) => `let ${s(p.name)} in`,
   "limbo.held": (p) => `${s(p.name)} is waiting in the entrance room`,
-  "join.blocked": (p) => `${s(p.name)} was held in the entrance room: ${p.reason === "no report" ? "has not pressed Play on the site" : p.reason === "stale" ? "pressed Play too long ago" : p.reason === "wrong version" ? "pressed Play before the pack changed" : s(p.reason, "Play first")}`,
-  "join.ready": (p) => `${s(p.name)} pressed Play and was let in${p.back ? ", back to where they were" : ""}`,
+  "join.blocked": (p) => `${s(p.name)} was held in the entrance room: ${p.reason === "not live" ? "the server is not open yet" : p.reason === "no report" ? "has not pressed Play on the site" : p.reason === "stale" ? "pressed Play too long ago" : p.reason === "wrong version" ? "pressed Play before the pack changed" : s(p.reason, "Play first")}`,
+  "join.ready": (p) => `${s(p.name)} ${p.was === "not live" ? "was let in: the server is open for them now" : "pressed Play and was let in"}${p.back ? ", back to where they were" : ""}`,
+  "limbo.kickIdleClosed": (p) => `${s(p.name)} waited too long in the entrance room while the server is not open and was disconnected`,
   "limbo.kickIdlePlay": (p) => `${s(p.name)} waited too long in the entrance room without pressing Play and was disconnected`,
   "limbo.kickIdle": (p) => `${s(p.name)} waited too long in the entrance room and was disconnected`,
   "limbo.build": "built the entrance room",
@@ -77,6 +78,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "announcement.pin": "pinned an announcement",
   "announcement.unpin": "unpinned an announcement",
   "announcement.delete": "deleted an announcement",
+  "announcement.picture": "added a picture to an announcement",
+  "announcement.nopicture": "took the picture off an announcement",
   "modpack.lock": "locked the mod versions",
   "modpack.build": "built the modpack",
   "modpack.sync": "synced the mods to the server",
@@ -108,7 +111,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
 };
 
 // Phrases that already say who (or have no who).
-const SELF_CONTAINED = new Set(["limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "world.pregenAutoPause"]);
+const SELF_CONTAINED = new Set(["limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "world.pregenAutoPause"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
 const OUTCOME_IN_PHRASE = new Set(["installer.report"]);

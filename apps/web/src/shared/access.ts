@@ -54,10 +54,17 @@ export function isAdmin(user: Member | null | undefined): boolean {
   return user?.role === "ADMIN";
 }
 
+export type Door = "in" | "not open" | "play first";
+
 /**
- * At the door, for a linked member of the Discord server: let in, or held until they have pressed Play.
+ * At the door, for a linked member of the Discord server. First of all: is the server open for them, live or early
+ * access (admins always)? If not they wait, whatever Play first says. Then Play first.
  * `hasPlayed`: their last run of Play went through, inside the window, with the server's pack (shared/join-gate).
  */
-export function doorRule(user: Member, requirePlay: boolean, hasPlayed: boolean): "in" | "play first" {
-  return !playFirstApplies(user, requirePlay) || hasPlayed ? "in" : "play first";
+export function doorRule(user: Member, d: { live: boolean; requirePlay: boolean; hasPlayed: boolean }): Door {
+  if (!isOpenFor(user, d.live)) return "not open";
+  return !playFirstApplies(user, d.requirePlay) || d.hasPlayed ? "in" : "play first";
 }
+
+/** What somebody reads in the room while the server is not open for them. */
+export const NOT_OPEN_TEXT = "Not open yet. You'll be let in when the server goes live.";

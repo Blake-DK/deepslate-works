@@ -200,11 +200,12 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Announce</CardTitle><CardDescription>Shows under News on the home page. Tick the box to also say it in game (first line, 200 characters).</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Announce</CardTitle><CardDescription>Shows under News on the home page, with a picture if you add one (PNG, JPEG or WebP, 3 MB at most). Tick the box to also say it in game (first line, 200 characters).</CardDescription></CardHeader>
           <CardContent>
             <form action={announceAction} className="space-y-2">
               <Label htmlFor="body" className="sr-only">Announcement</Label>
               <textarea id="body" name="body" maxLength={600} required rows={3} className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder="Server restarts at 8 for the new mods…" />
+              <div><Label htmlFor="newsimage">Picture (optional)</Label><input id="newsimage" name="image" type="file" accept="image/png,image/jpeg,image/webp" className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:bg-muted file:px-3 file:py-1.5 file:text-sm" /></div>
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <label className="flex items-center gap-2"><input type="checkbox" name="pinned" className="h-4 w-4" /> Pin to the top</label>
                 <label className="flex items-center gap-2"><input type="checkbox" name="say" className="h-4 w-4" disabled={!running} /> Also say it in game</label>
@@ -221,7 +222,15 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
             <ul className="divide-y">
               {news.map((n) => (
                 <li key={n.id} className="flex flex-wrap items-start gap-3 py-2 text-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded picture, served by our own route */}
+                  {n.image && <img src={n.image} alt="" loading="lazy" className="h-16 w-28 rounded border object-cover" />}
                   <p className="min-w-0 flex-1 whitespace-pre-line">{n.pinned && <Badge tone="warn" className="mr-2">Pinned</Badge>}{n.body}<span className="block text-xs text-muted-foreground">{n.author} · {timeAgo(n.createdAt)}</span></p>
+                  <form action={announcementChangeAction} className="flex items-center gap-1">
+                    <input type="hidden" name="id" value={n.id} />
+                    <input name="image" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Picture" className="w-44 text-xs file:mr-2 file:rounded file:border file:bg-muted file:px-2 file:py-1 file:text-xs" />
+                    <Button type="submit" name="what" value="picture" size="sm" variant="ghost">{n.image ? "Change picture" : "Add picture"}</Button>
+                    {n.image && <Button type="submit" name="what" value="nopicture" size="sm" variant="ghost">No picture</Button>}
+                  </form>
                   <form action={announcementChangeAction} className="flex gap-1">
                     <input type="hidden" name="id" value={n.id} />
                     <Button type="submit" name="what" value={n.pinned ? "unpin" : "pin"} size="sm" variant="ghost">{n.pinned ? "Unpin" : "Pin"}</Button>

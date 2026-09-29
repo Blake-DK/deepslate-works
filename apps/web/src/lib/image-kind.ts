@@ -13,3 +13,23 @@ export function imageKind(bytes: Uint8Array): ImageKind | null {
 
 export const IMAGE_TYPE: Record<ImageKind, string> = { png: "image/png", webp: "image/webp", svg: "image/svg+xml" };
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+// ---- pictures of news items: photographs and screenshots, never SVG ------------------------------------------
+
+export type PhotoKind = "png" | "webp" | "jpg";
+
+export function photoKind(bytes: Uint8Array): PhotoKind | null {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpg";
+  const k = imageKind(bytes);
+  return k === "png" || k === "webp" ? k : null;
+}
+
+export const PHOTO_TYPE: Record<PhotoKind, string> = { png: "image/png", webp: "image/webp", jpg: "image/jpeg" };
+export const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
+export const PHOTO_NAME = /^news-[0-9a-f]{16}\.(png|webp|jpg)$/;
+
+/** The file's name: from a hash of what is in it, so the same picture is the same file and a name says nothing. */
+export function photoName(sha256hex: string, kind: PhotoKind): string {
+  if (!/^[0-9a-f]{64}$/.test(sha256hex)) throw new Error("not a SHA-256");
+  return `news-${sha256hex.slice(0, 16)}.${kind}`;
+}

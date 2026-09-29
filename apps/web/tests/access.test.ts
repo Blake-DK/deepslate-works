@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { doorRule, downloadRule, earlyBanner, isAdmin, isOpenFor, mayReport, playFirstApplies, playRule, type Member } from "@/shared/access";
+import { doorRule, downloadRule, earlyBanner, isAdmin, isOpenFor, mayReport, NOT_OPEN_TEXT, playFirstApplies, playRule, type Member } from "@/shared/access";
 import { playGate } from "@/shared/join-gate";
 
 // docs/13 "Early access": the table, as it is written there.
@@ -52,25 +52,34 @@ describe("join (the door)", () => {
     expect(playFirstApplies(admin, true)).toBe(false);
     for (const who of [admin, early, player]) expect(playFirstApplies(who, false)).toBe(false);
   });
+
+  // docs/13 §9: live on/off x flag on/off x Play first on/off, and whether they have pressed Play.
   it.each([
-    // who, live, pressed Play, at the door
-    ["admin", admin, false, false, "in"],
-    ["admin", admin, true, false, "in"],
-    ["early access", early, false, true, "in"],
-    ["early access", early, false, false, "play first"],
-    ["early access", early, true, true, "in"],
-    ["early access", early, true, false, "play first"],
-    ["player", player, true, true, "in"],
-    ["player", player, true, false, "play first"],
-  ] as const)("%s, live %s, has pressed Play %s: %s", (_n, who, _live, played, door) => {
-    expect(doorRule(who, true, played ? pressed : never)).toBe(door);
+    // live, flag, Play first, pressed Play, at the door
+    [false, false, true, false, "not open"],
+    [false, false, true, true, "not open"], // whatever Play first says
+    [false, false, false, false, "not open"], // Play first off does not open the door
+    [false, false, false, true, "not open"],
+    [false, true, true, false, "play first"],
+    [false, true, true, true, "in"],
+    [false, true, false, false, "in"],
+    [false, true, false, true, "in"],
+    [true, false, true, false, "play first"],
+    [true, false, true, true, "in"],
+    [true, false, false, false, "in"],
+    [true, false, false, true, "in"],
+    [true, true, true, false, "play first"], // live: the flag changes nothing
+    [true, true, true, true, "in"],
+    [true, true, false, false, "in"],
+    [true, true, false, true, "in"],
+  ] as const)("a player: live %s, early access %s, Play first %s, has pressed Play %s: %s", (live, flag, requirePlay, played, door) => {
+    expect(doorRule({ role: "PLAYER", earlyAccess: flag }, { live, requirePlay, hasPlayed: played ? pressed : never })).toBe(door);
   });
-  it("a player without the flag, while not live, cannot press Play and so waits at the door", () => {
-    expect(playRule(player, false, true)).toEqual({ ok: false, reason: "not_live" }); // no run of Play can come from them
-    expect(doorRule(player, true, never)).toBe("play first");
-    // the same evening with the flag: Play, then in
-    expect(playRule(early, false, true).ok).toBe(true);
-    expect(doorRule(early, true, pressed)).toBe("in");
+  it("admins come in, whatever is on or off", () => {
+    for (const live of LIVE) for (const flag of [true, false]) for (const requirePlay of [true, false]) for (const hasPlayed of [true, false]) expect(doorRule({ role: "ADMIN", earlyAccess: flag }, { live, requirePlay, hasPlayed })).toBe("in");
+  });
+  it("says what the planner wrote to whoever waits because the server is not open", () => {
+    expect(NOT_OPEN_TEXT).toBe("Not open yet. You'll be let in when the server goes live.");
   });
 });
 

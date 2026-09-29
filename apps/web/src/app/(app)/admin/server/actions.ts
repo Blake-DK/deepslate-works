@@ -6,6 +6,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { apiFetch, ApiError } from "@/server/api-client";
 import { audit } from "@/server/events";
+import { removePhoto, storePhoto } from "@/server/news-images";
 
 const ops = z.enum(["start", "stop", "restart"]);
 const back = (msg: string, detail?: string) => `/admin/server?msg=${msg}${detail ? `&detail=${encodeURIComponent(detail)}` : ""}`;
@@ -135,8 +136,15 @@ export async function announceAction(formData: FormData) {
   const parsed = announcement.safeParse({ body: formData.get("body"), pinned: formData.get("pinned") === "on", say: formData.get("say") === "on" });
   if (!parsed.success) redirect(back("error", "Write something first (600 characters at most)."));
   const { body, pinned, say } = parsed.data;
-  await db.announcement.create({ data: { body, pinned, authorId: admin.id } });
-  await audit({ userId: admin.id, action: "announcement.create", params: { pinned, say, length: body.length }, result: "OK" });
+  const upload = formData.get("image");
+  let image: string | null = null;
+  if (upload instanceof File && upload.size > 0) {
+    const stored = await storePhoto(upload);
+    if (!stored.ok) redirect(back("error", stored.reason));
+    image = stored.file;
+  }
+  await db.announcement.create({ data: { body, pinned, authorId: admin.id, image } });
+  await audit({ userId: admin.id, action: "announcement.create", params: { pinned, say, length: body.length, image: Boolean(image) }, result: "OK" });
   for (const p of ["/", "/admin/server"]) revalidatePath(p);
   let said = "";
   if (say) {
@@ -155,10 +163,28 @@ export async function announceAction(formData: FormData) {
 export async function announcementChangeAction(formData: FormData) {
   const admin = await requireAdmin();
   const id = z.string().min(1).max(40).safeParse(formData.get("id"));
-  const what = z.enum(["pin", "unpin", "delete"]).safeParse(formData.get("what"));
+  const what = z.enum(["pin", "unpin", "delete", "picture", "nopicture"]).safeParse(formData.get("what"));
   if (!id.success || !what.success) redirect(back("error", "Unknown announcement."));
-  if (what.data === "delete") await db.announcement.deleteMany({ where: { id: id.data } });
-  else await db.announcement.updateMany({ where: { id: id.data }, data: { pinned: what.data === "pin" } });
+  const row = await db.announcement.findUnique({ where: { id: id.data }, select: { image: true } });
+  if (!row) redirect(back("error", "Unknown announcement."));
+  // a picture file is removed only when no other news item shows the same picture
+  const drop = async (file: string | null) => {
+    if (file && (await db.announcement.count({ where: { image: file } })) === 0) await removePhoto(file);
+  };
+  if (what.data === "delete") {
+    await db.announcement.deleteMany({ where: { id: id.data } });
+    await drop(row.image);
+  } else if (what.data === "picture") {
+    const upload = formData.get("image");
+    if (!(upload instanceof File) || upload.size === 0) redirect(back("error", "Choose a picture first."));
+    const stored = await storePhoto(upload);
+    if (!stored.ok) redirect(back("error", stored.reason));
+    await db.announcement.update({ where: { id: id.data }, data: { image: stored.file } });
+    if (row.image !== stored.file) await drop(row.image);
+  } else if (what.data === "nopicture") {
+    await db.announcement.update({ where: { id: id.data }, data: { image: null } });
+    await drop(row.image);
+  } else await db.announcement.updateMany({ where: { id: id.data }, data: { pinned: what.data === "pin" } });
   await audit({ userId: admin.id, action: `announcement.${what.data}`, params: { id: id.data }, result: "OK" });
   for (const p of ["/", "/admin/server"]) revalidatePath(p);
   redirect(back("action", `announcement ${what.data}`));

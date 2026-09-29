@@ -232,7 +232,13 @@ Alex: "I want an option in the GUI to turn on pregen … run for 8 hours, or alw
 - **Banner** on every page for a member with the flag while the site is not live; they do not get the "not open yet" banner.
 - **Also put right**: `/install` showed the admins' variant of the launch banner to anyone who could see the page while not live; until now that could only be an admin.
 - Tests: `apps/web/tests/access.test.ts`, 28: download for admin / early access / player with live on and off and the server available or not; Play; the door with and without a run of Play; what they see; the banner; the event wording. web 191.
-- **Observation for the planner** (docs/13 §9, last paragraph): the door does not know "not live"; players without the flag are kept out by Play first alone.
+- ~~Observation for the planner: the door does not know "not live"~~ **Closed the same evening**: the door checks "live or early access" before anything else (docs/13 §9, docs/14 "The order at the door").
+
+### The door knows "not live"; news items with a picture (2026-09-29 evening)
+
+- **The door**: `doorRule(user, {live, requirePlay, hasPlayed})` answers `in`, `not open` or `play first`. `api` reads "We're live" from the portal's settings (asked again every ten seconds) and the member's flag. A member held as "not open" is released, back to where they stood, within seconds of the site going live or the flag being given; if Play first then stands in the way the line in chat changes to that. Linking an account while the site is not live no longer lets out of the room.
+- Tests: the table in `apps/web/tests/access.test.ts` (16 rows for a player: live × flag × Play first × Play pressed; admins through all of them) and in `apps/api/tests/join-gate.test.ts` (the rule, the line in chat, the commands, the event). **Not seen with a player**: like everything at the door.
+- **News pictures**: `Announcement.image` (migration `0012_news_image`), files in `data/news/` (made by `deploy.sh`), `/news-image/<file>` for signed-in members. Admin → Server → Announce has a file box; each item in the list below has "Add picture" / "Change picture" / "No picture". A file is removed when the last item that showed it is gone. Today's item has the screenshot of spawn.
 
 ### docs/16 acceptance · state
 

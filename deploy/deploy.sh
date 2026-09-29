@@ -65,6 +65,12 @@ if [ ! -d data/branding ]; then
   [ "$(id -u)" = 0 ] && chown -R "$owner": data
   echo "created data/branding"
 fi
+# and the pictures of news items (Admin → Server → Announce)
+if [ ! -d data/news ]; then
+  mkdir -p data/news
+  [ "$(id -u)" = 0 ] && chown "$owner": data/news
+  echo "created data/news"
+fi
 
 step "up"
 "${COMPOSE[@]}" up -d --remove-orphans

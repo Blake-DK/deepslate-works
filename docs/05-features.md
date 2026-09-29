@@ -51,7 +51,7 @@ Pages are listed per phase. Every page must work on a 390px phone.
 
 ### `/` Home (after login)
 - Status pill (Online / Starting / Offline), player count and names with heads (`https://mc-heads.net/avatar/<uuid>/32`), uptime, TPS with a coloured chip (≥19 good, 15–19 warning, <15 bad), memory used vs allocated.
-- Pinned announcement and the last three.
+- Pinned announcement and the last three. A news item may have a picture (2026-09-29): PNG, JPEG or WebP, 3 MB at most, uploaded with the item or added to one later on Admin → Server; kept under `data/news/`, named after its content, shown to signed-in members only (`/news-image/<file>`). No SVG.
 - Big **Open live map** button and a compact embedded map (iframe to `map.<domain>`, lazy-loaded, hidden on LOW tier by default with a "show map" toggle).
 - "Last 24 h" sparkline of player count from `ServerSnapshot`.
 - **Play** card (once the server is visible to the member): see "Play from the site" under Phase 2.

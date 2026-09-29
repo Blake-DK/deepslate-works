@@ -23,7 +23,11 @@ export function playGate(run: PlayRun | null, serverPack: string | null, windowM
   return { ok: true, until };
 }
 
-export const GATE_TEXT: Record<GateReason, string> = {
+/** Why somebody was held at the door: the server is not open for them yet, or Play first. */
+export type BlockReason = GateReason | "not live";
+
+export const GATE_TEXT: Record<BlockReason, string> = {
+  "not live": "the server is not open yet",
   "no report": "has not pressed Play on the site",
   stale: "pressed Play too long ago",
   "wrong version": "pressed Play before the pack changed",

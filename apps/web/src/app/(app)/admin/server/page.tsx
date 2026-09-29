@@ -12,7 +12,7 @@ import { Alert } from "@/components/ui/alert";
 import { Input, Label } from "@/components/ui/input";
 import { LiveConsole } from "./live-console";
 import { announceAction, announcementChangeAction, backupAction, cancelRestartAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
-import { modeText, pregenCost, progress, sleepText, type Pregen } from "@/lib/pregen";
+import { mapProgress, modeText, pregenCost, progress, sleepText, type Pregen } from "@/lib/pregen";
 import { ConfirmSubmit } from "@/components/server/confirm-submit";
 
 export const metadata: Metadata = { title: "Server" };
@@ -43,6 +43,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
   ]);
   const mode = modeText(pregen);
   const prog = progress(pregen);
+  const mapProg = mapProgress(pregen);
   const sleepy = sleepText(pregen);
   const stuck = status?.stateCode === 45;
   const a = AVAILABILITY_TEXT[status?.availability ?? "unknown"];
@@ -128,7 +129,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
         <Card data-testid="pregen">
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2">Pre-generation <Badge tone={mode.tone}>{mode.label}</Badge></CardTitle>
-            <CardDescription>Makes the world around spawn ahead of time, so that exploring and the map are smooth later. <strong className="text-foreground">Off unless you turn it on here.</strong></CardDescription>
+            <CardDescription>Makes the world around spawn ahead of time and renders the map of it, so that exploring is smooth and the map is whole. <strong className="text-foreground">Off unless you turn it on here.</strong></CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm" data-testid="pregen-mode">{mode.line}</p>
@@ -136,11 +137,17 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
               <p className="text-sm">{pregen?.plan.area ? <>Radius {pregen.plan.area.radius} around {pregen.plan.area.x}, {pregen.plan.area.z}. </> : null}{prog.line}</p>
               {prog.percent !== null && <span className="mt-1 block h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(prog.percent)}><span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(100, prog.percent)}%` }} /></span>}
             </div>
+            {mapProg && (
+              <div data-testid="pregen-map">
+                <p className="text-sm">{mapProg.line}</p>
+                {mapProg.percent !== null && <span className="mt-1 block h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Map render" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(mapProg.percent)}><span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(100, mapProg.percent)}%` }} /></span>}
+              </div>
+            )}
             {mode.on ? (
               <div className="flex flex-wrap items-center gap-2">
                 <form action={pregenAction}><input type="hidden" name="op" value="off" /><Button type="submit" size="sm" variant="secondary">Stop</Button></form>
                 <form action={pregenAction}><input type="hidden" name="op" value="cancel" /><ConfirmSubmit question="Call the area off? Chunky forgets where it got to; what has been generated stays in the world.">Cancel</ConfirmSubmit></form>
-                <span className="text-xs text-muted-foreground">Stop pauses and saves, and keeps where it got to. Cancel forgets the area.</span>
+                <span className="text-xs text-muted-foreground">Stop pauses and saves, and keeps where it got to. Cancel forgets the area. The map keeps what is rendered either way.</span>
               </div>
             ) : (
               <form action={pregenAction} className="space-y-3">
@@ -149,6 +156,13 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
                 <input type="hidden" name="z" value={pregen?.plan.area?.z ?? 0} />
                 <div><Label htmlFor="pgr">Radius, blocks</Label><Input id="pgr" name="radius" type="number" min={16} max={10000} defaultValue={pregen?.plan.area?.radius ?? 1500} className="h-8 w-28 text-sm" required /></div>
                 <p className="text-xs text-muted-foreground">Around {pregen?.plan.area?.x ?? 0}, {pregen?.plan.area?.z ?? 0} (spawn). Another radius calls the present area off and begins a new one; what is already made is passed over quickly. Roughly: {[1500, 3000, 5000, 10000].map((r) => { const c = pregenCost(r); return `${r} = ${c.hours < 1 ? `${Math.round(c.hours * 60)} min` : `${c.hours.toFixed(1)} h`}, ${c.gb < 1 ? c.gb.toFixed(1) : Math.round(c.gb)} GB`; }).join(" · ")}.</p>
+                <fieldset className="space-y-1 text-sm">
+                  <legend className="mb-1 font-medium">What</legend>
+                  <label className="flex items-center gap-2"><input type="radio" name="what" value="both" defaultChecked className="h-4 w-4" />Generate, then render the map</label>
+                  <label className="flex items-center gap-2"><input type="radio" name="what" value="generate" className="h-4 w-4" />Generate only</label>
+                  <label className="flex items-center gap-2"><input type="radio" name="what" value="render" className="h-4 w-4" />Render the map only</label>
+                  <p className="text-xs text-muted-foreground">The map is BlueMap&apos;s, of the overworld, inside the radius. The server is kept awake until BlueMap says the map is up to date.</p>
+                </fieldset>
                 <fieldset className="space-y-2">
                   <legend className="sr-only">Mode</legend>
                   <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
@@ -167,7 +181,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
                     <input type="radio" name="mode" value="now" className="mt-1 h-4 w-4" />
                     <span className="space-y-2">
                       <span className="block font-medium">Now</span>
-                      <span className="block text-danger">Runs whoever is playing. It will lag anyone who is on.</span>
+                      <span className="block text-danger">Runs whoever is playing. It will lag anyone who is on. The map render waits while the server is slow for them; the generating does not.</span>
                       <span className="block"><Label htmlFor="pghn">For how many hours</Label><Input id="pghn" name="hoursNow" type="number" min={0.25} max={240} step={0.25} placeholder="until 100%" className="h-8 w-28 text-sm" /></span>
                     </span>
                   </label>
@@ -184,7 +198,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
               <p>{sleepy.line}</p>
               {sleepy.grant && <p className="mt-1">To allow it: in the instance&apos;s own panel, give the role of the user <span className="font-mono">webapp</span> the permission Settings → MinecraftModule → Limits → SleepMode, <span className="font-mono">{sleepy.grant}</span>. The setting is <span className="font-mono">{pregen?.sleep.node}</span>.</p>}
             </div>
-            <p className="text-xs text-muted-foreground">The server is never started from here, and never ended. If it is asleep or stopped, the pre-generation carries on the next time it runs. Hours are hours of generating, not hours on the clock.</p>
+            <p className="text-xs text-muted-foreground">The server is never started from here, and never ended. If it is asleep or stopped, the pre-generation carries on the next time it runs. Hours are hours of generating and rendering, not hours on the clock.</p>
           </CardContent>
         </Card>
         <Card>

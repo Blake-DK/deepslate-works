@@ -26,7 +26,25 @@ export type GameEvent =
   | { type: "pregen"; what: "finished"; world: string; chunks: number | null }
   | { type: "pos"; name: string; x: number; y: number; z: number }
   | { type: "dimension"; name: string; dimension: string }
+  | { type: "map"; line: MapLine }
   | { type: "problem"; level: "WARN" | "ERROR"; text: string; logger: string | null };
+
+/**
+ * One line of what BlueMap answers to `bluemap` ("BlueMap Status >") and `bluemap maps` ("BlueMap Maps >").
+ * The lines of a map follow its name; status/map.ts puts them together.
+ */
+export type MapLine =
+  | { what: "status" | "maps" } // the heading of an answer
+  | { what: "threads"; state: "running" | "idle" | "stopped" | "paused" }
+  | { what: "current"; map: string; doing: "updated" | "purged" }
+  | { what: "progress"; percent: number }
+  | { what: "remaining"; text: string }
+  | { what: "map"; map: string; icon: "updated" | "frozen" | "pending" | "rendering" }
+  | { what: "rendering"; percent: number }
+  | { what: "pending"; tasks: number }
+  | { what: "frozen" }
+  | { what: "said"; threads: "running" | "stopped" }
+  | { what: "other" }; // a line of an answer that says nothing the portal uses
 
 const NAME = "[A-Za-z0-9_]{3,16}";
 const PREFIX = new RegExp(
@@ -87,6 +105,60 @@ const RE = {
   ),
 };
 
+// BlueMap 5.7, from its source (common/.../commands/StatusCommand.java, MapListCommand.java, TextFormat.java)
+// and from the server's console on 2026-09-29. The signs in front are BlueMap's: \u2714 updated, \u2744 frozen,
+// \u231b pending, \u26cf in hand, \u274c stopped; \u251c \u2502 \u2514 in front of the lines under a heading.
+const MAP_ID = "[a-z0-9_-]{1,40}";
+const ICONS: Record<string, "updated" | "frozen" | "pending" | "rendering"> = { "\u2714": "updated", "\u2744": "frozen", "\u231b": "pending", "\u26cf": "rendering" };
+const MAP = {
+  heading: /^BlueMap (Status|Maps) >$/,
+  threadsStopped: /^\u274c render-threads are stopped$/,
+  threadsPaused: /^\u231b render-threads are paused$/,
+  threads: /^\u2714 \d+ render-threads? (?:is|are) (running|idle)$/,
+  current: new RegExp(`^\u26cf map (${MAP_ID}) is currently being (updated|purged)$`),
+  detail: /^[\u251c\u2502\u2514] ?(.*)$/,
+  progress: /^progress: ([\d.]+)%$/,
+  remaining: /^remaining time: (.{1,60})$/,
+  rendering: /^(?:is currently being (?:updated|purged)|has a running task): ([\d.]+)%$/,
+  pending: /^has (\d+) pending tasks?$/,
+  frozen: /^is frozen$/,
+  summary: /^[\u2714\u2744\u231b] (?:map \S+ (?:has pending updates|is updated|is frozen)|\d+ maps (?:have pending updates|are updated|are frozen))$/,
+  map: new RegExp(`^([\u2714\u2744\u231b\u26cf]) (${MAP_ID})$`),
+  said: /^[\u26cf\u274c] Render-Threads are now (running|stopped)$/,
+  asked: /^(?:Creating update-tasks \.\.\.|Created new update-task for map \S+|Use \/bluemap to see the progress)$/,
+};
+
+/** Pure: one line of BlueMap's answers, or null when the line is none of them. */
+export function parseMapLine(message: string): MapLine | null {
+  const t = message.trim();
+  let m: RegExpExecArray | null;
+  if ((m = MAP.heading.exec(t))) return { what: m[1] === "Status" ? "status" : "maps" };
+  if (MAP.threadsStopped.test(t)) return { what: "threads", state: "stopped" };
+  if (MAP.threadsPaused.test(t)) return { what: "threads", state: "paused" };
+  if ((m = MAP.threads.exec(t))) return { what: "threads", state: m[1] as "running" | "idle" };
+  if ((m = MAP.current.exec(t))) return { what: "current", map: m[1]!, doing: m[2] as "updated" | "purged" };
+  if ((m = MAP.said.exec(t))) return { what: "said", threads: m[1] as "running" | "stopped" };
+  if (MAP.summary.test(t) || MAP.asked.test(t)) return { what: "other" };
+  if ((m = MAP.map.exec(t))) return { what: "map", map: m[2]!, icon: ICONS[m[1]!]! };
+  if ((m = MAP.detail.exec(t))) {
+    const d = m[1]!.trim();
+    let n: RegExpExecArray | null;
+    if ((n = MAP.progress.exec(d))) return { what: "progress", percent: Number(n[1]) };
+    if ((n = MAP.remaining.exec(d))) return { what: "remaining", text: n[1]! };
+    if ((n = MAP.rendering.exec(d))) return { what: "rendering", percent: Number(n[1]) };
+    if ((n = MAP.pending.exec(d))) return { what: "pending", tasks: Number(n[1]) };
+    if (MAP.frozen.test(d)) return { what: "frozen" };
+    return { what: "other" };
+  }
+  return null;
+}
+
+/** What BlueMap answers when the portal asks where the render stands. Read, then kept out of the console page while the portal is the one asking. */
+export function isMapChatter(text: string): boolean {
+  const { message } = reduce(text);
+  return message.trim() === "" || parseMapLine(message) !== null;
+}
+
 /** What a round of `pingall` prints. Read for the numbers, then kept out of the console page: it comes every 15 s. */
 export function isPingChatter(text: string): boolean {
   const { message } = reduce(text);
@@ -138,6 +210,8 @@ export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) =
     return [{ type: "pregen", what, world: m[2] ?? null }];
   }
   if (/^\[(?:Server|Rcon|[A-Za-z0-9_: ]{1,40})\] /.test(message)) return []; // `say` from the console or a command block
+  const map = parseMapLine(message);
+  if (map) return [{ type: "map", line: map }];
   if ((m = RE.uuid.exec(message))) return [{ type: "uuid", name: m[1]!, uuid: m[2]!.toLowerCase() }];
   if ((m = RE.login.exec(message))) return [{ type: "join", name: m[1]!, ip: ipOf(m[2]!) }];
   if ((m = RE.joined.exec(message))) return [{ type: "join", name: m[1]!, ip: null }];

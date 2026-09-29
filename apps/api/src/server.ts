@@ -45,9 +45,9 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     save: async (p) => {
       await db.setting.upsert({ where: { key: PLAN_KEY }, create: { key: PLAN_KEY, value: p }, update: { value: p } });
     },
-  }, log);
+  }, log, undefined, undefined, { tps: () => poller.fresh()?.tps ?? null });
   pregenRoutes(app, tail, pregen);
-  const poller = new StatusPoller(ampClient, tail, env.AMP_MOCK === "1" ? null : prismaSnapshotStore, log, undefined, () => pings.current());
+  const poller: StatusPoller = new StatusPoller(ampClient, tail, env.AMP_MOCK === "1" ? null : prismaSnapshotStore, log, undefined, () => pings.current());
   const restarts = new RestartSchedule(ampClient, () => limbo.actionCtx, log, () => pregen.quiesce());
   statusRoutes(app, ampClient, poller, tail, () => pings.current());
   playerRoutes(app, ampClient, tail, limbo, () => pregen.quiesce());

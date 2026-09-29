@@ -39,10 +39,10 @@ describe("nextPregen", () => {
 
 const AREA = { x: 0, z: 0, radius: 1500 };
 type On = Exclude<PregenPlan, { mode: "off" }>;
-const empty: On = { mode: "empty", area: AREA, window: null, capHours: null, ranMs: 0, since: "2026-09-29T20:00:00.000Z", by: null, fresh: false, sleepWas: true };
+const empty: On = { mode: "empty", what: "generate", area: AREA, window: null, capHours: null, ranMs: 0, since: "2026-09-29T20:00:00.000Z", by: null, fresh: false, sleepWas: true, mapAsked: null, mapStopped: false };
 const now: On = { ...empty, mode: "now" };
 const noon = new Date("2026-09-29T11:00:00Z"); // 12:00 in the UK (summer time)
-const v = (over: Partial<View>): View => ({ serverRunning: true, online: 0, pregen: "paused", at: noon, sleepOff: true, emptyForMs: 0, sleepDelayMin: 5, ...over });
+const v = (over: Partial<View>): View => ({ serverRunning: true, online: 0, pregen: "paused", at: noon, sleepOff: true, emptyForMs: 0, sleepDelayMin: 5, mapDone: false, lag: false, ...over });
 
 describe("the window", () => {
   it("is UK time", () => {

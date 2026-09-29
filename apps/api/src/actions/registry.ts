@@ -302,7 +302,16 @@ export const actions = {
   }),
   "map.list": define({ name: "map.list", role: "ADMIN", input: z.object({}), build: () => ["bluemap maps"] }),
   "map.purge": define({ name: "map.purge", role: "ADMIN", input: z.object({ map: z.string().regex(/^[a-z0-9_-]{1,40}$/) }), build: (_ctx, { map }) => [`bluemap purge ${map}`] }),
-  "map.update": define({ name: "map.update", role: "ADMIN", input: z.object({ map: z.string().regex(/^[a-z0-9_-]{1,40}$/) }), build: (_ctx, { map }) => [`bluemap update ${map}`] }),
+  // With an area: what has changed inside it since it was last rendered. BlueMap renders only chunks that exist.
+  "map.update": define({
+    name: "map.update",
+    role: "ADMIN",
+    input: z.object({ map: z.string().regex(/^[a-z0-9_-]{1,40}$/), x: z.number().int().min(-100_000).max(100_000).optional(), z: z.number().int().min(-100_000).max(100_000).optional(), radius: z.number().int().min(16).max(10_000).optional() }),
+    build: (_ctx, { map, x, z: zz, radius }) => [radius === undefined ? `bluemap update ${map}` : `bluemap update ${map} ${x ?? 0} ${zz ?? 0} ${radius}`],
+  }),
+  // BlueMap keeps "stopped" over a restart of the server: whoever stops it owes it a start (status/pregen.ts does).
+  "map.stop": define({ name: "map.stop", role: "ADMIN", input: z.object({}), build: () => ["bluemap stop"] }),
+  "map.start": define({ name: "map.start", role: "ADMIN", input: z.object({}), build: () => ["bluemap start"] }),
   "map.status": define({ name: "map.status", role: "ADMIN", input: z.object({}), build: () => ["bluemap"] }),
 };
 

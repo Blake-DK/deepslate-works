@@ -1,9 +1,22 @@
 // Admin → Server → Pre-generation: what api says, in words. Pure, so it is tested.
 
 export type Area = { x: number; z: number; radius: number };
+/** Generate (chunky), render the map (BlueMap), or the one after the other. A plan without it generates. */
+export type What = "generate" | "render" | "both";
+export type MapView = {
+  status: "updated" | "rendering" | "pending" | "frozen" | null;
+  /** Of the task BlueMap has in hand for the map, by BlueMap's own count. */
+  percent: number | null;
+  waiting: number | null;
+  remaining: string | null;
+  threads: "running" | "idle" | "stopped" | "paused" | null;
+  at: string | null;
+  /** The portal has stopped BlueMap's render for now. */
+  stopped: boolean;
+};
 export type Plan =
   | { mode: "off"; area: Area | null }
-  | { mode: "empty" | "now"; area: Area; window: { from: string; to: string } | null; capHours: number | null; ranMs: number; since: string; sleepWas: boolean | null };
+  | { mode: "empty" | "now"; what?: What; area: Area; window: { from: string; to: string } | null; capHours: number | null; ranMs: number; since: string; sleepWas: boolean | null };
 
 export type Pregen = {
   status: "none" | "running" | "paused" | "finished" | "cancelled";
@@ -21,6 +34,9 @@ export type Pregen = {
   serverState: number;
   serverRunning: boolean;
   online: number;
+  /** What is in hand while a mode is on. */
+  phase?: "generate" | "render" | "done" | null;
+  map?: MapView | null;
 };
 
 const n = (v: number) => v.toLocaleString("en-GB");
@@ -47,8 +63,28 @@ export function progress(p: Pregen | null): Progress {
   return { line: `${n(p.chunks)} of ${total !== null ? n(total) : "?"} chunks, ${p.percent.toFixed(1)}%${to}${rate}.`, percent: p.percent };
 }
 
+/**
+ * Where BlueMap's render of the overworld stands, in BlueMap's own figures. Null when the map is not part of
+ * what is turned on: BlueMap is only asked while it is.
+ */
+export function mapProgress(p: Pregen | null): Progress | null {
+  const plan = p?.plan;
+  if (!p || !plan || plan.mode === "off" || (plan.what ?? "generate") === "generate") return null;
+  if (p.phase === "generate") return { line: "The map: rendered when the generating is done.", percent: null };
+  const m = p.map;
+  if (m?.stopped || m?.threads === "stopped") return { line: `The map: paused${m.percent !== null ? ` at ${m.percent.toFixed(1)}% of the task in hand` : ""}. BlueMap carries on where it stopped.`, percent: m.percent };
+  if (!m || m.status === null) return { line: "The map: no figures yet. BlueMap says where it stands half a minute after the server is running.", percent: null };
+  if (m.status === "updated") return { line: "The map is up to date.", percent: 100 };
+  if (m.status === "frozen") return { line: "The map is frozen in BlueMap: it is not being updated.", percent: null };
+  const waiting = m.waiting ? `, ${n(m.waiting)} more ${m.waiting === 1 ? "task" : "tasks"} waiting` : "";
+  if (m.status === "pending" || m.percent === null) return { line: `The map: waiting its turn in BlueMap${waiting}.`, percent: null };
+  return { line: `The map: ${m.percent.toFixed(1)}% of the task in hand${waiting}${m.remaining ? `, about ${m.remaining} to go` : ""}.`, percent: m.percent };
+}
+
 const DOING: Record<string, string> = {
   run: "generating",
+  render: "rendering the map",
+  "pause:lag": "the map waits: the server is slow and somebody is playing",
   "pause:playing": "waiting: somebody is playing",
   "pause:sleep": "paused before the server is put to sleep; it carries on when the server is next started",
   "idle:window": "waiting for its time of day",
@@ -60,8 +96,13 @@ export type ModeText = { on: boolean; label: string; tone: "warn" | "neutral" | 
 export function modeText(p: Pregen | null): ModeText {
   const plan = p?.plan;
   if (!p || !plan || plan.mode === "off") return { on: false, label: p?.status === "finished" ? "done" : "off", tone: p?.status === "finished" ? "good" : "neutral", line: "Off. Nothing generates, and nothing starts by itself." };
-  const hours = plan.capHours !== null ? `${plan.capHours} ${plan.capHours === 1 ? "hour" : "hours"} of generating at most (${(plan.ranMs / 3_600_000).toFixed(1)} so far)` : "until the area is done";
-  const what = plan.mode === "now" ? `On: now, whoever is playing, ${hours}` : `On: when nobody's online${plan.window ? `, between ${plan.window.from} and ${plan.window.to}` : ""}, ${hours}`;
+  const job = plan.what ?? "generate";
+  const hours =
+    plan.capHours !== null
+      ? `${plan.capHours} ${plan.capHours === 1 ? "hour" : "hours"} of ${job === "generate" ? "generating" : job === "render" ? "rendering" : "generating and rendering"} at most (${(plan.ranMs / 3_600_000).toFixed(1)} so far)`
+      : job === "generate" ? "until the area is done" : job === "render" ? "until the map is done" : "until the area is done and the map rendered";
+  const task = job === "render" ? "rendering the map, " : job === "both" ? "generating, then rendering the map, " : "";
+  const what = plan.mode === "now" ? `On: now, whoever is playing, ${task}${hours}` : `On: when nobody's online${plan.window ? `, between ${plan.window.from} and ${plan.window.to}` : ""}, ${task}${hours}`;
   const doing = DOING[p.doing] ? ` Right now: ${DOING[p.doing]}.` : "";
   return { on: true, label: plan.mode === "now" ? "on: now" : "on: when nobody's online", tone: "warn", line: `${what}.${doing}` };
 }

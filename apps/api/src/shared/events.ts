@@ -88,8 +88,22 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.stop": "stopped the server",
   "world.pregenOn": (p) => p.refused
     ? "tried to turn the pre-generation on; the control panel does not let the portal switch sleep mode off"
-    : `turned the pre-generation on: ${p.mode === "now" ? "now, whoever is playing" : "when nobody's online"}${p.capHours ? `, ${s(p.capHours)} hours at most` : ""}; ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}${p.newArea ? " (a new area)" : ""}`,
-  "world.pregenOff": (p) => (p.reason === "done" ? `pre-generation finished (100%${p.radius ? `, radius ${s(p.radius)}` : ""})` : p.reason === "cap" ? `pre-generation stopped: its hours are up (${s(p.percent)}%${p.radius ? `, radius ${s(p.radius)}` : ""})` : `stopped the pre-generation, at ${s(p.percent)}%`),
+    : `turned ${p.what === "render" ? "the map render" : "the pre-generation"} on: ${p.mode === "now" ? "now, whoever is playing" : "when nobody's online"}${p.what === "both" ? ", the map rendered afterwards" : ""}${p.capHours ? `, ${s(p.capHours)} hours at most` : ""}; ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}${p.newArea ? " (a new area)" : ""}`,
+  "world.pregenOff": (p) => {
+    const radius = p.radius ? `radius ${s(p.radius)}` : "";
+    // the map: what was in hand was BlueMap's render, which has its own figures
+    if (p.what === "render" || (p.what === "both" && p.phase !== "generate")) {
+      const at = p.mapPercent === null || p.mapPercent === undefined ? "" : `${s(p.mapPercent)}% of the task in hand`;
+      const where = [at, radius].filter(Boolean).join(", ");
+      const job = p.what === "both" ? "pre-generation finished and the map rendered" : "the map is rendered";
+      if (p.reason === "done") return `${job}${radius ? ` (${radius})` : ""}`;
+      return p.reason === "cap" ? `the map render stopped: its hours are up${where ? ` (${where})` : ""}` : `stopped the map render${at ? `, at ${at}` : ""}`;
+    }
+    return p.reason === "done" ? `pre-generation finished (100%${radius ? `, ${radius}` : ""})` : p.reason === "cap" ? `pre-generation stopped: its hours are up (${s(p.percent)}%${radius ? `, ${radius}` : ""})` : `stopped the pre-generation, at ${s(p.percent)}%`;
+  },
+  "map.update": (p) => `asked for the map to be brought up to date${p.radius ? `: ${s(p.radius)} blocks around ${s(p.x ?? 0)}, ${s(p.z ?? 0)}` : ""}`,
+  "map.stop": "paused the map render",
+  "map.start": "let the map render carry on",
   "world.pregen": (p) => `turned the pre-generation on: ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}`,
   "world.pregenContinue": "turned the pre-generation on again",
   "world.pregenPause": "paused the pre-generation",

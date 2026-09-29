@@ -3,6 +3,7 @@ import type { ConsoleTail } from "../amp/console.js";
 import { runAction } from "../actions/run.js";
 import type { ActionCtx } from "../actions/registry.js";
 import { audit } from "../audit.js";
+import { MapWatch, OVERWORLD_MAP, rendered } from "./map.js";
 
 // Pre-generation (chunky), as a mode on Admin → Server (planner, 2026-09-29).
 //
@@ -10,6 +11,13 @@ import { audit } from "../audit.js";
 //   empty  chunky carries on whenever the server is empty and pauses as soon as anyone joins;
 //          optionally only inside a window of the day, optionally for so many hours of generating at most
 //   now    runs whoever is playing, for so many hours or until the area is done
+//
+// What a mode does is one of: generate (chunky), render the map (BlueMap), or the one after the other. The
+// render step asks BlueMap to bring the overworld's map up to date inside the area, keeps the server awake
+// like the generating does, asks BlueMap every half minute where it stands, and ends when BlueMap has said
+// twice running that the map is updated. It pauses by stopping BlueMap's render threads (`bluemap stop`):
+// when somebody joins and the mode is "when nobody's online", or, with the mode "now", while somebody is on
+// and the server lags. BlueMap remembers "stopped" over a restart, so whatever this stops it starts again.
 //
 // While a mode is due, AMP's sleep mode is switched off, and put back as it was when the mode ends. If AMP does
 // not let the portal do that, the mode refuses to start.
@@ -84,10 +92,13 @@ export class PregenWatch {
 export type Area = { x: number; z: number; radius: number };
 export type Window = { from: string; to: string }; // "02:00", "08:00", UK time; may run over midnight
 
+export type What = "generate" | "render" | "both";
+
 export type PregenPlan =
-  | { mode: "off"; area: Area | null }
+  | { mode: "off"; area: Area | null; /** BlueMap's render threads were stopped from here and are owed a start. */ mapStopped?: boolean }
   | {
       mode: "empty" | "now";
+      what: What;
       area: Area;
       window: Window | null; // "empty" only
       capHours: number | null; // hours of generating; null = until the area is done
@@ -98,7 +109,20 @@ export type PregenPlan =
       fresh: boolean;
       /** AMP's sleep mode as it was before this switched it off; null while it has not been touched. */
       sleepWas: boolean | null;
+      /** When BlueMap was asked to bring the map up to date; null while it has not been. */
+      mapAsked: string | null;
+      /** BlueMap's render threads are stopped from here (a pause) and are owed a start. */
+      mapStopped: boolean;
     };
+
+export type Phase = "generate" | "render" | "done";
+
+/** Pure: what is in hand. Generating comes first; the map is rendered from what has been generated. */
+export function phase(what: What, pregen: PregenState["status"], mapDone: boolean): Phase {
+  if (what !== "render" && pregen !== "finished") return "generate";
+  if (what !== "generate" && !mapDone) return "render";
+  return "done";
+}
 
 const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const minutes = (hhmm: string) => {
@@ -123,8 +147,8 @@ export function inWindow(w: Window | null, clock: string): boolean {
 export type Due = "yes" | "window" | "cap" | "done";
 
 /** Pure: should it be generating, as far as the plan goes? */
-export function due(plan: Exclude<PregenPlan, { mode: "off" }>, pregen: PregenState["status"], at: Date): Due {
-  if (pregen === "finished") return "done";
+export function due(plan: Exclude<PregenPlan, { mode: "off" }>, pregen: PregenState["status"], at: Date, mapDone = false): Due {
+  if (phase(plan.what, pregen, mapDone) === "done") return "done";
   if (plan.capHours !== null && plan.ranMs >= plan.capHours * 3_600_000) return "cap";
   if (plan.mode === "empty" && !inWindow(plan.window, ukClock(at))) return "window";
   return "yes";
@@ -137,18 +161,28 @@ export type Step =
   | "idle:server" // the server is not running: nothing is started
   | "pause:playing" // somebody is on and the mode is "when nobody's online"
   | "pause:sleep" // sleep could not be switched off and AMP is about to put the server to sleep
-  | "run";
+  | "pause:lag" // rendering, somebody is on and the server is slow
+  | "run" // generating
+  | "render";
 
-export type View = { serverRunning: boolean; online: number; pregen: PregenState["status"]; at: Date; sleepOff: boolean; emptyForMs: number | null; sleepDelayMin: number };
+export type View = { serverRunning: boolean; online: number; pregen: PregenState["status"]; at: Date; sleepOff: boolean; emptyForMs: number | null; sleepDelayMin: number; mapDone: boolean; lag: boolean };
+
+/** Below this the server counts as slow, and from the second on as well again. */
+export const LAG_TPS = 15;
+export const FINE_TPS = 18;
 
 /** Pure: what to do now. Never "start the server", never "end it". */
 export function step(plan: Exclude<PregenPlan, { mode: "off" }>, v: View): Step {
-  const d = due(plan, v.pregen, v.at);
+  const d = due(plan, v.pregen, v.at, v.mapDone);
   if (d === "done") return "off:done";
   if (d === "cap") return "off:cap";
   if (d === "window") return "idle:window";
   if (!v.serverRunning) return "idle:server";
   if (plan.mode === "empty" && v.online > 0) return "pause:playing";
+  if (phase(plan.what, v.pregen, v.mapDone) === "render") {
+    // BlueMap puts its work down by itself when the server stops: a sleep that could not be switched off is accepted as it comes.
+    return v.online > 0 && v.lag ? "pause:lag" : "render";
+  }
   // Sleep is still on (the permission was taken away, or the write did not take): pause in good time, accept the
   // sleep, carry on at the next start.
   if (!v.sleepOff && v.online === 0 && v.emptyForMs !== null && v.emptyForMs >= Math.max(1, v.sleepDelayMin - 2) * 60_000) return "pause:sleep";
@@ -173,7 +207,13 @@ export class Refused extends Error {
 }
 
 const AGAIN_MS = 45_000;
+const MAP_ASK_MS = 30_000;
+/** An answer of BlueMap's counts when it is this old (all its lines are in) and was given this long after the map was asked for. */
+const MAP_SETTLE_MS = 3_000;
+const MAP_AFTER_ASK_MS = 10_000;
 const OFF: PregenPlan = { mode: "off", area: null };
+
+export type Extra = { map?: MapWatch; tps?: () => number | null };
 
 export class Pregen {
   plan: PregenPlan = OFF;
@@ -184,6 +224,14 @@ export class Pregen {
   private lastTick = 0;
   private lastSave = 0;
   private timer: NodeJS.Timeout | null = null;
+  readonly map: MapWatch;
+  private readonly tps: () => number | null;
+  private lag = false;
+  private lastMapAsk = 0;
+  private lastMapCommand = 0;
+  /** The last list of BlueMap's that was looked at, and how many in a row have said "updated". */
+  private listSeen = 0;
+  private updatedInARow = 0;
 
   constructor(
     private readonly amp: Amp,
@@ -194,12 +242,20 @@ export class Pregen {
     private readonly log: (o: unknown, m: string) => void,
     private readonly now: () => number = () => Date.now(),
     private readonly wait: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
-  ) {}
+    extra: Extra = {},
+  ) {
+    this.map = extra.map ?? new MapWatch(tail, now);
+    this.tps = extra.tps ?? (() => null);
+  }
 
   async start() {
     const loaded = await this.store.load().catch(() => OFF);
-    // anything that is not a plan as it is written today (an older shape, a broken row) is "off"
-    this.plan = loaded && (loaded.mode === "empty" || loaded.mode === "now") && loaded.area ? loaded : { mode: "off", area: loaded?.area ?? null };
+    // anything that is not a plan as it is written today (an older shape, a broken row) is "off"; a plan from
+    // before there was a render step is one that generates
+    this.plan =
+      loaded && (loaded.mode === "empty" || loaded.mode === "now") && loaded.area
+        ? { ...loaded, what: loaded.what ?? "generate", mapAsked: loaded.mapAsked ?? null, mapStopped: loaded.mapStopped ?? false }
+        : { mode: "off", area: loaded?.area ?? null, ...(loaded?.mapStopped ? { mapStopped: true } : {}) };
     this.lastTick = this.now();
     this.timer = setInterval(() => void this.tick().catch((err) => this.log({ err: String(err) }, "pregen tick failed")), 10_000);
   }
@@ -241,10 +297,11 @@ export class Pregen {
     return ok;
   }
 
-  async turnOn(input: { mode: "empty" | "now"; area: Area; window: Window | null; capHours: number | null }, by: string | null) {
+  async turnOn(input: { mode: "empty" | "now"; what?: What; area: Area; window: Window | null; capHours: number | null }, by: string | null) {
+    const what = input.what ?? "generate";
     const s = await this.lookAtSleep();
     if (s.allowed !== true) {
-      await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, refused: "sleep_permission" }, result: "DENIED", detail: s.problem });
+      await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, what, refused: "sleep_permission" }, result: "DENIED", detail: s.problem });
       throw new Refused(
         "sleep_permission",
         s.allowed === null
@@ -255,15 +312,19 @@ export class Pregen {
     const was = this.plan;
     const status = this.watch.state.status;
     // Another area than the one chunky has: that one is called off first.
-    const another = was.area !== null && !sameArea(was.area, input.area);
+    // Rendering alone leaves chunky and what it has as they are.
+    const another = what !== "render" && was.area !== null && !sameArea(was.area, input.area);
     if (was.mode !== "off") await this.turnOff("asked", by);
     if (another && this.tail.state === 20) await runAction(this.amp, this.ctx(), "world.pregenCancel", {}, by);
-    const fresh = another || was.area === null || status === "finished" || status === "cancelled";
+    const fresh = what !== "render" && (another || was.area === null || status === "finished" || status === "cancelled");
     if (fresh) this.watch.state = NONE;
-    this.plan = { mode: input.mode, area: input.area, window: input.mode === "empty" ? input.window : null, capHours: input.capHours, ranMs: 0, since: new Date(this.now()).toISOString(), by, fresh, sleepWas: null };
+    this.plan = { mode: input.mode, what, area: input.area, window: input.mode === "empty" ? input.window : null, capHours: input.capHours, ranMs: 0, since: new Date(this.now()).toISOString(), by, fresh, sleepWas: null, mapAsked: null, mapStopped: this.plan.mode === "off" && this.plan.mapStopped === true };
     this.lastCommand = 0;
+    this.lastMapCommand = 0;
+    this.lastMapAsk = 0;
+    this.updatedInARow = 0;
     await this.store.save(this.plan);
-    await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, ...input.area, window: input.window, capHours: input.capHours, newArea: fresh }, result: "OK" });
+    await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, what, ...input.area, window: input.window, capHours: input.capHours, newArea: fresh }, result: "OK" });
     await this.tick();
   }
 
@@ -271,19 +332,55 @@ export class Pregen {
     const was = this.plan;
     if (was.mode === "off") return;
     const paused = await this.pause();
+    // BlueMap goes back to rendering by itself, as it does on any day. If the server is not there to be told, it is told at its next start.
+    const owed = was.mapStopped && !(await this.mapThreads(true));
     if (was.sleepWas !== null) await this.setSleep(was.sleepWas);
-    this.plan = { mode: "off", area: reason === "done" ? null : was.area };
+    const map = this.map.state.maps[OVERWORLD_MAP];
+    const inHand = phase(was.what, this.watch.state.status, reason === "done");
+    this.plan = { mode: "off", area: reason === "done" ? null : was.area, ...(owed ? { mapStopped: true } : {}) };
     this.lastStep = "off";
     await this.store.save(this.plan);
-    await audit({ userId: by, action: "world.pregenOff", params: { reason, percent: this.watch.state.percent, chunks: this.watch.state.chunks, radius: was.area.radius, sleepRestored: was.sleepWas }, result: paused ? "OK" : "FAILED" });
+    await audit({
+      userId: by,
+      action: "world.pregenOff",
+      params: { reason, what: was.what, phase: inHand, percent: this.watch.state.percent, chunks: this.watch.state.chunks, mapPercent: map?.percent ?? null, mapWaiting: map?.pending ?? null, radius: was.area.radius, sleepRestored: was.sleepWas },
+      result: paused ? "OK" : "FAILED",
+    });
   }
 
   /** Stop, and make chunky forget where it got to. */
   async cancel(by: string | null) {
+    const what = this.plan.mode === "off" ? "generate" : this.plan.what;
     await this.turnOff("asked", by);
-    if (this.tail.state === 20) await runAction(this.amp, this.ctx(), "world.pregenCancel", {}, by);
-    this.plan = OFF;
+    if (what !== "render" && this.tail.state === 20) await runAction(this.amp, this.ctx(), "world.pregenCancel", {}, by);
+    this.plan = { mode: "off", area: null, ...(this.plan.mode === "off" && this.plan.mapStopped ? { mapStopped: true } : {}) };
     await this.store.save(this.plan);
+  }
+
+  /** BlueMap's render threads, on or off. False when the server is not running to be told. */
+  private async mapThreads(on: boolean): Promise<boolean> {
+    if (this.tail.state !== 20) return false;
+    return (await runAction(this.amp, this.ctx(), on ? "map.start" : "map.stop", {}, null)).ok;
+  }
+
+  /** Asks BlueMap where it stands. The answer comes through the console (status/map.ts). */
+  private async askMap() {
+    this.tail.hushMap(6_000);
+    await runAction(this.amp, this.ctx(), "map.status", {}, null);
+    await runAction(this.amp, this.ctx(), "map.list", {}, null);
+  }
+
+  /** True once BlueMap has said twice running, in answers given after it was asked for the map, that the map is updated. */
+  private mapDone(now: number): boolean {
+    const plan = this.plan;
+    if (plan.mode === "off" || plan.mapAsked === null) return false;
+    const s = this.map.state;
+    const listAt = s.listAt ? Date.parse(s.listAt) : 0;
+    if (s.lists !== this.listSeen && listAt >= Date.parse(plan.mapAsked) + MAP_AFTER_ASK_MS && now - listAt >= MAP_SETTLE_MS) {
+      this.listSeen = s.lists;
+      this.updatedInARow = rendered(s, OVERWORLD_MAP) ? this.updatedInARow + 1 : 0;
+    }
+    return this.updatedInARow >= 2;
   }
 
   private async pause(): Promise<boolean> {
@@ -316,7 +413,17 @@ export class Pregen {
     if (!running || online > 0) this.emptySince = null;
     else this.emptySince ??= now;
 
+    const tps = this.tps();
+    if (tps !== null) this.lag = tps < LAG_TPS ? true : tps >= FINE_TPS ? false : this.lag;
+
     if (this.plan.mode === "off") {
+      if (this.plan.mapStopped && running && now - this.lastMapCommand >= 15_000) {
+        this.lastMapCommand = now;
+        if (await this.mapThreads(true)) {
+          this.plan = { mode: "off", area: this.plan.area };
+          await this.store.save(this.plan);
+        }
+      }
       // Nobody has turned anything on: a pre-generation started by hand on the console is not left to meet AMP's sleep.
       if (running && online === 0 && this.watch.state.status === "running" && this.emptySince !== null && now - this.emptySince >= 3 * 60_000) {
         this.emptySince = null;
@@ -325,8 +432,10 @@ export class Pregen {
       }
       return;
     }
-    if (this.watch.state.status === "running") this.plan = { ...this.plan, ranMs: this.plan.ranMs + dt };
-    const isDue = due(this.plan, this.watch.state.status, new Date(now)) === "yes";
+    const mapDone = this.mapDone(now);
+    const inHand = phase(this.plan.what, this.watch.state.status, mapDone);
+    if (this.watch.state.status === "running" || (inHand === "render" && this.lastStep === "render" && running)) this.plan = { ...this.plan, ranMs: this.plan.ranMs + dt };
+    const isDue = due(this.plan, this.watch.state.status, new Date(now), mapDone) === "yes";
 
     // AMP's sleep: off while the mode is due, as it was otherwise.
     if (isDue && this.plan.sleepWas === null) {
@@ -344,8 +453,8 @@ export class Pregen {
       await this.store.save(this.plan);
     }
 
-    const s = step(this.plan, { serverRunning: running, online, pregen: this.watch.state.status, at: new Date(now), sleepOff: this.plan.sleepWas !== null && this.sleep.on === false, emptyForMs: this.emptySince === null ? null : now - this.emptySince, sleepDelayMin: this.sleep.delayMin ?? 5 });
-    if (s !== this.lastStep) this.log({ step: s, online, percent: this.watch.state.percent }, "pregen");
+    const s = step(this.plan, { serverRunning: running, online, pregen: this.watch.state.status, at: new Date(now), sleepOff: this.plan.sleepWas !== null && this.sleep.on === false, emptyForMs: this.emptySince === null ? null : now - this.emptySince, sleepDelayMin: this.sleep.delayMin ?? 5, mapDone, lag: this.lag });
+    if (s !== this.lastStep) this.log({ step: s, online, percent: this.watch.state.percent, map: this.map.state.maps[OVERWORLD_MAP] ?? null }, "pregen");
     this.lastStep = s;
     switch (s) {
       case "off:done":
@@ -357,11 +466,42 @@ export class Pregen {
       case "idle:window":
       case "pause:playing":
       case "pause:sleep":
+      case "pause:lag":
         if (this.watch.state.status === "running" && now - this.lastCommand >= 15_000) {
           this.lastCommand = now;
           await this.pause();
         }
+        if (inHand === "render" && running && !this.plan.mapStopped && now - this.lastMapCommand >= 15_000) {
+          this.lastMapCommand = now;
+          if (await this.mapThreads(false)) {
+            this.plan = { ...this.plan, mapStopped: true };
+            await this.store.save(this.plan);
+          }
+        }
         return;
+      case "render": {
+        if (this.plan.mapStopped) {
+          if (now - this.lastMapCommand < 15_000) return;
+          this.lastMapCommand = now;
+          if (!(await this.mapThreads(true))) return;
+          this.plan = { ...this.plan, mapStopped: false };
+          await this.store.save(this.plan);
+        }
+        if (this.plan.mapAsked === null) {
+          if (now - this.lastMapCommand < 15_000 && this.lastMapCommand !== now) return;
+          this.lastMapCommand = now;
+          const r = await runAction(this.amp, this.ctx(), "map.update", { map: OVERWORLD_MAP, ...this.plan.area }, this.plan.by);
+          if (!r.ok) return;
+          this.updatedInARow = 0;
+          this.plan = { ...this.plan, mapAsked: new Date(now).toISOString() };
+          await this.store.save(this.plan);
+        }
+        if (now - this.lastMapAsk >= MAP_ASK_MS) {
+          this.lastMapAsk = now;
+          await this.askMap();
+        }
+        return;
+      }
       case "run": {
         if (this.watch.state.status === "running" || now - this.lastCommand < AGAIN_MS) return;
         this.lastCommand = now;

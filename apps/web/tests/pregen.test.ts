@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { modeText, pregenCost, progress, sleepText, type Pregen } from "@/lib/pregen";
+import { mapProgress, modeText, pregenCost, progress, sleepText, type Pregen } from "@/lib/pregen";
+import { describeAction } from "@/shared/events";
 
 const AREA = { x: 0, z: 0, radius: 1500 };
 const sleep = { node: "MinecraftModule.Limits.SleepMode", permission: "Settings.MinecraftModule.Limits.SleepMode", allowed: true, on: true, delayMin: 5, problem: null };
@@ -67,5 +68,44 @@ describe("pregenCost", () => {
     const big = pregenCost(10000);
     expect(big.hours).toBeGreaterThan(8);
     expect(big.hours).toBeLessThan(9);
+  });
+});
+
+describe("the map render", () => {
+  const map = { status: "rendering", percent: 10.601, waiting: 1, remaining: "59 minutes", threads: "running", at: "2026-09-29T17:20:00.000Z", stopped: false } as const;
+  const render = { mode: "empty", ...on, what: "render" } as const;
+  it("is not shown while the map is not part of what is turned on", () => {
+    expect(mapProgress(base)).toBeNull();
+    expect(mapProgress({ ...base, plan: { mode: "empty", ...on }, map })).toBeNull(); // a plan from before there was a render step
+    expect(mapProgress({ ...base, plan: { mode: "empty", ...on, what: "generate" }, map })).toBeNull();
+    expect(mapProgress(null)).toBeNull();
+  });
+  it("is BlueMap's own figures: the task in hand, what waits, its estimate", () => {
+    expect(mapProgress({ ...base, plan: render, phase: "render", map })).toEqual({ line: "The map: 10.6% of the task in hand, 1 more task waiting, about 59 minutes to go.", percent: 10.601 });
+    expect(mapProgress({ ...base, plan: render, phase: "render", map: { ...map, waiting: 0, remaining: null } })?.line).toBe("The map: 10.6% of the task in hand.");
+    expect(mapProgress({ ...base, plan: render, phase: "render", map: { ...map, status: "pending", percent: null, waiting: 3 } })).toEqual({ line: "The map: waiting its turn in BlueMap, 3 more tasks waiting.", percent: null });
+    expect(mapProgress({ ...base, plan: render, phase: "render", map: { ...map, status: "updated", percent: null, waiting: 0 } })).toEqual({ line: "The map is up to date.", percent: 100 });
+  });
+  it("says so when it waits for the generating, is paused, or has nothing to show", () => {
+    expect(mapProgress({ ...base, plan: { ...render, what: "both" }, phase: "generate", map })?.line).toBe("The map: rendered when the generating is done.");
+    expect(mapProgress({ ...base, plan: render, phase: "render", map: { ...map, stopped: true } })?.line).toBe("The map: paused at 10.6% of the task in hand. BlueMap carries on where it stopped.");
+    expect(mapProgress({ ...base, plan: render, phase: "render", map: { status: null, percent: null, waiting: null, remaining: null, threads: null, at: null, stopped: false } })?.line).toBe("The map: no figures yet. BlueMap says where it stands half a minute after the server is running.");
+    expect(mapProgress({ ...base, plan: render, phase: "render" })?.percent).toBeNull();
+  });
+  it("is named in the mode's line", () => {
+    expect(modeText({ ...base, plan: render, doing: "render" }).line).toBe("On: when nobody's online, rendering the map, until the map is done. Right now: rendering the map.");
+    expect(modeText({ ...base, plan: { mode: "now", ...on, what: "both", capHours: 8, ranMs: 3_600_000 }, doing: "pause:lag" }).line).toBe("On: now, whoever is playing, generating, then rendering the map, 8 hours of generating and rendering at most (1.0 so far). Right now: the map waits: the server is slow and somebody is playing.");
+  });
+  it("is in the event log in words", () => {
+    const portal = { name: null, role: "system" } as const;
+    const alex = { name: "Bramble09", role: "ADMIN" } as const;
+    expect(describeAction("world.pregenOn", alex, { mode: "empty", what: "render", x: 0, z: 0, radius: 1500 }, "OK")).toBe("Bramble09 turned the map render on: when nobody's online; 1500 blocks around 0, 0");
+    expect(describeAction("world.pregenOn", alex, { mode: "empty", what: "both", x: 0, z: 0, radius: 1500, newArea: true }, "OK")).toBe("Bramble09 turned the pre-generation on: when nobody's online, the map rendered afterwards; 1500 blocks around 0, 0 (a new area)");
+    expect(describeAction("world.pregenOff", portal, { reason: "done", what: "render", phase: "done", percent: null, mapPercent: null, radius: 1500 }, "OK")).toBe("The map is rendered (radius 1500)");
+    expect(describeAction("world.pregenOff", portal, { reason: "done", what: "both", phase: "done", percent: 100, radius: 1500 }, "OK")).toBe("Pre-generation finished and the map rendered (radius 1500)");
+    expect(describeAction("world.pregenOff", alex, { reason: "asked", what: "render", phase: "render", mapPercent: 10.6, radius: 1500 }, "OK")).toBe("Bramble09 stopped the map render, at 10.6% of the task in hand");
+    expect(describeAction("world.pregenOff", alex, { reason: "asked", what: "both", phase: "generate", percent: 67.4, radius: 1500 }, "OK")).toBe("Bramble09 stopped the pre-generation, at 67.4%");
+    expect(describeAction("world.pregenOff", portal, { reason: "done", what: "generate", phase: "done", percent: 100, radius: 1500 }, "OK")).toBe("Pre-generation finished (100%, radius 1500)");
+    expect(describeAction("map.update", alex, { map: "world", x: 0, z: 0, radius: 1500 }, "OK")).toBe("Bramble09 asked for the map to be brought up to date: 1500 blocks around 0, 0");
   });
 });

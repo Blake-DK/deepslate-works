@@ -2,23 +2,33 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { ConsoleTail } from "../amp/console.js";
 import { requireAdmin } from "../auth.js";
-import { chunksIn, Refused, type Pregen } from "../status/pregen.js";
+import { OVERWORLD_MAP } from "../status/map.js";
+import { chunksIn, phase, Refused, type Pregen } from "../status/pregen.js";
 
 // Admin → Server → Pre-generation. Off unless an admin turns it on; see status/pregen.ts.
 
 const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const on = z.object({
   mode: z.enum(["empty", "now"]),
+  what: z.enum(["generate", "render", "both"]).default("generate"),
   area: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(10_000) }),
   window: z.object({ from: clock, to: clock }).nullable().default(null),
   capHours: z.number().min(0.25).max(240).nullable().default(null),
 });
 
 export function pregenRoutes(app: FastifyInstance, tail: ConsoleTail, pregen: Pregen) {
+  const map = () => {
+    const s = pregen.map.state;
+    const m = s.maps[OVERWORLD_MAP] ?? null;
+    // the estimate is for the task in hand, whichever map that is
+    return { id: OVERWORLD_MAP, status: m?.status ?? null, percent: m?.percent ?? null, waiting: m?.pending ?? null, remaining: s.current === OVERWORLD_MAP ? s.remaining : null, threads: s.threads, at: s.listAt, stopped: pregen.plan.mapStopped === true };
+  };
   const view = () => ({
     ...pregen.watch.state,
     plan: pregen.plan,
     doing: pregen.lastStep,
+    phase: pregen.plan.mode === "off" ? null : phase(pregen.plan.what, pregen.watch.state.status, false),
+    map: map(),
     total: pregen.plan.area ? chunksIn(pregen.plan.area.radius) : null,
     sleep: pregen.sleep,
     serverState: tail.state,

@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "Server" };
 type Players = { state: number; online: Array<{ name: string; uuid: string | null; held: boolean }>; held: Array<{ name: string; since: string }> };
 type Tail = { state: number; lines: string[]; entries?: Array<{ seq: number; text: string }> };
 type Schedule = { restart: { at: string; minutes: number } | null };
-type Backup = { allowed: boolean; stopsServer: boolean | null; permission: string };
+type Backup = { allowed: boolean; canList?: boolean; stopsServer: boolean | null; permission: string; listPermission?: string; backups?: Array<{ id: string | null; name: string; at: string | null; sizeBytes: number | null; sticky: boolean; automatic: boolean }> };
 
 const MSG: Record<string, string> = {
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
@@ -91,11 +91,24 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
               {backup === null ? "Can't ask AMP about backups right now." : backup.allowed ? <>Takes a backup with AMP&apos;s own backup tool.{backup.stopsServer ? " AMP says this stops the server while it runs." : ""}</> : <>Not switched on: the site&apos;s AMP user (<span className="font-mono">webapp</span>) isn&apos;t allowed to take backups. In AMP, give its role the permission <span className="font-mono">{backup.permission}</span>, or rely on AMP&apos;s backup schedule.</>}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <form action={backupAction} className="flex flex-wrap items-center gap-2">
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="sure" className="h-4 w-4" disabled={!backup?.allowed} /> I&apos;m sure</label>
               <Button type="submit" size="sm" variant="secondary" disabled={!backup?.allowed}>Back up</Button>
             </form>
+            {backup?.canList ? (
+              backup.backups?.length ? (
+                <ul className="divide-y text-sm" aria-label="Backups AMP holds">
+                  {backup.backups.slice(0, 8).map((b, i) => (
+                    <li key={b.id ?? i} className="flex flex-wrap items-baseline justify-between gap-x-3 py-1.5">
+                      <span className="min-w-0 truncate">{b.name}{b.sticky && <Badge className="ml-2">kept</Badge>}{b.automatic && <span className="ml-2 text-xs text-muted-foreground">automatic</span>}</span>
+                      <span className="text-xs text-muted-foreground">{b.at && !Number.isNaN(Date.parse(b.at)) ? timeAgo(new Date(b.at)) : ""}{b.sizeBytes ? ` · ${(b.sizeBytes / 1048576).toFixed(0)} MB` : ""}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="text-sm text-muted-foreground">AMP holds no backups yet.</p>
+            ) : backup ? <p className="text-xs text-muted-foreground">To list the backups here as well, the AMP user needs <span className="font-mono">{backup.listPermission ?? "LocalFileBackup.Backup.ViewBackupsList"}</span>.</p> : null}
+            <p className="text-xs text-muted-foreground">Restoring and deleting backups is done in AMP. The site cannot do either.</p>
           </CardContent>
         </Card>
         <Card>

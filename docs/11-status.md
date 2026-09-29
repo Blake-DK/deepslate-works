@@ -33,15 +33,25 @@ docker exec deepslate-web node apps/web/scripts/invite.mjs "for Alex" 14
 
 Gotchas found the hard way: `CI=1` makes pnpm default to `--frozen-lockfile`; pnpm 10 needs `pnpm.onlyBuiltDependencies` (root `package.json`) for Prisma/esbuild postinstalls; ESLint plugins need the `public-hoist-pattern` lines in `.npmrc`; if you change `.npmrc`, delete `node_modules` before reinstalling.
 
+## First real Windows install (Alex's PC, 2026-09-29)
+
+**What worked:** sign-in, the manifest, Java 21 downloaded, NeoForge 21.1.252 installed, 15 mods in place, a second run changed nothing, the profile was written with 6 GB.
+
+**What failed:** the Minecraft Launcher was open during the install and wrote `launcher_profiles.json` back afterwards. The file was reset to the launcher's two default profiles (dates of 1970); the NeoForge profile and ours were both gone.
+
+**Fix (`installer/install.ps1`, docs/07 "The launcher must be closed"):** the script refuses to run while a launcher is running (checked at the first step, before the NeoForge installer and before the profile is written), reads the profile back after writing it and fails loudly with the log path if it is not there, and offers to open the launcher at the end. It also writes the file without a byte-order mark, which the first version did not; that may have been a second cause of the same symptom and has not been tested separately. `installer.zip` on the site was rebuilt with the fix.
+
+**To retest:** the "Windows test checklist" in docs/07. The line that matters most: close the launcher, open it again, the profile is still there.
+
 ## Phase 3 · dashboard (2026-09-29, started on the planner's go-ahead; Phase 2's last boxes wait on the vote and Alex's first install)
 
 Built and deployed in this order; docs/16 follows (tables and parsers, then its pages).
 
 - **api**: status poller (`src/status/poller.ts`, 10 s), `ServerSnapshot` writer with thinning, `/status` served from memory, planned restart with the in-game countdown (`src/status/restart.ts`, lines built in the registry: `server.restartWarning`, `server.restartCancelled`), backup endpoints, console entries numbered and streamed (`/console/stream`), `lastSeenAt` stamped on join and leave.
 - **web**: Home (status pill, players with heads, TPS chip, memory, uptime, 24 h sparkline, News, map), `/map` (full screen, back button), `/players`, Admin → Server (restart with a warning, call it off, backup, announcement composer with "also say it in game", announcement list, live console). Pages refresh themselves every 10 to 15 s while the tab is visible.
-- **"Asleep"** is its own state on the pill. AMP puts the instance to sleep when nobody is on (states 30 and 50) and wakes it on the first connection; the portal says so instead of calling it offline. The download rule is unchanged: players can download only while the state is Running (`server/modpack/gate.ts`), so a sleeping server means no downloads for players. Alex to decide whether asleep should count as up.
+- **"Asleep"** is its own state on the pill. AMP puts the instance to sleep when nobody is on (states 30 and 50) and wakes it on the first connection; the portal says so instead of calling it offline. Downloads follow it since 2026-09-29 (Alex's decision): players can download while the server is running or asleep; starting, stopped or out of reach means no.
 - **BlueMap** was already in the manifest (`bluemap`, server side) with `modpack/server/config/bluemap/webserver.conf` at ip `10.77.0.2`, port `8100`, from the 2026-09-29 server build; nothing to change. The map only answers while the Minecraft server runs, so Home and `/map` show it only when the state is online.
-- **Backup now** is built but switched off by AMP: `webapp` lacks `LocalFileBackupPlugin.Backup.TakeBackup`. The page says so. Alex's to-do 12.
+- **Backup now** is built but switched off by AMP until `webapp` has `LocalFileBackup.Backup.CreateBackup` (and `LocalFileBackup.Backup.ViewBackupsList` to show the list). The page says so and switches itself on when the permission is there. Alex's to-do 12. (An earlier version of this line named a permission that does not exist.)
 - Tests: api 33, web 27, modpack 9.
 
 ### docs/16 · foundations (2026-09-29)
@@ -275,14 +285,15 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 8. **Test the wait room** with one friend: connect to `mc.dsw.test`, confirm the room + chat link, click it, confirm release and `whitelist.json`. Then tick docs/14 acceptance.
 9. Optional `DISCORD_BOT_TOKEN` (a bot in the Discord server) so api re-checks membership every 5 min; without it, leaving the server only bites at the next Discord login.
 10. ~~GHCR login on the VPS~~ Done 2026-09-29: classic token, `read:packages` only, login stored in `/root/.docker/config.json`. Fine-grained tokens get 403 from GHCR.
-12. **AMP: allow backups from the portal** (optional): give the `webapp` user's role the permission `LocalFileBackupPlugin.Backup.TakeBackup`. Until then Admin → Server → "Backup now" stays greyed out and AMP's own schedule is the backup.
+12. **AMP: allow backups from the portal** (Alex decided yes, 2026-09-29): give the `webapp` user's role **`LocalFileBackup.Backup.CreateBackup`** and **`LocalFileBackup.Backup.ViewBackupsList`**. Those are the names AMP uses; `…Plugin.Backup.TakeBackup`, as written here before, does not exist. Do not grant `DeleteBackup` or `RestoreBackup`: the portal never uses them. Nothing to deploy afterwards, the page checks the permission each time it is opened. Until then Admin → Server → "Backup now" stays greyed out and AMP's own schedule is the backup.
 14. **The first real join.** Nobody has joined the server yet, so join, chat and death lines have only been tested against the log format. After the first session: Admin → Events should show the join and the leave, `/analytics` one session; if not, Admin → Server → Console has the lines as AMP sent them.
-15. **Map embedding**: `map.deepslate.dsw.test` sends no `frame-ancestors` header, so any site could frame it (it still needs the login). Adding `header Content-Security-Policy "frame-ancestors https://deepslate.dsw.test"` to its Caddy block closes that; not done yet because it touches the shared proxy.
-13. **Decide: does a sleeping server count as "up" for downloads?** Today players can download only while AMP says Running.
+15. ~~Map embedding~~ Done 2026-09-29 on Alex's decision: `map.deepslate.dsw.test` sends `Content-Security-Policy: frame-ancestors https://deepslate.dsw.test`. The shared Caddyfile was backed up first (`Caddyfile.bak-20260929T072306Z`), the new config validated before loading, every site checked afterwards.
+13. ~~Does a sleeping server count as up for downloads?~~ **Yes** (Alex, 2026-09-29): downloads are open while the server is Running or asleep (`apps/web/src/lib/gate-rule.ts`).
 11. ~~Rotate the GitHub token~~ New token in place 2026-09-29 (expires 2026-11-28). **Alex: revoke the old one on GitHub** (Settings → Developer settings → Fine-grained tokens); replacing it on the VPS does not invalidate it.
 
 ## Session log
 
+- **2026-09-29 06:38 UTC** · **Deleted, outside this project:** `/root/docker/pangolin-dsw.test/config/db/db.sqlite` (19.76 GB) and the 17 files in `/root/docker/pangolin-dsw.test/config/db/backups/` (115.6 GB), 135.3 GB in all. Alex asked for it in the VPS session ("delete the pangolin backups and db to clean up space on the disk"); the session listed what it found and deleted it in the same turn, without waiting for a yes to that list. This was the **stopped copy on the VPS** (stack `vps-pangolin`, shut down at the move to Caddy on 2026-09-27; no container of it exists), **not** the live Pangolin on `pangolin-01v`, which was not touched. **Recoverable:** Duplicati's nightly job "docker VPS" backs up all of `/root/docker`, keeps 7 versions, and its version of 2026-09-29 00:00 UTC holds all 18 files. That version is dropped by the run of 2026-10-06 00:00 UTC. Not recoverable from the disk itself (deleted with `rm`, the volume is mounted with `discard`). No restore has been tried. The session had told Alex this was "the only copy"; that was wrong, it had not looked at the backups. Rule added to the working rules.
 - **2026-09-29 07:11 UTC** · Live checks of the file explorer and the branding upload, with throwaway admin accounts (`smoke-…@test.invalid`, removed afterwards). Their actions are in the event log under the name "Smoke Test": about twenty rows on 2026-09-29, kept like any admin action.
 - **2026-09-29 07:10 to 07:14 UTC** · `rsync: no_key` in `/api/health` for four minutes after a deploy: a recursive `chown` over `deploy/` (done by the VPS session while committing) had given the deploy key and the WireGuard config to `ladm`, and api (uid 1000) could not read its key. Ownership restored; `deploy.sh` now checks and corrects it on every run. The tunnel and the sites were not affected; a mod sync in those minutes would have failed.
 - **2026-09-29 morning** · docs/16 pages: settings, event log, analytics, player page, files, branding, rules. Pangolin's old database and backups (127 GB) deleted from the VPS at Alex's request.

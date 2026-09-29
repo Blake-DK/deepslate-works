@@ -1,27 +1,16 @@
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
-import { apiFetch } from "@/server/api-client";
+import { getStatus } from "@/server/status";
+import { downloadsOpen } from "@/lib/gate-rule";
 import { env } from "@/env";
 import { getSettings } from "@/server/settings";
 
 // Who may download the pack (Alex's rule): admins always; players only while the Minecraft server is
-// up and the site is connected to it; nobody anonymous. The Windows installer fetches the manifest
-// with the private key stamped into it at build time.
-
-type Status = { state: string };
-let cache: { at: number; online: boolean } | null = null;
+// available (running, or asleep and ready to wake: decided 2026-09-29) and the site is connected to it;
+// nobody anonymous. Starting, stopped, failed or out of reach all mean no.
 
 export async function serverOnline(): Promise<boolean> {
-  if (cache && Date.now() - cache.at < 15_000) return cache.online;
-  let online = false;
-  try {
-    const s = await apiFetch<Status>("/status", { timeoutMs: 5000 });
-    online = /^running$/i.test(s.state);
-  } catch {
-    online = false;
-  }
-  cache = { at: Date.now(), online };
-  return online;
+  return downloadsOpen((await getStatus())?.availability); // getStatus caches for 5 s
 }
 
 export async function canDownload(user: { role: "ADMIN" | "PLAYER" } | null): Promise<{ ok: boolean; reason: "admin" | "online" | "offline" | "anonymous" | "not_live" }> {

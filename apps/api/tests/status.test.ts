@@ -172,3 +172,23 @@ describe("console stream", () => {
     expect(tail.after(318).map((e) => e.text)).toEqual(["line 319", "line 320"]);
   });
 });
+
+describe("backups", () => {
+  it("asks AMP for the permissions by the names AMP uses, and never for delete or restore", async () => {
+    const { BACKUP_PERMISSION, BACKUP_LIST_PERMISSION } = await import("../src/routes/server.js");
+    expect(BACKUP_PERMISSION).toBe("LocalFileBackup.Backup.CreateBackup");
+    expect(BACKUP_LIST_PERMISSION).toBe("LocalFileBackup.Backup.ViewBackupsList");
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../src/routes/server.ts", import.meta.url), "utf8");
+    expect(src).not.toMatch(/"(?:RestoreBackup|DeleteLocalBackup|DeleteFromS3|UploadToS3|DownloadFromS3|SetBackupSticky)"/);
+  });
+  it("reads a backup list defensively", async () => {
+    const { readBackups } = await import("../src/routes/server.js");
+    expect(readBackups([{ Id: "b1", Name: "Portal backup 2026-09-29 10:00", Timestamp: "2026-09-29T10:00:00Z", TotalSizeBytes: 1048576, Sticky: true }, { Title: "nightly", WasCreatedAutomatically: true }, null, "x"])).toEqual([
+      { id: "b1", name: "Portal backup 2026-09-29 10:00", at: "2026-09-29T10:00:00Z", sizeBytes: 1048576, sticky: true, automatic: false },
+      { id: null, name: "nightly", at: null, sizeBytes: null, sticky: false, automatic: true },
+    ]);
+    expect(readBackups({ Title: "Unauthorized Access", Message: "no" })).toEqual([]);
+    expect(readBackups(null)).toEqual([]);
+  });
+});

@@ -7,7 +7,31 @@ import { requireAdmin } from "../auth.js";
 import { audit } from "../audit.js";
 import type { RestartSchedule } from "../status/restart.js";
 
-const BACKUP_PERMISSION = "LocalFileBackupPlugin.Backup.TakeBackup";
+// As AMP names them (Core.GetPermissionsSpec on the live instance, 2026-09-29). The plugin is called
+// LocalFileBackupPlugin, its permissions live under LocalFileBackup. Delete and Restore sit next to
+// these two; the portal never asks for them and has no code that calls them.
+export const BACKUP_PERMISSION = "LocalFileBackup.Backup.CreateBackup";
+export const BACKUP_LIST_PERMISSION = "LocalFileBackup.Backup.ViewBackupsList";
+
+export type BackupRow = { id: string | null; name: string; at: string | null; sizeBytes: number | null; sticky: boolean; automatic: boolean };
+
+/** AMP's backup list, whatever exactly it calls the fields: only what is recognised is passed on. */
+export function readBackups(raw: unknown): BackupRow[] {
+  if (!Array.isArray(raw)) return [];
+  const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  return raw
+    .filter((r): r is Record<string, unknown> => Boolean(r) && typeof r === "object")
+    .map((r) => ({
+      id: str(r.Id) ?? str(r.ID) ?? str(r.BackupId),
+      name: (str(r.Name) ?? str(r.Title) ?? "Backup").slice(0, 120),
+      at: str(r.Timestamp) ?? str(r.TakenAt) ?? str(r.Created) ?? str(r.Date),
+      sizeBytes: num(r.TotalSizeBytes) ?? num(r.SizeBytes) ?? num(r.Size),
+      sticky: r.Sticky === true,
+      automatic: r.WasCreatedAutomatically === true || r.CreatedAutomatically === true,
+    }))
+    .slice(0, 50);
+}
 
 export type StreamEvent = ConsoleEntry | { hb: 1; state: number };
 
@@ -65,9 +89,11 @@ export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
 
   app.get("/server/backup", async (req, reply) => {
     if (!requireAdmin(req, reply)) return;
-    const allowed = await amp.call<boolean>("Core", "CurrentSessionHasPermission", { PermissionNode: BACKUP_PERMISSION }).catch(() => false);
-    const stopsServer = allowed ? await amp.call<boolean>("LocalFileBackupPlugin", "BackupWillStopServer").catch(() => null) : null;
-    return { allowed: allowed === true, stopsServer, permission: BACKUP_PERMISSION };
+    const has = (node: string) => amp.call<boolean>("Core", "CurrentSessionHasPermission", { PermissionNode: node }).then((v) => v === true).catch(() => false);
+    const [allowed, canList] = await Promise.all([has(BACKUP_PERMISSION), has(BACKUP_LIST_PERMISSION)]);
+    const stops = canList ? await amp.call<unknown>("LocalFileBackupPlugin", "BackupWillStopServer").catch(() => null) : null;
+    const list = canList ? await amp.call<unknown>("LocalFileBackupPlugin", "GetBackups").catch(() => null) : null;
+    return { allowed, canList, stopsServer: typeof stops === "boolean" ? stops : null, permission: BACKUP_PERMISSION, listPermission: BACKUP_LIST_PERMISSION, backups: readBackups(list) };
   });
 
   app.post("/server/backup", async (req, reply) => {

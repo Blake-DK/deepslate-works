@@ -78,7 +78,7 @@ map.deepslate.dsw.test {
 }
 ```
 
-Reload recipe in `deploy/README.md`. The map block 502s harmlessly until BlueMap exists (Phase 3).
+The map host also sends `Content-Security-Policy: frame-ancestors https://deepslate.dsw.test` (added 2026-09-29), so only the portal can show the map inside a page; the full block is in `deploy/Caddyfile.snippet`. Reload recipe in `deploy/README.md`. The map block 502s harmlessly until BlueMap exists (Phase 3).
 
 ## `.env.example`
 

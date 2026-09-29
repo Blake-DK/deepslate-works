@@ -9,6 +9,11 @@ deepslate.dsw.test {
 # Live map (BlueMap on the AMP host, via the WireGuard tunnel relays). Login enforced by the portal.
 map.deepslate.dsw.test {
 	import common
+	# Only the portal may show the map inside its own pages (Alex, 2026-09-29).
+	header {
+		Content-Security-Policy "frame-ancestors https://deepslate.dsw.test"
+		defer
+	}
 	# forward_auth returns the 401 as-is, so spell it out: 2xx from /api/auth/verify -> map, 401 -> portal login.
 	reverse_proxy deepslate-web:3000 {
 		method GET

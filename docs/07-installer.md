@@ -8,6 +8,19 @@ A friend downloads one zip, double-clicks `Setup.bat`, waits, opens the normal M
 
 The installer authenticates every run. `install.ps1` asks the portal for a code (`POST /api/launcher/start`), opens `https://deepslate.dsw.test/launcher/<code>` in the browser, where the user logs in with Discord (guild check, auto-join) and presses "Yes, that's me"; the script polls `GET /api/launcher/poll?token=…` and receives a launcher token (7 days, stored hashed server-side, kept in `%APPDATA%\.minecraft-deepslate-works\launcher.json`). The manifest and `config.zip` are fetched with `Authorization: Bearer <token>`; the portal applies the same gate as the site (admin always; players only when live and the server is online). `Update and Play.bat` runs `install.ps1 -Play`: sign in if needed, update mods, set the profile as `selectedProfile`, open the Minecraft Launcher (classic install paths, then the Store app id, then `minecraft://`) and exit. `Setup.bat` is the first-run variant that pauses so people read the ticks. Admins can sign a member's installers out from `/admin/users` ("Sign out installer"); removing a member revokes them too. The old shared `MANIFEST_KEY` is no longer stamped into the script (the server still accepts it for admin testing).
 
+## The launcher must be closed (2026-09-29, after the first real install)
+
+The Minecraft Launcher reads `launcher_profiles.json` when it starts, keeps it in memory, and writes it back later. Anything written to the file while the launcher is open is thrown away. On Alex's PC the launcher was open during the install: afterwards the file held only the launcher's two default profiles (with their 1970 dates), and both the NeoForge profile and ours were gone. Everything else had worked.
+
+So `install.ps1`:
+
+1. **Checks for a running launcher three times**: at the first step (so nobody waits through the downloads to hear it), before the NeoForge installer, and before writing `launcher_profiles.json`. It looks for a process named `MinecraftLauncher` or `Minecraft Launcher`, for `Minecraft` when its path has "Launcher" in it or cannot be read (the Store and Xbox launcher; Bedrock runs as `Minecraft.Windows` and is left alone), and for any window titled "Minecraft Launcher". If one is found it prints **"Close the Minecraft Launcher (including the tray icon) and run this again"** and exits 1. Nothing has been changed at that point.
+2. **Reads the file back after writing it**, and again two seconds later, and checks that the profile is there and points at the right NeoForge version. If not, it stops with "THE LAUNCHER PROFILE WAS NOT SAVED", what is wrong, and the path of the log file.
+3. **Offers to open the launcher** at the end of `Setup.bat` ("Open the Minecraft Launcher now? [Y/n]", Enter means yes), only when the profile was saved and checked. `Update and Play.bat` opens it without asking, as before. `-NoPrompt` never asks.
+4. **Writes the file without a byte-order mark**, to a temporary file that is then moved into place. The first version used `Set-Content -Encoding UTF8`, which on Windows PowerShell 5.1 puts a byte-order mark at the start. Whether the launcher minds has not been tested; a launcher that did mind would also fall back to its defaults, so this may have been a second cause of the same symptom. Without the mark is what the launcher writes itself.
+
+`install.ps1 -SelfTest` runs the profile code against a scratch copy of a fresh launcher's file (18 checks: written, no byte-order mark, the launcher's own profiles and settings kept, `.bak` kept, a second run updates in place, a launcher that rewrote the file is noticed, a broken or missing file is reported, a running launcher is found). It touches nothing else and runs under Windows PowerShell 5.1 and under `pwsh` on Linux.
+
 ## Files
 
 - `Setup.bat`: `powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"` then `pause`. Exists so nobody has to know what an execution policy is.
@@ -28,8 +41,8 @@ The installer authenticates every run. `install.ps1` asks the portal for a code 
 9. **Configs**: extract the manifest's `configs` (or a `config.zip` URL) into the game dir, overwriting. Never overwrite `options.txt` if it exists; if it doesn't, write one with `renderDistance` and `simulationDistance` from the user's tier (default 8/6) and `fullscreen:false`.
 10. **Server list**: if `servers.dat` doesn't exist, write an uncompressed NBT file with one entry (name = pack name, ip = `server_address`). Format: `TAG_Compound "" { TAG_List "servers" [ TAG_Compound { TAG_String "name", TAG_String "ip" } ] }`. About 20 lines of byte-writing; there's no need for a library.
 11. **RAM**: read total RAM via `Get-CimInstance Win32_ComputerSystem`. Allocate: ≥16 GB → 6G, 12 GB → 5G, 8 GB → 4G, less → 3G, clamped to `ram.min_gb..max_gb` from the manifest. JVM args: `-Xmx<n>G -Xms1G -XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:MaxGCPauseMillis=50 -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20`.
-12. **Launcher profile**: read `launcher_profiles.json`, set `profiles.<profile.id>` = `{ name, type: "custom", lastVersionId: "neoforge-<ver>", gameDir, javaArgs, icon, created, lastUsed: now }` (update in place if present), write back with the original indentation. Back the file up first to `launcher_profiles.json.bak`.
-13. **Done**: print "Open the Minecraft Launcher, choose Deepslate Works, press Play." and the server address. Write `installed.json` in the game dir with the pack version for the `/install` page's "you're up to date" check (the page can't read it, but the script can compare on the next run and say "already up to date").
+12. **Launcher profile**: only with the launcher closed (see above). Read `launcher_profiles.json`, set `profiles.<profile.id>` = `{ name, type: "custom", lastVersionId: "neoforge-<ver>", gameDir, javaArgs, javaDir, icon, created, lastUsed: now }` (update in place if present, keeping `created`), set `selectedProfile`, back the file up to `launcher_profiles.json.bak`, write it without a byte-order mark, then read it back and check.
+13. **Done**: print the server address and offer to open the launcher (`Setup.bat`), or open it (`Update and Play.bat`). Write `installed.json` in the game dir with the pack version for the `/install` page's "you're up to date" check (the page can't read it, but the script can compare on the next run and say "already up to date").
 
 ## Non-goals
 - No custom launcher, no Prism install, no CurseForge app.
@@ -39,6 +52,36 @@ The installer authenticates every run. `install.ps1` asks the portal for a code 
 ## Mac / Linux
 `client.mrpack` from `modpack build client`, imported into the Modrinth App (or Prism Launcher). The `/install` page shows a two-step guide. The server address must be added by hand; the guide shows it with a copy button.
 
+## Windows test checklist
+
+Run on a real Windows 10 or 11 PC with the normal Minecraft Launcher installed. Tick each line; the log is `%TEMP%\deepslate-install.log`.
+
+Before anything:
+- [ ] `powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 -SelfTest` says "All checks passed."
+
+Launcher open (the bug of 2026-09-29):
+- [ ] With the launcher open: `Setup.bat` stops at step 1 with "Close the Minecraft Launcher (including the tray icon) and run this again". `launcher_profiles.json` has the same date and size as before.
+- [ ] With the launcher window closed but its icon still next to the clock: the same.
+- [ ] Close it completely (right-click the icon, Quit): `Setup.bat` runs through.
+
+A clean run:
+- [ ] Green ticks to the end, "saved and checked" on the profile line, then "Open the Minecraft Launcher now? [Y/n]".
+- [ ] Enter opens the launcher; **Deepslate Works** is there next to Play, selected.
+- [ ] `launcher_profiles.json` still has the launcher's own profiles; `launcher_profiles.json.bak` is the file as it was.
+- [ ] Press Play: NeoForge loads, 15 mods, the server is in the list.
+- [ ] Close the launcher, open it again: the profile is still there. (This is the line that failed on 2026-09-29.)
+
+Again and updates:
+- [ ] `Setup.bat` a second time: "Already up to date", nothing downloaded, the profile's `created` date unchanged.
+- [ ] `Update and Play.bat`: no question asked, launcher opens on the profile.
+- [ ] After a mod changes on the site: exactly that jar is replaced.
+
+Edges:
+- [ ] A PC with 8 GB of RAM gets a 4 GB profile; under 8 GB gets 3 GB.
+- [ ] No launcher installed: step 1 says to install it and opens minecraft.net.
+- [ ] Open the launcher while the mods are downloading: the run stops before the profile is written, with the close-the-launcher message. Nothing is lost; close it and run again.
+
 ## Testing
 - A Windows VM (or a friend's PC over a call) for: fresh launcher, existing NeoForge, rerun-is-noop, rerun-updates-one-mod, low-RAM machine gets 3G.
+- `install.ps1 -SelfTest` and the launcher-running case run under `pwsh` on Linux in a container (`mcr.microsoft.com/powershell`, with a memory limit); the rest needs Windows.
 - Unit-test the manifest parsing and the NBT writer by running the script under `pwsh` on Linux with `-WhatIf`-style dry run flags (`-DryRun` skips downloads and writes to a temp dir).

@@ -52,7 +52,7 @@ Gotchas found the hard way: `CI=1` makes pnpm default to `--frozen-lockfile`; pn
 | This stack | `mem_limit` web 768m (was 1g), api 512m (was 256m, it now runs `modpack build`), postgres `shared_buffers=128MB` explicit. Applied to the running containers with `docker update`; the compose file carries them from the next deploy |
 | `modpack build` | moved out of the `web` process into `api` as a child process: 256 MB heap, first to be killed if the container runs out, no secrets in its environment, output streamed line by line; jar downloads streamed to disk (they were read into memory whole). Peak 75 MB for the current pack |
 
-**Still open.** The first `deploy.sh` run needs the VPS logged in to `ghcr.io` (to-do 10 below). Until then the stack keeps running the images built locally on 2026-09-29 (`deepslate-web:local`, `deepslate-api:local`), which already contain the audit fix but not the `modpack build` move: **do not press Build in Admin → Modpack before the first deploy**, it still runs inside `web`.
+**First pull-only deploy: 2026-09-29 05:09 UTC.** `deploy/deploy.sh` ran clean. `deepslate-web` and `deepslate-api` run `ghcr.io/blake-dk/deepslate-{web,api}:latest`, image revision `ba5decf` = repo HEAD. Checked afterwards: `/api/health` all green; AMP through api (login, `GetStatus`, players) answers in under 100 ms; `rsync --list-only amp@10.77.0.2:` with the deploy key lists the instance's `Minecraft/` tree and a plain shell is still refused by rrsync; Build through `POST /modpack/build` streams its lines and finishes in about a second with the jars cached (api peak 113 MB of 512); `dist/` belongs to uid 1000, web mounts it read-only. The smoke script's `SetConfig` write probe was not re-run (Alex's to run). AMP reported state 50 (`PreparingForSleep`) at the time: the instance sleeps when empty, which matters for the "downloads only while Running" rule; not changed here.
 
 ## Phase 0 · what was built
 
@@ -215,11 +215,12 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 7. ~~Phase 0 click-through~~ done.
 8. **Test the wait room** with one friend: connect to `mc.dsw.test`, confirm the room + chat link, click it, confirm release and `whitelist.json`. Then tick docs/14 acceptance.
 9. Optional `DISCORD_BOT_TOKEN` (a bot in the Discord server) so api re-checks membership every 5 min; without it, leaving the server only bites at the next Discord login.
-10. **GHCR login on the VPS** so `deploy/deploy.sh` can pull the private images: `docker login ghcr.io -u bramble09` with a token that has `read:packages` (GHCR does not accept fine-grained tokens; it needs a classic one). Then `sudo deploy/deploy.sh`.
+10. ~~GHCR login on the VPS~~ Done 2026-09-29: classic token, `read:packages` only, login stored in `/root/.docker/config.json`. Fine-grained tokens get 403 from GHCR.
 11. **Rotate the GitHub token** that was pasted into the chat on 2026-09-29 once the pipeline is proven; the VPS only needs `contents:read` for `git pull`.
 
 ## Session log
 
+- **2026-09-29 05:09** · First deploy from GHCR images via `deploy/deploy.sh`; images, AMP smoke, rsync listing and the in-api Build verified (see "OOM incident"). Planner specs 15, 15a, 16 arrived by push (`ba5decf`); read, not started.
 - **2026-09-29 early morning** · OOM at 03:58 during `up --build`, reboot 04:07. Recovery check of every site, guardrails on the host (swap, earlyoom, capped builder, tooling hook), deploy moved to CI + GHCR + `deploy/deploy.sh`, `modpack build` moved into `api`, memory limits adjusted, `fetchJar` streams. api tests 21, modpack 9, web 20. Wait-room audit helper (`apps/api/src/audit.ts`: an audit row from a caller id that is not a user is kept with no user instead of failing the request) committed; it was already in the running image.
 
 - **2026-09-28** · Phase 0 built and deployed (commit `374ea10`), handover doc added (`94471be`), repo moved into `/home/ladm/Minecraft-site` with the brief files kept at the root (`19d7abb`). Bootstrap invite issued.

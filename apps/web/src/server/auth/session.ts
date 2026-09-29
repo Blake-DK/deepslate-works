@@ -12,7 +12,7 @@ export async function loadCurrentUser() {
     where: { id: session.user.id },
     select: {
       id: true, displayName: true, role: true, discordId: true, email: true,
-      mcUsername: true, mcUuid: true, pcTier: true, pcTierSource: true, pcTierWhy: true, pcTierAt: true, verifiedAt: true, guildMember: true, createdAt: true, lastSeenAt: true,
+      mcUsername: true, mcUuid: true, pcTier: true, pcTierSource: true, pcTierWhy: true, pcTierAt: true, verifiedAt: true, guildMember: true, createdAt: true, lastSeenAt: true, earlyAccess: true,
     },
   });
 }

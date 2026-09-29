@@ -9,6 +9,7 @@ import { parsePlace, parsePos, type ActionCtx } from "../actions/registry.js";
 import { getSection } from "../settings.js";
 import { playGate, type GateReason } from "../shared/join-gate.js";
 import { serverPack } from "./pack.js";
+import { playFirstApplies } from "../shared/access.js";
 
 // docs/14: the white room. Unlinked joins are held in the room with a clickable link; linking releases them.
 
@@ -115,7 +116,8 @@ export class Limbo {
     if (decision.action === "release") {
       if (user && user.mcUsername !== name) await db.user.update({ where: { id: user.id }, data: { mcUsername: name } }); // name change
       // docs/14 "Play first". Admins are never held.
-      const blocked = user && user.role !== "ADMIN" ? await this.playFirst(user.id) : null;
+      // The rule is `playFirstApplies` (shared/access.ts): everybody but admins, early access included.
+      const blocked = user ? await this.playFirst(user) : null;
       if (blocked) {
         await this.holdForPlay(name, uuid ?? "", user!.id, blocked);
         return;
@@ -127,9 +129,10 @@ export class Limbo {
   }
 
   /** Why this member may not come in yet, or null when they may (or when Play is not asked for). */
-  private async playFirst(userId: string): Promise<GateReason | null> {
+  private async playFirst(user: { id: string; role: "ADMIN" | "PLAYER" }): Promise<GateReason | null> {
+    const userId = user.id;
     const joining = await getSection("joining");
-    if (!joining.requirePlay) return null;
+    if (!playFirstApplies(user, joining.requirePlay)) return null;
     const [run, pack] = await Promise.all([
       db.installReport.findFirst({ where: { userId, mode: "play", outcome: "ok" }, orderBy: { at: "desc" }, select: { at: true, packVersion: true } }),
       serverPack(),
@@ -202,7 +205,7 @@ export class Limbo {
       }
       if (h.kind === "play") {
         // They may have pressed Play since: looked at every round, so that the door opens within seconds of the run.
-        if (h.userId && (await this.playFirst(h.userId)) === null) {
+        if (h.userId && (await this.playFirst({ id: h.userId, role: "PLAYER" })) === null) {
           await this.releaseBack(name, h);
           continue;
         }

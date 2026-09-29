@@ -43,7 +43,7 @@ export default async function HomePage() {
         <h1 className="text-2xl font-semibold">Welcome back, {user.displayName}</h1>
         <p className="text-muted-foreground">{user.mcUsername ? <>Linked to Minecraft account <span className="font-mono">{user.mcUsername}</span>.</> : <>Your Minecraft account gets linked the first time you join the server.</>} {members} {members === 1 ? "person" : "people"} in the group so far.</p>
       </div>
-      {!settings.live && <LaunchBanner launchAt={settings.launchAt} admin={user.role === "ADMIN"} />}
+      {!settings.live && !(user.earlyAccess && user.role !== "ADMIN") && <LaunchBanner launchAt={settings.launchAt} admin={user.role === "ADMIN"} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <StatusCard status={status} series={series} address={showServer ? env.SERVER_ADDRESS : null} />
         <div className="space-y-4">

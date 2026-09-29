@@ -94,3 +94,33 @@ Later, if needed: a client mod that carries a one-time join token minted by Play
 - **A change to a server-only mod changes the pack's version** (the hash is over the whole lock), so after adding TabTPS everyone has to press Play once although nothing changes on their PC.
 - **The check is "pressed Play", not "has the mods".** Someone can press Play and then start another profile. What a wrong set of mods does is the mod loader's business: it refuses the connection before the player is in the world.
 - **`data get entity` is a guess at this server's wording** until a member has been held once: the patterns are the game's standard answers. If the place is not read, the member goes to spawn, nothing worse.
+
+## The room has a dimension of its own (planner, 2026-09-29; built the same day; appended by the VPS session at the planner's request)
+
+Until 2026-09-29 the room was a bedrock box in the overworld's sky, at 0 250 0, and showed on the map as a grey block over spawn. It is now in a dimension that holds nothing else.
+
+**The datapack**: `modpack/datapacks/deepslate-limbo/` in the repo. Build copies `modpack/datapacks/` to `dist/server/datapacks/`; Sync carries that into `Minecraft/world/datapacks/` on the server (merged, never deleted; the world's folder name is `LEVEL_NAME`, `world` unless set).
+
+| File | Holds |
+|---|---|
+| `pack.mcmeta` | `pack_format` 48 (Minecraft 1.21.1) |
+| `data/deepslate/dimension_type/limbo.json` | not natural, not ultrawarm, skylight, no ceiling, `fixed_time` 18000 (always midnight), `effects` `minecraft:the_end`, no beds, no respawn anchors, no raids, not piglin-safe, no monsters at any light, `min_y` 0, `height` 256, `logical_height` 256, `coordinate_scale` 1, `ambient_light` 0.1, `infiniburn` `#minecraft:infiniburn_overworld` |
+| `data/deepslate/dimension/limbo.json` | type `deepslate:limbo`; generator `minecraft:flat` with no layers, biome `minecraft:the_void`, no features, no lakes |
+
+**What needs a restart.** A dimension from a datapack is registered when the server starts; `/reload` does not do it. Sync says so ("restart the server for them to count") and does not restart by itself: the moment is an admin's to choose. On 2026-09-29 the server was asleep with nobody on; after the start the log said "Found new data pack file/deepslate-limbo, loading it automatically" and the dimension was ticking.
+
+**The room**: glass all round, so that the void and the stars are seen; a floor of sea lanterns; one sign with the server's name (Admin → Branding) at 0 65 -3, facing whoever arrives. The same sealed size as before: 11 by 7 by 11, blocks -5 64 -5 to 5 70 5, the inside 9 by 5 by 9. People stand at **0.5 65 0.5**. Chunks -1,-1 to 0,0 of `deepslate:limbo` are force-loaded. Built from Admin → Server → "Build the room" (`limbo.build`), with `execute in deepslate:limbo run …`; it can be pressed again at any time.
+
+**`LIMBO_POS` names the dimension**: `deepslate:limbo 0.5 65 0.5`, where people stand (the floor is the block under it). Without a dimension it is the overworld. `SPAWN_POS` is where people are let out, in the overworld: `0.5 105 0.5`, the world's spawn, tested block by block (104 solid, 105 to 107 air).
+
+| | Command |
+|---|---|
+| Hold | `tag <player> remove verified`, `gamemode adventure <player>`, `execute in deepslate:limbo run tp <player> 0.5 65 0.5`, the two effects, the line in chat |
+| Keeping them in, every 5 s while anyone waits | `execute as @a[tag=!verified] at @s unless dimension deepslate:limbo in deepslate:limbo run tp @s 0.5 65 0.5` and `execute as @a[tag=!verified] at @s if dimension deepslate:limbo unless entity @s[x=-4,y=65,z=-4,dx=8,dy=4,dz=8] run tp @s 0.5 65 0.5` |
+| Release | `effect clear`, `gamemode survival`, `execute in minecraft:overworld run tp <player> 0.5 105 0.5`, the greeting, `whitelist add`, `tag <player> add verified`; all but the last two only for someone who is held (`@a[name=<player>,tag=!verified]`) |
+| Release of a member held for Play | the same, but `execute in <the dimension they were in> run tp <player> <where they stood>`; spawn if that was not learnt |
+| Rejoin while held | they log in where they logged out, in the room; the join is a join like any other and they are held again |
+
+**The old room** at 0 250 0 in the overworld was cleared after the new one had been checked (`limbo.clear`: 528 blocks to air; it had survived the morning's forced stop). `limbo.clear` refuses the room that is in use.
+
+**The map.** BlueMap has three maps, `world`, `world_the_nether`, `world_the_end`, and made none for `deepslate:limbo` (it makes its map files once, at its first start). It shows the players of a map's own world, so whoever waits in the room is on none of them. **Not seen with a player in the room**: nobody has been in it yet.

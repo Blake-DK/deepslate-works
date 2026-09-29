@@ -19,6 +19,17 @@ export async function setRoleAction(formData: FormData) {
   revalidatePath("/admin/users");
 }
 
+/** docs/13 "Early access": the member uses the portal as if it were live while it is not. */
+export async function setEarlyAccessAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const parsed = z.object({ id: z.string().min(1), on: z.enum(["1", "0"]) }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const on = parsed.data.on === "1";
+  const u = await db.user.update({ where: { id: parsed.data.id }, data: { earlyAccess: on }, select: { displayName: true } }).catch(() => null);
+  if (u) await audit({ userId: admin.id, action: "user.earlyAccess", params: { id: parsed.data.id, displayName: u.displayName, on }, result: "OK" });
+  for (const p of ["/admin/users", "/", "/install", "/me"]) revalidatePath(p);
+}
+
 export async function removeUserAction(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");

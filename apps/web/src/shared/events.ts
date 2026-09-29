@@ -54,6 +54,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "vote.apply": "applied the vote's results to the mod list",
   "invite.create": "created an invite",
   "invite.revoke": "revoked an invite",
+  "user.earlyAccess": (p) => (p.on ? `gave ${s(p.displayName, "a member")} early access` : `took early access away from ${s(p.displayName, "a member")}`),
   "user.setRole": (p) => `changed a member's role to ${s(p.role).toLowerCase()}`,
   "user.remove": (p) => `removed ${s(p.displayName, "a member")} from the group`,
   "user.setMinecraft": (p) => `linked a member to the Minecraft account ${s(p.mcUsername)}`,

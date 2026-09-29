@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "@/server/db";
+import { isOpenFor, type Member } from "@/shared/access";
 
 export type SiteSettings = { live: boolean; launchAt: Date | null };
 
@@ -18,7 +19,7 @@ export async function setSettings(next: SiteSettings, updatedById: string): Prom
   cache = null;
 }
 
-/** Players may see the server address and downloads only once the admin has flipped "live". Admins always. */
-export function canSeeServer(user: { role: "ADMIN" | "PLAYER" } | null, settings: SiteSettings): boolean {
-  return user?.role === "ADMIN" || settings.live;
+/** Players may see the server address and downloads only once the admin has flipped "live". Admins always; members with early access too (docs/13). */
+export function canSeeServer(user: Member | null, settings: SiteSettings): boolean {
+  return isOpenFor(user, settings.live);
 }

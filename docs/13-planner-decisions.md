@@ -168,3 +168,24 @@ Print both in `11-status.md` so Alex can copy them:
 2. Add the `map.deepslate.dsw.test` Caddy block (with `import common`), set `COOKIE_DOMAIN`, reload Caddy. No re-domain.
 3. Add `wireguard`, `api` skeleton (Fastify, `/health`, service-token middleware, `AMP_MOCK` client, ADS-proxy path builder), `map-relay-inner`, `map-relay-outer` to compose. Generate the VPS WireGuard keys and the ed25519 deploy key. Add 51820 to `host-firewall.sh`. Bring it up; `tunnel: down` in `/health` is expected until the AMP host enables its side.
 4. Then Phase 1 as docs/10 lists it, once the Phase 0 checklist is ticked.
+
+## 9. Early access (planner decision, 2026-09-29; entry written by the VPS session at the planner's request)
+
+**Decision.** Before "We're live" is switched on, single members can be let in. Admin → Players has a toggle for each member, "Early access". While the site is not live, a member with the flag is **treated as a normal player on a live site, not as an admin**.
+
+| | Admin | Early access, not live | Player, not live | Anybody, live |
+|---|---|---|---|---|
+| Sees the server's address, the Install page, the Play button | yes | yes | no: the launch date instead | yes |
+| Downloads the installer and the pack, fetches the mod list | always | while the server is available | no (`not_live`) | while the server is available |
+| Presses Play | always | while the server is available | no | while the server is available |
+| Play first at the door | never held | applies | applies, and cannot be met | applies |
+| Let out of the entrance room once linked | yes | like anyone else | like anyone else | like anyone else |
+| Admin pages, addresses, console lines | yes | no | no | no |
+| Banner "Early access: things may still break. Tell Alex in Discord if they do." | no | yes | no | no |
+
+- When the site is live the flag changes nothing. It is kept all the same.
+- The flag on an admin changes nothing either; it counts from the moment they are made a player.
+- Giving and taking away are in the event log ("Bramble09 gave Pabulum early access").
+- The rules are one file, `apps/web/src/shared/access.ts` (the same in `api`), and one table of tests, `apps/web/tests/access.test.ts`.
+
+**What "Player, not live" means at the door.** Nothing in the game server knows whether the site is live. A player without the flag is kept out by Play first: they cannot press Play, so no run of Play can come from them, so they wait in the room. **If Play first is switched off (Settings → Joining) while the site is not live, a linked player who knows the address comes straight in.** That was so before this decision and has not been changed ("unflagged players keep the current not-live experience"). For the planner: say if the door should also know "not live".

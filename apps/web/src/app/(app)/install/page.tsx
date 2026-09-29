@@ -61,7 +61,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-6">
-      {!settings.live && <LaunchBanner launchAt={settings.launchAt} admin />}
+      {!settings.live && user.role === "ADMIN" && <LaunchBanner launchAt={settings.launchAt} admin />}
       <div>
         <h1 className="text-2xl font-semibold">Join the server</h1>
         <p className="mt-1 max-w-2xl text-muted-foreground">

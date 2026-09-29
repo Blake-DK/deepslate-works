@@ -4,6 +4,7 @@ import { getStatus } from "@/server/status";
 import { downloadsOpen } from "@/lib/gate-rule";
 import { env } from "@/env";
 import { getSettings } from "@/server/settings";
+import { downloadRule, type DownloadReason, type Member } from "@/shared/access";
 
 // Who may download the pack (Alex's rule): admins always; players only while the Minecraft server is
 // available (running, or asleep and ready to wake: decided 2026-09-29) and the site is connected to it;
@@ -13,11 +14,14 @@ export async function serverOnline(): Promise<boolean> {
   return downloadsOpen((await getStatus())?.availability); // getStatus caches for 5 s
 }
 
-export async function canDownload(user: { role: "ADMIN" | "PLAYER" } | null): Promise<{ ok: boolean; reason: "admin" | "online" | "offline" | "anonymous" | "not_live" }> {
+/** The rule itself is `downloadRule` (shared/access.ts); this fetches what it needs. Early access counts as live (docs/13). */
+export async function canDownload(user: Member | null): Promise<{ ok: boolean; reason: DownloadReason }> {
   if (!user) return { ok: false, reason: "anonymous" };
   if (user.role === "ADMIN") return { ok: true, reason: "admin" };
-  if (!(await getSettings()).live) return { ok: false, reason: "not_live" };
-  return (await serverOnline()) ? { ok: true, reason: "online" } : { ok: false, reason: "offline" };
+  const live = (await getSettings()).live;
+  const first = downloadRule(user, live, true);
+  if (!first.ok) return first;
+  return downloadRule(user, live, await serverOnline());
 }
 
 export function manifestKeyOk(given: string | null): boolean {

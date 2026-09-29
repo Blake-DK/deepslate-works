@@ -158,11 +158,11 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 | 2. Seed | `server.properties`: `level-seed=-3899835130120818196` (it still said `CubeCodersPowered` until the server was started: AMP writes the file at start). `level.dat`: the same. The game, asked `seed`: `Seed: [-3899835130120818196]` |
 | 2. New world folder | yes, generated at 10:58 |
 | Spawn | **0 105 0** (`level.dat`), in forest |
-| 3. White room | built at 0 250 0: 847 + 405 + 81 blocks, five lights, four chunks force-loaded |
-| 3. `LIMBO_POS` / `SPAWN_POS` | `LIMBO_POS=0 250 0`, `SPAWN_POS=` (empty). **Not changed, because they already match:** the new spawn is at 0, 0 like the old. Empty `SPAWN_POS` means "spread around 0, 0 on the surface", which puts people on the ground whatever the ground is; `0 105 0` would put everyone on one block at a height nobody has looked at |
+| 3. White room | built at 0 250 0: 847 + 405 + 81 blocks, five lights, four chunks force-loaded. **Replaced the same afternoon** by a room in a dimension of its own, and cleared; see "The room's own dimension" |
+| 3. `LIMBO_POS` / `SPAWN_POS` | **Now `LIMBO_POS=deepslate:limbo 0.5 65 0.5`, `SPAWN_POS=0.5 105 0.5`.** At the time of the reset: `LIMBO_POS=0 250 0`, `SPAWN_POS=` (empty). **Not changed, because they already match:** the new spawn is at 0, 0 like the old. Empty `SPAWN_POS` means "spread around 0, 0 on the surface", which puts people on the ground whatever the ground is; `0 105 0` would put everyone on one block at a height nobody has looked at |
 | 3. "Test with your own account that a fresh join lands in the room" | **Not done: this session has no Minecraft account.** Alex's to-do 20 |
 | 4. Chunky, radius 1500 around spawn | **Stopped at 67.38% (24,069 of 35,721 chunks) on Alex's instruction, 11:46 UTC** ("stop doing the gen of the map"; pre-generation was getting in the way while he is still building). Paused and saved, not cancelled: "carry on" picks it up. Before that it had been interrupted once by AMP's sleep at 27%, which left the server hanging; see "What broke" and "Pre-generation from the portal" |
-| 5. Map and news | The old world's map tiles were purged (`world`, `world_the_nether`, `world_the_end`) and BlueMap renders the new world as it is made. The game confirms the planner's words: plains village 203 blocks from spawn, cherry grove 278, forest at spawn. **Screenshot and news item: not done**, held with the rest when Alex stopped the pre-generation. A way to take the picture exists (headless Chromium in a capped container inside the tunnel, straight at BlueMap's own port) |
+| 5. Map and news | **Done 13:46 UTC**: the news item is posted under the site's own name ("New world, new seed. Plains village near spawn, forest and cherry grove within walking distance."); the picture is `data/screenshots/spawn-20260929.png` on the VPS (the village, the cherry grove, forest, snow on the hills). News has no pictures, so it is not on the site. Earlier that day: The old world's map tiles were purged (`world`, `world_the_nether`, `world_the_end`) and BlueMap renders the new world as it is made. The game confirms the planner's words: plains village 203 blocks from spawn, cherry grove 278, forest at spawn. **Screenshot and news item: not done**, held with the rest when Alex stopped the pre-generation. A way to take the picture exists (headless Chromium in a capped container inside the tunnel, straight at BlueMap's own port) |
 | 6. Notes | in docs/09: the `webapp` password is in the VPS `.env` only. Uptime Kuma's check for `mc.dsw.test` was red from the ADS restart until 10:58 UTC, and is red whenever the instance sleeps if it tests the game port |
 
 **What broke**
@@ -208,6 +208,31 @@ Alex: "I want an option in the GUI to turn on pregen … run for 8 hours, or alw
 **Tests**: api 145 (`pregen.test.ts`: chunky's lines as the server printed them, the window over midnight and in summer time, every outcome of `step`, the refusal with AMP untouched, a night from turning on to 100%, another radius, two hours of "now", a sleeping server left asleep, the window's edges with sleep given back, pause-and-save before a stop; `kill.test.ts`: refused in six other states, refused for a player, accepted in Stopping, Stop and Restart pause first). web 163 (`pregen.test.ts`: the progress line, the mode line, the sleep notice with the permission's name, the rough cost).
 
 **Not tried on the live server.** Nothing can be turned on until the permission is granted, and this session does not write AMP's settings by hand. The first real run is Alex's, after the grant: to-do 22.
+
+### World reset, finished (planner's list A, 2026-09-29 afternoon)
+
+- **News item** posted 13:46 UTC, author shown as "Deepslate Works" (`authorId` `system`; the portal can now be the author of what it announces itself).
+- **Event log**: "Pre-generation finished (100%, radius 1500)" and "Pre-generation turned on again" (what the pre-generation does by itself has no "who" in front). A caller with the service token and no portal account is "System"; a visitor nobody knows is still "Someone". The two lines of that morning and the eighteen "Someone" lines of this session's own calls were put right in the database; their `meta` is as it was.
+- **Backup**: "Portal backup 2026-09-29 13:28", 1,146.6 MB, taken through `POST /server/backup` and listed by AMP a few seconds later. Both permissions work (`LocalFileBackup.Backup.CreateBackup`, `…ViewBackupsList`). The server was running and was not stopped for it.
+- **BlueMap** was at 31% of the overworld at 13:50 UTC with one render thread. It renders while the server runs, and the server sleeps after five empty minutes, so the rest comes as people play.
+
+### The room's own dimension (planner's list B, 2026-09-29)
+
+- As docs/14 "The room has a dimension of its own" describes. Datapack `modpack/datapacks/deepslate-limbo/`, room at **0 65 0 in `deepslate:limbo`** (people stand at 0.5 65 0.5; blocks -5 64 -5 to 5 70 5), release to **0.5 105 0.5 in the overworld**.
+- **What needed the restart:** registering the dimension. Done at 13:46 UTC by starting the server, which was asleep with nobody on. Nothing else did: the room was built, checked and the old one cleared on the running server; `LIMBO_POS` and `SPAWN_POS` took a deploy of the portal, which the game does not notice.
+- **Checked on the server**, by asking the game about single blocks: floor 0 64 0 sea lantern, wall 5 67 0 and roof 0 70 0 glass, 0 65 0 and 0 66 0 air, the sign at 0 65 -3, 0 63 0 air (the void under the floor). The old room: bedrock before, air at four places after. `datapack list`: `file/deepslate-limbo (world)` enabled. BlueMap: three maps, none for the room.
+- **Not checked: a player in it.** Hold, keep, release and "back to where they stood" are tested as commands, not as things that happen to somebody. Alex's to-do 20.
+- **A trap found on the way**: `.gitignore` had `data/`, which also hid the datapack's `data/` folder; the first push of the datapack was only its `pack.mcmeta` and CI failed on the test that reads the other two files. It is `/data/` now.
+- Tests: api 156 (the room's commands, `parsePlace`, `limbo.clear`), modpack 16 (the datapack's three files against the planner's values; Build carries datapacks).
+
+### Early access (planner's list C, 2026-09-29; docs/13 §9)
+
+- **Where**: Admin → Players (`/admin/users`; the page and the menu entry were called "Users"). Each row has "Early access" / "Take early access away", a badge, and the list can be narrowed to "Early access" or "Without", with counts.
+- **What it does**: docs/13 §9 has the table. `User.earlyAccess` (migration `0011_early_access`). Rules in `apps/web/src/shared/access.ts`; `canSeeServer` and `canDownload` go through them, the door in `api` uses `playFirstApplies`.
+- **Banner** on every page for a member with the flag while the site is not live; they do not get the "not open yet" banner.
+- **Also put right**: `/install` showed the admins' variant of the launch banner to anyone who could see the page while not live; until now that could only be an admin.
+- Tests: `apps/web/tests/access.test.ts`, 28: download for admin / early access / player with live on and off and the server available or not; Play; the door with and without a run of Play; what they see; the banner; the event wording. web 191.
+- **Observation for the planner** (docs/13 §9, last paragraph): the door does not know "not live"; players without the flag are kept out by Play first alone.
 
 ### docs/16 acceptance · state
 
@@ -420,6 +445,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Session log
 
+- **2026-09-29 13:25 to 14:1x UTC** · The planner's lists A, B and C: news item, event wording, a backup; the entrance room moved to `deepslate:limbo` and the old one cleared; early access. The server was started twice by this session (13:28 for the map, 13:46 for the dimension), both times asleep with nobody on.
 - **2026-09-29 12:32 UTC** · **Pre-generation turned on, "when nobody's online"** (Alex: "I granted the permission, turn on pregen when nobody online"). First answer: refused. The grant was there (a fresh login had it, and the two backup permissions with it), but AMP fixes a session's permissions at login and the api's session was older than the grant. After a restart of api: turned on; the api wrote `MinecraftModule.Limits.SleepMode = false`, read back `false` (so `Settings.MinecraftModule.Limits.SleepMode` is all that `Core.SetConfig` needs for it); the server was asleep, the mode waited, the VPS session pressed Start once as an admin would; chunky carried on from 67.4%. Fixed for next time: on a "no" the client logs in again and asks once more (`hasPermission`, once a minute at most), for the backup permissions too.
 - **2026-09-29 10:45 to 11:4x UTC** · World reset on the planner's note: new seed, old world kept as `world-backup-20260929`, room rebuilt, pre-generated, map purged and rendering. TabTPS taken out after it stopped the server from starting; pings from spark. Table and what broke: "World reset".
 - **2026-09-29 10:0x UTC** · Play first built and deployed; Player guide, FallingTree and connection stats before it, one push each (`119545d`, `3205c3e`, `970ebe8`). TabTPS synced to the server at 09:42 while it was asleep; it has not started with it yet.

@@ -11,7 +11,7 @@ const LINKS = [
   { href: "/admin/files", label: "Files" },
   { href: "/admin/branding", label: "Branding" },
   { href: "/admin/invites", label: "Invites" },
-  { href: "/admin/users", label: "Users" },
+  { href: "/admin/users", label: "Players" },
   { href: "/admin/settings", label: "Settings" },
 ];
 

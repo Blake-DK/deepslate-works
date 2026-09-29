@@ -18,7 +18,7 @@ function run(cmd: string, args: string[], timeoutMs: number): Promise<{ code: nu
   });
 }
 
-export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean } = {}): Promise<{ ok: boolean; lines: string[]; restarted: boolean; dryRun: boolean }> {
+export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; beforeRestart?: () => Promise<unknown> } = {}): Promise<{ ok: boolean; lines: string[]; restarted: boolean; dryRun: boolean }> {
   const dryRun = Boolean(opts.dryRun);
   const lines: string[] = [];
   try {
@@ -60,6 +60,7 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean } 
   if (modsChanged) {
     if (env.AMP_MOCK === "1") lines.push("AMP_MOCK=1: would call Core.Restart");
     else {
+      await opts.beforeRestart?.().catch(() => undefined); // a running pre-generation is paused and saved first
       await amp.call("Core", "Restart");
       lines.push("Core.Restart sent");
     }

@@ -105,6 +105,8 @@ Added 2026-09-29 (checked against `Core.GetAPISpec` on the live instance): `Core
 
 JSON `{ error: { code, message } }`. Codes: `unauthorized`, `forbidden`, `rate_limited` (with `retryAfterSec`), `server_offline`, `not_online` (player not in game), `timeout`, `validation`, `amp_error`. The UI maps each to a one-line message a player understands.
 
+Pre-generation (docs/05, docs/11): `GET /pregen` (what chunky last said, the plan, what AMP's sleep mode is and whether the portal may write it), `POST /pregen/on {mode: "empty"|"now", area: {x, z, radius}, window: {from, to}|null, capHours|null}` (409 `sleep_permission` while AMP does not allow it), `POST /pregen/off`, `POST /pregen/cancel`. `POST /server/kill`: 409 `not_stopping` unless the server is in state 45. AMP methods added: `Core.GetConfig`, `Core.SetConfig` (one node only: `MinecraftModule.Limits.SleepMode`), `Core.CurrentSessionHasPermission`, `Core.Kill`.
+
 Play first (docs/14): no new routes. `api` reads the member's latest `mode=play` report and the Setting `_packSynced` at every join; `POST /modpack/sync` writes `_packSynced` after a real sync. Console commands added to the registry: `player.where`, `limbo.holdPlay`, `limbo.remindPlay`, `limbo.releaseBack`, `limbo.kickIdlePlay`, `server.pings`.
 
 Mod list (docs/07 "The installer updates itself"): `GET /api/modpack/manifest` also answers `installer: { version, sha256, size } | null`, the installer in `/downloads/installer.zip` and the SHA-256 of that zip; `null` when `dist/installer.json` is missing or does not describe the zip on disk. `GET /downloads/installer.zip` takes the launcher token (`Authorization: Bearer …`) as it always did.

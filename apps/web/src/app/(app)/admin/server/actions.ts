@@ -40,33 +40,35 @@ export async function runActionAction(formData: FormData) {
   redirect(back("action", name));
 }
 
+const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+const blank = (v: FormDataEntryValue | null) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null);
 const pregenOn = z.object({
-  mode: z.enum(["hours", "empty"]),
-  hours: z.coerce.number().min(0.25).max(72),
-  whilePlaying: z.boolean(),
-  task: z.enum(["carry", "new"]),
+  mode: z.enum(["empty", "now"]),
+  radius: z.coerce.number().int().min(16).max(10_000),
   x: z.coerce.number().int().min(-100_000).max(100_000),
   z: z.coerce.number().int().min(-100_000).max(100_000),
-  radius: z.coerce.number().int().min(16).max(10_000),
+  from: clock.nullable(),
+  to: clock.nullable(),
+  hours: z.coerce.number().min(0.25).max(240).nullable(),
 });
 
-/** Pre-generation is off unless an admin turns it on here. */
+/** Pre-generation is a mode, off by default (docs/05). */
 export async function pregenAction(formData: FormData) {
   const admin = await requireAdmin();
   const caller = { id: admin.id, role: "ADMIN" as const };
   const op = String(formData.get("op") ?? "");
   try {
     if (op === "on") {
-      const parsed = pregenOn.safeParse({ mode: formData.get("mode"), hours: formData.get("hours") || 8, whilePlaying: formData.get("whilePlaying") === "on", task: formData.get("task") ?? "carry", x: formData.get("x") || 0, z: formData.get("z") || 0, radius: formData.get("radius") || 1500 });
-      if (!parsed.success) redirect(back("error", "Hours between a quarter and 72, the centre two whole numbers, the radius between 16 and 10000."));
+      const mode = String(formData.get("mode") ?? "");
+      const parsed = pregenOn.safeParse({ mode, radius: formData.get("radius") || 1500, x: formData.get("x") || 0, z: formData.get("z") || 0, from: blank(formData.get("from")), to: blank(formData.get("to")), hours: blank(formData.get(mode === "now" ? "hoursNow" : "hoursEmpty")) });
+      if (!parsed.success) redirect(back("error", "The radius is between 16 and 10000, the hours between a quarter and 240, the times like 02:00."));
       const d = parsed.data;
-      await apiFetch("/pregen/on", { method: "POST", body: { mode: d.mode, hours: d.hours, whilePlaying: d.whilePlaying, task: d.task === "new" ? { x: d.x, z: d.z, radius: d.radius } : null }, caller, timeoutMs: 60_000 });
+      if (d.mode === "empty" && Boolean(d.from) !== Boolean(d.to)) redirect(back("error", "A window has a from and a to. Leave both empty for any time of day."));
+      await apiFetch("/pregen/on", { method: "POST", body: { mode: d.mode, area: { x: d.x, z: d.z, radius: d.radius }, window: d.mode === "empty" && d.from && d.to ? { from: d.from, to: d.to } : null, capHours: d.hours }, caller, timeoutMs: 60_000 });
     } else if (op === "off") {
       await apiFetch("/pregen/off", { method: "POST", body: {}, caller, timeoutMs: 60_000 });
     } else if (op === "cancel") {
-      if (formData.get("sure") !== "on") redirect(back("confirm"));
-      await apiFetch("/pregen/off", { method: "POST", body: {}, caller, timeoutMs: 60_000 });
-      await apiFetch("/actions/world.pregenCancel", { method: "POST", body: {}, caller, timeoutMs: 60_000 });
+      await apiFetch("/pregen/cancel", { method: "POST", body: {}, caller, timeoutMs: 60_000 });
     } else redirect(back("error", "Unknown."));
   } catch (e) {
     if (e instanceof ApiError) redirect(back("error", e.message));
@@ -74,6 +76,19 @@ export async function pregenAction(formData: FormData) {
   }
   revalidatePath("/admin/server");
   redirect(back(op === "on" ? "pregenOn" : op === "off" ? "pregenPaused" : "pregenOff"));
+}
+
+/** Ends the server's process. Only offered, and only accepted by api, while the server is stuck in "Stopping". */
+export async function killAction() {
+  const admin = await requireAdmin();
+  try {
+    await apiFetch("/server/kill", { method: "POST", body: {}, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(back("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/server");
+  redirect(back("killed"));
 }
 
 export async function scheduleRestartAction(formData: FormData) {

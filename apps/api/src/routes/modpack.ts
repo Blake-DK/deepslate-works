@@ -13,7 +13,7 @@ import { chatSafe } from "../actions/registry.js";
 // Build writes dist/, sync reads it: one of them at a time.
 let busy: "build" | "sync" | null = null;
 
-export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: typeof runBuild = runBuild) {
+export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: typeof runBuild = runBuild, beforeRestart: () => Promise<unknown> = async () => undefined) {
   app.post("/modpack/sync", async (req, reply) => {
     if (!requireAdmin(req, reply)) return;
     const body = z.object({ packVersion: z.string().max(64).optional(), dryRun: z.boolean().optional() }).safeParse(req.body ?? {});
@@ -21,7 +21,7 @@ export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: t
     if (busy) return reply.code(409).send({ error: { code: "busy", message: `a ${busy} is already running` } });
     busy = "sync";
     try {
-      const res = await syncServer(env, amp, { dryRun: body.data.dryRun });
+      const res = await syncServer(env, amp, { dryRun: body.data.dryRun, beforeRestart });
       req.log.info({ ok: res.ok, restarted: res.restarted, packVersion: body.data.packVersion, by: req.caller.userId }, "modpack sync");
       // docs/14 "Play first": from now on this is the pack a member's run of Play has to have installed
       if (res.ok && !body.data.dryRun) await recordSynced().catch((err) => req.log.warn({ err: String(err) }, "could not record the synced pack"));

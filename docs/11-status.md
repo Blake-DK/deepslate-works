@@ -170,23 +170,44 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 1. **The server did not start with TabTPS** (10:50 UTC, the first start since it was added at 09:42): TabTPS and BlueMap both bring `net.kyori.adventure.text.serializer.gson`. Switched off in `mods.json`, locked, built, synced (10:52); the pack is `0.1.0+47b0b579` again, the same as before TabTPS, so nobody has anything to update. The pings come from spark now (docs/05). **This was the risk named when TabTPS went in unstarted; it should have been started once before anything was built on it.**
 2. **The portal had lost AMP and did not know.** ADS was restarted; from then on AMP answered every call of the api's old session with HTTP 200 and "This method requires the Session.Exists permission", which the client took for an answer: state "Unknown" on the site, `amp: ok` in `/api/health`, and the first `start` "succeeded" without starting anything. Until that morning the health check had logged in afresh every 30 s, which hid this; the fix of the repeated welcome took that away. The client now recognises the answer, logs in again and asks once more (`sessionGone`, tested).
 3. **`Core.Restart` does not start a stopped or failed instance**, so the sync that removed TabTPS left the server down; it needed `start`.
-4. **AMP put the server to sleep in the middle of the pre-generation** (11:16 UTC, 27% done), and again after every wake-up. Worked around with `pregen-loop.sh`.
+4. **AMP put the server to sleep in the middle of the pre-generation** (11:16 UTC, 27% done), and the stop hung at "Saving worlds" until the process was ended. It was then got to 67% by a script that woke the server and paused chunky in rounds. **The planner has since ruled that out** (no wake loop, no ending of processes for the pre-generation); the script is deleted and the portal switches AMP's sleep off instead, see "Pre-generation from the portal".
 5. **One of the new console commands was wrong**: `world.standable` sent `execute … run if block …`; `if` belongs to `execute` itself. The game refused it, nothing happened. Corrected.
 
 **What the reset took with it, by design:** everyone's position, inventory, advancements and the `verified` tag (they are in the world). Linked members are let in again on their next join like the first time; the whitelist and the links on the portal are not part of the world and stand. Sessions and events on the portal from before the reset are history of the old world and are kept.
 
-### Pre-generation from the portal (Alex, 2026-09-29)
+### Pre-generation from the portal (Alex, then the planner's design; 2026-09-29)
 
-"I want an option in the GUI to turn on pregen … I want to be able to run it for hours on end, like say in the GUI run for 8 hours, or always run when no one online."
+Alex: "I want an option in the GUI to turn on pregen … run for 8 hours, or always run when no one online." Planner, the same afternoon: "Don't build a burst/wake loop against AMP sleep; that's what caused this morning's hang", with the design below. **The wake loop that was deployed at 12:05 UTC (rounds around AMP's sleep, the api starting the server and ending a stop that hung) is gone; it was never switched on.**
 
-- **Admin → Server → Pre-generation.** Off unless an admin turns it on; nothing starts or continues it otherwise, not a restart of the server, not a deploy. Two ways to turn it on: **for N hours** (a quarter of an hour to 72), or **whenever nobody is on the server, until the area is done**. It waits while somebody is playing unless "also while people are playing" is ticked. What to generate: carry on where it stopped, or a new area (radius up to 10,000 blocks, centre). "Turn off" pauses and saves; "Call the area off" makes chunky forget where it got to.
-- **How it runs for hours on a server that AMP puts to sleep** (`PregenKeeper`, `apps/api/src/status/pregen.ts`): in rounds. Generate; pause and `save-all flush` 100 seconds before AMP would stop the server; AMP puts the server to sleep with nothing going on; api wakes it (`Core.Start`); carry on. The first round is 3.5 minutes; from then on the length follows what AMP was seen to do (shortest wait seen, less 100 s, between 2 and 10 minutes). About two thirds of the time is spent generating. The portal cannot change AMP's sleep setting; with sleep switched off in AMP all of the time would be.
-- **api starts the server by itself while this is on.** Only from sleep: a server somebody stopped is left stopped. A stop that hangs for four minutes is ended (`Core.Kill`) and the server started again; by then the pre-generation has been paused and saved.
-- **Without a plan** the old safeguard holds: a pre-generation somebody started by hand is paused once the server has been empty for three minutes.
-- The plan is kept in the Setting `_pregen`, so a deploy does not lose it. Events: "turned the pre-generation on: for 8 hours", "the pre-generation's time is up, at 81%", "the pre-generation is finished".
-- Rough cost, measured that day (50 chunks a second, 13 KB a chunk): 1500 blocks = 12 minutes, 0.4 GB; 5000 = 2.2 hours, 5 GB; 10,000 = 8.7 hours, 19 GB. **Nobody has looked at how much disk the AMP host has.**
-- Tests: what chunky says, the rounds, a whole night in one test (wake, carry on, pause, sleep, wake; nothing once it is off). api 130, web 159.
-- **Not tried on the live server:** it was deployed switched off, because Alex had just asked for the generating to stop. The rounds were done by hand with a script that day and worked (51% to 67% in two rounds); the keeper does the same from inside api.
+**The mode** (Admin → Server → Pre-generation; `apps/api/src/status/pregen.ts`)
+
+| Mode | What it does |
+|---|---|
+| Off (default) | Nothing generates, and nothing starts by itself: not after a restart, not after a deploy |
+| When nobody's online | Chunky carries on whenever the server is empty and is paused as soon as anyone joins. Optional window of the day (UK time, may run over midnight), optional number of hours at most |
+| Now | Runs whoever is playing, for a number of hours or until 100%. The card warns that it lags anyone who is on |
+
+- **The card** shows the radius (editable, 1500 to begin with; centre 0, 0), chunks done of the total, the percentage with a bar, chunky's own estimate and rate, what it is doing right now, **Stop** (pauses, saves, keeps where it got to) and **Cancel** (asks first; chunky forgets the area). Another radius = the present area is called off (`chunky cancel`, `chunky confirm`) and a new one begun. At 100% the mode ends by itself.
+- **Hours are hours of generating**, counted while chunky reports that it runs, not hours on the clock.
+- **AMP's sleep.** Setting: **`MinecraftModule.Limits.SleepMode`** ("Enable Sleep Mode", Boolean; today `true`, with `MinecraftModule.Limits.SleepDelayMinutes` = 5). Permission the portal's user needs to write it: **`Settings.MinecraftModule.Limits.SleepMode`** (in the role's permissions: Settings → MinecraftModule → Limits → SleepMode; "Which Settings users in this role have permission to change the value of"). **`webapp` does not have it today** (`Core.CurrentSessionHasPermission` answers `false`; it is among the 309 permissions the role denies, of 318). Both were found by reading only: `Core.GetConfig`, `Core.GetPermissionsSpec`, the permission list AMP sends at login.
+- **While a mode is due** (on, inside its window, hours not used up, not at 100%) the api writes `SleepMode = false` and reads it back; when the mode stops being due or ends it writes back what was there before. What was there is kept in the plan (Setting `_pregen`), so a restart of api in between does not lose it.
+- **Until the permission is granted the mode refuses to start**, with the permission's name in the message, and the card says the same with its button greyed out. No fallback.
+- **Should sleep fire all the same** (permission taken away later, the write not taking): chunky is paused two minutes before AMP's delay runs out, the sleep is accepted, and the pre-generation carries on at the next start somebody makes.
+
+**Hard rules, and where they are kept**
+
+- **The api never starts the server for the pre-generation and never ends its process.** `step()` has no such outcome; one test runs a whole evening (turn on, join, leave, 100%) and checks that `Start`, `Stop`, `Restart` and `Kill` were never asked of AMP.
+- **Before any stop the api makes** (Stop and Restart on Admin → Server, the planned restart, the restart after a mod sync): `quiesce()` sends `chunky pause` and `save-all flush`, waits for "Saved the game" (a minute at most), and only then is AMP asked to stop.
+- **Ending the process** stays in the api on Alex's decision: `POST /server/kill`, admins only, refused with 409 unless the server is in "Stopping" (state 45), every call and every refusal in the event log. On the page it is a red box that is only there while the server is stopping, and it asks "End the server's process? Whatever it had not saved is lost…" before it does anything.
+
+**Two things that follow from "never start the server", for the planner**
+
+- A window such as 02:00 to 08:00 only does anything if the server is running at 02:00. Outside the window sleep is as it was, so an empty server has gone to sleep by then, and nothing wakes it. As built, "when nobody's online" without a window is the mode that works through the night: sleep stays off from the moment it is turned on until 100%.
+- "Now" on a sleeping server waits for a start. The Start button is on the same page.
+
+**Tests**: api 145 (`pregen.test.ts`: chunky's lines as the server printed them, the window over midnight and in summer time, every outcome of `step`, the refusal with AMP untouched, a night from turning on to 100%, another radius, two hours of "now", a sleeping server left asleep, the window's edges with sleep given back, pause-and-save before a stop; `kill.test.ts`: refused in six other states, refused for a player, accepted in Stopping, Stop and Restart pause first). web 163 (`pregen.test.ts`: the progress line, the mode line, the sleep notice with the permission's name, the rough cost).
+
+**Not tried on the live server.** Nothing can be turned on until the permission is granted, and this session does not write AMP's settings by hand. The first real run is Alex's, after the grant: to-do 22.
 
 ### docs/16 acceptance · state
 
@@ -390,6 +411,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 13. ~~Does a sleeping server count as up for downloads?~~ **Yes** (Alex, 2026-09-29): downloads are open while the server is Running or asleep (`apps/web/src/lib/gate-rule.ts`).
 17. ~~Join the server once so that it wakes with TabTPS~~ TabTPS is out (it stopped the server from starting). **Join once and look at Home:** your ping should be next to your name within half a minute (spark).
 18. **Play first needs a member who is not an admin to test** (admins are never held): docs/14 acceptance.
+22. **Grant `webapp` the permission `Settings.MinecraftModule.Limits.SleepMode`** in the instance's own panel (the role's permissions: Settings → MinecraftModule → Limits → SleepMode). Until then Pre-generation cannot be turned on. Then: Admin → Server → Pre-generation → radius 1500 → "When nobody's online" → Turn on; it should say "generating" and carry on from where it was stopped (67%), and AMP's sleep mode should read off in AMP until it is done.
 20. **Join the new world with an account that is not linked** (or have someone new join): they must land in the entrance room at 0 251 0 with the link in chat. This session has no Minecraft account and cannot join.
 21. **Sleep in AMP**: the instance goes to sleep after about six minutes empty, in the middle of anything. Fine for every day; for the next pre-generation or a long BlueMap render switch it off first.
 19. ~~The world's seed~~ Done 2026-09-29, see "World reset". Was: the world's seed is AMP's default, `CubeCodersPowered`. A new one is set in AMP (the instance's settings, "Level seed"), the portal cannot write AMP's settings; the world folder has to be moved away for it to take effect, and the entrance room built again afterwards (Admin → Server). Say which seed, and whether the present world may go.

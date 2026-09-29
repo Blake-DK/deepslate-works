@@ -8,7 +8,7 @@ import { runAction } from "../actions/run.js";
 import { ADMIN_ACTIONS, actions, type ActionName } from "../actions/registry.js";
 import { audit } from "../audit.js";
 
-export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, limbo: Limbo) {
+export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, limbo: Limbo, beforeStop: () => Promise<unknown> = async () => undefined) {
   app.get("/players", async () => ({
     state: tail.state,
     online: [...tail.online].map((name) => ({ name, uuid: tail.uuidByName.get(name) ?? null, held: limbo.held.has(name) })),
@@ -50,9 +50,16 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
     if (!requireAdmin(req, reply)) return;
     const op = (req.params as { op: string }).op;
     // `kill` is for a server that hangs while it shuts down (2026-09-29: stuck at "Saving worlds" for ten minutes,
-    // AMP in "Stopping" and deaf to Stop). What had not been saved is lost, so it is not on any page: api only.
+    // AMP in "Stopping" and deaf to Stop). What had not been saved is lost. For an admin, and only while the server
+    // is in "Stopping": there is no other state in which ending the process is the right thing to do.
     const method = ({ start: "Start", stop: "Stop", restart: "Restart", kill: "Kill" } as Record<string, string>)[op];
     if (!method) return reply.code(404).send({ error: { code: "validation", message: "start|stop|restart|kill" } });
+    if (op === "kill" && tail.state !== 45) {
+      await audit({ userId: req.caller.userId, action: "server.kill", params: { state: tail.state }, result: "DENIED", detail: "not in Stopping" });
+      return reply.code(409).send({ error: { code: "not_stopping", message: "The server is not stuck in \"Stopping\". Ending its process is only for that." } });
+    }
+    // A running pre-generation is paused, and the save waited for, before the server is stopped.
+    if (op === "stop" || op === "restart") await beforeStop().catch((e) => req.log.warn({ err: String(e) }, "could not pause the pre-generation before the stop"));
     try {
       const r = await amp.call<unknown>("Core", method);
       await audit({ userId: req.caller.userId, action: `server.${op}`, params: {}, result: "OK" });

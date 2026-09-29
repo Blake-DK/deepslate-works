@@ -1,43 +1,59 @@
 import { describe, expect, it } from "vitest";
-import { planText, pregenCost, pregenText, type Pregen } from "@/lib/pregen";
+import { modeText, pregenCost, progress, sleepText, type Pregen } from "@/lib/pregen";
 
-const base: Pregen = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, pausedBy: null, at: null };
+const AREA = { x: 0, z: 0, radius: 1500 };
+const sleep = { node: "MinecraftModule.Limits.SleepMode", permission: "Settings.MinecraftModule.Limits.SleepMode", allowed: true, on: true, delayMin: 5, problem: null };
+const base: Pregen = { status: "none", chunks: null, percent: null, eta: null, rate: null, at: null, plan: { mode: "off", area: AREA }, doing: "off", total: 35721, sleep, serverState: 20, serverRunning: true, online: 0 };
+const on = { area: AREA, window: null, capHours: null, ranMs: 0, since: "2026-09-29T20:00:00.000Z", sleepWas: true } as const;
 
-describe("pregenText", () => {
-  it("says it is off, and that it stays off, when it is paused", () => {
-    const t = pregenText({ ...base, status: "paused", chunks: 24069, percent: 67.38 });
-    expect(t.label).toBe("off (paused)");
-    expect(t.line).toBe("Paused at 67.4% (24,069 chunks made). It stays paused until you turn it on.");
-    expect(t.can).toEqual({ start: true, continue: true, pause: false, cancel: true });
+describe("progress", () => {
+  it("is chunks done of the total, the percentage, and chunky's own estimate while it runs", () => {
+    expect(progress({ ...base, status: "running", chunks: 24069, percent: 67.38, eta: "0:03:41", rate: 52.7 })).toEqual({ line: "24,069 of 35,721 chunks, 67.4%, about 0:03:41 to go, 53 chunks a second.", percent: 67.38 });
+    expect(progress({ ...base, status: "paused", chunks: 24069, percent: 67.38 }).line).toBe("24,069 of 35,721 chunks, 67.4%.");
   });
-  it("says why when it paused by itself", () => {
-    expect(pregenText({ ...base, status: "paused", chunks: 100, percent: 1, pausedBy: "empty" }).line).toContain("by itself: the server had been empty for three minutes");
+  it("works the total out when no area is on record", () => {
+    expect(progress({ ...base, total: null, status: "paused", chunks: 17860, percent: 50 }).line).toBe("17,860 of 35,720 chunks, 50.0%.");
   });
-  it("offers only a pause while it runs", () => {
-    const t = pregenText({ ...base, status: "running", chunks: 9511, percent: 26.63, eta: "0:08:30", rate: 51.4 });
-    expect(t.label).toBe("on");
-    expect(t.line).toBe("Running: 9,511 chunks made, 26.6%, about 0:08:30 to go, 51 chunks a second.");
-    expect(t.can).toEqual({ start: false, continue: false, pause: true, cancel: false });
-  });
-  it("knows done, called off, and not knowing", () => {
-    expect(pregenText({ ...base, status: "finished", chunks: 35721, percent: 100 }).label).toBe("done");
-    expect(pregenText({ ...base, status: "cancelled" }).can.continue).toBe(false);
-    expect(pregenText(base).label).toBe("off");
-    expect(pregenText(null).can).toEqual({ start: false, continue: false, pause: false, cancel: false });
+  it("says so when there is nothing to show", () => {
+    expect(progress(base).line).toBe("No figures yet (the area is 35,721 chunks): chunky says where it stands when it next runs.");
+    expect(progress({ ...base, plan: { mode: "off", area: null }, total: null }).line).toBe("Nothing has been generated ahead of time yet.");
+    expect(progress({ ...base, status: "finished", chunks: 35721, percent: 100 })).toEqual({ line: "Done: 35,721 chunks, 100%.", percent: 100 });
+    expect(progress(null).percent).toBeNull();
   });
 });
 
-describe("planText", () => {
-  it("says off, and that nothing starts by itself", () => {
-    expect(planText({ ...base, plan: { mode: "off" } }, null)).toEqual({ on: false, line: "Off. Nothing generates, and nothing will start by itself." });
-    expect(planText(base, null).on).toBe(false);
-    expect(planText(null, null).on).toBe(false);
+describe("modeText", () => {
+  it("is off by default, and says that nothing starts by itself", () => {
+    expect(modeText(base)).toEqual({ on: false, label: "off", tone: "neutral", line: "Off. Nothing generates, and nothing starts by itself." });
+    expect(modeText(null).on).toBe(false);
+    expect(modeText({ ...base, status: "finished" }).label).toBe("done");
   });
-  it("says until when, or that it goes on whenever nobody is on", () => {
-    const since = "2026-09-29T20:00:00.000Z";
-    expect(planText({ ...base, plan: { mode: "hours", until: "2026-09-30T04:00:00.000Z", whilePlaying: false, since }, doing: "run" }, "Wed 05:00").line).toBe("On until Wed 05:00, waiting whenever somebody is playing. Right now: generating.");
-    expect(planText({ ...base, plan: { mode: "empty", until: null, whilePlaying: false, since }, doing: "pause:playing" }, null).line).toBe("On whenever nobody is on the server, until the area is done. Right now: waiting: somebody is playing.");
-    expect(planText({ ...base, plan: { mode: "hours", until: null, whilePlaying: true, since } }, "Wed 05:00").line).toContain("also while people are playing");
+  it("when nobody's online, with a window and hours", () => {
+    const t = modeText({ ...base, plan: { mode: "empty", ...on, window: { from: "02:00", to: "08:00" }, capHours: 8, ranMs: 5_400_000 }, doing: "idle:window" });
+    expect(t.label).toBe("on: when nobody's online");
+    expect(t.line).toBe("On: when nobody's online, between 02:00 and 08:00, 8 hours of generating at most (1.5 so far). Right now: waiting for its time of day.");
+  });
+  it("now", () => {
+    expect(modeText({ ...base, plan: { mode: "now", ...on }, doing: "run" }).line).toBe("On: now, whoever is playing, until the area is done. Right now: generating.");
+  });
+  it("says that a server which is not running is not started from here", () => {
+    expect(modeText({ ...base, plan: { mode: "empty", ...on }, doing: "idle:server" }).line).toContain("It is not started from here; it carries on when it next runs");
+    expect(modeText({ ...base, plan: { mode: "empty", ...on }, doing: "pause:playing" }).line).toContain("waiting: somebody is playing");
+  });
+});
+
+describe("sleepText", () => {
+  it("names the permission to grant while the portal may not switch sleep off", () => {
+    const t = sleepText({ ...base, sleep: { ...sleep, allowed: false } });
+    expect(t.ok).toBe(false);
+    expect(t.grant).toBe("Settings.MinecraftModule.Limits.SleepMode");
+    expect(t.line).toBe("Sleep mode is on: an empty server is put to sleep after 5 minutes. The control panel does not let the portal switch it off, so nothing can be turned on: the server would be put to sleep in the middle of generating.");
+  });
+  it("is fine once it may", () => {
+    expect(sleepText(base)).toEqual({ ok: true, line: "Sleep mode is on: an empty server is put to sleep after 5 minutes. While a mode is on, the portal switches it off, and puts it back as it was afterwards.", grant: null });
+  });
+  it("does not guess when the control panel did not answer", () => {
+    expect(sleepText({ ...base, sleep: { ...sleep, allowed: null, problem: "fetch failed" } })).toMatchObject({ ok: false, grant: null });
   });
 });
 

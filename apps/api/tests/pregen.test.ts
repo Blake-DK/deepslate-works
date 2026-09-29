@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { parse } from "../src/events/parse.js";
 import { ConsoleTail } from "../src/amp/console.js";
 import { MockAmp } from "../src/amp/client.js";
-import { EMPTY_PAUSE_MS, keeperStep, nextPregen, PregenKeeper, PregenWatch, roundLength, shouldPauseEmpty, type KeeperView, type PregenPlan, type PregenState } from "../src/status/pregen.js";
+import { chunksIn, due, inWindow, nextPregen, Pregen, PregenWatch, Refused, SLEEP_NODE, SLEEP_PERMISSION, step, ukClock, type PregenPlan, type PregenState, type View } from "../src/status/pregen.js";
 import { actions, parsePos } from "../src/actions/registry.js";
 
-const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, pausedBy: null, at: null };
+const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, at: null };
 const at = new Date("2026-09-29T11:46:00Z");
 
 // Lines as the server printed them on 2026-09-29.
@@ -37,139 +37,238 @@ describe("nextPregen", () => {
   });
 });
 
-describe("an empty server", () => {
-  const running: PregenState = { ...NONE, status: "running", percent: 50, chunks: 1 };
-  const now = 10_000_000;
-  it("has its pre-generation paused after three minutes, not before", () => {
-    expect(shouldPauseEmpty(running, true, 0, now - EMPTY_PAUSE_MS, now)).toBe(true);
-    expect(shouldPauseEmpty(running, true, 0, now - EMPTY_PAUSE_MS + 1000, now)).toBe(false);
-    expect(shouldPauseEmpty(running, true, 0, null, now)).toBe(false);
+const AREA = { x: 0, z: 0, radius: 1500 };
+type On = Exclude<PregenPlan, { mode: "off" }>;
+const empty: On = { mode: "empty", area: AREA, window: null, capHours: null, ranMs: 0, since: "2026-09-29T20:00:00.000Z", by: null, fresh: false, sleepWas: true };
+const now: On = { ...empty, mode: "now" };
+const noon = new Date("2026-09-29T11:00:00Z"); // 12:00 in the UK (summer time)
+const v = (over: Partial<View>): View => ({ serverRunning: true, online: 0, pregen: "paused", at: noon, sleepOff: true, emptyForMs: 0, sleepDelayMin: 5, ...over });
+
+describe("the window", () => {
+  it("is UK time", () => {
+    expect(ukClock(new Date("2026-09-29T01:30:00Z"))).toBe("02:30"); // summer
+    expect(ukClock(new Date("2026-12-01T01:30:00Z"))).toBe("01:30"); // winter
+    expect(ukClock(new Date("2026-09-28T23:05:00Z"))).toBe("00:05");
   });
-  it("is the only one: with somebody on, or nothing running, nothing is paused", () => {
-    expect(shouldPauseEmpty(running, true, 1, now - EMPTY_PAUSE_MS, now)).toBe(false);
-    expect(shouldPauseEmpty({ ...running, status: "paused" }, true, 0, now - EMPTY_PAUSE_MS, now)).toBe(false);
-    expect(shouldPauseEmpty(running, false, 0, now - EMPTY_PAUSE_MS, now)).toBe(false);
+  it("from 02:00 to 08:00 is the night's end, not the day", () => {
+    const w = { from: "02:00", to: "08:00" };
+    expect(["01:59", "02:00", "05:30", "07:59", "08:00", "14:00"].map((c) => inWindow(w, c))).toEqual([false, true, true, true, false, false]);
+  });
+  it("may run over midnight; none, or from and to the same, is all day", () => {
+    const w = { from: "22:00", to: "06:00" };
+    expect(["21:59", "22:00", "23:59", "00:00", "05:59", "06:00", "12:00"].map((c) => inWindow(w, c))).toEqual([false, true, true, true, true, false, false]);
+    expect(inWindow(null, "12:00")).toBe(true);
+    expect(inWindow({ from: "03:00", to: "03:00" }, "12:00")).toBe(true);
+    expect(inWindow({ from: "25:00", to: "03:00" }, "12:00")).toBe(false);
   });
 });
 
-describe("PregenWatch", () => {
-  it("never starts or continues anything: the only thing it ever sends is a pause", async () => {
-    const sent: string[] = [];
-    const amp = new (class extends MockAmp {
-      override async call<T>(_m?: string, method?: string, params?: Record<string, unknown>): Promise<T> {
-        if (method === "SendConsoleMessage") sent.push(String(params?.message));
-        return {} as T;
-      }
-    })();
-    const tail = new ConsoleTail(amp, () => {});
-    let now = 1_000_000;
-    const watch = new PregenWatch(amp, tail, () => ({ limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" }), () => {}, () => now);
-    watch.start(); // listens to the console; `look` is called by hand
-    tail.state = 20;
-    await watch.look();
-    tail.ingest("Task paused for minecraft:overworld.");
-    now += 10 * 60_000;
-    await watch.look();
-    expect(sent).toEqual([]); // paused, or nothing at all: left alone, however long the server is empty
-    tail.ingest("Task running for minecraft:overworld. Processed: 100 chunks (0.28%), ETA: 0:12:00, Rate: 50.0 cps, Current: 1, 1");
-    await watch.look(); // empty from now
-    now += EMPTY_PAUSE_MS + 1000;
-    await watch.look();
-    expect(sent).toEqual(["chunky pause", "save-all flush"]);
-    expect(watch.state).toMatchObject({ status: "paused", pausedBy: "empty" });
+describe("what it does next", () => {
+  it("when nobody's online: carries on while the server is empty, pauses as soon as anyone is on", () => {
+    expect(step(empty, v({}))).toBe("run");
+    expect(step(empty, v({ online: 1, emptyForMs: null, pregen: "running" }))).toBe("pause:playing");
   });
-  it("has commands for on, pause and off, and none of them takes words from outside", () => {
+  it("now: runs whoever is playing", () => {
+    expect(step(now, v({ online: 3, emptyForMs: null }))).toBe("run");
+  });
+  it("never starts a server: asleep, stopped or failed, it waits for the next start somebody makes", () => {
+    for (const mode of [empty, now]) expect(step(mode, v({ serverRunning: false }))).toBe("idle:server");
+  });
+  it("keeps to the window and to the hours", () => {
+    const night: On = { ...empty, window: { from: "02:00", to: "08:00" } };
+    expect(step(night, v({ at: noon, pregen: "running" }))).toBe("idle:window");
+    expect(step(night, v({ at: new Date("2026-09-29T03:00:00Z") }))).toBe("run"); // 04:00 in the UK
+    expect(due({ ...empty, capHours: 8, ranMs: 8 * 3_600_000 }, "running", noon)).toBe("cap");
+    expect(due({ ...empty, capHours: 8, ranMs: 8 * 3_600_000 - 1 }, "running", noon)).toBe("yes");
+    expect(step({ ...now, capHours: 2, ranMs: 2 * 3_600_000 }, v({}))).toBe("off:cap");
+  });
+  it("ends by itself at 100%", () => {
+    expect(step(empty, v({ pregen: "finished" }))).toBe("off:done");
+    expect(step(now, v({ pregen: "finished", serverRunning: false }))).toBe("off:done");
+  });
+  it("with sleep still on, pauses two minutes before AMP would put the server to sleep, and accepts the sleep", () => {
+    expect(step(empty, v({ sleepOff: false, emptyForMs: 2 * 60_000, pregen: "running" }))).toBe("run");
+    expect(step(empty, v({ sleepOff: false, emptyForMs: 3 * 60_000, pregen: "running" }))).toBe("pause:sleep");
+    expect(step(empty, v({ sleepOff: false, emptyForMs: 3 * 60_000, sleepDelayMin: 10, pregen: "running" }))).toBe("run");
+    expect(step(empty, v({ sleepOff: true, emptyForMs: 60 * 60_000, pregen: "running" }))).toBe("run"); // sleep is off: hours on end
+  });
+  it("counts chunks as chunky does", () => {
+    expect(chunksIn(1500)).toBe(35721);
+  });
+});
+
+/** An AMP that keeps a sleep setting, may or may not let it be written, and remembers everything it was asked. */
+class SleepyAmp extends MockAmp {
+  sleepOn = true;
+  asked: string[] = [];
+  console: string[] = [];
+  constructor(private readonly mayWrite: boolean) { super(); }
+  override async call<T>(_m?: string, method?: string, params?: Record<string, unknown>): Promise<T> {
+    this.asked.push(String(method));
+    if (method === "SendConsoleMessage") { this.console.push(String(params?.message)); return {} as T; }
+    if (method === "CurrentSessionHasPermission") return (params?.PermissionNode === SLEEP_PERMISSION && this.mayWrite) as T;
+    if (method === "GetConfig") return { CurrentValue: params?.node === SLEEP_NODE ? this.sleepOn : 5 } as T;
+    if (method === "SetConfig") {
+      if (!this.mayWrite) return { Status: false, Reason: "You do not have permission to change this setting." } as T;
+      if (params?.node === SLEEP_NODE) this.sleepOn = params.value === "true";
+      return { Status: true } as T;
+    }
+    return {} as T;
+  }
+}
+
+function rig(mayWrite: boolean) {
+  const amp = new SleepyAmp(mayWrite);
+  const tail = new ConsoleTail(amp, () => {});
+  const clock = { t: Date.parse("2026-09-29T20:00:00Z") };
+  let saved: PregenPlan = { mode: "off", area: AREA }; // chunky has the area of that morning, paused at 67%
+  const watch = new PregenWatch(tail, () => clock.t);
+  watch.start();
+  const ctx = () => ({ limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" });
+  const pregen = new Pregen(amp, tail, watch, ctx, { load: async () => saved, save: async (p) => { saved = p; } }, () => {}, () => clock.t, async () => { clock.t += 1000; await new Promise((res) => setTimeout(res, 2)); });
+  return { amp, tail, clock, watch, pregen, saved: () => saved };
+}
+
+describe("the mode, from turning it on to 100%", () => {
+  it("refuses to start while AMP does not let the portal switch sleep off, says which permission, and touches nothing", async () => {
+    const r = rig(false);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    const e = await r.pregen.turnOn({ mode: "now", area: AREA, window: null, capHours: 8 }, null).catch((err: unknown) => err);
+    expect(e).toBeInstanceOf(Refused);
+    expect((e as Refused).code).toBe("sleep_permission");
+    expect((e as Refused).message).toContain("Settings.MinecraftModule.Limits.SleepMode");
+    expect(r.pregen.plan.mode).toBe("off");
+    expect(r.amp.console).toEqual([]);
+    expect(r.amp.asked).not.toContain("SetConfig");
+    expect(r.amp.sleepOn).toBe(true);
+  });
+
+  it("when nobody's online: sleep off, carry on, pause on a join, carry on when they have left, sleep back on at 100%", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "empty", area: AREA, window: null, capHours: null }, null);
+    expect(r.amp.sleepOn).toBe(false);
+    expect(r.saved()).toMatchObject({ mode: "empty", sleepWas: true });
+    expect(r.amp.console).toEqual(["chunky quiet 30", "chunky continue"]); // the same area: carried on, not begun again
+    r.tail.ingest("Task running for minecraft:overworld. Processed: 24500 chunks (68.59%), ETA: 0:03:30, Rate: 50.0 cps, Current: 1, 1");
+    r.clock.t += 60 * 60_000; // an hour on an empty server: sleep is off, nothing to do
+    await r.pregen.tick();
+    expect(r.amp.console.length).toBe(2);
+    r.tail.ingest("bramble09 joined the game");
+    r.clock.t += 20_000;
+    await r.pregen.tick();
+    expect(r.amp.console.slice(2)).toEqual(["chunky pause", "save-all flush"]);
+    r.tail.ingest("Task paused for minecraft:overworld.");
+    r.clock.t += 30 * 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.length).toBe(4); // they are still playing
+    r.tail.ingest("bramble09 left the game");
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.slice(4)).toEqual(["chunky quiet 30", "chunky continue"]);
+    r.tail.ingest("Task finished for minecraft:overworld. Processed: 35721 chunks (100.00%), Total time: 0:12:40");
+    r.clock.t += 10_000;
+    await r.pregen.tick();
+    expect(r.pregen.plan).toEqual({ mode: "off", area: null });
+    expect(r.amp.sleepOn).toBe(true);
+    // and in all of it: the server was never started, never stopped, never ended
+    expect(r.amp.asked.filter((m) => ["Start", "Stop", "Restart", "Kill", "Sleep"].includes(m))).toEqual([]);
+  });
+
+  it("another radius: the old area is called off and a new one begun", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "now", area: { x: 0, z: 0, radius: 3000 }, window: null, capHours: 2 }, null);
+    expect(r.amp.console).toEqual(["chunky cancel", "chunky confirm", "chunky quiet 30", "chunky world minecraft:overworld", "chunky shape square", "chunky center 0 0", "chunky radius 3000", "chunky start"]);
+  });
+
+  it("now, for two hours: the hours are hours of generating; then it pauses, saves and gives sleep back", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "now", area: AREA, window: null, capHours: 2 }, null);
+    r.tail.ingest("Task running for minecraft:overworld. Processed: 24500 chunks (68.59%), ETA: 0:03:30, Rate: 50.0 cps, Current: 1, 1");
+    for (let i = 0; i < 119; i++) { r.clock.t += 60_000; await r.pregen.tick(); }
+    expect(r.pregen.plan.mode).toBe("now");
+    r.clock.t += 60_000; await r.pregen.tick();
+    r.clock.t += 60_000; await r.pregen.tick();
+    expect(r.pregen.plan).toEqual({ mode: "off", area: AREA });
+    expect(r.amp.console.slice(-2)).toEqual(["chunky pause", "save-all flush"]);
+    expect(r.amp.sleepOn).toBe(true);
+  });
+
+  it("a server that is asleep is left asleep; the pre-generation carries on at the next start somebody makes", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 50;
+    await r.pregen.turnOn({ mode: "empty", area: AREA, window: null, capHours: null }, null);
+    r.clock.t += 3 * 3_600_000;
+    await r.pregen.tick();
+    expect(r.amp.console).toEqual([]);
+    expect(r.amp.asked).not.toContain("Start");
+    expect(r.pregen.lastStep).toBe("idle:server");
+    r.tail.state = 20; // somebody joined and AMP woke it; they have left again
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console).toEqual(["chunky quiet 30", "chunky continue"]);
+  });
+
+  it("outside the window it is paused and sleep is as it was; inside, sleep is off", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    r.clock.t = Date.parse("2026-09-29T11:00:00Z"); // noon in the UK
+    await r.pregen.turnOn({ mode: "empty", area: AREA, window: { from: "02:00", to: "08:00" }, capHours: null }, null);
+    expect(r.amp.console).toEqual([]);
+    expect(r.amp.sleepOn).toBe(true);
+    r.clock.t = Date.parse("2026-09-30T01:30:00Z"); // 02:30
+    await r.pregen.tick();
+    expect(r.amp.sleepOn).toBe(false);
+    expect(r.amp.console).toEqual(["chunky quiet 30", "chunky continue"]);
+    r.tail.ingest("Task running for minecraft:overworld. Processed: 24500 chunks (68.59%), ETA: 0:03:30, Rate: 50.0 cps, Current: 1, 1");
+    r.clock.t = Date.parse("2026-09-30T07:00:30Z"); // 08:00
+    await r.pregen.tick();
+    expect(r.amp.console.slice(2)).toEqual(["chunky pause", "save-all flush"]);
+    expect(r.amp.sleepOn).toBe(true);
+    expect(r.pregen.plan.mode).toBe("empty"); // still on: tomorrow night again
+  });
+});
+
+describe("before the api stops the server", () => {
+  it("a running pre-generation is paused and the save is waited for", async () => {
+    const r = rig(true);
+    r.tail.state = 20;
+    r.tail.ingest("Task running for minecraft:overworld. Processed: 100 chunks (0.28%), ETA: 0:12:00, Rate: 50.0 cps, Current: 1, 1");
+    const waiting = r.pregen.quiesce();
+    setTimeout(() => r.tail.ingest("Saved the game"), 10);
+    expect(await waiting).toEqual({ paused: true, saved: true });
+    expect(r.amp.console).toEqual(["chunky pause", "save-all flush"]);
+  });
+  it("says so when the save was not seen, after a minute, and nothing is ended by force", async () => {
+    const r = rig(true);
+    r.tail.state = 20;
+    r.tail.ingest("Task running for minecraft:overworld. Processed: 100 chunks (0.28%), ETA: 0:12:00, Rate: 50.0 cps, Current: 1, 1");
+    const t0 = r.clock.t;
+    expect(await r.pregen.quiesce()).toEqual({ paused: true, saved: false });
+    expect(r.clock.t - t0).toBe(60_000);
+    expect(r.amp.asked).not.toContain("Kill");
+  });
+  it("has nothing to do when nothing is generating", async () => {
+    const r = rig(true);
+    r.tail.state = 20;
+    expect(await r.pregen.quiesce()).toEqual({ paused: false, saved: true });
+    expect(r.amp.console).toEqual([]);
+  });
+});
+
+describe("the commands", () => {
+  it("are fixed words and checked numbers", () => {
     const ctx = { limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
     expect(actions["world.pregenContinue"].build(ctx, {})).toEqual(["chunky quiet 30", "chunky continue"]);
     expect(actions["world.pregenPause"].build(ctx, {})).toEqual(["chunky pause", "save-all flush"]);
     expect(actions["world.pregenCancel"].build(ctx, {})).toEqual(["chunky cancel", "chunky confirm"]);
-  });
-});
-
-describe("running it for hours", () => {
-  const now = Date.parse("2026-09-29T20:00:00Z");
-  const hours: Exclude<PregenPlan, { mode: "off" }> = { mode: "hours", until: "2026-09-30T04:00:00.000Z", whilePlaying: false, task: null, started: true, since: "2026-09-29T20:00:00.000Z", by: null };
-  const empty: Exclude<PregenPlan, { mode: "off" }> = { ...hours, mode: "empty", until: null };
-  const v = (over: Partial<KeeperView>): KeeperView => ({ state: 20, online: 0, emptyForMs: 0, stoppingForMs: null, pregen: "paused", now, ...over });
-
-  it("generates in rounds that end well before AMP's sleep", () => {
-    expect(roundLength(null)).toBe(210_000);
-    expect(roundLength(380_000)).toBe(280_000); // AMP was seen to wait 6 min 20 s: 100 s earlier
-    expect(roundLength(150_000)).toBe(120_000); // never under two minutes
-    expect(roundLength(3_000_000)).toBe(600_000); // never over ten
-    expect(keeperStep(empty, v({ emptyForMs: 60_000 }), 210_000)).toBe("run");
-    expect(keeperStep(empty, v({ emptyForMs: 210_000, pregen: "running" }), 210_000)).toBe("pause:round");
-  });
-  it("wakes a server that sleeps, and leaves one alone that somebody stopped", () => {
-    expect(keeperStep(empty, v({ state: 50 }), 210_000)).toBe("wake");
-    expect(keeperStep(empty, v({ state: 30 }), 210_000)).toBe("wake");
-    expect(keeperStep(empty, v({ state: 0 }), 210_000)).toBe("wait");
-    expect(keeperStep(empty, v({ state: 10 }), 210_000)).toBe("wait");
-    expect(keeperStep(empty, v({ state: 100 }), 210_000)).toBe("wait");
-  });
-  it("waits while somebody is playing, unless it was told not to", () => {
-    expect(keeperStep(empty, v({ online: 1, emptyForMs: null, pregen: "running" }), 210_000)).toBe("pause:playing");
-    expect(keeperStep(hours, v({ online: 2, emptyForMs: null }), 210_000)).toBe("pause:playing");
-    expect(keeperStep({ ...hours, whilePlaying: true }, v({ online: 2, emptyForMs: null }), 210_000)).toBe("run");
-  });
-  it("ends when the time is up or the area is done", () => {
-    expect(keeperStep(hours, v({ now: Date.parse("2026-09-30T04:00:00Z") }), 210_000)).toBe("off:time");
-    expect(keeperStep(hours, v({ now: Date.parse("2026-09-30T03:59:00Z") }), 210_000)).toBe("run");
-    expect(keeperStep(empty, v({ pregen: "finished" }), 210_000)).toBe("off:done");
-  });
-  it("ends a server that hangs while stopping, after four minutes and not before", () => {
-    expect(keeperStep(empty, v({ state: 45, stoppingForMs: 60_000 }), 210_000)).toBe("wait");
-    expect(keeperStep(empty, v({ state: 45, stoppingForMs: 240_000 }), 210_000)).toBe("kill");
-  });
-
-  it("does a night's work: wake, carry on, pause before the sleep, wake again; and does nothing once it is off", async () => {
-    const sent: string[] = [];
-    const amp = new (class extends MockAmp {
-      override async call<T>(_m?: string, method?: string, params?: Record<string, unknown>): Promise<T> {
-        sent.push(method === "SendConsoleMessage" ? String(params?.message) : `AMP ${String(method)}`);
-        return {} as T;
-      }
-    })();
-    const tail = new ConsoleTail(amp, () => {});
-    let t = now;
-    let saved: PregenPlan = { mode: "off" };
-    const watch = new PregenWatch(amp, tail, () => ({ limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" }), () => {}, () => t);
-    watch.start();
-    const keeper = new PregenKeeper(amp, tail, watch, () => ({ limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" }), { load: async () => saved, save: async (p) => { saved = p; } }, () => {}, () => t);
-    tail.state = 50; // asleep
-    await keeper.tick();
-    expect(sent).toEqual([]); // off: a sleeping server is left asleep
-    await keeper.turnOn({ mode: "empty", whilePlaying: false, task: null }, null);
-    expect(saved.mode).toBe("empty");
-    expect(sent).toEqual(["AMP Start"]);
-    tail.state = 20;
-    t += 20_000;
-    await keeper.tick();
-    expect(sent.slice(1)).toEqual(["chunky quiet 30", "chunky continue"]);
-    tail.ingest("Task running for minecraft:overworld. Processed: 24500 chunks (68.59%), ETA: 0:03:30, Rate: 50.0 cps, Current: 1, 1");
-    t += 100_000;
-    await keeper.tick();
-    expect(sent.length).toBe(3); // generating: nothing to say
-    t += 120_000;
-    await keeper.tick();
-    expect(sent.slice(3)).toEqual(["chunky pause", "save-all flush"]);
-    tail.ingest("Task paused for minecraft:overworld.");
-    tail.state = 50; // AMP has put it to sleep
-    t += 160_000;
-    await keeper.tick();
-    expect(sent.slice(5)).toEqual(["AMP Start"]);
-    expect(keeper.idleSeenMs).not.toBeNull();
-    tail.state = 20;
-    tail.ingest("bramble09 joined the game");
-    t += 30_000;
-    await keeper.tick();
-    expect(sent.length).toBe(6); // somebody is playing and it is paused already: nothing is sent
-    await keeper.turnOff("asked", null);
-    expect(saved).toEqual({ mode: "off" });
-    tail.ingest("bramble09 left the game");
-    tail.state = 50;
-    t += 600_000;
-    await keeper.tick();
-    expect(sent.length).toBe(6); // off again: the server sleeps on
   });
 });

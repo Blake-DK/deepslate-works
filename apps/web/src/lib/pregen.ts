@@ -1,81 +1,78 @@
-// Admin → Server → Pre-generation: what api knows about chunky, in words. Pure, so it is tested.
+// Admin → Server → Pre-generation: what api says, in words. Pure, so it is tested.
+
+export type Area = { x: number; z: number; radius: number };
+export type Plan =
+  | { mode: "off"; area: Area | null }
+  | { mode: "empty" | "now"; area: Area; window: { from: string; to: string } | null; capHours: number | null; ranMs: number; since: string; sleepWas: boolean | null };
 
 export type Pregen = {
   status: "none" | "running" | "paused" | "finished" | "cancelled";
-  world: string | null;
   chunks: number | null;
   percent: number | null;
   eta: string | null;
   rate: number | null;
-  pausedBy: "empty" | null;
   at: string | null;
-  serverRunning?: boolean;
-  online?: number;
-  /** What an admin has asked for: off, for a number of hours, or whenever nobody is on until it is done. */
-  plan?: { mode: "off" } | { mode: "hours" | "empty"; until: string | null; whilePlaying: boolean; since: string };
-  /** What the keeper is doing right now. */
-  doing?: string;
-  roundSec?: number;
+  plan: Plan;
+  /** What api is doing about it right now. */
+  doing: string;
+  /** Chunks in the area of the plan. */
+  total: number | null;
+  sleep: { node: string; permission: string; allowed: boolean | null; on: boolean | null; delayMin: number | null; problem: string | null };
+  serverState: number;
+  serverRunning: boolean;
+  online: number;
 };
 
-/** Rough numbers for a radius: chunks, hours of generating at 50 chunks a second, and disk at 13 KB a chunk (both measured on 2026-09-29). */
+const n = (v: number) => v.toLocaleString("en-GB");
+
+/** Rough numbers for a radius: chunks, hours of generating at 50 chunks a second, disk at 13 KB a chunk (both measured on 2026-09-29). */
 export function pregenCost(radius: number): { chunks: number; hours: number; gb: number } {
   const side = Math.ceil((2 * radius) / 16) + 1;
   const chunks = side * side;
   return { chunks, hours: chunks / 50 / 3600, gb: (chunks * 13) / 1_048_576 };
 }
 
-const DOING: Record<string, string> = {
-  run: "generating",
-  wake: "waking the server",
-  wait: "waiting for the server",
-  "pause:playing": "waiting: somebody is playing",
-  "pause:round": "between two rounds: paused and saved, the server goes to sleep and is woken again",
-  kill: "the server hung while stopping and is being ended",
-};
+export type Progress = { line: string; percent: number | null };
 
-/** The line about what has been asked for. `until` is written out by the caller (UK time). */
-export function planText(p: Pregen | null, until: string | null): { on: boolean; line: string } {
-  const plan = p?.plan;
-  if (!plan || plan.mode === "off") return { on: false, line: "Off. Nothing generates, and nothing will start by itself." };
-  const what = plan.mode === "hours" ? `On until ${until ?? "the time is up"}` : "On whenever nobody is on the server, until the area is done";
-  const playing = plan.whilePlaying ? ", also while people are playing" : plan.mode === "hours" ? ", waiting whenever somebody is playing" : "";
-  const doing = p?.doing && DOING[p.doing] ? ` Right now: ${DOING[p.doing]}.` : "";
-  return { on: true, line: `${what}${playing}.${doing}` };
+/** Chunks done and to do, the percentage and chunky's own estimate. */
+export function progress(p: Pregen | null): Progress {
+  if (!p) return { line: "The site's backend did not answer.", percent: null };
+  const total = p.total ?? (p.chunks !== null && p.percent ? Math.round((p.chunks / p.percent) * 100) : null);
+  if (p.status === "finished") return { line: `Done: ${p.chunks !== null ? n(p.chunks) : total !== null ? n(total) : "all"} chunks, 100%.`, percent: 100 };
+  if (p.chunks === null || p.percent === null) {
+    return { line: p.plan.area ? `No figures yet${total !== null ? ` (the area is ${n(total)} chunks)` : ""}: chunky says where it stands when it next runs.` : "Nothing has been generated ahead of time yet.", percent: null };
+  }
+  const to = p.status === "running" && p.eta ? `, about ${p.eta} to go` : "";
+  const rate = p.status === "running" && p.rate ? `, ${p.rate.toFixed(0)} chunks a second` : "";
+  return { line: `${n(p.chunks)} of ${total !== null ? n(total) : "?"} chunks, ${p.percent.toFixed(1)}%${to}${rate}.`, percent: p.percent };
 }
 
-export type PregenText = {
-  label: string;
-  tone: "good" | "warn" | "bad" | "neutral";
-  line: string;
-  can: { start: boolean; continue: boolean; pause: boolean; cancel: boolean };
+const DOING: Record<string, string> = {
+  run: "generating",
+  "pause:playing": "waiting: somebody is playing",
+  "pause:sleep": "paused before the server is put to sleep; it carries on when the server is next started",
+  "idle:window": "waiting for its time of day",
+  "idle:server": "waiting: the server is not running. It is not started from here; it carries on when it next runs",
 };
 
-const n = (v: number | null) => (v === null ? "?" : v.toLocaleString("en-GB"));
+export type ModeText = { on: boolean; label: string; tone: "warn" | "neutral" | "good"; line: string };
 
-export function pregenText(p: Pregen | null): PregenText {
-  if (!p) return { label: "not known", tone: "neutral", line: "The site's backend did not answer.", can: { start: false, continue: false, pause: false, cancel: false } };
-  switch (p.status) {
-    case "running":
-      return {
-        label: "on",
-        tone: "warn",
-        line: `Running: ${n(p.chunks)} chunks made, ${p.percent?.toFixed(1) ?? "?"}%${p.eta ? `, about ${p.eta} to go` : ""}${p.rate ? `, ${p.rate.toFixed(0)} chunks a second` : ""}.`,
-        can: { start: false, continue: false, pause: true, cancel: false },
-      };
-    case "paused":
-      return {
-        label: "off (paused)",
-        tone: "neutral",
-        line: `Paused at ${p.percent?.toFixed(1) ?? "?"}% (${n(p.chunks)} chunks made)${p.pausedBy === "empty" ? ", by itself: the server had been empty for three minutes" : ""}. It stays paused until you turn it on.`,
-        can: { start: true, continue: true, pause: false, cancel: true },
-      };
-    case "finished":
-      return { label: "done", tone: "good", line: `Finished${p.chunks ? `: ${n(p.chunks)} chunks` : ""}. Nothing is running.`, can: { start: true, continue: false, pause: false, cancel: false } };
-    case "cancelled":
-      return { label: "off", tone: "neutral", line: "Called off. Nothing is running.", can: { start: true, continue: false, pause: false, cancel: false } };
-    default:
-      // api has heard nothing from chunky since it started; a paused task may still be waiting on the server
-      return { label: "off", tone: "neutral", line: "Nothing is running. If a pre-generation was paused earlier, \"carry on\" picks it up where it stopped.", can: { start: true, continue: true, pause: true, cancel: true } };
-  }
+export function modeText(p: Pregen | null): ModeText {
+  const plan = p?.plan;
+  if (!p || !plan || plan.mode === "off") return { on: false, label: p?.status === "finished" ? "done" : "off", tone: p?.status === "finished" ? "good" : "neutral", line: "Off. Nothing generates, and nothing starts by itself." };
+  const hours = plan.capHours !== null ? `${plan.capHours} ${plan.capHours === 1 ? "hour" : "hours"} of generating at most (${(plan.ranMs / 3_600_000).toFixed(1)} so far)` : "until the area is done";
+  const what = plan.mode === "now" ? `On: now, whoever is playing, ${hours}` : `On: when nobody's online${plan.window ? `, between ${plan.window.from} and ${plan.window.to}` : ""}, ${hours}`;
+  const doing = DOING[p.doing] ? ` Right now: ${DOING[p.doing]}.` : "";
+  return { on: true, label: plan.mode === "now" ? "on: now" : "on: when nobody's online", tone: "warn", line: `${what}.${doing}` };
+}
+
+export type SleepText = { ok: boolean; line: string; grant: string | null };
+
+/** What AMP's sleep mode is, and whether the portal may switch it off. Without that, nothing can be turned on. */
+export function sleepText(p: Pregen | null): SleepText {
+  const s = p?.sleep;
+  if (!s || s.allowed === null) return { ok: false, line: `The server's control panel could not be asked about its sleep mode${s?.problem ? ` (${s.problem})` : ""}.`, grant: null };
+  const is = s.on === null ? "" : s.on ? `Sleep mode is on${s.delayMin ? `: an empty server is put to sleep after ${s.delayMin} minutes` : ""}. ` : "Sleep mode is off. ";
+  if (s.allowed) return { ok: true, line: `${is}While a mode is on, the portal switches it off, and puts it back as it was afterwards.`, grant: null };
+  return { ok: false, line: `${is}The control panel does not let the portal switch it off, so nothing can be turned on: the server would be put to sleep in the middle of generating.`, grant: s.permission };
 }

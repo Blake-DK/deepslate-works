@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Input, Label } from "@/components/ui/input";
 import { LiveConsole } from "./live-console";
-import { announceAction, announcementChangeAction, backupAction, cancelRestartAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
-import { planText, pregenCost, pregenText, type Pregen } from "@/lib/pregen";
+import { announceAction, announcementChangeAction, backupAction, cancelRestartAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
+import { modeText, pregenCost, progress, sleepText, type Pregen } from "@/lib/pregen";
+import { ConfirmSubmit } from "@/components/server/confirm-submit";
 
 export const metadata: Metadata = { title: "Server" };
 
@@ -22,7 +23,7 @@ type Schedule = { restart: { at: string; minutes: number } | null };
 type Backup = { allowed: boolean; canList?: boolean; stopsServer: boolean | null; permission: string; listPermission?: string; backups?: Array<{ id: string | null; name: string; at: string | null; sizeBytes: number | null; sticky: boolean; automatic: boolean }> };
 
 const MSG: Record<string, string> = {
-  pregenOn: "Pre-generation is on.", pregenPaused: "Pre-generation paused.", pregenOff: "Pre-generation called off.",
+  pregenOn: "Pre-generation is on.", pregenPaused: "Pre-generation stopped; where it got to is kept.", pregenOff: "The area is called off.", killed: "The server's process has been ended.",
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
   error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup started in AMP.", announced: "Announcement posted",
 };
@@ -40,9 +41,10 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
     getAnnouncements(10),
     apiFetch<Pregen>("/pregen", { caller }).catch(() => null),
   ]);
-  const pre = pregenText(pregen);
-  const until = pregen?.plan && pregen.plan.mode !== "off" && pregen.plan.until ? new Date(pregen.plan.until).toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" }) : null;
-  const plan = planText(pregen, until);
+  const mode = modeText(pregen);
+  const prog = progress(pregen);
+  const sleepy = sleepText(pregen);
+  const stuck = status?.stateCode === 45;
   const a = AVAILABILITY_TEXT[status?.availability ?? "unknown"];
   const running = status?.availability === "online";
   const startable = status?.availability === "offline" || status?.availability === "sleeping";
@@ -67,6 +69,12 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
             <Button type="submit" name="op" value="restart" size="sm" variant="secondary" disabled={!running}>Restart now</Button>
             <Button type="submit" name="op" value="stop" size="sm" variant="danger" disabled={!running}>Stop</Button>
           </form>
+          {stuck && (
+            <form action={killAction} className="space-y-2 rounded-lg border border-danger/40 bg-danger/10 p-3" data-testid="kill">
+              <p className="text-sm">The server is stopping. That takes a minute at most; if it has been like this for several minutes it is stuck, and the only way out is to end its process. <strong>Whatever it had not saved is lost.</strong></p>
+              <ConfirmSubmit question="End the server's process? Whatever it had not saved is lost. Only do this when the server has been stuck in Stopping for several minutes.">End the process</ConfirmSubmit>
+            </form>
+          )}
         </CardContent>
       </Card>
       <div className="grid gap-4 md:grid-cols-2">
@@ -119,45 +127,64 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
         </Card>
         <Card data-testid="pregen">
           <CardHeader>
-            <CardTitle className="flex flex-wrap items-center gap-2">Pre-generation <Badge tone={plan.on ? "warn" : pre.tone}>{plan.on ? "on" : pre.label}</Badge></CardTitle>
-            <CardDescription>Makes the world around spawn ahead of time, so that exploring and the map are smooth later. While it generates the server is busy and playing can stutter. <strong className="text-foreground">It is off unless you turn it on here.</strong></CardDescription>
+            <CardTitle className="flex flex-wrap items-center gap-2">Pre-generation <Badge tone={mode.tone}>{mode.label}</Badge></CardTitle>
+            <CardDescription>Makes the world around spawn ahead of time, so that exploring and the map are smooth later. <strong className="text-foreground">Off unless you turn it on here.</strong></CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm" data-testid="pregen-plan">{plan.line}</p>
-            <p className="text-sm text-muted-foreground" data-testid="pregen-state">{pre.line}</p>
-            {plan.on ? (
-              <form action={pregenAction}><input type="hidden" name="op" value="off" /><Button type="submit" size="sm" variant="danger">Turn off</Button></form>
+            <p className="text-sm" data-testid="pregen-mode">{mode.line}</p>
+            <div data-testid="pregen-progress">
+              <p className="text-sm">{pregen?.plan.area ? <>Radius {pregen.plan.area.radius} around {pregen.plan.area.x}, {pregen.plan.area.z}. </> : null}{prog.line}</p>
+              {prog.percent !== null && <span className="mt-1 block h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(prog.percent)}><span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(100, prog.percent)}%` }} /></span>}
+            </div>
+            {mode.on ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <form action={pregenAction}><input type="hidden" name="op" value="off" /><Button type="submit" size="sm" variant="secondary">Stop</Button></form>
+                <form action={pregenAction}><input type="hidden" name="op" value="cancel" /><ConfirmSubmit question="Call the area off? Chunky forgets where it got to; what has been generated stays in the world.">Cancel</ConfirmSubmit></form>
+                <span className="text-xs text-muted-foreground">Stop pauses and saves, and keeps where it got to. Cancel forgets the area.</span>
+              </div>
             ) : (
               <form action={pregenAction} className="space-y-3">
                 <input type="hidden" name="op" value="on" />
+                <input type="hidden" name="x" value={pregen?.plan.area?.x ?? 0} />
+                <input type="hidden" name="z" value={pregen?.plan.area?.z ?? 0} />
+                <div><Label htmlFor="pgr">Radius, blocks</Label><Input id="pgr" name="radius" type="number" min={16} max={10000} defaultValue={pregen?.plan.area?.radius ?? 1500} className="h-8 w-28 text-sm" required /></div>
+                <p className="text-xs text-muted-foreground">Around {pregen?.plan.area?.x ?? 0}, {pregen?.plan.area?.z ?? 0} (spawn). Another radius calls the present area off and begins a new one; what is already made is passed over quickly. Roughly: {[1500, 3000, 5000, 10000].map((r) => { const c = pregenCost(r); return `${r} = ${c.hours < 1 ? `${Math.round(c.hours * 60)} min` : `${c.hours.toFixed(1)} h`}, ${c.gb < 1 ? c.gb.toFixed(1) : Math.round(c.gb)} GB`; }).join(" · ")}.</p>
                 <fieldset className="space-y-2">
-                  <legend className="text-sm font-medium">When</legend>
-                  <label className="flex flex-wrap items-center gap-2 text-sm"><input type="radio" name="mode" value="hours" defaultChecked className="h-4 w-4" /> For <Input name="hours" type="number" min={0.25} max={72} step={0.25} defaultValue={8} className="h-8 w-20 text-sm" aria-label="Hours" /> hours from now</label>
-                  <label className="flex items-center gap-2 text-sm"><input type="radio" name="mode" value="empty" className="h-4 w-4" /> Whenever nobody is on the server, until the area is done</label>
-                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="whilePlaying" className="h-4 w-4" /> Also while people are playing (it waits for them otherwise)</label>
+                  <legend className="sr-only">Mode</legend>
+                  <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
+                    <input type="radio" name="mode" value="empty" defaultChecked className="mt-1 h-4 w-4" />
+                    <span className="space-y-2">
+                      <span className="block font-medium">When nobody&apos;s online</span>
+                      <span className="block text-muted-foreground">Carries on whenever the server is empty and pauses as soon as anyone joins.</span>
+                      <span className="flex flex-wrap items-end gap-2">
+                        <span><Label htmlFor="pgf">Only from</Label><Input id="pgf" name="from" type="time" className="h-8 w-28 text-sm" /></span>
+                        <span><Label htmlFor="pgt">to (UK time)</Label><Input id="pgt" name="to" type="time" className="h-8 w-28 text-sm" /></span>
+                        <span><Label htmlFor="pghe">Hours at most</Label><Input id="pghe" name="hoursEmpty" type="number" min={0.25} max={240} step={0.25} placeholder="no limit" className="h-8 w-28 text-sm" /></span>
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
+                    <input type="radio" name="mode" value="now" className="mt-1 h-4 w-4" />
+                    <span className="space-y-2">
+                      <span className="block font-medium">Now</span>
+                      <span className="block text-danger">Runs whoever is playing. It will lag anyone who is on.</span>
+                      <span className="block"><Label htmlFor="pghn">For how many hours</Label><Input id="pghn" name="hoursNow" type="number" min={0.25} max={240} step={0.25} placeholder="until 100%" className="h-8 w-28 text-sm" /></span>
+                    </span>
+                  </label>
                 </fieldset>
-                <fieldset className="space-y-2">
-                  <legend className="text-sm font-medium">What</legend>
-                  <label className="flex items-center gap-2 text-sm"><input type="radio" name="task" value="carry" defaultChecked={pre.can.continue} disabled={!pre.can.continue} className="h-4 w-4" /> Carry on where it stopped{pregen?.percent != null && pregen.status === "paused" ? ` (${pregen.percent.toFixed(0)}% done)` : ""}</label>
-                  <label className="flex items-center gap-2 text-sm"><input type="radio" name="task" value="new" defaultChecked={!pre.can.continue} className="h-4 w-4" /> A new area:</label>
-                  <div className="flex flex-wrap items-end gap-2 pl-6">
-                    <div><Label htmlFor="pgr">Radius, blocks</Label><Input id="pgr" name="radius" type="number" min={16} max={10000} defaultValue={1500} className="h-8 w-24 text-sm" /></div>
-                    <div><Label htmlFor="pgx">Centre x</Label><Input id="pgx" name="x" type="number" defaultValue={0} className="h-8 w-24 text-sm" /></div>
-                    <div><Label htmlFor="pgz">Centre z</Label><Input id="pgz" name="z" type="number" defaultValue={0} className="h-8 w-24 text-sm" /></div>
-                  </div>
-                  <p className="pl-6 text-xs text-muted-foreground">Roughly: {[1500, 3000, 5000, 10000].map((r) => { const c = pregenCost(r); return `${r} blocks = ${c.hours < 1 ? `${Math.round(c.hours * 60)} min` : `${c.hours.toFixed(1)} h`} of generating, ${c.gb < 1 ? c.gb.toFixed(1) : Math.round(c.gb)} GB`; }).join(" · ")}. What is already made is skipped quickly.</p>
-                </fieldset>
-                <Button type="submit" size="sm">Turn on</Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="submit" size="sm" disabled={!sleepy.ok}>Turn on</Button>
+                </div>
               </form>
             )}
-            {pre.can.cancel && (
-              <form action={pregenAction} className="flex flex-wrap items-center gap-2">
-                <input type="hidden" name="op" value="cancel" />
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="sure" className="h-4 w-4" /> Forget where it got to</label>
-                <Button type="submit" size="sm" variant="secondary" disabled={!running}>Call the area off</Button>
-              </form>
+            {!mode.on && pregen?.plan.area && (
+              <form action={pregenAction}><input type="hidden" name="op" value="cancel" /><ConfirmSubmit variant="secondary" question="Call the area off? Chunky forgets where it got to; what has been generated stays in the world.">Cancel the area</ConfirmSubmit></form>
             )}
-            <p className="text-xs text-muted-foreground">How it keeps going: the server&apos;s control panel puts an empty server to sleep after about six minutes, whatever it is doing, and a sleep in the middle of generating once left the server hanging. So it works in rounds of {pregen?.roundSec ? Math.round(pregen.roundSec / 60 * 10) / 10 : 3.5} minutes: generate, pause and save, let the server go to sleep, wake it, carry on. About two thirds of the time is spent generating. The server wakes by itself while this is on; people can join at any time, and it waits while they play unless you ticked the box.</p>
+            <div className={`rounded-lg border p-3 text-xs ${sleepy.ok ? "text-muted-foreground" : "border-danger/40 bg-danger/10"}`} data-testid="pregen-sleep">
+              <p>{sleepy.line}</p>
+              {sleepy.grant && <p className="mt-1">To allow it: in the instance&apos;s own panel, give the role of the user <span className="font-mono">webapp</span> the permission Settings → MinecraftModule → Limits → SleepMode, <span className="font-mono">{sleepy.grant}</span>. The setting is <span className="font-mono">{pregen?.sleep.node}</span>.</p>}
+            </div>
+            <p className="text-xs text-muted-foreground">The server is never started from here, and never ended. If it is asleep or stopped, the pre-generation carries on the next time it runs. Hours are hours of generating, not hours on the clock.</p>
           </CardContent>
         </Card>
         <Card>

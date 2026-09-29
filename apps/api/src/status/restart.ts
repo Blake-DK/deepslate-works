@@ -20,7 +20,13 @@ export class RestartSchedule {
   private plan: Plan | null = null;
   private timers: NodeJS.Timeout[] = [];
 
-  constructor(private readonly amp: Amp, private readonly ctx: () => ActionCtx, private readonly log: (o: unknown, m: string) => void) {}
+  constructor(
+    private readonly amp: Amp,
+    private readonly ctx: () => ActionCtx,
+    private readonly log: (o: unknown, m: string) => void,
+    /** Called before the server is restarted: a running pre-generation is paused and saved first. */
+    private readonly before: () => Promise<unknown> = async () => undefined,
+  ) {}
 
   get current(): Plan | null {
     return this.plan;
@@ -69,6 +75,7 @@ export class RestartSchedule {
     this.plan = null;
     try {
       await runAction(this.amp, this.ctx(), "server.restartWarning", { minutes: 0 }, null).catch(() => undefined);
+      await this.before().catch((e) => this.log({ err: String(e) }, "could not pause the pre-generation before the restart"));
       await this.amp.call("Core", "Restart");
       await audit({ userId: plan.by, action: "server.restart", params: { scheduled: true, minutes: plan.minutes }, result: "OK" });
     } catch (e) {

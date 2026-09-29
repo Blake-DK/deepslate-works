@@ -4,12 +4,27 @@ import { runAction } from "../actions/run.js";
 import type { ActionCtx } from "../actions/registry.js";
 import { audit } from "../audit.js";
 
-// Pre-generation (chunky). It runs only when an admin has turned it on from Admin → Server; nothing here starts
-// or continues it. What this keeps is what chunky last said, for that page, and one safeguard: a server that has
-// been empty for three minutes is about to be put to sleep by AMP, and a stop in the middle of generating hung the
-// server at "Saving worlds" (2026-09-29). So an empty server's pre-generation is paused, and saved, before that.
+// Pre-generation (chunky), as a mode on Admin → Server (planner, 2026-09-29).
+//
+//   off    nothing generates, and nothing starts by itself
+//   empty  chunky carries on whenever the server is empty and pauses as soon as anyone joins;
+//          optionally only inside a window of the day, optionally for so many hours of generating at most
+//   now    runs whoever is playing, for so many hours or until the area is done
+//
+// While a mode is due, AMP's sleep mode is switched off, and put back as it was when the mode ends. If AMP does
+// not let the portal do that, the mode refuses to start.
+//
+// What this never does: start the server, or end its process. A server that is asleep or stopped stays so, and
+// the pre-generation carries on at the next start somebody else makes. Before the api stops or restarts the
+// server for any reason, a running pre-generation is paused and the save is waited for (`quiesce`).
+//
+// (For two hours on 2026-09-29 this worked in rounds around AMP's sleep, waking the server itself and ending a
+// stop that hung. That is gone: a stop in the middle of generating is what hung the server that morning.)
 
-export const EMPTY_PAUSE_MS = 3 * 60_000;
+export const SLEEP_NODE = "MinecraftModule.Limits.SleepMode";
+export const SLEEP_DELAY_NODE = "MinecraftModule.Limits.SleepDelayMinutes";
+export const SLEEP_PERMISSION = "Settings.MinecraftModule.Limits.SleepMode";
+export const PLAN_KEY = "_pregen";
 
 export type PregenState = {
   status: "none" | "running" | "paused" | "finished" | "cancelled";
@@ -18,8 +33,6 @@ export type PregenState = {
   percent: number | null;
   eta: string | null;
   rate: number | null;
-  /** Why it is paused, when api did it by itself. */
-  pausedBy: "empty" | null;
   at: string | null;
 };
 
@@ -28,242 +41,334 @@ export type PregenEvent =
   | { type: "pregen"; what: "started" | "continued" | "paused" | "stopped" | "cancelled"; world: string | null }
   | { type: "pregen"; what: "finished"; world: string; chunks: number | null };
 
-const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, pausedBy: null, at: null };
+const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, at: null };
 
 /** Pure: the state after chunky has said something. */
 export function nextPregen(s: PregenState, e: PregenEvent, at: Date): PregenState {
   const when = at.toISOString();
   switch (e.what) {
     case "running":
-      return { status: "running", world: e.world, chunks: e.chunks, percent: e.percent, eta: e.eta, rate: e.rate, pausedBy: null, at: when };
+      return { status: "running", world: e.world, chunks: e.chunks, percent: e.percent, eta: e.eta, rate: e.rate, at: when };
     case "started":
       return { ...NONE, status: "running", world: e.world, chunks: 0, percent: 0, at: when };
     case "continued":
-      return { ...s, status: "running", world: e.world ?? s.world, pausedBy: null, at: when };
+      return { ...s, status: "running", world: e.world ?? s.world, at: when };
     case "paused":
     case "stopped": // what chunky says when the server stops under it: the task is kept, as with a pause
       return s.status === "finished" || s.status === "cancelled" || s.status === "none" ? s : { ...s, status: "paused", eta: null, rate: null, at: when };
     case "cancelled":
       return { ...NONE, status: "cancelled", at: when };
     case "finished":
-      return { status: "finished", world: e.world, chunks: e.chunks ?? s.chunks, percent: 100, eta: null, rate: null, pausedBy: null, at: when };
+      return { status: "finished", world: e.world, chunks: e.chunks ?? s.chunks, percent: 100, eta: null, rate: null, at: when };
   }
 }
 
-/** Pure: is it time to pause because the server is empty? */
-export function shouldPauseEmpty(s: PregenState, running: boolean, online: number, emptySince: number | null, now: number): boolean {
-  return s.status === "running" && running && online === 0 && emptySince !== null && now - emptySince >= EMPTY_PAUSE_MS;
-}
-
+/** What chunky last said. Old lines count too: after a restart of api the page should still say where it stands. */
 export class PregenWatch {
   state: PregenState = NONE;
-  private emptySince: number | null = null;
+  /** When the game last said "Saved the game". */
+  savedAt = 0;
 
-  constructor(
-    private readonly amp: Amp,
-    private readonly tail: ConsoleTail,
-    private readonly ctx: () => ActionCtx,
-    private readonly log: (o: unknown, m: string) => void,
-    private readonly now: () => number = () => Date.now(),
-  ) {}
+  constructor(private readonly tail: ConsoleTail, private readonly now: () => number = () => Date.now()) {}
 
   start() {
-    // Old lines count too: after a restart of api the page should still say where the pre-generation stands.
-    this.tail.on((e) => {
+    this.tail.on((e, info) => {
       if (e.type === "pregen") this.state = nextPregen(this.state, e, new Date(this.now()));
+      if (e.type === "line" && !info.replay && /^Saved the game$/.test(e.text.trim())) this.savedAt = this.now();
     });
   }
+}
 
-  async look() {
-    const running = this.tail.state === 20;
-    const online = this.tail.online.size;
-    if (!running || online > 0 || this.state.status !== "running") this.emptySince = null;
-    else this.emptySince ??= this.now();
-    if (!shouldPauseEmpty(this.state, running, online, this.emptySince, this.now())) return;
-    this.emptySince = null;
-    const r = await runAction(this.amp, this.ctx(), "world.pregenPause", {}, null);
-    this.log({ ok: r.ok, at: this.state.percent }, "pre-generation paused: the server has been empty for three minutes");
-    if (r.ok) this.state = { ...this.state, status: "paused", pausedBy: "empty", eta: null, rate: null, at: new Date(this.now()).toISOString() };
-    await audit({ action: "world.pregenAutoPause", params: { percent: this.state.percent, chunks: this.state.chunks }, result: r.ok ? "OK" : "FAILED", detail: r.detail ?? null });
+// ---- the plan ------------------------------------------------------------------------------------------
+
+export type Area = { x: number; z: number; radius: number };
+export type Window = { from: string; to: string }; // "02:00", "08:00", UK time; may run over midnight
+
+export type PregenPlan =
+  | { mode: "off"; area: Area | null }
+  | {
+      mode: "empty" | "now";
+      area: Area;
+      window: Window | null; // "empty" only
+      capHours: number | null; // hours of generating; null = until the area is done
+      ranMs: number; // generating time so far
+      since: string;
+      by: string | null;
+      /** True while the area has not been handed to chunky yet. */
+      fresh: boolean;
+      /** AMP's sleep mode as it was before this switched it off; null while it has not been touched. */
+      sleepWas: boolean | null;
+    };
+
+const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const minutes = (hhmm: string) => {
+  const m = HHMM.exec(hhmm);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+
+/** Pure: "14:05" in UK time. */
+export function ukClock(at: Date): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hour12: false }).format(at).replace(/^24/, "00");
+}
+
+/** Pure: is the time of day inside the window? From 22:00 to 06:00 runs over midnight; from and to the same is all day. */
+export function inWindow(w: Window | null, clock: string): boolean {
+  if (!w) return true;
+  const [from, to, now] = [minutes(w.from), minutes(w.to), minutes(clock)];
+  if (from === null || to === null || now === null) return false;
+  if (from === to) return true;
+  return from < to ? now >= from && now < to : now >= from || now < to;
+}
+
+export type Due = "yes" | "window" | "cap" | "done";
+
+/** Pure: should it be generating, as far as the plan goes? */
+export function due(plan: Exclude<PregenPlan, { mode: "off" }>, pregen: PregenState["status"], at: Date): Due {
+  if (pregen === "finished") return "done";
+  if (plan.capHours !== null && plan.ranMs >= plan.capHours * 3_600_000) return "cap";
+  if (plan.mode === "empty" && !inWindow(plan.window, ukClock(at))) return "window";
+  return "yes";
+}
+
+export type Step =
+  | "off:done" // the area is finished: the mode ends
+  | "off:cap" // the hours are up: the mode ends
+  | "idle:window" // outside the window: paused, sleep as it was
+  | "idle:server" // the server is not running: nothing is started
+  | "pause:playing" // somebody is on and the mode is "when nobody's online"
+  | "pause:sleep" // sleep could not be switched off and AMP is about to put the server to sleep
+  | "run";
+
+export type View = { serverRunning: boolean; online: number; pregen: PregenState["status"]; at: Date; sleepOff: boolean; emptyForMs: number | null; sleepDelayMin: number };
+
+/** Pure: what to do now. Never "start the server", never "end it". */
+export function step(plan: Exclude<PregenPlan, { mode: "off" }>, v: View): Step {
+  const d = due(plan, v.pregen, v.at);
+  if (d === "done") return "off:done";
+  if (d === "cap") return "off:cap";
+  if (d === "window") return "idle:window";
+  if (!v.serverRunning) return "idle:server";
+  if (plan.mode === "empty" && v.online > 0) return "pause:playing";
+  // Sleep is still on (the permission was taken away, or the write did not take): pause in good time, accept the
+  // sleep, carry on at the next start.
+  if (!v.sleepOff && v.online === 0 && v.emptyForMs !== null && v.emptyForMs >= Math.max(1, v.sleepDelayMin - 2) * 60_000) return "pause:sleep";
+  return "run";
+}
+
+export const sameArea = (a: Area | null, b: Area | null) => Boolean(a && b && a.x === b.x && a.z === b.z && a.radius === b.radius);
+
+/** Pure: chunks in a square of that radius, as chunky counts them. */
+export function chunksIn(radius: number): number {
+  const side = Math.ceil((2 * radius) / 16) + 1;
+  return side * side;
+}
+
+export type PlanStore = { load(): Promise<PregenPlan>; save(p: PregenPlan): Promise<void> };
+export type SleepState = { node: string; permission: string; allowed: boolean | null; on: boolean | null; delayMin: number | null; checkedAt: string | null; problem: string | null };
+
+export class Refused extends Error {
+  constructor(readonly code: "sleep_permission" | "validation", message: string) {
+    super(message);
   }
 }
 
-// ---- running it for hours (Alex, 2026-09-29: "run for 8 hours or always run when no one online") ----------
-// AMP puts an empty server to sleep about six minutes after it became empty, whatever it is doing. So the
-// keeper works in rounds: generate for a few minutes, pause and save in good time before the sleep, let AMP put
-// the server to sleep with nothing going on, wake it, carry on. While somebody is playing it waits (unless told
-// otherwise), so that nobody builds on a server that is busy generating.
-
-export type PregenTask = { x: number; z: number; radius: number };
-export type PregenPlan =
-  | { mode: "off" }
-  | {
-      mode: "hours" | "empty"; // "hours": until `until`; "empty": until the task is finished
-      until: string | null;
-      whilePlaying: boolean;
-      /** A task to start; null = carry on with the one chunky has. */
-      task: PregenTask | null;
-      started: boolean;
-      since: string;
-      by: string | null;
-    };
-
-export const PLAN_KEY = "_pregen";
-export const RUN_FIRST_MS = 210_000; // until AMP's own timing has been seen once
-const RUN_MIN_MS = 120_000;
-const RUN_MAX_MS = 600_000;
-const MARGIN_MS = 100_000; // paused this long before AMP would stop the server
-const HANG_MS = 4 * 60_000;
 const AGAIN_MS = 45_000;
+const OFF: PregenPlan = { mode: "off", area: null };
 
-/** Pure: how long a round may generate, from the shortest time AMP has been seen to wait before a sleep. */
-export function roundLength(idleSeenMs: number | null): number {
-  if (idleSeenMs === null) return RUN_FIRST_MS;
-  return Math.min(RUN_MAX_MS, Math.max(RUN_MIN_MS, idleSeenMs - MARGIN_MS));
-}
-
-export type KeeperView = { state: number; online: number; emptyForMs: number | null; stoppingForMs: number | null; pregen: PregenState["status"]; now: number };
-export type KeeperStep = "off:time" | "off:done" | "kill" | "wait" | "wake" | "run" | "pause:playing" | "pause:round";
-
-/** Pure: what to do now. */
-export function keeperStep(plan: Exclude<PregenPlan, { mode: "off" }>, v: KeeperView, runForMs: number): KeeperStep {
-  if (v.pregen === "finished") return "off:done";
-  if (plan.until && v.now >= Date.parse(plan.until)) return "off:time";
-  if (v.state === 45) return v.stoppingForMs !== null && v.stoppingForMs >= HANG_MS ? "kill" : "wait";
-  if (v.state === 30 || v.state === 50) return "wake";
-  if (v.state !== 20) return "wait"; // starting, or stopped by somebody: not ours to start
-  if (v.online > 0) return plan.whilePlaying ? "run" : "pause:playing";
-  return v.emptyForMs !== null && v.emptyForMs >= runForMs ? "pause:round" : "run";
-}
-
-export type KeeperStore = { load(): Promise<PregenPlan>; save(p: PregenPlan): Promise<void> };
-
-export class PregenKeeper {
-  plan: PregenPlan = { mode: "off" };
-  /** The shortest time AMP has been seen to leave an empty server running. */
-  idleSeenMs: number | null = null;
-  lastStep: KeeperStep | "off" = "off";
+export class Pregen {
+  plan: PregenPlan = OFF;
+  lastStep: Step | "off" = "off";
+  sleep: SleepState = { node: SLEEP_NODE, permission: SLEEP_PERMISSION, allowed: null, on: null, delayMin: null, checkedAt: null, problem: null };
   private emptySince: number | null = null;
-  private stoppingSince: number | null = null;
   private lastCommand = 0;
-  private wokeAt = 0;
-  private wasRunning = false;
-  private startAfterKill = false;
+  private lastTick = 0;
+  private lastSave = 0;
   private timer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly amp: Amp,
     private readonly tail: ConsoleTail,
-    private readonly watch: PregenWatch,
+    readonly watch: PregenWatch,
     private readonly ctx: () => ActionCtx,
-    private readonly store: KeeperStore,
+    private readonly store: PlanStore,
     private readonly log: (o: unknown, m: string) => void,
     private readonly now: () => number = () => Date.now(),
+    private readonly wait: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
   ) {}
 
   async start() {
-    this.plan = await this.store.load().catch(() => ({ mode: "off" }) as PregenPlan);
-    this.tail.on((e, info) => {
-      if (info.replay) return;
-      if (e.type === "started" || e.type === "leave" || e.type === "join") this.emptySince = null; // counted afresh at the next look
-    });
-    this.timer = setInterval(() => void this.tick().catch((err) => this.log({ err: String(err) }, "pregen keeper failed")), 10_000);
+    const loaded = await this.store.load().catch(() => OFF);
+    // anything that is not a plan as it is written today (an older shape, a broken row) is "off"
+    this.plan = loaded && (loaded.mode === "empty" || loaded.mode === "now") && loaded.area ? loaded : { mode: "off", area: loaded?.area ?? null };
+    this.lastTick = this.now();
+    this.timer = setInterval(() => void this.tick().catch((err) => this.log({ err: String(err) }, "pregen tick failed")), 10_000);
   }
 
   stop() {
     if (this.timer) clearInterval(this.timer);
   }
 
-  get runForMs() {
-    return roundLength(this.idleSeenMs);
+  /** What AMP says about its sleep mode and about what the portal may do to it. Reads only. */
+  async lookAtSleep(): Promise<SleepState> {
+    const checkedAt = new Date(this.now()).toISOString();
+    try {
+      const [allowed, mode, delay] = await Promise.all([
+        this.amp.call<unknown>("Core", "CurrentSessionHasPermission", { PermissionNode: SLEEP_PERMISSION }),
+        this.amp.call<{ CurrentValue?: unknown }>("Core", "GetConfig", { node: SLEEP_NODE }),
+        this.amp.call<{ CurrentValue?: unknown } | null>("Core", "GetConfig", { node: SLEEP_DELAY_NODE }).catch(() => null),
+      ]);
+      this.sleep = {
+        node: SLEEP_NODE,
+        permission: SLEEP_PERMISSION,
+        allowed: allowed === true,
+        on: typeof mode?.CurrentValue === "boolean" ? mode.CurrentValue : null,
+        delayMin: typeof delay?.CurrentValue === "number" ? delay.CurrentValue : null,
+        checkedAt,
+        problem: null,
+      };
+    } catch (e) {
+      this.sleep = { ...this.sleep, allowed: null, checkedAt, problem: e instanceof Error ? e.message : String(e) };
+    }
+    return this.sleep;
   }
 
-  async turnOn(input: { mode: "hours" | "empty"; hours?: number; whilePlaying: boolean; task: PregenTask | null }, by: string | null) {
-    const since = new Date(this.now());
-    this.plan = {
-      mode: input.mode,
-      until: input.mode === "hours" ? new Date(since.getTime() + (input.hours ?? 8) * 3_600_000).toISOString() : null,
-      whilePlaying: input.whilePlaying,
-      task: input.task,
-      started: input.task === null,
-      since: since.toISOString(),
-      by,
-    };
+  private async setSleep(on: boolean): Promise<boolean> {
+    const r = await this.amp.call<{ Status?: boolean; Reason?: string } | null>("Core", "SetConfig", { node: SLEEP_NODE, value: on ? "true" : "false" }).catch((e) => ({ Status: false, Reason: String(e) }));
+    const after = await this.lookAtSleep();
+    const ok = after.on === on;
+    if (!ok) this.sleep = { ...after, problem: (r && typeof r === "object" && r.Reason) || "AMP did not change the setting" };
+    this.log({ on, ok, reason: ok ? undefined : this.sleep.problem }, "AMP sleep mode");
+    return ok;
+  }
+
+  async turnOn(input: { mode: "empty" | "now"; area: Area; window: Window | null; capHours: number | null }, by: string | null) {
+    const s = await this.lookAtSleep();
+    if (s.allowed !== true) {
+      await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, refused: "sleep_permission" }, result: "DENIED", detail: s.problem });
+      throw new Refused(
+        "sleep_permission",
+        s.allowed === null
+          ? `Not turned on: AMP could not be asked whether the portal may switch sleep mode off (${s.problem ?? "no answer"}).`
+          : `Not turned on: AMP does not let the portal switch sleep mode off, and without that the server is put to sleep in the middle of generating. In the instance's own panel, give the role of the user "webapp" the permission Settings → MinecraftModule → Limits → SleepMode (${SLEEP_PERMISSION}), then turn this on again.`,
+      );
+    }
+    const was = this.plan;
+    const status = this.watch.state.status;
+    // Another area than the one chunky has: that one is called off first.
+    const another = was.area !== null && !sameArea(was.area, input.area);
+    if (was.mode !== "off") await this.turnOff("asked", by);
+    if (another && this.tail.state === 20) await runAction(this.amp, this.ctx(), "world.pregenCancel", {}, by);
+    const fresh = another || was.area === null || status === "finished" || status === "cancelled";
+    if (fresh) this.watch.state = NONE;
+    this.plan = { mode: input.mode, area: input.area, window: input.mode === "empty" ? input.window : null, capHours: input.capHours, ranMs: 0, since: new Date(this.now()).toISOString(), by, fresh, sleepWas: null };
     this.lastCommand = 0;
     await this.store.save(this.plan);
-    await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, hours: input.mode === "hours" ? (input.hours ?? 8) : null, whilePlaying: input.whilePlaying, ...(input.task ?? {}) }, result: "OK" });
+    await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, ...input.area, window: input.window, capHours: input.capHours, newArea: fresh }, result: "OK" });
     await this.tick();
   }
 
-  async turnOff(reason: "asked" | "time" | "done", by: string | null = null) {
+  async turnOff(reason: "asked" | "cap" | "done", by: string | null = null) {
     const was = this.plan;
-    this.plan = { mode: "off" };
+    if (was.mode === "off") return;
+    const paused = await this.pause();
+    if (was.sleepWas !== null) await this.setSleep(was.sleepWas);
+    this.plan = { mode: "off", area: reason === "done" ? null : was.area };
     this.lastStep = "off";
     await this.store.save(this.plan);
-    let paused = true;
-    if (this.tail.state === 20 && this.watch.state.status === "running") paused = (await runAction(this.amp, this.ctx(), "world.pregenPause", {}, null)).ok;
-    if (was.mode !== "off") await audit({ userId: by, action: "world.pregenOff", params: { reason, percent: this.watch.state.percent, chunks: this.watch.state.chunks }, result: paused ? "OK" : "FAILED" });
+    await audit({ userId: by, action: "world.pregenOff", params: { reason, percent: this.watch.state.percent, chunks: this.watch.state.chunks, sleepRestored: was.sleepWas }, result: paused ? "OK" : "FAILED" });
+  }
+
+  /** Stop, and make chunky forget where it got to. */
+  async cancel(by: string | null) {
+    await this.turnOff("asked", by);
+    if (this.tail.state === 20) await runAction(this.amp, this.ctx(), "world.pregenCancel", {}, by);
+    this.plan = OFF;
+    await this.store.save(this.plan);
+  }
+
+  private async pause(): Promise<boolean> {
+    if (this.tail.state !== 20 || this.watch.state.status !== "running") return true;
+    return (await runAction(this.amp, this.ctx(), "world.pregenPause", {}, null)).ok;
+  }
+
+  /**
+   * Before the api stops or restarts the server, for whatever reason: a running pre-generation is paused and the
+   * save is waited for (a minute at most). A stop in the middle of generating hung the server at "Saving worlds".
+   */
+  async quiesce(): Promise<{ paused: boolean; saved: boolean }> {
+    if (this.tail.state !== 20 || this.watch.state.status !== "running") return { paused: false, saved: true };
+    const asked = this.now();
+    const ok = (await runAction(this.amp, this.ctx(), "world.pregenPause", {}, null)).ok;
+    for (let i = 0; ok && i < 60; i++) {
+      if (this.watch.savedAt >= asked) return { paused: true, saved: true };
+      await this.wait(1000);
+    }
+    this.log({ ok }, "pre-generation paused before a stop; the save was not seen to finish");
+    return { paused: ok, saved: false };
   }
 
   async tick() {
     const now = this.now();
-    const state = this.tail.state;
+    const dt = Math.max(0, Math.min(60_000, now - this.lastTick));
+    this.lastTick = now;
+    const running = this.tail.state === 20;
     const online = this.tail.online.size;
-    const running = state === 20;
-    // AMP's timing, learnt by watching: an empty, running server that stops without having been told to
-    if (this.wasRunning && !running && this.emptySince !== null && (state === 45 || state === 50 || state === 30)) {
-      const idle = now - this.emptySince;
-      if (idle > 60_000 && idle < 3_600_000) this.idleSeenMs = this.idleSeenMs === null ? idle : Math.min(this.idleSeenMs, idle);
-    }
-    this.wasRunning = running;
     if (!running || online > 0) this.emptySince = null;
     else this.emptySince ??= now;
-    if (state === 45) this.stoppingSince ??= now;
-    else this.stoppingSince = null;
 
     if (this.plan.mode === "off") {
-      await this.watch.look(); // the safeguard for a pre-generation somebody started by hand
+      // Nobody has turned anything on: a pre-generation started by hand on the console is not left to meet AMP's sleep.
+      if (running && online === 0 && this.watch.state.status === "running" && this.emptySince !== null && now - this.emptySince >= 3 * 60_000) {
+        this.emptySince = null;
+        await this.pause();
+        await audit({ action: "world.pregenAutoPause", params: { percent: this.watch.state.percent, chunks: this.watch.state.chunks }, result: "OK" });
+      }
       return;
     }
-    const step = this.startAfterKill && state === 0 ? "wake" : keeperStep(this.plan, { state, online, emptyForMs: this.emptySince === null ? null : now - this.emptySince, stoppingForMs: this.stoppingSince === null ? null : now - this.stoppingSince, pregen: this.watch.state.status, now }, this.runForMs);
-    if (step !== this.lastStep) this.log({ step, state, online, percent: this.watch.state.percent, runForSec: Math.round(this.runForMs / 1000) }, "pregen keeper");
-    this.lastStep = step;
-    switch (step) {
-      case "off:time":
-        return this.turnOff("time");
+    if (this.watch.state.status === "running") this.plan = { ...this.plan, ranMs: this.plan.ranMs + dt };
+    const isDue = due(this.plan, this.watch.state.status, new Date(now)) === "yes";
+
+    // AMP's sleep: off while the mode is due, as it was otherwise.
+    if (isDue && this.plan.sleepWas === null) {
+      const s = await this.lookAtSleep();
+      if (s.on === false) this.plan = { ...this.plan, sleepWas: false };
+      else if (s.on === true && s.allowed === true && (await this.setSleep(false))) this.plan = { ...this.plan, sleepWas: true };
+      if (this.plan.sleepWas !== null) await this.store.save(this.plan);
+    } else if (!isDue && this.plan.sleepWas !== null) {
+      await this.setSleep(this.plan.sleepWas);
+      this.plan = { ...this.plan, sleepWas: null };
+      await this.store.save(this.plan);
+    }
+    if (now - this.lastSave >= 60_000) {
+      this.lastSave = now;
+      await this.store.save(this.plan);
+    }
+
+    const s = step(this.plan, { serverRunning: running, online, pregen: this.watch.state.status, at: new Date(now), sleepOff: this.plan.sleepWas !== null && this.sleep.on === false, emptyForMs: this.emptySince === null ? null : now - this.emptySince, sleepDelayMin: this.sleep.delayMin ?? 5 });
+    if (s !== this.lastStep) this.log({ step: s, online, percent: this.watch.state.percent }, "pregen");
+    this.lastStep = s;
+    switch (s) {
       case "off:done":
         return this.turnOff("done");
-      case "wait":
+      case "off:cap":
+        return this.turnOff("cap");
+      case "idle:server":
         return;
-      case "kill": {
-        this.stoppingSince = null;
-        const ok = await this.amp.call("Core", "Kill").then(() => true, () => false);
-        this.startAfterKill = ok;
-        await audit({ action: "server.kill", params: { by: "pregen", after: "4 minutes in Stopping" }, result: ok ? "OK" : "FAILED" });
-        return;
-      }
-      case "wake": {
-        if (now - this.wokeAt < 60_000) return;
-        this.wokeAt = now;
-        this.startAfterKill = false;
-        const ok = await this.amp.call("Core", "Start").then(() => true, () => false);
-        if (!ok) this.log({ state }, "pregen keeper: could not wake the server");
-        return;
-      }
+      case "idle:window":
       case "pause:playing":
-      case "pause:round": {
-        if (this.watch.state.status !== "running" || now - this.lastCommand < 15_000) return;
-        this.lastCommand = now;
-        await runAction(this.amp, this.ctx(), "world.pregenPause", {}, null);
+      case "pause:sleep":
+        if (this.watch.state.status === "running" && now - this.lastCommand >= 15_000) {
+          this.lastCommand = now;
+          await this.pause();
+        }
         return;
-      }
       case "run": {
         if (this.watch.state.status === "running" || now - this.lastCommand < AGAIN_MS) return;
         this.lastCommand = now;
-        if (!this.plan.started && this.plan.task) {
-          const r = await runAction(this.amp, this.ctx(), "world.pregen", this.plan.task, this.plan.by);
+        if (this.plan.fresh) {
+          const r = await runAction(this.amp, this.ctx(), "world.pregen", this.plan.area, this.plan.by);
           if (r.ok) {
-            this.plan = { ...this.plan, started: true };
+            this.plan = { ...this.plan, fresh: false };
             await this.store.save(this.plan);
           }
           return;

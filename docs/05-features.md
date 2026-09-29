@@ -57,7 +57,10 @@ Pages are listed per phase. Every page must work on a 390px phone.
 - **Play** card (once the server is visible to the member): see "Play from the site" under Phase 2.
 
 ### Admin `/admin/server` · Pre-generation (2026-09-29)
-- Off unless turned on. "For N hours" or "whenever nobody is on the server, until the area is done"; waits while people play unless told otherwise; carry on or a new area (radius, centre); turn off; call the area off. Shows what chunky last said and what the keeper is doing. How it gets through AMP's sleep: docs/11-status.md "Pre-generation from the portal".
+- A mode, off by default: **When nobody's online** (carries on while the server is empty, pauses when anyone joins; optional window of the day, optional hours at most) or **Now** (runs whoever is playing, for so many hours or until 100%; warns about lag). Radius editable (1500), chunks done of the total, percentage, chunky's estimate, Stop and Cancel. Ends by itself at 100%.
+- While a mode is due the portal switches AMP's sleep mode off (`MinecraftModule.Limits.SleepMode`) and puts it back afterwards; it needs the permission `Settings.MinecraftModule.Limits.SleepMode` and refuses to start without it.
+- It never starts the server and never ends its process. Detail and the rules: docs/11-status.md "Pre-generation from the portal".
+- **End the process**: on the same page, only while the server is stuck in "Stopping", asks first, in the event log.
 
 ### Connection: ping and server speed
 (planner spec 2026-09-29; built the same day)

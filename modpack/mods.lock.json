@@ -1,9 +1,24 @@
 {
-  "generatedAt": "2026-09-29T15:50:50.889Z",
+  "generatedAt": "2026-09-29T16:47:53.868Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "5c3b04940b29fe3184eace633eebb547d9689232e6c00438623b6ae8ffd92e3e",
+  "hash": "b5d461ea8de4dcdc19e16cbb55783b052a82f23d409c5a05f310bc194c8639bf",
   "files": [
+    {
+      "slug": "additional-enchanted-miner",
+      "name": "Quarry (Additional Enchanted Miner)",
+      "projectId": "jhxX1zVW",
+      "versionId": "p0XlQYuL",
+      "versionNumber": "21.1.164",
+      "versionType": "release",
+      "filename": "AdditionalEnchantedMiner-1.21.1-neoforge-21.1.164.jar",
+      "url": "https://cdn.modrinth.com/data/jhxX1zVW/versions/p0XlQYuL/AdditionalEnchantedMiner-1.21.1-neoforge-21.1.164.jar",
+      "sha512": "be439e2c789d52dcc830397496c2a7c707819014252162f1564cad831306f41c40a65fa63b83aaafee8553f1100c7d820391541e31ae87cb04a7477f193ea9d2",
+      "sha1": "17debf7846d5d3b287a2920449154d85e5b9541e",
+      "size": 733289,
+      "side": "both",
+      "requiredBy": []
+    },
     {
       "slug": "appleskin",
       "name": "AppleSkin",
@@ -18,6 +33,23 @@
       "size": 75804,
       "side": "both",
       "requiredBy": []
+    },
+    {
+      "slug": "balm",
+      "name": "Balm",
+      "projectId": "MBAkmtvl",
+      "versionId": "CquiaiDj",
+      "versionNumber": "21.0.66+neoforge-1.21.1",
+      "versionType": "release",
+      "filename": "balm-neoforge-1.21.1-21.0.66.jar",
+      "url": "https://cdn.modrinth.com/data/MBAkmtvl/versions/CquiaiDj/balm-neoforge-1.21.1-21.0.66.jar",
+      "sha512": "0262d51c0e931d10c3dccefb3b5426a1622edecab243d4b15dce07a23309641370184776739765067d292d808242d088c6fbf249762689824eff9ba42c2d1e63",
+      "sha1": "dd3606a349f4a3c8fb5bd0ab22905675c02b0d74",
+      "size": 783793,
+      "side": "both",
+      "requiredBy": [
+        "waystones"
+      ]
     },
     {
       "slug": "bluemap",
@@ -65,6 +97,36 @@
       "requiredBy": []
     },
     {
+      "slug": "create",
+      "name": "Create",
+      "projectId": "LNytGWDc",
+      "versionId": "UjX6dr61",
+      "versionNumber": "6.0.10+mc1.21.1",
+      "versionType": "release",
+      "filename": "create-1.21.1-6.0.10.jar",
+      "url": "https://cdn.modrinth.com/data/LNytGWDc/versions/UjX6dr61/create-1.21.1-6.0.10.jar",
+      "sha512": "11cc8fc049d2f67f6548c7abfada6b82a3adb5c7ca410a742de04bbca76e03862c518721b88d806f6e6d768a4d68531fdb903a85859b25d1484d550cc7bafd4b",
+      "sha1": "0e97e49837bed766e6f28a4c95b04885d6acc353",
+      "size": 19123767,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
+      "slug": "createaddition",
+      "name": "Create: Crafts & Additions",
+      "projectId": "kU1G12Nn",
+      "versionId": "qPr8V4G2",
+      "versionNumber": "neoforge-1.21.1-1.6.0",
+      "versionType": "release",
+      "filename": "createaddition-1.6.0.jar",
+      "url": "https://cdn.modrinth.com/data/kU1G12Nn/versions/qPr8V4G2/createaddition-1.6.0.jar",
+      "sha512": "e3a31eefb15d37bd1a2ba9012d0c00ec92f7c9e57b7a35c993676ea0cc85ba4f35a055a9f98d57636f24a0562d6da18b4e90713f4f46d47959666a097a6a5cea",
+      "sha1": "87b539d41ed238e98b26c607c0c81a973323147e",
+      "size": 1661802,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
       "slug": "dynamic-fps",
       "name": "Dynamic FPS",
       "projectId": "LQ3K71Q1",
@@ -106,6 +168,21 @@
       "sha512": "21876b270ca40e3ad6168423f2aba04460f590be191c5558d53e4f542993efa6070589029cb3218557309b096cd920e4da65e53f19687b86c638ec6c342d83e5",
       "sha1": "7e1b3ee0ba89b556d5a468797bb1b5f4e2b8ccb7",
       "size": 496356,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
+      "slug": "farmers-delight",
+      "name": "Farmer's Delight",
+      "projectId": "R2OftAxM",
+      "versionId": "XTVZDOol",
+      "versionNumber": "1.21.1-1.3.4",
+      "versionType": "release",
+      "filename": "FarmersDelight-1.21.1-1.3.4.jar",
+      "url": "https://cdn.modrinth.com/data/R2OftAxM/versions/XTVZDOol/FarmersDelight-1.21.1-1.3.4.jar",
+      "sha512": "1f6f8796469f747cff36f477b4f589a3d69613882399f9ee7f86db36c7bca9aa4828731f43db15dc6c7f5a4c1bbe3d4092a232e8cef010b09cec0581848fda90",
+      "sha1": "27675ddfcb8cc37e6ea1ab6c15051c7949d94657",
+      "size": 3160490,
       "side": "both",
       "requiredBy": []
     },
@@ -170,6 +247,23 @@
       "requiredBy": []
     },
     {
+      "slug": "kotlin-lang-forge",
+      "name": "KotlinLangForge",
+      "projectId": "1vrSzlao",
+      "versionId": "SRMod41B",
+      "versionNumber": "2.14.1-k2.4.20-3.0+neoforge",
+      "versionType": "release",
+      "filename": "KotlinLangForge-2.14.1-k2.4.20-3.0+neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/1vrSzlao/versions/SRMod41B/KotlinLangForge-2.14.1-k2.4.20-3.0%2Bneoforge.jar",
+      "sha512": "8d6faf1fa623529e794fb0429b96f71965843ea1876262c26cecf4fe17dd6e64334498f984cca487e3083881f0e917a26af3862b72e85a2d0d5a7225104355da",
+      "sha1": "1a68ab7829e03b2f9ef59d4d2d58ac4c5be74ffc",
+      "size": 8214901,
+      "side": "both",
+      "requiredBy": [
+        "veinminer"
+      ]
+    },
+    {
       "slug": "lithium",
       "name": "Lithium",
       "projectId": "gvQqBUqZ",
@@ -215,6 +309,38 @@
       "requiredBy": []
     },
     {
+      "slug": "pipez",
+      "name": "Pipez",
+      "projectId": "iRmWy6ga",
+      "versionId": "BPGKb8pi",
+      "versionNumber": "neoforge-1.21.1-1.2.31",
+      "versionType": "beta",
+      "filename": "pipez-neoforge-1.21.1-1.2.31.jar",
+      "url": "https://cdn.modrinth.com/data/iRmWy6ga/versions/BPGKb8pi/pipez-neoforge-1.21.1-1.2.31.jar",
+      "sha512": "7291230b62104b73b04564d6d39ba18d11134a5713ee79242c7ae8885d07c4efb5f5d0ab75b8ff9aba3119ed8163d0c5488ad603a2db21b92dc35715b723ce5e",
+      "sha1": "a5671f7e8d38dfc092ace4091250e8f9e1245e1e",
+      "size": 456599,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
+      "slug": "scalable-cats-force",
+      "name": "scalable-cats-force",
+      "projectId": "zr0QMQMo",
+      "versionId": "WG1FLeZM",
+      "versionNumber": "3.7.1-build-11",
+      "versionType": "release",
+      "filename": "ScalableCatsForce-NeoForge-3.7.1-build-11-with-library.jar",
+      "url": "https://cdn.modrinth.com/data/zr0QMQMo/versions/WG1FLeZM/ScalableCatsForce-NeoForge-3.7.1-build-11-with-library.jar",
+      "sha512": "4da264d203d786efb638a6ecab0cb4f974436a72c84c0a9cdb2cb0eec5757dac294c1435deae048d44741098e6aaedb4def508a47d2bd4d010a3441921119806",
+      "sha1": "b96d133a016dde480458d6102d66353c7eeacf6a",
+      "size": 16872119,
+      "side": "both",
+      "requiredBy": [
+        "additional-enchanted-miner"
+      ]
+    },
+    {
       "slug": "simple-voice-chat",
       "name": "Simple Voice Chat",
       "projectId": "9eGKb6K1",
@@ -245,6 +371,38 @@
       "requiredBy": []
     },
     {
+      "slug": "sophisticated-backpacks",
+      "name": "Sophisticated Backpacks",
+      "projectId": "TyCTlI4b",
+      "versionId": "pJxNzk4X",
+      "versionNumber": "1.21.1-3.26.6.2174",
+      "versionType": "release",
+      "filename": "sophisticatedbackpacks-1.21.1-3.26.6.2174.jar",
+      "url": "https://cdn.modrinth.com/data/TyCTlI4b/versions/pJxNzk4X/sophisticatedbackpacks-1.21.1-3.26.6.2174.jar",
+      "sha512": "de88746802c53786c09defe878ff4e766b246a1146cd417f4985765bf032cedfb89f08778e7350820bdf67a3514ec63e58e9d8e76856332c265c1adbf7ef84b4",
+      "sha1": "c4f240d4071835631da9b698481ec607b9f1f8be",
+      "size": 1239554,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
+      "slug": "sophisticated-core",
+      "name": "Sophisticated Core",
+      "projectId": "nmoqTijg",
+      "versionId": "blXGSmAb",
+      "versionNumber": "1.21.1-1.5.2.2343",
+      "versionType": "release",
+      "filename": "sophisticatedcore-1.21.1-1.5.2.2343.jar",
+      "url": "https://cdn.modrinth.com/data/nmoqTijg/versions/blXGSmAb/sophisticatedcore-1.21.1-1.5.2.2343.jar",
+      "sha512": "ecaf6db1348d61934cbce15e39bb211d9af33ae7d8f2a1bb770c911f317807c15f67450363c92b9fe178eb12e922842ddc733b54d09784b359b7677b9318b852",
+      "sha1": "86a5cf18608b3feec76c17a8ccac4de36d660fbc",
+      "size": 1809363,
+      "side": "both",
+      "requiredBy": [
+        "sophisticated-backpacks"
+      ]
+    },
+    {
       "slug": "spark",
       "name": "spark",
       "projectId": "l6YH9Als",
@@ -257,6 +415,51 @@
       "sha1": "9430cc2ab64ff89d698be593769fb9f9ee4efae6",
       "size": 3642581,
       "side": "server",
+      "requiredBy": []
+    },
+    {
+      "slug": "tacz-1.21.1",
+      "name": "TaCZ (Timeless and Classics Zero)",
+      "projectId": "OypNE65K",
+      "versionId": "wPvGWIj9",
+      "versionNumber": "1.1.8-hotfix-r6",
+      "versionType": "release",
+      "filename": "tacz-neoforge-1.21.1-1.1.8-hotfix-r6.jar",
+      "url": "https://cdn.modrinth.com/data/OypNE65K/versions/wPvGWIj9/tacz-neoforge-1.21.1-1.1.8-hotfix-r6.jar",
+      "sha512": "ce14e985ce16d0517e7b1d41969a244818f46c1e4ae93842c3149963990aa488692c5372ecc4b71fe560a99794a3f865244dbef5b182beec4411148b4f83c53c",
+      "sha1": "c70e8f638bede79ab8a85c891c464097b3100055",
+      "size": 57242132,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
+      "slug": "veinminer",
+      "name": "VeinMiner",
+      "projectId": "OhduvhIc",
+      "versionId": "syKekkIm",
+      "versionNumber": "2.11.2",
+      "versionType": "release",
+      "filename": "veinminer-neoforge-2.11.2+1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/OhduvhIc/versions/syKekkIm/veinminer-neoforge-2.11.2%2B1.21.1.jar",
+      "sha512": "195fdfe9f1358e85218e770c953223825d102f54b5f607857b8893959cd2164a04c921987611a7933592ba89a83aa2bd8f3cec0b1fcf7d87a20b168f88b2cc05",
+      "sha1": "19f67a98cf5e7cfeefb089b5ec31450ac6d5bd53",
+      "size": 616301,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
+      "slug": "waystones",
+      "name": "Waystones",
+      "projectId": "LOpKHB2A",
+      "versionId": "6Z6MQ6os",
+      "versionNumber": "21.1.46+neoforge-1.21.1",
+      "versionType": "release",
+      "filename": "waystones-neoforge-1.21.1-21.1.46.jar",
+      "url": "https://cdn.modrinth.com/data/LOpKHB2A/versions/6Z6MQ6os/waystones-neoforge-1.21.1-21.1.46.jar",
+      "sha512": "ca90b58d884d4bc2b08a870484ae7ede397e71d31eaaf01ff2603ad498d584763e099c2094e57031522385339705d2c011ed4910bf36efae688e64935b49ece9",
+      "sha1": "75718161662d9ec957ba22e10e497788ec1687ba",
+      "size": 1223229,
+      "side": "both",
       "requiredBy": []
     },
     {

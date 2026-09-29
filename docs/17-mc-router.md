@@ -84,3 +84,15 @@ Remove the old UDP 19132 forward. Monitoring: Bedrock is a plain TCP check on 10
 ## Monitoring (Uptime Kuma on 10.0.10.7)
 
 Java: "Minecraft Server" monitors on `mc.dsw.test`, `boys.dsw.test`, `vanilla.dsw.test`, port 25565 (hostnames, because mc-router routes by name and backend ports are localhost-only). A sleeping instance reports up: AMP answers status pings without waking it, so the check means "joinable". Voice chat (UDP 24454) has no usable check; it listens only while Deepslate Works is awake.
+
+## DeepslateWorks01: web UI on the LAN and world seed (2026-09-29)
+
+The instance is **unmanaged** (`Login.UseAuthServer=False`, kept on purpose so `webapp` stays instance-local). ADS therefore refuses Manage ("Unmanaged instances cannot be accessed from within ADS"); the instance UI is opened directly instead.
+
+- **URL:** `http://10.0.10.8:8083/`, local admin `deepslate-adm`. `127.0.0.1:8083` no longer listens.
+- **How it was bound:** editing `Webserver.IPBinding` in `AMPConfig.conf` is ignored (AMP rewrites it from its registry). The change needed `ampinstmgr rebind`, which requires ADS stopped; ADS was down ~70 s, other instances kept running.
+- **Firewall:** TCP 8083 allowed from `10.0.10.0/24` and `10.0.21.0/24` only (`/etc/amp-acl/instance-ui.nft`, loaded by `amp-ui-acl.service`). Not open on wg0 or WAN.
+- **Seed:** `Minecraft.WorldSeed=-3899835130120818196`, Level Name `world`. Applies only to a newly generated world; `server.properties` is rewritten from the setting on the next server start. Old world is moved aside by the VPS session (`world-backup-20260929`).
+- **Portal impact:** the api still reaches the instance through the ADS proxy path on 8080; nothing on the VPS used `127.0.0.1:8083`. The VPS session re-checks the `webapp` login (`result: 10`) after the rebind.
+- **State after the work:** server stopped (not asleep), so 25569 is closed and `mc.dsw.test` is offline until started; Kuma red until then.
+- Backups of changed files: `/root/deepslate-backup-20260929-102917/` on the AMP host. The AMP host session's own copy of this doc lives at `/home/ladm/17-mc-router.md`; this file is canonical.

@@ -9,6 +9,10 @@ import { formatDate } from "@/lib/utils";
 import { canSeeServer, getSettings } from "@/server/settings";
 import { launchText } from "@/components/launch-banner";
 import { db } from "@/server/db";
+import { getStatus } from "@/server/status";
+import { averagePing } from "@/server/ping";
+import { pingTone } from "@/lib/ping";
+import { tpsTone } from "@/lib/series";
 
 export const metadata: Metadata = { title: "Me" };
 
@@ -16,6 +20,9 @@ const TIER = { LOW: "older laptop / no graphics card", MID: "normal desktop or g
 
 export default async function MePage() {
   const user = await requireOnboardedUser();
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000);
+  const [status, week] = await Promise.all([getStatus(), user.mcUuid ? averagePing(user.mcUuid, weekAgo, new Date()) : Promise.resolve(null)]);
+  const me = status?.availability === "online" ? (status.online.find((p) => (user.mcUuid && p.uuid === user.mcUuid) || (user.mcUsername && p.name.toLowerCase() === user.mcUsername.toLowerCase())) ?? null) : null;
   const [m, settings, install] = await Promise.all([
     getManifest(),
     getSettings(),
@@ -54,6 +61,23 @@ export default async function MePage() {
           <CardContent><Link href="/install" className={buttonClasses("primary", "sm")}>Get the game set up first</Link></CardContent>
         )}
       </Card>
+      {(me || week) && (
+        <Card data-testid="my-connection">
+          <CardHeader>
+            <CardTitle>Your connection</CardTitle>
+            <CardDescription>
+              {me ? (
+                <>
+                  {me.ping !== null ? <Badge tone={pingTone(me.ping)}>{me.ping} ms</Badge> : "You are on; your ping has not been measured yet"}
+                  {status?.tps != null && <>, server speed <Badge tone={tpsTone(status.tps)}>{status.tps.toFixed(1)} TPS</Badge></>}.{" "}
+                </>
+              ) : "You are not on the server right now. "}
+              {week ? <>Your average over the last 7 days: <strong className="text-foreground">{week.ms} ms</strong>.</> : "No average yet: it needs a few minutes on the server."}
+              {" "}Press Tab in the game for the same numbers.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>My PC</CardTitle>

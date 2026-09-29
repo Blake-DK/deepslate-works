@@ -221,6 +221,7 @@ model ServerSnapshot {
   tps     Float?
   cpu     Float?
   memMb   Int?
+  pings   Json?    // {"<uuid>": milliseconds} for whoever was on and had been measured (docs/05 "Connection")
 
   @@index([at])
 }

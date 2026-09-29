@@ -12,6 +12,7 @@ import type { runBuild } from "./modpack/build.js";
 import { serverRoutes } from "./routes/server.js";
 import { fileRoutes } from "./routes/files.js";
 import { StatusPoller } from "./status/poller.js";
+import { PingWatch } from "./status/ping.js";
 import { prismaSnapshotStore } from "./status/store.js";
 import { RestartSchedule } from "./status/restart.js";
 import { Recorder } from "./events/recorder.js";
@@ -33,10 +34,11 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   // Console tail, status poller and the wait room run for the life of the process (docs/05, docs/14).
   const log = (o: unknown, m: string) => app.log.info(o, m);
   const tail = new ConsoleTail(ampClient, log);
-  const poller = new StatusPoller(ampClient, tail, env.AMP_MOCK === "1" ? null : prismaSnapshotStore, log);
   const limbo = new Limbo(env, ampClient, tail, log);
+  const pings = new PingWatch(ampClient, tail, () => limbo.actionCtx, log);
+  const poller = new StatusPoller(ampClient, tail, env.AMP_MOCK === "1" ? null : prismaSnapshotStore, log, undefined, () => pings.current());
   const restarts = new RestartSchedule(ampClient, () => limbo.actionCtx, log);
-  statusRoutes(app, ampClient, poller, tail);
+  statusRoutes(app, ampClient, poller, tail, () => pings.current());
   playerRoutes(app, ampClient, tail, limbo);
   serverRoutes(app, ampClient, tail, restarts);
   fileRoutes(app, ampClient);
@@ -59,6 +61,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     tail.start();
     poller.start();
     limbo.start();
+    pings.start();
     const keepHouse = () => void runRetentionIfDue(log).catch((err) => log({ err: String(err) }, "retention failed"));
     housekeeping = setInterval(keepHouse, 30 * 60_000);
     setTimeout(keepHouse, 60_000).unref();
@@ -67,6 +70,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     tail.stop();
     poller.stop();
     limbo.stop();
+    pings.stop();
     restarts.stop();
     if (housekeeping) clearInterval(housekeeping);
   });

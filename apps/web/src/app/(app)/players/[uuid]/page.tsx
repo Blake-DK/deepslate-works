@@ -17,6 +17,9 @@ import { Tile } from "@/components/analytics/tile";
 import { AreaChart } from "@/components/analytics/area-chart";
 import { EventItem } from "@/components/events/event-list";
 import { suggestTier, summary, type SystemInfo } from "@/lib/install-report";
+import { pingReadings, sessionPings } from "@/server/ping";
+import { average, pingSlots, pingTone } from "@/lib/ping";
+import { Sparkline } from "@/components/server/sparkline";
 
 export const metadata: Metadata = { title: "Player" };
 
@@ -38,7 +41,17 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
   if (!member && rows.length === 0) notFound();
   const name = member?.mcUsername ?? rows[0]?.mcName ?? id.replace(/^name:/, "");
   const sessions: S[] = rows.map((r) => ({ mcUuid: r.mcUuid, mcName: r.mcName, userId: r.userId, joinedAt: r.joinedAt, leftAt: r.leftAt, country: r.country }));
-  const online = Boolean(status?.online.some((p) => p.uuid === id || p.name.toLowerCase() === name.toLowerCase()));
+  const here = status?.online.find((p) => p.uuid === id || p.name.toLowerCase() === name.toLowerCase()) ?? null;
+  const online = Boolean(here);
+  // docs/05 "Connection": the session in hand as a line, and the average of each of the latest sessions
+  const current = rows.find((r) => r.leftAt === null) ?? null;
+  const [readings, perSession] = await Promise.all([
+    online && current ? pingReadings(id, current.joinedAt, now) : Promise.resolve([]),
+    sessionPings(id, rows.slice(0, 25).map((r) => r.id)),
+  ]);
+  const pingLine = online && current ? pingSlots(readings, current.joinedAt, now, Math.min(60, Math.max(12, readings.length))) : [];
+  const pingNow = here?.ping ?? null;
+  const pingAvg = average(readings.map((r) => r.ms));
   const total = sessions.reduce((a, s) => a + lengthOf(s, now), 0);
   const longest = sessions.reduce((a, s) => Math.max(a, lengthOf(s, now)), 0);
   const month = rangeFor("30d", now, null);
@@ -79,6 +92,18 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
         <Tile label="Last on" value={online ? "now" : rows[0] ? timeAgo(rows[0].leftAt ?? rows[0].joinedAt, now) : "never"} />
       </section>
 
+      {online && (
+        <Card data-testid="connection">
+          <CardHeader>
+            <CardTitle className="flex flex-wrap items-center gap-2">Connection {pingNow !== null && <Badge tone={pingTone(pingNow)}>{pingNow} ms</Badge>}</CardTitle>
+            <CardDescription>Their ping through this session{pingAvg !== null ? <>, {pingAvg} ms on average</> : null}. Measured every 15 seconds; lower is better.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {readings.length < 2 ? <p className="text-sm text-muted-foreground">Not measured yet. The line appears after a few minutes on the server.</p> : <Sparkline values={pingLine} label="Ping, this session" unit={["ms", "ms"]} />}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader><CardTitle>Minutes played per day</CardTitle><CardDescription>The last 30 days.</CardDescription></CardHeader>
         <CardContent><AreaChart points={perDay} unit={["minute", "minutes"]} height={120} /></CardContent>
@@ -86,10 +111,10 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Sessions</CardTitle><CardDescription>{rows.length > 25 ? "The latest 25." : "Every visit."}</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Sessions</CardTitle><CardDescription>{rows.length > 25 ? "The latest 25." : "Every visit."} With the average ping where it was measured.</CardDescription></CardHeader>
           <CardContent>
             {rows.length === 0 ? <p className="text-sm text-muted-foreground">Hasn&apos;t played yet.</p> : (
-              <ul className="divide-y text-sm">{rows.slice(0, 25).map((r) => <li key={r.id} className="flex items-center justify-between gap-3 py-2"><span>{when.format(r.joinedAt)}</span><span className="tabular-nums text-muted-foreground">{r.leftAt ? hours(r.leftAt.getTime() - r.joinedAt.getTime()) : "on now"}</span></li>)}</ul>
+              <ul className="divide-y text-sm">{rows.slice(0, 25).map((r) => <li key={r.id} className="flex items-center justify-between gap-3 py-2"><span>{when.format(r.joinedAt)}</span><span className="tabular-nums text-muted-foreground">{perSession.has(r.id) && <span className="mr-3" title="Average ping in this session">{perSession.get(r.id)} ms</span>}{r.leftAt ? hours(r.leftAt.getTime() - r.joinedAt.getTime()) : "on now"}</span></li>)}</ul>
             )}
           </CardContent>
         </Card>

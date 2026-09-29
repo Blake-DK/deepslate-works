@@ -124,3 +124,14 @@ One place to change how the portal looks, editable by admins without a deploy.
 Acceptance: a failed run on a machine without the launcher produces a report with outcome=failed, failedStep="Checking the Minecraft Launcher", the OS/RAM/GPU fields filled, and no username anywhere in the stored log or system JSON.
 
 **As built**, with the differences, is in docs/07 "Install reports" and "The PC tier is measured". Two differences from the text above: the tier is not only suggested but **set** from the report (Alex, 2026-09-29: "the 'your PC' should be decided by a script too"), so there is no "self-reported tier looks wrong" flag, the report records the tier before and the tier measured instead; and signing in became the installer's first step, so that the acceptance case can be reported at all.
+
+## 9. Connection stats (planner spec, 2026-09-29; appended by the VPS session at the planner's request)
+
+a. Add to mods.json, side server: tabtps. Config: tab list header "Deepslate Works · TPS {tps} · {online}/{max} online", footer "your ping {ping} ms", ping shown per player in the list.
+b. api poller: every 15 s run `tabtps ping` (or spark ping if TabTPS lacks a bulk command) and parse per-player ping into `ServerSnapshot.pings` Json `{uuid: ms}`. Keep TPS/MSPT as now.
+c. Home: ping next to each online player (green <80, amber <150, red above). `/players/<uuid>`: ping sparkline for the current session and average per session. Stats: average ping by player, and a "connection" tile: server TPS now, 24 h low, worst ping right now.
+d. `/me`: "Your connection: <ping> ms, server TPS <tps>" while online, and your 7-day average.
+
+Acceptance: with one player online, Tab shows TPS/ping/online count in game; Home shows the same ping within 30 s; the player page shows a ping series after 5 minutes online.
+
+**As built**, with the differences, is in docs/05 "Connection". Three differences: the command is `pingall` (TabTPS has no `tabtps ping`; spark has no bulk command); the header and footer are made of TabTPS' own pieces, without words of ours; no ping number next to each player in the list.

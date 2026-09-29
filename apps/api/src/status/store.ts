@@ -3,7 +3,7 @@ import type { SnapshotStore } from "./poller.js";
 
 export const prismaSnapshotStore: SnapshotStore = {
   async save(s) {
-    await db.serverSnapshot.create({ data: { at: s.at, state: s.state, players: s.players, tps: s.tps, cpu: s.cpu, memMb: s.memMb === null ? null : Math.round(s.memMb) } });
+    await db.serverSnapshot.create({ data: { at: s.at, state: s.state, players: s.players, tps: s.tps, cpu: s.cpu, memMb: s.memMb === null ? null : Math.round(s.memMb), ...(s.pings ? { pings: s.pings } : {}) } });
   },
   async prune(now, maxAgeDays, thinAfterHours) {
     const tooOld = new Date(now.getTime() - maxAgeDays * 86_400_000);

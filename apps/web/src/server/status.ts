@@ -11,7 +11,7 @@ export type LiveStatus = {
   stateCode: number | null;
   availability: Availability;
   players: string[];
-  online: Array<{ name: string; uuid: string | null }>;
+  online: Array<{ name: string; uuid: string | null; ping: number | null }>; // ping in ms, from the last round (docs/05 "Connection")
   maxPlayers: number | null;
   cpu: number | null;
   memMb: number | null;
@@ -42,7 +42,7 @@ export async function getStatus(): Promise<LiveStatus | null> {
       // an older api answers without `availability`: fall back to the state name
       availability: s.availability ?? (/^running$/i.test(s.state) ? "online" : "offline"),
       players: s.players ?? [],
-      online: s.online ?? (s.players ?? []).map((name) => ({ name, uuid: null })),
+      online: (s.online ?? (s.players ?? []).map((name) => ({ name, uuid: null, ping: null }))).map((p) => ({ name: p.name, uuid: p.uuid ?? null, ping: typeof p.ping === "number" ? p.ping : null })),
       maxPlayers: s.maxPlayers ?? null,
       cpu: s.cpu ?? null,
       memMb: s.memMb ?? null,

@@ -26,6 +26,7 @@ export const DEFAULT_GUIDE = [
   "- **Jade**: look at a block or mob and it tells you what it is at the top of the screen.",
   "- **Voice chat**: hold V to talk to people near you. Press V once to open the settings (mute, volume, push-to-talk key).",
   "- **Minimap**: corner of the screen. M opens the big map. Press B to drop a waypoint where you stand.",
+  "- **Tab**: press Tab: who's on, your ping, and the server's TPS (20 is perfect). <!-- mod: tabtps -->",
   "- **Corpse**: when you die, your stuff stays in a body where you fell. Only you can loot it for the first while. It shows on the map.",
   "- **Backpacks**: craft one early. Upgrade it later with a magnet so it picks things up for you. <!-- mod: sophisticated-backpacks -->",
   "- **Waystones**: find or build one, click it, and you can teleport between any you've discovered. <!-- mod: waystones -->",

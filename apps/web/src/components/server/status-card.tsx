@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatUptime, tpsTone } from "@/lib/series";
+import { pingTone } from "@/lib/ping";
 import { AVAILABILITY_TEXT, type LiveStatus } from "@/server/status";
 import { PlayerHead } from "./player-head";
 import { Sparkline } from "./sparkline";
@@ -27,6 +28,7 @@ export function StatusCard({ status, series, address }: { status: LiveStatus | n
                 {status.online.map((p) => (
                   <li key={p.name} className="flex items-center gap-2 rounded-lg bg-muted py-1 pl-1 pr-3 text-sm">
                     <PlayerHead uuid={p.uuid} name={p.name} size={24} /> <span className="font-mono">{p.name}</span>
+                    {p.ping !== null && <Badge tone={pingTone(p.ping)} title="Ping: how long the server takes to answer this player. Lower is better." data-testid="ping">{p.ping} ms</Badge>}
                   </li>
                 ))}
               </ul>

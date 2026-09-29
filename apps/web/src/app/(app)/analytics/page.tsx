@@ -15,6 +15,11 @@ import { Tile } from "@/components/analytics/tile";
 import { AreaChart } from "@/components/analytics/area-chart";
 import { WorldMap } from "@/components/analytics/world-map";
 import { Heatmap } from "@/components/analytics/heatmap";
+import { Badge } from "@/components/ui/badge";
+import { getStatus } from "@/server/status";
+import { pingByPlayer, tpsLow } from "@/server/ping";
+import { pingTone, worstPing } from "@/lib/ping";
+import { tpsTone } from "@/lib/series";
 
 export const metadata: Metadata = { title: "Stats" };
 
@@ -29,6 +34,9 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const q = await searchParams;
   const data = await loadAnalytics(q.range);
   const { range, now, sessions, firstSeen, people } = data;
+  // docs/05 "Connection"
+  const [status, low, pings] = await Promise.all([getStatus(), tpsLow(now), pingByPlayer(range.from, range.to)]);
+  const worst = status?.availability === "online" ? worstPing(status.online) : null;
 
   const t = totals(sessions, range.from, range.to, now, firstSeen);
   const p = range.prevFrom ? totals(sessions, range.prevFrom, range.from, now, firstSeen) : null;
@@ -114,6 +122,36 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <Card>
           <CardHeader><CardTitle>Busiest hours</CardTitle><CardDescription>When the server is in use through the week.</CardDescription></CardHeader>
           <CardContent><Heatmap grid={grid} /></CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2" data-testid="connection">
+        <Card>
+          <CardHeader><CardTitle>Connection</CardTitle><CardDescription>How the server is keeping up, and the slowest line to it right now.</CardDescription></CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-3 gap-3 text-sm">
+              <div>
+                <dt className="text-xs text-muted-foreground">Server speed now</dt>
+                <dd>{status?.availability === "online" && status.tps != null ? <Badge tone={tpsTone(status.tps)} title="Ticks per second. 20 is perfect.">{status.tps.toFixed(1)} TPS</Badge> : <span className="text-muted-foreground">{status?.availability === "sleeping" ? "asleep" : "not running"}</span>}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Lowest, last 24 h</dt>
+                <dd>{low ? <><Badge tone={tpsTone(low.tps)}>{low.tps.toFixed(1)} TPS</Badge> <span className="text-xs text-muted-foreground">{timeAgo(low.at, now)}</span></> : <span className="text-muted-foreground">not running in that time</span>}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Worst ping right now</dt>
+                <dd>{worst ? <><Badge tone={pingTone(worst.ms)}>{worst.ms} ms</Badge> <span className="font-mono text-xs text-muted-foreground">{worst.name}</span></> : <span className="text-muted-foreground">{status?.availability === "online" && status.online.length > 0 ? "not measured yet" : "nobody on"}</span>}</dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Average ping</CardTitle><CardDescription>By player, in this period. Under 80 ms is good, over 150 is laggy.</CardDescription></CardHeader>
+          <CardContent>
+            {pings.length === 0 ? <p className="text-sm text-muted-foreground">Nothing measured in this period.</p> : (
+              <ol className="space-y-2 text-sm">{pings.slice(0, 12).map((r) => <li key={r.key} className="flex items-center justify-between gap-3"><Link href={`/players/${encodeURIComponent(r.key)}`} className="flex items-center gap-2 font-mono hover:underline"><PlayerHead uuid={r.key.startsWith("name:") ? null : r.key} name={nameOf(r.key)} size={20} />{nameOf(r.key)}</Link><span className="flex items-center gap-2"><span className="text-xs text-muted-foreground">worst {r.worst} ms</span><Badge tone={pingTone(r.ms)}>{r.ms} ms</Badge></span></li>)}</ol>
+            )}
+          </CardContent>
         </Card>
       </div>
 

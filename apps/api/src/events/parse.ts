@@ -20,6 +20,7 @@ export type GameEvent =
   | { type: "advancement"; name: string; how: "advancement" | "challenge" | "goal"; title: string }
   | { type: "started"; seconds: number }
   | { type: "stopping" }
+  | { type: "ping"; name: string; ms: number }
   | { type: "problem"; level: "WARN" | "ERROR"; text: string; logger: string | null };
 
 const NAME = "[A-Za-z0-9_]{3,16}";
@@ -58,6 +59,8 @@ const RE = {
   advancement: new RegExp(`^(${NAME}) has (made the advancement|completed the challenge|reached the goal) \\[(.+)\\]$`),
   started: /^Done \(([\d.]+)s\)!/,
   stopping: /^Stopping server$/,
+  // TabTPS, `pingall`: " - Bramble09: 23ms", one line for each player, then "Average ping: 23ms (1 player)"
+  ping: new RegExp(`^-\\s+(${NAME}):\\s+(\\d{1,6})\\s?ms$`),
   death: new RegExp(
     `^(${NAME}) (` +
       "was (?:slain|shot|killed|blown up|fireballed|pummeled|impaled|squashed|skewered|struck by lightning|burned|burnt|frozen|stung|poked|pricked|squished|doomed|obliterated|roasted|sonically|skewered)\\b.*" +
@@ -69,6 +72,13 @@ const RE = {
       ")$",
   ),
 };
+
+/** What a round of `pingall` prints. Read for the numbers, then kept out of the console page: it comes every 15 s. */
+export function isPingChatter(text: string): boolean {
+  const { message } = reduce(text);
+  const t = message.trim();
+  return RE.ping.test(t) || /^Average ping: \d+\s?ms \(\d+ players?\)$/.test(t) || /^-* ?(?:\[?TabTPS\]? )?Player Pings ?-*$/.test(t) || /^-{6,}$/.test(t);
+}
 
 // Printed on every start by the mod loader and harmless; they would only bury the lines that matter.
 const NOISE = [
@@ -117,6 +127,7 @@ export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) =
     const how = m[2] === "made the advancement" ? "advancement" : m[2] === "completed the challenge" ? "challenge" : "goal";
     return [{ type: "advancement", name: m[1]!, how, title: m[3]! }];
   }
+  if ((m = RE.ping.exec(message.trim()))) return [{ type: "ping", name: m[1]!, ms: Number(m[2]) }];
   if ((m = RE.started.exec(message))) return [{ type: "started", seconds: Number(m[1]) }];
   if (RE.stopping.test(message)) return [{ type: "stopping" }];
   if ((m = RE.death.exec(message)) && (!isPlayer || isPlayer(m[1]!))) return [{ type: "death", name: m[1]!, text: m[2]! }];

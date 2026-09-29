@@ -56,6 +56,28 @@ Pages are listed per phase. Every page must work on a 390px phone.
 - "Last 24 h" sparkline of player count from `ServerSnapshot`.
 - **Play** card (once the server is visible to the member): see "Play from the site" under Phase 2.
 
+### Connection: ping and server speed
+(planner spec 2026-09-29; built the same day)
+
+**In the game.** TabTPS (`tabtps`, server side only) puts the server's speed and the number of people on above the player list, and the ping of whoever is looking below it, for everyone from the moment they join (`modpack/server/config/tabtps/display-configs/default.conf`).
+
+**What TabTPS cannot do, against the spec.** It shows what it measures, piece by piece (`tps`, `mspt`, `players`, `ping`, `memory`, `cpu`), not a line of text: there is no "Deepslate Works" in the header, and the wording is TabTPS' own ("TPS", "Online", "Ping"). It does not put a ping number next to each player in the list either; the game's own signal bars stay as they are. Both would need another mod (a tab-list mod that takes placeholders). For the planner.
+
+**The portal.** While the server is running and somebody is on, `api` sends `pingall` every 15 s (`pingall 2` and so on from the eleventh player; TabTPS answers ten to a page) and reads the answer from the console: ` - Bramble09: 23ms` (`events/parse.ts`). spark has no command that lists everyone's ping, so TabTPS it is. Nothing is sent to a server that is asleep, starting or empty. The numbers are in `/status` next to each player (`online[].ping`, dropped when 50 s old) and in every `ServerSnapshot` (`pings`, `{"<uuid>": ms}`, migration `0009_snapshot_pings`; `name:<name>` where the UUID is not known). TPS and the rest are read as before.
+
+**Cost.** Each round writes about five lines to the server's console and log, so twenty lines a minute while anyone is on. They are kept out of the portal's console page; AMP's own console shows them.
+
+**Where it shows**
+
+- **Home**: the ping next to each player who is on: green under 80 ms, amber under 150, red from there.
+- **A player's page**: while they are on, "Connection" with the ping now, the line of this session and its average; in the list of sessions, each session's average ping.
+- **Stats**: "Connection" (the server's speed now, its lowest in the last 24 hours, the worst ping right now and whose) and "Average ping" by player for the period.
+- **Me**: "Your connection: 23 ms, server speed 20.0 TPS" while on, and the average of the last 7 days.
+
+**How long it is kept.** With the snapshots: every reading for two days, one in five minutes after that, thirty days in all. A seven-day average is therefore made of fewer readings for the older days.
+
+**Acceptance.** "With one player online, Tab shows TPS/ping/online count in game; Home shows the same ping within 30 s; the player page shows a ping series after 5 minutes online": all three need a player on the server with TabTPS on it. State in docs/11-status.md.
+
 ### `/map` Full-screen BlueMap iframe with a back button.
 
 ### `/players` Everyone in the group: online state, Minecraft name, last seen, PC tier. Nothing sensitive.

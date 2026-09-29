@@ -9,7 +9,7 @@ export type LiveStatus = {
   stateCode: number | null;
   availability: Availability;
   players: string[];
-  online: Array<{ name: string; uuid: string | null }>;
+  online: Array<{ name: string; uuid: string | null; ping: number | null }>;
   maxPlayers: number | null;
   cpu: number | null;
   memMb: number | null;
@@ -19,7 +19,8 @@ export type LiveStatus = {
   at: string;
 };
 
-export type Snapshot = { at: Date; state: string; players: string[]; tps: number | null; cpu: number | null; memMb: number | null };
+/** `pings`: by UUID where it is known, by "name:<name>" where not; null when nobody's ping is known. */
+export type Snapshot = { at: Date; state: string; players: string[]; tps: number | null; cpu: number | null; memMb: number | null; pings: Record<string, number> | null };
 export type SnapshotStore = {
   save(s: Snapshot): Promise<void>;
   /** Drops rows past `maxAgeDays` and thins rows older than `thinAfterHours` to one per five minutes. */
@@ -41,7 +42,7 @@ export function shouldSnapshot(prev: Pick<Snapshot, "at" | "state" | "players"> 
   return now.getTime() - prev.at.getTime() >= (running ? RUNNING_EVERY_MS : IDLE_EVERY_MS) - 500;
 }
 
-export function toLive(s: AmpStatus, tail: Pick<ConsoleTail, "online" | "uuidByName"> | null, now: Date): LiveStatus {
+export function toLive(s: AmpStatus, tail: Pick<ConsoleTail, "online" | "uuidByName"> | null, now: Date, pings: Record<string, number> = {}): LiveStatus {
   const running = s.stateCode === 20;
   // AMP's list lags the console by a few seconds either way; while running, anyone in either counts.
   const names = running ? [...new Set([...s.players, ...(tail?.online ?? [])])] : [];
@@ -50,7 +51,7 @@ export function toLive(s: AmpStatus, tail: Pick<ConsoleTail, "online" | "uuidByN
     stateCode: s.stateCode ?? null,
     availability: availability(s.stateCode),
     players: names,
-    online: names.map((name) => ({ name, uuid: tail?.uuidByName.get(name) ?? null })),
+    online: names.map((name) => ({ name, uuid: tail?.uuidByName.get(name) ?? null, ping: pings[name] ?? null })),
     maxPlayers: s.maxPlayers ?? null,
     cpu: s.cpu,
     memMb: s.memMb,
@@ -75,6 +76,7 @@ export class StatusPoller {
     private readonly store: SnapshotStore | null,
     private readonly log: (o: unknown, msg: string) => void,
     private readonly now: () => Date = () => new Date(),
+    private readonly pings: () => Record<string, number> = () => ({}),
   ) {}
 
   /** Called after every successful poll, with the previous answer (null on the first). */
@@ -103,7 +105,7 @@ export class StatusPoller {
     const now = this.now();
     let live: LiveStatus;
     try {
-      live = toLive(await this.amp.getStatus(), this.tail, now);
+      live = toLive(await this.amp.getStatus(), this.tail, now, this.pings());
       this.lastError = null;
     } catch (e) {
       this.lastError = e instanceof Error ? e.message : String(e);
@@ -120,7 +122,8 @@ export class StatusPoller {
       }
     }
     if (!this.store) return;
-    const snap: Snapshot = { at: now, state: live.state, players: live.players, tps: live.tps, cpu: live.cpu, memMb: live.memMb };
+    const measured = live.online.filter((p) => p.ping !== null).map((p) => [p.uuid ?? `name:${p.name.toLowerCase()}`, p.ping as number] as const);
+    const snap: Snapshot = { at: now, state: live.state, players: live.players, tps: live.tps, cpu: live.cpu, memMb: live.memMb, pings: measured.length ? Object.fromEntries(measured) : null };
     try {
       if (shouldSnapshot(this.lastSaved, snap, now, live.stateCode === 20)) {
         await this.store.save(snap);

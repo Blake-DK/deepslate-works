@@ -130,6 +130,16 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 - **Acceptance:** "with the current manifest the Create/Electricity/Quarry/Pipes/Guns sections show only for enabled mods" is a test against the real `mods.json` (today: none of the five is enabled, none shows). "Editing the guide in `/admin/branding` is live on the next load": checked on the live site, see the session log.
 - For the planner: "Where things are on the site" says M opens the map in game and "Minimap … M opens the big map. Press B to drop a waypoint": those are Xaero's defaults, not checked in game by anyone yet. The VeinMiner key (the grave key) likewise.
 
+### Connection stats (2026-09-29, planner spec; docs/05 "Connection")
+
+- **TabTPS** 1.3.25 in the pack, server side (`mods.lock.json`: 19 files; nothing else moved). Config shipped with the server files. **The lock's hash changed, so the pack is now `0.1.0+9e578404`** although nothing changed for the players' PCs: everyone sees "Update available" once, and Play finds nothing to download.
+- **api**: `PingWatch` (`status/ping.ts`) asks every 15 s while the server runs and somebody is on; the answer is read from the console; `/status` and `ServerSnapshot.pings` carry it. The lines of a round are kept off the portal's console page.
+- **web**: Home, a player's page, Stats, Me, as docs/05 lists them. Queries in `apps/web/src/server/ping.ts`, the rules (colours, the line's slots) in `apps/web/src/lib/ping.ts`.
+- **Against the spec** (docs/05 has the detail): no words of our own in the Tab list and no ping number next to each player, TabTPS does neither; the command is `pingall`.
+- **Not seen yet, by anyone:** what TabTPS really prints on this server. The pattern is taken from its source (`PingCommand.pingMultiple`: ` - <name>: <n>ms`), not from a line out of the console. If the first round with a player on reads nothing, Admin → Server → Console will not show the lines either (they are filtered by the same pattern or not at all): look in AMP's console, and put the line into `apps/api/tests/ping.test.ts`.
+- Tests: api 99, web 149, modpack 12.
+- **Acceptance · state:** none of the three lines ticked; each needs a player on the server. What is checked: the mod is on the server and the server starts with it (session log).
+
 ### docs/16 acceptance · state
 
 - [ ] `/analytics` shows the ten tiles, the chart, countries with the map, most active players for every period, and matches AMP within ±1 session. *Built and rendering; the comparison needs people to have played.*

@@ -131,6 +131,8 @@ export const actions = {
   }),
   "server.restartCancelled": define({ name: "server.restartCancelled", role: "system", input: z.object({}), build: () => ["say The restart has been called off."] }),
   "server.list": define({ name: "server.list", role: "system", input: z.object({}), build: () => ["list"] }),
+  // TabTPS: everyone's ping, ten players to a page (docs/05 "Connection")
+  "server.pings": define({ name: "server.pings", role: "system", input: z.object({ page: z.number().int().min(1).max(20) }), build: (_ctx, { page }) => [page === 1 ? "pingall" : `pingall ${page}`] }),
 };
 
 export type ActionName = keyof typeof actions;

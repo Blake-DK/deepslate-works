@@ -1117,6 +1117,27 @@
       "requires": []
     },
     {
+      "slug": "tabtps",
+      "name": "TabTPS",
+      "category": "server",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Press Tab in the game: the server's speed, how many are on, and your own ping. It also tells the portal everyone's ping.",
+      "wiki": "https://github.com/jpenilla/TabTPS",
+      "videos": [
+        {
+          "title": "TabTPS Tutorial | Minehut 101 | Minecraft",
+          "url": "https://www.youtube.com/watch?v=KpJc1pqsSyY"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
       "slug": "rpl",
       "name": "Ritchie's Projectile Library",
       "category": "base",

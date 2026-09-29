@@ -540,7 +540,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 4. **Try the mods in the game.** That they load is checked; that a tree falls to a bare hand, a quarry digs, a gun fires and breaks no blocks, a vein is mined, nobody has tried. The settings for trees and for TaCZ count since the restart of 18:27 UTC.
 5. **Look at Home while somebody is on:** their ping should be next to their name within half a minute. No ping had ever been read from a real player before 17:45 UTC (spark writes a colon the pattern did not expect), and nobody has looked since.
 6. **Play first with a member who is not an admin** (docs/14): join without having pressed Play (and without a run of Setup.bat in the last 30 minutes), and they should be held with "Press Play on deepslate.dsw.test to join". The same after linking in the room since 2026-09-29 evening.
-7. **Correct the 17:02 row**: `sudo /root/.config/deepslate/fix-crash-1702.sh` shows it, `--apply` changes it (one row, CRASH → "The server went to sleep (nobody on)", the old wording kept in `meta.corrected`).
+7. ~~Correct the 17:02 row.~~ Done 2026-09-29 19:4x UTC: event 298 is now SERVER_STOP "The server went to sleep (nobody on)", the old wording in `meta.corrected`.
 8. ~~Say whether the world is to be made again.~~ Planner: once, after the vote closes.
 9. **Close the vote** when it has run its course: Apply results, Lock, Build, Sync, then "We're live" in Admin → Settings. "Apply results" has never run on a closed vote; do it when there is time to look at the diff.
 10. **Revoke the old GitHub token** on GitHub (Settings → Developer settings → Fine-grained tokens). The one in use expires 2026-11-28.
@@ -595,7 +595,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 ## Suggested plan updates for the next session
 
 - **Wait for the planner's specs** of the evening's list (above, "Handed over by the planner") before building any of it.
-- **The other CRASH row** of 2026-09-29 (there are two): the planner named only 17:02. The fix script lists both; look at what the console held at the other before calling it anything.
+- **The other CRASH row**, event 127 at 11:14:07 UTC, `state: Stopping` like 17:02: during the world reset, when a stop hung at "Saving worlds" and was ended with Kill. Left as it is; the planner named only 17:02.
 - **Warnings at every start that mean nothing** (mods looking for mods that are not there: `createaddition` for Simulated, something for Controllable, a JetBrains annotation): into `NOISE` in `events/parse.ts`, so that a warning in the log is one to read.
 - **Throwaway accounts leave lines in the event log** ("… had their password reset from the command line", four for each run of `shots.sh`). Either the scripts remove their lines as `download-test.sh` does, or the lines are marked as tests.
 - **A settings-only Sync** says nothing about the server having to be restarted for them to count. One line on Admin → Modpack would do.

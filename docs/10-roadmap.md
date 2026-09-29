@@ -36,11 +36,11 @@ Build: `modpack lock`, `build client|server|installer`, `sync-server`; `/install
 
 Done when:
 - [ ] `modpack lock` resolves every enabled mod plus dependencies for NeoForge 1.21.1 and fails loudly on any mod without a compatible version.
-- [ ] `client.mrpack` imports into the Modrinth App and launches to the main menu.
+- ~~`client.mrpack` imports into the Modrinth App~~ struck 2026-09-29: Windows only.
 - [ ] On a clean Windows VM with only the launcher installed: run `Setup.bat`, open the launcher, choose the profile, press Play, reach the main menu, see the server in the list. Under five minutes on a normal connection excluding downloads.
 - [ ] Rerunning the installer with no changes prints "already up to date" and changes nothing; after bumping one mod it replaces exactly that jar.
 - [ ] `sync-server` puts the same jar set on the AMP instance; the server starts and a client built from the same lockfile connects.
-- [ ] Alex's Mac (or one friend's) gets in via the `.mrpack` route.
+- ~~Alex's Mac gets in via `.mrpack`~~ struck 2026-09-29: Windows only.
 
 ## Phase 3 · Server dashboard
 

@@ -1,4 +1,4 @@
-# 07 · Client installer (Windows) and `.mrpack`
+# 07 · Client installer (Windows only)
 
 ## Goal
 
@@ -103,7 +103,7 @@ Remote-desktop and virtual adapters (Parsec, Microsoft Basic Display, Hyper-V) a
 - No uninstaller in v1; the README says "delete the Deepslate Works profile and the `.minecraft-deepslate-works` folder".
 
 ## Mac / Linux
-`client.mrpack` from `modpack build client`, imported into the Modrinth App (or Prism Launcher). The `/install` page shows a two-step guide. The server address must be added by hand; the guide shows it with a copy button.
+Not supported (decided 2026-09-29). Non-Windows browsers get a one-line notice on `/install`.
 
 ## Windows test checklist
 

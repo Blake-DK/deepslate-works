@@ -29,7 +29,7 @@ Pages are listed per phase. Every page must work on a 390px phone.
 
 ### `/install` Join the server
 - Detects OS from user agent. Windows: one big **Download installer** button (zip with `Setup.bat` + `install.ps1`) and three steps in plain English: 1) install the normal Minecraft launcher and open it once, 2) download and double-click Setup.bat, 3) open the launcher, pick "Deepslate Works", press Play. Screenshots for each.
-- Mac/Linux: download `client.mrpack` and a two-step guide for the Modrinth App (install app, drag the file in).
+- Non-Windows browsers see one line: "Deepslate Works runs on Windows only." (Mac/Linux support dropped 2026-09-29.)
 - Shows the current pack version (lockfile hash, short), what changed since the last version, and "Run the installer again to update".
 - Server address shown with a copy button, though the installer adds it to the server list automatically.
 

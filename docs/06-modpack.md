@@ -111,7 +111,7 @@ Verified during planning: `create` (6.0.10 for 1.21.1 NeoForge, Apr 2026), `crea
 |---|---|
 | `modpack lint` | validates `mods.json` |
 | `modpack lock` | for each enabled mod: `GET /v2/project/{slug}/version?loaders=["neoforge"]&game_versions=["1.21.1"]`, pick the pinned id or the newest `release` (fall back to `beta` with a warning); recursively add `required` dependencies; resolve `neoforge: latest` from `https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml` (highest `21.1.*` without `-beta`); write the lockfile; print a diff against the previous one. Send a `User-Agent: deepslate-works/<version> (contact email)` header; Modrinth requires it. |
-| `modpack build client` | downloads client+both files, verifies sha512, writes `dist/client.mrpack` (Modrinth pack format: `modrinth.index.json` with `files[]` pointing at the CDN URLs + `overrides/` from `modpack/config`) |
+| `modpack build client` | ~~removed 2026-09-29~~ Windows only; the installer downloads client jars itself from the lockfile. |
 | `modpack build server` | downloads server+both files into `dist/server/mods/`, copies `modpack/server/*` and `modpack/config/*` |
 | `modpack build installer` | zips `installer/` with `manifest_url` and pack version stamped into `install.ps1` |
 | `modpack sync-server` | rsync `dist/server/` into `$AMP_INSTANCE_DIR/Minecraft/` (mods dir replaced wholesale, configs merged), then `Core.Restart` via AMP if anything in `mods/` changed |

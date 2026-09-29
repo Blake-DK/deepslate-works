@@ -36,7 +36,7 @@ Assume the player has never installed a mod, may be on a laptop from 2017 with 8
 |---|---|---|
 | 0 | Foundation | Repo, compose, Caddy, auth, invites, admin can log in on the VPS |
 | 1 | Catalogue & vote | Players log in, read about each mod (video + wiki links), vote; admin closes and sees results |
-| 2 | Modpack & installer | Manifest lockfile, client installer (Windows one-click, `.mrpack` for others), server sync to AMP |
+| 2 | Modpack & installer | Manifest lockfile, client installer (Windows one-click; Windows only, decided 2026-09-29), server sync to AMP |
 | 3 | Server dashboard | Status, online players, TPS, live map behind login, announcements |
 | 4 | Player self-service | Whitelist self, home/teleport, stats, admin actions with audit log |
 | 5 | Later | Discord bot bridge, chat relay, scheduled events |

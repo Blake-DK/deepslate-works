@@ -3,6 +3,7 @@ import type { Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { consumeInvite } from "./invites";
+import { audit } from "@/server/events";
 
 type NewUser = {
   displayName: string;
@@ -34,9 +35,7 @@ export async function createUser(input: NewUser) {
       },
     });
     if (input.inviteCode) await consumeInvite(tx, input.inviteCode, user.id);
-    await tx.auditLog.create({
-      data: { userId: user.id, action: "auth.register", params: { via: input.discordId ? "discord" : "email", role }, result: "OK" },
-    });
+    await audit({ userId: user.id, action: "auth.register", params: { via: input.discordId ? "discord" : "email", role }, result: "OK" }, tx);
     return user;
   });
 }

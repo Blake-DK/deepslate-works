@@ -6,10 +6,10 @@ import { actions, linkTellraw, parsePos } from "../src/actions/registry.js";
 describe("parseConsoleLine", () => {
   it("reads uuid, login, join, leave and list lines", () => {
     expect(parseConsoleLine("[19:49:10] [User Authenticator #1/INFO] [minecraft/ServerLoginPacketListenerImpl]: UUID of player Bramble09 is c50f3e2a-7d41-4b8e-9a63-2e1d4f6b8c10")).toContainEqual({ type: "uuid", name: "Bramble09", uuid: "c50f3e2a-7d41-4b8e-9a63-2e1d4f6b8c10" });
-    expect(parseConsoleLine("[19:49:11] [Server thread/INFO] [minecraft/PlayerList]: Bramble09[/10.0.0.5:51234] logged in with entity id 123 at (12.5, 64.0, -3.5)")).toContainEqual({ type: "join", name: "Bramble09" });
-    expect(parseConsoleLine("[19:49:11] [Server thread/INFO] [minecraft/MinecraftServer]: Bramble09 joined the game")).toContainEqual({ type: "join", name: "Bramble09" });
-    expect(parseConsoleLine("[19:55:00] [Server thread/INFO] [minecraft/MinecraftServer]: Bramble09 left the game")).toContainEqual({ type: "leave", name: "Bramble09" });
-    expect(parseConsoleLine("[19:55:00] [Server thread/INFO] [minecraft/ServerGamePacketListenerImpl]: m1_owl lost connection: Disconnected")).toContainEqual({ type: "leave", name: "m1_owl" });
+    expect(parseConsoleLine("[19:49:11] [Server thread/INFO] [minecraft/PlayerList]: Bramble09[/10.0.0.5:51234] logged in with entity id 123 at (12.5, 64.0, -3.5)")).toContainEqual({ type: "join", name: "Bramble09", ip: "10.0.0.5" });
+    expect(parseConsoleLine("[19:49:11] [Server thread/INFO] [minecraft/MinecraftServer]: Bramble09 joined the game")).toContainEqual({ type: "join", name: "Bramble09", ip: null });
+    expect(parseConsoleLine("[19:55:00] [Server thread/INFO] [minecraft/MinecraftServer]: Bramble09 left the game")).toContainEqual({ type: "leave", name: "Bramble09", reason: null });
+    expect(parseConsoleLine("[19:55:00] [Server thread/INFO] [minecraft/ServerGamePacketListenerImpl]: m1_owl lost connection: Disconnected")).toContainEqual({ type: "leave", name: "m1_owl", reason: "Disconnected" });
     expect(parseConsoleLine("[19:56:00] [Server thread/INFO] [minecraft/MinecraftServer]: There are 2 of a max of 20 players online: Bramble09, m1_owl")).toContainEqual({ type: "list", online: 2, max: 20, names: ["Bramble09", "m1_owl"] });
   });
   it("ignores chat that mimics a join", () => {

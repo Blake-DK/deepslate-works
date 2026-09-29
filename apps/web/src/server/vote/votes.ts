@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { getManifest, votableMods } from "@/server/modpack/manifest";
 import { parseQuestions, tally, type BallotRow, type Tally } from "./tally";
+import { audit } from "@/server/events";
 
 export async function getOpenVote() {
   const vote = await db.vote.findFirst({ where: { status: "OPEN" }, orderBy: { opensAt: "desc" } });
@@ -38,6 +39,6 @@ export async function closeVote(voteId: string, adminId: string | null) {
   if (!vote || vote.status !== "OPEN") return null;
   const result = await tallyVote(vote);
   const closed = await db.vote.update({ where: { id: voteId }, data: { status: "CLOSED", closesAt: new Date(), resultJson: result as unknown as Prisma.InputJsonValue } });
-  await db.auditLog.create({ data: { userId: adminId, action: "vote.close", params: { voteId, ballots: result.ballots, auto: adminId === null }, result: "OK" } });
+  await audit({ userId: adminId, action: "vote.close", params: { voteId, ballots: result.ballots, auto: adminId === null }, result: "OK" });
   return closed;
 }

@@ -12,16 +12,19 @@ export const metadata: Metadata = { title: "Players" };
 const TIER: Record<string, string> = { LOW: "Older PC", MID: "Decent PC", HIGH: "Gaming PC" };
 
 export default async function PlayersPage() {
-  const [users, status] = await Promise.all([
-    // Nothing sensitive leaves the database: no emails, no Discord ids.
-    db.user.findMany({ select: { id: true, displayName: true, mcUsername: true, mcUuid: true, pcTier: true, lastSeenAt: true, role: true } }),
+  const [users, status, played] = await Promise.all([
+    // Nothing sensitive leaves the database: no emails, no Discord ids, no addresses.
+    db.user.findMany({ select: { id: true, displayName: true, mcUsername: true, mcUuid: true, pcTier: true, role: true } }),
     getStatus(),
+    db.session.groupBy({ by: ["mcUuid"], _max: { joinedAt: true, leftAt: true } }),
   ]);
+  // "Last played" is about the game, not the website: the end of their latest session (or its start, if it is still open).
+  const lastPlayed = new Map(played.map((p) => [p.mcUuid, p._max.leftAt && p._max.joinedAt && p._max.leftAt > p._max.joinedAt ? p._max.leftAt : p._max.joinedAt]));
   const onlineNames = new Set((status?.online ?? []).map((p) => p.name.toLowerCase()));
   const onlineUuids = new Set((status?.online ?? []).map((p) => p.uuid).filter((u): u is string => Boolean(u)));
   const rows = users
-    .map((u) => ({ ...u, online: Boolean((u.mcUuid && onlineUuids.has(u.mcUuid)) || (u.mcUsername && onlineNames.has(u.mcUsername.toLowerCase()))) }))
-    .sort((a, b) => Number(b.online) - Number(a.online) || (b.lastSeenAt?.getTime() ?? 0) - (a.lastSeenAt?.getTime() ?? 0) || a.displayName.localeCompare(b.displayName));
+    .map((u) => ({ ...u, lastPlayed: (u.mcUuid && lastPlayed.get(u.mcUuid)) || null, online: Boolean((u.mcUuid && onlineUuids.has(u.mcUuid)) || (u.mcUsername && onlineNames.has(u.mcUsername.toLowerCase()))) }))
+    .sort((a, b) => Number(b.online) - Number(a.online) || (b.lastPlayed?.getTime() ?? 0) - (a.lastPlayed?.getTime() ?? 0) || a.displayName.localeCompare(b.displayName));
   const known = new Set(rows.filter((r) => r.online && r.mcUsername).map((r) => r.mcUsername!.toLowerCase()));
   const guests = (status?.online ?? []).filter((p) => !known.has(p.name.toLowerCase()) && !rows.some((r) => r.mcUuid && r.mcUuid === p.uuid));
   const now = new Date();
@@ -40,10 +43,10 @@ export default async function PlayersPage() {
                 <PlayerHead uuid={u.mcUuid} name={u.mcUsername} size={32} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{u.displayName} {u.role === "ADMIN" && <Badge className="ml-1">Admin</Badge>}</p>
-                  <p className="truncate text-sm text-muted-foreground">{u.mcUsername ? <span className="font-mono">{u.mcUsername}</span> : "Hasn't joined the server yet"}{u.pcTier && <> · {TIER[u.pcTier]}</>}</p>
+                  <p className="truncate text-sm text-muted-foreground">{u.mcUsername ? <span className="font-mono">{u.mcUsername}</span> : "No Minecraft account linked yet"}{u.pcTier && <> · {TIER[u.pcTier]}</>}</p>
                 </div>
                 <div className="text-right text-sm">
-                  {u.online ? <Badge tone="good">Playing</Badge> : <span className="text-muted-foreground">{u.lastSeenAt ? `Last on ${timeAgo(u.lastSeenAt, now)}` : "Not seen yet"}</span>}
+                  {u.online ? <Badge tone="good">Playing</Badge> : <span className="text-muted-foreground">{u.lastPlayed ? `Last played ${timeAgo(u.lastPlayed, now)}` : "Hasn't played yet"}</span>}
                 </div>
               </li>
             ))}

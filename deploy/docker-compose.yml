@@ -104,11 +104,15 @@ services:
       - ${DEEPSLATE_DIR:-..}/dist:/repo/dist             # `modpack build` writes it (owner uid 1000); sync-server rsyncs dist/server/ to the AMP host
       - ${DEEPSLATE_DIR:-..}/modpack:/repo/modpack:ro
       - ${DEEPSLATE_DIR:-..}/installer:/repo/installer:ro
+      # country lookup for the analytics page: MaxMind's GeoLite2-Country, kept current by the web-proxy stack
+      - ${GEOIP_DIR:-/root/docker/web-proxy/geoip}:/geoip:ro
     depends_on:
       wireguard:
         condition: service_started
       postgres:
         condition: service_healthy
+      web:
+        condition: service_healthy     # web applies the database migrations when it starts; api needs them done
     security_opt:
       - no-new-privileges:true
 

@@ -51,7 +51,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">Status <Badge tone={a.tone}>{status ? `${a.label} (${status.state})` : "backend unreachable"}</Badge></CardTitle>
           <CardDescription>
-            {status ? <>Up for {formatUptime(status.uptime) ?? "?"} · CPU {status.cpu ?? "?"}% · RAM {status.memMb ?? "?"}{status.memMaxMb ? ` / ${status.memMaxMb}` : ""} MB · TPS {status.tps?.toFixed(1) ?? "no reading"} · online: {players?.online.length ? players.online.map((p) => `${p.name}${p.held ? " (in the room)" : ""}`).join(", ") : "nobody"}</> : "Can't reach the site's backend (api)."}
+            {status ? <>{running ? <>Up for {formatUptime(status.uptime) ?? "?"} · </> : null}CPU {status.cpu ?? "?"}% · RAM {status.memMb ?? "?"}{status.memMaxMb ? ` / ${status.memMaxMb}` : ""} MB · TPS {status.tps?.toFixed(1) ?? "no reading"} · online: {players?.online.length ? players.online.map((p) => `${p.name}${p.held ? " (in the room)" : ""}`).join(", ") : "nobody"}</> : "Can't reach the site's backend (api)."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

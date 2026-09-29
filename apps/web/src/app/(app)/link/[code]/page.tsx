@@ -7,6 +7,7 @@ import { apiFetch } from "@/server/api-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { buttonClasses } from "@/components/ui/button";
+import { audit } from "@/server/events";
 
 export const metadata: Metadata = { title: "Link Minecraft" };
 
@@ -28,11 +29,11 @@ export default async function LinkPage({ params }: { params: Promise<{ code: str
     if (other) {
       outcome = { tone: "error", title: "That Minecraft account belongs to someone else", text: `${link.mcUsername} is linked to ${other.displayName}. Ask Alex if that's wrong.` };
     } else {
-      await db.$transaction([
-        db.user.update({ where: { id: user.id }, data: { mcUuid: link.mcUuid, mcUsername: link.mcUsername, verifiedAt: user.verifiedAt ?? new Date(), guildMember: true } }),
-        db.linkCode.update({ where: { code }, data: { usedById: user.id } }),
-        db.auditLog.create({ data: { userId: user.id, action: "link.bind", params: { code, mcUsername: link.mcUsername, mcUuid: link.mcUuid }, result: "OK" } }),
-      ]);
+      await db.$transaction(async (tx) => {
+        await tx.user.update({ where: { id: user.id }, data: { mcUuid: link.mcUuid, mcUsername: link.mcUsername, verifiedAt: user.verifiedAt ?? new Date(), guildMember: true } });
+        await tx.linkCode.update({ where: { code }, data: { usedById: user.id } });
+        await audit({ userId: user.id, action: "link.bind", params: { code, mcUsername: link.mcUsername, mcUuid: link.mcUuid }, result: "OK" }, tx);
+      });
       let released = false;
       try {
         const r = await apiFetch<{ released: boolean }>("/link/release", { method: "POST", body: { uuid: link.mcUuid }, caller: { id: user.id, role: user.role } });

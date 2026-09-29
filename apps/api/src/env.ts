@@ -22,6 +22,8 @@ const schema = z.object({
   REPO_DIR: z.string().default("/repo"),
   MODPACK_PKG_DIR: z.string().default("/app/packages/modpack"),
   MODRINTH_USER_AGENT: z.string().optional(),
+  // GeoLite2-Country database for the analytics page; unset or missing = no countries
+  GEOIP_DB: z.string().default("/geoip/GeoLite2-Country.mmdb"),
 });
 
 export type Env = z.infer<typeof schema>;

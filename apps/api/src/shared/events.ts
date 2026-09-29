@@ -1,0 +1,107 @@
+// SHARED FILE: apps/web/src/shared/ and apps/api/src/shared/ hold identical copies (a test compares them).
+// Edit the copy in apps/web, then `cp apps/web/src/shared/*.ts apps/api/src/shared/`.
+//
+// docs/16 §4: what an audit entry becomes in the event log. Portal actions are ADMIN_ACTION or
+// PLAYER_ACTION rows with the action's name, parameters and result in `meta`; a few have a kind of their own.
+
+export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP"] as const;
+export type EventKind = (typeof EVENT_KINDS)[number];
+
+/** What players may see at /events. Everything else is for admins. */
+export const PLAYER_KINDS: readonly EventKind[] = ["JOIN", "LEAVE", "DEATH", "ADVANCEMENT", "SERVER_START", "SERVER_STOP"];
+
+export type Severity = "info" | "player" | "warning" | "error" | "admin";
+export const SEVERITY: Record<EventKind, Severity> = {
+  JOIN: "player", LEAVE: "player", DEATH: "player", CHAT: "player", ADVANCEMENT: "player",
+  SERVER_START: "info", SERVER_STOP: "info", CRASH: "error", WARN: "warning", ERROR: "error",
+  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin",
+};
+
+export const KIND_LABEL: Record<EventKind, string> = {
+  JOIN: "Joined", LEAVE: "Left", DEATH: "Death", CHAT: "Chat", ADVANCEMENT: "Advancement",
+  SERVER_START: "Server started", SERVER_STOP: "Server stopped", CRASH: "Crash", WARN: "Warning", ERROR: "Error",
+  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup",
+};
+
+export type AuditResult = "OK" | "DENIED" | "FAILED" | "TIMEOUT";
+export type Actor = { role: "ADMIN" | "PLAYER" | "system" | null; name: string | null };
+
+/** Must agree with the CASE in prisma/migrations/0005_events_sessions_settings. */
+export function kindOf(action: string, role: Actor["role"]): EventKind {
+  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.kickIdle") return "LINK";
+  if (action === "player.revoke" || action === "user.remove" || action === "user.clearMinecraft") return "REVOKE";
+  if (action.startsWith("modpack.sync")) return "SYNC";
+  if (action === "server.backup") return "BACKUP";
+  return role === "ADMIN" || role === "system" ? "ADMIN_ACTION" : "PLAYER_ACTION";
+}
+
+type P = Record<string, unknown>;
+const s = (v: unknown, fallback = "?") => (typeof v === "string" && v ? v : typeof v === "number" ? String(v) : fallback);
+
+const PHRASES: Record<string, string | ((p: P) => string)> = {
+  "auth.login": "tried to sign in",
+  "auth.register": "joined the group",
+  "auth.adminReset": "had their password reset from the command line",
+  "profile.onboard": "answered the PC question",
+  "ballot.save": "saved their vote",
+  "vote.create": (p) => `created the vote "${s(p.title)}"`,
+  "vote.open": "opened the vote",
+  "vote.close": (p) => (p.auto ? "the vote closed by itself" : "closed the vote"),
+  "vote.delete": (p) => `deleted the vote "${s(p.title)}"`,
+  "vote.apply": "applied the vote's results to the mod list",
+  "invite.create": "created an invite",
+  "invite.revoke": "revoked an invite",
+  "user.setRole": (p) => `changed a member's role to ${s(p.role).toLowerCase()}`,
+  "user.remove": (p) => `removed ${s(p.displayName, "a member")} from the group`,
+  "user.setMinecraft": (p) => `linked a member to the Minecraft account ${s(p.mcUsername)}`,
+  "user.clearMinecraft": "unlinked a member's Minecraft account",
+  "launcher.approve": (p) => (p.approve === false ? "refused an installer sign-in" : "approved an installer sign-in"),
+  "launcher.revoke": "signed a member's installers out",
+  "link.bind": (p) => `linked their Minecraft account ${s(p.mcUsername)}`,
+  "link.release": (p) => `let ${s(p.name)} in`,
+  "limbo.held": (p) => `${s(p.name)} is waiting in the entrance room`,
+  "limbo.kickIdle": (p) => `${s(p.name)} waited too long in the entrance room and was disconnected`,
+  "limbo.build": "built the entrance room",
+  "player.revoke": (p) => `kicked ${s(p.name)} and took them off the whitelist`,
+  "site.settings": "changed the launch settings",
+  "settings.save": (p) => `changed the ${s(p.section, "site")} settings`,
+  "branding.save": "changed the branding",
+  "announcement.create": "posted an announcement",
+  "announcement.pin": "pinned an announcement",
+  "announcement.unpin": "unpinned an announcement",
+  "announcement.delete": "deleted an announcement",
+  "modpack.lock": "locked the mod versions",
+  "modpack.build": "built the modpack",
+  "modpack.sync": "synced the mods to the server",
+  "modpack.sync-dry": "checked what a mod sync would change",
+  "server.start": "started the server",
+  "server.stop": "stopped the server",
+  "server.restart": (p) => (p.scheduled ? "the planned restart went ahead" : "restarted the server"),
+  "server.restart.scheduled": (p) => `planned a restart in ${s(p.minutes)} minutes`,
+  "server.restart.cancelled": "called off the planned restart",
+  "server.backup": "started a backup",
+  "server.say": (p) => `said in game: ${s(p.text, "")}`,
+  "files.download": (p) => `downloaded ${s(p.path)} from the server`,
+  "retention.prune": (p) => `old entries cleared: ${s(p.events, "0")} events, ${s(p.ips, "0")} addresses`,
+  "events.export": "exported the event log",
+  "analytics.export": "exported the analytics",
+};
+
+// Phrases that already say who (or have no who).
+const SELF_CONTAINED = new Set(["limbo.held", "limbo.kickIdle", "retention.prune"]);
+
+export function describeAction(action: string, actor: Actor, params: unknown, result: AuditResult = "OK"): string {
+  const p = (params && typeof params === "object" ? params : {}) as P;
+  const phrase = PHRASES[action];
+  const text = typeof phrase === "function" ? phrase(p) : (phrase ?? action);
+  const who = actor.name ?? (actor.role === "system" ? "The portal" : "Someone");
+  const auto = action === "vote.close" && p.auto;
+  const planned = action === "server.restart" && p.scheduled;
+  const body = SELF_CONTAINED.has(action) || auto || planned ? text.charAt(0).toUpperCase() + text.slice(1) : phrase === undefined ? `${who}: ${text}` : `${who} ${text}`;
+  const suffix = result === "OK" ? "" : result === "DENIED" ? " (refused)" : result === "TIMEOUT" ? " (no answer)" : " (failed)";
+  return `${body}${suffix}`.slice(0, 500);
+}
+
+export function auditMeta(action: string, params: unknown, result: AuditResult, detail: string | null | undefined) {
+  return { action, params: params ?? {}, result, detail: detail ?? null };
+}

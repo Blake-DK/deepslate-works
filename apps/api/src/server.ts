@@ -13,7 +13,11 @@ import { serverRoutes } from "./routes/server.js";
 import { StatusPoller } from "./status/poller.js";
 import { prismaSnapshotStore } from "./status/store.js";
 import { RestartSchedule } from "./status/restart.js";
-import { db } from "./db.js";
+import { Recorder } from "./events/recorder.js";
+import { prismaRecorderStore } from "./events/store.js";
+import { countryOf } from "./events/geo.js";
+import { runRetentionIfDue } from "./events/retention.js";
+import { getSection } from "./settings.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
@@ -35,25 +39,34 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   playerRoutes(app, ampClient, tail, limbo);
   serverRoutes(app, ampClient, tail, restarts);
 
-  // "Last seen" on the Players page: stamped when someone joins and again when they leave.
-  tail.on((e) => {
-    if (e.type !== "join" && e.type !== "leave") return;
-    const uuid = tail.uuidByName.get(e.name);
-    if (!uuid) return;
-    void db.user.updateMany({ where: { mcUuid: uuid }, data: { lastSeenAt: new Date() } }).catch((err) => log({ err: String(err) }, "lastSeenAt update failed"));
+  // docs/16: sessions and the event log, fed by the console tail and the status poller.
+  const recorder = new Recorder({
+    store: prismaRecorderStore,
+    privacy: () => getSection("privacy"),
+    country: (ip) => countryOf(ip, env.GEOIP_DB),
+    uuidOf: (name) => tail.uuidByName.get(name),
+    log,
   });
+  let housekeeping: NodeJS.Timeout | null = null;
 
   app.addHook("onReady", async () => {
     if (env.AMP_MOCK === "1") return;
+    await recorder.init().catch((err) => log({ err: String(err) }, "could not load open sessions"));
+    tail.on(recorder.onConsole);
+    poller.onStatus(recorder.onStatus);
     tail.start();
     poller.start();
     limbo.start();
+    const keepHouse = () => void runRetentionIfDue(log).catch((err) => log({ err: String(err) }, "retention failed"));
+    housekeeping = setInterval(keepHouse, 30 * 60_000);
+    setTimeout(keepHouse, 60_000).unref();
   });
   app.addHook("onClose", async () => {
     tail.stop();
     poller.stop();
     limbo.stop();
     restarts.stop();
+    if (housekeeping) clearInterval(housekeeping);
   });
   return app;
 }

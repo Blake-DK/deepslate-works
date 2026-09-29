@@ -11,6 +11,7 @@ import { createUser, touchLastSeen } from "@/server/auth/users";
 import { loginLimiter } from "@/server/auth/rate-limit";
 import { clientIp } from "@/server/auth/request";
 import { INVITE_COOKIE } from "@/server/auth/constants";
+import { audit } from "@/server/events";
 
 class RateLimited extends CredentialsSignin {
   code = "rate_limited";
@@ -47,13 +48,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = parsed.data.email.toLowerCase();
         const ip = await clientIp();
         if (!loginLimiter.allow(ip)) {
-          await db.auditLog.create({ data: { action: "auth.login", params: { email, ip }, result: "DENIED", detail: "rate limited" } });
+          await audit({ action: "auth.login", params: { email, ip }, result: "DENIED", detail: "rate limited" });
           throw new RateLimited();
         }
         const user = await db.user.findUnique({ where: { email } });
         const ok = Boolean(user?.passwordHash) && (await verifyPassword(parsed.data.password, user!.passwordHash!));
         if (!user || !ok) {
-          await db.auditLog.create({ data: { action: "auth.login", params: { email, ip }, result: "DENIED", detail: "bad credentials" } });
+          await audit({ action: "auth.login", params: { email, ip }, result: "DENIED", detail: "bad credentials" });
           return null;
         }
         await touchLastSeen(user.id);
@@ -72,7 +73,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         inGuild = await isGuildMember(account.access_token, env.DISCORD_GUILD_ID);
         if (!inGuild) {
           await db.user.updateMany({ where: { discordId }, data: { guildMember: false } }); // docs/14 §7: back to the room next join
-          await db.auditLog.create({ data: { action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "not in discord server" } });
+          await audit({ action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "not in discord server" });
           return "/login?error=not-in-server";
         }
       }
@@ -88,7 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const invite = inviteCode ? await findValidInvite(inviteCode) : null;
       const guildIsInvite = inGuild && env.DISCORD_GUILD_AUTO_JOIN;
       if (!bootstrapAdmin && !invite && !guildIsInvite) {
-        await db.auditLog.create({ data: { action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "no invite" } });
+        await audit({ action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "no invite" });
         return "/login?error=no-invite";
       }
       const p = (profile ?? {}) as { global_name?: string | null; username?: string };

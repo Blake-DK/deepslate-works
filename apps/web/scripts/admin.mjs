@@ -18,6 +18,6 @@ const user = await db.user.upsert({
   create: { email: email.toLowerCase(), displayName, passwordHash, role: "ADMIN" },
   update: { passwordHash, role: "ADMIN" },
 });
-await db.auditLog.create({ data: { userId: user.id, action: "auth.adminReset", params: { email, via: "cli" }, result: "OK" } });
+await db.event.create({ data: { kind: "ADMIN_ACTION", actor: user.id, message: `${user.displayName} had their password reset from the command line`, meta: { action: "auth.adminReset", params: { email, via: "cli" }, result: "OK", detail: null } } });
 console.log(`login: ${email}\npassword: ${password}\nurl: ${process.env.AUTH_URL ?? "http://localhost:3000"}/login (open "Sign in with email")`);
 await db.$disconnect();

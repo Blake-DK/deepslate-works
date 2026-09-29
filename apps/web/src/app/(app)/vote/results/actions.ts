@@ -6,6 +6,7 @@ import { db } from "@/server/db";
 import { closeVote, tallyVote } from "@/server/vote/votes";
 import { getManifest, votableMods, writeManifest, commitManifest } from "@/server/modpack/manifest";
 import { decide } from "@/server/vote/tally";
+import { audit } from "@/server/events";
 
 export async function closeVoteAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -31,7 +32,7 @@ export async function applyResultsAction(formData: FormData) {
   await writeManifest(next);
   const summary = changes.map((d) => `${d.to ? "+" : "-"}${d.slug}`).join(" ");
   const commit = await commitManifest(`chore(modpack): apply "${vote.title}" results (${summary})`, { name: admin.displayName });
-  await db.auditLog.create({ data: { userId: admin.id, action: "vote.apply", params: { voteId, threshold, changes: summary }, result: commit.ok ? "OK" : "FAILED", detail: commit.ok ? null : commit.output.slice(0, 500) } });
+  await audit({ userId: admin.id, action: "vote.apply", params: { voteId, threshold, changes: summary }, result: commit.ok ? "OK" : "FAILED", detail: commit.ok ? null : commit.output.slice(0, 500) });
   revalidatePath("/mods");
   revalidatePath("/vote/results");
   redirect(commit.ok ? "/vote/results?applied=ok" : "/vote/results?applied=nocommit");

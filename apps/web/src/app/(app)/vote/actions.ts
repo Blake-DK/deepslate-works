@@ -6,6 +6,7 @@ import { db } from "@/server/db";
 import { getManifest, votableMods } from "@/server/modpack/manifest";
 import { getOpenVote } from "@/server/vote/votes";
 import { parseQuestions } from "@/server/vote/tally";
+import { audit } from "@/server/events";
 
 const schema = z.object({
   voteId: z.string().min(1),
@@ -45,6 +46,6 @@ export async function saveBallot(input: unknown): Promise<SaveResult> {
     create: { voteId: vote.id, userId: user.id, modIds: cleanIds, answers: answers as Prisma.InputJsonValue },
     update: { modIds: cleanIds, answers: answers as Prisma.InputJsonValue },
   });
-  await db.auditLog.create({ data: { userId: user.id, action: "ballot.save", params: { voteId: vote.id, picked: cleanIds.length }, result: "OK" } });
+  await audit({ userId: user.id, action: "ballot.save", params: { voteId: vote.id, picked: cleanIds.length }, result: "OK" });
   return { ok: true, savedAt: ballot.submittedAt.toISOString() };
 }

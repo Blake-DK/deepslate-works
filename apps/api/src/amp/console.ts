@@ -1,37 +1,19 @@
 import type { Amp } from "./client.js";
+import { parse, type GameEvent, type Meta } from "../events/parse.js";
 
 // Tails the instance console through Core.GetUpdates (AMP returns only new entries per session) and
-// turns the lines into events. Patterns verified against 1.21.1 NeoForge log formats.
+// turns the lines into events. The patterns are in src/events/parse.ts.
 
-export type ConsoleEvent =
-  | { type: "uuid"; name: string; uuid: string }
-  | { type: "join"; name: string }
-  | { type: "leave"; name: string }
-  | { type: "list"; online: number; max: number; names: string[] }
-  | { type: "line"; text: string };
+export type ConsoleEvent = GameEvent | { type: "line"; text: string; source: string | null; kind: string | null };
 
-const RE = {
-  uuid: /UUID of player (\S+) is ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
-  join: /\]: (\S+)\[\/[\d.:a-f]+\] logged in with entity id \d+/i,
-  joinAlt: /\]: (\S+) joined the game/,
-  leave: /\]: (\S+) (?:left the game|lost connection: .*)$/,
-  list: /There are (\d+) of a max of (\d+) players online:\s*(.*)$/,
-};
-
-export function parseConsoleLine(text: string): ConsoleEvent[] {
-  const out: ConsoleEvent[] = [{ type: "line", text }];
-  let m: RegExpExecArray | null;
-  if ((m = RE.uuid.exec(text))) out.push({ type: "uuid", name: m[1]!, uuid: m[2]!.toLowerCase() });
-  else if ((m = RE.join.exec(text)) || (m = RE.joinAlt.exec(text))) out.push({ type: "join", name: m[1]! });
-  else if ((m = RE.leave.exec(text))) out.push({ type: "leave", name: m[1]! });
-  else if ((m = RE.list.exec(text))) out.push({ type: "list", online: Number(m[1]), max: Number(m[2]), names: m[3]!.split(",").map((s) => s.trim()).filter(Boolean) });
-  return out;
+export function parseConsoleLine(text: string, meta: Meta = {}, isPlayer?: (name: string) => boolean): ConsoleEvent[] {
+  return [{ type: "line", text, source: meta.source ?? null, kind: meta.type ?? null }, ...parse(text, meta, isPlayer)];
 }
 
 type Entry = { Timestamp?: string; Source?: string; Type?: string; Contents?: string };
 type Updates = { Status?: { State?: number }; ConsoleEntries?: Entry[] };
 
-export type ConsoleEntry = { seq: number; at: string; text: string };
+export type ConsoleEntry = { seq: number; at: string; text: string; source: string | null; kind: string | null };
 const KEEP = 300;
 
 export class ConsoleTail {
@@ -66,10 +48,11 @@ export class ConsoleTail {
   }
 
   /** Adds one console line and notifies the handlers; `poll` calls it for every new AMP entry. */
-  ingest(text: string, at: Date = new Date()) {
-    this.entries.push({ seq: ++this.seq, at: at.toISOString(), text });
+  ingest(text: string, at: Date = new Date(), meta: Meta = {}) {
+    this.entries.push({ seq: ++this.seq, at: at.toISOString(), text, source: meta.source ?? null, kind: meta.type ?? null });
     if (this.entries.length > KEEP) this.entries.splice(0, this.entries.length - KEEP);
-    for (const e of parseConsoleLine(text)) {
+    const known = (name: string) => this.online.has(name) || this.uuidByName.has(name);
+    for (const e of parseConsoleLine(text, meta, known)) {
       if (e.type === "uuid") this.uuidByName.set(e.name, e.uuid);
       if (e.type === "join") this.online.add(e.name);
       if (e.type === "leave") this.online.delete(e.name);
@@ -112,7 +95,7 @@ export class ConsoleTail {
       }
       for (const entry of u.ConsoleEntries ?? []) {
         const text = entry.Contents ?? "";
-        if (text) this.ingest(text);
+        if (text) this.ingest(text, new Date(), { source: entry.Source ?? null, type: entry.Type ?? null });
       }
     } finally {
       this.busy = false;

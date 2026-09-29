@@ -78,6 +78,10 @@ model ServerSnapshot {                          // one row per poll, pruned to 7
 }
 ```
 
+## Added by docs/16 (2026-09-29)
+
+`Session` (one row per visit to the Minecraft server), `Event` (the event log; replaces `AuditLog`) and `Setting` (key/value settings edited from the admin pages). The definitions are in `apps/web/prisma/schema.prisma`; docs/16 §1 has the reasoning. `ServerSnapshot` is kept for 30 days and thinned to one row per five minutes after 48 hours.
+
 ## Not in the database
 
 - **Mods.** They live in `modpack/mods.json` and `mods.lock.json`. The app reads the files at startup and on a file-change signal (or on each request in dev). Ballots reference mods by slug so a mod removed from the manifest still shows up in old results as "removed".

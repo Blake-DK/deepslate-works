@@ -7,6 +7,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { closeVote } from "@/server/vote/votes";
 import { parseQuestions } from "@/server/vote/tally";
+import { audit } from "@/server/events";
 
 const createSchema = z.object({
   title: z.string().trim().min(2).max(80),
@@ -28,7 +29,7 @@ export async function createVoteAction(formData: FormData) {
   const closesAt = parsed.data.closesAt ? new Date(parsed.data.closesAt) : null;
   if (closesAt && Number.isNaN(closesAt.getTime())) redirect("/admin/votes?error=form");
   const vote = await db.vote.create({ data: { title: parsed.data.title, questions: clean as unknown as Prisma.InputJsonValue, closesAt } });
-  await db.auditLog.create({ data: { userId: admin.id, action: "vote.create", params: { voteId: vote.id, title: vote.title }, result: "OK" } });
+  await audit({ userId: admin.id, action: "vote.create", params: { voteId: vote.id, title: vote.title }, result: "OK" });
   revalidatePath("/admin/votes");
   redirect("/admin/votes");
 }
@@ -41,7 +42,7 @@ export async function openVoteAction(formData: FormData) {
   const vote = await db.vote.findUnique({ where: { id } });
   if (!vote || vote.status !== "DRAFT") redirect("/admin/votes");
   await db.vote.update({ where: { id }, data: { status: "OPEN", opensAt: new Date() } });
-  await db.auditLog.create({ data: { userId: admin.id, action: "vote.open", params: { voteId: id }, result: "OK" } });
+  await audit({ userId: admin.id, action: "vote.open", params: { voteId: id }, result: "OK" });
   revalidatePath("/admin/votes");
   revalidatePath("/vote");
   redirect("/admin/votes");
@@ -61,7 +62,7 @@ export async function deleteVoteAction(formData: FormData) {
   const vote = await db.vote.findUnique({ where: { id }, include: { _count: { select: { ballots: true } } } });
   if (!vote || vote.status === "OPEN") redirect("/admin/votes");
   await db.vote.delete({ where: { id } });
-  await db.auditLog.create({ data: { userId: admin.id, action: "vote.delete", params: { voteId: id, title: vote.title, ballots: vote._count.ballots }, result: "OK" } });
+  await audit({ userId: admin.id, action: "vote.delete", params: { voteId: id, title: vote.title, ballots: vote._count.ballots }, result: "OK" });
   revalidatePath("/admin/votes");
   redirect("/admin/votes");
 }

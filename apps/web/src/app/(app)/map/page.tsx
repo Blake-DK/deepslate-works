@@ -16,7 +16,7 @@ export default async function MapPage() {
       <Card>
         <CardHeader>
           <CardTitle>Map</CardTitle>
-          <CardDescription>{env.MAP_URL ? <>The map comes from the game server, so it is only there while the server is running. Right now: {a.label.toLowerCase()}. {a.hint}</> : "The map isn't set up yet."}</CardDescription>
+          <CardDescription>{env.MAP_URL ? <>The map comes from the game server, so it is only there while the server is running. Right now it is {a.label.toLowerCase()}: {a.hint.charAt(0).toLowerCase() + a.hint.slice(1)}</> : "The map isn't set up yet."}</CardDescription>
         </CardHeader>
         <CardContent><Link href="/" className={buttonClasses("secondary", "sm")}>Back</Link></CardContent>
       </Card>

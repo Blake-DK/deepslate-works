@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { apiFetch, ApiError } from "@/server/api-client";
+import { audit } from "@/server/events";
 
 const ops = z.enum(["start", "stop", "restart"]);
 const back = (msg: string, detail?: string) => `/admin/server?msg=${msg}${detail ? `&detail=${encodeURIComponent(detail)}` : ""}`;
@@ -84,7 +85,7 @@ export async function announceAction(formData: FormData) {
   if (!parsed.success) redirect(back("error", "Write something first (600 characters at most)."));
   const { body, pinned, say } = parsed.data;
   await db.announcement.create({ data: { body, pinned, authorId: admin.id } });
-  await db.auditLog.create({ data: { userId: admin.id, action: "announcement.create", params: { pinned, say, length: body.length }, result: "OK" } });
+  await audit({ userId: admin.id, action: "announcement.create", params: { pinned, say, length: body.length }, result: "OK" });
   for (const p of ["/", "/admin/server"]) revalidatePath(p);
   let said = "";
   if (say) {
@@ -107,7 +108,7 @@ export async function announcementChangeAction(formData: FormData) {
   if (!id.success || !what.success) redirect(back("error", "Unknown announcement."));
   if (what.data === "delete") await db.announcement.deleteMany({ where: { id: id.data } });
   else await db.announcement.updateMany({ where: { id: id.data }, data: { pinned: what.data === "pin" } });
-  await db.auditLog.create({ data: { userId: admin.id, action: `announcement.${what.data}`, params: { id: id.data }, result: "OK" } });
+  await audit({ userId: admin.id, action: `announcement.${what.data}`, params: { id: id.data }, result: "OK" });
   for (const p of ["/", "/admin/server"]) revalidatePath(p);
   redirect(back("action", `announcement ${what.data}`));
 }

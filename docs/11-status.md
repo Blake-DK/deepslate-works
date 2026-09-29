@@ -44,6 +44,19 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 - **Backup now** is built but switched off by AMP: `webapp` lacks `LocalFileBackupPlugin.Backup.TakeBackup`. The page says so. Alex's to-do 12.
 - Tests: api 33, web 27, modpack 9.
 
+### docs/16 · foundations (2026-09-29)
+
+- **Tables** (migration `0005_events_sessions_settings`): `Session`, `Event` (with a `count` column for repeated warnings), `Setting` (key/value: `privacy`, `retention`, `files`, `branding`). The 36 `AuditLog` rows were copied into `Event`. **Deviation from docs/16:** the old table is not dropped but renamed to `AuditLog_migrated_20260929`, so the move can be undone; a later migration drops it once the event log has been looked at.
+- **Every audit write is now an Event** (`audit()` in `apps/web/src/server/events.ts` and `apps/api/src/audit.ts`): kind `ADMIN_ACTION` / `PLAYER_ACTION`, or `LINK`, `REVOKE`, `SYNC`, `BACKUP`; the action name, parameters and result are in `meta`, the message is a sentence ("Bramble09 planned a restart in 5 minutes").
+- **Console parsers** in one file, `apps/api/src/events/parse.ts`, tested against lines taken from the instance's own logs. They accept the log-file shape and AMP's console-entry shape (message in `Contents`, thread and level in `Source`, `Type` "Chat"). Patterns are anchored to the start of the message, so chat cannot pass for a join, a death or a server start. The mod loader's start-up warnings are filtered out.
+- **Not yet seen for real: a player joining.** Nobody has joined the server since it was built, so what AMP's console entries look like for a join, chat or death is known from the log format and AMP's documentation, not from a capture. Each console entry is kept with its `source` and `kind` (`GET /console/tail`), so the first real join can be checked against the parsers. The wait room (docs/14) depends on the same join line.
+- **Recorder** (`apps/api/src/events/recorder.ts`): one session per visit (the two join lines and the two leave lines are one each), events for join, leave, chat, death, advancement, start, stop, sleep, crash, warnings and errors (repeats within 60 s are one row with a count). Catches up with AMP's player list when the console tail missed something. Sessions left open when api restarts are picked up again.
+- **Addresses**: kept on `Session.ip` only, cleared after 30 days; never in the event log (the raw join line is stored with the address replaced). Country from MaxMind's GeoLite2-Country file already on this host (`/root/docker/web-proxy/geoip`, mounted read-only into api); private addresses have no country. Players reach the server through Pangolin, so the address the server sees may be the tunnel's and not the player's; to be checked at the first real join.
+- **Retention** once a day: chat 30 days, other events 180 days, admin actions for good, addresses 30 days; each run is an Event.
+- **Players page** shows "Last played" from sessions (it showed the last visit to the website).
+- Shared code: `apps/web/src/shared/` and `apps/api/src/shared/` hold identical copies of `events.ts` and `settings.ts`; a test fails if they differ.
+- Tests: api 66, web 27, modpack 9.
+
 ### Phase 3 acceptance · state
 
 - [ ] Home shows Online/Offline within 20 s of a real change, names with heads, TPS and memory. *Built (10 s poll + 10 s page refresh); needs watching through a real start and stop.*
@@ -237,6 +250,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Session log
 
+- **2026-09-29 morning** · docs/16 foundations: tables, parsers, recorder, retention, audit log moved into the event log (see "docs/16 · foundations").
 - **2026-09-29 morning** · Phase 3 dashboard built (see "Phase 3 · dashboard"); `deploy/check.sh` runs the checks in a capped container.
 - **2026-09-29 05:22** · Stack registered in Dockhand as pull-only (`deploy/dockhand-sync.py`, mirror in `/data/stacks/deepslate`); compose host paths now built from `DEEPSLATE_DIR` so a redeploy from Dockhand mounts the same directories. GitHub token rotated (new fine-grained token, expires 2026-11-28); to-do 11 done.
 - **2026-09-29 05:09** · First deploy from GHCR images via `deploy/deploy.sh`; images, AMP smoke, rsync listing and the in-api Build verified (see "OOM incident"). Planner specs 15, 15a, 16 arrived by push (`ba5decf`); read, not started.

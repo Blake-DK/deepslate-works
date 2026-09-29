@@ -8,13 +8,14 @@ import { lookupMinecraftUser } from "@/server/mojang";
 import { MC_USERNAME_RE } from "@/server/auth/constants";
 import { revokeLauncherTokens } from "@/server/launcher";
 import { apiFetch } from "@/server/api-client";
+import { audit } from "@/server/events";
 
 export async function setRoleAction(formData: FormData) {
   const admin = await requireAdmin();
   const parsed = z.object({ id: z.string().min(1), role: z.enum(["ADMIN", "PLAYER"]) }).safeParse(Object.fromEntries(formData));
   if (!parsed.success || parsed.data.id === admin.id) return;
   await db.user.update({ where: { id: parsed.data.id }, data: { role: parsed.data.role } });
-  await db.auditLog.create({ data: { userId: admin.id, action: "user.setRole", params: parsed.data, result: "OK" } });
+  await audit({ userId: admin.id, action: "user.setRole", params: parsed.data, result: "OK" });
   revalidatePath("/admin/users");
 }
 
@@ -29,7 +30,7 @@ export async function removeUserAction(formData: FormData) {
     } catch {}
   }
   if (removed) {
-    await db.auditLog.create({ data: { userId: admin.id, action: "user.remove", params: { id, displayName: removed.displayName, mcUsername: removed.mcUsername }, result: "OK" } });
+    await audit({ userId: admin.id, action: "user.remove", params: { id, displayName: removed.displayName, mcUsername: removed.mcUsername }, result: "OK" });
   }
   revalidatePath("/admin/users");
 }
@@ -44,7 +45,7 @@ export async function setMinecraftNameAction(formData: FormData) {
   const taken = await db.user.findFirst({ where: { mcUuid: lookup.uuid, NOT: { id: parsed.data.id } }, select: { displayName: true } });
   if (taken) redirect("/admin/users?error=taken");
   await db.user.update({ where: { id: parsed.data.id }, data: { mcUsername: lookup.name, mcUuid: lookup.uuid, verifiedAt: new Date() } });
-  await db.auditLog.create({ data: { userId: admin.id, action: "user.setMinecraft", params: { id: parsed.data.id, mcUsername: lookup.name, mcUuid: lookup.uuid }, result: "OK" } });
+  await audit({ userId: admin.id, action: "user.setMinecraft", params: { id: parsed.data.id, mcUsername: lookup.name, mcUuid: lookup.uuid }, result: "OK" });
   revalidatePath("/admin/users");
   redirect("/admin/users");
 }
@@ -53,7 +54,7 @@ export async function clearMinecraftNameAction(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const u = await db.user.update({ where: { id }, data: { mcUsername: null, mcUuid: null, verifiedAt: null } }).catch(() => null);
-  if (u) await db.auditLog.create({ data: { userId: admin.id, action: "user.clearMinecraft", params: { id }, result: "OK" } });
+  if (u) await audit({ userId: admin.id, action: "user.clearMinecraft", params: { id }, result: "OK" });
   revalidatePath("/admin/users");
   redirect("/admin/users");
 }
@@ -62,7 +63,7 @@ export async function revokeLauncherAction(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const n = await revokeLauncherTokens(id);
-  await db.auditLog.create({ data: { userId: admin.id, action: "launcher.revoke", params: { id, revoked: n }, result: "OK" } });
+  await audit({ userId: admin.id, action: "launcher.revoke", params: { id, revoked: n }, result: "OK" });
   revalidatePath("/admin/users");
   redirect("/admin/users");
 }

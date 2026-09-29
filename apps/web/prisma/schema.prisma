@@ -19,6 +19,26 @@ enum PcTier {
   HIGH
 }
 
+// docs/16 §1: everything the portal has seen or done, in one log.
+enum EventKind {
+  JOIN
+  LEAVE
+  DEATH
+  CHAT
+  ADVANCEMENT
+  SERVER_START
+  SERVER_STOP
+  CRASH
+  WARN
+  ERROR
+  ADMIN_ACTION
+  PLAYER_ACTION
+  LINK
+  REVOKE
+  SYNC
+  BACKUP
+}
+
 enum VoteStatus {
   DRAFT
   OPEN
@@ -41,7 +61,6 @@ model User {
   lastSeenAt   DateTime?
   invitedById  String?
   ballots      Ballot[]
-  auditLogs    AuditLog[]
   launcherAuth LauncherAuth[]
 }
 
@@ -123,17 +142,45 @@ model Announcement {
   authorId  String
 }
 
-model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  params    Json
-  result    String // OK | DENIED | FAILED | TIMEOUT
-  detail    String?
-  createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+// One row per player session on the Minecraft server (docs/16 §1).
+model Session {
+  id       String    @id @default(cuid())
+  mcUuid   String    // "name:<lowercase name>" until the UUID is known
+  mcName   String    // the name they played under
+  userId   String?   // linked portal user, if any
+  joinedAt DateTime
+  leftAt   DateTime? // null while online; closed on leave, server stop, or the poller seeing them gone
+  ip       String?   // from the join line; admin-only, pruned after 30 days
+  country  String?   // ISO code, resolved once from ip with a local database (no external calls)
 
-  @@index([createdAt])
+  @@index([mcUuid, joinedAt])
+  @@index([joinedAt])
+  @@index([leftAt])
+}
+
+// The event log (docs/16 §4). Replaces AuditLog: portal actions are ADMIN_ACTION / PLAYER_ACTION rows,
+// with the action name, parameters and result in `meta`.
+model Event {
+  id      BigInt    @id @default(autoincrement())
+  at      DateTime  @default(now())
+  kind    EventKind
+  actor   String?   // mcUuid (game events) or userId (portal actions)
+  message String    // human line
+  raw     String?   // original console line, admin-only
+  meta    Json?
+  count   Int       @default(1) // WARN / ERROR repeated within 60 s are one row with a count
+
+  @@index([at])
+  @@index([kind, at])
+  @@index([actor, at])
+}
+
+// Key/value settings edited from the admin pages (docs/16 §5, §6): "branding", "privacy", "retention", "files".
+model Setting {
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?
 }
 
 model ServerSnapshot {

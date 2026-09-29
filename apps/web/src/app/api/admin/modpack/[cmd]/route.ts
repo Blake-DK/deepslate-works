@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/server/db";
 import { CMDS, runModpack, type Cmd } from "@/server/modpack/run";
+import { audit } from "@/server/events";
 
 export const maxDuration = 600;
 
@@ -21,7 +22,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ cmd: s
         if (line.startsWith("ERROR") || line.startsWith("busy")) failed = true;
         send(line);
       }
-      await db.auditLog.create({ data: { userId: user.id, action: `modpack.${cmd}`, params: {}, result: failed ? "FAILED" : "OK" } });
+      await audit({ userId: user.id, action: `modpack.${cmd}`, params: {}, result: failed ? "FAILED" : "OK" });
       send(failed ? "event: failed" : "event: done");
       controller.close();
     },

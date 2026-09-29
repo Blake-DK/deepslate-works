@@ -18,6 +18,10 @@ const schema = z.object({
   SPAWN_POS: z.string().regex(/^-?\d+ -?\d+ -?\d+$/).optional(),
   DISCORD_BOT_TOKEN: z.string().optional(),
   DISCORD_GUILD_ID: z.string().optional(),
+  // modpack build (runs as a child process of api): the repo mounts and the CLI's location in the image
+  REPO_DIR: z.string().default("/repo"),
+  MODPACK_PKG_DIR: z.string().default("/app/packages/modpack"),
+  MODRINTH_USER_AGENT: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;

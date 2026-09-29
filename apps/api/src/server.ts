@@ -8,8 +8,9 @@ import { modpackRoutes } from "./routes/modpack.js";
 import { playerRoutes } from "./routes/players.js";
 import { ConsoleTail } from "./amp/console.js";
 import { Limbo } from "./players/limbo.js";
+import type { runBuild } from "./modpack/build.js";
 
-export function buildServer(env: Env, amp?: Amp) {
+export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
   const ampClient: Amp = amp ?? (env.AMP_MOCK === "1"
     ? new MockAmp()
@@ -18,7 +19,7 @@ export function buildServer(env: Env, amp?: Amp) {
   app.addHook("onRequest", serviceAuth(env.API_SERVICE_TOKEN));
   app.get("/health", async () => health(env, ampClient));
   statusRoutes(app, ampClient);
-  modpackRoutes(app, env, ampClient);
+  modpackRoutes(app, env, ampClient, deps.build);
 
   // Console tail + the wait room run for the life of the process (docs/14).
   const tail = new ConsoleTail(ampClient, (o, m) => app.log.info(o, m));

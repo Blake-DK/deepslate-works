@@ -10,23 +10,56 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, opts: { method?: "GET" | "POST"; body?: unknown; caller?: Caller; timeoutMs?: number } = {}): Promise<T> {
+type Opts = { method?: "GET" | "POST"; body?: unknown; caller?: Caller; timeoutMs?: number };
+
+function request(path: string, opts: Opts, accept: string) {
   if (!env.API_URL || !env.API_SERVICE_TOKEN) throw new ApiError(503, "api_unconfigured", "Backend not configured");
-  const headers: Record<string, string> = { authorization: `Bearer ${env.API_SERVICE_TOKEN}`, accept: "application/json" };
+  const headers: Record<string, string> = { authorization: `Bearer ${env.API_SERVICE_TOKEN}`, accept };
   if (opts.body !== undefined) headers["content-type"] = "application/json";
   if (opts.caller) {
     headers["x-user-id"] = opts.caller.id;
     headers["x-user-role"] = opts.caller.role;
     if (opts.caller.mcUsername) headers["x-mc-username"] = opts.caller.mcUsername;
   }
-  const res = await fetch(`${env.API_URL}${path}`, {
+  return fetch(`${env.API_URL}${path}`, {
     method: opts.method ?? "GET",
     headers,
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
     signal: AbortSignal.timeout(opts.timeoutMs ?? 8000),
     cache: "no-store",
   });
+}
+
+async function fail(path: string, res: Response): Promise<never> {
   const json = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
-  if (!res.ok) throw new ApiError(res.status, json?.error?.code ?? "api_error", json?.error?.message ?? `api ${path} -> ${res.status}`);
-  return json as T;
+  throw new ApiError(res.status, json?.error?.code ?? "api_error", json?.error?.message ?? `api ${path} -> ${res.status}`);
+}
+
+export async function apiFetch<T>(path: string, opts: Opts = {}): Promise<T> {
+  const res = await request(path, opts, "application/json");
+  if (!res.ok) return fail(path, res);
+  return (await res.json().catch(() => null)) as T;
+}
+
+/** For api routes that answer with newline-delimited JSON while they work: yields each object as it arrives. */
+export async function* apiStream<T>(path: string, opts: Opts = {}): AsyncGenerator<T> {
+  const res = await request(path, opts, "application/x-ndjson");
+  if (!res.ok) return fail(path, res);
+  if (!res.body) return;
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const l of lines) if (l.trim()) yield JSON.parse(l) as T;
+    }
+    if (buf.trim()) yield JSON.parse(buf) as T;
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
 }

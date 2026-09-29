@@ -1,10 +1,9 @@
 import "server-only";
-import { rename, writeFile, mkdir } from "node:fs/promises";
-import { buildClient, buildConfigZip, buildInstaller, buildServer, buildLock, diffLocks, lintManifest, type LockFile } from "modpack";
+import { rename, writeFile } from "node:fs/promises";
+import { buildLock, diffLocks, lintManifest, type LockFile } from "modpack";
 import { getManifest, commitManifest } from "./manifest";
 import { getLock, P } from "./lock";
-import { env } from "@/env";
-import { apiFetch } from "@/server/api-client";
+import { apiFetch, apiStream } from "@/server/api-client";
 
 export type Cmd = "lock" | "build" | "sync" | "sync-dry";
 export const CMDS: Cmd[] = ["lock", "build", "sync", "sync-dry"];
@@ -43,24 +42,22 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
       const commit = await commitManifest(`chore(modpack): lock ${lock.hash.slice(0, 8)} (${changed} change${changed === 1 ? "" : "s"})`, { name: admin.displayName }, ["modpack/mods.lock.json"]);
       yield commit.ok ? `committed (${commit.output || "ok"})` : `git commit failed: ${commit.output}`;
     } else if (cmd === "build") {
-      const m = await getManifest();
       const lock = await getLock();
       if (!lock) {
         yield "no mods.lock.json yet: run Lock first";
         return;
       }
-      await mkdir(P.dist, { recursive: true });
-      const lines: string[] = [];
-      const log = (s: string) => lines.push(s);
-      await buildClient(m, lock, P, log);
-      for (const l of lines.splice(0)) yield l;
-      await buildConfigZip(P, log);
-      for (const l of lines.splice(0)) yield l;
-      await buildServer(m, lock, P, log);
-      for (const l of lines.splice(0)) yield l;
-      await buildInstaller(m, lock, P, env.AUTH_URL, log);
-      for (const l of lines.splice(0)) yield l;
-      yield `done: ${P.dist}`;
+      // The build (jar downloads, zips) runs in the api container under its memory cap, never in this process.
+      type BuildEvent = { line: string } | { done: true; ok: boolean; code: number };
+      let finished = false;
+      for await (const e of apiStream<BuildEvent>("/modpack/build", { method: "POST", body: { target: "all" }, caller: { id: admin.id, role: admin.role }, timeoutMs: 960_000 })) {
+        if ("line" in e) yield e.line;
+        else {
+          finished = true;
+          if (!e.ok) yield `ERROR build failed (exit ${e.code})`;
+        }
+      }
+      if (!finished) yield "ERROR the build stream ended early: check `docker logs deepslate-api`";
     } else if (cmd === "sync" || cmd === "sync-dry") {
       const dryRun = cmd === "sync-dry";
       const lock = await getLock();

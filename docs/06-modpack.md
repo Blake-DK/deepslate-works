@@ -142,7 +142,7 @@ In production Build runs inside the `api` container, under its memory limit, and
 
 All commands can be run again without harm and print what they changed. Network failures are tried three times and then fail loudly; a half-written lockfile is never left behind (write to temp, rename).
 
-**`dist/` is not emptied by a build**: `dist/server/config/tabtps/` is still there from the hour TabTPS was in the pack.
+A build makes `dist/server/config/` and `dist/server/datapacks/` afresh each time, so a settings file taken out of the pack does not stay behind (since 2026-09-29; TabTPS's lingered until then). Sync still never deletes on the server: `config/tabtps/` is on the instance, unused.
 
 ## Settings shipped with the pack (`modpack/config/`, `modpack/server/`, `modpack/datapacks/`)
 

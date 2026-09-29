@@ -64,6 +64,9 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
       log(`removed stale ${name}`);
     }
   }
+  // Settings are copied fresh every time: a file taken out of modpack/config/ (or modpack/server/config/) must not
+  // linger in dist/ and go to the server with every Sync, as TabTPS's did for a day (2026-09-29).
+  await rm(path.join(out, "config"), { recursive: true, force: true });
   if (await exists(paths.config)) await cp(paths.config, path.join(out, "config"), { recursive: true });
   if (await exists(paths.server)) await cp(paths.server, out, { recursive: true });
   // Datapacks are part of the world, not of the server's folder: Sync puts them into <world>/datapacks/.

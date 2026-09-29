@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -38,5 +38,19 @@ describe("buildServer", () => {
     const out = await buildServer({ version: "0.0.1" } as Manifest, { files: [], hash: "abcdef0123456789", neoforge: "21.1.252" } as unknown as LockFile, { dist: path.join(dir, "dist"), config: path.join(dir, "none"), server: path.join(dir, "none"), datapacks: path.join(dir, "datapacks") }, (l) => lines.push(l));
     expect(await readFile(path.join(out, "datapacks", "deepslate-limbo", "pack.mcmeta"), "utf8")).toBe("{}");
     expect(lines).toContain("datapacks: deepslate-limbo");
+  });
+  it("leaves no settings behind that are no longer in the pack", async () => {
+    dir = await mkdtemp(path.join(tmpdir(), "config-test-"));
+    const config = path.join(dir, "config");
+    const server = path.join(dir, "server");
+    await mkdir(config, { recursive: true });
+    await mkdir(path.join(server, "config", "bluemap"), { recursive: true });
+    await writeFile(path.join(config, "fallingtree.json"), "{}");
+    await writeFile(path.join(server, "config", "bluemap", "core.conf"), "x");
+    const stale = path.join(dir, "dist", "server", "config", "tabtps");
+    await mkdir(stale, { recursive: true });
+    await writeFile(path.join(stale, "default.conf"), "old");
+    const out = await buildServer({ version: "0.0.1" } as Manifest, { files: [], hash: "abcdef0123456789", neoforge: "21.1.252" } as unknown as LockFile, { dist: path.join(dir, "dist"), config, server }, () => {});
+    expect((await readdir(path.join(out, "config"))).sort()).toEqual(["bluemap", "fallingtree.json"]);
   });
 });

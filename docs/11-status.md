@@ -597,7 +597,6 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 - **The false "Crash" of 17:02 UTC**: the recorder did not see "Stopping server" before AMP's sleep. There are two CRASH rows in the log; look at what the console held at both.
 - **Warnings at every start that mean nothing** (mods looking for mods that are not there: `createaddition` for Simulated, something for Controllable, a JetBrains annotation): into `NOISE` in `events/parse.ts`, so that a warning in the log is one to read.
 - **Throwaway accounts leave lines in the event log** ("… had their password reset from the command line", four for each run of `shots.sh`). Either the scripts remove their lines as `download-test.sh` does, or the lines are marked as tests.
-- **`dist/` is not cleaned between builds**: `dist/server/config/tabtps` is still there from the hour TabTPS was in the pack, and goes to the server with every Sync. Harmless, untidy.
 - **A settings-only Sync** says nothing about the server having to be restarted for them to count. One line on Admin → Modpack would do.
 - **VeinMiner keeps jars of its own** in `config/Veinminer/update/` on the server although `autoUpdate` is `false`. Find out what puts them there.
 - Tag `phase-1`, `phase-2`, `phase-3` when Alex has ticked what is open in each (docs/10).

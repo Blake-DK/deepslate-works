@@ -278,3 +278,12 @@ Edges:
 - `packages/modpack/tests/installer.test.ts` reads the script as text: its version, that no command's stderr goes through `2>&1`, that Java is asked through a process of its own.
 - On the live site with a throwaway member, from the VPS (`/root/.config/deepslate/`): `installer-report-test.sh` (a report from a dry run), `play-test.sh` (the Play link and what it refuses), `update-test.sh` (an old copy fetches the new one; a wrong checksum replaces nothing).
 - What needs Windows and a person: the checklist above. Done so far on real PCs: a clean install, Play from the site, the launcher left open (Alex's PC); an install with Java on PATH (Pabulum's). Never watched: a rerun replacing exactly one jar, a PC with 8 GB.
+
+## Which installer ran (2026-09-29, planner; installer 1.4.3)
+
+Every install and Play report carries `installerVersion` (stamped as `$InstallerVersion` since 1.2.0). The portal compares it with the installer it hands out now (`dist/installer.json`, `getInstaller`), in `apps/web/src/lib/installer-version.ts`: **older, or not known, is "outdated"**; with no current installer on the site nothing is.
+
+- **Report endpoint**: a report without a version (or with something that is not one) is stored as `unknown` and counts as outdated, never refused. The answer has `installer: {ran, current, outdated}` and, when outdated, a `notice`.
+- **The run still counts** (Play first looks at the pack, not the installer). The event reads e.g. "m1owl pressed Play: 0.1.0+dbcbe9e1, launcher opened (installer 1.4.0, current 1.4.1)".
+- **Installer 1.4.3** prints the `notice` in yellow ("This PC has installer 1.4.2; the current one is 1.4.3. Download it again from deepslate.dsw.test/install before your next run, and run Setup.bat once."), as plain text, one line, 300 characters at most; a Play window started from the site then waits for Enter. Installers before 1.4.3 ignore the field, so the notice reaches only PCs from 1.4.3 on whose self-update did not go through; everyone else sees it on the site. `Hold-Window` waits once per run. Self test 66 checks.
+- **Admin → Installs**: an "Installer" column, the version and an "outdated" badge. **Admin → Players**: the installer of each member's latest report, the same badge, and a filter "Outdated installer". **Me**: "Your installer is out of date, download it again" with a link to /install, while their latest report is from an older one.

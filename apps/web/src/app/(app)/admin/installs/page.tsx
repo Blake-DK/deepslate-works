@@ -7,6 +7,9 @@ import { timeAgo } from "@/lib/series";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cell, Clip, Field, FixedTable } from "@/components/admin/parts";
+import { getInstaller } from "@/server/modpack/lock";
+import { isOutdated } from "@/lib/installer-version";
+import { InstallerVersion } from "@/components/admin/installer-version";
 
 export const metadata: Metadata = { title: "Installs" };
 
@@ -23,10 +26,12 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   await requireAdmin();
   const { outcome } = await searchParams;
   const only = (OUTCOMES as readonly string[]).includes(outcome ?? "") ? outcome : undefined;
-  const [rows, counts] = await Promise.all([
+  const [rows, counts, installer] = await Promise.all([
     db.installReport.findMany({ where: only ? { outcome: only } : undefined, orderBy: { at: "desc" }, take: 200, select: { id: true, userId: true, at: true, mode: true, updatedFrom: true, updateProblem: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } }),
     db.installReport.groupBy({ by: ["outcome"], _count: { _all: true } }),
+    getInstaller(),
   ]);
+  const current = installer?.version ?? null;
   const n = (o: string) => counts.find((c) => c.outcome === o)?._count._all ?? 0;
   const total = counts.reduce((a, c) => a + c._count._all, 0);
   const now = new Date();
@@ -54,6 +59,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
       os: <Short full={summary(r.system as SystemInfo).os} short={shortOs(summary(r.system as SystemInfo).os)} />,
       gpu: <Short full={summary(r.system as SystemInfo).gpu} short={shortGpu(summary(r.system as SystemInfo).gpu)} />,
       when: <span title={r.at.toISOString()}>{timeAgo(r.at, now)}</span>,
+      installer: <InstallerVersion version={r.installerVersion} current={current} outdated={isOutdated(r.installerVersion, current)} />,
       from: <span title={r.updatedFrom ? `updated itself, ${r.updatedFrom} to ${r.installerVersion}` : `installer ${r.installerVersion}`}>{r.mode === "play" ? "Play" : "Installer"}{r.updateProblem ? <span className="text-danger" title="The installer could not update itself"> !</span> : null}</span>,
       outcome: <Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"} className="whitespace-nowrap" title={about || undefined}>{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}{r.failedStep ? " …" : ""}</Badge>,
     };
@@ -62,7 +68,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Installs</h1>
-        <p className="text-muted-foreground">What the Windows installer reported at the end of each run: how it went, the log, and the PC it ran on. No Windows user names, no addresses. Kept for 90 days.</p>
+        <p className="text-muted-foreground">What the Windows installer reported at the end of each run: how it went, the log, and the PC it ran on. No Windows user names, no addresses. Kept for 90 days.{current ? <> The installer the site hands out now is <span className="font-mono">{current}</span>; a run from an older one is marked &quot;outdated&quot;.</> : null}</p>
       </div>
       <Card>
         <CardContent className="space-y-3 p-4">
@@ -120,7 +126,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
         <>
           <Card className="hidden min-[800px]:block" data-testid="runs-table">
             <CardContent className="p-2">
-              <FixedTable label="Every run" widths={["22%", "11%", "9%", "11%", "14%", "13%", "8%", "12%"]} head={[{ text: "Who" }, { text: "When", right: true }, { text: "From" }, { text: "Outcome" }, { text: "Pack" }, { text: "Windows" }, { text: "Memory", right: true }, { text: "Graphics" }]}>
+              <FixedTable label="Every run" widths={["18%", "10%", "8%", "13%", "11%", "12%", "11%", "7%", "10%"]} head={[{ text: "Who" }, { text: "When", right: true }, { text: "From" }, { text: "Installer" }, { text: "Outcome" }, { text: "Pack" }, { text: "Windows" }, { text: "Memory", right: true }, { text: "Graphics" }]}>
                 {rows.map((r) => {
                   const p = run(r);
                   return (
@@ -128,6 +134,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
                       <td className={cell}><span className="flex min-w-0 items-center gap-2">{p.who}{p.changed}</span></td>
                       <td className={`${cell} text-right text-muted-foreground`}>{p.when}</td>
                       <td className={cell}>{p.from}</td>
+                      <td className={cell}>{p.installer}</td>
                       <td className={cell}>{p.outcome}</td>
                       <td className={cell}><Clip text={r.packVersion} mono className="text-xs" /></td>
                       <td className={cell}>{p.os}</td>
@@ -150,6 +157,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
                       <dl className="mt-2 divide-y text-sm">
                         <Field name="When"><span className="text-muted-foreground">{p.when}</span></Field>
                         <Field name="From">{p.from}{p.changed}</Field>
+                        <Field name="Installer">{p.installer}</Field>
                         <Field name="Pack"><Clip text={r.packVersion} mono className="text-xs" /></Field>
                         <Field name="Windows">{p.os}</Field>
                         <Field name="Memory"><span className="tabular-nums">{p.s.ram}</span></Field>

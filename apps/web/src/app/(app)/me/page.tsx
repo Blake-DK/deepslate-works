@@ -16,6 +16,9 @@ import { tpsTone } from "@/lib/series";
 import { getPlayInfo } from "@/server/play";
 import { joinLine } from "@/lib/play";
 import { clock } from "@/lib/utils";
+import { getInstaller } from "@/server/modpack/lock";
+import { isOutdated } from "@/lib/installer-version";
+import { Alert } from "@/components/ui/alert";
 
 export const metadata: Metadata = { title: "Me" };
 
@@ -26,12 +29,15 @@ export default async function MePage() {
   const weekAgo = new Date(Date.now() - 7 * 86_400_000);
   const [status, week] = await Promise.all([getStatus(), user.mcUuid ? averagePing(user.mcUuid, weekAgo, new Date()) : Promise.resolve(null)]);
   const me = status?.availability === "online" ? (status.online.find((p) => (user.mcUuid && p.uuid === user.mcUuid) || (user.mcUsername && p.name.toLowerCase() === user.mcUsername.toLowerCase())) ?? null) : null;
-  const [m, settings, install] = await Promise.all([
+  const [m, settings, install, installer] = await Promise.all([
     getManifest(),
     getSettings(),
     // their own last install report: the outcome and the date, nothing else
-    db.installReport.findFirst({ where: { userId: user.id }, orderBy: { at: "desc" }, select: { at: true, outcome: true, packVersion: true, failedStep: true } }),
+    db.installReport.findFirst({ where: { userId: user.id }, orderBy: { at: "desc" }, select: { at: true, outcome: true, packVersion: true, failedStep: true, installerVersion: true } }),
+    getInstaller(),
   ]);
+  // Their last run came from an older installer than the site hands out: until a report from a new one arrives.
+  const oldInstaller = install && installer && isOutdated(install.installerVersion, installer.version) ? installer.version : null;
   const showServer = canSeeServer(user, settings);
   const play = showServer ? await getPlayInfo(user) : null;
   const join = play ? joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null) : null;
@@ -47,6 +53,12 @@ export default async function MePage() {
               : <>The installer ran into trouble on {formatDate(install.at)}{install.failedStep ? <> at &quot;{install.failedStep}&quot;</> : null}. Alex has the log; run it again, or ask him.</>}
         </p>
       )}
+      {oldInstaller && (
+        <Alert tone="info" data-testid="installer-outdated">
+          <strong>Your installer is out of date, download it again.</strong> Your last run used {install!.installerVersion === "unknown" ? "an old installer" : <>installer {install!.installerVersion}</>}; the current one is {oldInstaller}.{" "}
+          <Link href="/install" className="font-medium underline">Download it from the Install page</Link> and run Setup.bat once.
+        </Alert>
+      )}
       {join && (
         <p className="text-sm" data-testid="join-window">
           <span className={join.ready ? "font-medium text-accent" : "font-medium"}>{join.text}</span>{" "}
@@ -61,7 +73,7 @@ export default async function MePage() {
               <>Linked: <span className="font-mono text-foreground">{user.mcUsername}</span>{user.verifiedAt ? ` since ${formatDate(user.verifiedAt)}` : ""}.</>
             ) : (
               showServer ? (
-                <>Join the server to link your Minecraft account. Connect to <span className="font-mono text-foreground">{m.server_address}</span>, you&apos;ll land in a small room with a link in the chat; click it and you&apos;re through. Nothing to type.</>
+                <>Join the server to link your Minecraft account. Connect to <span className="font-mono text-foreground">{m.server_address}</span>, you&apos;ll land in a small room with a link in the chat; click it and you&apos;re through. On a phone, or if the link has scrolled away: <Link href="/join" className="underline">enter the code</Link> shown on your screen.</>
               ) : (
                 <>Join the server to link your Minecraft account: you&apos;ll land in a small room with a link in the chat, click it and you&apos;re through. {launchText(settings.launchAt)}</>
               )

@@ -83,7 +83,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "user.clearMinecraft": "unlinked a member's Minecraft account",
   "launcher.approve": (p) => (p.approve === false ? "refused an installer sign-in" : "approved an installer sign-in"),
   "launcher.revoke": "signed a member's installers out",
-  "link.bind": (p) => `linked their Minecraft account ${s(p.mcUsername)}`,
+  "link.bind": (p) => (p.refused ? "was stopped from trying more join codes: too many wrong ones" : `linked their Minecraft account ${s(p.mcUsername)}${p.via === "join" ? " with the code on /join" : ""}`),
   "link.release": (p) => `let ${s(p.name)} in`,
   "limbo.held": (p) => `${s(p.name)} is waiting in the entrance room`,
   "join.blocked": (p) => `${s(p.name)} was held in the entrance room: ${p.reason === "not live" ? "the server is not open yet" : p.reason === "no report" ? "has not pressed Play on the site" : p.reason === "stale" ? "pressed Play too long ago" : p.reason === "wrong version" ? "pressed Play before the pack changed" : s(p.reason, "Play first")}`,
@@ -140,7 +140,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
   "installer.report": (p) => p.refused ? "sent a report of a run that cannot have happened: the site is not open for them" : `${p.mode === "play"
     ? (p.outcome === "ok" ? `pressed Play: ${s(p.packVersion, "the pack")}, launcher opened` : p.outcome === "cancelled" ? "pressed Play and closed the window" : `pressed Play and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)
-    : (p.outcome === "ok" ? `installed ${s(p.packVersion, "the pack")}: all good` : p.outcome === "cancelled" ? `stopped the installer${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `ran the installer and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)}${p.updatedFrom ? ` (the installer updated itself, ${s(p.updatedFrom)} to ${s(p.installerVersion, "the current one")})` : p.updateProblem ? " (the installer could not update itself)" : ""}`,
+    : (p.outcome === "ok" ? `installed ${s(p.packVersion, "the pack")}: all good` : p.outcome === "cancelled" ? `stopped the installer${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `ran the installer and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)}${p.updatedFrom ? ` (the installer updated itself, ${s(p.updatedFrom)} to ${s(p.installerVersion, "the current one")})` : p.updateProblem ? " (the installer could not update itself)" : ""}${p.currentInstaller ? ` (installer ${s(p.installerVersion, "unknown")}, current ${s(p.currentInstaller)})` : ""}`,
   "files.download": (p) => `downloaded ${s(p.path)} from the server`,
   "download.file": (p) => downloaded(p, false),
   "download.file.key": (p) => downloaded(p, true),

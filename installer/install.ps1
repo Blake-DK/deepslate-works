@@ -35,7 +35,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.4.2"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report; 1.3.0: Play from the site; 1.4.0: updates itself; 1.4.1: a Java on PATH no longer ends the install; 1.4.2: paths are taken literally, a temp file left behind ends nothing
+$InstallerVersion = "1.4.3"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report; 1.3.0: Play from the site; 1.4.0: updates itself; 1.4.1: a Java on PATH no longer ends the install; 1.4.2: paths are taken literally, a temp file left behind ends nothing; 1.4.3: shows what the site says about an old installer
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 
 $ErrorActionPreference = "Stop"
@@ -79,7 +79,7 @@ function Remove-Temp($path) {
 function Note($msg) { if (-not $Quiet) { Write-Host ("   {0}" -f $msg) -ForegroundColor Gray }; Log $msg }
 function Hold-Window {
   # Started from the Play button there is no .bat to keep the window open: wait, so the message can be read.
-  if ($FromLink) { try { [void](Read-Host "Press Enter to close this window") } catch {} }
+  if ($FromLink -and -not $script:Held) { $script:Held = $true; try { [void](Read-Host "Press Enter to close this window") } catch {} }
 }
 function Gate-Message($err) {
   $body = ""
@@ -185,6 +185,21 @@ function New-Report([string]$outcome) {
   }
 }
 
+# 1.4.3: the site answers a report with a notice when this installer is older than the one it hands out now
+# (the run still counts). Shown as plain text, never run; a Play window started from the site waits so it is read.
+function Show-Notice($answer) {
+  $text = ""
+  try { if ($answer -and $answer.PSObject.Properties["notice"] -and $answer.notice) { $text = [string]$answer.notice } } catch {}
+  $text = ($text -replace '[\x00-\x1F\x7F]', ' ').Trim()
+  if (-not $text) { return $false }
+  if ($text.Length -gt 300) { $text = $text.Substring(0, 300) }
+  Write-Host ""
+  Write-Host ("   {0}" -f $text) -ForegroundColor Yellow
+  Log ("the site says: " + $text)
+  if ($Play) { Hold-Window }
+  return $true
+}
+
 function Send-Report([string]$outcome) {
   if ($script:Reported) { return }
   $script:Reported = $true
@@ -196,9 +211,10 @@ function Send-Report([string]$outcome) {
   Write-Host ("Sending the install log to {0} so Alex can help if something went wrong." -f $site) -ForegroundColor Gray
   try {
     $json = (New-Report $outcome) | ConvertTo-Json -Depth 8 -Compress
-    $null = Invoke-RestMethod -Uri "$PortalUrl/api/installer/report" -Method Post -Headers @{ Authorization = "Bearer $($script:Token)" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($json)) -UseBasicParsing -TimeoutSec 20
+    $answer = Invoke-RestMethod -Uri "$PortalUrl/api/installer/report" -Method Post -Headers @{ Authorization = "Bearer $($script:Token)" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($json)) -UseBasicParsing -TimeoutSec 20
     Write-Host "   Sent." -ForegroundColor Gray
     Log "install report sent"
+    Show-Notice $answer
   } catch {
     Write-Host ("   That didn't go through. No harm done: the log is still on this PC, at {0}" -f $LogFile) -ForegroundColor Yellow
     Log ("install report not sent: " + $_.Exception.Message)
@@ -556,6 +572,11 @@ if ($SelfTest) {
   Check "a run that went well names no step" ((New-Report "ok").failedStep -eq $null)
   Check "the report holds no user name, PC name or token" ($rj -notmatch "(?i)player|alex-pc|Q2hhbmdl")
   Check "the report says what ran" ($rep.installerVersion -eq $InstallerVersion -and $rep.durationSec -ge 0 -and $rep.system.powershell)
+  Write-Host "Self test: what the site says about an old installer" -ForegroundColor White
+  Check "an answer without a notice shows nothing" ((Show-Notice ([pscustomobject]@{ ok = $true; notice = $null })) -eq $false -and (Show-Notice $null) -eq $false)
+  Check "an answer with a notice is shown" ((Show-Notice ([pscustomobject]@{ ok = $true; notice = "This PC has installer 1.4.2; the current one is 1.4.3." })) -eq $true)
+  $null = Show-Notice ([pscustomobject]@{ notice = "a`e[2J`nb" })
+  Check ("a notice is shown as plain text on one line: " + $script:RunLog[-1]) ($script:RunLog[-1].EndsWith("] the site says: a [2J b"))
   $script:Token = $null
 
   Write-Host "Self test: the Play link" -ForegroundColor White

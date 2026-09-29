@@ -1,16 +1,24 @@
 // The admin's lists: which rows are shown. Pure, so it is tested.
 
-export const SHOW = { all: "Everyone", early: "Early access", rest: "Without" } as const;
+export const SHOW = { all: "Everyone", early: "Early access", rest: "Without", outdated: "Outdated installer" } as const;
 export type Show = keyof typeof SHOW;
 
-type MemberLike = { displayName: string; mcUsername: string | null; earlyAccess: boolean };
+/** `installerOutdated`: their latest run came from an installer older than the one the site hands out now. */
+type MemberLike = { displayName: string; mcUsername: string | null; earlyAccess: boolean; installerOutdated?: boolean };
 
-/** Filter by early access, then by what was typed: part of the Discord name or of the Minecraft name, any case. */
+const KEEP: Record<Show, (u: MemberLike) => boolean> = {
+  all: () => true,
+  early: (u) => u.earlyAccess,
+  rest: (u) => !u.earlyAccess,
+  outdated: (u) => Boolean(u.installerOutdated),
+};
+
+/** Filter by early access (or by an outdated installer), then by what was typed: part of the Discord name or of the Minecraft name, any case. */
 export function memberRows<T extends MemberLike>(all: T[], show: string | undefined, q: string | undefined): { rows: T[]; only: Show; query: string; count: Record<Show, number> } {
-  const only: Show = show === "early" || show === "rest" ? show : "all";
+  const only: Show = show && Object.hasOwn(SHOW, show) ? (show as Show) : "all";
   const query = (q ?? "").trim().slice(0, 40);
   const needle = query.toLowerCase();
   const found = needle ? all.filter((u) => u.displayName.toLowerCase().includes(needle) || (u.mcUsername ?? "").toLowerCase().includes(needle)) : all;
-  const count = { all: found.length, early: found.filter((u) => u.earlyAccess).length, rest: found.filter((u) => !u.earlyAccess).length };
-  return { rows: found.filter((u) => only === "all" || (only === "early" ? u.earlyAccess : !u.earlyAccess)), only, query, count };
+  const count = Object.fromEntries((Object.keys(SHOW) as Show[]).map((k) => [k, found.filter(KEEP[k]).length])) as Record<Show, number>;
+  return { rows: found.filter(KEEP[only]), only, query, count };
 }

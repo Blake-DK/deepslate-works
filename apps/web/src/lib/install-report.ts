@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { reportedVersion } from "./installer-version";
 
 // docs/07 "Install reports". The installer redacts before it sends; everything is redacted again here
 // before it is stored, because a copy of the script someone edited, or a bug in it, must not be able to put
@@ -32,7 +33,8 @@ export type SystemInfo = z.infer<typeof systemSchema>;
 export const reportSchema = z
   .object({
     packVersion: short(60),
-    installerVersion: short(40),
+    // installers that do not say which they are are stored as "unknown", and count as out of date (installer-version.ts)
+    installerVersion: z.string().max(40).nullish().transform((v) => reportedVersion(v)),
     mode: z.enum(MODES).nullish().transform((v) => v ?? "install"), // installers before 1.3.0 don't say
     updatedFrom: z.string().regex(/^\d{1,4}(\.\d{1,4}){1,3}$/).nullish().transform((v) => v ?? null), // since 1.4.0
     updateProblem: optional(300),

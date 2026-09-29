@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { doorRule, downloadRule, earlyBanner, isAdmin, isOpenFor, playFirstApplies, playRule, type Member } from "@/shared/access";
+import { doorRule, downloadRule, earlyBanner, isAdmin, isOpenFor, mayReport, playFirstApplies, playRule, type Member } from "@/shared/access";
 import { playGate } from "@/shared/join-gate";
 
 // docs/13 "Early access": the table, as it is written there.
@@ -100,5 +100,18 @@ describe("what they see", () => {
     const alex = { role: "ADMIN" as const, name: "Bramble09" };
     expect(describeAction("user.earlyAccess", alex, { displayName: "Pabulum", on: true })).toBe("Bramble09 gave Pabulum early access");
     expect(describeAction("user.earlyAccess", alex, { displayName: "Pabulum", on: false })).toBe("Bramble09 took early access away from Pabulum");
+  });
+});
+
+describe("a report that a run of Play went through", () => {
+  it("is not taken from a player the portal is not open for: it would open the door", () => {
+    expect(mayReport(player, false, "ok")).toBe(false);
+    expect(mayReport(early, false, "ok")).toBe(true);
+    expect(mayReport(admin, false, "ok")).toBe(true);
+    expect(mayReport(player, true, "ok")).toBe(true);
+    expect(mayReport(null, true, "ok")).toBe(false);
+  });
+  it("of a run that failed or was stopped is taken from every member: that is what Alex reads", () => {
+    for (const who of [admin, early, player]) for (const live of LIVE) for (const outcome of ["failed", "cancelled"]) expect(mayReport(who, live, outcome)).toBe(true);
   });
 });

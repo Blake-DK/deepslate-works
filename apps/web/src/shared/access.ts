@@ -29,6 +29,16 @@ export function downloadRule(user: Member | null | undefined, live: boolean, ser
 /** Pressing Play is fetching the mod list and sending a report: whoever may download may press Play. */
 export const playRule = downloadRule;
 
+/**
+ * A report that says "it went through" can only come from somebody the portal is open for: nobody else can have
+ * fetched the mod list. Reports of runs that failed or were stopped are taken from every member, they are what
+ * Alex reads when something goes wrong.
+ */
+export function mayReport(user: Member | null | undefined, live: boolean, outcome: string): boolean {
+  if (!user) return false;
+  return outcome !== "ok" || isOpenFor(user, live);
+}
+
 /** Does "Play first" apply at the door? To everybody but admins, early access or not. */
 export function playFirstApplies(user: Member, requirePlay: boolean): boolean {
   return requirePlay && user.role !== "ADMIN";

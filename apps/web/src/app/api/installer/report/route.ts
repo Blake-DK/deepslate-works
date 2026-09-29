@@ -4,6 +4,8 @@ import { audit } from "@/server/events";
 import { bearer, userFromLauncherToken } from "@/server/launcher";
 import { RateLimiter } from "@/server/auth/rate-limit";
 import { reportSchema, sanitizeReport, suggestTier } from "@/lib/install-report";
+import { getSettings } from "@/server/settings";
+import { mayReport } from "@/shared/access";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,12 @@ export async function POST(req: Request) {
   const parsed = reportSchema.safeParse(body);
   if (!parsed.success) return no(400, "validation", parsed.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
   const r = sanitizeReport(parsed.data);
+  // docs/13 §9: "it went through" from somebody who cannot have fetched the mod list is not a report, and must not
+  // open the door (docs/14 "Play first").
+  if (!mayReport(user, (await getSettings()).live, r.outcome)) {
+    await audit({ userId: user.id, action: "installer.report", params: { mode: r.mode, outcome: r.outcome, refused: "not_live" }, result: "DENIED" });
+    return no(403, "not_live", "Not launched yet");
+  }
   // The PC tier is measured, not asked (Alex, 2026-09-29): every report that says enough about the hardware sets it.
   const measured = suggestTier(r.system);
   const row = await db.installReport.create({

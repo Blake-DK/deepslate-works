@@ -44,6 +44,8 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
   const mode = modeText(pregen);
   const prog = progress(pregen);
   const mapProg = mapProgress(pregen);
+  // the map alone: chunky is not part of it and has nothing to say
+  const renderOnly = pregen?.plan.mode !== undefined && pregen.plan.mode !== "off" && pregen.plan.what === "render";
   const sleepy = sleepText(pregen);
   const stuck = status?.stateCode === 45;
   const a = AVAILABILITY_TEXT[status?.availability ?? "unknown"];
@@ -134,8 +136,8 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
           <CardContent className="space-y-3">
             <p className="text-sm" data-testid="pregen-mode">{mode.line}</p>
             <div data-testid="pregen-progress">
-              <p className="text-sm">{pregen?.plan.area ? <>Radius {pregen.plan.area.radius} around {pregen.plan.area.x}, {pregen.plan.area.z}. </> : null}{prog.line}</p>
-              {prog.percent !== null && <span className="mt-1 block h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(prog.percent)}><span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(100, prog.percent)}%` }} /></span>}
+              <p className="text-sm">{pregen?.plan.area ? <>Radius {pregen.plan.area.radius} around {pregen.plan.area.x}, {pregen.plan.area.z}. </> : null}{renderOnly ? null : prog.line}</p>
+              {!renderOnly && prog.percent !== null && <span className="mt-1 block h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(prog.percent)}><span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(100, prog.percent)}%` }} /></span>}
             </div>
             {mapProg && (
               <div data-testid="pregen-map">

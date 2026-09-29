@@ -49,6 +49,10 @@ describe("ping rounds", () => {
     expect(actions["server.pings"].input.safeParse({ name: "bramble09 --all; op me" }).success).toBe(false);
   });
   it("reads spark's answer", () => {
+    // as the server's console had it on 2026-09-29 17:3x UTC, with a colon the source does not have
+    expect(parse("[\u26a1]: Player bramble09 has 116 ms ping.")).toEqual([{ type: "ping", name: "bramble09", ms: 116 }]);
+    expect(isPingChatter("[\u26a1]: Player bramble09 has 116 ms ping.")).toBe(true);
+    expect(isPingChatter("[\u26a1]: Ping data is not available for 'bramble09'.")).toBe(true);
     expect(parse("[\u26a1] Player bramble09 has 23 ms ping.")).toEqual([{ type: "ping", name: "bramble09", ms: 23 }]);
     expect(parse("Player m1_owl has 187 ms ping.")).toEqual([{ type: "ping", name: "m1_owl", ms: 187 }]);
     expect(parse("<bramble09> Player m1_owl has 5 ms ping.").some((e) => e.type === "ping")).toBe(false);

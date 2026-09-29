@@ -90,8 +90,9 @@ const RE = {
   // `data get entity <name> Pos` and `... Dimension`, asked before a member is moved to the entrance room
   pos: new RegExp(`^(${NAME}) has the following entity data: \\[(-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d, (-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d, (-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d\\]$`),
   dimension: new RegExp(`^(${NAME}) has the following entity data: "([a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64})"$`),
-  // spark, `spark ping --player Bramble09`: "[⚡] Player Bramble09 has 23 ms ping."
-  sparkPing: new RegExp(`^(?:\\[\u26a1\\]\\s*)?Player (${NAME}) has (\\d{1,6}) ms ping\\.$`),
+  // spark, `spark ping --player Bramble09`. Its source has "[⚡] Player Bramble09 has 23 ms ping."; the console of
+  // this server writes "[⚡]: Player bramble09 has 116 ms ping." (2026-09-29, the first player on with spark asked).
+  sparkPing: new RegExp(`^(?:\\[\u26a1\\]:?\\s*)?Player (${NAME}) has (\\d{1,6}) ms ping\\.$`),
   // TabTPS, `pingall`: " - Bramble09: 23ms", one line for each player, then "Average ping: 23ms (1 player)"
   ping: new RegExp(`^-\\s+(${NAME}):\\s+(\\d{1,6})\\s?ms$`),
   death: new RegExp(
@@ -166,7 +167,7 @@ export function isMapChatter(text: string): boolean {
 export function isPingChatter(text: string): boolean {
   const { message } = reduce(text);
   const t = message.trim();
-  return RE.sparkPing.test(t) || /^(?:\[\u26a1\]\s*)?Ping data is not available for '[A-Za-z0-9_]{3,16}'\.$/.test(t) || RE.ping.test(t) || /^Average ping: \d+\s?ms \(\d+ players?\)$/.test(t) || /^-* ?(?:\[?TabTPS\]? )?Player Pings ?-*$/.test(t) || /^-{6,}$/.test(t);
+  return RE.sparkPing.test(t) || /^(?:\[\u26a1\]:?\s*)?Ping data is not available for '[A-Za-z0-9_]{3,16}'\.$/.test(t) || RE.ping.test(t) || /^Average ping: \d+\s?ms \(\d+ players?\)$/.test(t) || /^-* ?(?:\[?TabTPS\]? )?Player Pings ?-*$/.test(t) || /^-{6,}$/.test(t);
 }
 
 // Printed on every start by the mod loader and harmless; they would only bury the lines that matter.

@@ -522,6 +522,22 @@
       "requires": []
     },
     {
+      "slug": "bettertabinfo",
+      "name": "Better Tab Info",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Press Tab: who's on, everyone's ping in milliseconds, and the server's TPS (20 is perfect). Only on your PC, nothing on the server. Takes the place of TabTPS, which could not run next to BlueMap.",
+      "wiki": "https://github.com/tricube3/better-tab",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
       "slug": "create",
       "name": "Create",
       "category": "factories",
@@ -1111,27 +1127,6 @@
         {
           "title": "BEST BlueMap Tutorial",
           "url": "https://www.youtube.com/watch?v=_vAucQ56H1g"
-        }
-      ],
-      "version": "latest",
-      "requires": []
-    },
-    {
-      "slug": "tabtps",
-      "name": "TabTPS",
-      "category": "server",
-      "side": "server",
-      "enabled": false,
-      "load": "L",
-      "recommended": false,
-      "hidden": false,
-      "exclusiveGroup": null,
-      "description": "Off: it cannot run next to BlueMap on this server (both bring the same text library and the server refuses to start). It would show the server's speed and your ping when you press Tab.",
-      "wiki": "https://github.com/jpenilla/TabTPS",
-      "videos": [
-        {
-          "title": "TabTPS Tutorial | Minehut 101 | Minecraft",
-          "url": "https://www.youtube.com/watch?v=KpJc1pqsSyY"
         }
       ],
       "version": "latest",

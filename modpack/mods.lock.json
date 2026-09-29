@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-29T18:13:36.950Z",
+  "generatedAt": "2026-09-29T19:52:37.459Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "1a48e8ff01adbbd3f2d2d325ddfeb6fceef9680b1125655b85f3679bf5a046e7",
+  "hash": "dbcbe9e17795e4de629996dfab153426829b6ede08a9afd9c26bdd2cecef0db5",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -52,6 +52,21 @@
       ]
     },
     {
+      "slug": "bettertabinfo",
+      "name": "Better Tab Info",
+      "projectId": "LS20Llnw",
+      "versionId": "DnF5IgN7",
+      "versionNumber": "2.2.1+1.21.1-neoforge",
+      "versionType": "release",
+      "filename": "better_tab-2.2.1+1.21.1-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/LS20Llnw/versions/DnF5IgN7/better_tab-2.2.1%2B1.21.1-neoforge.jar",
+      "sha512": "9d3ad191c78780e89112d4567307a996d0ac1503fc31c1e267384e674d0ab3f217a0d363c93ada23180f46bde3ed589d0640510b5448e32fc64a3099783059da",
+      "sha1": "9c78e9f030054e9d9f423f92e0a7c09a976f63fa",
+      "size": 27506,
+      "side": "client",
+      "requiredBy": []
+    },
+    {
       "slug": "bluemap",
       "name": "BlueMap",
       "projectId": "swbUV1cr",
@@ -95,6 +110,23 @@
       "size": 253694,
       "side": "both",
       "requiredBy": []
+    },
+    {
+      "slug": "craft-config",
+      "name": "Craft Config Lib",
+      "projectId": "pqvUbuK1",
+      "versionId": "JJAHhzfZ",
+      "versionNumber": "1.1.12+1.21.1-neoforge",
+      "versionType": "release",
+      "filename": "craft_config-1.1.12+1.21.1-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/pqvUbuK1/versions/JJAHhzfZ/craft_config-1.1.12%2B1.21.1-neoforge.jar",
+      "sha512": "40a8a0559f6bb586ad0a44fc5f5d0522ba186f70cd11d5b442f692ab71d320e61635c39733482543a1f757c4987f462a858d13b696318110b37b72024dba14b8",
+      "sha1": "4321056263d5b5f29b57b5d4e99b66ae98eca72f",
+      "size": 269297,
+      "side": "client",
+      "requiredBy": [
+        "bettertabinfo"
+      ]
     },
     {
       "slug": "create",

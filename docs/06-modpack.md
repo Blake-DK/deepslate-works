@@ -48,7 +48,7 @@ Rules enforced by `modpack lint`:
 
 ## The catalogue as it stands (2026-09-29, pack `0.1.0+1a48e8ff`)
 
-Made from `modpack/mods.json` and `mods.lock.json`; **those files are what counts**, this table is a picture of them. 40 mods, 30 in the pack. The lock has 32 files: 25 go to the server, 29 to a PC. "on" with "suggested" is the recommended set, switched on on 2026-09-29 while the vote stays open.
+Made from `modpack/mods.json` and `mods.lock.json`; **those files are what counts**, this table is a picture of them. 40 mods, 31 in the pack. The lock has 34 files: 25 go to the server, 31 to a PC. "on" with "suggested" is the recommended set, switched on on 2026-09-29 while the vote stays open.
 
 | slug | name | category | side | in the pack | load | version in the lock | notes |
 |---|---|---|---|---|---|---|---|
@@ -68,6 +68,7 @@ Made from `modpack/mods.json` and `mods.lock.json`; **those files are what count
 | corpse | Corpse | base | both | **on** | L | neoforge-1.21.1-1.1.13 |  |
 | simple-voice-chat | Simple Voice Chat | base | both | **on** | L | neoforge-1.21.1-2.6.22 |  |
 | fallingtree | FallingTree | base | both | **on** | L | 1.21.1-1.21.1.11 |  |
+| bettertabinfo | Better Tab Info | base | client | **on** | L | 2.2.1+1.21.1-neoforge | TPS and everyone's ping in the Tab list, instead of TabTPS; pulls in craft-config (client) |
 | rpl | Ritchie's Projectile Library | base | both | off | L |  | hidden (needed by another mod) |
 | sophisticated-core | Sophisticated Core | base | both | **on** | L | 1.21.1-1.5.2.2343 | hidden (needed by another mod) |
 | scalable-cats-force | scalable-cats-force | base | both | **on** | L | 3.7.1-build-11 | hidden (needed by another mod) |
@@ -91,7 +92,6 @@ Made from `modpack/mods.json` and `mods.lock.json`; **those files are what count
 | chunky | Chunky | server | server | **on** | L | 1.4.23 |  |
 | spark | spark | server | server | **on** | L | 1.10.124-neoforge-1.21.1 |  |
 | bluemap | BlueMap | server | server | **on** | L | 5.7-neoforge |  |
-| tabtps | TabTPS | server | server | off | L |  | does not start next to BlueMap |
 
 In the lock and not in the catalogue, because a mod in the pack needs them: `balm` 21.0.66+neoforge-1.21.1 (for waystones), `kotlin-lang-forge` 2.14.1-k2.4.20-3.0+neoforge (for veinminer).
 
@@ -155,6 +155,8 @@ A build makes `dist/server/config/` and `dist/server/datapacks/` afresh each tim
 Thought of in the first plan and not shipped: Xaero's (minimap on, waypoints for each server), JEI (cheat mode off), Simple Voice Chat (push to talk on `V`), Corpse (corpses never despawn, only the owner can loot for 30 min). Each mod runs on its own defaults. To ship one: start the game or the server once, take the file the mod wrote, change what is to be changed, put it under `modpack/config/`, Lock, Build, Sync.
 
 ## TabTPS (2026-09-29): in the catalogue, switched off
+
+**Later the same day: taken out of `mods.json` altogether** (planner). Its place is taken by **Better Tab Info** (`bettertabinfo`, base, client only, with its library `craft-config`): TPS and everyone's ping in the Tab list, worked out on each PC, nothing on the server.
 
 Added at 09:42 UTC, taken out at 10:52 UTC the same day. With BlueMap in the pack the server does not start: `java.lang.module.ResolutionException: Modules bluemap and net.kyori.adventure.text.serializer.gson export package net.kyori.adventure.text.serializer.gson.impl to module corpse`. Both mods carry the same library. **Check a server-side mod against BlueMap before adding it** when it is by the same authors' circle (anything built on Adventure: TabTPS, MiniMOTD, squaremap and the like). The portal gets its pings from spark instead; see docs/05 "Connection".
 

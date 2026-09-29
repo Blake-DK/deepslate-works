@@ -66,11 +66,11 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <form action={serverOpAction} className="flex flex-wrap items-center gap-2">
+          <form action={serverOpAction.bind(null, "")} className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="sure" className="h-4 w-4" /> I&apos;m sure</label>
-            <Button type="submit" name="op" value="start" size="sm" disabled={!startable}>Start</Button>
-            <Button type="submit" name="op" value="restart" size="sm" variant="secondary" disabled={!running}>Restart now</Button>
-            <Button type="submit" name="op" value="stop" size="sm" variant="danger" disabled={!running}>Stop</Button>
+            <Button type="submit" formAction={serverOpAction.bind(null, "start")} size="sm" disabled={!startable}>Start</Button>
+            <Button type="submit" formAction={serverOpAction.bind(null, "restart")} size="sm" variant="secondary" disabled={!running}>Restart now</Button>
+            <Button type="submit" formAction={serverOpAction.bind(null, "stop")} size="sm" variant="danger" disabled={!running}>Stop</Button>
           </form>
           {stuck && (
             <form action={killAction} className="space-y-2 rounded-lg border border-danger/40 bg-danger/10 p-3" data-testid="kill">
@@ -243,16 +243,16 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
                   {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded picture, served by our own route */}
                   {n.image && <img src={n.image} alt="" loading="lazy" className="h-16 w-28 rounded border object-cover" />}
                   <p className="min-w-0 flex-1 whitespace-pre-line">{n.pinned && <Badge tone="warn" className="mr-2">Pinned</Badge>}{n.body}<span className="block text-xs text-muted-foreground">{n.author} · {timeAgo(n.createdAt)}</span></p>
-                  <form action={announcementChangeAction} className="flex items-center gap-1">
+                  <form action={announcementChangeAction.bind(null, "picture")} className="flex items-center gap-1">
                     <input type="hidden" name="id" value={n.id} />
                     <input name="image" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Picture" className="w-44 text-xs file:mr-2 file:rounded file:border file:bg-muted file:px-2 file:py-1 file:text-xs" />
-                    <Button type="submit" name="what" value="picture" size="sm" variant="ghost">{n.image ? "Change picture" : "Add picture"}</Button>
-                    {n.image && <Button type="submit" name="what" value="nopicture" size="sm" variant="ghost">No picture</Button>}
+                    <Button type="submit" formAction={announcementChangeAction.bind(null, "picture")} size="sm" variant="ghost">{n.image ? "Change picture" : "Add picture"}</Button>
+                    {n.image && <Button type="submit" formAction={announcementChangeAction.bind(null, "nopicture")} size="sm" variant="ghost">No picture</Button>}
                   </form>
-                  <form action={announcementChangeAction} className="flex gap-1">
+                  <form action={announcementChangeAction.bind(null, n.pinned ? "unpin" : "pin")} className="flex gap-1">
                     <input type="hidden" name="id" value={n.id} />
-                    <Button type="submit" name="what" value={n.pinned ? "unpin" : "pin"} size="sm" variant="ghost">{n.pinned ? "Unpin" : "Pin"}</Button>
-                    <Button type="submit" name="what" value="delete" size="sm" variant="ghost" className="text-danger">Delete</Button>
+                    <Button type="submit" formAction={announcementChangeAction.bind(null, n.pinned ? "unpin" : "pin")} size="sm" variant="ghost">{n.pinned ? "Unpin" : "Pin"}</Button>
+                    <Button type="submit" formAction={announcementChangeAction.bind(null, "delete")} size="sm" variant="ghost" className="text-danger">Delete</Button>
                   </form>
                 </li>
               ))}

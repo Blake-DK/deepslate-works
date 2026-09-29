@@ -11,9 +11,11 @@ import { removePhoto, storePhoto } from "@/server/news-images";
 const ops = z.enum(["start", "stop", "restart"]);
 const back = (msg: string, detail?: string) => `/admin/server?msg=${msg}${detail ? `&detail=${encodeURIComponent(detail)}` : ""}`;
 
-export async function serverOpAction(formData: FormData) {
+// Which button was pressed travels as a bound argument (`action.bind(null, "stop")` as the button's formAction),
+// never as the button's own name/value: the browser posted forms without it (2026-09-29, "Unknown announcement").
+export async function serverOpAction(which: string, formData: FormData) {
   const admin = await requireAdmin();
-  const op = ops.safeParse(formData.get("op"));
+  const op = ops.safeParse(which);
   if (!op.success || formData.get("sure") !== "on") redirect(back("confirm"));
   try {
     await apiFetch(`/server/${op.data}`, { method: "POST", body: {}, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 });
@@ -162,10 +164,10 @@ export async function announceAction(formData: FormData) {
   redirect(back("announced", said));
 }
 
-export async function announcementChangeAction(formData: FormData) {
+export async function announcementChangeAction(which: string, formData: FormData) {
   const admin = await requireAdmin();
   const id = z.string().min(1).max(40).safeParse(formData.get("id"));
-  const what = z.enum(["pin", "unpin", "delete", "picture", "nopicture"]).safeParse(formData.get("what"));
+  const what = z.enum(["pin", "unpin", "delete", "picture", "nopicture"]).safeParse(which);
   if (!id.success || !what.success) redirect(back("error", "Unknown announcement."));
   const row = await db.announcement.findUnique({ where: { id: id.data }, select: { image: true } });
   if (!row) redirect(back("error", "Unknown announcement."));

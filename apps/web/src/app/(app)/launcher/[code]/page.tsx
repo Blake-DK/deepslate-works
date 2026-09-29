@@ -37,10 +37,10 @@ export default async function LauncherApprovePage({ params, searchParams }: { pa
           </CardHeader>
           {live && (
             <CardContent>
-              <form action={decideLauncherAction} className="flex gap-2">
+              <form action={decideLauncherAction.bind(null, "deny")} className="flex gap-2">
                 <input type="hidden" name="code" value={code} />
-                <Button type="submit" name="decision" value="approve" size="lg">Yes, that&apos;s me</Button>
-                <Button type="submit" name="decision" value="deny" variant="secondary" size="lg">No</Button>
+                <Button type="submit" formAction={decideLauncherAction.bind(null, "approve")} size="lg">Yes, that&apos;s me</Button>
+                <Button type="submit" formAction={decideLauncherAction.bind(null, "deny")} variant="secondary" size="lg">No</Button>
               </form>
             </CardContent>
           )}

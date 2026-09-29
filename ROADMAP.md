@@ -2,7 +2,7 @@
 
 A private modded Minecraft server (1.21.1, NeoForge) for a group of friends, with a portal at **deepslate.dsw.test** that handles voting, installing, joining and running the server. Players sign in with Discord; nobody types a Minecraft username or asks for a whitelist.
 
-Last updated 2026-09-29 (evening). Detail per feature is in `docs/`; where the build actually is lives in `docs/11-status.md`.
+Last updated 2026-09-29 (late evening). Detail per feature is in `docs/`; where the build actually is lives in `docs/11-status.md`.
 
 ## What's live
 
@@ -28,6 +28,7 @@ Last updated 2026-09-29 (evening). Detail per feature is in `docs/`; where the b
 - Re-running updates only what changed and says "already up to date" otherwise.
 - Refuses to run while the Minecraft Launcher is open (it would overwrite the profile), and verifies the profile after writing it.
 - Sends an install report to the portal at the end of every run: outcome, failed step, full log, OS, CPU, RAM, GPU, disk, launcher and Java versions. Usernames and paths are redacted.
+- Java 21 comes from the launcher's own runtime, then PATH, then a Temurin download into the pack's folder; an old Java on PATH no longer stops the install (1.4.1).
 
 ### Joining the server ("the white room")
 - Whitelist is off. A first-time player lands in a sealed glass room floating in its own void dimension (`deepslate:limbo`, a small datapack) with one clickable link in chat. It never shows on the map.
@@ -41,7 +42,7 @@ Last updated 2026-09-29 (evening). Detail per feature is in `docs/`; where the b
 - Full-screen BlueMap behind the portal login.
 - Players page, per-player page (play time, sessions, deaths, advancements, link state, hardware from their install report).
 - Admin → Server: start, stop, planned restart with in-game countdown, console tail, announcements with an optional picture, backup now.
-- Pre-generation as a mode: off, "when nobody's online" (pauses the moment someone joins, optional time window and hour cap) or "now". The portal turns AMP's sleep off while it runs and restores it after.
+- Pre-generation as a mode: off, "when nobody's online" (pauses the moment someone joins, optional time window and hour cap) or "now". The portal turns AMP's sleep off while it runs and restores it after. The same card renders the BlueMap area afterwards and can wipe and re-render the map.
 - Play from the site: the Play button launches the game through a `deepslate://` handler after checking for pack updates.
 
 ### Analytics, events, files, branding
@@ -60,10 +61,12 @@ Last updated 2026-09-29 (evening). Detail per feature is in `docs/`; where the b
 
 ## In progress
 
+- **Being built now** (specs handed over 2026-09-29 evening): Better Tab Info in the base pack (ping per player and TPS in Tab, replaces TabTPS); the Configured mod for in-game settings screens; installer version on every report with an "outdated" badge and a nudge on the Me page; full logs on every run plus the previous game session's log and crash reports; the white room prompt repeated every 15 s with an on-screen title and a short join code usable at deepslate.dsw.test/join from a phone.
+- **Admin assistant** (docs/19): a read-only chat in Admin that can look at status, console, events, reports and container health and explain what went wrong. Needs an API key; never acts.
 - **First real joins on the new world** (seed -3899835130120818196, spawn pre-generated to 1500 blocks): Alex through the void room, then one early-access friend end to end (installer → Play → room → Discord link → spawn).
 - **Vote close**: apply results, lock, build, sync, flip "We're live".
 - **Bedrock** through NetherNet (TCP 19132 + UDP 19134–19153): forwards set, external join not yet tested.
-- **TabTPS** was dropped (library clash with BlueMap); Tab shows nothing extra for now. Pings come from spark.
+- **World terrain**: spawn's 1500 blocks were pre-generated before Create, Farmer's Delight and the rest went on, so their ores and crops only appear beyond that. One more reset after the vote closes is the clean fix.
 
 ## Next
 

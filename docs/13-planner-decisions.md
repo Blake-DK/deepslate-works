@@ -190,3 +190,12 @@ Print both in `11-status.md` so Alex can copy them:
 - The rules are one file, `apps/web/src/shared/access.ts` (the same in `api`), and one table of tests, `apps/web/tests/access.test.ts`.
 
 **The door knows "not live"** (planner, 2026-09-29, the same evening; this closes the gap that stood here). Before anything else the door asks whether the server is open for the member: live, or early access, or an admin. While the site is not live, a linked player without the flag is held in the room with "Not open yet. You'll be let in when the server goes live.", **whatever Play first says and whether or not they have pressed Play**. Only then comes Play first. The rule is `doorRule` in `shared/access.ts`; its table of tests is live on/off × flag on/off × Play first on/off × Play pressed or not. Whoever waits is let in within seconds of the site going live or of the flag being given (then Play first applies, if it is on), back to where they stood. Somebody who links their account while the site is not live stays in the room, with that line instead of the link.
+
+## 10. Decisions of 2026-09-29 (planner, from Alex)
+
+- **Kill stays in the api** (Alex's call, overriding the earlier "never expose Kill"). Admin-only, confirm dialog, audited, shown only while the server is in "Stopping". Needed once during pre-generation when a sleep-triggered stop hung at "Saving worlds".
+- **Pre-generation is a mode, not a loop.** Off / when nobody's online / now. The api flips `MinecraftModule.Limits.SleepMode` (permission `Settings.MinecraftModule.Limits.SleepMode` granted to `webapp`) while it runs and restores it after. It never starts or kills the server for pre-generation; before any stop it pauses Chunky and waits for the save.
+- **The white room lives in its own dimension** (`deepslate:limbo`, datapack `modpack/datapacks/deepslate-limbo/`, shipped by Sync). Glass box over the void, End sky, forceloaded. Nothing in the overworld, nothing on BlueMap.
+- **The AMP instance stays unmanaged.** ADS refuses Manage for it; Alex uses `http://10.0.10.8:8083/` directly (see docs/17). Not converting to managed, because that would move `webapp` to ADS auth and rework the api login.
+- **FallingTree is base**, not votable. **TabTPS is dropped** (clashes with BlueMap).
+- **News items may carry a picture** (PNG/JPEG/WebP, 3 MB, members only).

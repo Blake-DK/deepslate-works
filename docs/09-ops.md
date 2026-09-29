@@ -33,6 +33,18 @@ on the VPS  ──► sudo /home/ladm/Minecraft-site/deploy/deploy.sh
 - Never run `docker compose up --build`, `docker compose build` or `docker build` on the VPS. tooling sessions on this host are blocked from doing so by a hook (`/root/.tooling/hooks/mem-guard.py`), which also refuses `docker run` without `--memory`.
 - If CI is down and a change cannot wait: build on another machine and `docker save | ssh vps docker load`, then `IMAGE_TAG` to match. A build on the VPS is the last resort and Alex's call: stop the non-essential stacks first, one image at a time, through the memory-capped builder (`docker buildx use capped`, 2 GB), then start the stacks again.
 
+## Dockhand (pull-only)
+
+The stack is registered in Dockhand (`http://100.64.0.10:3690`, environment **VPS-01V**, stack `deepslate`) like the other stacks on the VPS, so it can be watched, pulled and restarted from there.
+
+- **Pull-only.** The compose file has no `build:` section, so nothing Dockhand does can build on the VPS; `deploy/dockhand-sync.py` refuses to mirror a compose file that has one. "Update" / "Redeploy" in Dockhand means: pull `ghcr.io/blake-dk/deepslate-{web,api}` and recreate what changed.
+- **The repo is the source of truth, Dockhand holds a mirror.** Dockhand's agent on the VPS is sandboxed and cannot read `/home`, so it runs the stack from its own copy in `/data/stacks/deepslate/` (`compose.yaml`, `.env`). `deploy/deploy.sh` refreshes the mirror after every deploy (`deploy/dockhand-sync.py`, which never restarts anything). Edit `deploy/docker-compose.yml` and `deploy/.env`, never the copy in Dockhand: the next deploy overwrites it. After editing `deploy/.env` by hand, run `sudo deploy/deploy.sh` (or `sudo deploy/dockhand-sync.py`) so Dockhand does not redeploy with the old values.
+- Because the stack runs from two directories, every host path in the compose file is built from `DEEPSLATE_DIR` (absolute, in `deploy/.env`). A relative path there would make a redeploy from Dockhand mount empty directories.
+- The env mirror contains the stack's secrets, as for the other stacks in Dockhand.
+- What Dockhand does not do: `git pull`. New installer files or a new `modpack/` arrive with `deploy/deploy.sh`. For a code change use `deploy.sh`; use Dockhand to look, restart, or pull the newest images.
+- Registry: Dockhand pulls with its own `ghcr.io` credentials (Settings → Registries → "GitHub"), not with the login in `/root/.docker/config.json`.
+- `deploy/dockhand-sync.py --check` reports whether the mirror matches.
+
 ## Memory limits
 
 | Service | `mem_limit` | Notes |

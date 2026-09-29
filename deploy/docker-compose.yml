@@ -5,7 +5,11 @@
 #
 # `web` and `api` are built by CI (.github/workflows/ci.yml) and pulled from GHCR. They have no build
 # section on purpose: this host must never build images (it ran out of memory doing so on 2026-09-29).
-# Deploy with deploy/deploy.sh and nothing else. Every service carries a memory limit.
+# Deploy with deploy/deploy.sh. Every service carries a memory limit.
+#
+# Dockhand holds a mirror of this file and of deploy/.env (stack `deepslate`, environment VPS-01V) and runs
+# it from /data/stacks/deepslate, so every host path goes through DEEPSLATE_DIR (absolute, set in deploy/.env).
+# deploy.sh refreshes the mirror after each deploy; edit here, never in Dockhand.
 name: deepslate
 
 networks:
@@ -46,9 +50,9 @@ services:
     volumes:
       # The manifest is edited by "apply results" and committed, so the live repo's modpack/ and .git are mounted.
       # Nothing else from the repo (no .env, no keys) is visible to the internet-facing container.
-      - ../modpack:/repo/modpack
-      - ../.git:/repo/.git
-      - ../dist:/repo/dist:ro         # built packs, served under /downloads (api builds them)
+      - ${DEEPSLATE_DIR:-..}/modpack:/repo/modpack
+      - ${DEEPSLATE_DIR:-..}/.git:/repo/.git
+      - ${DEEPSLATE_DIR:-..}/dist:/repo/dist:ro         # built packs, served under /downloads (api builds them)
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,7 +78,7 @@ services:
       PGID: "1000"
       TZ: Europe/London
     volumes:
-      - ./wireguard:/config          # wg_confs/wg0.conf (git-ignored)
+      - ${DEEPSLATE_DIR:-..}/deploy/wireguard:/config          # wg_confs/wg0.conf (git-ignored)
     ports:
       - 51820:51820/udp
     networks: [internal]             # never on `web`
@@ -96,10 +100,10 @@ services:
       DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
       PORTAL_URL: ${AUTH_URL}
     volumes:
-      - ./keys/deploy.key:/run/keys/deploy.key:ro
-      - ../dist:/repo/dist             # `modpack build` writes it (owner uid 1000); sync-server rsyncs dist/server/ to the AMP host
-      - ../modpack:/repo/modpack:ro
-      - ../installer:/repo/installer:ro
+      - ${DEEPSLATE_DIR:-..}/deploy/keys/deploy.key:/run/keys/deploy.key:ro
+      - ${DEEPSLATE_DIR:-..}/dist:/repo/dist             # `modpack build` writes it (owner uid 1000); sync-server rsyncs dist/server/ to the AMP host
+      - ${DEEPSLATE_DIR:-..}/modpack:/repo/modpack:ro
+      - ${DEEPSLATE_DIR:-..}/installer:/repo/installer:ro
     depends_on:
       wireguard:
         condition: service_started

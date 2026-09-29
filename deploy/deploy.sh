@@ -25,6 +25,7 @@ as_owner() {
 
 [ -f deploy/.env ] || die "deploy/.env is missing (copy deploy/.env.example)"
 grep -Eq '^GHCR_OWNER=[a-z0-9-]+$' deploy/.env || die "set GHCR_OWNER in deploy/.env (GitHub owner, lower case)"
+grep -Eq "^DEEPSLATE_DIR=$(pwd)\$" deploy/.env || die "set DEEPSLATE_DIR=$(pwd) in deploy/.env (absolute path of this checkout)"
 
 avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
 swap=$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)
@@ -49,6 +50,15 @@ fi
 
 step "up"
 "${COMPOSE[@]}" up -d --remove-orphans
+
+step "dockhand mirror"
+# Dockhand keeps a copy of the compose file and env so the stack can be pulled and restarted from its UI.
+# Refresh it; this never restarts anything, and a failure here does not fail the deploy.
+if [ -r "${DOCKHAND_KEY_FILE:-/root/.config/deepslate/dockhand-key}" ]; then
+  deploy/dockhand-sync.py || echo "deploy: Dockhand mirror NOT updated (the deploy itself is fine); run deploy/dockhand-sync.py later"
+else
+  echo "no Dockhand key on this host, skipped"
+fi
 
 step "prune old images"
 docker image prune -f

@@ -216,10 +216,11 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 8. **Test the wait room** with one friend: connect to `mc.dsw.test`, confirm the room + chat link, click it, confirm release and `whitelist.json`. Then tick docs/14 acceptance.
 9. Optional `DISCORD_BOT_TOKEN` (a bot in the Discord server) so api re-checks membership every 5 min; without it, leaving the server only bites at the next Discord login.
 10. ~~GHCR login on the VPS~~ Done 2026-09-29: classic token, `read:packages` only, login stored in `/root/.docker/config.json`. Fine-grained tokens get 403 from GHCR.
-11. **Rotate the GitHub token** that was pasted into the chat on 2026-09-29 once the pipeline is proven; the VPS only needs `contents:read` for `git pull`.
+11. ~~Rotate the GitHub token~~ New token in place 2026-09-29 (expires 2026-11-28). **Alex: revoke the old one on GitHub** (Settings → Developer settings → Fine-grained tokens); replacing it on the VPS does not invalidate it.
 
 ## Session log
 
+- **2026-09-29 05:22** · Stack registered in Dockhand as pull-only (`deploy/dockhand-sync.py`, mirror in `/data/stacks/deepslate`); compose host paths now built from `DEEPSLATE_DIR` so a redeploy from Dockhand mounts the same directories. GitHub token rotated (new fine-grained token, expires 2026-11-28); to-do 11 done.
 - **2026-09-29 05:09** · First deploy from GHCR images via `deploy/deploy.sh`; images, AMP smoke, rsync listing and the in-api Build verified (see "OOM incident"). Planner specs 15, 15a, 16 arrived by push (`ba5decf`); read, not started.
 - **2026-09-29 early morning** · OOM at 03:58 during `up --build`, reboot 04:07. Recovery check of every site, guardrails on the host (swap, earlyoom, capped builder, tooling hook), deploy moved to CI + GHCR + `deploy/deploy.sh`, `modpack build` moved into `api`, memory limits adjusted, `fetchJar` streams. api tests 21, modpack 9, web 20. Wait-room audit helper (`apps/api/src/audit.ts`: an audit row from a caller id that is not a user is kept with no user instead of failing the request) committed; it was already in the running image.
 
@@ -233,5 +234,5 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 - When the tunnel is up: confirm AMP method names against `http://10.77.0.2:8080/API` through `api` (docs/08 "AMP methods used"), then set `AMP_MOCK=0`.
 - Tick the Phase 0 boxes with Alex, tag `phase-0`; tick Phase 1 (phone click-through, one real apply-and-commit), tag `phase-1`; then Phase 2 (`modpack lock|build|sync-server`, `/install`, `/admin/modpack`, `installer/`). Phase 2 needs `server_address` from Alex (what Pangolin publishes) and the AMP instance for `sync-server`.
 - docs/06 `sync-server` still describes a bind mount; rewrite it for rsync over the tunnel when Phase 2 starts (docs/13 §4 has the command).
-- ~~GitHub remote~~ done 2026-09-29: `Blake-DK/deepslate-works` (private), CI builds the images. Dockhand: the stack is deployed by `deploy/deploy.sh`, not from Dockhand; if it is ever added there, as pull-only.
+- ~~GitHub remote~~ done 2026-09-29: `Blake-DK/deepslate-works` (private), CI builds the images. Dockhand: added 2026-09-29 as a pull-only stack (`deepslate`, environment VPS-01V); the repo stays the source of truth and `deploy/deploy.sh` refreshes Dockhand's mirror (docs/09 "Dockhand").
 - Phase 3 prep: the map host needs a DNS name under the chosen domain and `COOKIE_DOMAIN` set; the Caddy block needs `forward_auth deepslate-web:3000 { uri /api/auth/verify }` and a `reverse_proxy` to BlueMap on the AMP host over Tailscale.

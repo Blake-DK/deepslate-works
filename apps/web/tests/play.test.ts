@@ -57,3 +57,42 @@ describe("the mode of an install report", () => {
     expect(describeAction("installer.report", who, { mode: "install", outcome: "ok", packVersion: "0.1.0+47b0b579" }, "OK")).toBe("m1owl installed 0.1.0+47b0b579: all good");
   });
 });
+
+describe("the installer updates itself", () => {
+  const sha = "a".repeat(64);
+  const base = { packVersion: "0.1.0+47b0b579", installerVersion: "1.4.0", mode: "play", outcome: "ok", failedStep: null, durationSec: 9, log: "", system: {} };
+
+  it("names the installer in the mod list only while installer.json describes the zip that is there", async () => {
+    const { installerInfo } = await import("@/lib/installer-info");
+    expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: sha, size: 16022 })).toEqual({ version: "1.4.0", sha256: sha, size: 16022 });
+    expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: "b".repeat(64), size: 16022 })).toBeNull(); // another zip
+    expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: sha, size: 1 })).toBeNull();
+    expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, null)).toBeNull(); // no zip
+    expect(installerInfo(null, { sha256: sha, size: 16022 })).toBeNull(); // built before there was an installer.json
+    expect(installerInfo({ version: "1.4.0; calc", sha256: sha, size: 16022 }, { sha256: sha, size: 16022 })).toBeNull();
+    expect(installerInfo({ version: "1.4.0", sha256: "A".repeat(64), size: 16022 }, { sha256: "A".repeat(64), size: 16022 })).toBeNull(); // lower case only
+    expect(installerInfo({ version: "1.4.0", sha256: "abc", size: 3 }, { sha256: "abc", size: 3 })).toBeNull();
+  });
+
+  it("is in the report", () => {
+    expect(reportSchema.parse({ ...base, updatedFrom: "1.3.0" }).updatedFrom).toBe("1.3.0");
+    expect(reportSchema.parse(base).updatedFrom).toBeNull();
+    expect(reportSchema.parse(base).updateProblem).toBeNull();
+    expect(reportSchema.safeParse({ ...base, updatedFrom: "1.3.0 <script>" }).success).toBe(false);
+  });
+
+  it("has names and addresses taken out of the reason an update was not applied", async () => {
+    const { sanitizeReport } = await import("@/lib/install-report");
+    const r = sanitizeReport(reportSchema.parse({ ...base, updateProblem: "it could not be fetched or written: C:\\Users\\player\\AppData\\Local\\DeepslateWorks\\install.ps1.new from 203.0.113.10" }));
+    expect(r.updateProblem).toBe("it could not be fetched or written: C:\\Users\\~\\AppData\\Local\\DeepslateWorks\\install.ps1.new from ~ip~");
+  });
+
+  it("is said in the event log and marked in the log", async () => {
+    const { describeAction } = await import("@/shared/events");
+    const { markLog } = await import("@/lib/install-report");
+    const who = { role: "PLAYER" as const, name: "m1owl" };
+    expect(describeAction("installer.report", who, { mode: "play", outcome: "ok", packVersion: "0.1.0+47b0b579", installerVersion: "1.4.0", updatedFrom: "1.3.0" }, "OK")).toBe("m1owl pressed Play: 0.1.0+47b0b579, launcher opened (the installer updated itself, 1.3.0 to 1.4.0)");
+    expect(describeAction("installer.report", who, { mode: "play", outcome: "ok", packVersion: "0.1.0+47b0b579", installerVersion: "1.3.0", updateProblem: "the checksum …" }, "OK")).toBe("m1owl pressed Play: 0.1.0+47b0b579, launcher opened (the installer could not update itself)");
+    expect(markLog("[t] STEP Updating the installer 1.3.0 → 1.4.0\n[t] UPDATE NOT APPLIED: the checksum of the download (55f8...) is not the one the site gave (0000...)", null)[1]!.mark).toBe("fail");
+  });
+});

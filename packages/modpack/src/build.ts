@@ -1,4 +1,5 @@
-import { createWriteStream } from "node:fs";
+import { createHash } from "node:crypto";
+import { createReadStream, createWriteStream } from "node:fs";
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import archiver from "archiver";
@@ -79,7 +80,22 @@ export async function buildConfigZip(paths: { dist: string; config: string }, lo
   return out;
 }
 
-/** installer.zip: Setup.bat + install.ps1 with the manifest URL and pack version stamped in. */
+/** The version a script calls itself: `$InstallerVersion = "1.4.0"`. */
+export function installerVersion(ps1: string): string | null {
+  return /^\$InstallerVersion\s*=\s*"(\d{1,4}(?:\.\d{1,4}){1,3})"/m.exec(ps1)?.[1] ?? null;
+}
+
+export async function sha256File(file: string): Promise<string> {
+  const hash = createHash("sha256");
+  for await (const chunk of createReadStream(file)) hash.update(chunk as Buffer);
+  return hash.digest("hex");
+}
+
+/**
+ * installer.zip: Setup.bat + install.ps1 with the manifest URL and pack version stamped in.
+ * installer.json next to it: the installer's version and the zip's SHA-256, which the mod list passes on so that
+ * an installed copy can fetch a newer one and check it (docs/07 "The installer updates itself").
+ */
 export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist: string; installer: string }, portalUrl: string, log: (s: string) => void): Promise<string> {
   const stage = path.join(paths.dist, "_installer");
   await rm(stage, { recursive: true, force: true });
@@ -90,11 +106,17 @@ export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist:
     .replace(/^\$PackName\s*=.*$/m, `$PackName = "${m.name}"`)
     .replace(/^\$PackVersion\s*=.*$/m, `$PackVersion = "${m.version}+${shortHash(lock)}"`);
   if (stamped === ps1) throw new Error("install.ps1: config block not found to stamp");
+  const version = installerVersion(stamped);
+  if (!version) throw new Error("install.ps1: $InstallerVersion not found");
   await writeFile(path.join(stage, "install.ps1"), stamped);
   for (const f of ["Setup.bat", "Update and Play.bat", "README.txt"]) await cp(path.join(paths.installer, f), path.join(stage, f));
   const out = path.join(paths.dist, "installer.zip");
   await zipDir([{ dir: stage, name: false as unknown as string }], out);
   await rm(stage, { recursive: true, force: true });
+  const sha256 = await sha256File(out);
+  const { size } = await stat(out);
+  await writeFile(path.join(paths.dist, "installer.json"), `${JSON.stringify({ version, sha256, size, builtAt: new Date().toISOString() }, null, 2)}\n`);
   log(`installer.zip stamped with ${portalUrl} and version ${m.version}+${shortHash(lock)}`);
+  log(`installer ${version}, sha256 ${sha256}`);
   return out;
 }

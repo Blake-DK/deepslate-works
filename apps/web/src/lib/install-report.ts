@@ -34,6 +34,8 @@ export const reportSchema = z
     packVersion: short(60),
     installerVersion: short(40),
     mode: z.enum(MODES).nullish().transform((v) => v ?? "install"), // installers before 1.3.0 don't say
+    updatedFrom: z.string().regex(/^\d{1,4}(\.\d{1,4}){1,3}$/).nullish().transform((v) => v ?? null), // since 1.4.0
+    updateProblem: optional(300),
     outcome: z.enum(OUTCOMES),
     failedStep: optional(120),
     durationSec: z.number().finite().min(0).max(86_400).transform((v) => Math.round(v)),
@@ -93,6 +95,7 @@ export function sanitizeReport(r: Report, names: string[] = []): Report {
   return {
     ...r,
     failedStep: r.failedStep ? blank(redactLog(r.failedStep)).slice(0, 120) : null,
+    updateProblem: r.updateProblem ? blank(redactLog(r.updateProblem)).slice(0, 300) : null,
     log: truncateMiddle(blank(redactLog(r.log.replace(/\r\n?/g, "\n").replace(/\u0000/g, "")))),
     // versions are left readable: addresses are only looked for in the fields that could hold one
     system: deep(r.system, (s, key) => blank(/version|driver|build|display|caption|name|kind|arch|powershell|source|drive/i.test(key) ? redactText(s) : redactLog(s))),
@@ -145,5 +148,5 @@ export function markLog(log: string, failedStep: string | null): Array<{ n: numb
   const lines = log.split("\n");
   let at = -1;
   if (failedStep) for (let i = lines.length - 1; i >= 0; i--) if (lines[i]!.includes(`STEP ${failedStep}`)) { at = i; break; }
-  return lines.map((text, i) => ({ n: i + 1, text, mark: /\]\s+FAIL\b|PROFILE NOT SAVED/.test(text) ? "fail" : at >= 0 && i === at ? "step" : at >= 0 && i > at ? "after" : null }));
+  return lines.map((text, i) => ({ n: i + 1, text, mark: /\]\s+FAIL\b|PROFILE NOT SAVED|UPDATE NOT APPLIED/.test(text) ? "fail" : at >= 0 && i === at ? "step" : at >= 0 && i > at ? "after" : null }));
 }

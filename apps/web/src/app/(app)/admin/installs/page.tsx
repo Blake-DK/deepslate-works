@@ -18,7 +18,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   const { outcome } = await searchParams;
   const only = (OUTCOMES as readonly string[]).includes(outcome ?? "") ? outcome : undefined;
   const [rows, counts] = await Promise.all([
-    db.installReport.findMany({ where: only ? { outcome: only } : undefined, orderBy: { at: "desc" }, take: 200, select: { id: true, userId: true, at: true, mode: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } }),
+    db.installReport.findMany({ where: only ? { outcome: only } : undefined, orderBy: { at: "desc" }, take: 200, select: { id: true, userId: true, at: true, mode: true, updatedFrom: true, updateProblem: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } }),
     db.installReport.groupBy({ by: ["outcome"], _count: { _all: true } }),
   ]);
   const n = (o: string) => counts.find((c) => c.outcome === o)?._count._all ?? 0;
@@ -76,7 +76,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
                       <tr key={r.id}>
                         <td className="px-4 py-2"><Link href={`/admin/installs/${r.id}`} className="font-medium hover:underline">{r.user.displayName}</Link>{changed && <span className="block text-xs text-primary">was {TIER[r.tierBefore!]}, measured {TIER[r.tierMeasured!]}</span>}</td>
                         <td className="px-4 py-2 text-muted-foreground" title={r.at.toISOString()}>{timeAgo(r.at, now)}</td>
-                        <td className="px-4 py-2">{r.mode === "play" ? "Play" : "Installer"}</td>
+                        <td className="px-4 py-2">{r.mode === "play" ? "Play" : "Installer"}{r.updatedFrom && <span className="block text-xs text-muted-foreground">updated itself, {r.updatedFrom} to {r.installerVersion}</span>}{r.updateProblem && <span className="block text-xs text-danger">could not update itself</span>}</td>
                         <td className="px-4 py-2"><Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"}>{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}</Badge>{r.failedStep && <span className="block text-xs text-muted-foreground">at &quot;{r.failedStep}&quot;</span>}</td>
                         <td className="px-4 py-2 font-mono text-xs">{r.packVersion}</td>
                         <td className="px-4 py-2">{s.os}</td>

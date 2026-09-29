@@ -39,7 +39,7 @@ The pages render on the server and read the data directly, so most of the routes
 | api | `GET /server/backup`, `POST /server/backup` | whether `webapp` may take and list backups (`Core.CurrentSessionHasPermission` for `LocalFileBackup.Backup.CreateBackup` and `LocalFileBackup.Backup.ViewBackupsList`), the list (`LocalFileBackupPlugin.GetBackups`), and `LocalFileBackupPlugin.TakeBackup` |
 | api | `GET /console/tail?lines=`, `GET /console/stream?since=` | last lines (now with `entries[{seq, text}]`), and the live stream as newline-delimited JSON with a heartbeat every 15 s |
 
-Installer (docs/07): `POST /api/installer/report` in `web`, launcher token required, body as in docs/07 "Install reports" (`mode` is `install` or `play`, `install` when left out), answers `{ok, id, tier}`; 401 without a token, 413 over 1.3 MB, 429 over 20 an hour.
+Installer (docs/07): `POST /api/installer/report` in `web`, launcher token required, body as in docs/07 "Install reports" (`mode` is `install` or `play`, `install` when left out; `updatedFrom`, `updateProblem` optional), answers `{ok, id, tier}`; 401 without a token, 413 over 1.3 MB, 429 over 20 an hour.
 
 docs/16 added, in `api` (admin only, GET only): `/files/list?dir=`, `/files/read?path=`, `/files/download?path=`; in `web`: `/api/events/stream` (live tail of the event log, trimmed for players), `/api/admin/events/export` and `/api/admin/analytics/export` (CSV), `/api/admin/files/download`, `/branding/<file>` (public: logo, banner, tab icon).
 
@@ -104,3 +104,5 @@ Added 2026-09-29 (checked against `Core.GetAPISpec` on the live instance): `Core
 ## Errors
 
 JSON `{ error: { code, message } }`. Codes: `unauthorized`, `forbidden`, `rate_limited` (with `retryAfterSec`), `server_offline`, `not_online` (player not in game), `timeout`, `validation`, `amp_error`. The UI maps each to a one-line message a player understands.
+
+Mod list (docs/07 "The installer updates itself"): `GET /api/modpack/manifest` also answers `installer: { version, sha256, size } | null`, the installer in `/downloads/installer.zip` and the SHA-256 of that zip; `null` when `dist/installer.json` is missing or does not describe the zip on disk. `GET /downloads/installer.zip` takes the launcher token (`Authorization: Bearer …`) as it always did.

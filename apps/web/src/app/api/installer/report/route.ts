@@ -36,13 +36,13 @@ export async function POST(req: Request) {
   // The PC tier is measured, not asked (Alex, 2026-09-29): every report that says enough about the hardware sets it.
   const measured = suggestTier(r.system);
   const row = await db.installReport.create({
-    data: { userId: user.id, packVersion: r.packVersion, installerVersion: r.installerVersion, mode: r.mode, outcome: r.outcome, failedStep: r.failedStep, durationSec: r.durationSec, system: r.system as Prisma.InputJsonValue, log: r.log, tierBefore: user.pcTier, tierMeasured: measured?.tier ?? null },
+    data: { userId: user.id, packVersion: r.packVersion, installerVersion: r.installerVersion, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, durationSec: r.durationSec, system: r.system as Prisma.InputJsonValue, log: r.log, tierBefore: user.pcTier, tierMeasured: measured?.tier ?? null },
     select: { id: true },
   });
   if (measured) {
     await db.user.update({ where: { id: user.id }, data: { pcTier: measured.tier, pcTierSource: "measured", pcTierWhy: measured.why.slice(0, 200), pcTierAt: new Date() } });
     if (user.pcTier !== measured.tier || user.pcTierSource !== "measured") await audit({ userId: user.id, action: "profile.tier.measured", params: { from: user.pcTier, to: measured.tier, why: measured.why, reportId: row.id }, result: "OK" });
   }
-  await audit({ userId: user.id, action: "installer.report", params: { reportId: row.id, mode: r.mode, outcome: r.outcome, failedStep: r.failedStep, packVersion: r.packVersion, installerVersion: r.installerVersion, durationSec: r.durationSec }, result: r.outcome === "ok" ? "OK" : "FAILED" });
+  await audit({ userId: user.id, action: "installer.report", params: { reportId: row.id, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, packVersion: r.packVersion, installerVersion: r.installerVersion, durationSec: r.durationSec }, result: r.outcome === "ok" ? "OK" : "FAILED" });
   return Response.json({ ok: true, id: row.id, tier: measured?.tier ?? null });
 }

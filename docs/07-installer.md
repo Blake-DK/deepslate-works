@@ -31,6 +31,7 @@ At the end of every run, whether it went well, failed or was stopped, `install.p
 |---|---|
 | `packVersion`, `installerVersion` | what was being installed, and by which version of the script |
 | `mode` | `install` (`Setup.bat`) or `play` (the Play button, `Update and Play.bat`); since installer 1.3.0 |
+| `updatedFrom`, `updateProblem` | the installer version that fetched this one on this run; or why an update that was due was not applied; since installer 1.4.0 |
 | `outcome` | `ok`, `failed` or `cancelled` (the window was closed or Ctrl+C pressed part-way) |
 | `failedStep` | the title of the step in hand when it stopped, e.g. "Checking the Minecraft Launcher" |
 | `durationSec` | how long the run took |
@@ -90,7 +91,42 @@ If any of this fails the install still counts as done; the run says "The Play bu
 
 **Signing in.** The launcher token lasts a week. When it has run out, Play opens the browser for the Discord sign-in as `Setup.bat` does, then carries on.
 
-**Known gap: the copy does not update itself.** The copy in `%LOCALAPPDATA%` is replaced only when a newer `install.ps1` is run from a fresh download (`Setup.bat` or `Update and Play.bat` of a new `installer.zip`). Mods, configs, NeoForge version and memory settings come from the manifest on every run, so a pack update never needs a new script; a fix to the script itself does. Not in the spec; for the planner to decide (the script could fetch `installer.zip` when the manifest names a newer installer version, which needs a way to trust the download).
+**The link rule stands** (planner, 2026-09-29): a handler cannot see which page a link was clicked on, so "only from our https origin" is not something it could check. Exact match, everything else ignored.
+
+## The installer updates itself (planner spec 2026-09-29; built the same day, installer 1.4.0)
+
+Mods, configs, the NeoForge version and the memory settings come from the mod list on every run, so a pack update never needed a new script. A fix to the script itself did. Since 1.4.0 the script fetches its own successor.
+
+**What the site says.** The mod list (`GET /api/modpack/manifest`) has a new block, `installer: { version, sha256, size }`, or `null`. (It did not carry the installer's version before; it does now.) The build writes `dist/installer.json` next to `dist/installer.zip`: the version read from the script's `$InstallerVersion` line, and the SHA-256 and size of the zip. The portal works out the checksum of the zip that is really on disk and passes the block on only when `installer.json` describes that file; otherwise `installer` is `null` and no PC is told to fetch anything. There is no address in the block: the script fetches `<its own site>/downloads/installer.zip`, with the launcher token, the same sign-in and the same gate as the mod list.
+
+**What the script does**, in `-Play` mode only (the Play button, `Update and Play.bat`), right after "Fetching the mod list":
+
+1. `installer.version` newer than its own (`[version]` comparison; the same or older, or anything that is not a version: nothing happens). The step is logged as **"Updating the installer 1.3.0 → 1.4.0"**.
+2. Downloads the zip to `%TEMP%`.
+3. Checks, in this order, and stops at the first that fails (`Install-Update`):
+   - the mod list gave a checksum (64 hex digits);
+   - the SHA-256 of the download is that checksum;
+   - the zip holds `install.ps1` and `Setup.bat`, by exactly those names, at the top level, each under 2 MB;
+   - the `install.ps1` in it calls itself the version the mod list named;
+   - it parses as PowerShell.
+4. Only then writes `Setup.bat.new` and `install.ps1.new` next to the running script, keeps the old script as `install.ps1.bak`, and moves the new files over the old ones. The two files are read out of the zip by name; the zip is never unpacked, so whatever else it holds, under whatever path, stays in it.
+5. Starts the new script with what it was started with itself (`-Play "deepslate://play"` from the button; `-Play`, and `-Root`/`-NoPrompt` if given, otherwise), in the same window, waits for it and leaves with its exit code. The old script sends no report; the new one sends it.
+
+**Never replaced on a mismatch.** If any check fails, or the download does, nothing next to the script has been touched. The run says "The installer was not updated: <why>. Nothing was replaced. Carrying on with installer 1.3.0.", the log has a line `UPDATE NOT APPLIED: <why>` (marked red in Admin → Installs), and the run carries on with the script it has: the mods are still brought up to date and the launcher still opens.
+
+**In the report.** `updatedFrom` is the version that fetched the one that ran (`null` when there was no update), `updateProblem` the reason an update was not applied (names and addresses taken out, as everywhere). The report's log starts with the step "Updating the installer 1.3.0 → 1.4.0". `InstallReport.updatedFrom` / `updateProblem` (migration `0008_install_report_update`); Admin → Installs shows "updated itself, 1.3.0 to 1.4.0" or "could not update itself" under "From"; the event log adds "(the installer updated itself, 1.3.0 to 1.4.0)".
+
+**Once per run.** The old script tells the new one which version it was through the environment of the process (`DEEPSLATE_UPDATED_FROM`), which a link cannot reach. A script started that way does not look for an update again, so a wrong `installer.json` cannot make it go round in circles.
+
+**Which folder.** The running script's own. From the Play button that is `%LOCALAPPDATA%\DeepslateWorks\`; from `Update and Play.bat` it is the folder that was unzipped, and step 9 then copies the new script to `%LOCALAPPDATA%` as always. Step 9 never puts an older script over a newer copy (an old unzipped folder, run after the copy has updated itself).
+
+**Left alone on purpose:** `Update and Play.bat` (it may be the batch file that is running, and Windows reads batch files line by line while they run; it is two lines that have not changed since they were written) and `README.txt`. `Setup.bat` never runs with `-Play`, so it is never the one in use.
+
+**Not updated:** `Setup.bat` runs (`install` mode). They come from a download that was current when it was made; the next Play brings the script up to date.
+
+**What the checksum is good for, and what not.** It catches a download that was cut short, mangled on the way, or mixed up with another build. It comes from the same site over the same connection as the zip, so it is no protection against the site itself being taken over; nothing in the installer is, since the mods are programs too and come from the same list.
+
+**Installer 1.3.0 cannot do this.** It has no update step, so a PC set up with 1.3.0 needs one fresh download and `Setup.bat` to get 1.4.0. From then on it looks after itself.
 
 ## The PC tier is measured (Alex, 2026-09-29)
 
@@ -153,6 +189,13 @@ Install report:
 - [ ] `/me` shows "Installed … all good"; "My PC" says "Measured by the installer" with your memory and graphics card.
 - [ ] Rename `%APPDATA%\.minecraft\launcher_profiles.json` for a moment and run `Setup.bat`: it fails at step 2, and Admin → Installs shows a failed run at "Checking the Minecraft Launcher". Rename the file back.
 - [ ] Pull the network cable after signing in: the install says the log could not be sent and carries on; the local log is still there.
+
+The installer updates itself (installer 1.4.0). This needs a newer installer on the site than on the PC; ask Alex, or wait for the next one:
+- [ ] Press **Play**: the window shows "Updating the installer 1.4.0 → <newer>", then starts again from "Signing in" and opens the launcher as usual.
+- [ ] `%LOCALAPPDATA%\DeepslateWorks\` holds `install.ps1` (the new one; its `$InstallerVersion` line says so), `install.ps1.bak` (the old one) and `Setup.bat`, and nothing ending in `.new`.
+- [ ] Admin → Installs: one run, "Play", with "updated itself, 1.4.0 to <newer>" under it; its log starts with the update step.
+- [ ] Press **Play** again: no update step.
+- [ ] An old unzipped folder, `Update and Play.bat`: the folder's `install.ps1` is replaced too, and the copy in `%LOCALAPPDATA%` is not put back to the old one.
 
 Play from the site (installer 1.3.0):
 - [ ] Before `Setup.bat` has ever run on the PC (or after deleting `HKCU\Software\Classes\deepslate`): press **Play** on Home. After about 2.5 s the page says "Looks like the launcher isn't set up on this PC" and offers the download.

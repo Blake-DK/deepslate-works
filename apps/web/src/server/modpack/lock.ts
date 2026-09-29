@@ -1,8 +1,11 @@
 import "server-only";
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type { LockFile } from "modpack";
 import { modpackPaths } from "modpack/paths";
+import { installerInfo, type InstallerInfo } from "@/lib/installer-info";
 
 export const P = modpackPaths(process.env.MODPACK_DIR);
 
@@ -26,6 +29,26 @@ export async function distFile(name: string): Promise<{ file: string; size: numb
   try {
     const s = await stat(file);
     return s.isFile() ? { file, size: s.size, mtime: s.mtime } : null;
+  } catch {
+    return null;
+  }
+}
+
+let installerCache: { key: string; sha256: string } | null = null;
+
+/** The installer the site hands out: its version and the checksum of `installer.zip` as it is on disk now. */
+export async function getInstaller(): Promise<InstallerInfo | null> {
+  const zip = await distFile("installer.zip");
+  if (!zip) return null;
+  try {
+    const key = `${zip.size}:${zip.mtime.getTime()}`;
+    if (installerCache?.key !== key) {
+      const hash = createHash("sha256");
+      for await (const chunk of createReadStream(zip.file)) hash.update(chunk as Buffer);
+      installerCache = { key, sha256: hash.digest("hex") };
+    }
+    const sidecar: unknown = JSON.parse(await readFile(path.join(P.dist, "installer.json"), "utf8"));
+    return installerInfo(sidecar, { sha256: installerCache.sha256, size: zip.size });
   } catch {
     return null;
   }

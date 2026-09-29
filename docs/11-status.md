@@ -106,9 +106,20 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 - **Site.** `PlayButton` (`apps/web/src/components/server/play-button.tsx`) on Home and `/install`; the rule for "nothing happened" and for the chip are in `apps/web/src/lib/play.ts`, tested. `InstallReport.mode` (migration `0007_install_report_mode`), "From" column in Admin → Installs, "pressed Play" in the event log.
 - **Two things done beyond the spec, both small:** in play mode an open launcher no longer stops the run when the profile is already right (the file is left alone); `Setup.bat` is as strict as before. And a mod file held open by the running game gives "close Minecraft" instead of a bare error.
 - **Two old faults found on the way and fixed:** the classic launcher was looked for in `C:\Program Files(x86)` (no space; `$env:ProgramFiles(x86)` inside a string), so on a PC with the classic launcher "open the launcher" fell through to the Store app and `minecraft://`; and `installed.json` recorded the version the script was built with, not the one it installed.
-- **Known gap:** the copy in `%LOCALAPPDATA%` does not update itself (docs/07). Pack updates do not need it to; fixes to the script do. For the planner.
+- ~~Known gap: the copy in `%LOCALAPPDATA%` does not update itself~~ Closed the same day on the planner's spec, see "The installer updates itself" below.
 - Tests: web 128, api 85, modpack 9; installer self test 32 checks.
 - **Acceptance · state.** None of the three lines can be ticked from here; all need a Windows PC and a browser. "Fresh PC → Play shows the install prompt": the rule is tested, the browser behaviour is not. "Installed PC → Play launches within 10 s and a mode=play report appears": the report path is tested end to end from a Linux container (see the session log), the registry, the copy and the launch are not. "After a pack version bump … the chip clears": the comparison is tested; not the run. The lines are in the Windows test checklist in docs/07.
+
+### The installer updates itself (2026-09-29, planner spec; docs/07 "The installer updates itself")
+
+- **Installer 1.4.0.** In `-Play` mode, when the mod list names a newer installer: download `installer.zip` from `/downloads` with the launcher token, check it, replace `install.ps1` and `Setup.bat` next to the running script, start the new script with the same arguments. Step title "Updating the installer 1.3.0 → 1.4.0"; `updatedFrom` and `updateProblem` in the report (migration `0008_install_report_update`).
+- **The spec said the mod list already carried the installer's version. It did not.** It does now: `installer: { version, sha256, size }`, from `dist/installer.json`, which the build writes and the portal checks against the zip on disk before passing it on.
+- **Never replaced on a mismatch,** and more than the checksum is checked before anything is written: the two files by exact name, the version inside the script, that it parses. The zip is never unpacked. After a refusal the run carries on with the script it has.
+- **Decisions taken here, for the planner to overrule:** the address of the zip is not taken from the mod list (the script's own site, `/downloads/installer.zip`, only); a failed update does not fail the run; `Update and Play.bat` and `README.txt` are not replaced (the first may be running); the old script is kept as `install.ps1.bak`; one update per run at most; step 9 never copies an older script over a newer copy.
+- **The link rule is unchanged,** as the planner confirmed.
+- Tests: installer self test 46 checks (14 new: versions, wrong checksum, no checksum, wrong version inside, unparsable script, missing `Setup.bat`, other paths and spellings, strays in the zip, the report fields); web 132; modpack 12; api 85.
+- **Checked from Linux against the live site:** see the session log. **Not checked:** on Windows, under Windows PowerShell 5.1, with the launcher there; the lines are in the Windows test checklist in docs/07. It can only be tried for real when the site has a newer installer than the PC.
+- **A PC set up with 1.3.0 needs one fresh download**: 1.3.0 has no update step.
 
 ### docs/16 acceptance · state
 
@@ -310,7 +321,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 14. **The first real join.** Nobody has joined the server yet, so join, chat and death lines have only been tested against the log format. After the first session: Admin → Events should show the join and the leave, `/analytics` one session; if not, Admin → Server → Console has the lines as AMP sent them.
 15. ~~Map embedding~~ Done 2026-09-29 on Alex's decision: `map.deepslate.dsw.test` sends `Content-Security-Policy: frame-ancestors https://deepslate.dsw.test`. The shared Caddyfile was backed up first (`Caddyfile.bak-20260929T072306Z`), the new config validated before loading, every site checked afterwards.
 13. ~~Does a sleeping server count as up for downloads?~~ **Yes** (Alex, 2026-09-29): downloads are open while the server is Running or asleep (`apps/web/src/lib/gate-rule.ts`).
-16. **Play from the site, on Windows:** download the installer again (1.3.0), run `Setup.bat`, then work through "Play from the site" in the Windows test checklist (docs/07). Eight lines, ten minutes.
+16. **Play from the site, on Windows:** download the installer again (1.4.0; it updates itself from then on), run `Setup.bat`, then work through "Play from the site" in the Windows test checklist (docs/07). Eight lines, ten minutes.
 11. ~~Rotate the GitHub token~~ New token in place 2026-09-29 (expires 2026-11-28). **Alex: revoke the old one on GitHub** (Settings → Developer settings → Fine-grained tokens); replacing it on the VPS does not invalidate it.
 
 ## Session log

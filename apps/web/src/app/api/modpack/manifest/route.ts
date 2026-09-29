@@ -1,5 +1,5 @@
 import { getManifest } from "@/server/modpack/manifest";
-import { getLock } from "@/server/modpack/lock";
+import { getInstaller, getLock } from "@/server/modpack/lock";
 import { loadCurrentUser } from "@/server/auth/session";
 import { canDownload, manifestKeyOk } from "@/server/modpack/gate";
 import { env } from "@/env";
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
       return Response.json({ error: { code, message } }, { status: gate.reason === "anonymous" ? 401 : 403 });
     }
   }
-  const [m, lock] = await Promise.all([getManifest(), getLock()]);
+  const [m, lock, installer] = await Promise.all([getManifest(), getLock(), getInstaller()]);
   if (!lock) return Response.json({ error: { code: "no_lock", message: "Pack not built yet" } }, { status: 503 });
   const k = key && manifestKeyOk(key) ? `?key=${encodeURIComponent(key)}` : "";
   const body = {
@@ -37,6 +37,9 @@ export async function GET(req: Request) {
     config_url: lock.configs.length ? `${env.AUTH_URL}/downloads/config.zip${k}` : null,
     files: lock.files.map((f) => ({ slug: f.slug, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size, side: f.side })),
     configs: lock.configs,
+    // docs/07 "The installer updates itself": which installer is current, and the checksum of its zip. No address:
+    // the installer fetches it from /downloads on the site it was built for, and from nowhere else.
+    installer,
   };
   return Response.json(body, { headers: { "cache-control": "private, max-age=60" } });
 }

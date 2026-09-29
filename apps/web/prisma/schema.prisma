@@ -191,6 +191,8 @@ model InstallReport {
   packVersion      String
   installerVersion String
   mode             String   @default("install") // install (Setup.bat) | play (the Play button, or Update and Play.bat)
+  updatedFrom      String?  // the installer version that fetched this one and started it (docs/07 "The installer updates itself")
+  updateProblem    String?  // why an update that was due was not applied, e.g. the checksum did not match
   outcome          String   // ok | failed | cancelled
   failedStep       String?
   durationSec      Int

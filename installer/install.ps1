@@ -35,7 +35,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.3.0"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report; 1.3.0: Play from the site
+$InstallerVersion = "1.4.0"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report; 1.3.0: Play from the site; 1.4.0: updates itself
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 
 $ErrorActionPreference = "Stop"
@@ -49,6 +49,11 @@ $script:RunLog = New-Object System.Collections.Generic.List[string]   # this run
 $script:Token = $null
 $script:Reported = $false
 $script:PackSeen = $PackVersion
+# Set when an older copy of this script fetched this one and started it in its place. It comes through the
+# environment, which a link cannot reach, and it is also what stops a second update in the same run.
+$script:UpdatedFrom = $null
+if ($env:DEEPSLATE_UPDATED_FROM -match '^\d{1,4}(\.\d{1,4}){1,3}$') { $script:UpdatedFrom = [string]$env:DEEPSLATE_UPDATED_FROM }
+$script:UpdateProblem = $null  # why an update that was due was not applied
 $script:Facts = @{ java = $null; neoforge = $null; launcher = $null }
 # Words that would identify the person or the PC. They are blanked in everything that is sent.
 $script:Personal = @(@($env:USERNAME, [Environment]::UserName, $env:COMPUTERNAME, [Environment]::MachineName) | Where-Object { $_ -and ([string]$_).Length -ge 3 } | Select-Object -Unique)
@@ -157,9 +162,13 @@ function Redact-Tree($v) {
 function New-Report([string]$outcome) {
   $failed = $null
   if ($outcome -ne "ok" -and $script:StepName) { $failed = $script:StepName }
+  $problem = $null
+  if ($script:UpdateProblem) { $problem = Redact ([string]$script:UpdateProblem) -Addresses }
   return [ordered]@{
     packVersion      = [string]$script:PackSeen
     installerVersion = $InstallerVersion
+    updatedFrom      = $script:UpdatedFrom
+    updateProblem    = $problem
     mode             = $Mode
     outcome          = $outcome
     failedStep       = $failed
@@ -293,6 +302,87 @@ function Register-PlayLink([string]$scriptPath) {
   Set-Item -Path "$base\shell\open\command" -Value (Get-HandlerCommand $scriptPath)
 }
 
+# ---- the installer updates itself (docs/07 "The installer updates itself") ------------------------------
+# The mod list names the installer the site hands out and the SHA-256 of its zip. In -Play mode a script
+# older than that fetches the zip, checks it, replaces install.ps1 and Setup.bat next to itself and starts
+# the new script in its own place. Nothing is replaced unless every check has passed.
+
+function Test-Newer([string]$theirs, [string]$ours) {
+  if ($theirs -notmatch '^\d{1,4}(\.\d{1,4}){1,3}$' -or $ours -notmatch '^\d{1,4}(\.\d{1,4}){1,3}$') { return $false }
+  try { return ([version]$theirs -gt [version]$ours) } catch { return $false }
+}
+
+function Get-ScriptVersion([string]$path) {
+  try {
+    $m = [regex]::Match([IO.File]::ReadAllText($path), '(?m)^\$InstallerVersion = "([0-9.]+)"')
+    if ($m.Success) { return $m.Groups[1].Value }
+  } catch {}
+  return ""
+}
+
+# "" when install.ps1 and Setup.bat in $dir are now the ones from the zip. Otherwise what was wrong, in
+# words, and nothing in $dir has been touched.
+function Install-Update([string]$zip, [string]$sha256, [string]$version, [string]$dir) {
+  if ($sha256 -notmatch '^[0-9a-fA-F]{64}$') { return "the site gave no checksum for it" }
+  $got = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
+  if ($got -ne $sha256.ToLower()) { return ("the checksum of the download ({0}...) is not the one the site gave ({1}...)" -f $got.Substring(0, 12), $sha256.Substring(0, 12).ToLower()) }
+  Add-Type -AssemblyName System.IO.Compression
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $names = @("Setup.bat", "install.ps1")   # these two and nothing else, whatever the zip holds; taken by name, never unpacked by path
+  $files = @{}
+  $archive = [IO.Compression.ZipFile]::OpenRead($zip)
+  try {
+    foreach ($name in $names) {
+      $entry = @($archive.Entries | Where-Object { $_.FullName -ceq $name }) | Select-Object -First 1
+      if (-not $entry) { return ("{0} is not in the download" -f $name) }
+      if ($entry.Length -lt 1 -or $entry.Length -gt 2MB) { return ("{0} in the download has an unlikely size" -f $name) }
+      $ms = New-Object IO.MemoryStream
+      $in = $entry.Open()
+      try { $in.CopyTo($ms) } finally { $in.Dispose() }
+      $files[$name] = $ms.ToArray()
+    }
+  } finally { $archive.Dispose() }
+  $text = (New-Object Text.UTF8Encoding($false)).GetString($files["install.ps1"])
+  if ($text -notmatch ('(?m)^\$InstallerVersion = "' + [regex]::Escape($version) + '"')) { return ("the script in the download is not version {0}" -f $version) }
+  $errs = $null; $tokens = $null
+  [void][System.Management.Automation.Language.Parser]::ParseInput($text, [ref]$tokens, [ref]$errs)
+  if ($errs -and @($errs).Count -gt 0) { return "the script in the download does not read as PowerShell" }
+
+  # Everything has been checked. Written next to the old files first, then moved over them.
+  foreach ($name in $names) { [IO.File]::WriteAllBytes((Join-Path $dir ($name + ".new")), [byte[]]$files[$name]) }
+  $old = Join-Path $dir "install.ps1"
+  if (Test-Path $old) { Copy-Item -Path $old -Destination ($old + ".bak") -Force }
+  foreach ($name in $names) { Move-Item -Force -Path (Join-Path $dir ($name + ".new")) -Destination (Join-Path $dir $name) }
+  return ""
+}
+
+# $true when the newer script is in place and has to be started; the caller does that and leaves.
+function Update-Self($manifest, $headers) {
+  if ($Mode -ne "play" -or $DryRun -or $script:UpdatedFrom -or @($PretendRunning).Count -gt 0 -or -not $PSCommandPath) { return $false }
+  $inst = $null
+  if ($manifest.PSObject.Properties["installer"]) { $inst = $manifest.installer }
+  if (-not $inst -or -not (Test-Newer ([string]$inst.version) $InstallerVersion)) { return $false }
+  $new = [string]$inst.version
+  Step ("Updating the installer {0} {1} {2}" -f $InstallerVersion, [char]0x2192, $new)
+  $zip = Join-Path $Temp "deepslate-installer-update.zip"
+  $problem = ""
+  try {
+    # From this site's /downloads and nowhere else: the mod list says which version and which checksum, never where from.
+    Invoke-WebRequest -Uri "$PortalUrl/downloads/installer.zip" -Headers $headers -OutFile $zip -UseBasicParsing -TimeoutSec 120
+    $problem = Install-Update $zip ([string]$inst.sha256) $new (Split-Path -Parent $PSCommandPath)
+  } catch { $problem = ("it could not be fetched or written: {0}" -f $_.Exception.Message) }
+  finally { Remove-Item $zip -Force -ErrorAction SilentlyContinue }
+  if ($problem -ne "") {
+    $script:UpdateProblem = $problem
+    Log ("UPDATE NOT APPLIED: " + $problem)
+    Write-Host ("   The installer was not updated: {0}." -f $problem) -ForegroundColor Yellow
+    Write-Host ("   Nothing was replaced. Carrying on with installer {0}." -f $InstallerVersion) -ForegroundColor Gray
+    return $false
+  }
+  Tick ("Installer {0} is in place; starting it" -f $new)
+  return $true
+}
+
 # $true when the Play button will work on this PC afterwards.
 function Install-Self {
   if ($DryRun -or $script:CustomRoot -or $env:OS -ne "Windows_NT" -or -not $env:LOCALAPPDATA -or -not $PSCommandPath) { return $false }
@@ -302,7 +392,14 @@ function Install-Self {
   $me = (Resolve-Path $PSCommandPath).Path
   if ($me -ne $target) {
     $same = (Test-Path $target) -and ((Get-FileHash $me -Algorithm SHA256).Hash -eq (Get-FileHash $target -Algorithm SHA256).Hash)
-    if (-not $same) { Copy-Item -Path $me -Destination $target -Force; Log ("copied the installer to " + $target) }
+    # Never an older script over a newer one: the copy may have updated itself since this folder was unzipped.
+    if (-not $same -and (Test-Path $target) -and (Test-Newer (Get-ScriptVersion $target) $InstallerVersion)) { $same = $true; Log ("the copy in " + $dir + " is newer than this script; left as it is") }
+    if (-not $same) {
+      Copy-Item -Path $me -Destination $target -Force
+      $bat = Join-Path (Split-Path -Parent $me) "Setup.bat"
+      if (Test-Path $bat) { Copy-Item -Path $bat -Destination (Join-Path $dir "Setup.bat") -Force }
+      Log ("copied the installer to " + $target)
+    }
   }
   if (-not (Test-Path $target)) { return $false }
   Register-PlayLink $target
@@ -412,6 +509,68 @@ if ($SelfTest) {
   $Mode = "install"
   Check "a normal run says so too" ((New-Report "ok").mode -eq "install")
 
+  Write-Host "Self test: the installer updates itself" -ForegroundColor White
+  Check "1.4.0 is newer than 1.3.0, and 1.10.0 than 1.9.0" ((Test-Newer "1.4.0" "1.3.0") -and (Test-Newer "1.10.0" "1.9.0"))
+  $notNewer = @(@("1.3.0", "1.3.0"), @("1.2.9", "1.3.0"), @("banana", "1.3.0"), @("", "1.3.0"), @("9.9.9; calc", "1.3.0"), @("v2.0.0", "1.3.0")) | Where-Object { Test-Newer $_[0] $_[1] }
+  Check "the same, an older one and anything that is not a version are not" (@($notNewer).Count -eq 0)
+  Add-Type -AssemblyName System.IO.Compression
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  function New-TestZip($path, $entries) {
+    if (Test-Path $path) { Remove-Item $path -Force }
+    $z = [IO.Compression.ZipFile]::Open($path, [IO.Compression.ZipArchiveMode]::Create)
+    try {
+      foreach ($k in $entries.Keys) {
+        $w = New-Object IO.StreamWriter($z.CreateEntry($k).Open())
+        try { $w.Write([string]$entries[$k]) } finally { $w.Dispose() }
+      }
+    } finally { $z.Dispose() }
+    return (Get-FileHash -Path $path -Algorithm SHA256).Hash
+  }
+  $up = Join-Path $dir "update"
+  $home1 = Join-Path $up "folder"
+  New-Item -ItemType Directory -Force -Path $home1 | Out-Null
+  $oldPs = '$InstallerVersion = "1.3.0"' + "`nWrite-Host old"
+  $newPs = '$InstallerVersion = "1.4.0"' + "`nWrite-Host new"
+  function Reset-Folder { [IO.File]::WriteAllText((Join-Path $home1 "install.ps1"), $oldPs); [IO.File]::WriteAllText((Join-Path $home1 "Setup.bat"), "old bat"); Get-ChildItem $home1 | Where-Object { $_.Name -notin @("install.ps1", "Setup.bat") } | Remove-Item -Force -Recurse }
+  function Test-Untouched { return ((([IO.File]::ReadAllText((Join-Path $home1 "install.ps1"))) -eq $oldPs) -and (([IO.File]::ReadAllText((Join-Path $home1 "Setup.bat"))) -eq "old bat") -and (@(Get-ChildItem $home1).Count -eq 2)) }
+  $zip = Join-Path $up "installer.zip"
+
+  Reset-Folder
+  $sum = New-TestZip $zip ([ordered]@{ "install.ps1" = $newPs; "Setup.bat" = "new bat"; "README.txt" = "read me" })
+  $r = Install-Update $zip "0000000000000000000000000000000000000000000000000000000000000000" "1.4.0" $home1
+  Check ("a download with another checksum replaces nothing: " + $r) (($r -ne "") -and (Test-Untouched))
+  $r = Install-Update $zip "" "1.4.0" $home1
+  Check ("no checksum from the site, nothing replaced: " + $r) (($r -ne "") -and (Test-Untouched))
+  $r = Install-Update $zip $sum "1.5.0" $home1
+  Check ("a script of another version than the site named, nothing replaced: " + $r) (($r -ne "") -and (Test-Untouched))
+  $r = Install-Update $zip $sum "1.4.0" $home1
+  Check "the right download replaces install.ps1 and Setup.bat" (($r -eq "") -and ([IO.File]::ReadAllText((Join-Path $home1 "install.ps1")) -eq $newPs) -and ([IO.File]::ReadAllText((Join-Path $home1 "Setup.bat")) -eq "new bat"))
+  Check "the script it replaced is kept as install.ps1.bak, and nothing else was written" (([IO.File]::ReadAllText((Join-Path $home1 "install.ps1.bak")) -eq $oldPs) -and (@(Get-ChildItem $home1).Count -eq 3))
+  Check "the version of a script file can be read" ((Get-ScriptVersion (Join-Path $home1 "install.ps1")) -eq "1.4.0")
+
+  Reset-Folder
+  $sum = New-TestZip $zip ([ordered]@{ "install.ps1" = ('$InstallerVersion = "1.4.0"' + "`nif ((( {"); "Setup.bat" = "new bat" })
+  $r = Install-Update $zip $sum "1.4.0" $home1
+  Check ("a script that does not parse replaces nothing: " + $r) (($r -ne "") -and (Test-Untouched))
+  $sum = New-TestZip $zip ([ordered]@{ "install.ps1" = $newPs })
+  $r = Install-Update $zip $sum "1.4.0" $home1
+  Check ("a download without Setup.bat replaces nothing: " + $r) (($r -ne "") -and (Test-Untouched))
+  $sum = New-TestZip $zip ([ordered]@{ "sub/install.ps1" = $newPs; "../install.ps1" = $newPs; "INSTALL.PS1" = $newPs; "Setup.bat" = "new bat" })
+  $r = Install-Update $zip $sum "1.4.0" $home1
+  Check ("install.ps1 under another path or spelling is not taken: " + $r) (($r -ne "") -and (Test-Untouched))
+
+  Reset-Folder
+  $sum = New-TestZip $zip ([ordered]@{ "../evil.ps1" = "evil"; "..\evil2.ps1" = "evil"; "sub/evil.exe" = "evil"; "evil.bat" = "evil"; "install.ps1" = $newPs; "Setup.bat" = "new bat" })
+  $r = Install-Update $zip $sum "1.4.0" $home1
+  $strays = @(Get-ChildItem $up -Recurse -Force | Where-Object { $_.Name -like "*evil*" })
+  Check "whatever else the zip holds stays in the zip" (($r -eq "") -and ($strays.Count -eq 0) -and (@(Get-ChildItem $home1).Count -eq 3))
+  $script:UpdatedFrom = "1.3.0"; $script:UpdateProblem = $null
+  Check "a report from an updated script says which version fetched it" ((New-Report "ok").updatedFrom -eq "1.3.0")
+  $script:UpdatedFrom = $null; $script:UpdateProblem = "could not write C:\Users\" + $script:Personal[0] + "\AppData\Local\DeepslateWorks\install.ps1.new"
+  $rp = New-Report "ok"
+  Check ("an update that was not applied is in the report, without the name: " + $rp.updateProblem) (($rp.updatedFrom -eq $null) -and ($rp.updateProblem -like "could not write C:\Users\~\*") )
+  $script:UpdateProblem = $null
+
   Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
   if ($script:SelfTestBad -gt 0) { Write-Host ("{0} check(s) failed" -f $script:SelfTestBad) -ForegroundColor Red; exit 1 }
   Write-Host "All checks passed." -ForegroundColor Green
@@ -421,6 +580,10 @@ if ($SelfTest) {
 Write-Host ("{0} installer ({1})" -f $PackName, $PackVersion) -ForegroundColor White
 Log ("=== {0} {1} start ===" -f $PackName, $PackVersion)
 $script:CustomRoot = ($Root -ne "")   # a test run: nothing is copied or registered
+if ($script:UpdatedFrom) {
+  Log ("STEP Updating the installer {0} {1} {2}" -f $script:UpdatedFrom, [char]0x2192, $InstallerVersion)
+  Log ("OK installer {0} fetched, checked and started by installer {1}" -f $InstallerVersion, $script:UpdatedFrom)
+}
 if ($Root -eq "") { $Root = $env:APPDATA }
 $Minecraft = Join-Path $Root ".minecraft"
 $Profiles = Join-Path $Minecraft "launcher_profiles.json"
@@ -500,6 +663,20 @@ try {
     Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $ManifestUrl)
   }
   if ($manifest.version) { $script:PackSeen = [string]$manifest.version }
+
+  # A newer installer on the site? (-Play only.) The new script starts again from the top, with what this one was started with.
+  if (Update-Self $manifest $headers) {
+    $env:DEEPSLATE_UPDATED_FROM = $InstallerVersion
+    $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $PSCommandPath), "-Play")
+    if ($FromLink) { $again += $Link }
+    else {
+      if ($script:CustomRoot) { $again += @("-Root", ('"{0}"' -f $Root)) }
+      if ($NoPrompt) { $again += "-NoPrompt" }
+    }
+    $script:Reported = $true   # the report is the new script's to send
+    $child = Start-Process -FilePath ((Get-Process -Id $PID).Path) -ArgumentList $again -Wait -PassThru -NoNewWindow
+    exit $child.ExitCode
+  }
   $neo = $manifest.neoforge
   $mc = $manifest.minecraft
   $profile = $manifest.profile

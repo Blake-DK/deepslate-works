@@ -35,7 +35,7 @@ describe("what a player may see", () => {
     expect(eventWhere(readFilter({}, false), false, null).kind.in).toEqual(["JOIN", "LEAVE", "DEATH", "ADVANCEMENT", "SERVER_START", "SERVER_STOP"]);
   });
   it("admins get everything by default", () => {
-    expect(eventWhere(readFilter({}, true), true, null).kind.in).toHaveLength(18);
+    expect(eventWhere(readFilter({}, true), true, null).kind.in).toHaveLength(19);
     expect(eventWhere(readFilter({}, false), false, null).kind.in).not.toContain("JOIN_BLOCKED");
     expect(eventWhere(readFilter({ kind: "INSTALL" }, false), false, null).kind.in).not.toContain("INSTALL");
   });

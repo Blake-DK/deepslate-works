@@ -59,6 +59,14 @@ Players (`/admin/users`), Installs and Invites are tables with fixed columns: on
 - "Last 24 h" sparkline of player count from `ServerSnapshot`.
 - **Play** card (once the server is visible to the member): see "Play from the site" under Phase 2.
 
+### The download log (Alex, 2026-09-29: "add a download log on the event system")
+- Event kind **Download** (`DOWNLOAD`, migration `0013_download_kind`), admins only, a filter of its own on `/events`.
+- Written when somebody fetches from the site: the installer (`/downloads/installer.zip`, with its version and size), the pack's settings (`/downloads/config.zip`), the mod list (`/api/modpack/manifest`, with the pack's version and how many mods it names for a PC). It says who, and whether it was the site or the installer that asked. With the pack's key there is nobody to name and the line says so.
+- **Refusals are written too**: "Pabulum was refused the installer: the site is not open yet and they have no early access". Somebody who is not signed in is sent to the sign-in page and not written down.
+- The same person fetching the same thing again within two minutes is counted on the line that is there (`count`), not written again.
+- **The mods' own files are not in it and cannot be**: they come from Modrinth straight to the player's PC. The mod list is what names them; a run that went through is in the install reports.
+- Files an admin takes from the server (Admin → Files, `files.download`) are of this kind too from now on; older ones stay under Admin.
+
 ### Admin `/admin/server` · Pre-generation (2026-09-29)
 - A mode, off by default: **When nobody's online** (carries on while the server is empty, pauses when anyone joins; optional window of the day, optional hours at most) or **Now** (runs whoever is playing, for so many hours or until 100%; warns about lag). Radius editable (1500), chunks done of the total, percentage, chunky's estimate, Stop and Cancel. Ends by itself at 100%.
 - While a mode is due the portal switches AMP's sleep mode off (`MinecraftModule.Limits.SleepMode`) and puts it back afterwards; it needs the permission `Settings.MinecraftModule.Limits.SleepMode` and refuses to start without it.

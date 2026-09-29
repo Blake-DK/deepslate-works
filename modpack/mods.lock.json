@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-29T16:47:53.868Z",
+  "generatedAt": "2026-09-29T18:13:36.950Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "b5d461ea8de4dcdc19e16cbb55783b052a82f23d409c5a05f310bc194c8639bf",
+  "hash": "1a48e8ff01adbbd3f2d2d325ddfeb6fceef9680b1125655b85f3679bf5a046e7",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -493,5 +493,14 @@
       "requiredBy": []
     }
   ],
-  "configs": []
+  "configs": [
+    {
+      "path": "config/fallingtree.json",
+      "sha256": "8398591767375d5dcc635f1a9d487c81f3f8ffa9f15b382749f2d965aca93120"
+    },
+    {
+      "path": "config/tacz-common.toml",
+      "sha256": "11b62242f5accc0b1dfc2541c58d393f52b9d69232b9036ec442849d66acbf5e"
+    }
+  ]
 }

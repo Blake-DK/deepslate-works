@@ -31,7 +31,8 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
       for (const r of d.removed) yield `- ${r.slug} ${r.versionNumber}`;
       for (const c of d.changed) yield `~ ${c.slug} ${c.from} -> ${c.to}`;
       if (d.neoforge) yield `~ neoforge ${d.neoforge.from} -> ${d.neoforge.to}`;
-      const changed = d.added.length + d.removed.length + d.changed.length + (d.neoforge ? 1 : 0);
+      for (const c of d.configs) yield `~ settings ${c}`;
+      const changed = d.added.length + d.removed.length + d.changed.length + d.configs.length + (d.neoforge ? 1 : 0);
       if (prev && changed === 0) {
         yield `mods.lock.json unchanged (${lock.files.length} files, NeoForge ${lock.neoforge}, ${lock.hash.slice(0, 8)})`;
         return;

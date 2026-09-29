@@ -144,6 +144,23 @@ Settings, as shipped: `pvp=false` in `server.properties`. TaCZ has no setting fo
 
 **The area that was pre-generated that morning (radius 1500, 35,721 chunks) was made before these mods were on.** What they add to new terrain (Create's zinc ore, Farmer's Delight's wild crops, the villages' waystones) is missing inside it and present in every chunk made from now on. To have it near spawn the world would have to be made again; that is Alex's to decide.
 
+## Settings shipped with the pack (2026-09-29 evening)
+
+`modpack/config/` holds the settings files that go out with the pack, to the server (`dist/server/config`, by Sync) and to every PC (`config.zip`, by the installer). Two so far, each the mod's own file as the server had written it, with one value changed:
+
+| File | Changed | Why |
+|---|---|---|
+| `fallingtree.json` | `tools.ignoreTools: true` | Alex: "it should work without an axe". A tree falls whatever is in the hand; sneaking takes one log |
+| `tacz-common.toml` | `ExplosiveAmmoDestroysBlock = false` | the planner's ruling: griefing by accident |
+
+**The settings are part of the pack's version since then.** Before, the version was made of the mods alone: a change of settings left the lock "unchanged", its list of settings stayed empty, the mod list named no `config_url`, and no PC was sent anything. Lock now counts a settings file that is new, other than it was, or gone as a change (`~ settings config/…`), and the hash takes the files' checksums in. A pack without settings has the hash it always had. The pack went from `0.1.0+b5d461ea` to `0.1.0+1a48e8ff` by this alone, so Play-first asks everyone for one more run of Play, which fetches `config.zip` and no mod.
+
+A Sync that changes settings only does not restart the server. What is running reads its settings at start, so the change counts from the next start.
+
+## Configured cannot be added from Modrinth (planner's note, 2026-09-29)
+
+The note asked for "Configured", Modrinth slug `configured`, NeoForge 1.21.1, client side. **That slug is another mod**: a Fabric-only mod of the same name (loaders: fabric; the server is where it runs). MrCrayfish's Configured, the one JEI means with "Install the Configured mod", is published on CurseForge and not on Modrinth. Lock answered `configured: no neoforge 1.21.1 build on Modrinth`, and the entry was taken out again; nothing of it reached a PC or the server. The pack takes its files from Modrinth only (docs/06 top). For the planner: a second source (CurseForge needs a key and the author's leave to distribute), or a file kept in the repo, or doing without.
+
 ## FallingTree (2026-09-29)
 
 `fallingtree` on Modrinth. **Part of the default pack since 2026-09-29** (Alex: "tree felling is a default mod pack"): category base, switched on, not voted on. Works next to VeinMiner: FallingTree is the axe, VeinMiner is the key you hold.

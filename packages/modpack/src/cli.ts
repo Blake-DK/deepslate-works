@@ -61,7 +61,8 @@ async function main() {
       const { lock, warnings } = await buildLock(manifest, { configDir: P.config, onProgress: log });
       for (const w of warnings) log(`WARN  ${w}`);
       const d = diffLocks(prev, lock);
-      const changed = d.added.length + d.removed.length + d.changed.length + (d.neoforge ? 1 : 0);
+      const changed = d.added.length + d.removed.length + d.changed.length + d.configs.length + (d.neoforge ? 1 : 0);
+      for (const c of d.configs) log(`~ settings ${c}`);
       for (const a of d.added) log(`+ ${a.slug} ${a.versionNumber}`);
       for (const r of d.removed) log(`- ${r.slug} ${r.versionNumber}`);
       for (const c of d.changed) log(`~ ${c.slug} ${c.from} -> ${c.to}`);

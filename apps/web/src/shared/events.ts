@@ -4,7 +4,7 @@
 // docs/16 §4: what an audit entry becomes in the event log. Portal actions are ADMIN_ACTION or
 // PLAYER_ACTION rows with the action's name, parameters and result in `meta`; a few have a kind of their own.
 
-export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP", "INSTALL", "JOIN_BLOCKED"] as const;
+export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP", "INSTALL", "JOIN_BLOCKED", "DOWNLOAD"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 /** What players may see at /events. Everything else is for admins. */
@@ -14,13 +14,13 @@ export type Severity = "info" | "player" | "warning" | "error" | "admin";
 export const SEVERITY: Record<EventKind, Severity> = {
   JOIN: "player", LEAVE: "player", DEATH: "player", CHAT: "player", ADVANCEMENT: "player",
   SERVER_START: "info", SERVER_STOP: "info", CRASH: "error", WARN: "warning", ERROR: "error",
-  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin", INSTALL: "player", JOIN_BLOCKED: "warning",
+  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin", INSTALL: "player", JOIN_BLOCKED: "warning", DOWNLOAD: "player",
 };
 
 export const KIND_LABEL: Record<EventKind, string> = {
   JOIN: "Joined", LEAVE: "Left", DEATH: "Death", CHAT: "Chat", ADVANCEMENT: "Advancement",
   SERVER_START: "Server started", SERVER_STOP: "Server stopped", CRASH: "Crash", WARN: "Warning", ERROR: "Error",
-  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup", INSTALL: "Install", JOIN_BLOCKED: "Held at the door",
+  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup", INSTALL: "Install", JOIN_BLOCKED: "Held at the door", DOWNLOAD: "Download",
 };
 
 export type AuditResult = "OK" | "DENIED" | "FAILED" | "TIMEOUT";
@@ -34,11 +34,33 @@ export function kindOf(action: string, role: Actor["role"]): EventKind {
   if (action === "server.backup") return "BACKUP";
   if (action === "installer.report") return "INSTALL";
   if (action === "join.blocked") return "JOIN_BLOCKED";
+  if (action.startsWith("download.") || action === "files.download") return "DOWNLOAD";
   return role === "ADMIN" || role === "system" ? "ADMIN_ACTION" : "PLAYER_ACTION";
 }
 
 type P = Record<string, unknown>;
 const s = (v: unknown, fallback = "?") => (typeof v === "string" && v ? v : typeof v === "number" ? String(v) : fallback);
+
+const size = (v: unknown) => (typeof v === "number" && v > 0 ? (v < 1_048_576 ? `${Math.max(1, Math.round(v / 1024))} KB` : `${(v / 1_048_576).toFixed(1)} MB`) : "");
+const WHY_NOT: Record<string, string> = { not_live: "the site is not open yet and they have no early access", server_offline: "downloads are open while the server is up" };
+const WHAT: Record<string, string> = { "installer.zip": "the installer", "config.zip": "the pack's settings" };
+const how = (p: P) => (p.via === "installer" ? ", from the installer" : "");
+
+/** "downloaded the installer 1.4.1 (21 KB)", "was refused the installer: the site is not open yet …" */
+function downloaded(p: P, key: boolean): string {
+  const file = s(p.file, "a file");
+  const what = `${WHAT[file] ?? file}${p.version && file === "installer.zip" ? ` ${s(p.version)}` : ""}`;
+  if (p.refused) return `was refused ${what}${how(p)}: ${WHY_NOT[s(p.refused)] ?? s(p.refused)}`;
+  const tail = [size(p.size), p.version && file !== "installer.zip" ? `pack ${s(p.version)}` : ""].filter(Boolean).join(", ");
+  return key ? `${what} ${tail ? `(${tail}) ` : ""}was downloaded with the pack's key` : `downloaded ${what}${tail ? ` (${tail})` : ""}${how(p)}`;
+}
+
+/** The mods' files come from Modrinth; the mod list is what the site hands out. */
+function modlist(p: P, key: boolean): string {
+  const tail = [p.version ? `pack ${s(p.version)}` : "", typeof p.files === "number" ? `${p.files} mods for a PC` : ""].filter(Boolean).join(", ");
+  if (p.refused) return `was refused the mod list${how(p)}: ${WHY_NOT[s(p.refused)] ?? s(p.refused)}`;
+  return key ? `the mod list ${tail ? `(${tail}) ` : ""}was fetched with the pack's key` : `fetched the mod list${tail ? ` (${tail})` : ""}${how(p)}`;
+}
 
 const PHRASES: Record<string, string | ((p: P) => string)> = {
   "auth.login": "tried to sign in",
@@ -120,16 +142,20 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
     ? (p.outcome === "ok" ? `pressed Play: ${s(p.packVersion, "the pack")}, launcher opened` : p.outcome === "cancelled" ? "pressed Play and closed the window" : `pressed Play and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)
     : (p.outcome === "ok" ? `installed ${s(p.packVersion, "the pack")}: all good` : p.outcome === "cancelled" ? `stopped the installer${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `ran the installer and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)}${p.updatedFrom ? ` (the installer updated itself, ${s(p.updatedFrom)} to ${s(p.installerVersion, "the current one")})` : p.updateProblem ? " (the installer could not update itself)" : ""}`,
   "files.download": (p) => `downloaded ${s(p.path)} from the server`,
+  "download.file": (p) => downloaded(p, false),
+  "download.file.key": (p) => downloaded(p, true),
+  "download.modlist": (p) => modlist(p, false),
+  "download.modlist.key": (p) => modlist(p, true),
   "retention.prune": (p) => `old entries cleared: ${s(p.events, "0")} events, ${s(p.ips, "0")} addresses${p.installs ? `, ${s(p.installs)} install reports` : ""}`,
   "events.export": "exported the event log",
   "analytics.export": "exported the analytics",
 };
 
 // Phrases that already say who (or have no who).
-const SELF_CONTAINED = new Set(["limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "world.pregenAutoPause"]);
+const SELF_CONTAINED = new Set(["download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "world.pregenAutoPause"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
-const OUTCOME_IN_PHRASE = new Set(["installer.report"]);
+const OUTCOME_IN_PHRASE = new Set(["installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);
 
 export function describeAction(action: string, actor: Actor, params: unknown, result: AuditResult = "OK"): string {
   const p = (params && typeof params === "object" ? params : {}) as P;

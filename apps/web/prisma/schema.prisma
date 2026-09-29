@@ -39,6 +39,7 @@ enum EventKind {
   BACKUP
   INSTALL
   JOIN_BLOCKED
+  DOWNLOAD
 }
 
 enum VoteStatus {

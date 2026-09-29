@@ -133,17 +133,31 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
 
   const files = [...entries.values()].sort((a, b) => a.slug.localeCompare(b.slug));
   const neoforge = await resolveNeoForge(m.neoforge);
-  const hash = createHash("sha256").update([neoforge, ...files.map((f) => `${f.slug}@${f.versionId}`)].join("\n")).digest("hex");
-  const lock: LockFile = { generatedAt: new Date().toISOString(), minecraft: m.minecraft, neoforge, hash, files, configs: await hashConfigs(opts.configDir) };
+  const configs = await hashConfigs(opts.configDir);
+  const lock: LockFile = { generatedAt: new Date().toISOString(), minecraft: m.minecraft, neoforge, hash: packHash(neoforge, files, configs), files, configs };
   return { lock, warnings };
 }
 
-export type LockDiff = { added: LockEntry[]; removed: LockEntry[]; changed: Array<{ slug: string; from: string; to: string }>; neoforge?: { from: string; to: string } };
+/**
+ * What the pack's version ends in. The settings shipped with the pack are part of it: until 2026-09-29 they were
+ * not, a change of settings alone left the lock "unchanged" and its list of settings empty, and no PC was sent
+ * them. A pack without settings has the hash it always had.
+ */
+export function packHash(neoforge: string, files: Array<Pick<LockEntry, "slug" | "versionId">>, configs: LockFile["configs"]): string {
+  return createHash("sha256").update([neoforge, ...files.map((f) => `${f.slug}@${f.versionId}`), ...configs.map((c) => `config:${c.path}@${c.sha256}`)].join("\n")).digest("hex");
+}
+
+export type LockDiff = { added: LockEntry[]; removed: LockEntry[]; changed: Array<{ slug: string; from: string; to: string }>; neoforge?: { from: string; to: string }; /** Settings files that are new, gone or other than they were. */ configs: string[] };
 
 export function diffLocks(prev: LockFile | null, next: LockFile): LockDiff {
   const p = new Map((prev?.files ?? []).map((f) => [f.slug, f]));
   const n = new Map(next.files.map((f) => [f.slug, f]));
-  const d: LockDiff = { added: [], removed: [], changed: [] };
+  const d: LockDiff = { added: [], removed: [], changed: [], configs: [] };
+  const pc = new Map((prev?.configs ?? []).map((c) => [c.path, c.sha256]));
+  const nc = new Map(next.configs.map((c) => [c.path, c.sha256]));
+  for (const [file, sum] of nc) if (pc.get(file) !== sum) d.configs.push(file);
+  for (const file of pc.keys()) if (!nc.has(file)) d.configs.push(file);
+  d.configs.sort();
   for (const [slug, f] of n) {
     const old = p.get(slug);
     if (!old) d.added.push(f);

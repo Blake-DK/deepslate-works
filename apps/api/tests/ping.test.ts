@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isPingChatter, parse } from "../src/events/parse.js";
 import { ConsoleTail } from "../src/amp/console.js";
 import { MockAmp } from "../src/amp/client.js";
-import { currentPings, pagesFor, PING_STALE_MS } from "../src/status/ping.js";
+import { currentPings, whoToAsk, PING_STALE_MS } from "../src/status/ping.js";
 import { toLive } from "../src/status/poller.js";
 import { actions, parsePos } from "../src/actions/registry.js";
 
@@ -38,19 +38,31 @@ describe("ping lines", () => {
 });
 
 describe("ping rounds", () => {
-  it("asks for as many pages as there are players to fill", () => {
-    expect(pagesFor(0)).toEqual([]);
-    expect(pagesFor(1)).toEqual([1]);
-    expect(pagesFor(10)).toEqual([1]);
-    expect(pagesFor(11)).toEqual([1, 2]);
-    expect(pagesFor(20)).toEqual([1, 2]);
+  it("asks about each player once, and only about names that are names", () => {
+    expect(whoToAsk([])).toEqual([]);
+    expect(whoToAsk(["bramble09", "m1_owl", "bramble09", "a b; op me", "x"])).toEqual(["bramble09", "m1_owl"]);
+    expect(whoToAsk(Array.from({ length: 60 }, (_, i) => `player_${i}`)).length).toBe(40);
   });
-  it("sends `pingall` and nothing a caller could shape", () => {
+  it("sends spark's command and nothing a caller could shape", () => {
     const ctx = { limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
-    expect(actions["server.pings"].build(ctx, { page: 1 })).toEqual(["pingall"]);
-    expect(actions["server.pings"].build(ctx, { page: 2 })).toEqual(["pingall 2"]);
-    expect(actions["server.pings"].input.safeParse({ page: "1; op me" }).success).toBe(false);
-    expect(actions["server.pings"].input.safeParse({ page: 0 }).success).toBe(false);
+    expect(actions["server.pings"].build(ctx, { name: "bramble09" })).toEqual(["spark ping --player bramble09"]);
+    expect(actions["server.pings"].input.safeParse({ name: "bramble09 --all; op me" }).success).toBe(false);
+  });
+  it("reads spark's answer", () => {
+    expect(parse("[\u26a1] Player bramble09 has 23 ms ping.")).toEqual([{ type: "ping", name: "bramble09", ms: 23 }]);
+    expect(parse("Player m1_owl has 187 ms ping.")).toEqual([{ type: "ping", name: "m1_owl", ms: 187 }]);
+    expect(parse("<bramble09> Player m1_owl has 5 ms ping.").some((e) => e.type === "ping")).toBe(false);
+    expect(isPingChatter("[\u26a1] Player bramble09 has 23 ms ping.")).toBe(true);
+    expect(isPingChatter("[\u26a1] Ping data is not available for 'bramble09'.")).toBe(true);
+  });
+  it("builds the commands for a new world from checked numbers and names only", () => {
+    const ctx = { limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
+    expect(actions["world.pregen"].build(ctx, { x: 0, z: 0, radius: 1500 })).toEqual(["chunky quiet 30", "chunky world minecraft:overworld", "chunky shape square", "chunky center 0 0", "chunky radius 1500", "chunky start"]);
+    expect(actions["world.pregen"].input.safeParse({ x: 0, z: 0, radius: 99999 }).success).toBe(false);
+    expect(actions["world.locate"].build(ctx, { what: "biome", id: "minecraft:cherry_grove", x: 0, z: 0 })).toEqual(["execute in minecraft:overworld positioned 0 64 0 run locate biome minecraft:cherry_grove"]);
+    expect(actions["world.locate"].input.safeParse({ what: "biome", id: "minecraft:plains run op x", x: 0, z: 0 }).success).toBe(false);
+    expect(actions["map.purge"].input.safeParse({ map: "overworld; stop" }).success).toBe(false);
+    expect(actions["world.standable"].build(ctx, { x: 0, y: 105, z: 0 })[0]).toBe("execute in minecraft:overworld run if block 0 104 0 minecraft:air");
   });
   it("shows a ping only while it is recent and its player is here", () => {
     const now = 1_000_000;

@@ -198,8 +198,37 @@ export const actions = {
   }),
   "server.restartCancelled": define({ name: "server.restartCancelled", role: "system", input: z.object({}), build: () => ["say The restart has been called off."] }),
   "server.list": define({ name: "server.list", role: "system", input: z.object({}), build: () => ["list"] }),
-  // TabTPS: everyone's ping, ten players to a page (docs/05 "Connection")
-  "server.pings": define({ name: "server.pings", role: "system", input: z.object({ page: z.number().int().min(1).max(20) }), build: (_ctx, { page }) => [page === 1 ? "pingall" : `pingall ${page}`] }),
+  // spark: one player's ping (docs/05 "Connection"). spark has no command for everyone at once.
+  "server.pings": define({ name: "server.pings", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`spark ping --player ${name}`] }),
+  // ---- the world (docs/09 "A new world")
+  "world.seed": define({ name: "world.seed", role: "ADMIN", input: z.object({}), build: () => ["seed"] }),
+  "world.save": define({ name: "world.save", role: "ADMIN", input: z.object({}), build: () => ["save-all"] }),
+  "world.pregen": define({
+    name: "world.pregen",
+    role: "ADMIN",
+    input: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(5000) }),
+    // `quiet 30`: one line of progress every half minute instead of every second
+    build: (_ctx, { x, z, radius }) => ["chunky quiet 30", "chunky world minecraft:overworld", "chunky shape square", `chunky center ${x} ${z}`, `chunky radius ${radius}`, "chunky start"],
+  }),
+  "world.pregenContinue": define({ name: "world.pregenContinue", role: "ADMIN", input: z.object({}), build: () => ["chunky continue"] }),
+  "world.pregenProgress": define({ name: "world.pregenProgress", role: "ADMIN", input: z.object({}), build: () => ["chunky progress"] }),
+  "world.locate": define({
+    name: "world.locate",
+    role: "ADMIN",
+    input: z.object({ what: z.enum(["structure", "biome"]), id: z.string().regex(/^#?[a-z0-9_.-]{1,40}:[a-z0-9_./-]{1,60}$/), x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000) }),
+    build: (_ctx, { what, id, x, z }) => [`execute in minecraft:overworld positioned ${x} 64 ${z} run locate ${what} ${id}`],
+  }),
+  // Can someone stand there? Three answers: the block below is not air ("Test failed"), the two above it are ("Test passed").
+  "world.standable": define({
+    name: "world.standable",
+    role: "ADMIN",
+    input: z.object({ x: z.number().int().min(-100_000).max(100_000), y: z.number().int().min(-63).max(318), z: z.number().int().min(-100_000).max(100_000) }),
+    build: (_ctx, { x, y, z }) => [ow(`if block ${x} ${y - 1} ${z} minecraft:air`), ow(`if block ${x} ${y} ${z} minecraft:air`), ow(`if block ${x} ${y + 1} ${z} minecraft:air`)],
+  }),
+  "map.list": define({ name: "map.list", role: "ADMIN", input: z.object({}), build: () => ["bluemap maps"] }),
+  "map.purge": define({ name: "map.purge", role: "ADMIN", input: z.object({ map: z.string().regex(/^[a-z0-9_-]{1,40}$/) }), build: (_ctx, { map }) => [`bluemap purge ${map}`] }),
+  "map.update": define({ name: "map.update", role: "ADMIN", input: z.object({ map: z.string().regex(/^[a-z0-9_-]{1,40}$/) }), build: (_ctx, { map }) => [`bluemap update ${map}`] }),
+  "map.status": define({ name: "map.status", role: "ADMIN", input: z.object({}), build: () => ["bluemap"] }),
 };
 
 export type ActionName = keyof typeof actions;

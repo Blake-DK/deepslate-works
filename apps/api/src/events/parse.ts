@@ -64,6 +64,8 @@ const RE = {
   // `data get entity <name> Pos` and `... Dimension`, asked before a member is moved to the entrance room
   pos: new RegExp(`^(${NAME}) has the following entity data: \\[(-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d, (-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d, (-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d\\]$`),
   dimension: new RegExp(`^(${NAME}) has the following entity data: "([a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64})"$`),
+  // spark, `spark ping --player Bramble09`: "[⚡] Player Bramble09 has 23 ms ping."
+  sparkPing: new RegExp(`^(?:\\[\u26a1\\]\\s*)?Player (${NAME}) has (\\d{1,6}) ms ping\\.$`),
   // TabTPS, `pingall`: " - Bramble09: 23ms", one line for each player, then "Average ping: 23ms (1 player)"
   ping: new RegExp(`^-\\s+(${NAME}):\\s+(\\d{1,6})\\s?ms$`),
   death: new RegExp(
@@ -82,7 +84,7 @@ const RE = {
 export function isPingChatter(text: string): boolean {
   const { message } = reduce(text);
   const t = message.trim();
-  return RE.ping.test(t) || /^Average ping: \d+\s?ms \(\d+ players?\)$/.test(t) || /^-* ?(?:\[?TabTPS\]? )?Player Pings ?-*$/.test(t) || /^-{6,}$/.test(t);
+  return RE.sparkPing.test(t) || /^(?:\[\u26a1\]\s*)?Ping data is not available for '[A-Za-z0-9_]{3,16}'\.$/.test(t) || RE.ping.test(t) || /^Average ping: \d+\s?ms \(\d+ players?\)$/.test(t) || /^-* ?(?:\[?TabTPS\]? )?Player Pings ?-*$/.test(t) || /^-{6,}$/.test(t);
 }
 
 // Printed on every start by the mod loader and harmless; they would only bury the lines that matter.
@@ -137,7 +139,7 @@ export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) =
     return [x, y, z].every(Number.isFinite) ? [{ type: "pos", name: m[1]!, x: x!, y: y!, z: z! }] : [];
   }
   if ((m = RE.dimension.exec(message))) return [{ type: "dimension", name: m[1]!, dimension: m[2]! }];
-  if ((m = RE.ping.exec(message.trim()))) return [{ type: "ping", name: m[1]!, ms: Number(m[2]) }];
+  if ((m = RE.sparkPing.exec(message.trim()) ?? RE.ping.exec(message.trim()))) return [{ type: "ping", name: m[1]!, ms: Number(m[2]) }];
   if ((m = RE.started.exec(message))) return [{ type: "started", seconds: Number(m[1]) }];
   if (RE.stopping.test(message)) return [{ type: "stopping" }];
   if ((m = RE.death.exec(message)) && (!isPlayer || isPlayer(m[1]!))) return [{ type: "death", name: m[1]!, text: m[2]! }];

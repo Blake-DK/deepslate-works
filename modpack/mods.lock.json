@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-29T09:33:47.382Z",
+  "generatedAt": "2026-09-29T10:52:05.541Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "9e578404586e8b71ca2c728645a399e9a672f25d9ac24d048646ebf982fe1641",
+  "hash": "47b0b5799c2640b0f67d232ac68973b18f0dcbb280c5fd26397c479c540461aa",
   "files": [
     {
       "slug": "appleskin",
@@ -241,21 +241,6 @@
       "sha512": "f86ce34f2759c69df82578c397ff55b666c84626229a98f598458b960c21b38c95d6bfef4772af7f963c4f4868e5e2d9aef6b99c1d51bab55bf45e0e6e6b5ed4",
       "sha1": "9430cc2ab64ff89d698be593769fb9f9ee4efae6",
       "size": 3642581,
-      "side": "server",
-      "requiredBy": []
-    },
-    {
-      "slug": "tabtps",
-      "name": "TabTPS",
-      "projectId": "cUhi3iB2",
-      "versionId": "JkFbz8lE",
-      "versionNumber": "1.3.25",
-      "versionType": "release",
-      "filename": "tabtps-neoforge-mc1.21.1-1.3.25.jar",
-      "url": "https://cdn.modrinth.com/data/cUhi3iB2/versions/JkFbz8lE/tabtps-neoforge-mc1.21.1-1.3.25.jar",
-      "sha512": "fa38198aedea225ec6aa83cf45b9a6080a7fb96765686f9350b8a46d76a06feac8b9ef47401acc0ffd2c8a965bcc4f5f64e6f3b48bc98c4e63e296877ce90785",
-      "sha1": "230eeb9a43249aa2df98ba2a0208a204ef25eeee",
-      "size": 2408478,
       "side": "server",
       "requiredBy": []
     },

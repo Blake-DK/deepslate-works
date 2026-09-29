@@ -44,6 +44,18 @@ type Opts = { url: string; username: string; password: string; instanceId: strin
 
 const UNAUTHORIZED = /unauthori[sz]ed|session/i;
 
+/**
+ * What AMP answers, with HTTP 200, to a session it no longer knows (after ADS has been restarted, say):
+ * {"Status": false, "Reason": "You do not have permission to use this method (…) at this time. This method requires
+ * the Session.Exists permission."}. A permission the user really lacks names that permission instead.
+ */
+export function sessionGone(body: unknown): boolean {
+  if (!body || typeof body !== "object") return false;
+  const b = body as { Status?: unknown; Reason?: unknown; Title?: unknown; Message?: unknown };
+  const said = [b.Reason, b.Message, b.Title].filter((v): v is string => typeof v === "string").join(" ");
+  return /requires the Session\.Exists permission/i.test(said);
+}
+
 export class AmpClient implements Amp {
   private sessionId: string | null = null;
   sessions = 0;
@@ -74,14 +86,18 @@ export class AmpClient implements Amp {
   async call<T = unknown>(module: string, method: string, params: Record<string, unknown> = {}): Promise<T> {
     if (!this.sessionId) await this.login();
     const path = instancePath(this.o.instanceId, module, method);
+    let answer: T;
     try {
-      return await this.post<T>(path, { ...params, SESSIONID: this.sessionId });
+      answer = await this.post<T>(path, { ...params, SESSIONID: this.sessionId });
+      if (!sessionGone(answer)) return answer;
     } catch (e) {
       if (!(e instanceof Error) || !UNAUTHORIZED.test(e.message)) throw e;
-      this.sessionId = null; // expired; one retry
-      await this.login();
-      return this.post<T>(path, { ...params, SESSIONID: this.sessionId });
     }
+    this.sessionId = null; // expired, or AMP has forgotten it; one retry
+    await this.login();
+    answer = await this.post<T>(path, { ...params, SESSIONID: this.sessionId });
+    if (sessionGone(answer)) throw new Error("AMP does not accept the session it has just given out");
+    return answer;
   }
 
   async ping() {

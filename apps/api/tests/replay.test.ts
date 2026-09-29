@@ -123,3 +123,38 @@ describe("the wait room", () => {
     expect(joined).toEqual(["bramble09", "bramble09"]);
   });
 });
+
+describe("a session AMP has forgotten", () => {
+  it("is known by what AMP answers, with HTTP 200", async () => {
+    const { sessionGone } = await import("../src/amp/client.js");
+    expect(sessionGone({ Status: false, Reason: "You do not have permission to use this method (GSMyAdmin.WebServer.Start) at this time. This method requires the Session.Exists permission." })).toBe(true);
+    expect(sessionGone({ Status: false, Reason: "You do not have permission to use this method at this time. This method requires the Core.AppManagement.StartInstance permission." })).toBe(false);
+    expect(sessionGone({ State: 20 })).toBe(false);
+    expect(sessionGone(null)).toBe(false);
+  });
+  it("makes the client log in again and ask once more", async () => {
+    const calls: string[] = [];
+    const real = globalThis.fetch;
+    let logins = 0;
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      const u = String(url).replace(/^.*\/API\//, "");
+      calls.push(u);
+      const body = JSON.parse(String(init?.body ?? "{}")) as { SESSIONID?: string };
+      let answer: unknown;
+      if (u.endsWith("Core/Login")) answer = { success: true, sessionID: `s${++logins}` };
+      else if (body.SESSIONID === "s1") answer = { Status: false, Reason: "This method requires the Session.Exists permission." };
+      else answer = { State: 20 };
+      return new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      const amp = new AmpClient({ url: "http://amp.invalid", username: "webapp", password: "x", instanceId: "0a1b2c3d-test" });
+      expect(await amp.call("Core", "GetStatus")).toEqual({ State: 20 });
+      expect(calls.filter((c) => c.endsWith("Core/Login")).length).toBe(2);
+      expect(amp.sessions).toBe(2);
+      await amp.ping(); // the health check, on the session there is now
+      expect(amp.sessions).toBe(2);
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});

@@ -1121,12 +1121,12 @@
       "name": "TabTPS",
       "category": "server",
       "side": "server",
-      "enabled": true,
+      "enabled": false,
       "load": "L",
       "recommended": false,
       "hidden": false,
       "exclusiveGroup": null,
-      "description": "Press Tab in the game: the server's speed, how many are on, and your own ping. It also tells the portal everyone's ping.",
+      "description": "Off: it cannot run next to BlueMap on this server (both bring the same text library and the server refuses to start). It would show the server's speed and your ping when you press Tab.",
       "wiki": "https://github.com/jpenilla/TabTPS",
       "videos": [
         {

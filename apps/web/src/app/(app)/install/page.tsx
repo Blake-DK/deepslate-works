@@ -82,17 +82,17 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
           </CardHeader>
           <CardContent className="space-y-4">
             <ol className="space-y-3">
-              <li className="rounded-lg border p-3"><span className="font-medium">1. Install the normal Minecraft Launcher</span> from <a className="underline" href="https://www.minecraft.net/download" target="_blank" rel="noreferrer">minecraft.net</a> if you don&apos;t have it, and open it once (log in, let it update, close it). Already have it? Skip this.</li>
+              <li className="rounded-lg border p-3"><span className="font-medium">1. Install the normal Minecraft Launcher</span> from <a className="underline" href="https://www.minecraft.net/download" target="_blank" rel="noreferrer">minecraft.net</a> if you don&apos;t have it, and open it once (log in, let it update). Already have it? Skip this. <strong>Then close it completely</strong>: if its icon is still next to the clock, right-click the icon and choose Quit. While the launcher is open it throws the new profile away; the installer checks and tells you.</li>
               <li className="rounded-lg border p-3">
-                <span className="font-medium">2. Download the installer, unzip it somewhere you&apos;ll keep (Desktop is fine), double-click <span className="font-mono">Setup.bat</span></span>. Your browser opens once to sign you in with Discord and asks &quot;is this you?&quot;: say yes. Then a black window shows green ticks.
+                <span className="font-medium">2. Download the installer, unzip it somewhere you&apos;ll keep (Desktop is fine), double-click <span className="font-mono">Setup.bat</span></span>. Your browser opens once to sign you in with Discord and asks &quot;is this you?&quot;: say yes. Then a black window shows green ticks and offers to open the launcher for you.
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <a href="/downloads/installer.zip" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")} aria-disabled={!ready}>Download installer{installer ? ` (${(installer.size / 1024).toFixed(0)} KB)` : ""}</a>
                   <span className="text-xs text-muted-foreground">Windows may warn about an unknown app: choose &quot;More info&quot; then &quot;Run anyway&quot;. It&apos;s a plain script; you can read it.</span>
                 </div>
               </li>
-              <li className="rounded-lg border p-3"><span className="font-medium">3. Open the Minecraft Launcher, pick &quot;{m.name}&quot;</span> in the dropdown next to Play, press Play. The server is already in your server list.</li>
+              <li className="rounded-lg border p-3"><span className="font-medium">3. In the Minecraft Launcher, pick &quot;{m.name}&quot;</span> in the dropdown next to Play, press Play. The server is already in your server list.</li>
             </ol>
-            <p className="text-sm text-muted-foreground">From then on, double-click <span className="font-mono">Update and Play.bat</span> in the same folder: it signs you in with Discord in your browser the first time (then remembers you for a week), fetches any mod updates, and opens the launcher on the Deepslate Works profile. Keep the folder; that&apos;s your play button.</p>
+            <p className="text-sm text-muted-foreground">From then on, close the launcher and double-click <span className="font-mono">Update and Play.bat</span> in the same folder: it signs you in with Discord in your browser the first time (then remembers you for a week), fetches any mod updates, and opens the launcher on the Deepslate Works profile. Keep the folder; that&apos;s your play button.</p>
           </CardContent>
         </Card>
       ) : (

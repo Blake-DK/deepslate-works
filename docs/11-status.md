@@ -83,9 +83,9 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 
 - [ ] `/analytics` shows the ten tiles, the chart, countries with the map, most active players for every period, and matches AMP within ±1 session. *Built and rendering; the comparison needs people to have played.*
 - [ ] `/players/<uuid>` works for a linked and an unlinked player. *Built; unlinked players are addressed as `name:<name>` until their UUID is seen. Needs a real player.*
-- [ ] `/admin/files` browses the instance, shows `server.properties` as settings, downloads a `.log`, refuses `world/level.dat`. *Built; checked against the live instance after deploy (see session log).*
+- [x] `/admin/files` browses the instance, shows `server.properties` as settings, downloads a `.log`, refuses `world/level.dat`. *Checked on the live instance 2026-09-29: `logs/latest.log` came down whole (23,039 bytes), `world/level.dat` 403 with the message, `../../etc/passwd` 400, a missing file 404, a player 403; all four attempts are in the event log.*
 - [ ] `/admin/events` shows a join, a death, a chat line, a restart and an admin action from a test session, live tail working; `/events` hides addresses, raw lines and admin rows. *Admin actions and the cut-down are verified; game events need a real session.*
-- [ ] Accent colour and logo changed in `/admin/branding` show on the next page load; the sign-in page shows the banner. *Built; one upload exercised after deploy.*
+- [ ] Accent colour and logo changed in `/admin/branding` show on the next page load; the sign-in page shows the banner. *Logo verified on the live site 2026-09-29 with an SVG full of things that should not be there: stored as a clean 248-byte drawing, shown in the top bar and on the sign-in page on the next load, served with the script-forbidding policy, removed again. A file that only claimed to be a PNG and a colour that was not a colour were both refused. Still to do by eye: a real accent change and a banner.*
 - [x] Retention prune runs and is logged as an Event. *First run 2026-09-29 07:36 UK time.*
 
 ### Phase 3 acceptance · state
@@ -283,6 +283,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Session log
 
+- **2026-09-29 07:11 UTC** · Live checks of the file explorer and the branding upload, with throwaway admin accounts (`smoke-…@test.invalid`, removed afterwards). Their actions are in the event log under the name "Smoke Test": about twenty rows on 2026-09-29, kept like any admin action.
 - **2026-09-29 07:10 to 07:14 UTC** · `rsync: no_key` in `/api/health` for four minutes after a deploy: a recursive `chown` over `deploy/` (done by the VPS session while committing) had given the deploy key and the WireGuard config to `ladm`, and api (uid 1000) could not read its key. Ownership restored; `deploy.sh` now checks and corrects it on every run. The tunnel and the sites were not affected; a mod sync in those minutes would have failed.
 - **2026-09-29 morning** · docs/16 pages: settings, event log, analytics, player page, files, branding, rules. Pangolin's old database and backups (127 GB) deleted from the VPS at Alex's request.
 - **2026-09-29 morning** · docs/16 foundations: tables, parsers, recorder, retention, audit log moved into the event log (see "docs/16 · foundations").

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { signOut } from "@/auth";
 import { loadCurrentUser } from "@/server/auth/session";
 import { ThemeToggle } from "./theme-toggle";
-import { env } from "@/env";
+import { getBranding } from "@/server/branding";
 
 const LINKS = [
   { href: "/", label: "Home" },
@@ -13,15 +13,20 @@ const LINKS = [
   { href: "/players", label: "Players" },
   { href: "/analytics", label: "Stats" },
   { href: "/events", label: "Events" },
+  { href: "/rules", label: "Rules" },
   { href: "/me", label: "Me" },
 ];
 
 export async function Nav() {
-  const user = await loadCurrentUser();
+  const [user, brand] = await Promise.all([loadCurrentUser(), getBranding()]);
   return (
     <header className="border-b bg-card">
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
-        <Link href="/" className="font-semibold tracking-tight">{env.SITE_NAME}</Link>
+        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+          {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded logo, already sized; the optimiser does not handle SVG */}
+          {brand.logoUrl && <img src={brand.logoUrl} alt="" className="h-7 w-auto max-w-32 object-contain" />}
+          <span>{brand.name}</span>
+        </Link>
         <nav className="ml-2 hidden gap-1 sm:flex" aria-label="Main">
           {user?.pcTier && LINKS.map((l) => (
             <Link key={l.href} href={l.href} className="rounded-lg px-3 py-1.5 text-sm hover:bg-muted">{l.label}</Link>

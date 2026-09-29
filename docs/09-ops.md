@@ -7,6 +7,7 @@
 /home/ladm/Minecraft-site/deploy/.env
 /home/ladm/Minecraft-site/deploy/wireguard/wg_confs/wg0.conf   git-ignored
 /home/ladm/Minecraft-site/deploy/keys/deploy.key               git-ignored, mounted read-only into api
+/home/ladm/Minecraft-site/data/branding/                        git-ignored: uploaded logo, banner, tab icon
 /root/docker/deepslate/postgres, /root/docker/deepslate/backups
 ```
 

@@ -4,6 +4,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { apiFetch, ApiError } from "@/server/api-client";
 import { getManifest } from "@/server/modpack/manifest";
 import { getSection } from "@/server/site-settings";
+import { getBranding } from "@/server/branding";
 import { bytes, colour, readList, readProperties, sortEntries } from "@/lib/file-views";
 import { timeAgo } from "@/lib/series";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,12 +40,15 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
   const parts = path ? path.split("/") : [];
   const ancestors = ["", ...parts.map((_, i) => parts.slice(0, i + 1).join("/"))];
 
-  const [levels, shown, manifest, limits] = await Promise.all([
+  const [levels, shown, manifest, limits, brand] = await Promise.all([
     Promise.all(ancestors.map((a) => ask<Listing>(`/files/list?dir=${encodeURIComponent(a)}`, caller))),
     file ? ask<Preview>(`/files/read?path=${encodeURIComponent(file)}`, caller) : Promise.resolve(null),
     getManifest(),
     getSection("files"),
+    getBranding(),
   ]);
+  // The message of the day comes from Admin → Branding; everything else from the mod list.
+  const expected = { ...(manifest.server_properties ?? {}), motd: brand.motd };
   const here = levels.at(-1)!;
   const find = (q.q ?? "").trim().toLowerCase();
   const entries = here.ok ? sortEntries(here.data.entries, q.sort, q.dir).filter((e) => !find || e.name.toLowerCase().includes(find)) : [];
@@ -85,7 +89,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
         </Card>
 
         <div className="min-w-0 space-y-4">
-          {file && shown && (shown.ok ? <FileView preview={shown.data} expected={manifest.server_properties ?? {}} capMb={limits.maxDownloadMb} /> : (
+          {file && shown && (shown.ok ? <FileView preview={shown.data} expected={expected} capMb={limits.maxDownloadMb} /> : (
             <Alert tone="error"><strong>{shown.status === 403 ? "Not available." : shown.status === 415 ? "Can't be shown as text." : "That didn't work."}</strong> {shown.message}{shown.status === 415 && <> <a className="underline" href={`/api/admin/files/download?path=${encodeURIComponent(file)}`}>Download it</a></>}</Alert>
           ))}
 

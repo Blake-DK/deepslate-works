@@ -44,6 +44,11 @@ describe("modpack build runner", () => {
     expect(JSON.stringify(c.env)).not.toMatch(/amp-secret|postgresql|tttt/);
   });
 
+  it("passes the server's name from Admin > Branding to the CLI", () => {
+    expect(buildCommand(env, "installer", "The Mine").env.PACK_NAME).toBe("The Mine");
+    expect("PACK_NAME" in buildCommand(env, "installer").env).toBe(false);
+  });
+
   it("yields stdout and stderr lines, then done", async () => {
     const events = await collect(runBuild(env, "all", { command: fake('console.log("one\\ntwo"); console.error("warn"); console.log("three")') }));
     const lines = events.flatMap((e) => ("line" in e ? [e.line] : []));

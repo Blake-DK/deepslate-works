@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { env } from "@/env";
+import { getBranding } from "@/server/branding";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -25,11 +26,16 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (session?.user) redirect("/");
   const { error, next } = await searchParams;
   const message = error ? (ERRORS[error] ?? "Sign-in failed. Try again.") : null;
+  const brand = await getBranding();
 
   return (
     <div className="mx-auto max-w-sm space-y-4 pt-6">
+      {/* eslint-disable-next-line @next/next/no-img-element -- uploaded banner; the optimiser does not handle SVG */}
+      {brand.bannerUrl && <img src={brand.bannerUrl} alt="" className="max-h-40 w-full rounded-xl border object-cover" />}
       <div className="text-center">
-        <h1 className="text-2xl font-semibold">{env.SITE_NAME}</h1>
+        {/* eslint-disable-next-line @next/next/no-img-element -- uploaded logo */}
+        {brand.logoUrl && <img src={brand.logoUrl} alt="" className="mx-auto mb-2 h-16 w-auto max-w-40 object-contain" />}
+        <h1 className="text-2xl font-semibold">{brand.name}</h1>
         <p className="mt-1 text-sm text-muted-foreground">A private Minecraft server for friends.</p>
       </div>
       {message && <Alert tone="error">{message}</Alert>}

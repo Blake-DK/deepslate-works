@@ -13,7 +13,7 @@ export function parsePos(s: string): Pos {
   return { x: Number(m[1]), y: Number(m[2]), z: Number(m[3]) };
 }
 
-export type ActionCtx = { limbo: Pos; spawn: Pos | null; portalUrl: string };
+export type ActionCtx = { limbo: Pos; spawn: Pos | null; portalUrl: string; siteName?: string };
 
 export type Action<I> = {
   name: string;
@@ -29,12 +29,15 @@ const roomBounds = (c: Pos) => ({ x1: c.x - 5, y1: c.y - 1, z1: c.z - 5, x2: c.x
 const inside = (c: Pos) => `x=${c.x - 4},y=${c.y},z=${c.z - 4},dx=8,dy=5,dz=8`;
 const ow = (cmd: string) => `execute in minecraft:overworld run ${cmd}`;
 
-export function linkTellraw(name: string, portalUrl: string, code: string): string {
+/** Only what is safe to show in chat: the name comes from a settings page, not from code. */
+export const chatSafe = (s: string | undefined, fallback: string) => (s ?? "").replace(/[^\p{L}\p{N} .,'!&()+-]/gu, "").trim().slice(0, 40) || fallback;
+
+export function linkTellraw(name: string, portalUrl: string, code: string, siteName?: string): string {
   const url = `${portalUrl}/link/${code}`;
   const short = url.replace(/^https?:\/\//, "");
   const payload = [
     "",
-    { text: "Welcome to Deepslate Works. Click to link your Discord: ", color: "gold" },
+    { text: `Welcome to ${chatSafe(siteName, "Deepslate Works")}. Click to link your Discord: `, color: "gold" },
     { text: short, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: url }, hoverEvent: { action: "show_text", value: "Opens the portal in your browser" } },
     { text: `  (or open the site and enter ${code})`, color: "gray" },
   ];
@@ -52,14 +55,14 @@ export const actions = {
       ow(`tp ${name} ${ctx.limbo.x} ${ctx.limbo.y + 1} ${ctx.limbo.z}`),
       `effect give ${name} minecraft:slowness infinite 255 true`,
       `effect give ${name} minecraft:jump_boost infinite 250 true`,
-      linkTellraw(name, ctx.portalUrl, code),
+      linkTellraw(name, ctx.portalUrl, code, ctx.siteName),
     ],
   }),
   "limbo.remind": define({
     name: "limbo.remind",
     role: "system",
     input: z.object({ name: MC_NAME, code: z.string().regex(/^[A-Z0-9]{8}$/) }),
-    build: (ctx, { name, code }) => [linkTellraw(name, ctx.portalUrl, code)],
+    build: (ctx, { name, code }) => [linkTellraw(name, ctx.portalUrl, code, ctx.siteName)],
   }),
   "limbo.keep": define({
     name: "limbo.keep",

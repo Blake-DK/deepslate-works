@@ -44,6 +44,15 @@ describe("actions", () => {
     expect(actions["link.release"].build(ctx, { name: "x_1" }).some((c) => c.includes("spreadplayers 0 0 1 12 false x_1"))).toBe(true);
     expect(actions["link.release"].build({ ...ctx, spawn: parsePos("10 70 -5") }, { name: "x_1" }).some((c) => c.includes("tp x_1 10 70 -5"))).toBe(true);
   });
+  it("welcomes with the name from Admin > Branding, stripped of anything that could break the chat line", () => {
+    expect(linkTellraw("p", "https://deepslate.dsw.test", "ABCD2345", "The Mine")).toContain('"text":"Welcome to The Mine. Click to link your Discord: "');
+    expect(linkTellraw("p", "https://deepslate.dsw.test", "ABCD2345")).toContain("Welcome to Deepslate Works.");
+    const odd = linkTellraw("p", "https://deepslate.dsw.test", "ABCD2345", 'X"},{"text":"pwn","clickEvent":{"action":"run_command","value":"/op p"}} \n§k');
+    expect(JSON.parse(odd.slice("tellraw p ".length))).toHaveLength(4);
+    expect(odd).not.toContain("run_command");
+    expect(odd).not.toContain("§");
+    expect(actions["limbo.hold"].build({ ...ctx, siteName: "Blake & Co" }, { name: "Bramble09", code: "ABCD2345" }).at(-1)).toContain("Welcome to Blake & Co.");
+  });
   it("tellraw keeps the code visible as a fallback", () => {
     expect(linkTellraw("p", "https://deepslate.dsw.test", "ABCD2345")).toContain("enter ABCD2345");
   });

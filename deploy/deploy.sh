@@ -48,6 +48,13 @@ if [ "$(stat -c %u dist 2>/dev/null || echo none)" != 1000 ]; then
   echo "dist/ now belongs to uid 1000"
 fi
 
+# web keeps uploaded pictures here (Admin → Branding); it runs as the owner of the checkout
+if [ ! -d data/branding ]; then
+  mkdir -p data/branding
+  [ "$(id -u)" = 0 ] && chown -R "$owner": data
+  echo "created data/branding"
+fi
+
 step "up"
 "${COMPOSE[@]}" up -d --remove-orphans
 

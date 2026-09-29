@@ -16,7 +16,7 @@ export type BuildEvent = { line: string } | { done: true; ok: boolean; code: num
 const HEAP_MB = 256;
 const TIMEOUT_MS = 15 * 60_000;
 
-export function buildCommand(env: Env, target: BuildTarget) {
+export function buildCommand(env: Env, target: BuildTarget, packName?: string) {
   return {
     cmd: process.execPath,
     args: [`--max-old-space-size=${HEAP_MB}`, "--import", "tsx", "src/cli.ts", "build", target],
@@ -31,6 +31,8 @@ export function buildCommand(env: Env, target: BuildTarget) {
       DIST_DIR: `${env.REPO_DIR}/dist`,
       AUTH_URL: env.PORTAL_URL,
       ...(env.MODRINTH_USER_AGENT ? { MODRINTH_USER_AGENT: env.MODRINTH_USER_AGENT } : {}),
+      // Admin → Branding: the name the launcher profile and the pack are given
+      ...(packName ? { PACK_NAME: packName } : {}),
     } as Record<string, string>,
   };
 }
@@ -39,9 +41,9 @@ export function buildCommand(env: Env, target: BuildTarget) {
 export async function* runBuild(
   env: Env,
   target: BuildTarget,
-  opts: { timeoutMs?: number; command?: ReturnType<typeof buildCommand> } = {},
+  opts: { timeoutMs?: number; command?: ReturnType<typeof buildCommand>; packName?: string } = {},
 ): AsyncGenerator<BuildEvent> {
-  const c = opts.command ?? buildCommand(env, target);
+  const c = opts.command ?? buildCommand(env, target, opts.packName);
   try {
     await access(c.env.DIST_DIR ?? `${env.REPO_DIR}/dist`, constants.W_OK);
   } catch {

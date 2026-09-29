@@ -39,6 +39,8 @@ The pages render on the server and read the data directly, so most of the routes
 | api | `GET /server/backup`, `POST /server/backup` | whether `webapp` may take backups (`Core.CurrentSessionHasPermission`), and `LocalFileBackupPlugin.TakeBackup` |
 | api | `GET /console/tail?lines=`, `GET /console/stream?since=` | last lines (now with `entries[{seq, text}]`), and the live stream as newline-delimited JSON with a heartbeat every 15 s |
 
+docs/16 added, in `api` (admin only, GET only): `/files/list?dir=`, `/files/read?path=`, `/files/download?path=`; in `web`: `/api/events/stream` (live tail of the event log, trimmed for players), `/api/admin/events/export` and `/api/admin/analytics/export` (CSV), `/api/admin/files/download`, `/branding/<file>` (public: logo, banner, tab icon).
+
 `api` polls `Core.GetStatus` + `Core.GetUserList` every 10 s (`apps/api/src/status/poller.ts`) and writes `ServerSnapshot`: on every change of state or player list, otherwise every 15 s while running and every 5 min while not. Rows older than 48 h are thinned to one per five minutes, rows older than 30 days are deleted (hourly). TPS, memory and the player limit come from AMP's own metrics (`TPS`, `Memory Usage`, `Active Users`); no console command is sent to measure anything.
 
 ## Server actions registry (`apps/api/src/actions/registry.ts`)

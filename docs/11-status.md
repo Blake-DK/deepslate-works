@@ -68,6 +68,26 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 - All the arithmetic is in `apps/web/src/lib/analytics.ts` and `event-query.ts`, with tests (clock changes, open sessions, the player cut-down). Tests: api 66, web 62, modpack 9.
 - **Cannot be checked yet:** the acceptance line "matches AMP's own counts within ±1 session". AMP's Analytics plugin is not readable by `webapp` and nobody has played; compare by eye after the first week of play.
 
+### docs/16 · pages, part 2 (2026-09-29): files and branding
+
+- **Admin → Files** (`/admin/files`): the instance's `Minecraft/` folder through AMP's file manager. Folder tree, breadcrumbs, find in folder, sort, text preview with line numbers and light colouring (2 MB shown, the head of anything larger), download up to 50 MB streamed through api. `whitelist.json`, `ops.json`, `banned-players.json` as tables; `server.properties` as settings against what is expected, differences marked. **Read only**: api calls `GetDirectoryListing` and `GetFileChunk` and nothing else, and a test fails if another file method is ever called. Every path is cleaned and checked against the never-shown list (worlds, `*.dat`, backups, `session.lock`, keys; editable in Settings) before AMP is asked. `world/level.dat` is refused with a plain message. Every download, and every refused one, is an Event.
+- **Expected `server.properties`** is a new optional block in `modpack/mods.json` (`server_properties`, the values from docs/15 §4); the message of the day comes from Branding.
+- **Admin → Branding** (`/admin/branding`): name, tagline, footer, Discord invite, message for the server list, accent colour for each theme, theme for a first visit, logo, sign-in banner, tab icon, rules. Live preview in both themes with a contrast reading. Stored in `Setting` (`branding`); the pictures are files under `data/branding/` (not in git, mounted into web), named after their content.
+- **Uploads**: PNG, WebP or SVG by what the file is (first bytes), 2 MB at most. **SVGs are rebuilt from an allow-list** of drawing elements and attributes (`apps/web/src/lib/svg-sanitize.ts`): scripts, styles, event handlers, `foreignObject`, animation, links, anything pointing outside the file, embedded data, doctype and entities are removed; 16 attack cases in the tests. They are served with `Content-Security-Policy: default-src 'none'; sandbox` as a second fence.
+- **Where branding shows**: top bar, page titles, footer, sign-in and invite pages, the rules page (`/rules`, a small Markdown subset rendered as elements, never as HTML), the welcome line in game (`linkTellraw`, name stripped to letters, digits and plain punctuation), and the pack and launcher profile name at the next Build (`PACK_NAME`). The accent is set by a style block in the root layout at request time; only a six-digit hex colour can reach it.
+- **Deviation from docs/16, forced.** The message of the day is **not pushed** to the server. AMP writes `server.properties` from its own settings on every start and `webapp` may not change AMP settings (`Core.SetConfig` is refused), so a file written by the portal would be overwritten. Admin → Files shows whether the server matches; the change is made in AMP. To lift this, Alex would have to give `webapp` the right to change that one setting.
+- **Not built:** the installer's launcher profile *icon* from branding (the profile icon is one of Minecraft's built-in names, `Furnace`, not a picture).
+- Tests: api 83, web 97, modpack 9.
+
+### docs/16 acceptance · state
+
+- [ ] `/analytics` shows the ten tiles, the chart, countries with the map, most active players for every period, and matches AMP within ±1 session. *Built and rendering; the comparison needs people to have played.*
+- [ ] `/players/<uuid>` works for a linked and an unlinked player. *Built; unlinked players are addressed as `name:<name>` until their UUID is seen. Needs a real player.*
+- [ ] `/admin/files` browses the instance, shows `server.properties` as settings, downloads a `.log`, refuses `world/level.dat`. *Built; checked against the live instance after deploy (see session log).*
+- [ ] `/admin/events` shows a join, a death, a chat line, a restart and an admin action from a test session, live tail working; `/events` hides addresses, raw lines and admin rows. *Admin actions and the cut-down are verified; game events need a real session.*
+- [ ] Accent colour and logo changed in `/admin/branding` show on the next page load; the sign-in page shows the banner. *Built; one upload exercised after deploy.*
+- [x] Retention prune runs and is logged as an Event. *First run 2026-09-29 07:36 UK time.*
+
 ### Phase 3 acceptance · state
 
 - [ ] Home shows Online/Offline within 20 s of a real change, names with heads, TPS and memory. *Built (10 s poll + 10 s page refresh); needs watching through a real start and stop.*
@@ -256,11 +276,14 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 9. Optional `DISCORD_BOT_TOKEN` (a bot in the Discord server) so api re-checks membership every 5 min; without it, leaving the server only bites at the next Discord login.
 10. ~~GHCR login on the VPS~~ Done 2026-09-29: classic token, `read:packages` only, login stored in `/root/.docker/config.json`. Fine-grained tokens get 403 from GHCR.
 12. **AMP: allow backups from the portal** (optional): give the `webapp` user's role the permission `LocalFileBackupPlugin.Backup.TakeBackup`. Until then Admin → Server → "Backup now" stays greyed out and AMP's own schedule is the backup.
+14. **The first real join.** Nobody has joined the server yet, so join, chat and death lines have only been tested against the log format. After the first session: Admin → Events should show the join and the leave, `/analytics` one session; if not, Admin → Server → Console has the lines as AMP sent them.
+15. **Map embedding**: `map.deepslate.dsw.test` sends no `frame-ancestors` header, so any site could frame it (it still needs the login). Adding `header Content-Security-Policy "frame-ancestors https://deepslate.dsw.test"` to its Caddy block closes that; not done yet because it touches the shared proxy.
 13. **Decide: does a sleeping server count as "up" for downloads?** Today players can download only while AMP says Running.
 11. ~~Rotate the GitHub token~~ New token in place 2026-09-29 (expires 2026-11-28). **Alex: revoke the old one on GitHub** (Settings → Developer settings → Fine-grained tokens); replacing it on the VPS does not invalidate it.
 
 ## Session log
 
+- **2026-09-29 morning** · docs/16 pages: settings, event log, analytics, player page, files, branding, rules. Pangolin's old database and backups (127 GB) deleted from the VPS at Alex's request.
 - **2026-09-29 morning** · docs/16 foundations: tables, parsers, recorder, retention, audit log moved into the event log (see "docs/16 · foundations").
 - **2026-09-29 morning** · Phase 3 dashboard built (see "Phase 3 · dashboard"); `deploy/check.sh` runs the checks in a capped container.
 - **2026-09-29 05:22** · Stack registered in Dockhand as pull-only (`deploy/dockhand-sync.py`, mirror in `/data/stacks/deepslate`); compose host paths now built from `DEEPSLATE_DIR` so a redeploy from Dockhand mounts the same directories. GitHub token rotated (new fine-grained token, expires 2026-11-28); to-do 11 done.

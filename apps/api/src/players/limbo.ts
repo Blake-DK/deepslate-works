@@ -6,6 +6,7 @@ import { audit } from "../audit.js";
 import type { Env } from "../env.js";
 import { runAction } from "../actions/run.js";
 import { parsePos, type ActionCtx } from "../actions/registry.js";
+import { getSection } from "../settings.js";
 
 // docs/14: the white room. Unlinked joins are held in the room with a clickable link; linking releases them.
 
@@ -79,6 +80,7 @@ export class Limbo {
   }
 
   private async hold(name: string, uuid: string, reason: string) {
+    this.ctx.siteName = (await getSection("branding")).name; // Admin → Branding; read again for every newcomer
     const code = uuid ? await this.codeFor(uuid, name) : codeGen();
     this.held.set(name, { uuid, code, since: Date.now(), lastReminder: Date.now() });
     await runAction(this.amp, this.ctx, "limbo.hold", { name, code }, null);

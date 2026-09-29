@@ -79,7 +79,9 @@ async function main() {
     // falls through never
     case "build": {
       const what = rest[0] ?? "all";
-      const manifest = await loadManifest();
+      const loaded = await loadManifest();
+      // PACK_NAME: the server's name from Admin → Branding, when the build runs inside api
+      const manifest = process.env.PACK_NAME?.trim() ? { ...loaded, name: process.env.PACK_NAME.trim().slice(0, 40) } : loaded;
       const lock = await requireLock();
       await mkdir(P.dist, { recursive: true });
       const portalUrl = process.env.AUTH_URL ?? "https://deepslate.dsw.test";

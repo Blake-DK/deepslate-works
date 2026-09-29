@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { joinWithDiscord } from "./actions";
+import { getBranding } from "@/server/branding";
 
 export const metadata: Metadata = { title: "Join" };
 
@@ -29,7 +30,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
   return (
     <div className="mx-auto max-w-sm space-y-4 pt-6">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold">{env.SITE_NAME}</h1>
+        <h1 className="text-2xl font-semibold">{(await getBranding()).name}</h1>
         <p className="mt-1 text-sm text-muted-foreground">A private modded Minecraft server for friends. Dig it out with drills, wire it up with factories.</p>
       </div>
       {state !== "valid" ? (

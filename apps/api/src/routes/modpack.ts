@@ -6,6 +6,8 @@ import type { Env } from "../env.js";
 import { requireAdmin } from "../auth.js";
 import { BUILD_TARGETS, runBuild, type BuildEvent } from "../modpack/build.js";
 import { syncServer } from "../modpack/sync.js";
+import { getSection } from "../settings.js";
+import { chatSafe } from "../actions/registry.js";
 
 // Build writes dist/, sync reads it: one of them at a time.
 let busy: "build" | "sync" | null = null;
@@ -33,7 +35,8 @@ export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: t
     if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "target: all|client|server|installer" } });
     if (busy) return reply.code(409).send({ error: { code: "busy", message: `a ${busy} is already running` } });
     busy = "build";
-    const events = build(env, body.data.target);
+    const packName = chatSafe((await getSection("branding")).name, "");
+    const events = build(env, body.data.target, packName ? { packName } : {});
     const log = req.log;
     const by = req.caller.userId;
     async function* ndjson(): AsyncGenerator<string> {

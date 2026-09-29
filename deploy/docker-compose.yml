@@ -53,6 +53,7 @@ services:
       - ${DEEPSLATE_DIR:-..}/modpack:/repo/modpack
       - ${DEEPSLATE_DIR:-..}/.git:/repo/.git
       - ${DEEPSLATE_DIR:-..}/dist:/repo/dist:ro         # built packs, served under /downloads (api builds them)
+      - ${DEEPSLATE_DIR:-..}/data:/repo/data            # uploaded pictures (Admin → Branding); not in git
     depends_on:
       postgres:
         condition: service_healthy

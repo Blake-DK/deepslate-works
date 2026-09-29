@@ -16,6 +16,6 @@ docker exec deepslate-web node apps/web/scripts/invite.mjs "for Alex"
 ```
 
 Caddy: add the block from `deploy/Caddyfile.snippet` and reload (recipe in /root/HOSTING.md).
-Update: push to `main`, wait for the `ci` workflow to go green, `sudo deploy/deploy.sh`. Migrations run on container start.
+Update: `deploy/check.sh` first, push to `main` as `ladm` (`runuser -u ladm -- git push`), wait for the `ci` workflow to go green, `sudo deploy/deploy.sh`. Migrations run on container start; dump the database before one (docs/09).
 Roll back: `sudo IMAGE_TAG=<commit sha> deploy/deploy.sh`.
 Logs: `docker logs -f deepslate-web`. Health: `https://deepslate.dsw.test/api/health`.

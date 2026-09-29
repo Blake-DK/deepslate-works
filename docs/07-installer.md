@@ -14,12 +14,12 @@ The Minecraft Launcher reads `launcher_profiles.json` when it starts, keeps it i
 
 So `install.ps1`:
 
-1. **Checks for a running launcher three times**: at the first step (so nobody waits through the downloads to hear it), before the NeoForge installer, and before writing `launcher_profiles.json`. It looks for a process named `MinecraftLauncher` or `Minecraft Launcher`, for `Minecraft` when its path has "Launcher" in it or cannot be read (the Store and Xbox launcher; Bedrock runs as `Minecraft.Windows` and is left alone), and for any window titled "Minecraft Launcher". If one is found it prints **"Close the Minecraft Launcher (including the tray icon) and run this again"** and exits 1. Nothing has been changed at that point.
+1. **Checks for a running launcher three times**: at the second step, straight after signing in (so nobody waits through the downloads to hear it), before the NeoForge installer, and before writing `launcher_profiles.json`. It looks for a process named `MinecraftLauncher` or `Minecraft Launcher`, for `Minecraft` when its path has "Launcher" in it or cannot be read (the Store and Xbox launcher; Bedrock runs as `Minecraft.Windows` and is left alone), and for any window titled "Minecraft Launcher". If one is found it prints **"Close the Minecraft Launcher (including the tray icon) and run this again"** and exits 1. Nothing has been changed at that point.
 2. **Reads the file back after writing it**, and again two seconds later, and checks that the profile is there and points at the right NeoForge version. If not, it stops with "THE LAUNCHER PROFILE WAS NOT SAVED", what is wrong, and the path of the log file.
 3. **Offers to open the launcher** at the end of `Setup.bat` ("Open the Minecraft Launcher now? [Y/n]", Enter means yes), only when the profile was saved and checked. `Update and Play.bat` opens it without asking, as before. `-NoPrompt` never asks.
 4. **Writes the file without a byte-order mark**, to a temporary file that is then moved into place. The first version used `Set-Content -Encoding UTF8`, which on Windows PowerShell 5.1 puts a byte-order mark at the start. Whether the launcher minds has not been tested; a launcher that did mind would also fall back to its defaults, so this may have been a second cause of the same symptom. Without the mark is what the launcher writes itself.
 
-`install.ps1 -SelfTest` runs the profile code against a scratch copy of a fresh launcher's file (18 checks: written, no byte-order mark, the launcher's own profiles and settings kept, `.bak` kept, a second run updates in place, a launcher that rewrote the file is noticed, a broken or missing file is reported, a running launcher is found). It touches nothing else and runs under Windows PowerShell 5.1 and under `pwsh` on Linux.
+`install.ps1 -SelfTest` runs the profile code against a scratch copy of a fresh launcher's file (18 checks when this was written; the self test has grown with every version and is 58 checks in 1.4.1, in five parts: the launcher profile, what a report leaves out, the Play link, the update, finding Java. The profile's part: written, no byte-order mark, the launcher's own profiles and settings kept, `.bak` kept, a second run updates in place, a launcher that rewrote the file is noticed, a broken or missing file is reported, a running launcher is found). It touches nothing else and runs under Windows PowerShell 5.1 and under `pwsh` on Linux.
 
 ## Install reports (planner spec 2026-09-29; built the same day)
 
@@ -166,25 +166,31 @@ Remote-desktop and virtual adapters (Parsec, Microsoft Basic Display, Hyper-V) a
 - `Update and Play.bat`: the same with `-Play`; pauses only on failure.
 - `%LOCALAPPDATA%\DeepslateWorks\install.ps1`: the copy the Play button runs (see "Play from the site"). Made by the script, not part of the zip.
 - `install.ps1`: PowerShell 5.1 compatible (ships with Windows 10/11). No modules, no admin rights.
-- `README.txt`: three lines, same as the `/install` page.
+- `README.txt`: what the two `.bat` files are for, what the Play button on the site does and what it leaves in the registry (`HKCU\Software\Classes\deepslate`), and how to remove the pack.
 
-## `install.ps1` behaviour, in order
+## `install.ps1` behaviour, in order (installer 1.4.1)
 
-*(Since installer 1.2.0 signing in comes first and the launcher check second; see "Install reports". The numbering below is the original design.)*
+**Parameters.** None for a person: `Setup.bat` and the Play button supply them. `-Play` (bring up to date quietly, open the launcher, leave), `-NoPrompt` (ask nothing at the end), `-DryRun` (no downloads, nothing written outside `-Root`, no browser), `-Root <folder>` (in place of `%APPDATA%`, for tests), `-SelfTest`, `-PretendRunning <names>` (tests: processes to take as running), and one word without a name: the link Windows hands over when Play is pressed on the site. Only `deepslate://play` is accepted, and with a link every other parameter is set aside.
 
-1. **Config block at the top**, stamped by `modpack build installer`: `$PortalUrl`, `$PackName`, `$PackVersion`. Then the sign-in step above.
-2. **Console output**: friendly, numbered steps, green ticks, no stack traces. On any failure: one plain sentence saying what to do ("Install the Minecraft Launcher from minecraft.net, open it once, then run this again") and a log file path `%TEMP%\deepslate-install.log` with the details.
-3. **Check the Minecraft launcher**: `%APPDATA%\.minecraft\launcher_profiles.json` must exist. If not: stop with the message above and open `https://www.minecraft.net/download` in the browser.
-4. **Fetch the manifest** from `$ManifestUrl` (the app's `/api/modpack/manifest`, which is the lockfile plus profile settings). TLS 1.2 forced (`[Net.ServicePointManager]::SecurityProtocol`).
-5. **Java 21**: try in order: the launcher's bundled runtime `%APPDATA%\.minecraft\runtime\java-runtime-delta\windows-x64\java-runtime-delta\bin\java.exe` (present after the launcher has run 1.21 once), `java` on PATH if `-version` reports 21+, otherwise download the Adoptium Temurin 21 JRE zip from `https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse` into `<gameDir>\runtime\` and use that. Never install system-wide.
-6. **NeoForge**: if `%APPDATA%\.minecraft\versions\neoforge-<ver>` is missing, download `https://maven.neoforged.net/releases/net/neoforged/neoforge/<ver>/neoforge-<ver>-installer.jar` and run `java -jar … --install-client "%APPDATA%\.minecraft"` (the newer installer flag; fall back to `--installClient` on a non-zero exit). Log installer output.
-7. **Game directory**: `%APPDATA%\<profile.dir>` with `mods\`, `config\`, `resourcepacks\`. Separate from `.minecraft` so vanilla is untouched.
-8. **Mods**: for every lockfile entry with side `client` or `both`: skip if the file exists and its sha512 matches; else download to a temp name and rename. Delete any `.jar` in `mods\` that is not in the lockfile (the installer owns that folder; say so in the README). Show a progress bar; TaCZ alone is 50 MB.
-9. **Configs**: extract the manifest's `configs` (or a `config.zip` URL) into the game dir, overwriting. Never overwrite `options.txt` if it exists; if it doesn't, write one with `renderDistance` and `simulationDistance` from the user's tier (default 8/6) and `fullscreen:false`.
-10. **Server list**: if `servers.dat` doesn't exist, write an uncompressed NBT file with one entry (name = pack name, ip = `server_address`). Format: `TAG_Compound "" { TAG_List "servers" [ TAG_Compound { TAG_String "name", TAG_String "ip" } ] }`. About 20 lines of byte-writing; there's no need for a library.
-11. **RAM**: read total RAM via `Get-CimInstance Win32_ComputerSystem`. Allocate: ≥16 GB → 6G, 12 GB → 5G, 8 GB → 4G, less → 3G, clamped to `ram.min_gb..max_gb` from the manifest. JVM args: `-Xmx<n>G -Xms1G -XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:MaxGCPauseMillis=50 -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20`.
-12. **Launcher profile**: only with the launcher closed (see above). Read `launcher_profiles.json`, set `profiles.<profile.id>` = `{ name, type: "custom", lastVersionId: "neoforge-<ver>", gameDir, javaArgs, javaDir, icon, created, lastUsed: now }` (update in place if present, keeping `created`), set `selectedProfile`, back the file up to `launcher_profiles.json.bak`, write it without a byte-order mark, then read it back and check.
-13. **Done**: print the server address and offer to open the launcher (`Setup.bat`), or open it (`Update and Play.bat`). Write `installed.json` in the game dir with the pack version for the `/install` page's "you're up to date" check (the page can't read it, but the script can compare on the next run and say "already up to date").
+**At the top**, stamped by Build: `$PortalUrl`, `$PackName`, `$PackVersion`; and the script's own `$InstallerVersion`.
+
+**Output**: friendly, numbered steps, green ticks, no stack traces. On any failure: one plain sentence saying what to do, and the path of the log, `%TEMP%\deepslate-install.log`. Every run ends by sending its report (see "Install reports").
+
+| Step | What it says | What it does |
+|---|---|---|
+| 1 | Signing in | a launcher token kept from an earlier run, or a code to approve in the browser |
+| 2 | Checking the Minecraft Launcher | `%APPDATA%\.minecraft\launcher_profiles.json` must exist, else it stops and opens `minecraft.net/download`. The launcher must be closed (see above); with `-Play` an open launcher is not a reason to stop, the profile is left as it is |
+| 3 | Fetching the mod list | `/api/modpack/manifest` with the token. TLS 1.2 forced |
+| (Play only) | Updating the installer 1.4.0 → 1.4.1 | when the mod list names a newer installer: see "The installer updates itself". The script starts again from step 1 as the new one |
+| 4 | Finding Java 21 | in this order: the launcher's own (`%APPDATA%\.minecraft\runtime\java-runtime-delta\…\java.exe`, there once the launcher has run 1.21); a `java` on PATH that says it is 21 or newer; the one this installer downloaded on an earlier run; else Temurin 21 is downloaded into the pack's folder (about 45 MB). A Java on PATH that is older, broken or silent is passed over (see "A Java on the PC ended the install") |
+| 5 | Installing NeoForge | if `versions\neoforge-<version>` is missing: the NeoForge installer from the NeoForged maven, `--install-client` (and `--installClient` if that fails). Needs the launcher closed |
+| 6 | Setting up the mods | the pack's own folder, `%APPDATA%\<profile.dir>` with `mods\`, `config\`, `resourcepacks\`, apart from `.minecraft` so that vanilla is untouched. Every file of the mod list for a PC: left alone if it is there with the right SHA-512, else downloaded from Modrinth to a temporary name, checked, renamed. Any `.jar` in `mods\` that the mod list does not name is removed: the installer owns that folder |
+| 7 | Settings | `config.zip` from the site when the mod list names one (`config_url`), unpacked over the pack's `config\`. `options.txt` is written only if there is none (render distance 8, simulation distance 6, not full screen). `servers.dat` is written only if there is none, with the one server |
+| 8 | Adding the launcher profile | memory by what the PC has: 16 GB or more → 6G, 12 → 5G, 8 → 4G, less → 3G, within `ram.min_gb..max_gb` of the mod list. `profiles.<profile.id>` = name, `lastVersionId: neoforge-<version>`, `gameDir`, `javaArgs`, `javaDir` (the Java of step 4), icon; `created` kept if the profile was there. Written without a byte-order mark, the file as it was kept as `.bak`, read back twice |
+| 9 | Setting up the Play button | copies itself to `%LOCALAPPDATA%\DeepslateWorks\` and registers `deepslate://` for this Windows user (see "Play from the site"). Never an older copy over a newer one |
+| then | | `installed.json` in the pack's folder (pack version, the lock's hash, when). A later run whose mod list has the same hash says "Already up to date." The server's address is shown, and `Setup.bat` offers to open the launcher; Play opens it |
+
+The render distance is the same for every PC (the mod list says 8 and 6); the measured tier decides the warnings on the site, not the file.
 
 ## Non-goals
 - No custom launcher, no Prism install, no CurseForge app.
@@ -208,7 +214,7 @@ Install report:
 - [ ] Rename `%APPDATA%\.minecraft\launcher_profiles.json` for a moment and run `Setup.bat`: it fails at step 2, and Admin → Installs shows a failed run at "Checking the Minecraft Launcher". Rename the file back.
 - [ ] Pull the network cable after signing in: the install says the log could not be sent and carries on; the local log is still there.
 
-The installer updates itself (installer 1.4.0). This needs a newer installer on the site than on the PC; ask Alex, or wait for the next one:
+The installer updates itself (installer 1.4.0 and later; the site has 1.4.1 since 2026-09-29, so a PC with 1.4.0 shows this at its next Play):
 - [ ] Press **Play**: the window shows "Updating the installer 1.4.0 → <newer>", then starts again from "Signing in" and opens the launcher as usual.
 - [ ] `%LOCALAPPDATA%\DeepslateWorks\` holds `install.ps1` (the new one; its `$InstallerVersion` line says so), `install.ps1.bak` (the old one) and `Setup.bat`, and nothing ending in `.new`.
 - [ ] Admin → Installs: one run, "Play", with "updated itself, 1.4.0 to <newer>" under it; its log starts with the update step.
@@ -226,7 +232,7 @@ Play from the site (installer 1.3.0):
 - [ ] In the Run box (Win+R): `deepslate://play?x=1` opens a window that says "That is not a link this installer knows" and changes nothing.
 
 Launcher open (the bug of 2026-09-29):
-- [ ] With the launcher open: `Setup.bat` stops at step 1 with "Close the Minecraft Launcher (including the tray icon) and run this again". `launcher_profiles.json` has the same date and size as before.
+- [ ] With the launcher open: `Setup.bat` stops at step 2 with "Close the Minecraft Launcher (including the tray icon) and run this again". `launcher_profiles.json` has the same date and size as before.
 - [ ] With the launcher window closed but its icon still next to the clock: the same.
 - [ ] Close it completely (right-click the icon, Quit): `Setup.bat` runs through.
 
@@ -234,7 +240,7 @@ A clean run:
 - [ ] Green ticks to the end, "saved and checked" on the profile line, then "Open the Minecraft Launcher now? [Y/n]".
 - [ ] Enter opens the launcher; **Deepslate Works** is there next to Play, selected.
 - [ ] `launcher_profiles.json` still has the launcher's own profiles; `launcher_profiles.json.bak` is the file as it was.
-- [ ] Press Play: NeoForge loads, 15 mods, the server is in the list.
+- [ ] Press Play: NeoForge loads with the pack's mods (29 files on a PC with pack `0.1.0+1a48e8ff`), the server is in the list.
 - [ ] Close the launcher, open it again: the profile is still there. (This is the line that failed on 2026-09-29.)
 
 Again and updates:
@@ -242,12 +248,18 @@ Again and updates:
 - [ ] `Update and Play.bat`: no question asked, launcher opens on the profile. Admin → Installs shows it as "Play".
 - [ ] After a mod changes on the site: exactly that jar is replaced.
 
+Java (installer 1.4.1):
+- [ ] A PC with an old Java on PATH (`java -version` in a command window says 1.8 or 17) and no launcher runtime yet: step 4 says the Java on this PC is not Java 21 and is left as it is, downloads Java 21, and carries on. The profile's Java is the one in the pack's folder.
+- [ ] A PC with Java 21 on PATH: "Using Java 21 from PATH". (Pabulum's PC, 2026-09-29: passed.)
+- [ ] Admin → Installs, the run: Java's source and its version line are filled in.
+
 Edges:
 - [ ] A PC with 8 GB of RAM gets a 4 GB profile; under 8 GB gets 3 GB.
-- [ ] No launcher installed: step 1 says to install it and opens minecraft.net.
+- [ ] No launcher installed: step 2 says to install it and opens minecraft.net.
 - [ ] Open the launcher while the mods are downloading: the run stops before the profile is written, with the close-the-launcher message. Nothing is lost; close it and run again.
 
 ## Testing
-- A Windows VM (or a friend's PC over a call) for: fresh launcher, existing NeoForge, rerun-is-noop, rerun-updates-one-mod, low-RAM machine gets 3G.
-- `install.ps1 -SelfTest` and the launcher-running case run under `pwsh` on Linux in a container (`mcr.microsoft.com/powershell`, with a memory limit); the rest needs Windows.
-- Unit-test the manifest parsing and the NBT writer by running the script under `pwsh` on Linux with `-WhatIf`-style dry run flags (`-DryRun` skips downloads and writes to a temp dir).
+- `install.ps1 -SelfTest`: 58 checks, under Windows PowerShell 5.1 and under `pwsh` on Linux. On the VPS it runs in a container (`mcr.microsoft.com/powershell`, with a memory limit, no network). **It has never been run on Windows by this session**; the first line of the checklist above is that run.
+- `packages/modpack/tests/installer.test.ts` reads the script as text: its version, that no command's stderr goes through `2>&1`, that Java is asked through a process of its own.
+- On the live site with a throwaway member, from the VPS (`/root/.config/deepslate/`): `installer-report-test.sh` (a report from a dry run), `play-test.sh` (the Play link and what it refuses), `update-test.sh` (an old copy fetches the new one; a wrong checksum replaces nothing).
+- What needs Windows and a person: the checklist above. Done so far on real PCs: a clean install, Play from the site, the launcher left open (Alex's PC); an install with Java on PATH (Pabulum's). Never watched: a rerun replacing exactly one jar, a PC with 8 GB.

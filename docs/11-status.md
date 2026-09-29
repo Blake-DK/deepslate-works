@@ -1,16 +1,50 @@
 # 11 · Status and handover
 
-Last updated 2026-09-29 (OOM incident and the deploy change that follows from it: CI builds the images, the VPS only pulls; before that: must-have mods synced, wait room + Discord link flow live in `api`, admin Server page). Read this before touching anything; update it at the end of every session. `docs/10-roadmap.md` stays the plan; this file records where reality is against it.
+Last updated 2026-09-29, 19:00 UTC (the evening the first player who is not an admin got in). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
+
+## Where the build stands (2026-09-29, 19:00 UTC)
+
+| | |
+|---|---|
+| Deployed | `main` at `7282e71` plus docs; images from CI; migrations 0001 to 0013 applied |
+| Checks | api 188 tests, web 224, modpack 21, installer self test 58 checks (under `pwsh` on Linux); all pass |
+| The site | not live (`live = false`). 4 members, 2 of them admins, 2 linked to a Minecraft account, 1 with early access (Pabulum). Vote "Season 1 mods" open, 4 ballots |
+| The pack | `0.1.0+1a48e8ff`: 40 mods in the catalogue, 30 switched on (the recommended set among them, the vote left open), 32 files in the lock, 25 on the server, 29 on a PC, 2 settings files shipped |
+| The installer | 1.4.1. 15 reports so far, 6 of runs that went through. Alex's own copy is still 1.3.0, which cannot update itself |
+| The server | NeoForge 21.1.252, 31 entries in the loader's list, no errors at start. World of 2026-09-29, seed `-3899835130120818196`, spawn `0 105 0`, 35,721 chunks made ahead of time (before the recommended mods were on). Entrance room in `deepslate:limbo`. `pvp=false`, whitelist off |
+| The map | **empty since 18:36:33 UTC** (deleted on Alex's word). BlueMap renders while the server runs; to have it finish, Admin → Server → Pre-generation → "Render the map only" |
+| Played | 10 sessions, two players (bramble09, samoyedx). Joins, leaves, one death, starts and stops are in the event log |
+
+**Phases, against docs/10** (a box is ticked there only with what shows it):
+
+| Phase | State |
+|---|---|
+| 0 Foundation | done, tagged `phase-0`. Two boxes were never clicked through by a person: an invite link for a second account, and the email fallback through an invite. Members come in through the Discord server instead |
+| 1 Catalogue and vote | built and in use. Open: "Apply results" has never run on a closed vote |
+| 2 Modpack and installer | built and in use on two Windows PCs. Open: nobody has watched a rerun replace exactly one jar |
+| 3 Server dashboard | built and in use. Open: a restart with the full five minutes of warnings (one with one minute ran at 18:26); the map, which is empty |
+| docs/14 joining | the entrance room, the link, Play first, early access, "not open yet": built. **The room and the link worked for a real newcomer at 18:12 to 18:16.** Open: Play first with a member who is not an admin; leaving the Discord server (needs `DISCORD_BOT_TOKEN`) |
+| docs/16 analytics, files, events, branding | built. Open: comparing the figures with AMP's; an accent colour and a banner by eye |
+| docs/17 mc-router | the homelab's; from here: `mc.dsw.test` brought a player from outside in, and a sleeping server woke on a connection (18:10:18 up, 18:10:25 joined) |
+| docs/18 player guide | built (`/guide`), follows the mods that are switched on |
+| docs/19 admin assistant | not begun. No `ASSISTANT_API_KEY` in `deploy/.env` |
+| 4 Player self-service | not begun, apart from what docs/14 brought forward (the action registry, the event log) |
+
+**Handed over by the planner on 2026-09-29 evening, not begun** (named in `ROADMAP.md`; the specs themselves have not reached this session except the first): Configured (cannot be had from Modrinth, docs/06); Better Tab Info in the base pack; the installer's version on every report with an "outdated" badge and a nudge on `/me`; fuller logs with the last game session's log and crash reports; the entrance room's prompt every 15 s with a title on screen and a short code for `deepslate.dsw.test/join`.
 
 ## Where things are
 
 | Thing | Where |
 |---|---|
 | Repo (git, branch `main`) | `/home/ladm/Minecraft-site` on vps-01v (the folder Alex gave; the original brief files `00-overview.md`, `markdown`, `deepslate-works-design-docs.zip` stay at its root, the repo copy under `docs/` is canonical) |
-| Live site | https://deepslate.dsw.test · map host https://map.deepslate.dsw.test (needs Alex's DNS A record; 401→login redirect works; 502 until BlueMap exists) |
+| Live site | https://deepslate.dsw.test · map host https://map.deepslate.dsw.test (DNS in place; without a session it sends to the sign-in page and back; BlueMap is served from the game server through the tunnel) |
 | Compose stack `deepslate` | `/home/ladm/Minecraft-site/deploy/docker-compose.yml` → `deepslate-web`, `deepslate-api` (in the tunnel namespace), `deepslate-wg` (WireGuard, udp 51820), `deepslate-map-relay-inner`/`-outer`, `deepslate-db`, `deepslate-backups` |
 | Secrets | `deploy/.env` (mode 600), `deploy/wireguard/wg_confs/wg0.conf` + `vps.key`, `deploy/keys/deploy.key` (all git-ignored; template `deploy/.env.example`, `deploy/wireguard/wg0.conf.example`) |
 | Postgres data / dumps | `/root/docker/deepslate/postgres`, `/root/docker/deepslate/backups` (nightly, keep 7) |
+| Dumps before a migration | `/root/docker/deepslate/backups/pre-00NN-*.sql.gz`, the last `pre-0013-download-kind.sql.gz` |
+| The old world | `Minecraft/world-backup-20260929` on the AMP host, and `/root/docker/deepslate/backups/world-20260929-before-reset/` |
+| Helpers of this session (root only) | `/root/.config/deepslate/`: `api.sh`, `console.sh`, `wait-ci.sh`, `smoke.sh`, `shots.sh`, and one test script for each feature tested on the live site (`play-test.sh`, `update-test.sh`, `early-test.sh`, `news-test.sh`, `switch-test.sh`, `download-test.sh`, …). Every one removes the throwaway account it makes |
+| Pictures | `data/screenshots/` (not in git) |
 | Reverse proxy | blocks `deepslate.dsw.test` and `map.deepslate.dsw.test` in `/root/docker/web-proxy/etc/Caddyfile` (copy in `deploy/Caddyfile.snippet`; the map block uses an explicit reverse_proxy + handle_response because `forward_auth` alone returns the 401 instead of redirecting) |
 | Health | `GET /api/health` → `{ok, db, api:{ok,tunnel,amp,rsync}, missingEnv, discord, guildGate}`; `ok` is web's own health, tunnel state is reported not required |
 
@@ -20,8 +54,16 @@ The VPS has no Node, and **it never builds images** (see "OOM incident" below). 
 # checks (typecheck, lint, tests): in a container capped at 1.5 GB, as ladm so nothing ends up owned by root
 deploy/check.sh                 # everything;  deploy/check.sh api test  for one package and step
 
+# git: as the owner of the checkout, the network too. A fetch or push as root rewrites
+# /home/ladm/.config/deepslate/git-credentials as root's, and deploy.sh can no longer pull (2026-09-29).
+runuser -u ladm -- git pull --rebase && runuser -u ladm -- git push
+
 # deploy: the only way (docs/09). Push to main, wait for CI, then:
 sudo /home/ladm/Minecraft-site/deploy/deploy.sh
+
+# lock (there is no route for it in api; Admin → Modpack → Lock does the same from the site)
+docker run --rm --memory=1200m -u "$(stat -c %u .):$(stat -c %g .)" -e HOME=/tmp -v "$PWD":/app -w /app node:22-alpine \
+  sh -c 'npm i -g --prefix /tmp/pnpm pnpm@10 >/dev/null 2>&1; PATH=/tmp/pnpm/bin:$PATH; pnpm install --frozen-lockfile >/dev/null; pnpm --filter modpack cli lock'
 
 # Caddy reload after editing the Caddyfile
 docker exec caddy sh -c 'caddy adapt --config /etc/caddy/Caddyfile --envfile /etc/caddy/caddy.env > /tmp/c.json \
@@ -295,20 +337,24 @@ Alex: "I want an option in the GUI to turn on pregen … run for 8 hours, or alw
 
 ### docs/16 acceptance · state
 
-- [ ] `/analytics` shows the ten tiles, the chart, countries with the map, most active players for every period, and matches AMP within ±1 session. *Built and rendering; the comparison needs people to have played.*
-- [ ] `/players/<uuid>` works for a linked and an unlinked player. *Built; unlinked players are addressed as `name:<name>` until their UUID is seen. Needs a real player.*
-- [x] `/admin/files` browses the instance, shows `server.properties` as settings, downloads a `.log`, refuses `world/level.dat`. *Checked on the live instance 2026-09-29: `logs/latest.log` came down whole (23,039 bytes), `world/level.dat` 403 with the message, `../../etc/passwd` 400, a missing file 404, a player 403; all four attempts are in the event log.*
-- [ ] `/admin/events` shows a join, a death, a chat line, a restart and an admin action from a test session, live tail working; `/events` hides addresses, raw lines and admin rows. *Admin actions and the cut-down are verified; game events need a real session.*
-- [ ] Accent colour and logo changed in `/admin/branding` show on the next page load; the sign-in page shows the banner. *Logo verified on the live site 2026-09-29 with an SVG full of things that should not be there: stored as a clean 248-byte drawing, shown in the top bar and on the sign-in page on the next load, served with the script-forbidding policy, removed again. A file that only claimed to be a PNG and a colour that was not a colour were both refused. Still to do by eye: a real accent change and a banner.*
+*Rewritten 2026-09-29, 19:00 UTC.*
+
+- [ ] `/analytics` shows the ten tiles, the chart, countries with the map, most active players for every period, and matches AMP within ±1 session. *Built and rendering, with 10 real sessions of two players; the comparison with AMP has not been made.*
+- [x] `/players/<uuid>` works for a linked and an unlinked player. *bramble09 and samoyedx (linked); samoyedx before the link was addressed as `name:samoyedx`.*
+- [x] `/admin/files` browses the instance, shows `server.properties` as settings, downloads a `.log`, refuses `world/level.dat`. *2026-09-29; every attempt is in the event log (now under Download).*
+- [ ] `/admin/events` shows a join, a death, a chat line, a restart and an admin action from a test session, live tail working; `/events` hides addresses, raw lines and admin rows. *Joins, leaves, one death, restarts and admin actions are in the log from real play; no chat line yet; the live tail has not been watched by a person.*
+- [ ] Accent colour and logo changed in `/admin/branding` show on the next page load; the sign-in page shows the banner. *Logo verified 2026-09-29; accent colour and banner not yet by eye.*
 - [x] Retention prune runs and is logged as an Event. *First run 2026-09-29 07:36 UK time.*
 
 ### Phase 3 acceptance · state
 
-- [ ] Home shows Online/Offline within 20 s of a real change, names with heads, TPS and memory. *Built (10 s poll + 10 s page refresh); needs watching through a real start and stop.*
-- [ ] The map loads at `map.<domain>` only when logged in; logged out redirects to login and back. *Redirect verified earlier; embedding on Home needs the server running to check.*
-- [ ] Admin restart with a 5-minute countdown warns every minute and restarts on time. *Unit-tested with a fake clock; needs one real run.*
-- [ ] Console tail streams live for admins; players cannot reach it. *Built; route answers 403 for non-admins.*
-- [x] `/api/health` is green. Monitoring (UptimeRobot or similar) still to be set up by Alex.
+*Rewritten 2026-09-29, 19:00 UTC; the same ticks as docs/10.*
+
+- [x] Home shows Online/Offline within 20 s of a real change, names with heads, TPS and memory. *Watched through starts, sleeps and stops on 2026-09-29.*
+- [x] The map loads at `map.<domain>` only when logged in; logged out redirects to login and back. *302 to `/login?next=…` without a session; the map is on Home and at `/map` with one. Empty since 18:36 UTC, to be rendered again.*
+- [ ] Admin restart with a 5-minute countdown warns every minute and restarts on time. *A one-minute one ran on time (18:26 to 18:27 UTC); the five-minute one has not been watched.*
+- [x] Console tail streams live for admins; players cannot reach it. *403 for a player (smoke test).*
+- [ ] `/api/health` is green and monitored. *Green; the monitoring is Alex's to say.*
 
 ## OOM incident, 2026-09-29 03:58 UTC
 
@@ -392,11 +438,14 @@ Alex: "build the server with the must-have modpacks first and get the wait room 
 
 ### docs/14 acceptance · state
 
-- [ ] A fresh account joins, lands in the room, can't leave, sees the link within 5 s. *Engine live; needs a real join.*
-- [ ] Clicking the link with a Discord account in the server releases them to spawn within 5 s and `whitelist.json` gains them. *Portal side verified; release-on-online untested.*
-- [ ] A Discord account outside the server is refused and the player stays in the room. *Login refusal verified earlier; room hold untested.*
-- [ ] Leaving the Discord server puts the player back in the room next join. *Flag set at login; 5-min re-check needs `DISCORD_BOT_TOKEN`.*
-- [ ] api down 2 min then back: nobody unverified escaped. *Tags persist; on restart api holds unknown joins again; no in-game command block yet (docs/14 §4 belt-and-braces not done).*
+*Rewritten 2026-09-29, 19:00 UTC.*
+
+- [x] A fresh account joins, lands in the room, can't leave, sees the link within 5 s. *samoyedx, 18:12:08 UTC: "Samoyedx is waiting in the entrance room".*
+- [x] Clicking the link with a Discord account in the server releases them to spawn within 5 s and `whitelist.json` gains them. *18:16:12 UTC, linked and let in in the same second; `whitelist.json` has samoyedx.*
+- [ ] A Discord account outside the server is refused and the player stays in the room. *The sign-in refusal is verified; the room hold with such an account is not.*
+- [ ] Leaving the Discord server puts the player back in the room next join. *Noticed at the next Discord sign-in; within five minutes needs `DISCORD_BOT_TOKEN`, not set.*
+- [ ] api down 2 min then back: nobody unverified escaped. *Tags persist and api holds unknown joins again after a restart; not tried with somebody in the room.*
+- [ ] Play first holds a member who is not an admin and has not pressed Play (docs/14 "Play first"). *Not tried: the only member who is not an admin came in by the link, which does not ask for Play first (to-do 7).*
 
 ## Installer sign-in + "Update and Play" (Alex, 2026-09-28)
 
@@ -431,12 +480,14 @@ Per Alex's message: the Phase-1 data model bits and the onboarding change are in
 
 ### Phase 2 acceptance (docs/10)
 
-- [x] `modpack lock` resolves every enabled mod plus dependencies for NeoForge 1.21.1 and fails loudly on a mod without a compatible version.
-- [ ] `client.mrpack` imports into the Modrinth App and launches to the main menu. *Built; needs a real client test.*
-- [ ] Clean Windows VM: Setup.bat → launcher → profile → main menu → server in list. *Script dry-run passes on Linux; needs Windows.*
-- [ ] Rerun says "already up to date"; bumping one mod replaces exactly that jar. *Logic present; needs Windows.*
-- [ ] `sync-server` puts the jar set on the AMP instance; server starts; client connects. *Dry run over the tunnel works (11 jars would be copied); key restriction verified; AMP login works. Ready for a real Sync once Alex says go (the instance is stopped right now).*
-- [ ] Alex's Mac or one friend's gets in via `.mrpack`.
+*Rewritten 2026-09-29, 19:00 UTC; the `.mrpack` boxes are struck (Windows only).*
+
+- [x] `modpack lock` resolves every enabled mod plus dependencies for NeoForge 1.21.1 and fails loudly on a mod without a compatible version. *Configured, 2026-09-29.*
+- ~~`client.mrpack` imports into the Modrinth App~~ struck: Windows only.
+- [x] Windows: Setup.bat → launcher → profile → main menu → server in list. *Alex's PC and Pabulum's, real PCs.*
+- [ ] Rerun says "already up to date"; bumping one mod replaces exactly that jar. *Not watched.*
+- [x] `sync-server` puts the jar set on the AMP instance; server starts; client connects. *Two players on the same pack.*
+- ~~Alex's Mac or one friend's gets in via `.mrpack`~~ struck: Windows only.
 
 ### Mod list changes (Alex, 2026-09-28)
 
@@ -456,51 +507,57 @@ Two players hit it. The Mojang lookup was verified working from the container (N
 
 ## Phase 1 acceptance (docs/10)
 
+*Rewritten 2026-09-29, 19:00 UTC.*
+
 - [x] Every mod card has a working Mod page, Wiki and at least one real video link (`verify-links` passes).
-- [ ] A player can submit a ballot on a phone in under two minutes and edit it later. *Built; a ballot was saved through the real server action in a smoke test (exclusive group and unknown answers filtered server-side). Needs a real phone click-through.*
+- [ ] A player can submit a ballot on a phone in under two minutes and edit it later. *Four ballots are in; a phone not confirmed.*
 - [x] Exclusive group (guns) allows one choice; load estimate updates live and warns LOW-tier users about Heavy sets.
 - [x] Results page shows per-mod yes % and per-tier breakdown; closing freezes results (`resultJson`).
-- [ ] "Apply results" produces a diff of `mods.json` and commits it on confirm. *Built; commit path not yet exercised end to end (needs a closed vote with ballots).*
+- [ ] "Apply results" produces a diff of `mods.json` and commits it on confirm. *Never run on a closed vote; the vote is open.*
 
-Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. Player address is plain `mc.dsw.test`: Pangolin publishes it on the default 25565 and forwards to the AMP host's 25569 (voice chat 24454/udp the same way). No port in the server list.
+Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. Player address is plain `mc.dsw.test`: mc-router on the homelab hands it to the instance (docs/17; it was Pangolin until 2026-09-29).
 
 ## Phase 0 acceptance (docs/10) · current state
 
+*Rewritten 2026-09-29, 19:00 UTC. `phase-0` is tagged.*
+
 - [x] `docker compose up -d` on the VPS serves the site over HTTPS.
-- [ ] Alex logs in with Discord and lands on an admin page. *Unblocked 2026-09-28: Discord app, `ADMIN_DISCORD_ID`, `DISCORD_GUILD_ID` and `DISCORD_GUILD_AUTO_JOIN=1` are in `deploy/.env`; the signin redirect was verified (scope `identify guilds`, correct callback). Not yet clicked through. Note: the Discord login creates a separate ADMIN user from the email account `admin@example.com`; that's fine, or remove the email one in Users afterwards.*
-- [ ] Invite link lets a second account in; a third without an invite is refused. *Code paths exist; not clicked through.*
-- [ ] Email/password fallback works for one invite. *Renders; not clicked through end to end.*
-- [x] `/api/auth/verify` returns 401 without a session (200 with one not yet exercised).
-- [ ] `/api/health` reports `tunnel: ok`. *Currently `down`: waiting on the homelab side to enable its peer with our public key.*
+- [x] Alex logs in with Discord and lands on an admin page.
+- [ ] Invite link lets a second account in; a third without an invite is refused. *One invite used (kanefinch); the refusal not watched. Members come in through the Discord server.*
+- [ ] Email/password fallback works for one invite. *Email sign-in is used daily by the test scripts; through an invite not clicked through.*
+- [x] `/api/auth/verify` returns 401 without a session and lets the map through with one.
+- [x] `/api/health` reports `tunnel: ok`.
 
-**Admin login (email route):** `admin@example.com`, created from the CLI; password handed to Alex in chat and recorded in `/root/HOSTING.md` (mode 600), never here. Reset any time with `docker exec deepslate-web node apps/web/scripts/admin.mjs admin@example.com Alex` (prints a new password; there is no GUI password change yet). First login lands on `/onboarding` (Minecraft name + PC tier), then Admin appears in the nav. The bootstrap invite `https://deepslate.dsw.test/join/2R97LWNC` (14 days) is still unused and can go to the first friend.
+**Admin login (email route):** `admin@example.com`, created from the CLI; its password is in `/root/HOSTING.md` (mode 600), never here. Reset with `docker exec deepslate-web node apps/web/scripts/admin.mjs admin@example.com Alex` (prints a new password).
 
-## Alex's to-do (blocking; docs/13 §7 plus what this session couldn't do)
+## Alex's to-do (rewritten 2026-09-29, 19:00 UTC; what was done is at the end)
 
-0. ~~AMP smoke test~~ Complete: login, GetStatus, SetConfig refused. `Core.Start` gets exercised from the admin page in Phase 3.
-0b. ~~Deploy key restriction~~ **Verified 2026-09-28**: with the key pinned (`IdentitiesOnly=yes`, no agent, no other identity in the container) `rsync --list-only amp@10.77.0.2:` lists the instance's `Minecraft/` (server.properties, mods/, config/, world/ …), so rrsync roots the key correctly. The earlier "unrestricted" verdict came from `ssh … true` returning exit 0 with no rrsync message on that host, which turned out to be a poor test; the health probe now lists the remote root instead and reports `ok` / `wrong_root` / `no_key` / `down`. Real Sync is therefore allowed once Build has run. Fingerprint of our key: `SHA256:5g0kW7Zo+q0CBsMiD5/42qnkFIkJe2MVw8Nod3J/xtE`.
-1. ~~Host firewall UDP 51820~~ Done by Alex (in `host-firewall.sh`, survives restart).
-2. DNS: `map.deepslate.dsw.test → 198.51.100.20`.
-3. AMP: create instance `DeepslateWorks01`; create ADS user `webapp` with rights on that instance only; put `AMP_INSTANCE_ID` and `AMP_PASSWORD` in `deploy/.env`, set `AMP_MOCK=0`, `docker compose -f deploy/docker-compose.yml up -d api`.
-4. ~~Discord OAuth app~~ Done 2026-09-28. Server gate on, auto-join on: anyone in the Discord server can sign in without an invite link; invite links are now only for the person without Discord.
-5. Ferry the two keys above to the AMP host session; give this session the instance id and `webapp` password.
-6. Does anyone lack Discord? (docs/10 q5.) `server_address` Pangolin publishes? (docs/10 q6.)
-7. ~~Phase 0 click-through~~ done.
-8. **Test the wait room** with one friend: connect to `mc.dsw.test`, confirm the room + chat link, click it, confirm release and `whitelist.json`. Then tick docs/14 acceptance.
-9. Optional `DISCORD_BOT_TOKEN` (a bot in the Discord server) so api re-checks membership every 5 min; without it, leaving the server only bites at the next Discord login.
-10. ~~GHCR login on the VPS~~ Done 2026-09-29: classic token, `read:packages` only, login stored in `/root/.docker/config.json`. Fine-grained tokens get 403 from GHCR.
-12. **AMP: allow backups from the portal** (Alex decided yes, 2026-09-29): give the `webapp` user's role **`LocalFileBackup.Backup.CreateBackup`** and **`LocalFileBackup.Backup.ViewBackupsList`**. Those are the names AMP uses; `…Plugin.Backup.TakeBackup`, as written here before, does not exist. Do not grant `DeleteBackup` or `RestoreBackup`: the portal never uses them. Nothing to deploy afterwards, the page checks the permission each time it is opened. Until then Admin → Server → "Backup now" stays greyed out and AMP's own schedule is the backup.
-14. **The first real join.** Nobody has joined the server yet, so join, chat and death lines have only been tested against the log format. After the first session: Admin → Events should show the join and the leave, `/analytics` one session; if not, Admin → Server → Console has the lines as AMP sent them.
-15. ~~Map embedding~~ Done 2026-09-29 on Alex's decision: `map.deepslate.dsw.test` sends `Content-Security-Policy: frame-ancestors https://deepslate.dsw.test`. The shared Caddyfile was backed up first (`Caddyfile.bak-20260929T072306Z`), the new config validated before loading, every site checked afterwards.
-13. ~~Does a sleeping server count as up for downloads?~~ **Yes** (Alex, 2026-09-29): downloads are open while the server is Running or asleep (`apps/web/src/lib/gate-rule.ts`).
-17. ~~Join the server once so that it wakes with TabTPS~~ TabTPS is out (it stopped the server from starting). **Join once and look at Home:** your ping should be next to your name within half a minute (spark).
-18. **Play first needs a member who is not an admin to test** (admins are never held): docs/14 acceptance.
-22. **Grant `webapp` the permission `Settings.MinecraftModule.Limits.SleepMode`** in the instance's own panel (the role's permissions: Settings → MinecraftModule → Limits → SleepMode). Until then Pre-generation cannot be turned on. Then: Admin → Server → Pre-generation → radius 1500 → "When nobody's online" → Turn on; it should say "generating" and carry on from where it was stopped (67%), and AMP's sleep mode should read off in AMP until it is done.
-20. **Join the new world with an account that is not linked** (or have someone new join): they must land in the entrance room at 0 251 0 with the link in chat. This session has no Minecraft account and cannot join.
-21. **Sleep in AMP**: the instance goes to sleep after about six minutes empty, in the middle of anything. Fine for every day; for the next pre-generation or a long BlueMap render switch it off first.
-19. ~~The world's seed~~ Done 2026-09-29, see "World reset". Was: the world's seed is AMP's default, `CubeCodersPowered`. A new one is set in AMP (the instance's settings, "Level seed"), the portal cannot write AMP's settings; the world folder has to be moved away for it to take effect, and the entrance room built again afterwards (Admin → Server). Say which seed, and whether the present world may go.
-16. **Play from the site, on Windows:** download the installer again (1.4.0; it updates itself from then on), run `Setup.bat`, then work through "Play from the site" in the Windows test checklist (docs/07). Eight lines, ten minutes.
-11. ~~Rotate the GitHub token~~ New token in place 2026-09-29 (expires 2026-11-28). **Alex: revoke the old one on GitHub** (Settings → Developer settings → Fine-grained tokens); replacing it on the VPS does not invalidate it.
+**To do**
+
+1. **Render the map.** It is empty. Admin → Server → Pre-generation → "Render the map only" → Turn on. About an hour with the server kept awake; it stops by itself. "When nobody's online" waits while anyone plays; "Now" does not.
+2. **Download the installer once more on your own PC.** Your copy is 1.3.0 (your last Play, 17:32 UTC, says so), and 1.3.0 has no update step. From 1.4.0 on a copy keeps itself up to date whenever Play is pressed.
+3. **Press Play before you next join**, and tell Pabulum to: the pack is `0.1.0+1a48e8ff` since 18:20 UTC, and Play first asks for it. (Admins are never held, so for you it is only the settings that come with it.)
+4. **Try the mods in the game.** That they load is checked; that a tree falls to a bare hand, a quarry digs, a gun fires and breaks no blocks, a vein is mined, nobody has tried. The settings for trees and for TaCZ count since the restart of 18:27 UTC.
+5. **Look at Home while somebody is on:** their ping should be next to their name within half a minute. No ping had ever been read from a real player before 17:45 UTC (spark writes a colon the pattern did not expect), and nobody has looked since.
+6. **Play first with a member who is not an admin** (docs/14): join without having pressed Play, and they should be held with "Press Play on deepslate.dsw.test to join".
+7. **Say whether somebody who has just linked should be held for Play first too.** Today they are let in (Pabulum was, 18:16 UTC).
+8. **Say whether the world is to be made again.** The 1500 blocks around spawn were generated before Create, Farmer's Delight and Waystones were on and have none of their ore, crops or waystones. `ROADMAP.md` has "one more reset after the vote closes" as the clean way.
+9. **Close the vote** when it has run its course: Apply results, Lock, Build, Sync, then "We're live" in Admin → Settings. "Apply results" has never run on a closed vote; do it when there is time to look at the diff.
+10. **Revoke the old GitHub token** on GitHub (Settings → Developer settings → Fine-grained tokens). The one in use expires 2026-11-28.
+11. **`DISCORD_BOT_TOKEN`**, if leaving the Discord server is to bite within five minutes and not at the next sign-in. Optional.
+12. **`ASSISTANT_API_KEY`**, when the admin assistant (docs/19) is to be built.
+13. **Does anyone lack Discord?** (docs/10, question 5.) If nobody does, the email fallback can go.
+14. **Monitoring of `/api/health`**: Uptime Kuma watches the game servers (docs/17); whether it watches the portal is not known here.
+
+**Done** (in the order they were asked)
+
+- AMP smoke test; deploy key restricted to the instance's folder; host firewall UDP 51820; DNS for `map.deepslate.dsw.test`; the instance `DeepslateWorks01` and its user `webapp`; the keys ferried to the AMP host; Discord app, server gate and auto-join; Phase 0 click-through; GHCR login; the GitHub token replaced.
+- AMP permissions for `webapp`: backups (`LocalFileBackup.Backup.CreateBackup`, `ViewBackupsList`; two backups taken on 2026-09-29), and sleep mode (`Settings.MinecraftModule.Limits.SleepMode`; the pre-generation ran to 100% with it).
+- Map embedding (`frame-ancestors`); downloads open while the server is up or asleep.
+- The world's seed and the reset (2026-09-29).
+- The first real join (Alex, 09:54 UTC) and the first by a newcomer (samoyedx, 18:12 UTC): entrance room, link in chat, linked on the site, let in, on the whitelist.
+- Play from the site on Windows: Alex's PC, several runs that went through.
+- `server_address`: `mc.dsw.test`, by mc-router on the homelab (docs/17); Pangolin is no longer part of it.
 
 ## Session log
 
@@ -535,8 +592,12 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Suggested plan updates for the next session
 
-- When the tunnel is up: confirm AMP method names against `http://10.77.0.2:8080/API` through `api` (docs/08 "AMP methods used"), then set `AMP_MOCK=0`.
-- Tick the Phase 0 boxes with Alex, tag `phase-0`; tick Phase 1 (phone click-through, one real apply-and-commit), tag `phase-1`; then Phase 2 (`modpack lock|build|sync-server`, `/install`, `/admin/modpack`, `installer/`). Phase 2 needs `server_address` from Alex (what Pangolin publishes) and the AMP instance for `sync-server`.
-- docs/06 `sync-server` still describes a bind mount; rewrite it for rsync over the tunnel when Phase 2 starts (docs/13 §4 has the command).
-- ~~GitHub remote~~ done 2026-09-29: `Blake-DK/deepslate-works` (private), CI builds the images. Dockhand: added 2026-09-29 as a pull-only stack (`deepslate`, environment VPS-01V); the repo stays the source of truth and `deploy/deploy.sh` refreshes Dockhand's mirror (docs/09 "Dockhand").
-- Phase 3 prep: the map host needs a DNS name under the chosen domain and `COOKIE_DOMAIN` set; the Caddy block needs `forward_auth deepslate-web:3000 { uri /api/auth/verify }` and a `reverse_proxy` to BlueMap on the AMP host over Tailscale.
+- **Wait for the planner's specs** of the evening's list (above, "Handed over by the planner") before building any of it; only Configured has arrived, and it cannot be built as written.
+- **Play first at the link** (to-do 7): one line in `Limbo.release()` if the answer is yes.
+- **The false "Crash" of 17:02 UTC**: the recorder did not see "Stopping server" before AMP's sleep. There are two CRASH rows in the log; look at what the console held at both.
+- **Warnings at every start that mean nothing** (mods looking for mods that are not there: `createaddition` for Simulated, something for Controllable, a JetBrains annotation): into `NOISE` in `events/parse.ts`, so that a warning in the log is one to read.
+- **Throwaway accounts leave lines in the event log** ("… had their password reset from the command line", four for each run of `shots.sh`). Either the scripts remove their lines as `download-test.sh` does, or the lines are marked as tests.
+- **`dist/` is not cleaned between builds**: `dist/server/config/tabtps` is still there from the hour TabTPS was in the pack, and goes to the server with every Sync. Harmless, untidy.
+- **A settings-only Sync** says nothing about the server having to be restarted for them to count. One line on Admin → Modpack would do.
+- **VeinMiner keeps jars of its own** in `config/Veinminer/update/` on the server although `autoUpdate` is `false`. Find out what puts them there.
+- Tag `phase-1`, `phase-2`, `phase-3` when Alex has ticked what is open in each (docs/10).

@@ -1,6 +1,43 @@
 # 05 · Features by phase
 
-Pages are listed per phase. Every page must work on a 390px phone.
+Pages are listed per phase. Every page must work on a 390px phone. What is built is described as it is; what is not yet built says so.
+
+## Every page (2026-09-29)
+
+| Page | For | What | Described in |
+|---|---|---|---|
+| `/login`, `/join/<code>`, `/join/<code>/email` | anyone | sign in; an invite for the one without Discord | docs/04 |
+| `/onboarding` | a new member | one question: what is your PC like | docs/04 |
+| `/` | members | Home: the server, who is on, news, the map, Play. Before the site is live and without early access: a launch page | below, Phase 3 |
+| `/guide` | members | how to get in, where things are, what each mod that is switched on is for | docs/18 |
+| `/mods`, `/vote`, `/vote/results` | members | the catalogue, the ballot, the results | below, Phase 1 |
+| `/install` | members | the installer, the three steps, Play | below, Phase 2; docs/07 |
+| `/map` | members | BlueMap, full screen | below |
+| `/players`, `/players/<uuid>` | members | everyone; one player's play time, sessions, advancements, connection, and for admins their PC, last install and addresses | docs/16 |
+| `/analytics` ("Stats") | members | sessions, players, play time, countries, hours of the day, connection | docs/16 §2 |
+| `/events` | members | who came and went, deaths, advancements, when the server was up | docs/16 §4 |
+| `/rules` | members | the rules, as written on Admin → Branding | docs/16 §5 |
+| `/me` | members | one's Minecraft account, connection, PC, and (Phase 4) quick actions | below, Phase 4 |
+| `/link/<code>` | members | binds the Minecraft account that was shown this link in the entrance room | docs/14 |
+| `/launcher/<code>` | members | approves a sign-in of the installer | docs/07 |
+| `/admin` | admins | numbers and what happened lately | |
+| `/admin/votes`, `/admin/vote/results/apply` | admins | votes; applying a result to the mod list | below, Phase 1 |
+| `/admin/modpack` | admins | the mod list, Lock, Build, Sync | below, Phase 2; docs/06 |
+| `/admin/server` | admins | start, stop, planned restart, backups, pre-generation and map render, the entrance room, news, console | below, Phase 3 |
+| `/admin/events` | admins | the whole event log, filters, live, CSV | docs/16 §4 |
+| `/admin/installs`, `/admin/installs/<id>` | admins | every run of the installer, with its log | docs/07 "Install reports" |
+| `/admin/files` | admins | the server's files, read only | docs/16 §3 |
+| `/admin/branding` | admins | name, logo, banner, colour, rules, guide, Discord link | docs/16 §5 |
+| `/admin/invites`, `/admin/users` ("Players") | admins | invites; members, roles, early access, the Minecraft link | below |
+| `/admin/settings` | admins | "We're live", joining (Play first), privacy, how long things are kept, the file browser | docs/16 §6, docs/14 |
+
+Not pages but served to members: `/downloads/installer.zip`, `/downloads/config.zip`, `/branding/<file>`, `/news-image/<file>`.
+
+## Joining the server (docs/14, docs/13 §9; built 2026-09-28 and 29)
+
+The whitelist is off. Whoever joins and is not known to the portal is put into the **entrance room**, a sealed room of glass in a dimension of its own (`deepslate:limbo`, a datapack that ships with the pack; env `LIMBO_POS`, default `deepslate:limbo 0.5 65 0.5`), and shown one link in chat. Opening it, signed in, binds the Minecraft account to the member, and they are let in where they would have spawned.
+
+At the door, in this order: is the site open for them (live, or early access, or admin), else "Not open yet. You'll be let in when the server goes live."; has their last run of Play gone through within the window (30 minutes) and with the pack the server runs, else "Press Play on deepslate.dsw.test to join". Admins are never held. Whoever is held is asked where they stood first and put back there when let in. **Somebody who has just linked is let in without the second question** (2026-09-29; to be decided).
 
 ## Phase 1 · Catalogue and vote
 
@@ -60,7 +97,7 @@ Players (`/admin/users`), Installs and Invites are tables with fixed columns: on
 - **Play** card (once the server is visible to the member): see "Play from the site" under Phase 2.
 
 ### The download log (Alex, 2026-09-29: "add a download log on the event system")
-- Event kind **Download** (`DOWNLOAD`, migration `0013_download_kind`), admins only, a filter of its own on `/events`.
+- Event kind **Download** (`DOWNLOAD`, migration `0013_download_kind`), admins only, a filter of its own on `/admin/events`.
 - Written when somebody fetches from the site: the installer (`/downloads/installer.zip`, with its version and size), the pack's settings (`/downloads/config.zip`), the mod list (`/api/modpack/manifest`, with the pack's version and how many mods it names for a PC). It says who, and whether it was the site or the installer that asked. With the pack's key there is nobody to name and the line says so.
 - **Refusals are written too**: "Pabulum was refused the installer: the site is not open yet and they have no early access". Somebody who is not signed in is sent to the sign-in page and not written down.
 - The same person fetching the same thing again within two minutes is counted on the line that is there (`count`), not written again.
@@ -82,7 +119,7 @@ Players (`/admin/users`), Installs and Invites are tables with fixed columns: on
 
 **In the game: nothing, for now.** TabTPS was to put the server's speed and everyone's ping into the Tab list. **It cannot run on this server**: TabTPS and BlueMap both bring the same text library (`net.kyori.adventure.text.serializer.gson`), Java refuses to load the two, and the server stops before it has started (2026-09-29 10:50 UTC, the first start with it). It is switched off in `mods.json`; its entry stays in the catalogue and says why. What the Tab list shows is the game's own: names and signal bars. For the planner: a Tab-list mod that does not bring that library, or a BlueMap build that hides its copy, would be needed.
 
-**The portal.** While the server is running and somebody is on, `api` asks spark for each player's ping every 15 s, one command for each player (`spark ping --player <name>`; spark has no command that lists everyone), and reads the answer from the console: `[⚡] Player Bramble09 has 23 ms ping.` (`events/parse.ts`; taken from spark's source, `HealthModule.ping`). Nothing is sent to a server that is asleep, starting or empty. The numbers are in `/status` next to each player (`online[].ping`, dropped when 50 s old) and in every `ServerSnapshot` (`pings`, `{"<uuid>": ms}`, migration `0009_snapshot_pings`; `name:<name>` where the UUID is not known). TPS and the rest are read as before.
+**The portal.** While the server is running and somebody is on, `api` asks spark for each player's ping every 15 s, one command for each player (`spark ping --player <name>`; spark has no command that lists everyone), and reads the answer from the console: `[⚡]: Player bramble09 has 116 ms ping.` as this server writes it, `[⚡] Player Bramble09 has 23 ms ping.` as spark's source has it; both are read (`events/parse.ts`; the second was taken from spark's source, `HealthModule.ping`). Nothing is sent to a server that is asleep, starting or empty. The numbers are in `/status` next to each player (`online[].ping`, dropped when 50 s old) and in every `ServerSnapshot` (`pings`, `{"<uuid>": ms}`, migration `0009_snapshot_pings`; `name:<name>` where the UUID is not known). TPS and the rest are read as before.
 
 **Cost.** One line in the server's console and log for each player every 15 s. They are kept out of the portal's console page; AMP's own console shows them.
 
@@ -99,25 +136,25 @@ Players (`/admin/users`), Installs and Invites are tables with fixed columns: on
 
 ### `/map` Full-screen BlueMap iframe with a back button.
 
-### `/players` Everyone in the group: online state, Minecraft name, last seen, PC tier. Nothing sensitive.
+### `/players` Everyone in the group: online state, Minecraft name, last seen, PC tier. Nothing sensitive. Each name leads to `/players/<uuid>` (docs/16).
 
 ### Admin `/admin/server`
 - Start / Stop / Restart with a confirmation step inside the page (no `confirm()`), scheduled restart in N minutes with an in-game warning countdown (`say` every minute for the last 5).
 - Console tail (read-only, last 200 lines, live), announcement composer that also runs `say` in game.
-- Backup now (AMP backup API if available, else a scheduled task note).
+- Backup now, with AMP's own backup tool, and the list of backups with their sizes. Restoring and deleting are done in AMP; the portal can do neither.
+- The entrance room: build it (once for each world), and remove somebody from the whitelist by name.
 
-## Phase 4 · Player self-service and actions
+## Phase 4 · Player self-service and actions (not built)
 
-All actions are entries in `src/server/actions/registry.ts` (see 08-api.md). Player-facing page `/me`:
+**What is there today.** `/me` shows the member's Minecraft account and whether it is linked, their connection while they are on, their PC (the measured tier, the render distance and memory that go with it), and under "Quick actions" one line: they arrive in Phase 4. The action registry exists (`apps/api/src/actions/registry.ts`, docs/08) and every command the portal sends goes through it, but all its entries are for admins or for the portal itself: **there is no action a player can run.** Whitelisting oneself needs no button: the entrance room does it.
 
-- **Minecraft account**: username, verified UUID, whitelist status with **Add me to the whitelist** (idempotent).
-- **Quick actions** (each a button, each rate limited, each with a result line): Take me to spawn, Take me home (`/home` via FTB Essentials on the server), Set my home here, Where am I (returns dimension + coordinates from the console), Kill me (unstuck; confirms in-page).
-- **My stats**: deaths, playtime, blocks mined, from the server's `stats/<uuid>.json` read through AMP's file API; cached 5 min.
-- **My PC**: tier selector and the recommended render distance / RAM for it.
+**The plan.**
 
-Admin `/admin/actions`: audit log with filters, per-action enable/disable, rate limit editor.
+- **Quick actions** on `/me` (each a button, each with a limit on how often, each with a result line): Take me to spawn, Take me home, Set my home here, Where am I, Unstick me. Each an entry in the registry with the role PLAYER, which the registry does not have yet.
+- **My stats**: deaths, play time, blocks mined, from the server's `stats/<uuid>.json` read through AMP's file API; cached 5 min.
+- Admin `/admin/actions`: for each action, on or off, and how often. (The log itself is `/admin/events`.)
 
-Server-side mods required for this phase: **FTB Essentials** (homes, tpa, spawn, server-only) and keep **spark** for TPS. Add them to `mods.json` with `side: "server"`.
+Server-side mods for this phase: something that has homes (FTB Essentials was named in the first plan and is not in the catalogue). **spark** is in the pack already and is what the pings come from; the server's TPS comes from AMP.
 
 ## Phase 5 · Later (not designed yet)
 Discord bot: server status in a channel, join/leave messages, chat relay both ways, `/whitelist` slash command. Scheduled events page. Season archive (old maps kept on BlueMap under a different name).

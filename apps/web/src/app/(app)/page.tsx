@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { requireOnboardedUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { env } from "@/env";
@@ -15,16 +16,21 @@ import { MapEmbed } from "@/components/server/map-embed";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
+import { isWindows, WINDOWS_ONLY } from "@/lib/platform";
+import { getPlayInfo } from "@/server/play";
+import { PlayButton } from "@/components/server/play-button";
 
 export default async function HomePage() {
   const user = await requireOnboardedUser();
-  const [members, openVote, settings, status, series, news] = await Promise.all([
+  const [members, openVote, settings, status, series, news, play, agent] = await Promise.all([
     db.user.count(),
     getOpenVote(),
     getSettings(),
     getStatus(),
     playersLast24h().catch(() => [] as Array<number | null>),
     getAnnouncements(3),
+    getPlayInfo(user),
+    headers().then((h) => h.get("user-agent")),
   ]);
   const showServer = canSeeServer(user, settings);
   const mapUp = Boolean(env.MAP_URL) && status?.availability === "online";
@@ -39,6 +45,19 @@ export default async function HomePage() {
       <div className="grid gap-4 sm:grid-cols-2">
         <StatusCard status={status} series={series} address={showServer ? env.SERVER_ADDRESS : null} />
         <div className="space-y-4">
+          {showServer && (
+            <Card data-testid="play-card">
+              <CardHeader>
+                <CardTitle>Play</CardTitle>
+                {isWindows(agent) && <CardDescription>Checks for mod updates, then opens the Minecraft Launcher on {play.name}.</CardDescription>}
+              </CardHeader>
+              <CardContent>
+                {isWindows(agent)
+                  ? <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} />
+                  : <p className="text-sm text-muted-foreground">{WINDOWS_ONLY(play.name)}</p>}
+              </CardContent>
+            </Card>
+          )}
           <Card className={openVote ? "border-primary" : undefined}>
             <CardHeader>
               <CardTitle>{openVote ? `Vote open: ${openVote.title}` : "The mod list"}</CardTitle>

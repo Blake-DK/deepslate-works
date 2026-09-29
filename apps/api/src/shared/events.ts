@@ -83,7 +83,9 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.restart.cancelled": "called off the planned restart",
   "server.backup": "started a backup",
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
-  "installer.report": (p) => (p.outcome === "ok" ? `installed ${s(p.packVersion, "the pack")}: all good` : p.outcome === "cancelled" ? `stopped the installer${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `ran the installer and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`),
+  "installer.report": (p) => p.mode === "play"
+    ? (p.outcome === "ok" ? `pressed Play: ${s(p.packVersion, "the pack")}, launcher opened` : p.outcome === "cancelled" ? "pressed Play and closed the window" : `pressed Play and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)
+    : (p.outcome === "ok" ? `installed ${s(p.packVersion, "the pack")}: all good` : p.outcome === "cancelled" ? `stopped the installer${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `ran the installer and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`),
   "files.download": (p) => `downloaded ${s(p.path)} from the server`,
   "retention.prune": (p) => `old entries cleared: ${s(p.events, "0")} events, ${s(p.ips, "0")} addresses${p.installs ? `, ${s(p.installs)} install reports` : ""}`,
   "events.export": "exported the event log",

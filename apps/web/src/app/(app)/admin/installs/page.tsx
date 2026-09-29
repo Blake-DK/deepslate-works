@@ -18,7 +18,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   const { outcome } = await searchParams;
   const only = (OUTCOMES as readonly string[]).includes(outcome ?? "") ? outcome : undefined;
   const [rows, counts] = await Promise.all([
-    db.installReport.findMany({ where: only ? { outcome: only } : undefined, orderBy: { at: "desc" }, take: 200, select: { id: true, userId: true, at: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } }),
+    db.installReport.findMany({ where: only ? { outcome: only } : undefined, orderBy: { at: "desc" }, take: 200, select: { id: true, userId: true, at: true, mode: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } }),
     db.installReport.groupBy({ by: ["outcome"], _count: { _all: true } }),
   ]);
   const n = (o: string) => counts.find((c) => c.outcome === o)?._count._all ?? 0;
@@ -65,8 +65,8 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
         <CardContent className="p-0">
           {rows.length === 0 ? <p className="p-4 text-sm text-muted-foreground">{only ? "No reports with that outcome." : "No reports yet. They arrive when someone runs the installer."}</p> : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[52rem] text-sm">
-                <thead className="text-left text-xs text-muted-foreground"><tr><th className="px-4 py-2 font-normal">Who</th><th className="px-4 py-2 font-normal">When</th><th className="px-4 py-2 font-normal">Outcome</th><th className="px-4 py-2 font-normal">Pack</th><th className="px-4 py-2 font-normal">Windows</th><th className="px-4 py-2 font-normal">Memory</th><th className="px-4 py-2 font-normal">Graphics</th></tr></thead>
+              <table className="w-full min-w-[56rem] text-sm">
+                <thead className="text-left text-xs text-muted-foreground"><tr><th className="px-4 py-2 font-normal">Who</th><th className="px-4 py-2 font-normal">When</th><th className="px-4 py-2 font-normal">From</th><th className="px-4 py-2 font-normal">Outcome</th><th className="px-4 py-2 font-normal">Pack</th><th className="px-4 py-2 font-normal">Windows</th><th className="px-4 py-2 font-normal">Memory</th><th className="px-4 py-2 font-normal">Graphics</th></tr></thead>
                 <tbody className="divide-y">
                   {rows.map((r) => {
                     const sys = r.system as SystemInfo;
@@ -76,6 +76,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
                       <tr key={r.id}>
                         <td className="px-4 py-2"><Link href={`/admin/installs/${r.id}`} className="font-medium hover:underline">{r.user.displayName}</Link>{changed && <span className="block text-xs text-primary">was {TIER[r.tierBefore!]}, measured {TIER[r.tierMeasured!]}</span>}</td>
                         <td className="px-4 py-2 text-muted-foreground" title={r.at.toISOString()}>{timeAgo(r.at, now)}</td>
+                        <td className="px-4 py-2">{r.mode === "play" ? "Play" : "Installer"}</td>
                         <td className="px-4 py-2"><Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"}>{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}</Badge>{r.failedStep && <span className="block text-xs text-muted-foreground">at &quot;{r.failedStep}&quot;</span>}</td>
                         <td className="px-4 py-2 font-mono text-xs">{r.packVersion}</td>
                         <td className="px-4 py-2">{s.os}</td>

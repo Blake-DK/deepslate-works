@@ -190,6 +190,7 @@ model InstallReport {
   at               DateTime @default(now())
   packVersion      String
   installerVersion String
+  mode             String   @default("install") // install (Setup.bat) | play (the Play button, or Update and Play.bat)
   outcome          String   // ok | failed | cancelled
   failedStep       String?
   durationSec      Int

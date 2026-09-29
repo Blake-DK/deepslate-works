@@ -7,6 +7,8 @@ import { z } from "zod";
 export const MAX_LOG_BYTES = 512 * 1024;
 export const OUTCOMES = ["ok", "failed", "cancelled"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
+export const MODES = ["install", "play"] as const; // docs/05 "Play from the site"
+export type Mode = (typeof MODES)[number];
 
 const short = (max: number) => z.string().max(max).transform((v) => v.trim());
 const optional = (max: number) => z.string().max(max).nullish().transform((v) => (v ? v.trim() : null));
@@ -31,6 +33,7 @@ export const reportSchema = z
   .object({
     packVersion: short(60),
     installerVersion: short(40),
+    mode: z.enum(MODES).nullish().transform((v) => v ?? "install"), // installers before 1.3.0 don't say
     outcome: z.enum(OUTCOMES),
     failedStep: optional(120),
     durationSec: z.number().finite().min(0).max(86_400).transform((v) => Math.round(v)),

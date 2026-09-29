@@ -30,6 +30,7 @@ At the end of every run, whether it went well, failed or was stopped, `install.p
 | Field | Holds |
 |---|---|
 | `packVersion`, `installerVersion` | what was being installed, and by which version of the script |
+| `mode` | `install` (`Setup.bat`) or `play` (the Play button, `Update and Play.bat`); since installer 1.3.0 |
 | `outcome` | `ok`, `failed` or `cancelled` (the window was closed or Ctrl+C pressed part-way) |
 | `failedStep` | the title of the step in hand when it stopped, e.g. "Checking the Minecraft Launcher" |
 | `durationSec` | how long the run took |
@@ -58,6 +59,39 @@ At the end of every run, whether it went well, failed or was stopped, `install.p
 
 **No heartbeat.** Nothing is sent from the launcher profile or from the game; the report at install time is all there is.
 
+## Play from the site (planner spec 2026-09-29; built the same day, installer 1.3.0)
+
+The site's Play button is a link, `deepslate://play` (docs/05). This is the PC's side of it.
+
+**Setting it up.** After the launcher profile has been saved and checked, every run (first or later, `Setup.bat` or Play) does step 9, "Setting up the Play button":
+
+1. copies `install.ps1` to `%LOCALAPPDATA%\DeepslateWorks\install.ps1`, unless the copy there is already the same file (SHA-256);
+2. registers the link for this Windows user only, no admin rights:
+   - `HKCU\Software\Classes\deepslate` · default value `URL:Deepslate Works`, and an empty value named `URL Protocol`
+   - `HKCU\Software\Classes\deepslate\shell\open\command` · default value `"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "<the copy>" -Play "%1"`
+3. reads the command back and compares it.
+
+If any of this fails the install still counts as done; the run says "The Play button was not set up this time" and the log says why. Nothing is copied or registered in a dry run, in the self test, or when `-Root` was given.
+
+**A link is input from a stranger.** Any web page can show a `deepslate://` link, and Windows passes whatever was clicked to the script. So:
+
+- The link is matched against `^deepslate://play/?$` (`Test-PlayLink`). Anything else, a longer path, a query, quotes, spaces, another word, ends the run at once with "That is not a link this installer knows", before anything is read or written.
+- When the script was started with a link, **no other option counts**: `-Root`, `-DryRun`, `-SelfTest`, `-PretendRunning` are reset to their defaults. The script declares `PositionalBinding = $false` and one positional parameter, `$Link`, so that `-Play "%1"` puts the link there and nowhere else.
+- The link carries no data. What is installed, from where and into which folder is in the script and in the signed-in manifest, as in any other run. The worst a hostile page can do is start an update and open the launcher, and the browser asks first.
+- The command in the registry names PowerShell by its full path.
+
+**`-Play` mode** (from the link, or from `Update and Play.bat`): the same steps as a normal run, in the same order, quietly: one grey line per step instead of the ticks, problems in full. It then opens the launcher; the profile was written with `lastUsed` = now and as `selectedProfile`, so the launcher opens on it. No question is asked. The install report carries `mode: "play"` (`install` otherwise; `InstallReport.mode`, migration `0007_install_report_mode`), Admin → Installs has a "From" column, and the event log says "m1owl pressed Play: 0.1.0+47b0b579, launcher opened".
+
+**Launcher already open.** Pressing Play with the launcher open is ordinary, so play mode does not stop at step 2 for it. The mods are brought up to date; if the profile is in `launcher_profiles.json` and points at the right NeoForge, the file is **left alone** and the run says "The Minecraft Launcher is already open. Choose Deepslate Works next to Play". If the profile is missing or wrong, or NeoForge itself has to be installed, the rule of "The launcher must be closed" applies and the run stops with the close-the-launcher message. `Setup.bat` is as strict as before.
+
+**Minecraft itself running.** A mod file the game holds open cannot be replaced; the run stops with "<file> is in use. Close Minecraft (the game, not only the launcher), then try again."
+
+**When it fails from the link** there is no `.bat` to keep the window open, so the script waits for Enter after the message.
+
+**Signing in.** The launcher token lasts a week. When it has run out, Play opens the browser for the Discord sign-in as `Setup.bat` does, then carries on.
+
+**Known gap: the copy does not update itself.** The copy in `%LOCALAPPDATA%` is replaced only when a newer `install.ps1` is run from a fresh download (`Setup.bat` or `Update and Play.bat` of a new `installer.zip`). Mods, configs, NeoForge version and memory settings come from the manifest on every run, so a pack update never needs a new script; a fix to the script itself does. Not in the spec; for the planner to decide (the script could fetch `installer.zip` when the manifest names a newer installer version, which needs a way to trust the download).
+
 ## The PC tier is measured (Alex, 2026-09-29)
 
 "The 'your PC' should be decided by a script too, so we get a real view of the power and capabilities of people's PCs." Every install report that says enough about the hardware sets the member's tier (`suggestTier` in `apps/web/src/lib/install-report.ts`):
@@ -76,6 +110,7 @@ Remote-desktop and virtual adapters (Parsec, Microsoft Basic Display, Hyper-V) a
 
 - `Setup.bat`: `powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"` then `pause`. Exists so nobody has to know what an execution policy is.
 - `Update and Play.bat`: the same with `-Play`; pauses only on failure.
+- `%LOCALAPPDATA%\DeepslateWorks\install.ps1`: the copy the Play button runs (see "Play from the site"). Made by the script, not part of the zip.
 - `install.ps1`: PowerShell 5.1 compatible (ships with Windows 10/11). No modules, no admin rights.
 - `README.txt`: three lines, same as the `/install` page.
 
@@ -119,6 +154,16 @@ Install report:
 - [ ] Rename `%APPDATA%\.minecraft\launcher_profiles.json` for a moment and run `Setup.bat`: it fails at step 2, and Admin → Installs shows a failed run at "Checking the Minecraft Launcher". Rename the file back.
 - [ ] Pull the network cable after signing in: the install says the log could not be sent and carries on; the local log is still there.
 
+Play from the site (installer 1.3.0):
+- [ ] Before `Setup.bat` has ever run on the PC (or after deleting `HKCU\Software\Classes\deepslate`): press **Play** on Home. After about 2.5 s the page says "Looks like the launcher isn't set up on this PC" and offers the download.
+- [ ] `Setup.bat` ends with step 9, "The Play button on the site now starts the game on this PC". `%LOCALAPPDATA%\DeepslateWorks\install.ps1` exists; `reg query HKCU\Software\Classes\deepslate\shell\open\command` shows the PowerShell line ending in `-Play "%1"`.
+- [ ] Launcher closed, press **Play**: the browser asks whether to open Windows PowerShell; yes. A window shows a few grey lines, the launcher opens on Deepslate Works **within 10 s** of the yes, the window closes. The page does not show the "isn't set up" box.
+- [ ] Admin → Installs has the run with "Play" in the From column; Home says "Your last launch: <version> on <today>".
+- [ ] Launcher already open, press **Play**: the run goes through and says the launcher is already open; `launcher_profiles.json` keeps its date.
+- [ ] After a pack version bump (Admin → Modpack → Build): Home shows **Update available**; Play replaces exactly the changed jar; within ten seconds of the run ending the chip is gone.
+- [ ] Try it in Chrome or Edge, and in Firefox if it is installed. In Firefox on a PC without the installer the page must stay where it is.
+- [ ] In the Run box (Win+R): `deepslate://play?x=1` opens a window that says "That is not a link this installer knows" and changes nothing.
+
 Launcher open (the bug of 2026-09-29):
 - [ ] With the launcher open: `Setup.bat` stops at step 1 with "Close the Minecraft Launcher (including the tray icon) and run this again". `launcher_profiles.json` has the same date and size as before.
 - [ ] With the launcher window closed but its icon still next to the clock: the same.
@@ -133,7 +178,7 @@ A clean run:
 
 Again and updates:
 - [ ] `Setup.bat` a second time: "Already up to date", nothing downloaded, the profile's `created` date unchanged.
-- [ ] `Update and Play.bat`: no question asked, launcher opens on the profile.
+- [ ] `Update and Play.bat`: no question asked, launcher opens on the profile. Admin → Installs shows it as "Play".
 - [ ] After a mod changes on the site: exactly that jar is replaced.
 
 Edges:

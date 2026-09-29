@@ -34,7 +34,7 @@ export default async function InstallReportPage({ params }: { params: Promise<{ 
     ["Launcher", sys.launcher?.version || sys.launcher?.kind ? `${sys.launcher.kind ?? ""} ${sys.launcher.version ?? ""}`.trim() : "not known"],
     ["Java", sys.java?.version ? `${sys.java.version}${sys.java.source ? ` (${sys.java.source})` : ""}` : "not found"], ["Java path", sys.java?.path],
     ["NeoForge", sys.neoforge ? `${sys.neoforge.version ?? "?"}: ${sys.neoforge.before ? "there before" : "not there before"}, ${sys.neoforge.after ? "there after" : "not there after"}` : "not known"],
-    ["PowerShell", sys.powershell], ["Installer", r.installerVersion], ["Pack", r.packVersion], ["Took", `${r.durationSec} s`],
+    ["PowerShell", sys.powershell], ["Started from", r.mode === "play" ? "the Play button (or Update and Play.bat)" : "Setup.bat"], ["Installer", r.installerVersion], ["Pack", r.packVersion], ["Took", `${r.durationSec} s`],
   ];
   return (
     <div className="space-y-4">

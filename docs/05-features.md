@@ -32,6 +32,15 @@ Pages are listed per phase. Every page must work on a 390px phone.
 - Non-Windows browsers see one line: "Deepslate Works runs on Windows only." (Mac/Linux support dropped 2026-09-29.)
 - Shows the current pack version (lockfile hash, short), what changed since the last version, and "Run the installer again to update".
 - Server address shown with a copy button, though the installer adds it to the server list automatically.
+- **Play** card at the top, and the line "Once installed, use the Play button here to launch. It checks for updates every time." See "Play from the site" below.
+
+### Play from the site (planner spec 2026-09-29; built the same day)
+- A **Play** button on Home and on `/install`, a plain link to `deepslate://play`. Windows hands the link to the copy of `install.ps1` that `Setup.bat` left in `%LOCALAPPDATA%\DeepslateWorks\` (docs/07 "Play from the site"), which brings the mods up to date and opens the Minecraft Launcher on the Deepslate Works profile.
+- On click the page waits 2.5 s. If it is still visible and focused, and never lost focus in between, nothing on the PC took the link: it shows **"Looks like the launcher isn't set up on this PC"** with the installer download. Losing focus (the browser's "Open Windows PowerShell?" question, the installer's window) counts as the link having been taken.
+- Next to the button: the current pack version and "Your last launch: <version> on <date>", from the member's latest install report with outcome ok (from `Setup.bat` or from Play), and an **Update available** chip when the two differ. Home refreshes itself every 10 s, so the chip clears by itself once the run has reported.
+- The button is greyed out while downloads are closed (server off, or not launched yet): the installer would be refused the mod list anyway.
+- Non-Windows browsers get the one line "Deepslate Works runs on Windows only." in place of the button.
+- Firefox only: the link is opened in a hidden frame, because Firefox replaces the page with an error when nothing is registered for a link.
 
 ### Admin `/admin/modpack`
 - Table from `mods.json`: enabled toggle, load, side, resolved version from the lockfile, and status (OK / not found on Modrinth / no 1.21.1 NeoForge build / dependency missing).
@@ -45,6 +54,7 @@ Pages are listed per phase. Every page must work on a 390px phone.
 - Pinned announcement and the last three.
 - Big **Open live map** button and a compact embedded map (iframe to `map.<domain>`, lazy-loaded, hidden on LOW tier by default with a "show map" toggle).
 - "Last 24 h" sparkline of player count from `ServerSnapshot`.
+- **Play** card (once the server is visible to the member): see "Play from the site" under Phase 2.
 
 ### `/map` Full-screen BlueMap iframe with a back button.
 

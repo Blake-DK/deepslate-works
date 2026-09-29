@@ -13,6 +13,8 @@ import { canDownload } from "@/server/modpack/gate";
 import { canSeeServer, getSettings } from "@/server/settings";
 import { LaunchBanner } from "@/components/launch-banner";
 import { isWindows, WINDOWS_ONLY } from "@/lib/platform";
+import { getPlayInfo } from "@/server/play";
+import { PlayButton } from "@/components/server/play-button";
 
 export const metadata: Metadata = { title: "Install" };
 
@@ -29,7 +31,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       </div>
     );
   }
-  const [m, lock, installer] = await Promise.all([getManifest(), getLock(), distFile("installer.zip")]);
+  const [m, lock, installer, play] = await Promise.all([getManifest(), getLock(), distFile("installer.zip"), getPlayInfo(user)]);
   const version = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const settings = await getSettings();
   const showServer = canSeeServer(user, settings);
@@ -70,9 +72,19 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       {offline && gate.ok && <Alert tone="info">The server was offline a moment ago; it&apos;s reachable now, try again.</Alert>}
       {gate.reason === "admin" && <Alert tone="info">Admin: downloads are always open for you. Players only see them while the server is running or asleep.</Alert>}
 
+      <Card className="border-primary">
+        <CardHeader>
+          <CardTitle>Play</CardTitle>
+          <CardDescription>Once installed, use the Play button here to launch. It checks for updates every time.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} stepsHere />
+        </CardContent>
+      </Card>
+
         <Card>
           <CardHeader>
-            <CardTitle>Windows: three steps</CardTitle>
+            <CardTitle>First time on this PC: three steps</CardTitle>
             <CardDescription>About five minutes, most of it downloading.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -87,7 +99,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
               </li>
               <li className="rounded-lg border p-3"><span className="font-medium">3. In the Minecraft Launcher, pick &quot;{m.name}&quot;</span> in the dropdown next to Play, press Play. The server is already in your server list.</li>
             </ol>
-            <p className="text-sm text-muted-foreground">From then on, close the launcher and double-click <span className="font-mono">Update and Play.bat</span> in the same folder: it signs you in with Discord in your browser the first time (then remembers you for a week), fetches any mod updates, and opens the launcher on the Deepslate Works profile. Keep the folder; that&apos;s your play button.</p>
+            <p className="text-sm text-muted-foreground">Once installed, use the Play button here to launch. It checks for updates every time. Your browser asks once whether this site may open Windows PowerShell: say yes, and tick &quot;always allow&quot; if you like. <span className="font-mono">Update and Play.bat</span> in the folder you unzipped does the same job without the browser.</p>
           </CardContent>
         </Card>
 

@@ -1,18 +1,41 @@
 # Deepslate Works client installer. PowerShell 5.1, no modules, no admin rights. See docs/07-installer.md.
+[CmdletBinding(PositionalBinding = $false)]
 param(
+  [Parameter(Position = 0)]
+  [string]$Link = "",       # the deepslate:// link, when Windows starts this from the Play button on the site
   [switch]$DryRun,          # no downloads, no writes outside -Root, no browser
-  [switch]$Play,            # after updating: open the Minecraft Launcher on our profile and exit
+  [switch]$Play,            # update quietly, then open the Minecraft Launcher on our profile and exit
   [string]$Root = "",       # override %APPDATA% (tests)
   [switch]$NoPrompt,        # never ask anything at the end (automation)
-  [switch]$SelfTest,        # check the launcher-profile code against a scratch file, touch nothing else, exit
+  [switch]$SelfTest,        # check the script's own code against scratch files, touch nothing else, exit
   [string[]]$PretendRunning = @()   # tests: process names to treat as running
 )
+
+# ---- started from a link on a web page ------------------------------------------------------------------
+# The Play button is a link, deepslate://play, and Windows hands this script whatever link was clicked.
+# ANY web page can put such a link in front of someone, so: exactly one link is accepted, and when the
+# script was started by a link nothing else on the command line counts. It installs where it always
+# installs, from the site it was built for, and does nothing a normal run would not do.
+function Test-PlayLink([string]$l) { return ($l -match '^deepslate://play/?$') }
+
+$FromLink = ($Link -ne "")
+if ($FromLink) {
+  if (-not (Test-PlayLink $Link)) {
+    Write-Host "That is not a link this installer knows. Use the Play button on the site." -ForegroundColor Red
+    Start-Sleep -Seconds 6
+    exit 1
+  }
+  $Play = $true; $DryRun = $false; $SelfTest = $false; $NoPrompt = $true; $Root = ""; $PretendRunning = @()
+}
+$Mode = "install"
+if ($Play) { $Mode = "play" }
+$Quiet = [bool]$Play      # play mode: one grey line per step, no ticks; failures are said in full
 # ---- config block (stamped by `modpack build installer`) ----
 $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.2.0"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report
+$InstallerVersion = "1.3.0"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report; 1.3.0: Play from the site
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 
 $ErrorActionPreference = "Stop"
@@ -35,9 +58,17 @@ function Log($msg) {
   $script:RunLog.Add($line)
   try { Add-Content -Path $LogFile -Value $line } catch {}
 }
-function Step($msg) { $script:Step++; $script:StepName = [string]$msg; Write-Host ("`n{0}. {1}" -f $script:Step, $msg) -ForegroundColor Cyan; Log "STEP $msg" }
-function Tick($msg) { Write-Host ("   [OK] {0}" -f $msg) -ForegroundColor Green; Log "OK $msg" }
-function Note($msg) { Write-Host ("   {0}" -f $msg) -ForegroundColor Gray; Log $msg }
+function Step($msg) {
+  $script:Step++; $script:StepName = [string]$msg
+  if ($Quiet) { Write-Host ("  {0} ..." -f $msg) -ForegroundColor DarkGray } else { Write-Host ("`n{0}. {1}" -f $script:Step, $msg) -ForegroundColor Cyan }
+  Log "STEP $msg"
+}
+function Tick($msg) { if (-not $Quiet) { Write-Host ("   [OK] {0}" -f $msg) -ForegroundColor Green }; Log "OK $msg" }
+function Note($msg) { if (-not $Quiet) { Write-Host ("   {0}" -f $msg) -ForegroundColor Gray }; Log $msg }
+function Hold-Window {
+  # Started from the Play button there is no .bat to keep the window open: wait, so the message can be read.
+  if ($FromLink) { try { [void](Read-Host "Press Enter to close this window") } catch {} }
+}
 function Gate-Message($err) {
   $body = ""
   try { $body = (New-Object IO.StreamReader($err.Exception.Response.GetResponseStream())).ReadToEnd() } catch {}
@@ -51,6 +82,7 @@ function Fail($msg) {
   Write-Host ("   Details are in {0}" -f $LogFile) -ForegroundColor DarkGray
   Log "FAIL $msg"
   Send-Report "failed"
+  Hold-Window
   exit 1
 }
 
@@ -128,6 +160,7 @@ function New-Report([string]$outcome) {
   return [ordered]@{
     packVersion      = [string]$script:PackSeen
     installerVersion = $InstallerVersion
+    mode             = $Mode
     outcome          = $outcome
     failedStep       = $failed
     durationSec      = [int]((Get-Date) - $script:Started).TotalSeconds
@@ -236,16 +269,50 @@ function Get-LauncherFacts {
     if ($j.PSObject.Properties["version"]) { $f.profilesFormat = [int]$j.version }
     if ($j.PSObject.Properties["launcherVersion"] -and $j.launcherVersion.PSObject.Properties["name"]) { $f.version = [string]$j.launcherVersion.name }
   } catch {}
-  foreach ($exe in @("$env:ProgramFiles(x86)\Minecraft Launcher\MinecraftLauncher.exe", "$env:ProgramFiles\Minecraft Launcher\MinecraftLauncher.exe", "$env:LOCALAPPDATA\Programs\Minecraft Launcher\MinecraftLauncher.exe")) {
+  foreach ($exe in @("${env:ProgramFiles(x86)}\Minecraft Launcher\MinecraftLauncher.exe", "$env:ProgramFiles\Minecraft Launcher\MinecraftLauncher.exe", "$env:LOCALAPPDATA\Programs\Minecraft Launcher\MinecraftLauncher.exe")) {
     try { if (Test-Path $exe) { $f.kind = "classic"; if (-not $f.version) { $f.version = [string](Get-Item $exe).VersionInfo.ProductVersion }; return $f } } catch {}
   }
   try { $pkg = Get-AppxPackage -Name "Microsoft.4297127D64EC6" -ErrorAction Stop; if ($pkg) { $f.kind = "store"; if (-not $f.version) { $f.version = [string]$pkg.Version } } } catch {}
   return $f
 }
 
+# ---- Play from the site (docs/07 "Play from the site") ------------------------------------------------
+# The script keeps a copy of itself in %LOCALAPPDATA%\DeepslateWorks and tells Windows, for this user
+# only (HKCU, no admin rights), to run that copy for deepslate:// links.
+
+function Get-HandlerCommand([string]$scriptPath) {
+  $ps = ([string]$env:SystemRoot).TrimEnd("\") + "\System32\WindowsPowerShell\v1.0\powershell.exe"   # the full path: never whatever "powershell" is found first
+  return ('"{0}" -NoProfile -ExecutionPolicy Bypass -File "{1}" -Play "%1"' -f $ps, $scriptPath)
+}
+
+function Register-PlayLink([string]$scriptPath) {
+  $base = "HKCU:\Software\Classes\deepslate"
+  New-Item -Path "$base\shell\open\command" -Force | Out-Null
+  Set-Item -Path $base -Value ("URL:{0}" -f $PackName)
+  New-ItemProperty -Path $base -Name "URL Protocol" -Value "" -PropertyType String -Force | Out-Null
+  Set-Item -Path "$base\shell\open\command" -Value (Get-HandlerCommand $scriptPath)
+}
+
+# $true when the Play button will work on this PC afterwards.
+function Install-Self {
+  if ($DryRun -or $script:CustomRoot -or $env:OS -ne "Windows_NT" -or -not $env:LOCALAPPDATA -or -not $PSCommandPath) { return $false }
+  $dir = Join-Path $env:LOCALAPPDATA "DeepslateWorks"
+  $target = Join-Path $dir "install.ps1"
+  New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  $me = (Resolve-Path $PSCommandPath).Path
+  if ($me -ne $target) {
+    $same = (Test-Path $target) -and ((Get-FileHash $me -Algorithm SHA256).Hash -eq (Get-FileHash $target -Algorithm SHA256).Hash)
+    if (-not $same) { Copy-Item -Path $me -Destination $target -Force; Log ("copied the installer to " + $target) }
+  }
+  if (-not (Test-Path $target)) { return $false }
+  Register-PlayLink $target
+  $got = [string](Get-Item "HKCU:\Software\Classes\deepslate\shell\open\command").GetValue("")
+  return ($got -eq (Get-HandlerCommand $target))
+}
+
 function Open-Launcher {
   Log "launching"
-  foreach ($exe in @("$env:ProgramFiles(x86)\Minecraft Launcher\MinecraftLauncher.exe", "$env:ProgramFiles\Minecraft Launcher\MinecraftLauncher.exe", "$env:LOCALAPPDATA\Programs\Minecraft Launcher\MinecraftLauncher.exe")) {
+  foreach ($exe in @("${env:ProgramFiles(x86)}\Minecraft Launcher\MinecraftLauncher.exe", "$env:ProgramFiles\Minecraft Launcher\MinecraftLauncher.exe", "$env:LOCALAPPDATA\Programs\Minecraft Launcher\MinecraftLauncher.exe")) {
     if (Test-Path $exe) { Start-Process $exe; return $true }
   }
   try { Start-Process "shell:AppsFolder\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft"; return $true } catch {}   # Microsoft Store launcher
@@ -332,6 +399,19 @@ if ($SelfTest) {
   Check "the report says what ran" ($rep.installerVersion -eq $InstallerVersion -and $rep.durationSec -ge 0 -and $rep.system.powershell)
   $script:Token = $null
 
+  Write-Host "Self test: the Play link" -ForegroundColor White
+  Check "deepslate://play is accepted, with or without the slash a browser adds" ((Test-PlayLink "deepslate://play") -and (Test-PlayLink "deepslate://play/") -and (Test-PlayLink "DEEPSLATE://PLAY"))
+  $no = @("deepslate://play/../x", "deepslate://play?root=\\evil\share", "deepslate://play -Root C:\x", 'deepslate://play" -SelfTest "', "deepslate://update", "deepslate://", "deepslate:play", "http://deepslate.dsw.test/play", "deepslate://play/ ", " deepslate://play", "deepslate://play`n-DryRun", "")
+  $let = @($no | Where-Object { Test-PlayLink $_ })
+  Check ("every other link is refused (let through: " + $let.Count + ")") ($let.Count -eq 0)
+  $env:SystemRoot = "C:\Windows"
+  $cmd = Get-HandlerCommand "C:\Users\x\AppData\Local\DeepslateWorks\install.ps1"
+  Check ("Windows is told to run: " + $cmd) ($cmd -eq '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "C:\Users\x\AppData\Local\DeepslateWorks\install.ps1" -Play "%1"')
+  $Mode = "play"
+  Check "a run from the Play button says so in its report" ((New-Report "ok").mode -eq "play")
+  $Mode = "install"
+  Check "a normal run says so too" ((New-Report "ok").mode -eq "install")
+
   Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
   if ($script:SelfTestBad -gt 0) { Write-Host ("{0} check(s) failed" -f $script:SelfTestBad) -ForegroundColor Red; exit 1 }
   Write-Host "All checks passed." -ForegroundColor Green
@@ -340,6 +420,7 @@ if ($SelfTest) {
 
 Write-Host ("{0} installer ({1})" -f $PackName, $PackVersion) -ForegroundColor White
 Log ("=== {0} {1} start ===" -f $PackName, $PackVersion)
+$script:CustomRoot = ($Root -ne "")   # a test run: nothing is copied or registered
 if ($Root -eq "") { $Root = $env:APPDATA }
 $Minecraft = Join-Path $Root ".minecraft"
 $Profiles = Join-Path $Minecraft "launcher_profiles.json"
@@ -397,8 +478,17 @@ try {
     Fail "Install the Minecraft Launcher from minecraft.net, open it once, then run this again."
   }
   $script:Facts.launcher = Get-LauncherFacts
-  Require-LauncherClosed "anything is changed"   # asked for before NeoForge and before the profile; said first, so nobody waits through the downloads to hear it
-  Tick "Launcher found, and closed"
+  $script:LauncherOpen = $false
+  if ($Mode -eq "play") {
+    # Pressing Play with the launcher already open is ordinary. The mods can be brought up to date all the
+    # same; only NeoForge and the profile need it closed, and they are checked when their turn comes.
+    $script:LauncherOpen = (@(Find-Launcher).Count -gt 0)
+    if ($script:LauncherOpen) { Log "the launcher is open; carrying on with the mods" }
+    Tick "Launcher found"
+  } else {
+    Require-LauncherClosed "anything is changed"   # asked for before NeoForge and before the profile; said first, so nobody waits through the downloads to hear it
+    Tick "Launcher found, and closed"
+  }
 
   # 3. manifest
   Step "Fetching the mod list"
@@ -506,11 +596,19 @@ try {
     Invoke-WebRequest -Uri $f.url -OutFile $tmp -UseBasicParsing
     $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($tmp))).Replace("-", "").ToLower()
     if ($hash -ne $f.sha512) { Remove-Item $tmp -Force; Fail ("{0} downloaded wrong. Run this again." -f $f.filename) }
-    Move-Item -Force $tmp $dest
+    try { Move-Item -Force $tmp $dest }
+    catch { Log ("could not replace " + $f.filename + ": " + $_.Exception.Message); Remove-Item $tmp -Force -ErrorAction SilentlyContinue; Fail ("{0} is in use. Close Minecraft (the game, not only the launcher), then try again." -f $f.filename) }
     Log ("downloaded " + $f.filename)
   }
   Write-Progress -Activity "Downloading mods" -Completed
-  Get-ChildItem -Path $modsDir -Filter *.jar | Where-Object { -not $keep[$_.Name] } | ForEach-Object { Log ("removing " + $_.Name); if (-not $DryRun) { Remove-Item $_.FullName -Force } }
+  Get-ChildItem -Path $modsDir -Filter *.jar | Where-Object { -not $keep[$_.Name] } | ForEach-Object {
+    Log ("removing " + $_.Name)
+    if (-not $DryRun) {
+      $gone = $_.Name
+      try { Remove-Item $_.FullName -Force -ErrorAction Stop }
+      catch { Log ("could not remove " + $gone + ": " + $_.Exception.Message); Fail ("{0} is in use. Close Minecraft (the game, not only the launcher), then try again." -f $gone) }
+    }
+  }
   Tick ("{0} mods in place" -f $files.Count)
 
   # 6. configs (zip from the site) and options.txt
@@ -563,8 +661,15 @@ try {
   $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
   $entry = [ordered]@{ name = $PackName; type = "custom"; lastVersionId = $versionId; gameDir = $GameDir; javaArgs = $javaArgs; javaDir = $java; icon = $profile.icon; created = $now; lastUsed = $now }
   $profileSaved = $false
+  $profileLeft = $false
+  if ($Mode -eq "play" -and -not $DryRun -and @(Find-Launcher).Count -gt 0 -and (Test-LauncherProfile $Profiles $profile.id $versionId) -eq "") {
+    # Launcher open, profile already there and pointing at the right NeoForge: nothing to write.
+    $profileLeft = $true
+    $profileSaved = $true
+    Log "the launcher is open and the profile is right: launcher_profiles.json left as it is"
+  }
   if ($DryRun) { Note "(dry run) would write the profile to launcher_profiles.json" }
-  else {
+  elseif (-not $profileLeft) {
     Require-LauncherClosed "launcher_profiles.json is written"
     Set-LauncherProfile $Profiles $profile.id $entry
     # Read it back. Then once more after a moment: a launcher that was just starting would have written over it by now.
@@ -584,21 +689,34 @@ try {
       Write-Host ("   Log file: {0}" -f $LogFile) -ForegroundColor White
       Log "FAIL the launcher profile was not saved"
       Send-Report "failed"
+      Hold-Window
       exit 1
     }
     $profileSaved = $true
   }
-  Tick ("Profile '{0}' with {1} GB of RAM (your PC has {2} GB), saved and checked" -f $PackName, $xmx, $totalGb)
+  if ($profileLeft) { Tick ("Profile '{0}' is already in the launcher" -f $PackName) }
+  else { Tick ("Profile '{0}' with {1} GB of RAM (your PC has {2} GB), saved and checked" -f $PackName, $xmx, $totalGb) }
 
-  if (-not $DryRun) { @{ version = $PackVersion; installedAt = $now; hash = $manifest.hash } | ConvertTo-Json | Set-Content -Path $installedFile }
+  # 9. the Play button on the site
+  if ($profileSaved) {
+    Step "Setting up the Play button"
+    $linked = $false
+    try { $linked = Install-Self } catch { Log ("could not set up the Play button: " + $_.Exception.Message) }
+    if ($linked) { Tick "The Play button on the site now starts the game on this PC" }
+    else { Note "The Play button was not set up this time; Update and Play.bat does the same job" }
+  }
+
+  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash } | ConvertTo-Json | Set-Content -Path $installedFile }
 
   Write-Host ""
   if ($prev -and $prev.hash -eq $manifest.hash) { Write-Host "Already up to date." -ForegroundColor Green }
-  Write-Host ("Server address: {0}" -f $manifest.server_address) -ForegroundColor White
+  elseif ($Quiet -and $prev) { Write-Host ("Updated to {0}." -f $script:PackSeen) -ForegroundColor Green }
+  if (-not $Quiet) { Write-Host ("Server address: {0}" -f $manifest.server_address) -ForegroundColor White }
   if ($DryRun) {
     Write-Host ("(dry run) Done. Nothing was changed." ) -ForegroundColor Green
   } elseif ($Play) {
-    Write-Host ("Opening the Minecraft Launcher on {0}. Press Play." -f $PackName) -ForegroundColor Green
+    if ($profileLeft) { Write-Host ("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play." -f $PackName) -ForegroundColor Green }
+    else { Write-Host ("Opening the Minecraft Launcher on {0}. Press Play." -f $PackName) -ForegroundColor Green }
     if (-not (Open-Launcher)) { Write-Host "Couldn't find the launcher automatically; open it from the Start menu." -ForegroundColor Yellow }
     Start-Sleep -Seconds 2
   } else {
@@ -615,6 +733,7 @@ try {
     } else {
       Write-Host ("Open the Minecraft Launcher, choose {0}, press Play." -f $PackName) -ForegroundColor Green
     }
+    Write-Host ("Next time, press Play on {0}: it checks for updates and opens the launcher for you." -f $PortalUrl.Replace("https://", "")) -ForegroundColor Gray
   }
   Log "=== done ==="
   $script:StepName = ""

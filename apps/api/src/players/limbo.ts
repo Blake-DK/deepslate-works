@@ -5,7 +5,7 @@ import { db } from "../db.js";
 import { audit } from "../audit.js";
 import type { Env } from "../env.js";
 import { runAction } from "../actions/run.js";
-import { parsePos, type ActionCtx } from "../actions/registry.js";
+import { parsePlace, parsePos, type ActionCtx } from "../actions/registry.js";
 import { getSection } from "../settings.js";
 import { playGate, type GateReason } from "../shared/join-gate.js";
 import { serverPack } from "./pack.js";
@@ -47,7 +47,7 @@ export class Limbo {
   private timers: NodeJS.Timeout[] = [];
 
   constructor(private readonly env: Env, private readonly amp: Amp, private readonly tail: ConsoleTail, private readonly log: (o: unknown, m: string) => void) {
-    this.ctx = { limbo: parsePos(env.LIMBO_POS), spawn: env.SPAWN_POS ? parsePos(env.SPAWN_POS) : null, portalUrl: env.PORTAL_URL };
+    this.ctx = { limbo: parsePlace(env.LIMBO_POS), spawn: env.SPAWN_POS ? parsePos(env.SPAWN_POS) : null, portalUrl: env.PORTAL_URL };
   }
 
   get actionCtx() {

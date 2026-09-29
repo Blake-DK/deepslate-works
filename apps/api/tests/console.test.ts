@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseConsoleLine } from "../src/amp/console.js";
 import { decideJoin } from "../src/players/limbo.js";
-import { actions, linkTellraw, parsePos } from "../src/actions/registry.js";
+import { actions, linkTellraw, parsePlace, parsePos, roomBounds } from "../src/actions/registry.js";
 
 describe("parseConsoleLine", () => {
   it("reads uuid, login, join, leave and list lines", () => {
@@ -28,11 +28,11 @@ describe("decideJoin", () => {
 });
 
 describe("actions", () => {
-  const ctx = { limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
+  const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
   it("builds the hold sequence with a clickable link", () => {
     const cmds = actions["limbo.hold"].build(ctx, { name: "Bramble09", code: "ABCD2345" });
     expect(cmds[0]).toBe("tag Bramble09 remove verified");
-    expect(cmds.some((c) => c.includes("tp Bramble09 0 251 0"))).toBe(true);
+    expect(cmds.some((c) => c === "execute in deepslate:limbo run tp Bramble09 0.5 65 0.5")).toBe(true);
     expect(cmds.at(-1)).toContain('"action":"open_url","value":"https://deepslate.dsw.test/link/ABCD2345"');
   });
   it("refuses unsafe names and free text", () => {
@@ -63,5 +63,49 @@ describe("actions", () => {
   });
   it("tellraw keeps the code visible as a fallback", () => {
     expect(linkTellraw("p", "https://deepslate.dsw.test", "ABCD2345")).toContain("enter ABCD2345");
+  });
+});
+
+describe("the entrance room in a dimension of its own (docs/14)", () => {
+  const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: parsePos("0 105 0"), portalUrl: "https://deepslate.dsw.test", siteName: "Deepslate Works" };
+  it("reads where people stand, with or without a dimension", () => {
+    expect(parsePlace("deepslate:limbo 0.5 65 0.5")).toEqual({ dimension: "deepslate:limbo", x: 0.5, y: 65, z: 0.5 });
+    expect(parsePlace("0 250 0")).toEqual({ dimension: "minecraft:overworld", x: 0, y: 250, z: 0 });
+    expect(() => parsePlace("deepslate:limbo run op x 0 65 0")).toThrow();
+    expect(() => parsePlace("Deepslate:Limbo 0 65 0")).toThrow();
+  });
+  it("holds in the room's dimension, in adventure mode", () => {
+    const cmds = actions["limbo.hold"].build(ctx, { name: "Bramble09", code: "ABCD2345" });
+    expect(cmds).toContain("execute in deepslate:limbo run tp Bramble09 0.5 65 0.5");
+    expect(cmds).toContain("gamemode adventure Bramble09");
+    expect(actions["limbo.holdPlay"].build(ctx, { name: "Bramble09" })).toContain("execute in deepslate:limbo run tp Bramble09 0.5 65 0.5");
+  });
+  it("lets out into the overworld, at spawn, in survival mode", () => {
+    const cmds = actions["link.release"].build(ctx, { name: "Bramble09" });
+    expect(cmds).toContain("execute in minecraft:overworld run tp @a[name=Bramble09,tag=!verified] 0 105 0");
+    expect(cmds).toContain("gamemode survival @a[name=Bramble09,tag=!verified]");
+  });
+  it("puts a member who had not pressed Play back where they stood, in the dimension they were in", () => {
+    expect(actions["limbo.releaseBack"].build(ctx, { name: "Bramble09", back: { dimension: "minecraft:the_nether", x: 10.5, y: 70, z: -3.25 } })).toContain("execute in minecraft:the_nether run tp @a[name=Bramble09,tag=!verified] 10.50 70.00 -3.25");
+  });
+  it("brings back whoever waits and is in another dimension, or in the room's but outside the room", () => {
+    expect(actions["limbo.keep"].build(ctx, {})).toEqual([
+      "execute as @a[tag=!verified] at @s unless dimension deepslate:limbo in deepslate:limbo run tp @s 0.5 65 0.5",
+      "execute as @a[tag=!verified] at @s if dimension deepslate:limbo unless entity @s[x=-4,y=65,z=-4,dx=8,dy=4,dz=8] run tp @s 0.5 65 0.5",
+    ]);
+  });
+  it("is glass, with a floor of sea lanterns under the feet and a sign with the server's name, the size it always was", () => {
+    expect(roomBounds(ctx.limbo)).toEqual({ x1: -5, y1: 64, z1: -5, x2: 5, y2: 70, z2: 5 });
+    expect(actions["limbo.build"].build({ ...ctx, siteName: "Alex's Works" }, {})).toEqual([
+      "execute in deepslate:limbo run forceload add -5 -5 5 5",
+      "execute in deepslate:limbo run fill -5 64 -5 5 70 5 minecraft:glass hollow",
+      "execute in deepslate:limbo run fill -5 64 -5 5 64 5 minecraft:sea_lantern",
+      `execute in deepslate:limbo run setblock 0 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":""}','{"text":"Alexs Works"}','{"text":""}','{"text":""}']},is_waxed:1b}`,
+    ]);
+  });
+  it("clears the room of before, the same box it was built as, and never the one that is in use", () => {
+    expect(actions["limbo.clear"].build(ctx, { dimension: "minecraft:overworld", x: 0, y: 250, z: 0 })).toEqual(["execute in minecraft:overworld run fill -5 249 -5 5 255 5 minecraft:air", "execute in minecraft:overworld run forceload remove -5 -5 5 5"]);
+    expect(actions["limbo.clear"].build(ctx, { dimension: "deepslate:limbo", x: 0, y: 65, z: 0 })).toEqual([]);
+    expect(actions["limbo.clear"].input.safeParse({ dimension: "minecraft:overworld run stop", x: 0, y: 250, z: 0 }).success).toBe(false);
   });
 });

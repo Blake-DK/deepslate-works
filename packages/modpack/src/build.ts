@@ -48,7 +48,7 @@ export async function removeClientPack(paths: { dist: string }, log: (s: string)
 }
 
 /** dist/server/mods + configs + server-only files; jars are downloaded and hash-checked. */
-export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: string; config: string; server: string }, log: (s: string) => void): Promise<string> {
+export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: string; config: string; server: string; datapacks?: string }, log: (s: string) => void): Promise<string> {
   const out = path.join(paths.dist, "server");
   const modsDir = path.join(out, "mods");
   await mkdir(modsDir, { recursive: true });
@@ -66,6 +66,12 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
   }
   if (await exists(paths.config)) await cp(paths.config, path.join(out, "config"), { recursive: true });
   if (await exists(paths.server)) await cp(paths.server, out, { recursive: true });
+  // Datapacks are part of the world, not of the server's folder: Sync puts them into <world>/datapacks/.
+  await rm(path.join(out, "datapacks"), { recursive: true, force: true });
+  if (paths.datapacks && (await exists(paths.datapacks))) {
+    await cp(paths.datapacks, path.join(out, "datapacks"), { recursive: true });
+    log(`datapacks: ${(await readdir(paths.datapacks)).join(", ")}`);
+  }
   await writeFile(path.join(out, "PACK_VERSION"), `${m.version}+${shortHash(lock)}\n`);
   log(`server: ${wanted.size} mods (${downloaded} downloaded), NeoForge ${lock.neoforge}`);
   return out;

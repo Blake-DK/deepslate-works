@@ -14,8 +14,10 @@ const schema = z.object({
   DEPLOY_KEY_PATH: z.string().default("/run/keys/deploy.key"),
   DATABASE_URL: z.string().min(1),
   PORTAL_URL: z.string().url().default("https://deepslate.dsw.test"),
-  LIMBO_POS: z.string().regex(/^-?\d+ -?\d+ -?\d+$/).default("0 250 0"),
-  SPAWN_POS: z.string().regex(/^-?\d+ -?\d+ -?\d+$/).optional(),
+  // docs/14: where someone who waits stands, "<dimension> x y z"; without a dimension it is the overworld
+  LIMBO_POS: z.string().regex(/^(?:[a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64} )?-?\d+(?:\.\d+)? -?\d+(?:\.\d+)? -?\d+(?:\.\d+)?$/).default("deepslate:limbo 0.5 65 0.5"),
+  // where someone who is let in stands, in the overworld; unset = spread around 0, 0
+  SPAWN_POS: z.string().regex(/^-?\d+(?:\.\d+)? -?\d+(?:\.\d+)? -?\d+(?:\.\d+)?$/).optional(),
   DISCORD_BOT_TOKEN: z.string().optional(),
   DISCORD_GUILD_ID: z.string().optional(),
   // modpack build (runs as a child process of api): the repo mounts and the CLI's location in the image

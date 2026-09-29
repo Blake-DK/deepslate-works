@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { playGate } from "../src/shared/join-gate.js";
 import { parse } from "../src/events/parse.js";
-import { actions, parsePos, playTellraw } from "../src/actions/registry.js";
+import { actions, parsePlace, playTellraw } from "../src/actions/registry.js";
 import { describeAction, kindOf } from "../src/shared/events.js";
 import { parseSection } from "../src/shared/settings.js";
 
@@ -46,7 +46,7 @@ describe("where a member stands", () => {
 });
 
 describe("the commands", () => {
-  const ctx = { limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
+  const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
   it("say what the planner wrote, with the site as a link", () => {
     const t = playTellraw("bramble09", "https://deepslate.dsw.test");
     const parts = JSON.parse(t.replace(/^tellraw bramble09 /, "")) as Array<string | { text: string; clickEvent?: { action: string; value: string } }>;
@@ -56,7 +56,7 @@ describe("the commands", () => {
   it("hold in the room like anyone who waits there", () => {
     const cmds = actions["limbo.holdPlay"].build(ctx, { name: "bramble09" });
     expect(cmds[0]).toBe("tag bramble09 remove verified");
-    expect(cmds.some((c) => c.includes("tp bramble09 0 251 0"))).toBe(true);
+    expect(cmds.some((c) => c === "execute in deepslate:limbo run tp bramble09 0.5 65 0.5")).toBe(true);
   });
   it("put a member back where they stood, in the dimension they were in", () => {
     const cmds = actions["limbo.releaseBack"].build(ctx, { name: "bramble09", back: { dimension: "minecraft:the_nether", x: -312.5, y: 64, z: 1207.30000001192 } });

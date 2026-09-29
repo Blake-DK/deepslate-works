@@ -8,6 +8,7 @@ import type { Amp } from "../amp/client.js";
 // (rrsync-restricted deploy key), then Core.Restart through the ADS proxy if the mod set changed.
 
 const DIST_SERVER = process.env.DIST_SERVER_DIR ?? "/repo/dist/server";
+const LEVEL_NAME = /^[A-Za-z0-9_-]{1,40}$/.test(process.env.LEVEL_NAME ?? "") ? (process.env.LEVEL_NAME as string) : "world";
 
 function run(cmd: string, args: string[], timeoutMs: number): Promise<{ code: number; out: string }> {
   return new Promise((resolve) => {
@@ -54,6 +55,17 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; b
     if (r.code !== 0) return { ok: false, lines: [...lines, `rsync ${dir} failed (${r.code}):`, ...r.out.trim().split("\n").slice(-5)], restarted: false, dryRun };
     const n = r.out.split("\n").filter((l) => /^[<>ch*]/.test(l)).length;
     lines.push(`${dir}: ${n} file(s) updated`);
+  }
+  // 2b. datapacks go into the world. A new dimension is only there after a restart; that restart is not made here,
+  //     it is for an admin to choose the moment.
+  try {
+    await readdir(path.join(DIST_SERVER, "datapacks"));
+    const r = await run("rsync", ["-rlt", "--itemize-changes", "-e", ssh, `${DIST_SERVER}/datapacks/`, `${target}${LEVEL_NAME}/datapacks/`], 300_000);
+    if (r.code !== 0) return { ok: false, lines: [...lines, `rsync datapacks failed (${r.code}):`, ...r.out.trim().split("\n").slice(-5)], restarted: false, dryRun };
+    const n = r.out.split("\n").filter((l) => /^[<>ch*]/.test(l) && !/^cd/.test(l)).length;
+    lines.push(n ? `datapacks: ${n} file(s) updated in ${LEVEL_NAME}/datapacks; restart the server for them to count` : "datapacks: up to date");
+  } catch {
+    /* none built */
   }
   // 3. restart if mods changed
   let restarted = false;

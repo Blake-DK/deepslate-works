@@ -3,7 +3,7 @@ import { parse } from "../src/events/parse.js";
 import { ConsoleTail } from "../src/amp/console.js";
 import { MockAmp } from "../src/amp/client.js";
 import { chunksIn, due, inWindow, nextPregen, Pregen, PregenWatch, Refused, SLEEP_NODE, SLEEP_PERMISSION, step, ukClock, type PregenPlan, type PregenState, type View } from "../src/status/pregen.js";
-import { actions, parsePos } from "../src/actions/registry.js";
+import { actions, parsePlace } from "../src/actions/registry.js";
 
 const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, at: null };
 const at = new Date("2026-09-29T11:46:00Z");
@@ -124,7 +124,7 @@ function rig(mayWrite: boolean) {
   let saved: PregenPlan = { mode: "off", area: AREA }; // chunky has the area of that morning, paused at 67%
   const watch = new PregenWatch(tail, () => clock.t);
   watch.start();
-  const ctx = () => ({ limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" });
+  const ctx = () => ({ limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" });
   const pregen = new Pregen(amp, tail, watch, ctx, { load: async () => saved, save: async (p) => { saved = p; } }, () => {}, () => clock.t, async () => { clock.t += 1000; await new Promise((res) => setTimeout(res, 2)); });
   return { amp, tail, clock, watch, pregen, saved: () => saved };
 }
@@ -266,7 +266,7 @@ describe("before the api stops the server", () => {
 
 describe("the commands", () => {
   it("are fixed words and checked numbers", () => {
-    const ctx = { limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
+    const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
     expect(actions["world.pregenContinue"].build(ctx, {})).toEqual(["chunky quiet 30", "chunky continue"]);
     expect(actions["world.pregenPause"].build(ctx, {})).toEqual(["chunky pause", "save-all flush"]);
     expect(actions["world.pregenCancel"].build(ctx, {})).toEqual(["chunky cancel", "chunky confirm"]);

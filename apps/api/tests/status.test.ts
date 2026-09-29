@@ -101,7 +101,7 @@ describe("restart countdown", () => {
     expect(warningMinutes(1)).toEqual([1]);
   });
   it("builds the in-game lines in the registry", () => {
-    const ctx = { limbo: { x: 0, y: 250, z: 0 }, spawn: null, portalUrl: "https://deepslate.dsw.test" };
+    const ctx = { limbo: { dimension: "deepslate:limbo", x: 0.5, y: 65, z: 0.5 }, spawn: null, portalUrl: "https://deepslate.dsw.test" };
     expect(actions["server.restartWarning"].build(ctx, { minutes: 5 })).toEqual(["say Server restarts in 5 minutes. Get somewhere safe."]);
     expect(actions["server.restartWarning"].build(ctx, { minutes: 1 })).toEqual(["say Server restarts in 1 minute. Get somewhere safe."]);
     expect(actions["server.restartWarning"].build(ctx, { minutes: 0 })[0]).toMatch(/^say Restarting now/);
@@ -118,7 +118,7 @@ describe("RestartSchedule", () => {
     const { RestartSchedule } = await import("../src/status/restart.js");
     const sent: string[] = [];
     const amp: Amp = { ping: async () => {}, getStatus: async () => status(), call: async <T,>(m: string, method: string, p?: Record<string, unknown>) => { sent.push(method === "SendConsoleMessage" ? String(p?.message) : `${m}.${method}`); return {} as T; } };
-    const ctx = { limbo: { x: 0, y: 250, z: 0 }, spawn: null, portalUrl: "https://deepslate.dsw.test" };
+    const ctx = { limbo: { dimension: "deepslate:limbo", x: 0.5, y: 65, z: 0.5 }, spawn: null, portalUrl: "https://deepslate.dsw.test" };
     const s = new RestartSchedule(amp, () => ctx, noLog);
     s.schedule(3, "admin1");
     expect(s.current?.minutes).toBe(3);

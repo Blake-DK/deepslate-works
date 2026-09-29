@@ -4,7 +4,7 @@ import { ConsoleTail } from "../src/amp/console.js";
 import { MockAmp } from "../src/amp/client.js";
 import { currentPings, whoToAsk, PING_STALE_MS } from "../src/status/ping.js";
 import { toLive } from "../src/status/poller.js";
-import { actions, parsePos } from "../src/actions/registry.js";
+import { actions, parsePlace } from "../src/actions/registry.js";
 
 // What TabTPS prints for `pingall` (PingCommand.pingMultiple): an empty line, a header, one line for each player,
 // an empty line, the average.
@@ -44,7 +44,7 @@ describe("ping rounds", () => {
     expect(whoToAsk(Array.from({ length: 60 }, (_, i) => `player_${i}`)).length).toBe(40);
   });
   it("sends spark's command and nothing a caller could shape", () => {
-    const ctx = { limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
+    const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
     expect(actions["server.pings"].build(ctx, { name: "bramble09" })).toEqual(["spark ping --player bramble09"]);
     expect(actions["server.pings"].input.safeParse({ name: "bramble09 --all; op me" }).success).toBe(false);
   });
@@ -56,7 +56,7 @@ describe("ping rounds", () => {
     expect(isPingChatter("[\u26a1] Ping data is not available for 'bramble09'.")).toBe(true);
   });
   it("builds the commands for a new world from checked numbers and names only", () => {
-    const ctx = { limbo: parsePos("0 250 0"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
+    const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
     expect(actions["world.pregen"].build(ctx, { x: 0, z: 0, radius: 1500 })).toEqual(["chunky quiet 30", "chunky world minecraft:overworld", "chunky shape square", "chunky center 0 0", "chunky radius 1500", "chunky start"]);
     expect(actions["world.pregen"].input.safeParse({ x: 0, z: 0, radius: 99999 }).success).toBe(false);
     expect(actions["world.locate"].build(ctx, { what: "biome", id: "minecraft:cherry_grove", x: 0, z: 0 })).toEqual(["execute in minecraft:overworld positioned 0 64 0 run locate biome minecraft:cherry_grove"]);

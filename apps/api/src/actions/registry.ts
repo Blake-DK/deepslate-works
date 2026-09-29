@@ -4,7 +4,8 @@ import { z } from "zod";
 // "system" actions are run by the api itself (join hook, timers); the rest need an ADMIN caller.
 
 export const MC_NAME = z.string().regex(/^[A-Za-z0-9_]{3,16}$/);
-const POS = /^(-?\d+) (-?\d+) (-?\d+)$/;
+const POS = /^(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)$/;
+const DIMENSION = /^[a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64}$/;
 
 export type Pos = { x: number; y: number; z: number };
 export function parsePos(s: string): Pos {
@@ -13,7 +14,16 @@ export function parsePos(s: string): Pos {
   return { x: Number(m[1]), y: Number(m[2]), z: Number(m[3]) };
 }
 
-export type ActionCtx = { limbo: Pos; spawn: Pos | null; portalUrl: string; siteName?: string };
+/** Where somebody stands: "deepslate:limbo 0.5 65 0.5". Without a dimension it is the overworld. */
+export type Place = Pos & { dimension: string };
+export function parsePlace(s: string): Place {
+  const parts = s.trim().split(" ");
+  const dimension = parts.length === 4 ? parts.shift()! : "minecraft:overworld";
+  if (!DIMENSION.test(dimension)) throw new Error(`bad dimension in "${s}"`);
+  return { dimension, ...parsePos(parts.join(" ")) };
+}
+
+export type ActionCtx = { limbo: Place; spawn: Pos | null; portalUrl: string; siteName?: string };
 
 export type Action<I> = {
   name: string;
@@ -24,10 +34,22 @@ export type Action<I> = {
 
 const define = <I,>(a: Action<I>) => a;
 
-// The room: a bedrock box 11 wide, 7 high, 11 long centred on LIMBO_POS; players stand at y+1.
-const roomBounds = (c: Pos) => ({ x1: c.x - 5, y1: c.y - 1, z1: c.z - 5, x2: c.x + 5, y2: c.y + 5, z2: c.z + 5 });
-const inside = (c: Pos) => `x=${c.x - 4},y=${c.y},z=${c.z - 4},dx=8,dy=5,dz=8`;
-const ow = (cmd: string) => `execute in minecraft:overworld run ${cmd}`;
+// The room: a box 11 wide, 7 high, 11 long around LIMBO_POS, which is where people stand: the floor is the
+// block under their feet. Since 2026-09-29 it is in a dimension of its own (docs/14) and made of glass.
+const block = (c: Pos) => ({ x: Math.floor(c.x), y: Math.floor(c.y), z: Math.floor(c.z) });
+export const roomBounds = (c: Pos) => {
+  const b = block(c);
+  return { x1: b.x - 5, y1: b.y - 1, z1: b.z - 5, x2: b.x + 5, y2: b.y + 5, z2: b.z + 5 };
+};
+const inside = (c: Pos) => {
+  const b = block(c);
+  return `x=${b.x - 4},y=${b.y},z=${b.z - 4},dx=8,dy=4,dz=8`;
+};
+const at = (c: Pos) => `${c.x} ${c.y} ${c.z}`;
+const inDim = (dimension: string, cmd: string) => `execute in ${dimension} run ${cmd}`;
+const ow = (cmd: string) => inDim("minecraft:overworld", cmd);
+/** Into the room, from whichever dimension they are in. */
+const toRoom = (ctx: ActionCtx, who: string) => inDim(ctx.limbo.dimension, `tp ${who} ${at(ctx.limbo)}`);
 
 /** Only what is safe to show in chat: the name comes from a settings page, not from code. */
 export const chatSafe = (s: string | undefined, fallback: string) => (s ?? "").replace(/[^\p{L}\p{N} .,'!&()+-]/gu, "").trim().slice(0, 40) || fallback;
@@ -57,6 +79,8 @@ export function playTellraw(name: string, portalUrl: string): string {
   return `tellraw ${name} ${JSON.stringify(payload)}`;
 }
 
+const sameBox = (a: ReturnType<typeof roomBounds>, b: ReturnType<typeof roomBounds>) => a.x1 === b.x1 && a.y1 === b.y1 && a.z1 === b.z1 && a.x2 === b.x2 && a.y2 === b.y2 && a.z2 === b.z2;
+
 export const actions = {
   "limbo.hold": define({
     name: "limbo.hold",
@@ -65,7 +89,7 @@ export const actions = {
     build: (ctx, { name, code }) => [
       `tag ${name} remove verified`,
       `gamemode adventure ${name}`,
-      ow(`tp ${name} ${ctx.limbo.x} ${ctx.limbo.y + 1} ${ctx.limbo.z}`),
+      toRoom(ctx, name),
       `effect give ${name} minecraft:slowness infinite 255 true`,
       `effect give ${name} minecraft:jump_boost infinite 250 true`,
       linkTellraw(name, ctx.portalUrl, code, ctx.siteName),
@@ -81,7 +105,11 @@ export const actions = {
     name: "limbo.keep",
     role: "system",
     input: z.object({}),
-    build: (ctx) => [ow(`execute as @a[tag=!verified] at @s unless entity @s[${inside(ctx.limbo)}] run tp @s ${ctx.limbo.x} ${ctx.limbo.y + 1} ${ctx.limbo.z}`)],
+    // Anyone who waits and is in another dimension, or in the room's dimension but outside the room, is put back.
+    build: (ctx) => [
+      `execute as @a[tag=!verified] at @s unless dimension ${ctx.limbo.dimension} in ${ctx.limbo.dimension} run tp @s ${at(ctx.limbo)}`,
+      `execute as @a[tag=!verified] at @s if dimension ${ctx.limbo.dimension} unless entity @s[${inside(ctx.limbo)}] run tp @s ${at(ctx.limbo)}`,
+    ],
   }),
   "link.release": define({
     name: "link.release",
@@ -115,7 +143,7 @@ export const actions = {
     build: (ctx, { name }) => [
       `tag ${name} remove verified`,
       `gamemode adventure ${name}`,
-      ow(`tp ${name} ${ctx.limbo.x} ${ctx.limbo.y + 1} ${ctx.limbo.z}`),
+      toRoom(ctx, name),
       `effect give ${name} minecraft:slowness infinite 255 true`,
       `effect give ${name} minecraft:jump_boost infinite 250 true`,
       playTellraw(name, ctx.portalUrl),
@@ -165,19 +193,40 @@ export const actions = {
     name: "limbo.build",
     role: "ADMIN",
     input: z.object({}),
+    // Glass all round, so that the void and the stars are seen; a floor of sea lanterns; a sign with the server's name.
     build: (ctx) => {
       const b = roomBounds(ctx.limbo);
-      const c = ctx.limbo;
+      const c = block(ctx.limbo);
+      const d = ctx.limbo.dimension;
+      const name = chatSafe(ctx.siteName, "Deepslate Works").replace(/'/g, "");
+      const line = (t: string) => `'${JSON.stringify({ text: t })}'`;
       return [
-        ow(`forceload add ${b.x1} ${b.z1} ${b.x2} ${b.z2}`),
-        ow(`fill ${b.x1} ${b.y1} ${b.z1} ${b.x2} ${b.y2} ${b.z2} minecraft:bedrock`),
-        ow(`fill ${b.x1 + 1} ${b.y1 + 1} ${b.z1 + 1} ${b.x2 - 1} ${b.y2 - 1} ${b.z2 - 1} minecraft:air`),
-        ow(`fill ${b.x1 + 1} ${b.y1 + 1} ${b.z1 + 1} ${b.x2 - 1} ${b.y1 + 1} ${b.z2 - 1} minecraft:smooth_stone`),
-        ...[[b.x1 + 1, b.z1 + 1], [b.x2 - 1, b.z1 + 1], [b.x1 + 1, b.z2 - 1], [b.x2 - 1, b.z2 - 1]].map(([x, z]) => ow(`setblock ${x} ${b.y2 - 1} ${z} minecraft:glowstone`)),
-        ow(`setblock ${c.x} ${b.y2 - 1} ${c.z} minecraft:sea_lantern`),
+        inDim(d, `forceload add ${b.x1} ${b.z1} ${b.x2} ${b.z2}`),
+        inDim(d, `fill ${b.x1} ${b.y1} ${b.z1} ${b.x2} ${b.y2} ${b.z2} minecraft:glass hollow`),
+        inDim(d, `fill ${b.x1} ${b.y1} ${b.z1} ${b.x2} ${b.y1} ${b.z2} minecraft:sea_lantern`),
+        inDim(d, `setblock ${c.x} ${c.y} ${c.z - 3} minecraft:oak_sign[rotation=0]{front_text:{messages:[${line("")},${line(name)},${line("")},${line("")}]},is_waxed:1b}`),
       ];
     },
   }),
+  // The room as it was until 2026-09-29, or any other that is no longer wanted: taken away, block by block.
+  "limbo.clear": define({
+    name: "limbo.clear",
+    role: "ADMIN",
+    input: z.object({ dimension: z.string().regex(DIMENSION), x: z.number().int().min(-100_000).max(100_000), y: z.number().int().min(-63).max(318), z: z.number().int().min(-100_000).max(100_000) }),
+    build: (ctx, place) => {
+      const same = place.dimension === ctx.limbo.dimension && sameBox(roomBounds(place), roomBounds(ctx.limbo));
+      if (same) return []; // never the room that is in use
+      const b = roomBounds(place);
+      return [inDim(place.dimension, `fill ${b.x1} ${b.y1} ${b.z1} ${b.x2} ${b.y2} ${b.z2} minecraft:air`), inDim(place.dimension, `forceload remove ${b.x1} ${b.z1} ${b.x2} ${b.z2}`)];
+    },
+  }),
+  "world.blockIs": define({
+    name: "world.blockIs",
+    role: "ADMIN",
+    input: z.object({ dimension: z.string().regex(DIMENSION), x: z.number().int().min(-100_000).max(100_000), y: z.number().int().min(-63).max(318), z: z.number().int().min(-100_000).max(100_000), block: z.string().regex(/^[a-z0-9_.-]{1,40}:[a-z0-9_./-]{1,60}$/) }),
+    build: (_ctx, p) => [`execute in ${p.dimension} if block ${p.x} ${p.y} ${p.z} ${p.block}`],
+  }),
+  "world.datapacks": define({ name: "world.datapacks", role: "ADMIN", input: z.object({}), build: () => ["datapack list"] }),
   "player.revoke": define({
     name: "player.revoke",
     role: "ADMIN",

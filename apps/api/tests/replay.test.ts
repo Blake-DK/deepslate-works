@@ -109,7 +109,7 @@ describe("the wait room", () => {
     const { Limbo } = await import("../src/players/limbo.js");
     const amp = new FakeAmp();
     const tail = new ConsoleTail(amp, noLog);
-    const env = { LIMBO_POS: "0 250 0", SPAWN_POS: "", PORTAL_URL: "https://deepslate.dsw.test" } as never;
+    const env = { LIMBO_POS: "deepslate:limbo 0.5 65 0.5", SPAWN_POS: "", PORTAL_URL: "https://deepslate.dsw.test" } as never;
     const limbo = new Limbo(env, amp, tail, noLog);
     const joined: string[] = [];
     limbo.onJoin = async (name: string) => { joined.push(name); };

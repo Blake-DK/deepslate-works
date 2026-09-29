@@ -11,6 +11,7 @@ export function modpackPaths(modpackDir = process.env.MODPACK_DIR ?? path.join(p
     lock: path.join(root, "mods.lock.json"),
     config: path.join(root, "config"),
     server: path.join(root, "server"),
+    datapacks: path.join(root, "datapacks"), // go into the world: Minecraft/world/datapacks/ (docs/14)
     dist: process.env.DIST_DIR ?? path.join(repo, "dist"),
     installer: path.join(repo, "installer"),
   };

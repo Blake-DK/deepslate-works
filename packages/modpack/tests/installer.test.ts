@@ -18,6 +18,27 @@ describe("installerVersion", () => {
   });
 });
 
+// Installer 1.4.0 and before ended at "Finding Java 21" on any PC with a java on PATH: java says its version on
+// stderr, and in Windows PowerShell 5.1 `& java -version 2>&1` under $ErrorActionPreference = "Stop" is an error
+// that ends the script. What the script does instead is checked by its own self test (install.ps1 -SelfTest).
+describe("the script that is shipped", () => {
+  const code = async () => (await readFile(path.join(__dirname, "../../../installer/install.ps1"), "utf8")).split(/\r?\n/).filter((l) => !/^\s*#/.test(l));
+  it("sends no command's stderr through 2>&1", async () => {
+    const lines = (await code()).filter((l) => l.includes("2>&1") && !l.includes("[regex]::Matches") && !/^\s*Check "/.test(l)); // the self test looks for it, and says so
+    expect(lines).toEqual([]);
+  });
+  it("asks java for its version through a process of its own, in both places", async () => {
+    const lines = await code();
+    expect(lines.filter((l) => /-version\b/.test(l) && !/^\s*\$psi\.Arguments = "-version"$/.test(l))).toEqual([]);
+    expect(lines.filter((l) => /Get-JavaVersionText \$/.test(l)).length).toBeGreaterThanOrEqual(3); // the one on PATH, the one chosen, the self test
+    expect(lines.some((l) => l.includes("RedirectStandardError = $true"))).toBe(true);
+  });
+  it("is 1.4.1 or newer", async () => {
+    const [a, b, c] = (installerVersion((await readFile(path.join(__dirname, "../../../installer/install.ps1"), "utf8"))) ?? "0.0.0").split(".").map(Number);
+    expect(a! * 1_000_000 + b! * 1_000 + c!).toBeGreaterThanOrEqual(1_004_001);
+  });
+});
+
 describe("sha256File", () => {
   let dir = "";
   afterEach(async () => { if (dir) await rm(dir, { recursive: true, force: true }); });

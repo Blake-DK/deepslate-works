@@ -35,7 +35,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.4.0"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report; 1.3.0: Play from the site; 1.4.0: updates itself
+$InstallerVersion = "1.4.1"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report; 1.3.0: Play from the site; 1.4.0: updates itself; 1.4.1: a Java on PATH no longer ends the install
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 
 $ErrorActionPreference = "Stop"
@@ -407,6 +407,61 @@ function Install-Self {
   return ($got -eq (Get-HandlerCommand $target))
 }
 
+# Java says its version on stderr. It is asked through a process of its own and both streams are read as text:
+# in Windows PowerShell 5.1 a native command's stderr sent through 2>&1 becomes an error, and with
+# $ErrorActionPreference = "Stop" that error ended the script (1.4.0 and before, whatever the Java was).
+# Returns the line with the version in it, or $null: no answer, no such file, or nothing that reads as a version.
+function Get-JavaVersionText([string]$exe) {
+  if (-not $exe) { return $null }
+  try {
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $exe
+    $psi.Arguments = "-version"
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardError = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.CreateNoWindow = $true
+    $p = [System.Diagnostics.Process]::Start($psi)
+    $err = $p.StandardError.ReadToEndAsync()
+    $out = $p.StandardOutput.ReadToEndAsync()
+    if (-not $p.WaitForExit(15000)) { try { $p.Kill() } catch {}; return $null }
+    # "Picked up JAVA_TOOL_OPTIONS: ..." may come first: the line is found, not assumed to be the first
+    foreach ($line in (([string]$err.Result + "`n" + [string]$out.Result) -split "`r?`n")) {
+      if ($line -match 'version "[^"]+"') { return $line.Trim() }
+    }
+    return $null
+  } catch { return $null }
+}
+
+# 21 from 'java version "21.0.12" 2026-07-21 LTS', 8 from 'java version "1.8.0_503"', 0 from anything else.
+function Get-JavaMajor([string]$line) {
+  if ($line -match 'version "(\d+)(?:\.(\d+))?') {
+    $first = [int]$Matches[1]
+    if ($first -eq 1 -and $Matches[2]) { return [int]$Matches[2] }
+    return $first
+  }
+  return 0
+}
+
+# Which Java the profile is pointed at: the launcher's own, one on PATH that is 21 or newer, or the one
+# downloaded on an earlier run. With none of them `path` is $null and Java 21 is downloaded. A Java on PATH
+# that is older, or that does not answer, is passed over and left alone: it never stops the install, and the
+# profile never points at it.
+function Select-Java([string]$bundled, [string]$onPath, [string]$runtimeDir) {
+  if ($bundled -and (Test-Path $bundled)) { return [ordered]@{ path = $bundled; source = "the launcher's own"; say = "Using the launcher's own Java"; passedOver = $null } }
+  $passedOver = $null
+  if ($onPath) {
+    $line = Get-JavaVersionText $onPath
+    $major = Get-JavaMajor $line
+    if ($major -ge 21) { return [ordered]@{ path = $onPath; source = "on PATH"; say = ("Using Java {0} from PATH" -f $major); passedOver = $null } }
+    $passedOver = if ($line) { $line } else { "a java that did not say its version" }
+  }
+  $found = $null
+  if ($runtimeDir -and (Test-Path $runtimeDir)) { $found = Get-ChildItem -Path $runtimeDir -Filter java.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 }
+  if ($found) { return [ordered]@{ path = $found.FullName; source = "downloaded on an earlier run"; say = "Using the Java we downloaded last time"; passedOver = $passedOver } }
+  return [ordered]@{ path = $null; source = $null; say = $null; passedOver = $passedOver }
+}
+
 function Open-Launcher {
   Log "launching"
   foreach ($exe in @("${env:ProgramFiles(x86)}\Minecraft Launcher\MinecraftLauncher.exe", "$env:ProgramFiles\Minecraft Launcher\MinecraftLauncher.exe", "$env:LOCALAPPDATA\Programs\Minecraft Launcher\MinecraftLauncher.exe")) {
@@ -571,6 +626,59 @@ if ($SelfTest) {
   Check ("an update that was not applied is in the report, without the name: " + $rp.updateProblem) (($rp.updatedFrom -eq $null) -and ($rp.updateProblem -like "could not write C:\Users\~\*") )
   $script:UpdateProblem = $null
 
+  Write-Host "Self test: finding Java" -ForegroundColor White
+  # Stand-ins for java that say their version the way java does: on stderr, and nothing on stdout.
+  $onWindows = ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT)
+  function New-JavaStub([string]$name, [string[]]$lines) {
+    $folder = Join-Path $dir $name
+    New-Item -ItemType Directory -Force -Path $folder | Out-Null
+    if ($onWindows) {
+      $stub = Join-Path $folder "java.cmd"
+      $body = "@echo off`r`n" + (($lines | ForEach-Object { "echo " + $_ + " 1>&2" }) -join "`r`n") + "`r`n"
+      [IO.File]::WriteAllText($stub, $body, (New-Object Text.ASCIIEncoding))
+    } else {
+      $stub = Join-Path $folder "java"
+      $body = "#!/bin/sh`n" + (($lines | ForEach-Object { "echo '" + $_ + "' 1>&2" }) -join "`n") + "`n"
+      [IO.File]::WriteAllText($stub, $body, $utf8)
+      & chmod +x $stub
+    }
+    return $stub
+  }
+  $java8 = New-JavaStub "java8" @('java version "1.8.0_503"', 'Java(TM) SE Runtime Environment (build 1.8.0_503-b13)')
+  $java21 = New-JavaStub "java21" @('java version "21.0.12" 2026-07-21 LTS', 'Java(TM) SE Runtime Environment (build 21.0.12+8-LTS-250)')
+  $javaOpts = New-JavaStub "javaopts" @('Picked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8', 'openjdk version "21.0.4" 2024-07-16 LTS')
+  $javaMute = New-JavaStub "javamute" @('Error: could not open jvm.cfg')
+  $noJre = Join-Path $dir "no-runtime"
+  $jre = Join-Path $dir "runtime"
+  $jreBin = Join-Path (Join-Path $jre "jdk-21.0.4+7-jre") "bin"
+  New-Item -ItemType Directory -Force -Path $jreBin | Out-Null
+  [IO.File]::WriteAllText((Join-Path $jreBin "java.exe"), "stand-in", $utf8)
+
+  $line = $null; $threw = $null
+  try { $line = Get-JavaVersionText $java8 } catch { $threw = "$_" }
+  Check ("a java that writes only to stderr is read, and nothing is thrown with errors set to stop the script: " + $line) (($ErrorActionPreference -eq "Stop") -and ($threw -eq $null) -and ($line -eq 'java version "1.8.0_503"'))
+  Check "1.8.0_503 is Java 8, 21.0.12 is Java 21" (((Get-JavaMajor 'java version "1.8.0_503"') -eq 8) -and ((Get-JavaMajor 'java version "21.0.12" 2026-07-21 LTS') -eq 21) -and ((Get-JavaMajor 'openjdk version "17.0.9" 2023-10-17') -eq 17) -and ((Get-JavaMajor 'openjdk version "25" 2025-09-16') -eq 25))
+  Check "what is not a version is no Java at all" (((Get-JavaMajor $null) -eq 0) -and ((Get-JavaMajor "") -eq 0) -and ((Get-JavaMajor "Error: could not open jvm.cfg") -eq 0) -and ((Get-JavaMajor "version 21") -eq 0))
+  $s = Select-Java (Join-Path $dir "no-launcher-java.exe") $java8 $noJre
+  Check ("Java 8 on PATH: passed over, Java 21 is downloaded (" + $s.passedOver + ")") (($s.path -eq $null) -and ($s.source -eq $null) -and ($s.passedOver -eq 'java version "1.8.0_503"'))
+  $s = Select-Java (Join-Path $dir "no-launcher-java.exe") $java21 $noJre
+  Check ("Java 21.0.12 on PATH: accepted (" + $s.say + ")") (($s.path -eq $java21) -and ($s.source -eq "on PATH") -and ($s.say -eq "Using Java 21 from PATH") -and ($s.passedOver -eq $null))
+  $s = Select-Java (Join-Path $dir "no-launcher-java.exe") $java8 $jre
+  Check "Java 8 on PATH and ours from an earlier run: ours, never the one on PATH" (($s.path -like "*jdk-21.0.4+7-jre*java.exe") -and ($s.source -eq "downloaded on an earlier run") -and ($s.passedOver -eq 'java version "1.8.0_503"'))
+  $s = Select-Java (Join-Path $dir "no-launcher-java.exe") $javaOpts $noJre
+  Check "a first line about JAVA_TOOL_OPTIONS is not taken for the version" (($s.source -eq "on PATH") -and ((Get-JavaVersionText $javaOpts) -eq 'openjdk version "21.0.4" 2024-07-16 LTS'))
+  $s = Select-Java (Join-Path $dir "no-launcher-java.exe") $javaMute $noJre
+  Check "a java that is broken or says nothing: passed over, Java 21 is downloaded" (($s.path -eq $null) -and ($s.passedOver -eq "a java that did not say its version"))
+  $s = Select-Java (Join-Path $dir "no-launcher-java.exe") (Join-Path (Join-Path $dir "gone") "java.exe") $noJre
+  Check "a java that PATH names but that is not there: the same" (($s.path -eq $null) -and ((Get-JavaVersionText (Join-Path (Join-Path $dir "gone") "java.exe")) -eq $null))
+  $s = Select-Java $java21 $java8 $jre
+  Check "the launcher's own Java comes first, and the one on PATH is not even asked" (($s.path -eq $java21) -and ($s.source -eq "the launcher's own") -and ($s.passedOver -eq $null))
+  $s = Select-Java (Join-Path $dir "no-launcher-java.exe") "" $noJre
+  Check "no Java anywhere: Java 21 is downloaded" (($s.path -eq $null) -and ($s.passedOver -eq $null))
+  $own = [IO.File]::ReadAllText($PSCommandPath)
+  $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
+  Check "no command's stderr is sent through 2>&1 anywhere in this script" ($left -eq 0)
+
   Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
   if ($script:SelfTestBad -gt 0) { Write-Host ("{0} check(s) failed" -f $script:SelfTestBad) -ForegroundColor Red; exit 1 }
   Write-Host "All checks passed." -ForegroundColor Green
@@ -691,23 +799,15 @@ try {
 
   # 3. Java 21
   Step "Finding Java 21"
-  $java = $null
   $bundled = Join-Path $Minecraft "runtime\java-runtime-delta\windows-x64\java-runtime-delta\bin\java.exe"
-  $javaSource = $null
-  if (Test-Path $bundled) { $java = $bundled; $javaSource = "the launcher's own"; Tick "Using the launcher's own Java" }
-  if (-not $java) {
-    $cmd = Get-Command java -ErrorAction SilentlyContinue
-    if ($cmd) {
-      $ver = (& $cmd.Source -version 2>&1 | Select-Object -First 1) -replace '[^0-9.]', ' '
-      $major = [int](($ver.Trim() -split '[ .]')[0])
-      if ($major -ge 21) { $java = $cmd.Source; $javaSource = "on PATH"; Tick ("Using Java {0} from PATH" -f $major) }
-    }
-  }
-  if (-not $java) {
-    $jreDir = Join-Path $GameDir "runtime"
-    $found = Get-ChildItem -Path $jreDir -Filter java.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($found) { $java = $found.FullName; $javaSource = "downloaded on an earlier run"; Tick "Using the Java we downloaded last time" }
-  }
+  $cmd = Get-Command java -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+  $onPath = if ($cmd) { [string]$cmd.Source } else { "" }
+  $chosen = Select-Java $bundled $onPath (Join-Path $GameDir "runtime")
+  $java = $chosen.path
+  $javaSource = $chosen.source
+  $javaPassedOver = $chosen.passedOver
+  if ($javaPassedOver) { Note ("The Java on this PC ({0}) is not Java 21. It is left as it is; Minecraft gets its own." -f $javaPassedOver) }
+  if ($java) { Tick $chosen.say }
   if (-not $java) {
     if ($DryRun) { $java = "java"; Note "(dry run) would download Temurin 21" }
     else {
@@ -725,8 +825,8 @@ try {
     }
   }
   $javaVersion = $null
-  if (-not $DryRun) { try { $javaVersion = [string](& $java -version 2>&1 | Select-Object -First 1) } catch {} }
-  $script:Facts.java = [ordered]@{ source = $javaSource; path = [string]$java; version = $javaVersion }
+  if (-not $DryRun) { $javaVersion = Get-JavaVersionText $java }
+  $script:Facts.java = [ordered]@{ source = $javaSource; path = [string]$java; version = $javaVersion; passedOver = $javaPassedOver }
 
   # 4. NeoForge
   Step ("Installing NeoForge {0}" -f $neo)

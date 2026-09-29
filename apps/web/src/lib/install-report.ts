@@ -22,7 +22,7 @@ export const systemSchema = z
     gpus: z.array(z.object({ name: optional(160), driver: optional(60), vramMb: number(0, 1_000_000) }).partial()).max(8).nullish(),
     disk: z.object({ drive: optional(8), freeGb: number(0, 1_000_000), totalGb: number(0, 1_000_000) }).partial().nullish(),
     launcher: z.object({ version: optional(60), kind: optional(40), profilesFormat: number(0, 1000) }).partial().nullish(),
-    java: z.object({ source: optional(40), path: optional(300), version: optional(120) }).partial().nullish(),
+    java: z.object({ source: optional(40), path: optional(300), version: optional(120), passedOver: optional(120) }).partial().nullish(),
     neoforge: z.object({ version: optional(40), before: z.boolean().nullish(), after: z.boolean().nullish() }).partial().nullish(),
     powershell: optional(40),
   })

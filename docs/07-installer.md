@@ -128,6 +128,24 @@ Mods, configs, the NeoForge version and the memory settings come from the mod li
 
 **Installer 1.3.0 cannot do this.** It has no update step, so a PC set up with 1.3.0 needs one fresh download and `Setup.bat` to get 1.4.0. From then on it looks after itself.
 
+## A Java on the PC ended the install (2026-09-29, installer 1.4.1)
+
+**What happened.** Pabulum, the first player with early access, ran `Setup.bat` three times (16:48, 16:53 and 17:06 UTC) and each run ended at "Finding Java 21" with `NativeCommandError`. His PC had Java 8 on PATH the first time and Java 21.0.12, which he installed himself, after that. The same happened on both.
+
+**Why.** `java -version` says its version on stderr. The script asked with `& $cmd.Source -version 2>&1`, and in Windows PowerShell 5.1 a native command's stderr that is sent through `2>&1` becomes an error record; with `$ErrorActionPreference = "Stop"` that error ends the script. So the check ended before it had compared anything, whatever the Java was, and the branch that downloads Java 21 was never reached. It had not shown before because every PC so far had the launcher's own Java, which is taken first and was never asked for its version. The second place, the version for the report, had the same fault inside a `try`: no crash, and `java.version` was `null` in every report.
+
+**What it does now.**
+
+- `Get-JavaVersionText` asks through a process of its own (`System.Diagnostics.Process`, both streams read as text, 15 s at most) and returns the line with `version "..."` in it, which need not be the first (`Picked up JAVA_TOOL_OPTIONS: ...`). It cannot throw: no answer, no file, nothing that reads as a version are all `$null`.
+- `Get-JavaMajor`: 21 from `java version "21.0.12" 2026-07-21 LTS`, 8 from `java version "1.8.0_503"`, 0 from anything else.
+- `Select-Java`, in this order: the launcher's own; the one on PATH if it is 21 or newer; the one downloaded on an earlier run; none, and Java 21 is downloaded into the pack's folder. **A Java on PATH that is older, broken or silent is passed over and left alone. It never stops the install, and the launcher profile's `javaDir` is never pointed at it**: `javaDir` is the path that was chosen, not whatever `java` resolves to.
+- The report's `system.java` has `passedOver` (the version line of the Java that was not taken), and `version` is filled in.
+- There is no `2>&1` on a command left in the script; its own self test and `packages/modpack/tests/installer.test.ts` both look.
+
+**A copy of 1.4.0 that never got through cannot fetch 1.4.1 by itself.** The update step is part of Play, and Play is set up at the end of a run that went through. Whoever is in that place downloads the installer from the site once more.
+
+**Not tested here:** Windows PowerShell 5.1 itself. The self test ran under `pwsh` on Linux, where the stand-ins for java are shell scripts; on Windows they are `.cmd` files. The checks are the same.
+
 ## The PC tier is measured (Alex, 2026-09-29)
 
 "The 'your PC' should be decided by a script too, so we get a real view of the power and capabilities of people's PCs." Every install report that says enough about the hardware sets the member's tier (`suggestTier` in `apps/web/src/lib/install-report.ts`):

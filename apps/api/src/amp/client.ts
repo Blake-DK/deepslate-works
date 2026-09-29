@@ -31,8 +31,10 @@ export function availability(stateCode: number | null | undefined): Availability
 }
 
 export interface Amp {
-  /** Verifies login works; throws on failure. */
+  /** Verifies that AMP answers and the login works; throws on failure. Must not start a new session when there is one. */
   ping(): Promise<void>;
+  /** How many times this client has logged in. A new AMP session is handed the recent console lines all over again. */
+  readonly sessions?: number;
   getStatus(): Promise<AmpStatus>;
   /** Any instance call. Console commands must only be built by the action registry. */
   call<T = unknown>(module: string, method: string, params?: Record<string, unknown>): Promise<T>;
@@ -44,6 +46,7 @@ const UNAUTHORIZED = /unauthori[sz]ed|session/i;
 
 export class AmpClient implements Amp {
   private sessionId: string | null = null;
+  sessions = 0;
   constructor(private readonly o: Opts) {}
 
   private async post<T>(path: string, body: Record<string, unknown>): Promise<T> {
@@ -65,6 +68,7 @@ export class AmpClient implements Amp {
     });
     if (!r.success || !r.sessionID) throw new Error(`AMP login failed: ${r.resultReason ?? "unknown"}`);
     this.sessionId = r.sessionID;
+    this.sessions++;
   }
 
   async call<T = unknown>(module: string, method: string, params: Record<string, unknown> = {}): Promise<T> {
@@ -81,7 +85,10 @@ export class AmpClient implements Amp {
   }
 
   async ping() {
-    await this.login();
+    // Over the session there is; `call` logs in when there is none or it has run out. Until 2026-09-29 this logged
+    // in afresh on every health check (every 30 s), and each new session made AMP send the last console lines
+    // again: a join line was read as a new join each time, and the player was let in, and moved, again and again.
+    await this.call("Core", "GetStatus");
   }
 
   async getStatus(): Promise<AmpStatus> {

@@ -41,8 +41,16 @@ describe("actions", () => {
     expect(actions["player.revoke"].input.safeParse({ name: "m1_owl", reason: "bye; op x" }).success).toBe(false);
   });
   it("release falls back to spreadplayers without SPAWN_POS and tps with it", () => {
-    expect(actions["link.release"].build(ctx, { name: "x_1" }).some((c) => c.includes("spreadplayers 0 0 1 12 false x_1"))).toBe(true);
-    expect(actions["link.release"].build({ ...ctx, spawn: parsePos("10 70 -5") }, { name: "x_1" }).some((c) => c.includes("tp x_1 10 70 -5"))).toBe(true);
+    expect(actions["link.release"].build(ctx, { name: "x_1" }).some((c) => c.includes("spreadplayers 0 0 1 12 false @a[name=x_1,tag=!verified]"))).toBe(true);
+    expect(actions["link.release"].build({ ...ctx, spawn: parsePos("10 70 -5") }, { name: "x_1" }).some((c) => c.includes("tp @a[name=x_1,tag=!verified] 10 70 -5"))).toBe(true);
+  });
+  it("a release moves, resets and greets only someone who is held, and marks them last", () => {
+    const cmds = actions["link.release"].build(ctx, { name: "x_1" });
+    const touching = cmds.filter((c) => /\b(tp|spreadplayers|gamemode|effect|tellraw)\b/.test(c));
+    expect(touching.length).toBe(4);
+    expect(touching.every((c) => c.includes("@a[name=x_1,tag=!verified]"))).toBe(true);
+    expect(cmds[cmds.length - 1]).toBe("tag x_1 add verified");
+    expect(cmds).toContain("whitelist add x_1");
   });
   it("welcomes with the name from Admin > Branding, stripped of anything that could break the chat line", () => {
     expect(linkTellraw("p", "https://deepslate.dsw.test", "ABCD2345", "The Mine")).toContain('"text":"Welcome to The Mine. Click to link your Discord: "');

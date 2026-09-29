@@ -11,6 +11,13 @@ export function parseConsoleLine(text: string, meta: Meta = {}, isPlayer?: (name
 }
 
 type Entry = { Timestamp?: string; Source?: string; Type?: string; Contents?: string };
+
+/** `replay`: a line from before this process was listening, read for the record and the player list, not to act on. */
+export type EventInfo = { replay: boolean };
+export type ConsoleHandler = (e: ConsoleEvent, info: EventInfo) => void;
+
+const keyOf = (e: Entry) => `${e.Timestamp ?? ""}\u0000${e.Source ?? ""}\u0000${e.Contents ?? ""}`;
+const SEEN = 600;
 type Updates = { Status?: { State?: number }; ConsoleEntries?: Entry[] };
 
 export type ConsoleEntry = { seq: number; at: string; text: string; source: string | null; kind: string | null };
@@ -23,7 +30,11 @@ export class ConsoleTail {
   readonly uuidByName = new Map<string, string>();
   readonly online = new Set<string>();
   state = -1;
-  private handlers: Array<(e: ConsoleEvent) => void> = [];
+  private handlers: ConsoleHandler[] = [];
+  private resyncHandlers: Array<() => void> = [];
+  /** The AMP session the last batch came from; another one means AMP starts from its backlog again. */
+  private session: number | null = null;
+  private seen = new Set<string>();
   private timer: NodeJS.Timeout | null = null;
   private busy = false;
 
@@ -33,11 +44,16 @@ export class ConsoleTail {
     return this.entries.map((e) => e.text);
   }
 
-  on(handler: (e: ConsoleEvent) => void) {
+  on(handler: ConsoleHandler) {
     this.handlers.push(handler);
   }
 
-  off(handler: (e: ConsoleEvent) => void) {
+  /** Called after a batch of old lines has been read: who is online is known again, nothing has been acted on. */
+  onResync(handler: () => void) {
+    this.resyncHandlers.push(handler);
+  }
+
+  off(handler: ConsoleHandler) {
     this.handlers = this.handlers.filter((h) => h !== handler);
   }
 
@@ -48,7 +64,7 @@ export class ConsoleTail {
   }
 
   /** Adds one console line and notifies the handlers; `poll` calls it for every new AMP entry. */
-  ingest(text: string, at: Date = new Date(), meta: Meta = {}) {
+  ingest(text: string, at: Date = new Date(), meta: Meta = {}, replay = false) {
     this.entries.push({ seq: ++this.seq, at: at.toISOString(), text, source: meta.source ?? null, kind: meta.type ?? null });
     if (this.entries.length > KEEP) this.entries.splice(0, this.entries.length - KEEP);
     const known = (name: string) => this.online.has(name) || this.uuidByName.has(name);
@@ -62,7 +78,7 @@ export class ConsoleTail {
       }
       for (const h of [...this.handlers]) {
         try {
-          h(e);
+          h(e, { replay });
         } catch (err) {
           this.log({ err: String(err) }, "console handler failed");
         }
@@ -83,6 +99,12 @@ export class ConsoleTail {
     if (this.timer) clearTimeout(this.timer);
   }
 
+  private remember(key: string) {
+    this.seen.delete(key); // moved to the end: the set keeps the newest
+    this.seen.add(key);
+    if (this.seen.size > SEEN) for (const k of this.seen) { this.seen.delete(k); if (this.seen.size <= SEEN) break; }
+  }
+
   async poll(): Promise<void> {
     if (this.busy) return;
     this.busy = true;
@@ -93,9 +115,33 @@ export class ConsoleTail {
       if (prev === 20 && this.state !== 20) {
         this.online.clear(); // server went down: everyone is gone
       }
+      // The first batch of an AMP session is AMP's backlog, not news. Lines already read are dropped; the rest
+      // (after a restart of api: all of them) are read as history.
+      const session = this.amp.sessions ?? 0;
+      const backlog = this.session === null || session !== this.session;
+      const first = this.session === null;
+      this.session = session;
+      let replayed = 0;
       for (const entry of u.ConsoleEntries ?? []) {
         const text = entry.Contents ?? "";
-        if (text) this.ingest(text, new Date(), { source: entry.Source ?? null, type: entry.Type ?? null });
+        if (!text) continue;
+        const key = keyOf(entry);
+        const known = this.seen.has(key);
+        this.remember(key);
+        if (backlog && known) continue;
+        const replay = backlog && (first || !entry.Timestamp);
+        if (replay) replayed++;
+        this.ingest(text, new Date(), { source: entry.Source ?? null, type: entry.Type ?? null }, replay);
+      }
+      if (backlog) {
+        this.log({ session, entries: (u.ConsoleEntries ?? []).length, replayed }, "console: new AMP session, backlog read");
+        for (const h of [...this.resyncHandlers]) {
+          try {
+            h();
+          } catch (err) {
+            this.log({ err: String(err) }, "console resync handler failed");
+          }
+        }
       }
     } finally {
       this.busy = false;

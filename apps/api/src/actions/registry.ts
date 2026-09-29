@@ -74,14 +74,19 @@ export const actions = {
     name: "link.release",
     role: "ADMIN",
     input: z.object({ name: MC_NAME }),
-    build: (ctx, { name }) => [
-      `tag ${name} add verified`,
-      `effect clear ${name}`,
-      `gamemode survival ${name}`,
-      ctx.spawn ? ow(`tp ${name} ${ctx.spawn.x} ${ctx.spawn.y} ${ctx.spawn.z}`) : ow(`spreadplayers 0 0 1 12 false ${name}`),
-      `whitelist add ${name}`,
-      `tellraw ${name} ${JSON.stringify([{ text: "Linked. Welcome in, ", color: "green" }, { text: name, color: "aqua" }, { text: ". Have fun.", color: "green" }])}`,
-    ],
+    build: (ctx, { name }) => {
+      // Only someone who is being let out of the room (the hold took their tag away) is moved, reset and greeted.
+      // A member who comes back, or a release that is run twice, changes nothing: they stay where they are.
+      const held = `@a[name=${name},tag=!verified]`;
+      return [
+        `effect clear ${held}`,
+        `gamemode survival ${held}`,
+        ctx.spawn ? ow(`tp ${held} ${ctx.spawn.x} ${ctx.spawn.y} ${ctx.spawn.z}`) : ow(`spreadplayers 0 0 1 12 false ${held}`),
+        `tellraw ${held} ${JSON.stringify([{ text: "Linked. Welcome in, ", color: "green" }, { text: name, color: "aqua" }, { text: ". Have fun.", color: "green" }])}`,
+        `whitelist add ${name}`,
+        `tag ${name} add verified`, // last: everything above looks for its absence
+      ];
+    },
   }),
   "limbo.kickIdle": define({
     name: "limbo.kickIdle",

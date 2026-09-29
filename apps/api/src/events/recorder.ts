@@ -73,7 +73,10 @@ export class Recorder {
     return this.open.size;
   }
 
-  onConsole = (e: ConsoleEvent) => {
+  onConsole = (e: ConsoleEvent, info?: { replay: boolean }) => {
+    // Old lines, read again after a restart: they were recorded when they were new. Who is online is put right
+    // from AMP's player list (see `status`). The UUIDs in them are still worth having.
+    if (info?.replay && e.type !== "uuid" && e.type !== "line") return;
     this.enqueue(() => this.console(e));
   };
 

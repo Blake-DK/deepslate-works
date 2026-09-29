@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 import type { Amp } from "../amp/client.js";
-import type { ConsoleTail, ConsoleEvent } from "../amp/console.js";
+import type { ConsoleTail, ConsoleEvent, EventInfo } from "../amp/console.js";
 import { db } from "../db.js";
 import { audit } from "../audit.js";
 import type { Env } from "../env.js";
@@ -16,6 +16,7 @@ const CODE_TTL_MS = 15 * 60_000;
 const REMIND_MS = 60_000;
 const IDLE_KICK_MS = 15 * 60_000;
 const GUILD_REFRESH_MS = 5 * 60_000;
+const SAME_JOIN_MS = 15_000; // "logged in with entity id" and "joined the game" are two lines for one join
 
 type Held = { uuid: string; code: string; since: number; lastReminder: number };
 
@@ -31,6 +32,7 @@ export function decideJoin(user: { verifiedAt: Date | null; guildMember: boolean
 
 export class Limbo {
   readonly held = new Map<string, Held>(); // by player name
+  private readonly lastJoin = new Map<string, number>();
   private ctx: ActionCtx;
   private timers: NodeJS.Timeout[] = [];
 
@@ -43,7 +45,8 @@ export class Limbo {
   }
 
   start() {
-    this.tail.on((e) => void this.onEvent(e).catch((err) => this.log({ err: String(err) }, "limbo event failed")));
+    this.tail.on((e, info) => void this.onEvent(e, info).catch((err) => this.log({ err: String(err) }, "limbo event failed")));
+    this.tail.onResync(() => void this.resync().catch((err) => this.log({ err: String(err) }, "limbo resync failed")));
     this.timers.push(setInterval(() => void this.tick().catch((err) => this.log({ err: String(err) }, "limbo tick failed")), 5000));
     this.timers.push(setInterval(() => void this.refreshGuild().catch((err) => this.log({ err: String(err) }, "guild refresh failed")), GUILD_REFRESH_MS));
   }
@@ -52,10 +55,34 @@ export class Limbo {
     for (const t of this.timers) clearInterval(t);
   }
 
-  private async onEvent(e: ConsoleEvent) {
-    if (e.type === "join") await this.onJoin(e.name);
-    if (e.type === "leave") this.held.delete(e.name);
+  async onEvent(e: ConsoleEvent, info: EventInfo = { replay: false }) {
+    // A join read from old lines is not a join: nobody is moved or greeted because of it (see `resync`).
+    if (e.type === "join" && !info.replay) {
+      const now = Date.now();
+      const last = this.lastJoin.get(e.name) ?? 0;
+      this.lastJoin.set(e.name, now);
+      if (now - last >= SAME_JOIN_MS) await this.onJoin(e.name);
+    }
+    if (e.type === "leave") {
+      this.held.delete(e.name);
+      this.lastJoin.delete(e.name);
+    }
     if (e.type === "list") for (const name of [...this.held.keys()]) if (!e.names.includes(name)) this.held.delete(name);
+  }
+
+  /**
+   * After old lines have been read (api restarted, or AMP gave out a new session): whoever is online and should be
+   * in the room but is not held is held. Members are left exactly where they are.
+   */
+  async resync() {
+    for (const name of this.tail.online) {
+      if (this.held.has(name)) continue;
+      const uuid = this.tail.uuidByName.get(name);
+      const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select: { verifiedAt: true, guildMember: true } }) : null;
+      const decision = decideJoin(user);
+      this.log({ name, uuid, decision }, "resync");
+      if (decision.action === "hold") await this.hold(name, uuid ?? "", decision.reason);
+    }
   }
 
   async onJoin(name: string) {

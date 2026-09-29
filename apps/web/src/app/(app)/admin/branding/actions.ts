@@ -5,8 +5,13 @@ import { requireAdmin } from "@/server/auth/session";
 import { audit } from "@/server/events";
 import { getSection, setSection } from "@/server/site-settings";
 import { SLOTS, storeImage, tidy } from "@/server/branding";
+import { DEFAULT_GUIDE } from "@/lib/guide-default";
 
 const text = (f: FormData, k: string) => String(f.get(k) ?? "");
+const ownGuide = (t: string) => {
+  const v = t.replace(/\r\n?/g, "\n");
+  return v.trim() === "" || v.trim() === DEFAULT_GUIDE.trim() ? "" : v;
+};
 
 export async function saveBrandingAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -21,6 +26,9 @@ export async function saveBrandingAction(formData: FormData) {
     discordInvite: text(formData, "discordInvite").trim(),
     footer: text(formData, "footer"),
     rules: text(formData, "rules").replace(/\r\n?/g, "\n"),
+    // Not in the form that was sent: left as it is. Sent as it ships, or empty: nothing of the admin's own is kept,
+    // so the guide goes on following docs/18 as that changes.
+    guide: formData.has("guide") ? ownGuide(text(formData, "guide")) : current.guide,
     motd: text(formData, "motd"),
   };
   const notes: string[] = [];

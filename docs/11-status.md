@@ -121,6 +121,15 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 - **Checked from Linux against the live site:** see the session log. **Not checked:** on Windows, under Windows PowerShell 5.1, with the launcher there; the lines are in the Windows test checklist in docs/07. It can only be tried for real when the site has a newer installer than the PC.
 - **A PC set up with 1.3.0 needs one fresh download**: 1.3.0 has no update step.
 
+### Player guide (docs/18, 2026-09-29)
+
+- `/guide`, second in the nav. Markdown like the rules page, kept in the branding settings (`branding.guide`), edited in Admin → Branding → "Guide page"; live on the next load. While nobody has saved a text of their own the page shows the guide as it ships (`apps/web/src/lib/guide-default.ts`, generated from the text between the two rules in docs/18), and goes on following it; saving the shipped text unchanged, or an empty box, keeps it that way.
+- **Tags** (`apps/web/src/lib/guide.ts`, tested): `<!-- mod: slug -->` on a heading covers the section down to the next heading of the same rank or above; on a list item, that item; in a paragraph, that paragraph. Several names in one tag: all are needed. Every comment is taken out of what is shown.
+- **The sign-in page** shows the numbered steps of "Getting in" (three lines), from the admin's text if it has such a section, else from the shipped guide.
+- **Where the shipped guide differs from docs/18**, all in tags, not in wording: `falling-tree` is `fallingtree` (its name on Modrinth and in `mods.json`; a test checks that every tag names a mod in the list). The lines about Backpacks, Waystones and VeinMiner, and the two steps of "Your first hour" that need a backpack and a waystone, carry their mods' tags: those mods are voted on and not in the pack yet, and the guide would have described them as there. "Home, spawn and getting unstuck" carries `<!-- feature: actions -->` and is hidden: the buttons it describes are Phase 4 and do not exist. Switch: `FEATURES.actions` in `guide.ts`.
+- **Acceptance:** "with the current manifest the Create/Electricity/Quarry/Pipes/Guns sections show only for enabled mods" is a test against the real `mods.json` (today: none of the five is enabled, none shows). "Editing the guide in `/admin/branding` is live on the next load": checked on the live site, see the session log.
+- For the planner: "Where things are on the site" says M opens the map in game and "Minimap … M opens the big map. Press B to drop a waypoint": those are Xaero's defaults, not checked in game by anyone yet. The VeinMiner key (the grave key) likewise.
+
 ### docs/16 acceptance · state
 
 - [ ] `/analytics` shows the ten tiles, the chart, countries with the map, most active players for every period, and matches AMP within ±1 session. *Built and rendering; the comparison needs people to have played.*

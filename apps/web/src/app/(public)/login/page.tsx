@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { discordLogin, emailLogin } from "./actions";
+import { getGettingIn } from "@/server/guide";
+import { Markdown } from "@/components/markdown";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -26,7 +28,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (session?.user) redirect("/");
   const { error, next } = await searchParams;
   const message = error ? (ERRORS[error] ?? "Sign-in failed. Try again.") : null;
-  const brand = await getBranding();
+  const [brand, steps] = await Promise.all([getBranding(), getGettingIn()]);
 
   return (
     <div className="mx-auto max-w-sm space-y-4 pt-6">
@@ -66,6 +68,14 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </details>
         </CardContent>
       </Card>
+      {steps && (
+        <Card data-testid="getting-in">
+          <CardHeader>
+            <CardTitle>Getting in</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm"><Markdown text={steps} /></CardContent>
+        </Card>
+      )}
       <p className="text-center text-xs text-muted-foreground">New here? Ask Alex for an invite link.</p>
     </div>
   );

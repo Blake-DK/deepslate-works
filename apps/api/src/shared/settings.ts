@@ -33,6 +33,7 @@ export const sections = {
     discordInvite: z.string().trim().url().max(200).or(z.literal("")).default(""),
     footer: z.string().trim().max(200).default(""),
     rules: z.string().max(8000).default(""),
+    guide: z.string().max(20000).default(""), // docs/18; "" = the guide as it ships
     motd: z.string().trim().max(59).default("Deepslate Works"),
     logo: z.string().max(80).default(""), // file name under data/branding, "" = none
     favicon: z.string().max(80).default(""),

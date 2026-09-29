@@ -5,7 +5,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 
 export type BrandingValues = {
   name: string; tagline: string; accent: string; accentDark: string; defaultTheme: "light" | "dark" | "system";
-  discordInvite: string; footer: string; rules: string; motd: string;
+  discordInvite: string; footer: string; rules: string; guide: string; guideOwn: boolean; motd: string;
   logoUrl: string | null; faviconUrl: string | null; bannerUrl: string | null;
 };
 
@@ -101,6 +101,12 @@ export function BrandingForm({ initial, action }: { initial: BrandingValues; act
           <Label htmlFor="rules" className="sr-only">Rules</Label>
           <textarea id="rules" name="rules" value={v.rules} onChange={set("rules")} rows={10} maxLength={8000} className="w-full rounded-lg border bg-background px-3 py-2 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder={"# House rules\n\n- No griefing\n- Ask before borrowing\n\nChat is kept for 30 days so admins can sort out disputes."} />
           <p className="text-xs text-muted-foreground"><span className="font-mono"># Heading</span>, <span className="font-mono">- list</span>, <span className="font-mono">**bold**</span>, <span className="font-mono">*italic*</span>, <span className="font-mono">[words](https://link)</span>. The page also lists what the site keeps about players, from the settings.</p>
+        </fieldset>
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-semibold">Guide page</legend>
+          <Label htmlFor="guide" className="sr-only">Guide</Label>
+          <textarea id="guide" name="guide" value={v.guide} onChange={set("guide")} rows={16} maxLength={20000} className="w-full rounded-lg border bg-background px-3 py-2 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <p className="text-xs text-muted-foreground">{v.guideOwn ? "This is your own text." : "This is the guide as it ships; change it and save to make it yours."} Same Markdown as the rules. A heading, a list item or a paragraph that ends in <span className="font-mono">&lt;!-- mod: create --&gt;</span> is shown only while that mod is switched on in the mod list; the name is the one in the mod&apos;s address on the Mods page. The numbered steps under &quot;Getting in&quot; are also shown on the sign-in page. Empty the box and save to get the shipped guide back.</p>
         </fieldset>
         <Button type="submit">Save branding</Button>
       </form>

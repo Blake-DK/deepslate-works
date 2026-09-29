@@ -6,6 +6,7 @@ import { getBranding } from "@/server/branding";
 
 const LINKS = [
   { href: "/", label: "Home" },
+  { href: "/guide", label: "Guide" },
   { href: "/mods", label: "Mods" },
   { href: "/vote", label: "Vote" },
   { href: "/install", label: "Install" },

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/session";
 import { getBranding } from "@/server/branding";
+import { getGuideSource } from "@/server/guide";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { BrandingForm } from "./form";
@@ -11,7 +12,7 @@ export const metadata: Metadata = { title: "Branding" };
 
 export default async function BrandingPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string; note?: string; renamed?: string }> }) {
   await requireAdmin();
-  const [{ saved, error, note, renamed }, b] = await Promise.all([searchParams, getBranding()]);
+  const [{ saved, error, note, renamed }, b, guide] = await Promise.all([searchParams, getBranding(), getGuideSource()]);
   return (
     <div className="space-y-4">
       <div>
@@ -27,7 +28,7 @@ export default async function BrandingPage({ searchParams }: { searchParams: Pro
           <CardDescription>The preview on the right follows what you type. Used by the top bar, the sign-in and invite pages, the page titles, the rules page and the welcome line in game.</CardDescription>
         </CardHeader>
         <CardContent>
-          <BrandingForm action={saveBrandingAction} initial={{ name: b.name, tagline: b.tagline, accent: b.accent, accentDark: b.accentDark, defaultTheme: b.defaultTheme, discordInvite: b.discordInvite, footer: b.footer, rules: b.rules, motd: b.motd, logoUrl: b.logoUrl, faviconUrl: b.faviconUrl, bannerUrl: b.bannerUrl }} />
+          <BrandingForm action={saveBrandingAction} initial={{ name: b.name, tagline: b.tagline, accent: b.accent, accentDark: b.accentDark, defaultTheme: b.defaultTheme, discordInvite: b.discordInvite, footer: b.footer, rules: b.rules, guide: guide.text, guideOwn: guide.own, motd: b.motd, logoUrl: b.logoUrl, faviconUrl: b.faviconUrl, bannerUrl: b.bannerUrl }} />
         </CardContent>
       </Card>
     </div>

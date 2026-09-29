@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import type { Amp } from "../amp/client.js";
 import type { ConsoleTail, ConsoleEvent } from "../amp/console.js";
 import { db } from "../db.js";
+import { audit } from "../audit.js";
 import type { Env } from "../env.js";
 import { runAction } from "../actions/run.js";
 import { parsePos, type ActionCtx } from "../actions/registry.js";
@@ -81,7 +82,7 @@ export class Limbo {
     const code = uuid ? await this.codeFor(uuid, name) : codeGen();
     this.held.set(name, { uuid, code, since: Date.now(), lastReminder: Date.now() });
     await runAction(this.amp, this.ctx, "limbo.hold", { name, code }, null);
-    await db.auditLog.create({ data: { action: "limbo.held", params: { name, uuid, reason }, result: "OK" } });
+    await audit({ action: "limbo.held", params: { name, uuid, reason }, result: "OK" });
   }
 
   /** One live code per UUID; reused while valid so the chat link stays the same. */

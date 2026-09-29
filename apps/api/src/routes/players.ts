@@ -6,7 +6,7 @@ import type { Limbo } from "../players/limbo.js";
 import { requireAdmin } from "../auth.js";
 import { runAction } from "../actions/run.js";
 import { ADMIN_ACTIONS, actions, type ActionName } from "../actions/registry.js";
-import { db } from "../db.js";
+import { audit } from "../audit.js";
 
 export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, limbo: Limbo) {
   app.get("/players", async () => ({
@@ -53,11 +53,11 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
     if (!method) return reply.code(404).send({ error: { code: "validation", message: "start|stop|restart" } });
     try {
       const r = await amp.call<unknown>("Core", method);
-      await db.auditLog.create({ data: { userId: req.caller.userId, action: `server.${op}`, params: {}, result: "OK" } });
+      await audit({ userId: req.caller.userId, action: `server.${op}`, params: {}, result: "OK" });
       return { ok: true, result: r };
     } catch (e) {
       const detail = e instanceof Error ? e.message : String(e);
-      await db.auditLog.create({ data: { userId: req.caller.userId, action: `server.${op}`, params: {}, result: "FAILED", detail } });
+      await audit({ userId: req.caller.userId, action: `server.${op}`, params: {}, result: "FAILED", detail });
       return reply.code(502).send({ error: { code: "amp_error", message: detail } });
     }
   });

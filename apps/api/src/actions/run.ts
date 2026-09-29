@@ -1,5 +1,5 @@
 import type { Amp } from "../amp/client.js";
-import { db } from "../db.js";
+import { audit } from "../audit.js";
 import { actions, type ActionCtx, type ActionName } from "./registry.js";
 
 export type RunResult = { ok: boolean; commands: number; detail?: string };
@@ -9,7 +9,7 @@ export async function runAction(amp: Amp, ctx: ActionCtx, name: ActionName, rawI
   const action = actions[name];
   const parsed = action.input.safeParse(rawInput);
   if (!parsed.success) {
-    await db.auditLog.create({ data: { userId: callerId, action: name, params: {} as object, result: "DENIED", detail: "validation" } });
+    await audit({ userId: callerId, action: name, params: {} as object, result: "DENIED", detail: "validation" });
     return { ok: false, commands: 0, detail: "validation" };
   }
   const input = parsed.data;
@@ -21,12 +21,12 @@ export async function runAction(amp: Amp, ctx: ActionCtx, name: ActionName, rawI
       sent++;
     }
     if (name !== "limbo.keep" && name !== "server.list") {
-      await db.auditLog.create({ data: { userId: callerId, action: name, params: input as object, result: "OK", detail: `${sent} command(s)` } });
+      await audit({ userId: callerId, action: name, params: input as object, result: "OK", detail: `${sent} command(s)` });
     }
     return { ok: true, commands: sent };
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
-    await db.auditLog.create({ data: { userId: callerId, action: name, params: input as object, result: "FAILED", detail: `${detail} after ${sent}/${commands.length}` } });
+    await audit({ userId: callerId, action: name, params: input as object, result: "FAILED", detail: `${detail} after ${sent}/${commands.length}` });
     return { ok: false, commands: sent, detail };
   }
 }

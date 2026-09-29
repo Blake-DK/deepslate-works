@@ -6,13 +6,19 @@
 // rule to say "Ready to join until 10:35". Pure, so it is tested.
 
 export const GATE_REASONS = ["no report", "stale", "wrong version"] as const;
+
+/**
+ * The runs that count as "pressed Play": the Play button, and a run of Setup.bat that went through. A fresh install
+ * is the current pack by definition (planner, 2026-09-29, after Pabulum was held although he had just installed).
+ */
+export const PLAY_MODES = ["play", "install"] as const;
 export type GateReason = (typeof GATE_REASONS)[number];
 
 export type PlayRun = { at: Date; packVersion: string };
 export type Gate = { ok: true; until: Date } | { ok: false; reason: GateReason };
 
 /**
- * `run`: their latest run of Play that went through. `serverPack`: the pack last synced to the server, null when
+ * `run`: their latest run of Play, or of the installer, that went through (PLAY_MODES). `serverPack`: the pack last synced to the server, null when
  * that is not known (then the version is not looked at). Time first: a run from yesterday is "stale" whatever its pack.
  */
 export function playGate(run: PlayRun | null, serverPack: string | null, windowMin: number, now: Date): Gate {

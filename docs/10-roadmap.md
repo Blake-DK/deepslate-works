@@ -37,7 +37,7 @@ Done when:
 Build: `modpack lock`, `build client|server|installer`, `sync-server`; `/install`; `/admin/modpack`; `installer/` per 07.
 
 Done when:
-- [x] `modpack lock` resolves every enabled mod plus dependencies for NeoForge 1.21.1 and fails loudly on any mod without a compatible version. *32 files; "configured: no neoforge 1.21.1 build on Modrinth" on 2026-09-29, and nothing written.*
+- [x] `modpack lock` resolves every enabled mod plus dependencies for NeoForge 1.21.1 and fails loudly on any mod without a compatible version. *32 files, 2026-09-29.*
 - ~~`client.mrpack` imports into the Modrinth App~~ struck 2026-09-29: Windows only.
 - [x] On a clean Windows VM with only the launcher installed: run `Setup.bat`, open the launcher, choose the profile, press Play, reach the main menu, see the server in the list. Under five minutes on a normal connection excluding downloads. *On two real PCs, not a VM: Alex's (2026-09-29 morning) and Pabulum's (18:08 UTC, after installer 1.4.1 fixed the Java step; he joined four minutes later).*
 - [ ] Rerunning the installer with no changes prints "already up to date" and changes nothing; after bumping one mod it replaces exactly that jar. *Alex's Play runs go through quickly; nobody has watched the one-jar case.*

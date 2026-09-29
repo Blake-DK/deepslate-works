@@ -5,7 +5,7 @@ import { distFile, getLock } from "@/server/modpack/lock";
 import { canDownload } from "@/server/modpack/gate";
 import { updateAvailable, type LastLaunch } from "@/lib/play";
 import { getSection } from "@/server/site-settings";
-import { playGate, type Gate } from "@/shared/join-gate";
+import { PLAY_MODES, playGate, type Gate } from "@/shared/join-gate";
 
 type GateUser = Parameters<typeof canDownload>[0];
 
@@ -38,7 +38,7 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
     canDownload(user),
     db.installReport.findFirst({ where: { userId: user.id, outcome: "ok" }, orderBy: { at: "desc" }, select: { packVersion: true, at: true } }),
     getSection("joining"),
-    db.installReport.findFirst({ where: { userId: user.id, mode: "play", outcome: "ok" }, orderBy: { at: "desc" }, select: { packVersion: true, at: true } }),
+    db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { packVersion: true, at: true } }),
     serverPack(),
   ]);
   const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date()) : null;

@@ -7,7 +7,7 @@ import type { Env } from "../env.js";
 import { runAction } from "../actions/run.js";
 import { parsePlace, parsePos, type ActionCtx } from "../actions/registry.js";
 import { getSection } from "../settings.js";
-import { playGate, type BlockReason } from "../shared/join-gate.js";
+import { PLAY_MODES, playGate, type BlockReason, type PlayRun } from "../shared/join-gate.js";
 import { serverPack } from "./pack.js";
 import { doorRule, type Member } from "../shared/access.js";
 
@@ -39,6 +39,18 @@ export function decideJoin(user: { verifiedAt: Date | null; guildMember: boolean
   if (!user.verifiedAt) return { action: "hold", reason: "not linked" };
   if (!user.guildMember) return { action: "hold", reason: "left the discord server" };
   return { action: "release", reason: "linked member" };
+}
+
+/**
+ * Pure: the door for a linked member, in its order. Open for them (admin, live, early access)? Then Play first:
+ * `run` is their latest run of Play or of the installer that went through. Null: in. Joining and having just
+ * linked in the room both come through here (2026-09-29: a member who linked was let in without Play first).
+ */
+export function doorReason(user: Member, d: { live: boolean; requirePlay: boolean; windowMin: number; run: PlayRun | null; pack: string | null; now: Date }): BlockReason | null {
+  if (doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: true }) === "not open") return "not live";
+  if (doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: false }) === "in") return null; // Play is not asked of them
+  const gate = playGate(d.run, d.pack, d.windowMin, d.now);
+  return gate.ok ? null : gate.reason;
 }
 
 export class Limbo {
@@ -140,17 +152,15 @@ export class Limbo {
     return live;
   }
 
-  /** Why this member may not come in yet, or null when they may. */
-  private async atTheDoor(user: Known): Promise<BlockReason | null> {
-    const [live, joining] = await Promise.all([this.live(), getSection("joining")]);
-    if (doorRule(user, { live, requirePlay: joining.requirePlay, hasPlayed: true }) === "not open") return "not live";
-    if (doorRule(user, { live, requirePlay: joining.requirePlay, hasPlayed: false }) === "in") return null; // Play is not asked of them
-    const [run, pack] = await Promise.all([
-      db.installReport.findFirst({ where: { userId: user.id, mode: "play", outcome: "ok" }, orderBy: { at: "desc" }, select: { at: true, packVersion: true } }),
+  /** Why this member may not come in yet, or null when they may (`doorReason`). */
+  protected async atTheDoor(user: Known): Promise<BlockReason | null> {
+    const [live, joining, run, pack] = await Promise.all([
+      this.live(),
+      getSection("joining"),
+      db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { at: true, packVersion: true } }),
       serverPack(),
     ]);
-    const gate = playGate(run, pack, joining.windowMin, new Date());
-    return gate.ok ? null : gate.reason;
+    return doorReason(user, { live, requirePlay: joining.requirePlay, windowMin: joining.windowMin, run, pack, now: new Date() });
   }
 
   /** Asks the server where they are and waits for the answer; null when none comes. */
@@ -170,7 +180,7 @@ export class Limbo {
   }
 
   /** A linked member who may not come in yet. `inRoom`: they are in the room already (they have just linked). */
-  private async holdMember(name: string, uuid: string, userId: string, reason: BlockReason, inRoom = false) {
+  protected async holdMember(name: string, uuid: string, userId: string, reason: BlockReason, inRoom = false) {
     const back = inRoom ? null : await this.where(name); // before they are moved
     if (!this.tail.online.has(name)) return; // gone while we asked
     const kind = reason === "not live" ? "closed" : "play";
@@ -253,15 +263,25 @@ export class Limbo {
     if (!name || !this.tail.online.has(name)) return { released: false };
     const was = this.held.get(name);
     if (was?.kind === "play" || was?.kind === "closed") return { released: false }; // linked long ago; they wait for something else
-    // They have just linked. Is the server open for them? If not they stay in the room, with the other line.
-    const user = await db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, role: true, earlyAccess: true } });
-    if (user && (await this.atTheDoor(user)) === "not live") {
-      await this.holdMember(name, uuid, user.id, "not live", true);
+    // They have just linked: the door as for anybody who walks in (`doorReason`), open for them and then Play
+    // first. Held, they stay in the room with that line (not open yet, or press Play) instead of the link line.
+    const user = await this.memberByUuid(uuid);
+    const blocked = user ? await this.atTheDoor(user) : null;
+    if (user && blocked) {
+      await this.holdMember(name, uuid, user.id, blocked, true);
       return { released: false, name };
     }
     this.held.delete(name);
-    const r = await runAction(this.amp, this.ctx, "link.release", { name }, null);
+    const r = await this.letIn(name);
     return { released: r.ok, name };
+  }
+
+  protected memberByUuid(uuid: string): Promise<Known | null> {
+    return db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, role: true, earlyAccess: true } });
+  }
+
+  protected letIn(name: string) {
+    return runAction(this.amp, this.ctx, "link.release", { name }, null);
   }
 
   /** Member left the Discord server (or admin removed them): back to the room next join; kicked now if online. */

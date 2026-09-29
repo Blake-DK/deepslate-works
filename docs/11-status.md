@@ -30,7 +30,7 @@ Last updated 2026-09-29, 19:00 UTC (the evening the first player who is not an a
 | docs/19 admin assistant | not begun. No `ASSISTANT_API_KEY` in `deploy/.env` |
 | 4 Player self-service | not begun, apart from what docs/14 brought forward (the action registry, the event log) |
 
-**Handed over by the planner on 2026-09-29 evening, not begun** (named in `ROADMAP.md`; the specs themselves have not reached this session except the first): Configured (cannot be had from Modrinth, docs/06); Better Tab Info in the base pack; the installer's version on every report with an "outdated" badge and a nudge on `/me`; fuller logs with the last game session's log and crash reports; the entrance room's prompt every 15 s with a title on screen and a short code for `deepslate.dsw.test/join`.
+**Handed over by the planner on 2026-09-29 evening, not begun** (named in `ROADMAP.md`; the specs themselves have not reached this session): Better Tab Info in the base pack; the installer's version on every report with an "outdated" badge and a nudge on `/me`; fuller logs with the last game session's log and crash reports; the entrance room's prompt every 15 s with a title on screen and a short code for `deepslate.dsw.test/join`.
 
 ## Where things are
 
@@ -326,13 +326,13 @@ Alex: "I want an option in the GUI to turn on pregen … run for 8 hours, or alw
 
 **The mods, looked at on the running server (18:2x UTC, two players on).** 31 entries in the loader's list, no ERROR and no FATAL line, 3,601 recipes and 2,899 advancements loaded. The server knows a block of each mod that brings blocks (`create:andesite_casing`, `createaddition:electric_motor`, `quarryplus:quarry`, `pipez:item_pipe`, `tacz:gun_smith_table`, `sophisticatedbackpacks:backpack`, `waystones:waystone`, `farmersdelight:stove`; a made-up one is refused). 27 warnings at every start, 23 of them from mods looking for other mods that are not there (Create Crafts & Additions for "Simulated", something for MrCrayfish's Controllable); they do no harm. **Nobody has tried in the game** that a gun fires, a quarry digs, a vein is mined or a tree falls by hand: this session cannot play.
 
-**For the planner**
+**For the planner** (answered 2026-09-29 evening, see the session log "19:2x")
 
-1. **Somebody who has just linked is let in without Play-first.** `release()` asks "is the site open for them" and nothing else; Play-first is asked at a join. Pabulum came in eight minutes after a run of Setup.bat that went through and had never pressed Play. Whether that is wanted is the planner's to say.
-2. **Configured** is not on Modrinth for NeoForge (docs/06).
-3. **"The server went down without shutting down first", 17:02:02 UTC, is wrong.** The server's own log of that run ends with "All dimensions are saved" at 17:02:01: AMP put it to sleep. The recorder did not see "Stopping server". Not looked into further.
-4. **docs/18 line 37** still says FallingTree needs an axe; the site's own guide text is changed.
-5. **The pre-generated area has none of the new mods' terrain** (docs/06).
+1. ~~Somebody who has just linked is let in without Play-first.~~ Fixed: linking goes through the same door as a join.
+2. ~~Configured.~~ Dropped: Modrinth only.
+3. ~~The "Crash" of 17:02:02 UTC.~~ The detector waits for the stop to settle; the row is to be corrected (below).
+4. ~~docs/18 line 37.~~ Corrected by the planner (2f74dc2).
+5. **The pre-generated area has none of the new mods' terrain** (docs/06). The world is made again once, after the vote closes (planner).
 6. **The map was deleted again at 18:36:33 UTC** on Alex's word ("delete the live map so it can regen"), with the server asleep: the three folders under `bluemap/web/maps/` emptied over the rsync link after a dry run that showed deletions only (9,815 + 9 + 9 entries). Nothing was started from the shell. BlueMap renders from nothing whenever the server runs; to have it finish in one go: Admin → Server → Pre-generation → "Render the map only" → Turn on, which keeps the server awake until BlueMap says the map is updated (about an hour at one thread).
 
 ### docs/16 acceptance · state
@@ -482,7 +482,7 @@ Per Alex's message: the Phase-1 data model bits and the onboarding change are in
 
 *Rewritten 2026-09-29, 19:00 UTC; the `.mrpack` boxes are struck (Windows only).*
 
-- [x] `modpack lock` resolves every enabled mod plus dependencies for NeoForge 1.21.1 and fails loudly on a mod without a compatible version. *Configured, 2026-09-29.*
+- [x] `modpack lock` resolves every enabled mod plus dependencies for NeoForge 1.21.1 and fails loudly on a mod without a compatible version. *2026-09-29.*
 - ~~`client.mrpack` imports into the Modrinth App~~ struck: Windows only.
 - [x] Windows: Setup.bat → launcher → profile → main menu → server in list. *Alex's PC and Pabulum's, real PCs.*
 - [ ] Rerun says "already up to date"; bumping one mod replaces exactly that jar. *Not watched.*
@@ -539,9 +539,9 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 3. **Press Play before you next join**, and tell Pabulum to: the pack is `0.1.0+1a48e8ff` since 18:20 UTC, and Play first asks for it. (Admins are never held, so for you it is only the settings that come with it.)
 4. **Try the mods in the game.** That they load is checked; that a tree falls to a bare hand, a quarry digs, a gun fires and breaks no blocks, a vein is mined, nobody has tried. The settings for trees and for TaCZ count since the restart of 18:27 UTC.
 5. **Look at Home while somebody is on:** their ping should be next to their name within half a minute. No ping had ever been read from a real player before 17:45 UTC (spark writes a colon the pattern did not expect), and nobody has looked since.
-6. **Play first with a member who is not an admin** (docs/14): join without having pressed Play, and they should be held with "Press Play on deepslate.dsw.test to join".
-7. **Say whether somebody who has just linked should be held for Play first too.** Today they are let in (Pabulum was, 18:16 UTC).
-8. **Say whether the world is to be made again.** The 1500 blocks around spawn were generated before Create, Farmer's Delight and Waystones were on and have none of their ore, crops or waystones. `ROADMAP.md` has "one more reset after the vote closes" as the clean way.
+6. **Play first with a member who is not an admin** (docs/14): join without having pressed Play (and without a run of Setup.bat in the last 30 minutes), and they should be held with "Press Play on deepslate.dsw.test to join". The same after linking in the room since 2026-09-29 evening.
+7. **Correct the 17:02 row**: `sudo /root/.config/deepslate/fix-crash-1702.sh` shows it, `--apply` changes it (one row, CRASH → "The server went to sleep (nobody on)", the old wording kept in `meta.corrected`).
+8. ~~Say whether the world is to be made again.~~ Planner: once, after the vote closes.
 9. **Close the vote** when it has run its course: Apply results, Lock, Build, Sync, then "We're live" in Admin → Settings. "Apply results" has never run on a closed vote; do it when there is time to look at the diff.
 10. **Revoke the old GitHub token** on GitHub (Settings → Developer settings → Fine-grained tokens). The one in use expires 2026-11-28.
 11. **`DISCORD_BOT_TOKEN`**, if leaving the Discord server is to bite within five minutes and not at the next sign-in. Optional.
@@ -561,7 +561,8 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Session log
 
-- **2026-09-29 17:4x to 18:3x UTC** · From Alex while he played, and two planner's notes. **Trees fall without an axe** and **TaCZ's explosive ammunition breaks no blocks**: settings shipped with the pack, synced without a restart (pack `0.1.0+1a48e8ff`; they count from the server's next start). **Configured is not added**: the Modrinth slug is a Fabric mod of the same name (docs/06). **Lock had never counted settings files**; it does now, and they are part of the pack's version. **"Delete the map and render it again"** is a button on the Pre-generation card; the render started from the shell was turned off at Alex's word ("from the gui not from here") at 27.6% and the map is as far as it got. **The portal lost track of who was on** after a restart of api and let the render run while Alex played, 17:45 to 17:5x; it now compares its list with AMP's. **Spark's ping line** has a colon the parser did not expect: no ping had ever been read from a real player. **Download log** in the event log (docs/05).
+- **2026-09-29 19:2x UTC** · Planner's answers (pasted by Alex). **The door after linking**: `Limbo.release()` asked only "is the server open for them"; it now asks the whole door (`doorReason` in `players/limbo.ts`: open for them → Play first → in), the same as a join, and someone held there gets the Play line (`limbo.holdPlay`), not the link line. **A run of Setup.bat that went through counts as Play** (`PLAY_MODES = ["play", "install"]` in `shared/join-gate.ts`; api's door and the portal's "Ready to join until" both use it): a fresh install is the current pack. Test rows: `apps/api/tests/join-gate.test.ts` "the door after linking". **The crash detector**: the status poller (10 s) could see the server gone before the console tail (2 s, 15 s once the server is not running) had read the stop lines, and it decided at that first poll. It now waits for the fall to settle (up to 90 s): asleep → "went to sleep", back or starting → "restarting", a stop line read → "stopped", and only with none of these a CRASH, dated when it went down. "Stopping the server" (the stop command's answer, what AMP writes) counts as a stop line as well as "Stopping server". The sleep of 17:02 is a test (`recorder.test.ts`, "a sleep with the stop lines read after the poll"), in four variants of AMP's states. **Configured** dropped from the docs (Modrinth only). **Spark's ping line** as this server's console writes it: `[⚡]: Player bramble09 has 116 ms ping.` (seen from Alex, 17:45 UTC); the parser also takes it without the colon and without the `[⚡]`. To be confirmed with the next player who is not Alex.
+- **2026-09-29 17:4x to 18:3x UTC** · From Alex while he played, and two planner's notes. **Trees fall without an axe** and **TaCZ's explosive ammunition breaks no blocks**: settings shipped with the pack, synced without a restart (pack `0.1.0+1a48e8ff`; they count from the server's next start). **Lock had never counted settings files**; it does now, and they are part of the pack's version. **"Delete the map and render it again"** is a button on the Pre-generation card; the render started from the shell was turned off at Alex's word ("from the gui not from here") at 27.6% and the map is as far as it got. **The portal lost track of who was on** after a restart of api and let the render run while Alex played, 17:45 to 17:5x; it now compares its list with AMP's. **Spark's ping line** has a colon the parser did not expect: no ping had ever been read from a real player. **Download log** in the event log (docs/05).
 - **2026-09-29 17:1x UTC** · Installer 1.4.1 (planner's note pasted by Alex): a Java on PATH ended every run at "Finding Java 21" (`2>&1` on `java -version` under `$ErrorActionPreference = "Stop"`). Java is now asked through a process of its own; an old Java on PATH is passed over and Java 21 downloaded. Self test 58 checks (12 new), modpack tests 19. Pabulum ran it three times (16:48, 16:53, 17:06 UTC; the note's 17:48 and 17:53 are UK time), pack `0.1.0+b5d461ea` in all three. **His Play-first window was not used up: there is none yet.** The door counts runs of Play that went through, and he has no run that went through. **He has to download the installer again**: his copy is 1.4.0, and only Play updates a copy. docs/07 "A Java on the PC ended the install".
 - **2026-09-29 15:58 UTC** · FallingTree synced (pack `0.1.0+5c3b0494`) and the server started once with it: "FallingTree (fallingtree)" in the list of mods, `Done (1.331s)`. Nobody was on; the server was asleep before and went back to sleep.
 - **2026-09-29 16:00 UTC** · The admin lists photographed at 1280, 1920 and 390 px with throwaway members, one of them with a name of 32 characters (`data/screenshots/before-*.png`, `after-*.png`, `after-report.json`), and the switch and the row menu pressed the way a browser presses them (`/root/.config/deepslate/switch-test.sh`): on, off, Make admin, Remove, each in the event log.
@@ -592,9 +593,8 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Suggested plan updates for the next session
 
-- **Wait for the planner's specs** of the evening's list (above, "Handed over by the planner") before building any of it; only Configured has arrived, and it cannot be built as written.
-- **Play first at the link** (to-do 7): one line in `Limbo.release()` if the answer is yes.
-- **The false "Crash" of 17:02 UTC**: the recorder did not see "Stopping server" before AMP's sleep. There are two CRASH rows in the log; look at what the console held at both.
+- **Wait for the planner's specs** of the evening's list (above, "Handed over by the planner") before building any of it.
+- **The other CRASH row** of 2026-09-29 (there are two): the planner named only 17:02. The fix script lists both; look at what the console held at the other before calling it anything.
 - **Warnings at every start that mean nothing** (mods looking for mods that are not there: `createaddition` for Simulated, something for Controllable, a JetBrains annotation): into `NOISE` in `events/parse.ts`, so that a warning in the log is one to read.
 - **Throwaway accounts leave lines in the event log** ("… had their password reset from the command line", four for each run of `shots.sh`). Either the scripts remove their lines as `download-test.sh` does, or the lines are marked as tests.
 - **A settings-only Sync** says nothing about the server having to be restarted for them to count. One line on Admin → Modpack would do.

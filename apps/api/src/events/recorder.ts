@@ -37,6 +37,13 @@ const DEDUPE_MS = 60_000;
 const STOP_LINE_MS = 120_000;
 const START_LINE_MS = 180_000;
 const MISSING_POLLS = 3;
+/**
+ * How long a server that went down is watched before it is called a crash. The console tail and the status poller
+ * run on their own clocks (2 s and 10 s; the tail slows to 15 s once the server is not running), so the poller can
+ * see the server gone before the tail has read "Stopping the server". 2026-09-29 17:02: AMP put the server to sleep
+ * with a clean stop in the log, and it was written down as a crash.
+ */
+const SETTLE_MS = 90_000;
 
 export const placeholder = (name: string) => `name:${name.toLowerCase()}`;
 
@@ -58,6 +65,8 @@ export class Recorder {
   private raw: string | null = null;
   private lastStopLine = 0;
   private lastStart = 0;
+  /** The server went down at `at` and what it was is not known yet (see `settle`). */
+  private down: { at: number; state: string } | null = null;
   private readonly now: () => Date;
 
   constructor(private readonly d: RecorderDeps) {
@@ -187,6 +196,30 @@ export class Recorder {
     });
   }
 
+  /**
+   * What the server did when it went down, written once it is known: asleep, restarting, stopped (a stop line was
+   * read), or, only when none of these has shown after SETTLE_MS, a crash. A stop line anywhere around the fall
+   * means it was not a crash. The row carries the time it went down.
+   */
+  private async settle(next: LiveStatus, now: Date) {
+    const down = this.down!;
+    const at = new Date(down.at);
+    const said = this.lastStopLine > down.at - STOP_LINE_MS;
+    const waited = now.getTime() - down.at >= SETTLE_MS;
+    let message: string | null = null;
+    if (next.availability === "sleeping") message = "The server went to sleep (nobody on)";
+    else if (next.availability === "starting" || next.availability === "online") message = "The server is restarting";
+    else if (said && (next.stateCode === 0 || waited)) message = "The server stopped";
+    if (message) {
+      this.down = null;
+      await this.d.store.addEvent({ at, kind: "SERVER_STOP", actor: null, message, meta: { state: next.state, ...(said ? { stopLine: true } : {}) } });
+      return;
+    }
+    if (!waited) return;
+    this.down = null;
+    await this.d.store.addEvent({ at, kind: "CRASH", actor: null, message: "The server went down without shutting down first", meta: { state: next.state, wentDownAs: down.state } });
+  }
+
   private async closeAll(at: Date) {
     for (const s of [...this.open.values()]) await this.leave(s.mcName, null, at, true);
   }
@@ -196,13 +229,8 @@ export class Recorder {
     const was = prev?.availability === "online";
     const is = next.availability === "online";
     if (!is && this.open.size > 0) await this.closeAll(at);
-    if (was && !is) {
-      const said = at.getTime() - this.lastStopLine < STOP_LINE_MS;
-      if (next.availability === "sleeping") await this.d.store.addEvent({ at, kind: "SERVER_STOP", actor: null, message: "The server went to sleep (nobody on)", meta: { state: next.state } });
-      else if (next.availability === "starting") await this.d.store.addEvent({ at, kind: "SERVER_STOP", actor: null, message: "The server is restarting", meta: { state: next.state } });
-      else if (said) await this.d.store.addEvent({ at, kind: "SERVER_STOP", actor: null, message: "The server stopped", meta: { state: next.state } });
-      else await this.d.store.addEvent({ at, kind: "CRASH", actor: null, message: "The server went down without shutting down first", meta: { state: next.state } });
-    }
+    if (was && !is && !this.down) this.down = { at: at.getTime(), state: next.state };
+    if (this.down) await this.settle(next, at);
     if (prev && !was && is && at.getTime() - this.lastStart > START_LINE_MS) {
       this.lastStart = at.getTime();
       await this.d.store.addEvent({ at, kind: "SERVER_START", actor: null, message: "The server is up", meta: { inferred: true } });

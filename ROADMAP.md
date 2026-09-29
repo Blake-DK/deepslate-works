@@ -66,7 +66,6 @@ Last updated 2026-09-29, 19:00 UTC: the first friend is in, and the recommended 
 ## In progress
 
 - **Specified by the planner on the evening of 2026-09-29, not started**: Better Tab Info in the base pack (ping per player and TPS in Tab, where TabTPS could not go); installer version on every report with an "outdated" badge and a nudge on the Me page; full logs on every run plus the previous game session's log and crash reports; the white room prompt repeated every 15 s with an on-screen title and a short join code usable at deepslate.dsw.test/join from a phone.
-- **Configured** (in-game settings screens) is **blocked**: the mod the planner meant is not on Modrinth for NeoForge (a Fabric mod has its name there), and the pack takes its files from Modrinth only. It needs a second source or a decision to do without.
 - **Admin assistant** (docs/19): a read-only chat in Admin that can look at status, console, events, reports and container health and explain what went wrong. Needs an API key; never acts.
 - **The map**: deleted on 2026-09-29 evening to be rendered clean from Admin → Server ("Render the map only"), about an hour.
 - **Waiting on a person**: Play first with a friend who is not an admin; the mods tried in the game (guns, quarry, vein mining, trees by hand); a five-minute planned restart watched through; whether someone who has just linked should also be held for Play first.

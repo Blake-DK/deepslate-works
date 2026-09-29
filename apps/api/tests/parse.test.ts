@@ -78,7 +78,8 @@ describe("parse", () => {
   it("reads start and stop (real lines)", () => {
     expect(parse('[29Sep2026 03:46:07.132] [Server thread/INFO] [net.minecraft.server.dedicated.DedicatedServer/]: Done (1.756s)! For help, type "help"')).toEqual([{ type: "started", seconds: 1.756 }]);
     expect(parse("[29Sep2026 03:51:01.024] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping server")).toEqual([{ type: "stopping" }]);
-    expect(parse("[29Sep2026 03:51:00.534] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping the server")).toEqual([]);
+    // the stop command's answer, what AMP's stop and its sleep write first (2026-09-29 17:02): a clean stop too
+    expect(parse("[29Sep2026 03:51:00.534] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping the server")).toEqual([{ type: "stopping" }]);
   });
   it("reports warnings and errors, but not the mod loader's start-up noise (real lines)", () => {
     expect(parse(L("Can't keep up! Is the server overloaded? Running 2500ms or 50 ticks behind", "Server thread", "WARN"))).toEqual([{ type: "problem", level: "WARN", text: "Can't keep up! Is the server overloaded? Running 2500ms or 50 ticks behind", logger: "net.minecraft.server.MinecraftServer" }]);

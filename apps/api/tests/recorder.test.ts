@@ -129,8 +129,57 @@ describe("Recorder: the server going up and down", () => {
     expect(t.events.at(-1)).toMatchObject({ kind: "SERVER_STOP", message: "The server is restarting" });
 
     t.tick(600);
-    await t.poll(t.status({ state: "Stopped", stateCode: 0, availability: "offline" }), online);
-    expect(t.events.at(-1)).toMatchObject({ kind: "CRASH" });
+    const gone = t.status({ state: "Stopped", stateCode: 0, availability: "offline" });
+    await t.poll(gone, online);
+    expect(t.events.at(-1)).toMatchObject({ message: "The server is restarting" }); // not yet: no stop line may still be on its way
+    t.tick(90);
+    await t.poll(gone, gone);
+    expect(t.events.at(-1)).toMatchObject({ kind: "CRASH", at: new Date("2026-09-29T10:20:05Z") }); // dated when it went down
+  });
+
+  // 2026-09-29 17:02 UTC, as it went: nobody on, AMP puts the server to sleep. The poller saw it gone before the
+  // console tail had read the stop lines (the tail runs on its own clock and slows down once the server is not
+  // running), and the row said "Crash".
+  const SLEEP = [
+    "Stopping the server",
+    "Stopping server",
+    "Saving players",
+    "Saving worlds",
+    "Saving chunks for level 'ServerLevel[world]'/minecraft:overworld",
+    "ThreadedAnvilChunkStorage: All dimensions are saved",
+  ];
+  it.each([
+    ["the sleep state at once", [{ state: "PreparingForSleep", stateCode: 50, availability: "sleeping" }], "The server went to sleep (nobody on)"],
+    ["a state between, then sleep", [{ state: "Stopping", stateCode: 45, availability: "offline" }, { state: "Sleeping", stateCode: 30, availability: "sleeping" }], "The server went to sleep (nobody on)"],
+    ["Stopped, then sleep", [{ state: "Stopped", stateCode: 0, availability: "offline" }, { state: "Sleeping", stateCode: 30, availability: "sleeping" }], "The server went to sleep (nobody on)"],
+    ["a state between for longer than the wait", [{ state: "Stopping", stateCode: 45, availability: "offline" }, { state: "Stopping", stateCode: 45, availability: "offline" }], "The server stopped"],
+  ] as const)("a sleep with the stop lines read after the poll, %s: never a crash", async (_how, states, message) => {
+    const t = setup();
+    let prev = t.status({});
+    await t.poll(prev, null);
+    t.tick(10);
+    const first = t.status(states[0]);
+    await t.poll(first, prev); // the poller is first
+    prev = first;
+    t.tick(2);
+    for (const l of SLEEP) await t.say(L(l)); // then the tail
+    for (const s of states.slice(1)) {
+      t.tick(60);
+      const n = t.status(s);
+      await t.poll(n, prev);
+      prev = n;
+    }
+    t.tick(120);
+    await t.poll(prev, prev);
+    expect(t.events.filter((e) => e.kind === "CRASH")).toEqual([]);
+    expect(t.events.filter((e) => e.kind === "SERVER_STOP").map((e) => e.message)).toEqual([message]);
+  });
+  it("a stop line read before the poll is enough too", async () => {
+    const t = setup();
+    await t.say(L("Stopping the server"));
+    t.tick(3);
+    await t.poll(t.status({ state: "Stopped", stateCode: 0, availability: "offline" }), t.status({}));
+    expect(t.events.map((e) => [e.kind, e.message])).toEqual([["SERVER_STOP", "The server stopped"]]);
   });
   it("records the start once: from the Done line, or from the state if the line was missed", async () => {
     const t = setup();

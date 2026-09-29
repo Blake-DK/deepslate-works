@@ -181,10 +181,6 @@ Settings, as shipped: `pvp=false` in `server.properties`. TaCZ has no setting fo
 
 A Sync that changes settings only does not restart the server. What is running reads its settings at start, so the change counts from the next start. (These two were synced at 17:4x and 18:20 UTC and count since the restart Alex planned for 18:27.)
 
-## Configured cannot be added from Modrinth (planner's note, 2026-09-29)
-
-The note asked for "Configured", Modrinth slug `configured`, NeoForge 1.21.1, client side. **That slug is another mod**: a Fabric-only mod of the same name (loaders: fabric; the server is where it runs). MrCrayfish's Configured, the one JEI means with "Install the Configured mod", is published on CurseForge and not on Modrinth. Lock answered `configured: no neoforge 1.21.1 build on Modrinth`, and the entry was taken out again; nothing of it reached a PC or the server. The pack takes its files from Modrinth only (docs/06 top). For the planner: a second source (CurseForge needs a key and the author's leave to distribute), or a file kept in the repo, or doing without.
-
 ## FallingTree (2026-09-29)
 
 `fallingtree` on Modrinth. **Part of the default pack since 2026-09-29** (Alex: "tree felling is a default mod pack"): category base, switched on, not voted on. Since the evening of the same day a tree falls whatever is in the hand (`tools.ignoreTools: true`, shipped with the pack; Alex: "it should work without an axe"); sneaking takes one log. VeinMiner is the key you hold, for ore.

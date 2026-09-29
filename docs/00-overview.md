@@ -26,7 +26,7 @@ Assume the player has never installed a mod, may be on a laptop from 2017 with 8
 ## Fixed decisions
 
 - **Minecraft 1.21.1 on NeoForge.** This is where Create 6, the TaCZ gun port, Mekanism, Immersive Engineering and the performance mods (Sodium, Lithium) all line up as of Sept 2026. Do not chase a newer Minecraft version; mod support lags.
-- **Modrinth is the mod source.** Every mod in the pack must have a Modrinth project with a NeoForge 1.21.1 version. Mods that only exist on CurseForge are out unless the manifest gets an explicit direct-URL entry with a stated reason. (No such entry exists and the tooling has none; MrCrayfish's Configured is the first mod this has kept out, docs/06.)
+- **Modrinth is the mod source.** Every mod in the pack must have a Modrinth project with a NeoForge 1.21.1 version. Mods that only exist on CurseForge are out unless the manifest gets an explicit direct-URL entry with a stated reason. (No such entry exists and the tooling has none.)
 - **Login is Discord first.** The friends already use Discord. Invite-code username/password exists only as a fallback for the one person without Discord.
 - **Live map is BlueMap.** It ships as a server-side NeoForge mod, renders a 3D web map with live player positions and needs nothing on the client.
 - **Windows only** (2026-09-29). One installer, for the official Minecraft Launcher on Windows. No `.mrpack`, no Mac or Linux path.

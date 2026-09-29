@@ -82,7 +82,9 @@ const RE = {
   chat: new RegExp(`^(?:\\[Not Secure\\] )?<(${NAME})> (.*)$`),
   advancement: new RegExp(`^(${NAME}) has (made the advancement|completed the challenge|reached the goal) \\[(.+)\\]$`),
   started: /^Done \(([\d.]+)s\)!/,
-  stopping: /^Stopping server$/,
+  // "Stopping the server" (the stop command's answer, what AMP's own stop and its sleep write) and "Stopping server"
+  // (Minecraft, a moment later). Either one means a clean stop.
+  stopping: /^Stopping (?:the )?server$/,
   // chunky. AMP hands the lines over without "[Chunky] " in front; the log file has it.
   pregenRunning: /^(?:\[Chunky\] )?Task running for ([a-z0-9_.:\/-]{1,80})\. Processed: (\d+) chunks \(([\d.]+)%\)(?:, ETA: ([\d:]+))?(?:, Rate: ([\d.]+) cps)?/,
   pregenFinished: /^(?:\[Chunky\] )?Task finished for ([a-z0-9_.:\/-]{1,80})\.(?: Processed: (\d+) chunks)?/,

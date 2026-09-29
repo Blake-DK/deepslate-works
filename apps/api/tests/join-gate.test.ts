@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { playGate } from "../src/shared/join-gate.js";
+import { PLAY_MODES, playGate, type BlockReason } from "../src/shared/join-gate.js";
+import { doorReason } from "../src/players/limbo.js";
 import { parse } from "../src/events/parse.js";
 import { actions, closedTellraw, parsePlace, playTellraw } from "../src/actions/registry.js";
 import { doorRule } from "../src/shared/access.js";
@@ -134,5 +135,70 @@ describe("the door checks live or early access before anything else (docs/13 §9
     expect(kindOf("join.blocked", "PLAYER")).toBe("JOIN_BLOCKED");
     expect(describeAction("join.blocked", { role: "PLAYER", name: "Pabulum" }, { name: "pabulum", reason: "not live" })).toBe("Pabulum was held in the entrance room: the server is not open yet");
     expect(describeAction("join.ready", { role: "PLAYER", name: "Pabulum" }, { name: "pabulum", was: "not live", back: true })).toBe("Pabulum was let in: the server is open for them now, back to where they were");
+  });
+});
+
+// Planner, 2026-09-29: linking must not skip Play first. Pabulum linked in the room and was let straight in. The
+// order is linked → open for them → Play first (Play, or a run of the installer that went through, inside the
+// window) → in, and it is the same whether they walk in linked or have just linked in the room.
+describe("the door after linking: the same order as at a join", () => {
+  const early = { role: "PLAYER" as const, earlyAccess: true };
+  const player = { role: "PLAYER" as const, earlyAccess: false };
+  const admin = { role: "ADMIN" as const, earlyAccess: false };
+  const run = (mode: "play" | "install", min: number, pack = PACK) => ({ mode, at: ago(min), packVersion: pack });
+
+  it.each([
+    // who, live, Play first, their latest run that went through, at the door
+    ["player", player, false, true, run("play", 5), "not live"], // open first, whatever else
+    ["player", player, false, true, run("install", 5), "not live"],
+    ["early access", early, false, true, null, "no report"],
+    ["early access", early, false, true, run("play", 5), null],
+    ["early access", early, false, true, run("install", 5), null], // Setup.bat counts as pressing Play
+    ["early access", early, false, true, run("install", 45), "stale"],
+    ["early access", early, false, true, run("install", 5, "0.1.0+47b0b579"), "wrong version"],
+    ["early access", early, false, false, null, null], // Play first off
+    ["player", player, true, true, null, "no report"],
+    ["player", player, true, true, run("install", 10), null],
+    ["player", player, true, true, run("play", 31), "stale"],
+    ["admin", admin, false, true, null, null],
+    // the same rule for both ways to the door: walking in linked (onJoin) and having just linked (release, below)
+  ] as const)("%s, live %s, Play first %s, run %o: %s", (_who, user, live, requirePlay, r, expected) => {
+    expect(doorReason(user, { live, requirePlay, windowMin: 30, run: r, pack: PACK, now })).toBe(expected);
+  });
+
+  it("counts a run of the installer as a run of Play", () => {
+    expect(PLAY_MODES).toEqual(["play", "install"]);
+  });
+
+  async function roomWith(blocked: BlockReason | null) {
+    const { Limbo } = await import("../src/players/limbo.js");
+    const tail = { online: new Set(["pabulum"]), uuidByName: new Map([["pabulum", "uuid-p"]]), on() {}, onResync() {} };
+    const env = { LIMBO_POS: "deepslate:limbo 0.5 65 0.5", SPAWN_POS: "", PORTAL_URL: "https://deepslate.dsw.test" } as never;
+    const limbo = new Limbo(env, {} as never, tail as never, () => {});
+    const did: string[] = [];
+    const l = limbo as unknown as Record<string, unknown>;
+    l.memberByUuid = async () => ({ id: "u1", role: "PLAYER", earlyAccess: true });
+    l.atTheDoor = async () => blocked;
+    l.holdMember = async (name: string, _u: string, _id: string, reason: BlockReason, inRoom: boolean) => { did.push(`hold ${name} ${reason} inRoom=${inRoom}`); };
+    l.letIn = async (name: string) => { did.push(`let in ${name}`); return { ok: true, commands: 1 }; };
+    limbo.held.set("pabulum", { uuid: "uuid-p", code: "ABCDEFGH", since: 0, lastReminder: 0, kind: "link" });
+    return { limbo, did };
+  }
+
+  it("holds a member who has just linked but not pressed Play, with the Play line, not the link line", async () => {
+    const { limbo, did } = await roomWith("no report");
+    expect(await limbo.release("uuid-p")).toEqual({ released: false, name: "pabulum" });
+    expect(did).toEqual(["hold pabulum no report inRoom=true"]);
+  });
+  it("holds one the server is not open for with the 'not open' line", async () => {
+    const { limbo, did } = await roomWith("not live");
+    await limbo.release("uuid-p");
+    expect(did).toEqual(["hold pabulum not live inRoom=true"]);
+  });
+  it("lets in one who has just linked and has pressed Play (or installed) inside the window", async () => {
+    const { limbo, did } = await roomWith(null);
+    expect(await limbo.release("uuid-p")).toEqual({ released: true, name: "pabulum" });
+    expect(did).toEqual(["let in pabulum"]);
+    expect(limbo.held.has("pabulum")).toBe(false);
   });
 });

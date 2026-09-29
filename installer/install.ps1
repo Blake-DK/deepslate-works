@@ -35,7 +35,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.4.1"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report; 1.3.0: Play from the site; 1.4.0: updates itself; 1.4.1: a Java on PATH no longer ends the install
+$InstallerVersion = "1.4.2"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report; 1.3.0: Play from the site; 1.4.0: updates itself; 1.4.1: a Java on PATH no longer ends the install; 1.4.2: paths are taken literally, a temp file left behind ends nothing
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 
 $ErrorActionPreference = "Stop"
@@ -61,7 +61,7 @@ $script:Personal = @(@($env:USERNAME, [Environment]::UserName, $env:COMPUTERNAME
 function Log($msg) {
   $line = "[{0}] {1}" -f (Get-Date -Format s), $msg
   $script:RunLog.Add($line)
-  try { Add-Content -Path $LogFile -Value $line } catch {}
+  try { Add-Content -LiteralPath $LogFile -Value $line } catch {}
 }
 function Step($msg) {
   $script:Step++; $script:StepName = [string]$msg
@@ -69,6 +69,13 @@ function Step($msg) {
   Log "STEP $msg"
 }
 function Tick($msg) { if (-not $Quiet) { Write-Host ("   [OK] {0}" -f $msg) -ForegroundColor Green }; Log "OK $msg" }
+# 1.4.2: every file operation takes its path literally (-LiteralPath). With -Path, PowerShell reads [ ] in a
+# path as a pattern and can fail to resolve a user folder at all; on Pabulum's PC (2026-09-29) deleting the
+# NeoForge installer from %TEMP% ended a run whose install had just gone through.
+function Remove-Temp($path) {
+  # A leftover temporary file is never a reason to stop.
+  try { if ($path -and [IO.File]::Exists($path)) { [IO.File]::Delete($path) } } catch { Log ("could not remove " + $path + ": " + $_.Exception.Message) }
+}
 function Note($msg) { if (-not $Quiet) { Write-Host ("   {0}" -f $msg) -ForegroundColor Gray }; Log $msg }
 function Hold-Window {
   # Started from the Play button there is no .bat to keep the window open: wait, so the message can be read.
@@ -243,7 +250,7 @@ function Write-Json($path, $obj) {
   $text = $obj | ConvertTo-Json -Depth 20
   $tmp = "$path.deepslate-tmp"
   [IO.File]::WriteAllText($tmp, $text, (New-Object Text.UTF8Encoding($false)))
-  Move-Item -Force -Path $tmp -Destination $path
+  Move-Item -Force -LiteralPath $tmp -Destination $path
 }
 
 function Set-LauncherProfile($path, $id, $entry) {
@@ -256,13 +263,13 @@ function Set-LauncherProfile($path, $id, $entry) {
   }
   $json.profiles | Add-Member -NotePropertyName $id -NotePropertyValue ([pscustomobject]$entry)
   if ($json.PSObject.Properties["selectedProfile"]) { $json.selectedProfile = $id } else { $json | Add-Member -NotePropertyName selectedProfile -NotePropertyValue $id }
-  Copy-Item -Path $path -Destination "$path.bak" -Force
+  Copy-Item -LiteralPath $path -Destination "$path.bak" -Force
   Write-Json $path $json
 }
 
 # "" when the profile is there and points at the right version; otherwise what is wrong, in words.
 function Test-LauncherProfile($path, $id, $versionId) {
-  if (-not (Test-Path $path)) { return "launcher_profiles.json is gone" }
+  if (-not (Test-Path -LiteralPath $path)) { return "launcher_profiles.json is gone" }
   $json = $null
   try { $json = Read-Json $path } catch { return ("launcher_profiles.json can't be read ({0})" -f $_.Exception.Message) }
   if (-not $json -or -not $json.PSObject.Properties["profiles"] -or -not $json.profiles.PSObject.Properties[$id]) { return ("the profile '{0}' is not in launcher_profiles.json" -f $id) }
@@ -279,7 +286,7 @@ function Get-LauncherFacts {
     if ($j.PSObject.Properties["launcherVersion"] -and $j.launcherVersion.PSObject.Properties["name"]) { $f.version = [string]$j.launcherVersion.name }
   } catch {}
   foreach ($exe in @("${env:ProgramFiles(x86)}\Minecraft Launcher\MinecraftLauncher.exe", "$env:ProgramFiles\Minecraft Launcher\MinecraftLauncher.exe", "$env:LOCALAPPDATA\Programs\Minecraft Launcher\MinecraftLauncher.exe")) {
-    try { if (Test-Path $exe) { $f.kind = "classic"; if (-not $f.version) { $f.version = [string](Get-Item $exe).VersionInfo.ProductVersion }; return $f } } catch {}
+    try { if (Test-Path -LiteralPath $exe) { $f.kind = "classic"; if (-not $f.version) { $f.version = [string](Get-Item -LiteralPath $exe).VersionInfo.ProductVersion }; return $f } } catch {}
   }
   try { $pkg = Get-AppxPackage -Name "Microsoft.4297127D64EC6" -ErrorAction Stop; if ($pkg) { $f.kind = "store"; if (-not $f.version) { $f.version = [string]$pkg.Version } } } catch {}
   return $f
@@ -324,7 +331,7 @@ function Get-ScriptVersion([string]$path) {
 # words, and nothing in $dir has been touched.
 function Install-Update([string]$zip, [string]$sha256, [string]$version, [string]$dir) {
   if ($sha256 -notmatch '^[0-9a-fA-F]{64}$') { return "the site gave no checksum for it" }
-  $got = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
+  $got = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLower()
   if ($got -ne $sha256.ToLower()) { return ("the checksum of the download ({0}...) is not the one the site gave ({1}...)" -f $got.Substring(0, 12), $sha256.Substring(0, 12).ToLower()) }
   Add-Type -AssemblyName System.IO.Compression
   Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -351,8 +358,8 @@ function Install-Update([string]$zip, [string]$sha256, [string]$version, [string
   # Everything has been checked. Written next to the old files first, then moved over them.
   foreach ($name in $names) { [IO.File]::WriteAllBytes((Join-Path $dir ($name + ".new")), [byte[]]$files[$name]) }
   $old = Join-Path $dir "install.ps1"
-  if (Test-Path $old) { Copy-Item -Path $old -Destination ($old + ".bak") -Force }
-  foreach ($name in $names) { Move-Item -Force -Path (Join-Path $dir ($name + ".new")) -Destination (Join-Path $dir $name) }
+  if (Test-Path -LiteralPath $old) { Copy-Item -LiteralPath $old -Destination ($old + ".bak") -Force }
+  foreach ($name in $names) { Move-Item -Force -LiteralPath (Join-Path $dir ($name + ".new")) -Destination (Join-Path $dir $name) }
   return ""
 }
 
@@ -371,7 +378,7 @@ function Update-Self($manifest, $headers) {
     Invoke-WebRequest -Uri "$PortalUrl/downloads/installer.zip" -Headers $headers -OutFile $zip -UseBasicParsing -TimeoutSec 120
     $problem = Install-Update $zip ([string]$inst.sha256) $new (Split-Path -Parent $PSCommandPath)
   } catch { $problem = ("it could not be fetched or written: {0}" -f $_.Exception.Message) }
-  finally { Remove-Item $zip -Force -ErrorAction SilentlyContinue }
+  finally { Remove-Temp $zip }
   if ($problem -ne "") {
     $script:UpdateProblem = $problem
     Log ("UPDATE NOT APPLIED: " + $problem)
@@ -389,19 +396,19 @@ function Install-Self {
   $dir = Join-Path $env:LOCALAPPDATA "DeepslateWorks"
   $target = Join-Path $dir "install.ps1"
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
-  $me = (Resolve-Path $PSCommandPath).Path
+  $me = (Resolve-Path -LiteralPath $PSCommandPath).Path
   if ($me -ne $target) {
-    $same = (Test-Path $target) -and ((Get-FileHash $me -Algorithm SHA256).Hash -eq (Get-FileHash $target -Algorithm SHA256).Hash)
+    $same = (Test-Path -LiteralPath $target) -and ((Get-FileHash -LiteralPath $me -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash)
     # Never an older script over a newer one: the copy may have updated itself since this folder was unzipped.
-    if (-not $same -and (Test-Path $target) -and (Test-Newer (Get-ScriptVersion $target) $InstallerVersion)) { $same = $true; Log ("the copy in " + $dir + " is newer than this script; left as it is") }
+    if (-not $same -and (Test-Path -LiteralPath $target) -and (Test-Newer (Get-ScriptVersion $target) $InstallerVersion)) { $same = $true; Log ("the copy in " + $dir + " is newer than this script; left as it is") }
     if (-not $same) {
-      Copy-Item -Path $me -Destination $target -Force
+      Copy-Item -LiteralPath $me -Destination $target -Force
       $bat = Join-Path (Split-Path -Parent $me) "Setup.bat"
-      if (Test-Path $bat) { Copy-Item -Path $bat -Destination (Join-Path $dir "Setup.bat") -Force }
+      if (Test-Path -LiteralPath $bat) { Copy-Item -LiteralPath $bat -Destination (Join-Path $dir "Setup.bat") -Force }
       Log ("copied the installer to " + $target)
     }
   }
-  if (-not (Test-Path $target)) { return $false }
+  if (-not (Test-Path -LiteralPath $target)) { return $false }
   Register-PlayLink $target
   $got = [string](Get-Item "HKCU:\Software\Classes\deepslate\shell\open\command").GetValue("")
   return ($got -eq (Get-HandlerCommand $target))
@@ -448,7 +455,7 @@ function Get-JavaMajor([string]$line) {
 # that is older, or that does not answer, is passed over and left alone: it never stops the install, and the
 # profile never points at it.
 function Select-Java([string]$bundled, [string]$onPath, [string]$runtimeDir) {
-  if ($bundled -and (Test-Path $bundled)) { return [ordered]@{ path = $bundled; source = "the launcher's own"; say = "Using the launcher's own Java"; passedOver = $null } }
+  if ($bundled -and (Test-Path -LiteralPath $bundled)) { return [ordered]@{ path = $bundled; source = "the launcher's own"; say = "Using the launcher's own Java"; passedOver = $null } }
   $passedOver = $null
   if ($onPath) {
     $line = Get-JavaVersionText $onPath
@@ -457,7 +464,7 @@ function Select-Java([string]$bundled, [string]$onPath, [string]$runtimeDir) {
     $passedOver = if ($line) { $line } else { "a java that did not say its version" }
   }
   $found = $null
-  if ($runtimeDir -and (Test-Path $runtimeDir)) { $found = Get-ChildItem -Path $runtimeDir -Filter java.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 }
+  if ($runtimeDir -and (Test-Path -LiteralPath $runtimeDir)) { $found = Get-ChildItem -LiteralPath $runtimeDir -Filter java.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 }
   if ($found) { return [ordered]@{ path = $found.FullName; source = "downloaded on an earlier run"; say = "Using the Java we downloaded last time"; passedOver = $passedOver } }
   return [ordered]@{ path = $null; source = $null; say = $null; passedOver = $passedOver }
 }
@@ -465,7 +472,7 @@ function Select-Java([string]$bundled, [string]$onPath, [string]$runtimeDir) {
 function Open-Launcher {
   Log "launching"
   foreach ($exe in @("${env:ProgramFiles(x86)}\Minecraft Launcher\MinecraftLauncher.exe", "$env:ProgramFiles\Minecraft Launcher\MinecraftLauncher.exe", "$env:LOCALAPPDATA\Programs\Minecraft Launcher\MinecraftLauncher.exe")) {
-    if (Test-Path $exe) { Start-Process $exe; return $true }
+    if (Test-Path -LiteralPath $exe) { Start-Process $exe; return $true }
   }
   try { Start-Process "shell:AppsFolder\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft"; return $true } catch {}   # Microsoft Store launcher
   try { Start-Process "minecraft://"; return $true } catch {}
@@ -675,6 +682,34 @@ if ($SelfTest) {
   Check "the launcher's own Java comes first, and the one on PATH is not even asked" (($s.path -eq $java21) -and ($s.source -eq "the launcher's own") -and ($s.passedOver -eq $null))
   $s = Select-Java (Join-Path $dir "no-launcher-java.exe") "" $noJre
   Check "no Java anywhere: Java 21 is downloaded" (($s.path -eq $null) -and ($s.passedOver -eq $null))
+  Write-Host "Self test: a user folder PowerShell would read as a pattern (1.4.2)" -ForegroundColor White
+  $odd = Join-Path $dir "Pab [x] PABULU~1"
+  [void][IO.Directory]::CreateDirectory($odd)
+  $jarOdd = Join-Path $odd "neoforge-21.1.252-installer.jar"
+  [IO.File]::WriteAllText($jarOdd, "jar")
+  Check "such a folder is found" (Test-Path -LiteralPath $odd)
+  Remove-Temp $jarOdd
+  Check "a temporary file in it is removed" (-not [IO.File]::Exists($jarOdd))
+  $threw = $false
+  try { Remove-Temp $jarOdd; Remove-Temp (Join-Path $dir "nothing [here]\x.jar"); Remove-Temp $null } catch { $threw = $true }
+  Check "removing what is not there, or cannot be, never stops the run" (-not $threw)
+  $pf = Join-Path $odd "launcher_profiles.json"
+  [IO.File]::WriteAllText($pf, $defaults, $utf8)
+  Set-LauncherProfile $pf "deepslate-works" $entry
+  Check "the launcher profile is written and read back in such a folder" ((Test-LauncherProfile $pf "deepslate-works" "neoforge-21.1.252") -eq "")
+  $mine = [IO.File]::ReadAllLines($PSCommandPath)
+  $st = [Array]::FindIndex($mine, [Predicate[string]]{ param($l) $l -match '^if \(\$SelfTest\) \{' })
+  $en = $st + 1
+  while ($en -lt $mine.Length -and $mine[$en] -notmatch '^\}') { $en++ }
+  $loose = @()
+  for ($k = 0; $k -lt $mine.Length; $k++) {
+    if ($k -ge $st -and $k -le $en) { continue }   # the self test works on its own scratch files
+    $l = $mine[$k]
+    if ($l -match '^\s*#') { continue }
+    if ($l -match '\b(Test-Path|Remove-Item|Move-Item|Copy-Item|Get-Content|Set-Content|Add-Content|Expand-Archive|Get-ChildItem|Get-FileHash|Resolve-Path)\b(?![^|;{}]*-LiteralPath)' -and $l -notmatch "\[regex\]|'\\b\(Test-Path") { $loose += ($k + 1) }
+  }
+  Check ("every file operation outside the self test takes its path literally" + $(if ($loose.Count) { ": line(s) " + ($loose -join ", ") } else { "" })) ($loose.Count -eq 0)
+
   $own = [IO.File]::ReadAllText($PSCommandPath)
   $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
   Check "no command's stderr is sent through 2>&1 anywhere in this script" ($left -eq 0)
@@ -702,7 +737,7 @@ try {
   Step "Signing in"
   $token = $null
   $tokenFile = Join-Path (Join-Path $Root ".minecraft-deepslate-works") "launcher.json"
-  if (Test-Path $tokenFile) { try { $token = (Get-Content $tokenFile -Raw | ConvertFrom-Json).token } catch {} }
+  if (Test-Path -LiteralPath $tokenFile) { try { $token = (Get-Content -LiteralPath $tokenFile -Raw | ConvertFrom-Json).token } catch {} }
   if ($DryRun -and $env:DEEPSLATE_LAUNCHER_TOKEN) { $token = $env:DEEPSLATE_LAUNCHER_TOKEN }   # tests under pwsh on Linux
   $headers = @{}
   if ($token) {
@@ -733,7 +768,7 @@ try {
       }
       if (-not $token) { Fail "Timed out waiting for the browser sign-in. Run this again." }
       New-Item -ItemType Directory -Force -Path (Split-Path $tokenFile) | Out-Null
-      @{ token = $token; savedAt = (Get-Date).ToString("s") } | ConvertTo-Json | Set-Content -Path $tokenFile
+      @{ token = $token; savedAt = (Get-Date).ToString("s") } | ConvertTo-Json | Set-Content -LiteralPath $tokenFile
       $headers = @{ Authorization = "Bearer $token" }
       Tick ("Signed in as {0}" -f $poll.displayName)
     }
@@ -743,7 +778,7 @@ try {
 
   # 2. launcher present, and closed?
   Step "Checking the Minecraft Launcher"
-  if (-not (Test-Path $Profiles)) {
+  if (-not (Test-Path -LiteralPath $Profiles)) {
     $script:Facts.launcher = [ordered]@{ kind = "not found"; version = $null; profilesFormat = $null }
     if (-not $DryRun) { try { Start-Process "https://www.minecraft.net/download" } catch {} }
     Fail "Install the Minecraft Launcher from minecraft.net, open it once, then run this again."
@@ -795,7 +830,7 @@ try {
   # already up to date?
   $installedFile = Join-Path $GameDir "installed.json"
   $prev = $null
-  if (Test-Path $installedFile) { try { $prev = Get-Content $installedFile -Raw | ConvertFrom-Json } catch {} }
+  if (Test-Path -LiteralPath $installedFile) { try { $prev = Get-Content -LiteralPath $installedFile -Raw | ConvertFrom-Json } catch {} }
 
   # 3. Java 21
   Step "Finding Java 21"
@@ -815,9 +850,9 @@ try {
       New-Item -ItemType Directory -Force -Path (Join-Path $GameDir "runtime") | Out-Null
       $zip = Join-Path $Temp "temurin21.zip"
       Invoke-WebRequest -Uri "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse" -OutFile $zip -UseBasicParsing
-      Expand-Archive -Path $zip -DestinationPath (Join-Path $GameDir "runtime") -Force
-      Remove-Item $zip -Force
-      $found = Get-ChildItem -Path (Join-Path $GameDir "runtime") -Filter java.exe -Recurse | Select-Object -First 1
+      Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $GameDir "runtime") -Force
+      Remove-Temp $zip
+      $found = Get-ChildItem -LiteralPath (Join-Path $GameDir "runtime") -Filter java.exe -Recurse | Select-Object -First 1
       if (-not $found) { Fail "Java download didn't work. Run this again, or ask Alex." }
       $java = $found.FullName
       $javaSource = "downloaded on this run"
@@ -831,7 +866,7 @@ try {
   # 4. NeoForge
   Step ("Installing NeoForge {0}" -f $neo)
   $versionId = "neoforge-$neo"
-  $neoBefore = Test-Path (Join-Path $Minecraft ("versions\{0}" -f $versionId))
+  $neoBefore = Test-Path -LiteralPath (Join-Path $Minecraft ("versions\{0}" -f $versionId))
   $script:Facts.neoforge = [ordered]@{ version = [string]$neo; before = [bool]$neoBefore; after = [bool]$neoBefore }
   if ($neoBefore) { Tick "Already installed" }
   elseif ($DryRun) { Note "(dry run) would run the NeoForge installer" }
@@ -843,9 +878,10 @@ try {
     if ($p.ExitCode -ne 0) {
       $p = Start-Process -FilePath $java -ArgumentList @("-jar", "`"$jar`"", "--installClient", "`"$Minecraft`"") -Wait -PassThru -NoNewWindow -RedirectStandardOutput (Join-Path $Temp "neoforge-install.out")
     }
-    Get-Content (Join-Path $Temp "neoforge-install.out") -ErrorAction SilentlyContinue | ForEach-Object { Log ("neoforge: " + $_) }
-    Remove-Item $jar -Force -ErrorAction SilentlyContinue
-    if (-not (Test-Path (Join-Path $Minecraft ("versions\{0}" -f $versionId)))) { Fail "NeoForge didn't install. Open the Minecraft Launcher, make sure vanilla 1.21.1 has been run once, then try again." }
+    Get-Content -LiteralPath (Join-Path $Temp "neoforge-install.out") -ErrorAction SilentlyContinue | ForEach-Object { Log ("neoforge: " + $_) }
+    Remove-Temp $jar
+    Remove-Temp (Join-Path $Temp "neoforge-install.out")
+    if (-not (Test-Path -LiteralPath (Join-Path $Minecraft ("versions\{0}" -f $versionId)))) { Fail "NeoForge didn't install. Open the Minecraft Launcher, make sure vanilla 1.21.1 has been run once, then try again." }
     $script:Facts.neoforge.after = $true
     Tick "NeoForge installed"
   }
@@ -862,7 +898,7 @@ try {
     $dest = Join-Path $modsDir $f.filename
     $keep[$f.filename] = $true
     $ok = $false
-    if (Test-Path $dest) {
+    if (Test-Path -LiteralPath $dest) {
       $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($dest))).Replace("-", "").ToLower()
       $ok = ($hash -eq $f.sha512)
     }
@@ -872,17 +908,17 @@ try {
     $tmp = "$dest.part"
     Invoke-WebRequest -Uri $f.url -OutFile $tmp -UseBasicParsing
     $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($tmp))).Replace("-", "").ToLower()
-    if ($hash -ne $f.sha512) { Remove-Item $tmp -Force; Fail ("{0} downloaded wrong. Run this again." -f $f.filename) }
-    try { Move-Item -Force $tmp $dest }
-    catch { Log ("could not replace " + $f.filename + ": " + $_.Exception.Message); Remove-Item $tmp -Force -ErrorAction SilentlyContinue; Fail ("{0} is in use. Close Minecraft (the game, not only the launcher), then try again." -f $f.filename) }
+    if ($hash -ne $f.sha512) { Remove-Temp $tmp; Fail ("{0} downloaded wrong. Run this again." -f $f.filename) }
+    try { Move-Item -Force -LiteralPath $tmp -Destination $dest }
+    catch { Log ("could not replace " + $f.filename + ": " + $_.Exception.Message); Remove-Temp $tmp; Fail ("{0} is in use. Close Minecraft (the game, not only the launcher), then try again." -f $f.filename) }
     Log ("downloaded " + $f.filename)
   }
   Write-Progress -Activity "Downloading mods" -Completed
-  Get-ChildItem -Path $modsDir -Filter *.jar | Where-Object { -not $keep[$_.Name] } | ForEach-Object {
+  Get-ChildItem -LiteralPath $modsDir -Filter *.jar | Where-Object { -not $keep[$_.Name] } | ForEach-Object {
     Log ("removing " + $_.Name)
     if (-not $DryRun) {
       $gone = $_.Name
-      try { Remove-Item $_.FullName -Force -ErrorAction Stop }
+      try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop }
       catch { Log ("could not remove " + $gone + ": " + $_.Exception.Message); Fail ("{0} is in use. Close Minecraft (the game, not only the launcher), then try again." -f $gone) }
     }
   }
@@ -894,23 +930,23 @@ try {
     $cz = Join-Path $Temp "deepslate-config.zip"
     try {
       Invoke-WebRequest -Uri $manifest.config_url -Headers $headers -OutFile $cz -UseBasicParsing
-      Expand-Archive -Path $cz -DestinationPath $GameDir -Force
-      Remove-Item $cz -Force
+      Expand-Archive -LiteralPath $cz -DestinationPath $GameDir -Force
+      Remove-Temp $cz
       Tick "Config files updated"
     } catch { Note "No config files this time" }
   }
   $options = Join-Path $GameDir "options.txt"
-  if (-not (Test-Path $options)) {
+  if (-not (Test-Path -LiteralPath $options)) {
     $rd = 8; $sd = 6
     if ($manifest.render_distance) { $rd = [int]$manifest.render_distance }
     if ($manifest.simulation_distance) { $sd = [int]$manifest.simulation_distance }
-    if (-not $DryRun) { Set-Content -Path $options -Value @("renderDistance:$rd", "simulationDistance:$sd", "fullscreen:false") }
+    if (-not $DryRun) { Set-Content -LiteralPath $options -Value @("renderDistance:$rd", "simulationDistance:$sd", "fullscreen:false") }
     Tick ("Render distance set to {0}" -f $rd)
   } else { Tick "Kept your existing settings" }
 
   # 7. servers.dat (uncompressed NBT, one entry)
   $serversDat = Join-Path $GameDir "servers.dat"
-  if (-not (Test-Path $serversDat) -and -not $DryRun) {
+  if (-not (Test-Path -LiteralPath $serversDat) -and -not $DryRun) {
     $ms = New-Object IO.MemoryStream
     $w = New-Object IO.BinaryWriter($ms)
     function WriteStr([IO.BinaryWriter]$bw, [string]$s) { $b = [Text.Encoding]::UTF8.GetBytes($s); $bw.Write([byte](($b.Length -shr 8) -band 0xFF)); $bw.Write([byte]($b.Length -band 0xFF)); $bw.Write($b) }
@@ -983,7 +1019,7 @@ try {
     else { Note "The Play button was not set up this time; Update and Play.bat does the same job" }
   }
 
-  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash } | ConvertTo-Json | Set-Content -Path $installedFile }
+  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash } | ConvertTo-Json | Set-Content -LiteralPath $installedFile }
 
   Write-Host ""
   if ($prev -and $prev.hash -eq $manifest.hash) { Write-Host "Already up to date." -ForegroundColor Green }

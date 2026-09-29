@@ -146,6 +146,21 @@ Mods, configs, the NeoForge version and the memory settings come from the mod li
 
 **Not tested here:** Windows PowerShell 5.1 itself. The self test ran under `pwsh` on Linux, where the stand-ins for java are shell scripts; on Windows they are `.cmd` files. The checks are the same.
 
+## A temp file ended an install that had worked (2026-09-29, installer 1.4.2)
+
+**What happened.** Pabulum's first run of 1.4.1 (18:04 UTC) installed NeoForge ("Successfully installed client into launcher") and then stopped on the next line, `Remove-Item $jar -Force -ErrorAction SilentlyContinue`, which only deletes the NeoForge installer from `%TEMP%`: `PSArgumentException`, "An object at the specified path C:\Users\<name>… does not exist". PowerShell could not resolve his user folder as a path pattern, and that error stops a script whatever `-ErrorAction` says. His next run (18:08, started as admin) went through only because NeoForge was already there and the block was skipped; being admin had nothing to do with it.
+
+**Why.** With `-Path` (and a path given without a parameter name) PowerShell treats `[` `]` as a pattern and resolves the path before acting on it. A user folder with brackets in its name, or a `%TEMP%` in the short 8.3 form (`PABULU~1`, which Windows uses for long names and names with spaces), can fail that. Which of the two his PC has is not known: the report blanks the name.
+
+**What it does now.**
+
+- Every file operation outside the self test takes `-LiteralPath`; the self test reads the script and fails on any that does not.
+- Temporary files (the NeoForge installer and its output, the Java zip, `config.zip`, a `.part` download, the installer update zip) are removed by `Remove-Temp`, which uses .NET directly and only logs a failure. A leftover file never ends a run.
+- The settings step no longer says "No config files this time" when only the cleanup of `config.zip` failed.
+- Self test: a folder named `Pab [x] PABULU~1`, a file removed from it, removal of what is not there, and the launcher profile written and read back in it. 63 checks.
+
+**Not tested here:** a real 8.3 path; `pwsh` on Linux has no short names. `Invoke-WebRequest -OutFile` still takes its path as given; it worked on Pabulum's PC.
+
 ## The PC tier is measured (Alex, 2026-09-29)
 
 "The 'your PC' should be decided by a script too, so we get a real view of the power and capabilities of people's PCs." Every install report that says enough about the hardware sets the member's tier (`suggestTier` in `apps/web/src/lib/install-report.ts`):

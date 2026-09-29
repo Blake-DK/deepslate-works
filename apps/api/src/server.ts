@@ -10,6 +10,7 @@ import { ConsoleTail } from "./amp/console.js";
 import { Limbo } from "./players/limbo.js";
 import type { runBuild } from "./modpack/build.js";
 import { serverRoutes } from "./routes/server.js";
+import { fileRoutes } from "./routes/files.js";
 import { StatusPoller } from "./status/poller.js";
 import { prismaSnapshotStore } from "./status/store.js";
 import { RestartSchedule } from "./status/restart.js";
@@ -38,6 +39,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   statusRoutes(app, ampClient, poller, tail);
   playerRoutes(app, ampClient, tail, limbo);
   serverRoutes(app, ampClient, tail, restarts);
+  fileRoutes(app, ampClient);
 
   // docs/16: sessions and the event log, fed by the console tail and the status poller.
   const recorder = new Recorder({

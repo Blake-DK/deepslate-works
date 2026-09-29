@@ -44,6 +44,9 @@ export const manifestSchema = z.object({
   server_address: z.string().min(1),
   profile: z.object({ id: z.string(), dir: z.string(), icon: z.string() }),
   ram: z.object({ min_gb: z.number().int().min(2), max_gb: z.number().int().max(16) }),
+  // What server.properties is expected to hold. Not pushed anywhere (AMP writes that file from its own
+  // settings on every start); Admin → Files shows where the live file differs.
+  server_properties: z.record(z.string().regex(/^[a-z0-9._-]+$/), z.string().max(200)).default({}),
   categories: z.array(categorySchema).min(1),
   mods: z.array(modSchema).min(1),
 });

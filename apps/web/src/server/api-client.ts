@@ -41,6 +41,15 @@ export async function apiFetch<T>(path: string, opts: Opts = {}): Promise<T> {
   return (await res.json().catch(() => null)) as T;
 }
 
+/** The response as it comes, for passing a file through. The caller checks `ok`; use `apiError` to read a refusal. */
+export async function apiRaw(path: string, opts: Opts = {}): Promise<Response> {
+  return request(path, opts, "*/*");
+}
+
+export async function apiError(path: string, res: Response): Promise<ApiError> {
+  return fail(path, res).catch((e: unknown) => (e instanceof ApiError ? e : new ApiError(res.status, "api_error", String(e))));
+}
+
 /** For api routes that answer with newline-delimited JSON while they work: yields each object as it arrives. */
 export async function* apiStream<T>(path: string, opts: Opts = {}): AsyncGenerator<T> {
   const res = await request(path, opts, "application/x-ndjson");

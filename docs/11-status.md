@@ -291,7 +291,7 @@ Alex: "I want an option in the GUI to turn on pregen … run for 8 hours, or alw
 3. **"The server went down without shutting down first", 17:02:02 UTC, is wrong.** The server's own log of that run ends with "All dimensions are saved" at 17:02:01: AMP put it to sleep. The recorder did not see "Stopping server". Not looked into further.
 4. **docs/18 line 37** still says FallingTree needs an axe; the site's own guide text is changed.
 5. **The pre-generated area has none of the new mods' terrain** (docs/06).
-6. **The map is 28% rendered** and waits for Alex to press "Delete the map and render it again", or "Turn on" with "Render the map only".
+6. **The map was deleted again at 18:36:33 UTC** on Alex's word ("delete the live map so it can regen"), with the server asleep: the three folders under `bluemap/web/maps/` emptied over the rsync link after a dry run that showed deletions only (9,815 + 9 + 9 entries). Nothing was started from the shell. BlueMap renders from nothing whenever the server runs; to have it finish in one go: Admin → Server → Pre-generation → "Render the map only" → Turn on, which keeps the server awake until BlueMap says the map is updated (about an hour at one thread).
 
 ### docs/16 acceptance · state
 

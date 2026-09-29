@@ -278,6 +278,21 @@ Alex: "I want an option in the GUI to turn on pregen … run for 8 hours, or alw
 
 **Open:** the area was pre-generated before the new mods were on and has none of their terrain features (docs/06). The final picture of the map is taken when the render has finished.
 
+### The evening of 2026-09-29, with the first two players on
+
+**Pabulum is in.** Installer 1.4.1 from 18:04 UTC: his Java 21.0.12 on PATH was taken ("on PATH", the version is in the report now), NeoForge failed once and went through at 18:08. He joined as `samoyedx` at 18:12, waited in the entrance room, linked at 18:16:12 and was let in.
+
+**The mods, looked at on the running server (18:2x UTC, two players on).** 31 entries in the loader's list, no ERROR and no FATAL line, 3,601 recipes and 2,899 advancements loaded. The server knows a block of each mod that brings blocks (`create:andesite_casing`, `createaddition:electric_motor`, `quarryplus:quarry`, `pipez:item_pipe`, `tacz:gun_smith_table`, `sophisticatedbackpacks:backpack`, `waystones:waystone`, `farmersdelight:stove`; a made-up one is refused). 27 warnings at every start, 23 of them from mods looking for other mods that are not there (Create Crafts & Additions for "Simulated", something for MrCrayfish's Controllable); they do no harm. **Nobody has tried in the game** that a gun fires, a quarry digs, a vein is mined or a tree falls by hand: this session cannot play.
+
+**For the planner**
+
+1. **Somebody who has just linked is let in without Play-first.** `release()` asks "is the site open for them" and nothing else; Play-first is asked at a join. Pabulum came in eight minutes after a run of Setup.bat that went through and had never pressed Play. Whether that is wanted is the planner's to say.
+2. **Configured** is not on Modrinth for NeoForge (docs/06).
+3. **"The server went down without shutting down first", 17:02:02 UTC, is wrong.** The server's own log of that run ends with "All dimensions are saved" at 17:02:01: AMP put it to sleep. The recorder did not see "Stopping server". Not looked into further.
+4. **docs/18 line 37** still says FallingTree needs an axe; the site's own guide text is changed.
+5. **The pre-generated area has none of the new mods' terrain** (docs/06).
+6. **The map is 28% rendered** and waits for Alex to press "Delete the map and render it again", or "Turn on" with "Render the map only".
+
 ### docs/16 acceptance · state
 
 - [ ] `/analytics` shows the ten tiles, the chart, countries with the map, most active players for every period, and matches AMP within ±1 session. *Built and rendering; the comparison needs people to have played.*

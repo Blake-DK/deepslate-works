@@ -15,7 +15,7 @@ export async function logDownload(e: Entry): Promise<void> {
     const action = actionOf(e.what, e.via);
     const result = e.refused ? "DENIED" : "OK";
     const before = await db.event.findFirst({
-      where: { kind: "DOWNLOAD", actor: e.userId, at: { gte: new Date(Date.now() - SAME_DOWNLOAD_MS) }, AND: [{ meta: { path: ["action"], equals: action } }, { meta: { path: ["params", "file"], equals: e.file } }, { meta: { path: ["result"], equals: result } }] },
+      where: { kind: "DOWNLOAD", actor: e.userId, at: { gte: new Date(Date.now() - SAME_DOWNLOAD_MS) }, AND: [{ meta: { path: ["action"], equals: action } }, { meta: { path: ["params", "file"], equals: e.file } }, { meta: { path: ["params", "via"], equals: e.via } }, { meta: { path: ["result"], equals: result } }] },
       orderBy: { at: "desc" },
       select: { id: true },
     });

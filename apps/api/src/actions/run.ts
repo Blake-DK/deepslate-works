@@ -5,6 +5,11 @@ import { actions, type ActionCtx, type ActionName } from "./registry.js";
 export type RunResult = { ok: boolean; commands: number; detail?: string };
 
 /** Validates, builds, sends and audits one action. The only place console commands leave the api. */
+// Not written into the event log: questions that change nothing and come round every few seconds, and what the
+// portal says to somebody at the door, which has a line of its own there ("… is waiting in the entrance room").
+const QUIET = new Set<string>(["limbo.keep", "server.list", "server.pings", "player.where", "limbo.remindPlay", "limbo.remindClosed", "map.status", "map.list"]);
+const QUIET_FROM_THE_PORTAL = new Set<string>(["limbo.hold", "limbo.remind"]);
+
 export async function runAction(amp: Amp, ctx: ActionCtx, name: ActionName, rawInput: unknown, callerId: string | null): Promise<RunResult> {
   const action = actions[name];
   const parsed = action.input.safeParse(rawInput);
@@ -20,7 +25,7 @@ export async function runAction(amp: Amp, ctx: ActionCtx, name: ActionName, rawI
       await amp.call("Core", "SendConsoleMessage", { message: cmd });
       sent++;
     }
-    if (name !== "limbo.keep" && name !== "server.list" && name !== "server.pings" && name !== "player.where" && name !== "limbo.remindPlay" && name !== "limbo.remindClosed" && !((name === "map.status" || name === "map.list") && callerId === null)) {
+    if (!QUIET.has(name) && !(callerId === null && QUIET_FROM_THE_PORTAL.has(name))) {
       await audit({ userId: callerId, action: name, params: input as object, result: "OK", detail: `${sent} command(s)` });
     }
     return { ok: true, commands: sent };

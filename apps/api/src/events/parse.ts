@@ -21,6 +21,9 @@ export type GameEvent =
   | { type: "started"; seconds: number }
   | { type: "stopping" }
   | { type: "ping"; name: string; ms: number }
+  | { type: "pregen"; what: "running"; world: string; chunks: number; percent: number; eta: string | null; rate: number | null }
+  | { type: "pregen"; what: "started" | "continued" | "paused" | "stopped" | "cancelled"; world: string | null }
+  | { type: "pregen"; what: "finished"; world: string; chunks: number | null }
   | { type: "pos"; name: string; x: number; y: number; z: number }
   | { type: "dimension"; name: string; dimension: string }
   | { type: "problem"; level: "WARN" | "ERROR"; text: string; logger: string | null };
@@ -61,6 +64,10 @@ const RE = {
   advancement: new RegExp(`^(${NAME}) has (made the advancement|completed the challenge|reached the goal) \\[(.+)\\]$`),
   started: /^Done \(([\d.]+)s\)!/,
   stopping: /^Stopping server$/,
+  // chunky. AMP hands the lines over without "[Chunky] " in front; the log file has it.
+  pregenRunning: /^(?:\[Chunky\] )?Task running for ([a-z0-9_.:\/-]{1,80})\. Processed: (\d+) chunks \(([\d.]+)%\)(?:, ETA: ([\d:]+))?(?:, Rate: ([\d.]+) cps)?/,
+  pregenFinished: /^(?:\[Chunky\] )?Task finished for ([a-z0-9_.:\/-]{1,80})\.(?: Processed: (\d+) chunks)?/,
+  pregenOther: /^(?:\[Chunky\] )?Task (started|continuing|continued|paused|stopped|cancelled|canceled)\b(?: (?:in|for) ([a-z0-9_.:\/-]{1,80}?))?[. ]/,
   // `data get entity <name> Pos` and `... Dimension`, asked before a member is moved to the entrance room
   pos: new RegExp(`^(${NAME}) has the following entity data: \\[(-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d, (-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d, (-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d\\]$`),
   dimension: new RegExp(`^(${NAME}) has the following entity data: "([a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64})"$`),
@@ -123,6 +130,13 @@ export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) =
   }
   let m: RegExpExecArray | null;
   if ((m = RE.chat.exec(message))) return [{ type: "chat", name: m[1]!, text: m[2]! }];
+  if ((m = RE.pregenRunning.exec(message))) return [{ type: "pregen", what: "running", world: m[1]!, chunks: Number(m[2]), percent: Number(m[3]), eta: m[4] ?? null, rate: m[5] ? Number(m[5]) : null }];
+  if ((m = RE.pregenFinished.exec(message))) return [{ type: "pregen", what: "finished", world: m[1]!, chunks: m[2] ? Number(m[2]) : null }];
+  if ((m = RE.pregenOther.exec(message))) {
+    const w = m[1]!;
+    const what = w === "started" ? "started" : w === "paused" ? "paused" : w === "stopped" ? "stopped" : w.startsWith("cancel") ? "cancelled" : "continued";
+    return [{ type: "pregen", what, world: m[2] ?? null }];
+  }
   if (/^\[(?:Server|Rcon|[A-Za-z0-9_: ]{1,40})\] /.test(message)) return []; // `say` from the console or a command block
   if ((m = RE.uuid.exec(message))) return [{ type: "uuid", name: m[1]!, uuid: m[2]!.toLowerCase() }];
   if ((m = RE.login.exec(message))) return [{ type: "join", name: m[1]!, ip: ipOf(m[2]!) }];

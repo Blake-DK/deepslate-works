@@ -82,6 +82,13 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "modpack.sync-dry": "checked what a mod sync would change",
   "server.start": "started the server",
   "server.stop": "stopped the server",
+  "world.pregenOn": (p) => `turned the pre-generation on: ${p.mode === "hours" ? `for ${s(p.hours)} hours` : "whenever nobody is on, until it is done"}${p.whilePlaying ? ", also while people play" : ""}${p.radius ? `; a new area, ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}` : ""}`,
+  "world.pregenOff": (p) => (p.reason === "done" ? "the pre-generation is finished" : p.reason === "time" ? `the pre-generation's time is up, at ${s(p.percent)}%` : `turned the pre-generation off, at ${s(p.percent)}%`),
+  "world.pregen": (p) => `turned the pre-generation on: ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}`,
+  "world.pregenContinue": "turned the pre-generation on again",
+  "world.pregenPause": "paused the pre-generation",
+  "world.pregenCancel": "called the pre-generation off",
+  "world.pregenAutoPause": (p) => `the pre-generation was paused at ${s(p.percent)}%: the server had been empty for three minutes`,
   "server.kill": "ended the server's process by force (it hung while shutting down)",
   "server.restart": (p) => (p.scheduled ? "the planned restart went ahead" : "restarted the server"),
   "server.restart.scheduled": (p) => `planned a restart in ${s(p.minutes)} minutes`,
@@ -98,7 +105,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
 };
 
 // Phrases that already say who (or have no who).
-const SELF_CONTAINED = new Set(["limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay"]);
+const SELF_CONTAINED = new Set(["limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "world.pregenAutoPause"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
 const OUTCOME_IN_PHRASE = new Set(["installer.report"]);

@@ -63,7 +63,7 @@ Verify every slug and that a NeoForge 1.21.1 version exists before trusting this
 | chunky | Chunky | server | server | yes | L |
 | spark | spark | server | server | yes | L |
 | bluemap | BlueMap | server | server | yes | L |
-| tabtps | TabTPS | server | server | yes | L |
+| tabtps | TabTPS | server | server | **no** (does not start next to BlueMap) | L |
 | ftb-essentials ? | FTB Essentials | server | server | phase 4 | L |
 | create | Create (6.x) | factories | both | vote | M |
 | createaddition | Create: Crafts & Additions | factories | both | vote | L |
@@ -130,9 +130,9 @@ All commands are idempotent and print what they changed. Network failures retry 
 - Corpse: corpses never despawn, only the owner can loot for 30 min.
 - TaCZ (if chosen): default gun pack only, no extra packs in season 1.
 
-## TabTPS (2026-09-29)
+## TabTPS (2026-09-29): in the catalogue, switched off
 
-Server side only; nobody installs anything. Press Tab in the game: who's on, the server's TPS and the number of people on above the list, your own ping below it. Its config is `modpack/server/config/tabtps/display-configs/default.conf` and goes to the server with every sync. The portal asks it for everyone's ping every 15 s (`pingall`); see docs/05 "Connection".
+Added at 09:42 UTC, taken out at 10:52 UTC the same day. With BlueMap in the pack the server does not start: `java.lang.module.ResolutionException: Modules bluemap and net.kyori.adventure.text.serializer.gson export package net.kyori.adventure.text.serializer.gson.impl to module corpse`. Both mods carry the same library. **Check a server-side mod against BlueMap before adding it** when it is by the same authors' circle (anything built on Adventure: TabTPS, MiniMOTD, squaremap and the like). The portal gets its pings from spark instead; see docs/05 "Connection".
 
 ## FallingTree (2026-09-29)
 

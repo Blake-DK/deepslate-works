@@ -56,16 +56,17 @@ Pages are listed per phase. Every page must work on a 390px phone.
 - "Last 24 h" sparkline of player count from `ServerSnapshot`.
 - **Play** card (once the server is visible to the member): see "Play from the site" under Phase 2.
 
+### Admin `/admin/server` · Pre-generation (2026-09-29)
+- Off unless turned on. "For N hours" or "whenever nobody is on the server, until the area is done"; waits while people play unless told otherwise; carry on or a new area (radius, centre); turn off; call the area off. Shows what chunky last said and what the keeper is doing. How it gets through AMP's sleep: docs/11-status.md "Pre-generation from the portal".
+
 ### Connection: ping and server speed
 (planner spec 2026-09-29; built the same day)
 
-**In the game.** TabTPS (`tabtps`, server side only) puts the server's speed and the number of people on above the player list, and the ping of whoever is looking below it, for everyone from the moment they join (`modpack/server/config/tabtps/display-configs/default.conf`).
+**In the game: nothing, for now.** TabTPS was to put the server's speed and everyone's ping into the Tab list. **It cannot run on this server**: TabTPS and BlueMap both bring the same text library (`net.kyori.adventure.text.serializer.gson`), Java refuses to load the two, and the server stops before it has started (2026-09-29 10:50 UTC, the first start with it). It is switched off in `mods.json`; its entry stays in the catalogue and says why. What the Tab list shows is the game's own: names and signal bars. For the planner: a Tab-list mod that does not bring that library, or a BlueMap build that hides its copy, would be needed.
 
-**What TabTPS cannot do, against the spec.** It shows what it measures, piece by piece (`tps`, `mspt`, `players`, `ping`, `memory`, `cpu`), not a line of text: there is no "Deepslate Works" in the header, and the wording is TabTPS' own ("TPS", "Online", "Ping"). It does not put a ping number next to each player in the list either; the game's own signal bars stay as they are. Both would need another mod (a tab-list mod that takes placeholders). For the planner.
+**The portal.** While the server is running and somebody is on, `api` asks spark for each player's ping every 15 s, one command for each player (`spark ping --player <name>`; spark has no command that lists everyone), and reads the answer from the console: `[⚡] Player Bramble09 has 23 ms ping.` (`events/parse.ts`; taken from spark's source, `HealthModule.ping`). Nothing is sent to a server that is asleep, starting or empty. The numbers are in `/status` next to each player (`online[].ping`, dropped when 50 s old) and in every `ServerSnapshot` (`pings`, `{"<uuid>": ms}`, migration `0009_snapshot_pings`; `name:<name>` where the UUID is not known). TPS and the rest are read as before.
 
-**The portal.** While the server is running and somebody is on, `api` sends `pingall` every 15 s (`pingall 2` and so on from the eleventh player; TabTPS answers ten to a page) and reads the answer from the console: ` - Bramble09: 23ms` (`events/parse.ts`). spark has no command that lists everyone's ping, so TabTPS it is. Nothing is sent to a server that is asleep, starting or empty. The numbers are in `/status` next to each player (`online[].ping`, dropped when 50 s old) and in every `ServerSnapshot` (`pings`, `{"<uuid>": ms}`, migration `0009_snapshot_pings`; `name:<name>` where the UUID is not known). TPS and the rest are read as before.
-
-**Cost.** Each round writes about five lines to the server's console and log, so twenty lines a minute while anyone is on. They are kept out of the portal's console page; AMP's own console shows them.
+**Cost.** One line in the server's console and log for each player every 15 s. They are kept out of the portal's console page; AMP's own console shows them.
 
 **Where it shows**
 
@@ -76,7 +77,7 @@ Pages are listed per phase. Every page must work on a 390px phone.
 
 **How long it is kept.** With the snapshots: every reading for two days, one in five minutes after that, thirty days in all. A seven-day average is therefore made of fewer readings for the older days.
 
-**Acceptance.** "With one player online, Tab shows TPS/ping/online count in game; Home shows the same ping within 30 s; the player page shows a ping series after 5 minutes online": all three need a player on the server with TabTPS on it. State in docs/11-status.md.
+**Acceptance.** "With one player online, Tab shows TPS/ping/online count in game" cannot be met without TabTPS. "Home shows the same ping within 30 s; the player page shows a ping series after 5 minutes online" need a player on the server. State in docs/11-status.md.
 
 ### `/map` Full-screen BlueMap iframe with a back button.
 

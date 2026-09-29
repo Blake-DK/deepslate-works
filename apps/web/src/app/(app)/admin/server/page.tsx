@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Input, Label } from "@/components/ui/input";
 import { LiveConsole } from "./live-console";
-import { announceAction, announcementChangeAction, backupAction, cancelRestartAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
+import { announceAction, announcementChangeAction, backupAction, cancelRestartAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
+import { planText, pregenCost, pregenText, type Pregen } from "@/lib/pregen";
 
 export const metadata: Metadata = { title: "Server" };
 
@@ -21,6 +22,7 @@ type Schedule = { restart: { at: string; minutes: number } | null };
 type Backup = { allowed: boolean; canList?: boolean; stopsServer: boolean | null; permission: string; listPermission?: string; backups?: Array<{ id: string | null; name: string; at: string | null; sizeBytes: number | null; sticky: boolean; automatic: boolean }> };
 
 const MSG: Record<string, string> = {
+  pregenOn: "Pre-generation is on.", pregenPaused: "Pre-generation paused.", pregenOff: "Pre-generation called off.",
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
   error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup started in AMP.", announced: "Announcement posted",
 };
@@ -29,14 +31,18 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
   const admin = await requireAdmin();
   const { msg, detail } = await searchParams;
   const caller = { id: admin.id, role: "ADMIN" as const };
-  const [status, players, tail, schedule, backup, news] = await Promise.all([
+  const [status, players, tail, schedule, backup, news, pregen] = await Promise.all([
     getStatus(),
     apiFetch<Players>("/players", { caller }).catch(() => null),
     apiFetch<Tail>("/console/tail?lines=200", { caller }).catch(() => null),
     apiFetch<Schedule>("/server/schedule", { caller }).catch(() => null),
     apiFetch<Backup>("/server/backup", { caller }).catch(() => null),
     getAnnouncements(10),
+    apiFetch<Pregen>("/pregen", { caller }).catch(() => null),
   ]);
+  const pre = pregenText(pregen);
+  const until = pregen?.plan && pregen.plan.mode !== "off" && pregen.plan.until ? new Date(pregen.plan.until).toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" }) : null;
+  const plan = planText(pregen, until);
   const a = AVAILABILITY_TEXT[status?.availability ?? "unknown"];
   const running = status?.availability === "online";
   const startable = status?.availability === "offline" || status?.availability === "sleeping";
@@ -109,6 +115,49 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
               ) : <p className="text-sm text-muted-foreground">AMP holds no backups yet.</p>
             ) : backup ? <p className="text-xs text-muted-foreground">To list the backups here as well, the AMP user needs <span className="font-mono">{backup.listPermission ?? "LocalFileBackup.Backup.ViewBackupsList"}</span>.</p> : null}
             <p className="text-xs text-muted-foreground">Restoring and deleting backups is done in AMP. The site cannot do either.</p>
+          </CardContent>
+        </Card>
+        <Card data-testid="pregen">
+          <CardHeader>
+            <CardTitle className="flex flex-wrap items-center gap-2">Pre-generation <Badge tone={plan.on ? "warn" : pre.tone}>{plan.on ? "on" : pre.label}</Badge></CardTitle>
+            <CardDescription>Makes the world around spawn ahead of time, so that exploring and the map are smooth later. While it generates the server is busy and playing can stutter. <strong className="text-foreground">It is off unless you turn it on here.</strong></CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm" data-testid="pregen-plan">{plan.line}</p>
+            <p className="text-sm text-muted-foreground" data-testid="pregen-state">{pre.line}</p>
+            {plan.on ? (
+              <form action={pregenAction}><input type="hidden" name="op" value="off" /><Button type="submit" size="sm" variant="danger">Turn off</Button></form>
+            ) : (
+              <form action={pregenAction} className="space-y-3">
+                <input type="hidden" name="op" value="on" />
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">When</legend>
+                  <label className="flex flex-wrap items-center gap-2 text-sm"><input type="radio" name="mode" value="hours" defaultChecked className="h-4 w-4" /> For <Input name="hours" type="number" min={0.25} max={72} step={0.25} defaultValue={8} className="h-8 w-20 text-sm" aria-label="Hours" /> hours from now</label>
+                  <label className="flex items-center gap-2 text-sm"><input type="radio" name="mode" value="empty" className="h-4 w-4" /> Whenever nobody is on the server, until the area is done</label>
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="whilePlaying" className="h-4 w-4" /> Also while people are playing (it waits for them otherwise)</label>
+                </fieldset>
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">What</legend>
+                  <label className="flex items-center gap-2 text-sm"><input type="radio" name="task" value="carry" defaultChecked={pre.can.continue} disabled={!pre.can.continue} className="h-4 w-4" /> Carry on where it stopped{pregen?.percent != null && pregen.status === "paused" ? ` (${pregen.percent.toFixed(0)}% done)` : ""}</label>
+                  <label className="flex items-center gap-2 text-sm"><input type="radio" name="task" value="new" defaultChecked={!pre.can.continue} className="h-4 w-4" /> A new area:</label>
+                  <div className="flex flex-wrap items-end gap-2 pl-6">
+                    <div><Label htmlFor="pgr">Radius, blocks</Label><Input id="pgr" name="radius" type="number" min={16} max={10000} defaultValue={1500} className="h-8 w-24 text-sm" /></div>
+                    <div><Label htmlFor="pgx">Centre x</Label><Input id="pgx" name="x" type="number" defaultValue={0} className="h-8 w-24 text-sm" /></div>
+                    <div><Label htmlFor="pgz">Centre z</Label><Input id="pgz" name="z" type="number" defaultValue={0} className="h-8 w-24 text-sm" /></div>
+                  </div>
+                  <p className="pl-6 text-xs text-muted-foreground">Roughly: {[1500, 3000, 5000, 10000].map((r) => { const c = pregenCost(r); return `${r} blocks = ${c.hours < 1 ? `${Math.round(c.hours * 60)} min` : `${c.hours.toFixed(1)} h`} of generating, ${c.gb < 1 ? c.gb.toFixed(1) : Math.round(c.gb)} GB`; }).join(" · ")}. What is already made is skipped quickly.</p>
+                </fieldset>
+                <Button type="submit" size="sm">Turn on</Button>
+              </form>
+            )}
+            {pre.can.cancel && (
+              <form action={pregenAction} className="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="op" value="cancel" />
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="sure" className="h-4 w-4" /> Forget where it got to</label>
+                <Button type="submit" size="sm" variant="secondary" disabled={!running}>Call the area off</Button>
+              </form>
+            )}
+            <p className="text-xs text-muted-foreground">How it keeps going: the server&apos;s control panel puts an empty server to sleep after about six minutes, whatever it is doing, and a sleep in the middle of generating once left the server hanging. So it works in rounds of {pregen?.roundSec ? Math.round(pregen.roundSec / 60 * 10) / 10 : 3.5} minutes: generate, pause and save, let the server go to sleep, wake it, carry on. About two thirds of the time is spent generating. The server wakes by itself while this is on; people can join at any time, and it waits while they play unless you ticked the box.</p>
           </CardContent>
         </Card>
         <Card>

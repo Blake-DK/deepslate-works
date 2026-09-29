@@ -135,3 +135,5 @@ d. `/me`: "Your connection: <ping> ms, server TPS <tps>" while online, and your 
 Acceptance: with one player online, Tab shows TPS/ping/online count in game; Home shows the same ping within 30 s; the player page shows a ping series after 5 minutes online.
 
 **As built**, with the differences, is in docs/05 "Connection". Three differences: the command is `pingall` (TabTPS has no `tabtps ping`; spark has no bulk command); the header and footer are made of TabTPS' own pieces, without words of ours; no ping number next to each player in the list.
+
+**2026-09-29, later: TabTPS is out.** The server does not start with it next to BlueMap (docs/06). The pings come from spark, one player at a time; the Tab list is the game's own. Items b, c and d stand; item a does not.

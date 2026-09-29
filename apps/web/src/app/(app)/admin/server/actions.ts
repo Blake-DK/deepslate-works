@@ -40,6 +40,42 @@ export async function runActionAction(formData: FormData) {
   redirect(back("action", name));
 }
 
+const pregenOn = z.object({
+  mode: z.enum(["hours", "empty"]),
+  hours: z.coerce.number().min(0.25).max(72),
+  whilePlaying: z.boolean(),
+  task: z.enum(["carry", "new"]),
+  x: z.coerce.number().int().min(-100_000).max(100_000),
+  z: z.coerce.number().int().min(-100_000).max(100_000),
+  radius: z.coerce.number().int().min(16).max(10_000),
+});
+
+/** Pre-generation is off unless an admin turns it on here. */
+export async function pregenAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const caller = { id: admin.id, role: "ADMIN" as const };
+  const op = String(formData.get("op") ?? "");
+  try {
+    if (op === "on") {
+      const parsed = pregenOn.safeParse({ mode: formData.get("mode"), hours: formData.get("hours") || 8, whilePlaying: formData.get("whilePlaying") === "on", task: formData.get("task") ?? "carry", x: formData.get("x") || 0, z: formData.get("z") || 0, radius: formData.get("radius") || 1500 });
+      if (!parsed.success) redirect(back("error", "Hours between a quarter and 72, the centre two whole numbers, the radius between 16 and 10000."));
+      const d = parsed.data;
+      await apiFetch("/pregen/on", { method: "POST", body: { mode: d.mode, hours: d.hours, whilePlaying: d.whilePlaying, task: d.task === "new" ? { x: d.x, z: d.z, radius: d.radius } : null }, caller, timeoutMs: 60_000 });
+    } else if (op === "off") {
+      await apiFetch("/pregen/off", { method: "POST", body: {}, caller, timeoutMs: 60_000 });
+    } else if (op === "cancel") {
+      if (formData.get("sure") !== "on") redirect(back("confirm"));
+      await apiFetch("/pregen/off", { method: "POST", body: {}, caller, timeoutMs: 60_000 });
+      await apiFetch("/actions/world.pregenCancel", { method: "POST", body: {}, caller, timeoutMs: 60_000 });
+    } else redirect(back("error", "Unknown."));
+  } catch (e) {
+    if (e instanceof ApiError) redirect(back("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/server");
+  redirect(back(op === "on" ? "pregenOn" : op === "off" ? "pregenPaused" : "pregenOff"));
+}
+
 export async function scheduleRestartAction(formData: FormData) {
   const admin = await requireAdmin();
   const minutes = z.coerce.number().int().min(1).max(120).safeParse(formData.get("minutes"));

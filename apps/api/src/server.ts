@@ -13,6 +13,9 @@ import { serverRoutes } from "./routes/server.js";
 import { fileRoutes } from "./routes/files.js";
 import { StatusPoller } from "./status/poller.js";
 import { PingWatch } from "./status/ping.js";
+import { PLAN_KEY, PregenKeeper, PregenWatch, type PregenPlan } from "./status/pregen.js";
+import { pregenRoutes } from "./routes/pregen.js";
+import { db } from "./db.js";
 import { prismaSnapshotStore } from "./status/store.js";
 import { RestartSchedule } from "./status/restart.js";
 import { Recorder } from "./events/recorder.js";
@@ -36,6 +39,14 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const tail = new ConsoleTail(ampClient, log);
   const limbo = new Limbo(env, ampClient, tail, log);
   const pings = new PingWatch(ampClient, tail, () => limbo.actionCtx, log);
+  const pregen = new PregenWatch(ampClient, tail, () => limbo.actionCtx, log);
+  const keeper = new PregenKeeper(ampClient, tail, pregen, () => limbo.actionCtx, {
+    load: async () => ((await db.setting.findUnique({ where: { key: PLAN_KEY } }))?.value as PregenPlan | undefined) ?? { mode: "off" },
+    save: async (p) => {
+      await db.setting.upsert({ where: { key: PLAN_KEY }, create: { key: PLAN_KEY, value: p }, update: { value: p } });
+    },
+  }, log);
+  pregenRoutes(app, tail, pregen, keeper);
   const poller = new StatusPoller(ampClient, tail, env.AMP_MOCK === "1" ? null : prismaSnapshotStore, log, undefined, () => pings.current());
   const restarts = new RestartSchedule(ampClient, () => limbo.actionCtx, log);
   statusRoutes(app, ampClient, poller, tail, () => pings.current());
@@ -62,6 +73,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     poller.start();
     limbo.start();
     pings.start();
+    pregen.start();
+    await keeper.start();
     const keepHouse = () => void runRetentionIfDue(log).catch((err) => log({ err: String(err) }, "retention failed"));
     housekeeping = setInterval(keepHouse, 30 * 60_000);
     setTimeout(keepHouse, 60_000).unref();
@@ -71,6 +84,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     poller.stop();
     limbo.stop();
     pings.stop();
+    keeper.stop();
     restarts.stop();
     if (housekeeping) clearInterval(housekeeping);
   });

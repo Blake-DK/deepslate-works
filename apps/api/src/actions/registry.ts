@@ -206,11 +206,13 @@ export const actions = {
   "world.pregen": define({
     name: "world.pregen",
     role: "ADMIN",
-    input: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(5000) }),
+    input: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(10_000) }),
     // `quiet 30`: one line of progress every half minute instead of every second
     build: (_ctx, { x, z, radius }) => ["chunky quiet 30", "chunky world minecraft:overworld", "chunky shape square", `chunky center ${x} ${z}`, `chunky radius ${radius}`, "chunky start"],
   }),
-  "world.pregenContinue": define({ name: "world.pregenContinue", role: "ADMIN", input: z.object({}), build: () => ["chunky continue"] }),
+  "world.pregenContinue": define({ name: "world.pregenContinue", role: "ADMIN", input: z.object({}), build: () => ["chunky quiet 30", "chunky continue"] }),
+  // chunky asks "are you sure" and wants `confirm`
+  "world.pregenCancel": define({ name: "world.pregenCancel", role: "ADMIN", input: z.object({}), build: () => ["chunky cancel", "chunky confirm"] }),
   // Before the server is stopped: a stop in the middle of generating hung at "Saving worlds" (2026-09-29).
   "world.pregenPause": define({ name: "world.pregenPause", role: "ADMIN", input: z.object({}), build: () => ["chunky pause", "save-all flush"] }),
   "world.pregenProgress": define({ name: "world.pregenProgress", role: "ADMIN", input: z.object({}), build: () => ["chunky progress"] }),

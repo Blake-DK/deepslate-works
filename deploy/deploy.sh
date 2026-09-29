@@ -48,6 +48,17 @@ if [ "$(stat -c %u dist 2>/dev/null || echo none)" != 1000 ]; then
   echo "dist/ now belongs to uid 1000"
 fi
 
+# The deploy key is read by api and the WireGuard config by its container, both as uid 1000. A careless
+# `chown -R` over deploy/ takes them away from both (it happened on 2026-09-29: api lost rsync).
+for p in deploy/keys/deploy.key deploy/wireguard; do
+  [ -e "$p" ] || continue
+  if [ -n "$(find "$p" ! -uid 1000 ! -name 'wg0.conf.example' -print -quit)" ]; then
+    [ "$(id -u)" = 0 ] || die "$p must belong to uid 1000; run this once as root"
+    find "$p" ! -name 'wg0.conf.example' -exec chown 1000:1000 {} +
+    echo "$p given back to uid 1000"
+  fi
+done
+
 # web keeps uploaded pictures here (Admin → Branding); it runs as the owner of the checkout
 if [ ! -d data/branding ]; then
   mkdir -p data/branding

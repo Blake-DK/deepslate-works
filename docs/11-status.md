@@ -283,6 +283,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Session log
 
+- **2026-09-29 07:10 to 07:14 UTC** · `rsync: no_key` in `/api/health` for four minutes after a deploy: a recursive `chown` over `deploy/` (done by the VPS session while committing) had given the deploy key and the WireGuard config to `ladm`, and api (uid 1000) could not read its key. Ownership restored; `deploy.sh` now checks and corrects it on every run. The tunnel and the sites were not affected; a mod sync in those minutes would have failed.
 - **2026-09-29 morning** · docs/16 pages: settings, event log, analytics, player page, files, branding, rules. Pangolin's old database and backups (127 GB) deleted from the VPS at Alex's request.
 - **2026-09-29 morning** · docs/16 foundations: tables, parsers, recorder, retention, audit log moved into the event log (see "docs/16 · foundations").
 - **2026-09-29 morning** · Phase 3 dashboard built (see "Phase 3 · dashboard"); `deploy/check.sh` runs the checks in a capped container.

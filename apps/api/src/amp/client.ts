@@ -35,6 +35,12 @@ export interface Amp {
   ping(): Promise<void>;
   /** How many times this client has logged in. A new AMP session is handed the recent console lines all over again. */
   readonly sessions?: number;
+  /**
+   * Does the portal's user have this permission? AMP fixes a session's permissions when it logs in, so a "no" from
+   * a session that has been open for a while may be out of date: on a "no" the client logs in again (once a minute
+   * at most) and asks once more. 2026-09-29: Alex granted a permission and the portal went on saying it had not got it.
+   */
+  hasPermission?(node: string): Promise<boolean>;
   getStatus(): Promise<AmpStatus>;
   /** Any instance call. Console commands must only be built by the action registry. */
   call<T = unknown>(module: string, method: string, params?: Record<string, unknown>): Promise<T>;
@@ -98,6 +104,17 @@ export class AmpClient implements Amp {
     answer = await this.post<T>(path, { ...params, SESSIONID: this.sessionId });
     if (sessionGone(answer)) throw new Error("AMP does not accept the session it has just given out");
     return answer;
+  }
+
+  private lastFresh = 0;
+
+  async hasPermission(node: string): Promise<boolean> {
+    if ((await this.call<unknown>("Core", "CurrentSessionHasPermission", { PermissionNode: node })) === true) return true;
+    if (Date.now() - this.lastFresh < 60_000) return false;
+    this.lastFresh = Date.now();
+    this.sessionId = null;
+    await this.login();
+    return (await this.call<unknown>("Core", "CurrentSessionHasPermission", { PermissionNode: node })) === true;
   }
 
   async ping() {

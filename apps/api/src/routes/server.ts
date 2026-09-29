@@ -89,7 +89,7 @@ export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
 
   app.get("/server/backup", async (req, reply) => {
     if (!requireAdmin(req, reply)) return;
-    const has = (node: string) => amp.call<boolean>("Core", "CurrentSessionHasPermission", { PermissionNode: node }).then((v) => v === true).catch(() => false);
+    const has = (node: string) => (amp.hasPermission ? amp.hasPermission(node) : amp.call<boolean>("Core", "CurrentSessionHasPermission", { PermissionNode: node }).then((v) => v === true)).catch(() => false);
     const [allowed, canList] = await Promise.all([has(BACKUP_PERMISSION), has(BACKUP_LIST_PERMISSION)]);
     const stops = canList ? await amp.call<unknown>("LocalFileBackupPlugin", "BackupWillStopServer").catch(() => null) : null;
     const list = canList ? await amp.call<unknown>("LocalFileBackupPlugin", "GetBackups").catch(() => null) : null;
@@ -98,7 +98,7 @@ export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
 
   app.post("/server/backup", async (req, reply) => {
     if (!requireAdmin(req, reply)) return;
-    const allowed = await amp.call<boolean>("Core", "CurrentSessionHasPermission", { PermissionNode: BACKUP_PERMISSION }).catch(() => false);
+    const allowed = await (amp.hasPermission ? amp.hasPermission(BACKUP_PERMISSION) : amp.call<boolean>("Core", "CurrentSessionHasPermission", { PermissionNode: BACKUP_PERMISSION })).catch(() => false);
     if (allowed !== true) {
       await audit({ userId: req.caller.userId, action: "server.backup", params: {}, result: "DENIED", detail: "AMP permission missing" });
       return reply.code(403).send({ error: { code: "forbidden", message: `AMP's webapp user may not take backups. Grant it "${BACKUP_PERMISSION}" in AMP, or use AMP's own backup schedule.` } });

@@ -158,3 +158,44 @@ describe("a session AMP has forgotten", () => {
     }
   });
 });
+
+describe("a permission granted while the portal was logged in", () => {
+  it("is seen: on a no, the client logs in again and asks once more, once a minute at most", async () => {
+    const real = globalThis.fetch;
+    let logins = 0;
+    const granted = new Set<string>(); // sessions that were opened after the grant
+    let grantedNow = false;
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      const u = String(url).replace(/^.*\/API\//, "");
+      const body = JSON.parse(String(init?.body ?? "{}")) as { SESSIONID?: string };
+      let answer: unknown = {};
+      if (u.endsWith("Core/Login")) {
+        const id = `s${++logins}`;
+        if (grantedNow) granted.add(id);
+        answer = { success: true, sessionID: id };
+      } else if (u.endsWith("Core/CurrentSessionHasPermission")) answer = granted.has(String(body.SESSIONID));
+      return new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      const amp = new AmpClient({ url: "http://amp.invalid", username: "webapp", password: "x", instanceId: "0a1b2c3d-test" });
+      expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(false); // not granted: asked twice, one fresh login
+      expect(logins).toBe(2);
+      grantedNow = true;
+      expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(false); // within the minute: no third login
+      expect(logins).toBe(2);
+      const later = Date.now() + 61_000;
+      const now = Date.now;
+      Date.now = () => later;
+      try {
+        expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(true);
+        expect(logins).toBe(3);
+        expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(true); // a yes costs nothing
+        expect(logins).toBe(3);
+      } finally {
+        Date.now = now;
+      }
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});

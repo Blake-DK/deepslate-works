@@ -213,7 +213,7 @@ export class Pregen {
     const checkedAt = new Date(this.now()).toISOString();
     try {
       const [allowed, mode, delay] = await Promise.all([
-        this.amp.call<unknown>("Core", "CurrentSessionHasPermission", { PermissionNode: SLEEP_PERMISSION }),
+        this.amp.hasPermission ? this.amp.hasPermission(SLEEP_PERMISSION) : this.amp.call<unknown>("Core", "CurrentSessionHasPermission", { PermissionNode: SLEEP_PERMISSION }),
         this.amp.call<{ CurrentValue?: unknown }>("Core", "GetConfig", { node: SLEEP_NODE }),
         this.amp.call<{ CurrentValue?: unknown } | null>("Core", "GetConfig", { node: SLEEP_DELAY_NODE }).catch(() => null),
       ]);

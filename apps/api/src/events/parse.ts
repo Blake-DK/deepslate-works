@@ -40,7 +40,7 @@ export type MapLine =
   | { what: "progress"; percent: number }
   | { what: "remaining"; text: string }
   | { what: "map"; map: string; icon: "updated" | "frozen" | "pending" | "rendering" }
-  | { what: "rendering"; percent: number }
+  | { what: "rendering"; percent: number; purge: boolean } // purge: what is in hand is the deleting of the map
   | { what: "pending"; tasks: number }
   | { what: "frozen" }
   | { what: "said"; threads: "running" | "stopped" }
@@ -121,14 +121,14 @@ const MAP = {
   detail: /^[\u251c\u2502\u2514] ?(.*)$/,
   progress: /^progress: ([\d.]+)%$/,
   remaining: /^remaining time: (.{1,60})$/,
-  rendering: /^(?:is currently being (?:updated|purged)|has a running task): ([\d.]+)%$/,
+  rendering: /^(is currently being updated|is currently being purged|has a running task): ([\d.]+)%$/,
   pending: /^has (\d+) pending tasks?$/,
   frozen: /^is frozen$/,
   summary: /^[\u2714\u2744\u231b] (?:map \S+ (?:has pending updates|is updated|is frozen)|\d+ maps (?:have pending updates|are updated|are frozen))$/,
   map: new RegExp(`^([\u2714\u2744\u231b\u26cf]) (${MAP_ID})$`),
   said: /^[\u26cf\u274c] Render-Threads are now (running|stopped)$/,
   loading: /^\u231b BlueMap is still loading!$/,
-  asked: /^(?:Creating update-tasks \.\.\.|Created new update-task for map \S+|Use \/bluemap to see the progress)$/,
+  asked: /^(?:Creating update-tasks \.\.\.|Created new update-task for map \S+|Use \/bluemap to see the progress|Scheduled a new task to purge map \S+|BlueMap will automatically start rendering the map again once the purge is done|If you don't want this, use \/bluemap freeze \S+ before purging)$/,
 };
 
 /** Pure: one line of BlueMap's answers, or null when the line is none of them. */
@@ -149,7 +149,7 @@ export function parseMapLine(message: string): MapLine | null {
     let n: RegExpExecArray | null;
     if ((n = MAP.progress.exec(d))) return { what: "progress", percent: Number(n[1]) };
     if ((n = MAP.remaining.exec(d))) return { what: "remaining", text: n[1]! };
-    if ((n = MAP.rendering.exec(d))) return { what: "rendering", percent: Number(n[1]) };
+    if ((n = MAP.rendering.exec(d))) return { what: "rendering", percent: Number(n[2]), purge: n[1] === "is currently being purged" };
     if ((n = MAP.pending.exec(d))) return { what: "pending", tasks: Number(n[1]) };
     if (MAP.frozen.test(d)) return { what: "frozen" };
     return { what: "other" };

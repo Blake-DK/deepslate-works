@@ -96,6 +96,12 @@ describe("the map render", () => {
     expect(modeText({ ...base, plan: render, doing: "render" }).line).toBe("On: when nobody's online, rendering the map, until the map is done. Right now: rendering the map.");
     expect(modeText({ ...base, plan: { mode: "now", ...on, what: "both", capHours: 8, ranMs: 3_600_000 }, doing: "pause:lag" }).line).toBe("On: now, whoever is playing, generating, then rendering the map, 8 hours of generating and rendering at most (1.0 so far). Right now: the map waits: the server is slow and somebody is playing.");
   });
+  it("says when the old map is being deleted first", () => {
+    expect(mapProgress({ ...base, plan: { ...render, purge: true }, phase: "render", map: { ...map, status: "purging", percent: 40 } })).toEqual({ line: "The map: the old one is being deleted, 40.0%. BlueMap renders it anew after that.", percent: null });
+    expect(modeText({ ...base, plan: { ...render, purge: true }, doing: "render" }).line).toBe("On: when nobody's online, rendering the map anew (the old one is deleted first), until the map is done. Right now: rendering the map.");
+    expect(describeAction("world.pregenOn", { name: "Bramble09", role: "ADMIN" }, { mode: "now", what: "render", purge: true, x: 0, z: 0, radius: 1500 }, "OK")).toBe("Bramble09 turned the map render on: now, whoever is playing, the old map deleted first; 1500 blocks around 0, 0");
+    expect(describeAction("map.purge", { name: "Bramble09", role: "ADMIN" }, { map: "world" }, "OK")).toBe("Bramble09 had the map world deleted, to be rendered anew");
+  });
   it("is in the event log in words", () => {
     const portal = { name: null, role: "system" } as const;
     const alex = { name: "Bramble09", role: "ADMIN" } as const;

@@ -11,12 +11,13 @@ const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const on = z.object({
   mode: z.enum(["empty", "now"]),
   what: z.enum(["generate", "render", "both"]).default("generate"),
+  purge: z.boolean().default(false),
   area: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(10_000) }),
   window: z.object({ from: clock, to: clock }).nullable().default(null),
   capHours: z.number().min(0.25).max(240).nullable().default(null),
 });
 
-export function pregenRoutes(app: FastifyInstance, tail: ConsoleTail, pregen: Pregen) {
+export function pregenRoutes(app: FastifyInstance, tail: ConsoleTail, pregen: Pregen, players: () => number | null = () => null) {
   const map = () => {
     const s = pregen.map.state;
     const m = s.maps[OVERWORLD_MAP] ?? null;
@@ -33,7 +34,7 @@ export function pregenRoutes(app: FastifyInstance, tail: ConsoleTail, pregen: Pr
     sleep: pregen.sleep,
     serverState: tail.state,
     serverRunning: tail.state === 20,
-    online: tail.online.size,
+    online: Math.max(tail.online.size, tail.state === 20 ? (players() ?? 0) : 0),
   });
 
   app.get("/pregen", async () => {

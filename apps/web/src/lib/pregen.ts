@@ -4,7 +4,7 @@ export type Area = { x: number; z: number; radius: number };
 /** Generate (chunky), render the map (BlueMap), or the one after the other. A plan without it generates. */
 export type What = "generate" | "render" | "both";
 export type MapView = {
-  status: "updated" | "rendering" | "pending" | "frozen" | null;
+  status: "updated" | "rendering" | "purging" | "pending" | "frozen" | null;
   /** Of the task BlueMap has in hand for the map, by BlueMap's own count. */
   percent: number | null;
   waiting: number | null;
@@ -16,7 +16,7 @@ export type MapView = {
 };
 export type Plan =
   | { mode: "off"; area: Area | null }
-  | { mode: "empty" | "now"; what?: What; area: Area; window: { from: string; to: string } | null; capHours: number | null; ranMs: number; since: string; sleepWas: boolean | null };
+  | { mode: "empty" | "now"; what?: What; purge?: boolean; area: Area; window: { from: string; to: string } | null; capHours: number | null; ranMs: number; since: string; sleepWas: boolean | null };
 
 export type Pregen = {
   status: "none" | "running" | "paused" | "finished" | "cancelled";
@@ -77,6 +77,7 @@ export function mapProgress(p: Pregen | null): Progress | null {
   if (m.status === "updated") return { line: "The map is up to date.", percent: 100 };
   if (m.status === "frozen") return { line: "The map is frozen in BlueMap: it is not being updated.", percent: null };
   const waiting = m.waiting ? `, ${n(m.waiting)} more ${m.waiting === 1 ? "task" : "tasks"} waiting` : "";
+  if (m.status === "purging") return { line: `The map: the old one is being deleted${m.percent !== null ? `, ${m.percent.toFixed(1)}%` : ""}. BlueMap renders it anew after that.`, percent: null };
   if (m.status === "pending" || m.percent === null) return { line: `The map: waiting its turn in BlueMap${waiting}.`, percent: null };
   return { line: `The map: ${m.percent.toFixed(1)}% of the task in hand${waiting}${m.remaining ? `, about ${m.remaining} to go` : ""}.`, percent: m.percent };
 }
@@ -101,7 +102,8 @@ export function modeText(p: Pregen | null): ModeText {
     plan.capHours !== null
       ? `${plan.capHours} ${plan.capHours === 1 ? "hour" : "hours"} of ${job === "generate" ? "generating" : job === "render" ? "rendering" : "generating and rendering"} at most (${(plan.ranMs / 3_600_000).toFixed(1)} so far)`
       : job === "generate" ? "until the area is done" : job === "render" ? "until the map is done" : "until the area is done and the map rendered";
-  const task = job === "render" ? "rendering the map, " : job === "both" ? "generating, then rendering the map, " : "";
+  const anew = plan.purge ? " anew (the old one is deleted first)" : "";
+  const task = job === "render" ? `rendering the map${anew}, ` : job === "both" ? `generating, then rendering the map${anew}, ` : "";
   const what = plan.mode === "now" ? `On: now, whoever is playing, ${task}${hours}` : `On: when nobody's online${plan.window ? `, between ${plan.window.from} and ${plan.window.to}` : ""}, ${task}${hours}`;
   const doing = DOING[p.doing] ? ` Right now: ${DOING[p.doing]}.` : "";
   return { on: true, label: plan.mode === "now" ? "on: now" : "on: when nobody's online", tone: "warn", line: `${what}.${doing}` };

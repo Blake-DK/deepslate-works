@@ -190,7 +190,9 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
                 </fieldset>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button type="submit" size="sm" disabled={!sleepy.ok}>Turn on</Button>
+                  <ConfirmSubmit name="purge" value="1" disabled={!sleepy.ok} question="Delete the map and render it again? Every tile of the map is removed (overworld, Nether and End) and BlueMap renders the world as it is now, which takes about an hour with the server awake. The world itself is not touched. With &quot;Generate only&quot; chosen, only the map is done.">Delete the map and render it again</ConfirmSubmit>
                 </div>
+                <p className="text-xs text-muted-foreground">Delete the map and render it again: for a map that shows old or broken tiles. It uses the mode chosen above (when nobody&apos;s online, or now).</p>
               </form>
             )}
             {!mode.on && pregen?.plan.area && (

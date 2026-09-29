@@ -7,8 +7,10 @@ import type { MapLine } from "../events/parse.js";
 
 /** The map of the overworld, as BlueMap names it (the folder of the world). */
 export const OVERWORLD_MAP = "world";
+/** All the maps of the server: what "delete the map" deletes. */
+export const ALL_MAPS = ["world", "world_the_nether", "world_the_end"];
 
-export type MapInfo = { status: "updated" | "rendering" | "pending" | "frozen"; percent: number | null; pending: number };
+export type MapInfo = { status: "updated" | "rendering" | "purging" | "pending" | "frozen"; percent: number | null; pending: number };
 
 export type MapState = {
   threads: "running" | "idle" | "stopped" | "paused" | null;
@@ -56,7 +58,7 @@ export function nextMap(s: MapState, l: MapLine, at: Date): MapState {
     case "frozen": {
       const was = s.block === "maps" && s.cursor ? s.maps[s.cursor] : undefined;
       if (!was || !s.cursor) return s;
-      const now: MapInfo = l.what === "rendering" ? { ...was, status: "rendering", percent: l.percent } : l.what === "pending" ? { ...was, status: was.status === "rendering" ? "rendering" : "pending", pending: l.tasks } : { ...was, status: was.status === "updated" ? "frozen" : was.status };
+      const now: MapInfo = l.what === "rendering" ? { ...was, status: l.purge ? "purging" : "rendering", percent: l.percent } : l.what === "pending" ? { ...was, status: was.status === "rendering" || was.status === "purging" ? was.status : "pending", pending: l.tasks } : { ...was, status: was.status === "updated" ? "frozen" : was.status };
       return { ...s, maps: { ...s.maps, [s.cursor]: now } };
     }
     case "loading":

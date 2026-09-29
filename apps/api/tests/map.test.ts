@@ -3,6 +3,7 @@ import { isMapChatter, parse, parseMapLine } from "../src/events/parse.js";
 import { ConsoleTail } from "../src/amp/console.js";
 import { MockAmp } from "../src/amp/client.js";
 import { MapWatch, nextMap, NO_MAP, rendered, type MapState } from "../src/status/map.js";
+import { differ, OnlineWatch } from "../src/status/online.js";
 import { phase, Pregen, PregenWatch, SLEEP_NODE, SLEEP_PERMISSION, step, type PregenPlan, type View } from "../src/status/pregen.js";
 import { actions, parsePlace } from "../src/actions/registry.js";
 
@@ -28,7 +29,8 @@ describe("what BlueMap says", () => {
       { what: "other" },
       { what: "other" },
     ]);
-    expect(MAPS.slice(1, 5).map((l) => parseMapLine(l))).toEqual([{ what: "maps" }, { what: "map", map: "world", icon: "rendering" }, { what: "rendering", percent: 10.601 }, { what: "pending", tasks: 1 }]);
+    expect(MAPS.slice(1, 5).map((l) => parseMapLine(l))).toEqual([{ what: "maps" }, { what: "map", map: "world", icon: "rendering" }, { what: "rendering", percent: 10.601, purge: false }, { what: "pending", tasks: 1 }]);
+    expect(parseMapLine(" ├ is currently being purged: 40.000%")).toEqual({ what: "rendering", percent: 40, purge: true });
     expect(parseMapLine(" ❌ render-threads are stopped")).toEqual({ what: "threads", state: "stopped" });
     expect(parseMapLine(" ⌛ render-threads are paused")).toEqual({ what: "threads", state: "paused" });
     expect(parseMapLine("❌ Render-Threads are now stopped")).toEqual({ what: "said", threads: "stopped" });
@@ -84,7 +86,7 @@ describe("where the render stands", () => {
 
 const AREA = { x: 0, z: 0, radius: 1500 };
 type On = Exclude<PregenPlan, { mode: "off" }>;
-const plan: On = { mode: "empty", what: "render", area: AREA, window: null, capHours: null, ranMs: 0, since: "2026-09-29T17:30:00.000Z", by: null, fresh: false, sleepWas: true, mapAsked: null, mapStopped: false };
+const plan: On = { mode: "empty", what: "render", area: AREA, window: null, capHours: null, ranMs: 0, since: "2026-09-29T17:30:00.000Z", by: null, fresh: false, sleepWas: true, mapAsked: null, mapStopped: false, purge: false };
 const noon = new Date("2026-09-29T11:00:00Z");
 const v = (over: Partial<View>): View => ({ serverRunning: true, online: 0, pregen: "finished", at: noon, sleepOff: true, emptyForMs: 0, sleepDelayMin: 5, mapDone: false, lag: false, ...over });
 
@@ -139,7 +141,7 @@ class SleepyAmp extends MockAmp {
   }
 }
 
-function rig(tps: () => number | null = () => 20) {
+function rig(tps: () => number | null = () => 20, players: () => number | null = () => null) {
   const amp = new SleepyAmp();
   const tail = new ConsoleTail(amp, () => {});
   const clock = { t: Date.parse("2026-09-29T17:30:00Z") };
@@ -148,7 +150,7 @@ function rig(tps: () => number | null = () => 20) {
   watch.start();
   const map = new MapWatch(tail, () => clock.t);
   const ctx = () => ({ limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" });
-  const pregen = new Pregen(amp, tail, watch, ctx, { load: async () => saved, save: async (p) => { saved = p; } }, () => {}, () => clock.t, async () => { clock.t += 1000; }, { map, tps });
+  const pregen = new Pregen(amp, tail, watch, ctx, { load: async () => saved, save: async (p) => { saved = p; } }, () => {}, () => clock.t, async () => { clock.t += 1000; }, { map, tps, players });
   const say = (lines: string[]) => { for (const l of lines) tail.ingest(l); };
   /** Half a minute on, and what the api does then. */
   const on = async (ms = 30_000) => { clock.t += ms; await pregen.tick(); };
@@ -321,13 +323,59 @@ describe("the render step, from turning it on to the finished map", () => {
     expect(r.amp.console.filter((c) => c.startsWith("bluemap update")).length).toBe(2);
   });
 
+  it("delete the map and render it again: the three maps are deleted, BlueMap renders anew by itself, and it ends when the overworld is updated", async () => {
+    const r = rig();
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "empty", what: "render", purge: true, area: AREA, window: null, capHours: null }, null);
+    expect(r.amp.console).toEqual(["bluemap purge world", "bluemap purge world_the_nether", "bluemap purge world_the_end", ...ASK]);
+    expect(r.saved()).toMatchObject({ purge: true, mapAsked: expect.any(String) });
+    r.say(["BlueMap Status >", " ✔ 1 render-thread is running", " ⛏ map world is currently being purged", " ├ progress: 40.000%", "BlueMap Maps >", " ⛏ world", " ├ is currently being purged: 40.000%", " └ has 1 pending task", " ⌛ world_the_nether", " └ has 2 pending tasks"]);
+    await r.on();
+    expect(r.pregen.map.state.maps.world).toEqual({ status: "purging", percent: 40, pending: 1 });
+    expect(r.pregen.plan.mode).toBe("empty");
+    r.say([...STATUS, ...MAPS]);
+    await r.on();
+    r.say([...STATUS_DONE, ...MAPS_DONE]);
+    await r.on();
+    r.say([...STATUS_DONE, ...MAPS_DONE]);
+    await r.on();
+    expect(r.pregen.plan).toEqual({ mode: "off", area: null });
+    expect(r.amp.console.filter((c) => c.startsWith("bluemap purge")).length).toBe(3); // once
+    expect(r.amp.console.some((c) => c.startsWith("bluemap update"))).toBe(false);
+    expect(r.amp.sleepOn).toBe(true);
+  });
+
+  it("deleting the map goes with rendering: with \"generate only\" nothing is deleted", async () => {
+    const r = rig();
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "empty", what: "generate", purge: true, area: AREA, window: null, capHours: null }, null);
+    expect(r.saved()).toMatchObject({ purge: false });
+    expect(r.amp.console.some((c) => c.startsWith("bluemap"))).toBe(false);
+  });
+
+  it("somebody is on whom the console has not told of (api was restarted after they joined): AMP's count is what counts", async () => {
+    let amp = 1;
+    const r = rig(() => 20, () => amp);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    expect(r.tail.online.size).toBe(0);
+    await r.pregen.turnOn({ mode: "empty", what: "render", area: AREA, window: null, capHours: null }, null);
+    expect(r.pregen.lastStep).toBe("pause:playing");
+    expect(r.amp.console).toEqual(["bluemap stop"]); // BlueMap renders by itself after a start: it is stopped while they play
+    amp = 0;
+    await r.on();
+    expect(r.amp.console.slice(1)).toEqual(["bluemap start", "bluemap update world 0 0 1500", ...ASK]);
+  });
+
   it("a plan saved before there was a render step is one that generates", async () => {
     const amp = new SleepyAmp();
     const tail = new ConsoleTail(amp, () => {});
     const old = { mode: "empty", area: AREA, window: null, capHours: null, ranMs: 5, since: "2026-09-29T12:00:00.000Z", by: null, fresh: false, sleepWas: true } as unknown as PregenPlan;
     const pregen = new Pregen(amp, tail, new PregenWatch(tail), () => ({ limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" }), { load: async () => old, save: async () => {} }, () => {});
     await pregen.start(); pregen.stop();
-    expect(pregen.plan).toMatchObject({ mode: "empty", what: "generate", mapAsked: null, mapStopped: false });
+    expect(pregen.plan).toMatchObject({ mode: "empty", what: "generate", mapAsked: null, mapStopped: false, purge: false });
   });
 });
 
@@ -341,5 +389,31 @@ describe("the map's commands", () => {
     expect(actions["map.update"].input.safeParse({ map: "world; stop", radius: 1500 }).success).toBe(false);
     expect(actions["map.update"].input.safeParse({ map: "world", radius: 1_000_000 }).success).toBe(false);
     expect(actions["map.update"].input.safeParse({ map: "world", x: 1.5, z: 0, radius: 100 }).success).toBe(false);
+  });
+});
+
+describe("who is on", () => {
+  it("the console's list and AMP's are compared by name, whatever the case", () => {
+    expect(differ(["bramble09"], new Set<string>())).toBe(true);
+    expect(differ([], new Set(["bramble09"]))).toBe(true);
+    expect(differ(["Bramble09"], new Set(["bramble09"]))).toBe(false);
+    expect(differ(["a_b", "c_d"], new Set(["c_d", "a_b"]))).toBe(false);
+    expect(differ(["a_b", "c_d"], new Set(["a_b", "e_f"]))).toBe(true);
+    expect(differ(null, new Set(["bramble09"]))).toBe(false); // AMP has not answered
+  });
+  it("when they differ the server is asked, and its answer puts the console's list right", async () => {
+    const amp = new SleepyAmp();
+    const tail = new ConsoleTail(amp, () => {});
+    const watch = new OnlineWatch(amp, tail, () => ({ limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" }), () => ["bramble09"], () => {});
+    tail.state = 50;
+    await watch.check();
+    expect(amp.console).toEqual([]); // asleep: not asked
+    tail.state = 20;
+    await watch.check();
+    expect(amp.console).toEqual(["list"]);
+    tail.ingest("There are 1 of a max of 20 players online: bramble09");
+    expect([...tail.online]).toEqual(["bramble09"]);
+    await watch.check();
+    expect(amp.console).toEqual(["list"]); // they agree: nothing more is asked
   });
 });

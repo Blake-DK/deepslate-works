@@ -88,7 +88,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.stop": "stopped the server",
   "world.pregenOn": (p) => p.refused
     ? "tried to turn the pre-generation on; the control panel does not let the portal switch sleep mode off"
-    : `turned ${p.what === "render" ? "the map render" : "the pre-generation"} on: ${p.mode === "now" ? "now, whoever is playing" : "when nobody's online"}${p.what === "both" ? ", the map rendered afterwards" : ""}${p.capHours ? `, ${s(p.capHours)} hours at most` : ""}; ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}${p.newArea ? " (a new area)" : ""}`,
+    : `turned ${p.what === "render" ? "the map render" : "the pre-generation"} on: ${p.mode === "now" ? "now, whoever is playing" : "when nobody's online"}${p.what === "both" ? ", the map rendered afterwards" : ""}${p.purge ? ", the old map deleted first" : ""}${p.capHours ? `, ${s(p.capHours)} hours at most` : ""}; ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}${p.newArea ? " (a new area)" : ""}`,
   "world.pregenOff": (p) => {
     const radius = p.radius ? `radius ${s(p.radius)}` : "";
     // the map: what was in hand was BlueMap's render, which has its own figures
@@ -102,6 +102,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
     return p.reason === "done" ? `pre-generation finished (100%${radius ? `, ${radius}` : ""})` : p.reason === "cap" ? `pre-generation stopped: its hours are up (${s(p.percent)}%${radius ? `, ${radius}` : ""})` : `stopped the pre-generation, at ${s(p.percent)}%`;
   },
   "map.update": (p) => `asked for the map to be brought up to date${p.radius ? `: ${s(p.radius)} blocks around ${s(p.x ?? 0)}, ${s(p.z ?? 0)}` : ""}`,
+  "map.purge": (p) => `had the map ${s(p.map)} deleted, to be rendered anew`,
   "map.stop": "paused the map render",
   "map.start": "let the map render carry on",
   "world.pregen": (p) => `turned the pre-generation on: ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}`,

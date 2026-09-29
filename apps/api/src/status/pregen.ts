@@ -3,7 +3,7 @@ import type { ConsoleTail } from "../amp/console.js";
 import { runAction } from "../actions/run.js";
 import type { ActionCtx } from "../actions/registry.js";
 import { audit } from "../audit.js";
-import { MapWatch, OVERWORLD_MAP, rendered } from "./map.js";
+import { ALL_MAPS, MapWatch, OVERWORLD_MAP, rendered } from "./map.js";
 
 // Pre-generation (chunky), as a mode on Admin → Server (planner, 2026-09-29).
 //
@@ -113,6 +113,8 @@ export type PregenPlan =
       mapAsked: string | null;
       /** BlueMap's render threads are stopped from here (a pause) and are owed a start. */
       mapStopped: boolean;
+      /** The maps are deleted first and rendered anew, all of what exists; without it, what has changed inside the area. */
+      purge: boolean;
     };
 
 export type Phase = "generate" | "render" | "done";
@@ -213,7 +215,8 @@ const MAP_SETTLE_MS = 3_000;
 const MAP_AFTER_ASK_MS = 10_000;
 const OFF: PregenPlan = { mode: "off", area: null };
 
-export type Extra = { map?: MapWatch; tps?: () => number | null };
+/** `players`: how many AMP says are on. The larger of that and what the console has told counts: after a restart of api the console may not have told yet. */
+export type Extra = { map?: MapWatch; tps?: () => number | null; players?: () => number | null };
 
 export class Pregen {
   plan: PregenPlan = OFF;
@@ -226,6 +229,7 @@ export class Pregen {
   private timer: NodeJS.Timeout | null = null;
   readonly map: MapWatch;
   private readonly tps: () => number | null;
+  private readonly players: () => number | null;
   private lag = false;
   private lastMapAsk = 0;
   private lastMapCommand = 0;
@@ -246,6 +250,7 @@ export class Pregen {
   ) {
     this.map = extra.map ?? new MapWatch(tail, now);
     this.tps = extra.tps ?? (() => null);
+    this.players = extra.players ?? (() => null);
   }
 
   async start() {
@@ -254,7 +259,7 @@ export class Pregen {
     // before there was a render step is one that generates
     this.plan =
       loaded && (loaded.mode === "empty" || loaded.mode === "now") && loaded.area
-        ? { ...loaded, what: loaded.what ?? "generate", mapAsked: loaded.mapAsked ?? null, mapStopped: loaded.mapStopped ?? false }
+        ? { ...loaded, what: loaded.what ?? "generate", mapAsked: loaded.mapAsked ?? null, mapStopped: loaded.mapStopped ?? false, purge: loaded.purge ?? false }
         : { mode: "off", area: loaded?.area ?? null, ...(loaded?.mapStopped ? { mapStopped: true } : {}) };
     this.lastTick = this.now();
     this.timer = setInterval(() => void this.tick().catch((err) => this.log({ err: String(err) }, "pregen tick failed")), 10_000);
@@ -297,8 +302,9 @@ export class Pregen {
     return ok;
   }
 
-  async turnOn(input: { mode: "empty" | "now"; what?: What; area: Area; window: Window | null; capHours: number | null }, by: string | null) {
+  async turnOn(input: { mode: "empty" | "now"; what?: What; purge?: boolean; area: Area; window: Window | null; capHours: number | null }, by: string | null) {
     const what = input.what ?? "generate";
+    const purge = input.purge === true && what !== "generate";
     const s = await this.lookAtSleep();
     if (s.allowed !== true) {
       await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, what, refused: "sleep_permission" }, result: "DENIED", detail: s.problem });
@@ -318,13 +324,13 @@ export class Pregen {
     if (another && this.tail.state === 20) await runAction(this.amp, this.ctx(), "world.pregenCancel", {}, by);
     const fresh = what !== "render" && (another || was.area === null || status === "finished" || status === "cancelled");
     if (fresh) this.watch.state = NONE;
-    this.plan = { mode: input.mode, what, area: input.area, window: input.mode === "empty" ? input.window : null, capHours: input.capHours, ranMs: 0, since: new Date(this.now()).toISOString(), by, fresh, sleepWas: null, mapAsked: null, mapStopped: this.plan.mode === "off" && this.plan.mapStopped === true };
+    this.plan = { mode: input.mode, what, area: input.area, window: input.mode === "empty" ? input.window : null, capHours: input.capHours, ranMs: 0, since: new Date(this.now()).toISOString(), by, fresh, sleepWas: null, mapAsked: null, mapStopped: this.plan.mode === "off" && this.plan.mapStopped === true, purge };
     this.lastCommand = 0;
     this.lastMapCommand = 0;
     this.lastMapAsk = 0;
     this.updatedInARow = 0;
     await this.store.save(this.plan);
-    await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, what, ...input.area, window: input.window, capHours: input.capHours, newArea: fresh }, result: "OK" });
+    await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, what, purge, ...input.area, window: input.window, capHours: input.capHours, newArea: fresh }, result: "OK" });
     await this.tick();
   }
 
@@ -409,7 +415,7 @@ export class Pregen {
     const dt = Math.max(0, Math.min(60_000, now - this.lastTick));
     this.lastTick = now;
     const running = this.tail.state === 20;
-    const online = this.tail.online.size;
+    const online = Math.max(this.tail.online.size, running ? (this.players() ?? 0) : 0);
     if (!running || online > 0) this.emptySince = null;
     else this.emptySince ??= now;
 
@@ -499,8 +505,11 @@ export class Pregen {
         if (this.plan.mapAsked === null) {
           if (now - this.lastMapCommand < 15_000 && this.lastMapCommand !== now) return;
           this.lastMapCommand = now;
-          const r = await runAction(this.amp, this.ctx(), "map.update", { map: OVERWORLD_MAP, ...this.plan.area }, this.plan.by);
-          if (!r.ok) return;
+          // Deleting a map makes BlueMap render it anew by itself, all of it, when the deleting is done.
+          let ok = true;
+          if (this.plan.purge) for (const map of ALL_MAPS) ok = ok && (await runAction(this.amp, this.ctx(), "map.purge", { map }, this.plan.by)).ok;
+          else ok = (await runAction(this.amp, this.ctx(), "map.update", { map: OVERWORLD_MAP, ...this.plan.area }, this.plan.by)).ok;
+          if (!ok) return;
           this.updatedInARow = 0;
           this.plan = { ...this.plan, mapAsked: new Date(now).toISOString() };
           await this.store.save(this.plan);

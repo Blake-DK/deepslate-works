@@ -15,6 +15,7 @@ import { StatusPoller } from "./status/poller.js";
 import { PingWatch } from "./status/ping.js";
 import { PLAN_KEY, Pregen, PregenWatch, type PregenPlan } from "./status/pregen.js";
 import { pregenRoutes } from "./routes/pregen.js";
+import { OnlineWatch } from "./status/online.js";
 import { db } from "./db.js";
 import { prismaSnapshotStore } from "./status/store.js";
 import { RestartSchedule } from "./status/restart.js";
@@ -45,8 +46,9 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     save: async (p) => {
       await db.setting.upsert({ where: { key: PLAN_KEY }, create: { key: PLAN_KEY, value: p }, update: { value: p } });
     },
-  }, log, undefined, undefined, { tps: () => poller.fresh()?.tps ?? null });
-  pregenRoutes(app, tail, pregen);
+  }, log, undefined, undefined, { tps: () => poller.fresh()?.tps ?? null, players: () => poller.fresh()?.players.length ?? null });
+  pregenRoutes(app, tail, pregen, () => poller.fresh()?.players.length ?? null);
+  const online = new OnlineWatch(ampClient, tail, () => limbo.actionCtx, () => poller.fresh()?.players ?? null, log);
   const poller: StatusPoller = new StatusPoller(ampClient, tail, env.AMP_MOCK === "1" ? null : prismaSnapshotStore, log, undefined, () => pings.current());
   const restarts = new RestartSchedule(ampClient, () => limbo.actionCtx, log, () => pregen.quiesce());
   statusRoutes(app, ampClient, poller, tail, () => pings.current());
@@ -73,6 +75,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     poller.start();
     limbo.start();
     pings.start();
+    online.start();
     pregenWatch.start();
     await pregen.start();
     const keepHouse = () => void runRetentionIfDue(log).catch((err) => log({ err: String(err) }, "retention failed"));
@@ -84,6 +87,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     poller.stop();
     limbo.stop();
     pings.stop();
+    online.stop();
     pregen.stop();
     restarts.stop();
     if (housekeeping) clearInterval(housekeeping);

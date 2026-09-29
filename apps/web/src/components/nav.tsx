@@ -11,6 +11,8 @@ const LINKS = [
   { href: "/install", label: "Install" },
   { href: "/map", label: "Map" },
   { href: "/players", label: "Players" },
+  { href: "/analytics", label: "Stats" },
+  { href: "/events", label: "Events" },
   { href: "/me", label: "Me" },
 ];
 

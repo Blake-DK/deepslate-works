@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/server/auth/session";
 import { setSettings } from "@/server/settings";
+import { getSection, setSection } from "@/server/site-settings";
 import { ukLocalToDate } from "@/lib/uk-time";
 import { audit } from "@/server/events";
 
@@ -23,4 +24,31 @@ export async function saveSettingsAction(formData: FormData) {
   await audit({ userId: admin.id, action: "site.settings", params: { live, launchAt: launchAt?.toISOString() ?? null }, result: "OK" });
   for (const p of ["/", "/install", "/me", "/admin/settings"]) revalidatePath(p);
   redirect("/admin/settings?saved=1");
+}
+
+const on = (v: FormDataEntryValue | null) => v === "on";
+const int = (v: FormDataEntryValue | null) => (typeof v === "string" && /^\d{1,5}$/.test(v.trim()) ? Number(v) : Number.NaN);
+
+async function save(section: "privacy" | "retention" | "files", value: unknown, adminId: string) {
+  const r = await setSection(section, value, adminId);
+  await audit({ userId: adminId, action: "settings.save", params: { section, ...(r.ok ? { value: r.value } : { problems: r.problems }) }, result: r.ok ? "OK" : "DENIED" });
+  for (const p of ["/admin/settings", "/analytics", "/admin/files"]) revalidatePath(p);
+  redirect(r.ok ? `/admin/settings?saved=${section}` : `/admin/settings?error=${section}&detail=${encodeURIComponent(r.problems.join("; ").slice(0, 300))}`);
+}
+
+export async function savePrivacyAction(formData: FormData) {
+  const admin = await requireAdmin();
+  await save("privacy", { geo: on(formData.get("geo")), chat: on(formData.get("chat")), analyticsForPlayers: on(formData.get("analyticsForPlayers")) }, admin.id);
+}
+
+export async function saveRetentionAction(formData: FormData) {
+  const admin = await requireAdmin();
+  await save("retention", { chatDays: int(formData.get("chatDays")), eventDays: int(formData.get("eventDays")), ipDays: int(formData.get("ipDays")) }, admin.id);
+}
+
+export async function saveFilesAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const current = await getSection("files");
+  const denied = String(formData.get("denied") ?? "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  await save("files", { ...current, maxDownloadMb: int(formData.get("maxDownloadMb")), maxPreviewKb: int(formData.get("maxPreviewKb")), denied }, admin.id);
 }

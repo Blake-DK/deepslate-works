@@ -6,6 +6,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { PlayerHead } from "@/components/server/player-head";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Players" };
 
@@ -42,7 +43,7 @@ export default async function PlayersPage() {
               <li key={u.id} className="flex items-center gap-3 px-4 py-3">
                 <PlayerHead uuid={u.mcUuid} name={u.mcUsername} size={32} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{u.displayName} {u.role === "ADMIN" && <Badge className="ml-1">Admin</Badge>}</p>
+                  <p className="truncate font-medium">{u.mcUuid ? <Link href={`/players/${u.mcUuid}`} className="hover:underline">{u.displayName}</Link> : u.displayName} {u.role === "ADMIN" && <Badge className="ml-1">Admin</Badge>}</p>
                   <p className="truncate text-sm text-muted-foreground">{u.mcUsername ? <span className="font-mono">{u.mcUsername}</span> : "No Minecraft account linked yet"}{u.pcTier && <> · {TIER[u.pcTier]}</>}</p>
                 </div>
                 <div className="text-right text-sm">

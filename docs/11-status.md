@@ -57,6 +57,17 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 - Shared code: `apps/web/src/shared/` and `apps/api/src/shared/` hold identical copies of `events.ts` and `settings.ts`; a test fails if they differ.
 - Tests: api 66, web 27, modpack 9.
 
+### docs/16 · pages, part 1 (2026-09-29): settings, event log, analytics
+
+- **Admin → Settings** gained Privacy (country lookup, chat logging, analytics visible to players), How long things are kept, and File browser (download cap, preview cap, the never-shown list). Stored in `Setting`, validated by the shared schema; api picks changes up within 30 s.
+- **`/admin/events`** and **`/events`**: filters in the URL (kinds, player, from, to, words), "Older" paging, live tail (`/api/events/stream`), rows open to the console line and details for admins, CSV export (`/api/admin/events/export`, formula-safe). Players get joins, leaves, deaths, advancements and server up/down only; the kinds are cut down on the server whatever the URL asks for, and `raw` / `meta` never leave it for a non-admin.
+- **`/analytics`** ("Stats" in the menu): period picker (24 h, 7 days, 30 days, all time; default 30 days), ten tiles with the change against the period before, sessions chart with a "players online" view, countries as a table or a world map, busiest hours (7 by 24, UK time), most active players (sortable), who plays together, deaths, and for admins the CSV export of sessions and events.
+- **`/players/<uuid>`**: totals, minutes per day, sessions, advancements, their events, link state; addresses for admins only.
+- **Deviations from docs/16, deliberate.** (1) The "Uptime %" tile is **Server available**: running or asleep. AMP puts the instance to sleep whenever it is empty, so "running" alone would read as 10 % uptime for a server that was there for everyone all month; the tile's small print gives the running share. (2) Peak concurrent takes the larger of the snapshots' figure and the one worked out from the sessions. (3) A session belongs to a period when it started in it, which is how AMP counts; play time is the whole session.
+- **World map data** is generated once from Natural Earth (public domain) into `apps/web/src/lib/geo-data.ts`: land outline and country label points. Nothing is fetched at run time and there are no map tiles.
+- All the arithmetic is in `apps/web/src/lib/analytics.ts` and `event-query.ts`, with tests (clock changes, open sessions, the player cut-down). Tests: api 66, web 62, modpack 9.
+- **Cannot be checked yet:** the acceptance line "matches AMP's own counts within ±1 session". AMP's Analytics plugin is not readable by `webapp` and nobody has played; compare by eye after the first week of play.
+
 ### Phase 3 acceptance · state
 
 - [ ] Home shows Online/Offline within 20 s of a real change, names with heads, TPS and memory. *Built (10 s poll + 10 s page refresh); needs watching through a real start and stop.*

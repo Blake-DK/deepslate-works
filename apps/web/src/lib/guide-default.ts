@@ -31,7 +31,7 @@ export const DEFAULT_GUIDE = [
   "- **Backpacks**: craft one early. Upgrade it later with a magnet so it picks things up for you. <!-- mod: sophisticated-backpacks -->",
   "- **Waystones**: find or build one, click it, and you can teleport between any you've discovered. <!-- mod: waystones -->",
   "- **VeinMiner**: hold the grave key (` under Esc) while breaking ore or a log and the whole vein or tree comes out. Costs hunger, so bring food. <!-- mod: veinminer -->",
-  "- **FallingTree**: break the bottom log with an axe and the tree falls. <!-- mod: fallingtree -->",
+  "- **FallingTree**: break the bottom log and the tree falls, with an axe or by hand. Sneak to take one log. <!-- mod: fallingtree -->",
   "",
   "## Your first hour",
   "",

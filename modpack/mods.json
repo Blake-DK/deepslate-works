@@ -506,7 +506,7 @@
       "recommended": false,
       "hidden": false,
       "exclusiveGroup": null,
-      "description": "Break the bottom log with an axe and the whole tree comes down. Leaves decay fast. Part of the pack from the start. Works alongside VeinMiner: FallingTree is the axe, VeinMiner is the key you hold.",
+      "description": "Break the bottom log and the whole tree comes down, with an axe or without. Leaves decay fast. Sneak to take one log at a time. Part of the pack from the start. Works alongside VeinMiner.",
       "wiki": "https://github.com/RakambdaOrg/FallingTree/wiki",
       "videos": [
         {

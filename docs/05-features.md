@@ -22,6 +22,9 @@ Pages are listed per phase. Every page must work on a 390px phone.
 - Per question: counts.
 - Admin: **Close vote** freezes `resultJson`; **Apply results** flips `enabled` in `mods.json` for every mod above the threshold (default 50% of ballots; exclusive groups: the winner) and opens a diff to confirm before writing.
 
+### Admin lists (2026-09-29)
+Players (`/admin/users`), Installs and Invites are tables with fixed columns: one line for each row, names cut with an ellipsis and whole on hover, the actions in one "…" menu for each row, early access as a switch, cards under 800 px. Detail: docs/11-status.md "Admin lists as tables".
+
 ### Admin `/admin/votes`, `/admin/invites`, `/admin/users`
 - Minimal tables. Create vote (title, questions JSON editor with sensible default), open/close. Invites as in 04-auth.md. Users: role, mcUsername, tier, last seen, remove.
 

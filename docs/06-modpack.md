@@ -136,4 +136,4 @@ Added at 09:42 UTC, taken out at 10:52 UTC the same day. With BlueMap in the pac
 
 ## FallingTree (2026-09-29)
 
-`fallingtree` on Modrinth. Votable, recommended. Works next to VeinMiner: FallingTree is the axe, VeinMiner is the key you hold.
+`fallingtree` on Modrinth. **Part of the default pack since 2026-09-29** (Alex: "tree felling is a default mod pack"): category base, switched on, not voted on. Works next to VeinMiner: FallingTree is the axe, VeinMiner is the key you hold.

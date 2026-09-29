@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-29T10:52:05.541Z",
+  "generatedAt": "2026-09-29T15:50:50.889Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "47b0b5799c2640b0f67d232ac68973b18f0dcbb280c5fd26397c479c540461aa",
+  "hash": "5c3b04940b29fe3184eace633eebb547d9689232e6c00438623b6ae8ffd92e3e",
   "files": [
     {
       "slug": "appleskin",
@@ -92,6 +92,21 @@
       "sha1": "2f723582d44b60b41d701a797846eaa45a3fef58",
       "size": 1510018,
       "side": "client",
+      "requiredBy": []
+    },
+    {
+      "slug": "fallingtree",
+      "name": "FallingTree",
+      "projectId": "Fb4jn8m6",
+      "versionId": "wxGXaJMA",
+      "versionNumber": "1.21.1-1.21.1.11",
+      "versionType": "release",
+      "filename": "FallingTree-1.21.1-1.21.1.11.jar",
+      "url": "https://cdn.modrinth.com/data/Fb4jn8m6/versions/wxGXaJMA/FallingTree-1.21.1-1.21.1.11.jar",
+      "sha512": "21876b270ca40e3ad6168423f2aba04460f590be191c5558d53e4f542993efa6070589029cb3218557309b096cd920e4da65e53f19687b86c638ec6c342d83e5",
+      "sha1": "7e1b3ee0ba89b556d5a468797bb1b5f4e2b8ccb7",
+      "size": 496356,
+      "side": "both",
       "requiredBy": []
     },
     {

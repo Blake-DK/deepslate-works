@@ -240,6 +240,23 @@ Alex: "I want an option in the GUI to turn on pregen … run for 8 hours, or alw
 - Tests: the table in `apps/web/tests/access.test.ts` (16 rows for a player: live × flag × Play first × Play pressed; admins through all of them) and in `apps/api/tests/join-gate.test.ts` (the rule, the line in chat, the commands, the event). **Not seen with a player**: like everything at the door.
 - **News pictures**: `Announcement.image` (migration `0012_news_image`), files in `data/news/` (made by `deploy.sh`), `/news-image/<file>` for signed-in members. Admin → Server → Announce has a file box; each item in the list below has "Add picture" / "Change picture" / "No picture". A file is removed when the last item that showed it is gone. Today's item has the screenshot of spawn.
 
+### Admin lists as tables (planner, 2026-09-29 evening)
+
+- **Players, Installs, Invites**: tables with fixed columns (`FixedTable`, `table-fixed` with a width for each column), one line for each row, names cut with an ellipsis and whole on hover. Under 800 px each row is a card with the same things in it. Parts in `apps/web/src/components/admin/`.
+- **Players**: Member (name, role badge beside it) · Minecraft (name and "verified", or "Unlinked") · PC (badge) · Seen (right-aligned) · Early access (a switch: `role="switch"`, the submit button of a form of its own, no script; for admins it cannot be pressed and says "Admins don't need it") · "…" (Make admin / Make player, Unlink, Link by name…, Sign out installer, Remove). "Link by name…" opens a dialog with the name and a button. Remove asks first. The two paragraphs are one line under the heading; what early access does is the switch's tooltip and the column's.
+- **Search**: there was none; there is one now, by part of the Discord name or of the Minecraft name. The numbers on the filters are those of the search.
+- **Installs**: the hardware columns show the part of a name that tells one from another ("i7-13700H, 14 cores", "RTX 4070 Laptop +1", "11 Home SL 24H2"), the whole name on hover. The step a run failed at and a re-measured PC are tooltips (on the outcome, and on a dot next to the name) instead of second lines.
+- **Invites**: Code · State · For · Expires or used by · Copy link · "…" (Remove, asks first).
+- **The header** wrapped too ("Deepslate / Works", "Sign / out") since the Guide was added: twelve entries did not fit. It is one line from 1100 px; under that the entries are in the row below, to scroll sideways.
+- **Measured, not only looked at** (`/root/.config/deepslate/shots.sh`, pictures in `data/screenshots/after-*.png`): at 1280 and 1920 every row of Players and Invites is 49 px high and every row of Installs 38 px, the columns start at the same place in every row, the page does not scroll sideways. A name of 32 characters ("Maximilian_Featherstonehaugh_032") is cut and whole in its tooltip. At 390 px: cards, no sideways scroll.
+- Tests: `admin-lists.test.ts` (filter and search), the short hardware names. web 212.
+
+### FallingTree is part of the default pack (Alex, 2026-09-29 evening)
+
+- "Tree felling is a default mod pack." `fallingtree`: category base, switched on, no longer voted on. Locked: `FallingTree-1.21.1-1.21.1.11.jar`, both sides. **The pack is `0.1.0+5c3b0494`**, so everyone's next Play fetches one jar, and Play first asks for that pack.
+- The guide's FallingTree line shows by itself (it carries `<!-- mod: fallingtree -->`).
+- **Started once with it before anything was built on it** (the lesson of TabTPS): see the session log.
+
 ### docs/16 acceptance · state
 
 - [ ] `/analytics` shows the ten tiles, the chart, countries with the map, most active players for every period, and matches AMP within ±1 session. *Built and rendering; the comparison needs people to have played.*

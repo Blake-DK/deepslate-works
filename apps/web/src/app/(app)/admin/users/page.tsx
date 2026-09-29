@@ -84,7 +84,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       </div>
       {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
       <div className="flex flex-wrap items-center gap-3">
-        <nav className="flex gap-1 rounded-lg bg-muted p-1 text-sm" aria-label="Filter by early access">
+        <nav className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-sm" aria-label="Filter by early access">
           {(Object.keys(SHOW) as Show[]).map((k) => <Link key={k} href={href(k)} aria-current={only === k ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${only === k ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{SHOW[k]} ({count[k]})</Link>)}
         </nav>
         <form method="get" action="/admin/users" className="flex min-w-0 flex-1 items-center gap-2" role="search">

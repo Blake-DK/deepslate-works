@@ -497,6 +497,31 @@
       "requires": []
     },
     {
+      "slug": "fallingtree",
+      "name": "FallingTree",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Break the bottom log with an axe and the whole tree comes down. Leaves decay fast. Part of the pack from the start. Works alongside VeinMiner: FallingTree is the axe, VeinMiner is the key you hold.",
+      "wiki": "https://github.com/RakambdaOrg/FallingTree/wiki",
+      "videos": [
+        {
+          "title": "INSTANT Tree Cutting! | FallingTree Mod | Minecraft 1.21.5+ Java Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=kW0xOhRkTVU"
+        },
+        {
+          "title": "The Ultimate Tree Chopping Hack for Minecraft: Falling Tree Mod!",
+          "url": "https://www.youtube.com/watch?v=zmce1lR_z9I"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
       "slug": "create",
       "name": "Create",
       "category": "factories",
@@ -999,31 +1024,6 @@
         {
           "title": "Pipez mod - Minecraft 1.18+ Bit-By-Bit",
           "url": "https://www.youtube.com/watch?v=-UUor9ThmmQ"
-        }
-      ],
-      "version": "latest",
-      "requires": []
-    },
-    {
-      "slug": "fallingtree",
-      "name": "FallingTree",
-      "category": "world",
-      "side": "both",
-      "enabled": false,
-      "load": "L",
-      "recommended": true,
-      "hidden": false,
-      "exclusiveGroup": null,
-      "description": "Break the bottom log with an axe and the whole tree comes down. Leaves decay fast. Works alongside VeinMiner: FallingTree is the axe, VeinMiner is the key you hold.",
-      "wiki": "https://github.com/RakambdaOrg/FallingTree/wiki",
-      "videos": [
-        {
-          "title": "INSTANT Tree Cutting! | FallingTree Mod | Minecraft 1.21.5+ Java Mod Showcase",
-          "url": "https://www.youtube.com/watch?v=kW0xOhRkTVU"
-        },
-        {
-          "title": "The Ultimate Tree Chopping Hack for Minecraft: Falling Tree Mod!",
-          "url": "https://www.youtube.com/watch?v=zmce1lR_z9I"
         }
       ],
       "version": "latest",

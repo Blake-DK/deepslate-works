@@ -150,3 +150,35 @@ export function markLog(log: string, failedStep: string | null): Array<{ n: numb
   if (failedStep) for (let i = lines.length - 1; i >= 0; i--) if (lines[i]!.includes(`STEP ${failedStep}`)) { at = i; break; }
   return lines.map((text, i) => ({ n: i + 1, text, mark: /\]\s+FAIL\b|PROFILE NOT SAVED|UPDATE NOT APPLIED/.test(text) ? "fail" : at >= 0 && i === at ? "step" : at >= 0 && i > at ? "after" : null }));
 }
+
+// ---- for a column of a table: the part of a name that tells one from another. The whole name is in the tooltip.
+
+/** "13th Gen Intel(R) Core(TM) i7-13700H, 14 cores" → "i7-13700H, 14 cores"; "AMD Ryzen 7 5800X 8-Core Processor" → "Ryzen 7 5800X". */
+export function shortCpu(cpu: string): string {
+  const t = cpu
+    .replace(/\((?:R|TM|C)\)/gi, "")
+    .replace(/^\s*\d+(?:st|nd|rd|th) Gen\s+/i, "")
+    .replace(/\b(?:Intel|AMD)\b\s*/gi, "")
+    .replace(/\bCore\s+(?=i\d|Ultra)/i, "")
+    .replace(/\s+CPU\s+@\s*[\d.]+\s*GHz/i, "")
+    .replace(/\s+\d+-Core Processor/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return t || cpu;
+}
+
+/** "NVIDIA GeForce RTX 4070 Laptop GPU + Intel(R) Iris(R) Xe Graphics" → "RTX 4070 Laptop +1": the strongest card first, the rest counted. */
+export function shortGpu(gpu: string): string {
+  if (!gpu || gpu === "not known") return gpu;
+  const names = gpu.split(" + ").map((g) => g.replace(/\((?:R|TM|C)\)/gi, "").replace(/\b(?:NVIDIA|GeForce|AMD|Intel|Graphics|GPU)\b/gi, "").replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (names.length === 0) return gpu;
+  const rank = (n: string) => (/\b(RTX|GTX|RX\s*\d|Arc)\b/i.test(n) ? 0 : 1);
+  const sorted = [...names].sort((a, b) => rank(a) - rank(b));
+  return sorted.length > 1 ? `${sorted[0]} +${sorted.length - 1}` : sorted[0]!;
+}
+
+/** "Windows 11 Home Single Language 24H2 (26100)" → "11 Home SL 24H2": the column is called Windows. */
+export function shortOs(os: string): string {
+  if (!os || os === "not known") return os;
+  return os.replace(/^Windows\s+/i, "").replace(/\bSingle Language\b/i, "SL").replace(/\s*\(\d+\)\s*$/, "").replace(/\s+/g, " ").trim() || os;
+}

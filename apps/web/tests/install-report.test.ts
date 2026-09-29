@@ -142,3 +142,30 @@ describe("the tier is measured, not asked", () => {
     expect(kindOf("installer.report", "PLAYER")).toBe("INSTALL");
   });
 });
+
+describe("short names for a column", () => {
+  it("keep what tells one processor from another", async () => {
+    const { shortCpu } = await import("@/lib/install-report");
+    expect(shortCpu("13th Gen Intel(R) Core(TM) i7-13700H, 14 cores")).toBe("i7-13700H, 14 cores");
+    expect(shortCpu("12th Gen Intel(R) Core(TM) i9-12900K, 16 cores")).toBe("i9-12900K, 16 cores");
+    expect(shortCpu("Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz, 4 cores")).toBe("i5-8250U, 4 cores");
+    expect(shortCpu("AMD Ryzen 7 5800X 8-Core Processor, 8 cores")).toBe("Ryzen 7 5800X, 8 cores");
+    expect(shortCpu("not known")).toBe("not known");
+  });
+  it("put the real graphics card first and count the rest", async () => {
+    const { shortGpu } = await import("@/lib/install-report");
+    expect(shortGpu("NVIDIA GeForce RTX 4070 Laptop GPU + Intel(R) Iris(R) Xe Graphics")).toBe("RTX 4070 Laptop +1");
+    expect(shortGpu("Intel(R) Arc(TM) A380 Graphics + NVIDIA GeForce RTX 3080")).toBe("Arc A380 +1");
+    expect(shortGpu("Intel(R) UHD Graphics 620 + NVIDIA GeForce GTX 1650")).toBe("GTX 1650 +1");
+    expect(shortGpu("Intel(R) UHD Graphics 620")).toBe("UHD 620");
+    expect(shortGpu("AMD Radeon RX 6700 XT")).toBe("Radeon RX 6700 XT");
+    expect(shortGpu("not known")).toBe("not known");
+  });
+  it("leave Windows out of the Windows column", async () => {
+    const { shortOs } = await import("@/lib/install-report");
+    expect(shortOs("Windows 11 Home Single Language 24H2 (26100)")).toBe("11 Home SL 24H2");
+    expect(shortOs("Windows 11 Pro 25H2 (26200)")).toBe("11 Pro 25H2");
+    expect(shortOs("Windows 10 Home 22H2 (19045)")).toBe("10 Home 22H2");
+    expect(shortOs("not known")).toBe("not known");
+  });
+});

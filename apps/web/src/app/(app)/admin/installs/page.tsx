@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { OUTCOMES, summary, type SystemInfo } from "@/lib/install-report";
+import { OUTCOMES, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
 import { timeAgo } from "@/lib/series";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,11 @@ export const metadata: Metadata = { title: "Installs" };
 const TONE = { ok: "good", failed: "bad", cancelled: "warn" } as const;
 const LABEL = { ok: "All good", failed: "Failed", cancelled: "Stopped" } as const;
 const TIER: Record<string, string> = { LOW: "Older PC", MID: "Decent PC", HIGH: "Gaming PC" };
+
+/** The short form in the column, the whole of it on hover. */
+function Short({ full, short }: { full: string; short: string }) {
+  return <span data-truncate title={full} className="block min-w-0 truncate">{short}</span>;
+}
 
 export default async function InstallsPage({ searchParams }: { searchParams: Promise<{ outcome?: string }> }) {
   await requireAdmin();
@@ -34,6 +39,8 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   const pc = (l: (typeof latest)[number]) => ({
     s: summary(l.system as SystemInfo),
     who: <Link href={`/admin/installs/${l.id}`} className="block min-w-0 font-medium hover:underline"><Clip text={l.user.displayName} /></Link>,
+    cpu: <Short full={summary(l.system as SystemInfo).cpu} short={shortCpu(summary(l.system as SystemInfo).cpu)} />,
+    gpu: <Short full={summary(l.system as SystemInfo).gpu} short={shortGpu(summary(l.system as SystemInfo).gpu)} />,
     tier: l.tierMeasured ? <Badge tone={l.tierMeasured === "HIGH" ? "good" : l.tierMeasured === "LOW" ? "warn" : "neutral"} className="whitespace-nowrap">{TIER[l.tierMeasured]}</Badge> : <span className="text-muted-foreground" title="Not enough in the report to go on">–</span>,
     when: <span title={l.at.toISOString()}>{timeAgo(l.at, now)}</span>,
   });
@@ -43,7 +50,9 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
     return {
       s: summary(r.system as SystemInfo),
       who: <Link href={`/admin/installs/${r.id}`} className="block min-w-0 font-medium hover:underline"><Clip text={r.user.displayName} /></Link>,
-      changed: changed ? <Badge tone="warn" className="shrink-0 whitespace-nowrap" title={`was ${TIER[r.tierBefore!]}, measured ${TIER[r.tierMeasured!]}`}>PC re-measured</Badge> : null,
+      changed: changed ? <span className="shrink-0 cursor-help text-primary" title={`Their PC was measured on this run: was ${TIER[r.tierBefore!]}, measured ${TIER[r.tierMeasured!]}`} aria-label={`PC tier changed: was ${TIER[r.tierBefore!]}, measured ${TIER[r.tierMeasured!]}`}>●</span> : null,
+      os: <Short full={summary(r.system as SystemInfo).os} short={shortOs(summary(r.system as SystemInfo).os)} />,
+      gpu: <Short full={summary(r.system as SystemInfo).gpu} short={shortGpu(summary(r.system as SystemInfo).gpu)} />,
       when: <span title={r.at.toISOString()}>{timeAgo(r.at, now)}</span>,
       from: <span title={r.updatedFrom ? `updated itself, ${r.updatedFrom} to ${r.installerVersion}` : `installer ${r.installerVersion}`}>{r.mode === "play" ? "Play" : "Installer"}{r.updateProblem ? <span className="text-danger" title="The installer could not update itself"> !</span> : null}</span>,
       outcome: <Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"} className="whitespace-nowrap" title={about || undefined}>{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}{r.failedStep ? " …" : ""}</Badge>,
@@ -64,16 +73,16 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
           {latest.length > 0 && (
             <>
               <div className="hidden min-[800px]:block" data-testid="pcs-table">
-                <FixedTable label="The group's PCs" widths={["24%", "13%", "24%", "9%", "19%", "11%"]} head={[{ text: "Who" }, { text: "Tier" }, { text: "Processor" }, { text: "Memory", right: true }, { text: "Graphics" }, { text: "Measured", right: true }]}>
+                <FixedTable label="The group's PCs" widths={["27%", "13%", "21%", "9%", "18%", "12%"]} head={[{ text: "Who" }, { text: "Tier" }, { text: "Processor" }, { text: "Memory", right: true }, { text: "Graphics" }, { text: "Measured", right: true }]}>
                   {latest.map((l) => {
                     const p = pc(l);
                     return (
                       <tr key={l.id} data-row>
                         <td className={cell}>{p.who}</td>
                         <td className={cell}>{p.tier}</td>
-                        <td className={cell}><Clip text={p.s.cpu} /></td>
+                        <td className={cell}>{p.cpu}</td>
                         <td className={`${cell} text-right tabular-nums`}>{p.s.ram}</td>
-                        <td className={cell}><Clip text={p.s.gpu} /></td>
+                        <td className={cell}>{p.gpu}</td>
                         <td className={`${cell} text-right text-muted-foreground`}>{p.when}</td>
                       </tr>
                     );
@@ -87,9 +96,9 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
                     <li key={l.id} data-row className="rounded-lg border p-3">
                       <div className="flex min-w-0 items-center gap-2">{p.who}<span className="ml-auto shrink-0">{p.tier}</span></div>
                       <dl className="mt-1 divide-y text-sm">
-                        <Field name="Processor"><Clip text={p.s.cpu} /></Field>
+                        <Field name="Processor">{p.cpu}</Field>
                         <Field name="Memory"><span className="tabular-nums">{p.s.ram}</span></Field>
-                        <Field name="Graphics"><Clip text={p.s.gpu} /></Field>
+                        <Field name="Graphics">{p.gpu}</Field>
                         <Field name="Measured"><span className="text-muted-foreground">{p.when}</span></Field>
                       </dl>
                     </li>
@@ -101,9 +110,9 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
         </CardContent>
       </Card>
       <h2 className="pt-2 text-lg font-semibold">Every run</h2>
-      <nav className="flex flex-wrap gap-1 rounded-lg bg-muted p-1 text-sm" aria-label="Filter by outcome">
-        <Link href="/admin/installs" aria-current={!only ? "page" : undefined} className={`rounded-md px-3 py-1.5 ${!only ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>All ({total})</Link>
-        {OUTCOMES.map((o) => <Link key={o} href={`/admin/installs?outcome=${o}`} aria-current={only === o ? "page" : undefined} className={`rounded-md px-3 py-1.5 ${only === o ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{LABEL[o]} ({n(o)})</Link>)}
+      <nav className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-sm" aria-label="Filter by outcome">
+        <Link href="/admin/installs" aria-current={!only ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${!only ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>All ({total})</Link>
+        {OUTCOMES.map((o) => <Link key={o} href={`/admin/installs?outcome=${o}`} aria-current={only === o ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${only === o ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{LABEL[o]} ({n(o)})</Link>)}
       </nav>
       {rows.length === 0 ? (
         <Card><CardContent className="p-4 text-sm text-muted-foreground">{only ? "No reports with that outcome." : "No reports yet. They arrive when someone runs the installer."}</CardContent></Card>
@@ -111,7 +120,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
         <>
           <Card className="hidden min-[800px]:block" data-testid="runs-table">
             <CardContent className="p-2">
-              <FixedTable label="Every run" widths={["23%", "10%", "9%", "11%", "14%", "13%", "8%", "12%"]} head={[{ text: "Who" }, { text: "When", right: true }, { text: "From" }, { text: "Outcome" }, { text: "Pack" }, { text: "Windows" }, { text: "Memory", right: true }, { text: "Graphics" }]}>
+              <FixedTable label="Every run" widths={["22%", "11%", "9%", "11%", "14%", "13%", "8%", "12%"]} head={[{ text: "Who" }, { text: "When", right: true }, { text: "From" }, { text: "Outcome" }, { text: "Pack" }, { text: "Windows" }, { text: "Memory", right: true }, { text: "Graphics" }]}>
                 {rows.map((r) => {
                   const p = run(r);
                   return (
@@ -121,9 +130,9 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
                       <td className={cell}>{p.from}</td>
                       <td className={cell}>{p.outcome}</td>
                       <td className={cell}><Clip text={r.packVersion} mono className="text-xs" /></td>
-                      <td className={cell}><Clip text={p.s.os} /></td>
+                      <td className={cell}>{p.os}</td>
                       <td className={`${cell} text-right tabular-nums`}>{p.s.ram}</td>
-                      <td className={cell}><Clip text={p.s.gpu} /></td>
+                      <td className={cell}>{p.gpu}</td>
                     </tr>
                   );
                 })}
@@ -142,9 +151,9 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
                         <Field name="When"><span className="text-muted-foreground">{p.when}</span></Field>
                         <Field name="From">{p.from}{p.changed}</Field>
                         <Field name="Pack"><Clip text={r.packVersion} mono className="text-xs" /></Field>
-                        <Field name="Windows"><Clip text={p.s.os} /></Field>
+                        <Field name="Windows">{p.os}</Field>
                         <Field name="Memory"><span className="tabular-nums">{p.s.ram}</span></Field>
-                        <Field name="Graphics"><Clip text={p.s.gpu} /></Field>
+                        <Field name="Graphics">{p.gpu}</Field>
                       </dl>
                     </CardContent>
                   </Card>

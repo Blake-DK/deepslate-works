@@ -53,8 +53,8 @@ export default async function InvitesPage() {
               <Label htmlFor="note">Who is it for?</Label>
               <Input id="note" name="note" placeholder="for Bertie" maxLength={60} />
             </div>
-            <div className="w-28">
-              <Label htmlFor="days">Valid for (days)</Label>
+            <div className="w-32">
+              <Label htmlFor="days" className="whitespace-nowrap">Valid for, days</Label>
               <Input id="days" name="days" type="number" min={1} max={90} defaultValue={7} />
             </div>
             <Button type="submit">Create invite</Button>

@@ -19,7 +19,7 @@ The home connection has a static IP (203.0.113.10) and unifi-01p port-forwards. 
 player -> mc.dsw.test:25565 -> 203.0.113.10 (unifi-01p forward) -> mc-router:25565 (AMP host) -> AMP instance game port
 ```
 
-- unifi-01p: forward 25565/tcp, 24454/udp (Simple Voice Chat) and 19132/udp (Bedrock, optional) to the AMP host. Remove the Minecraft forwards that pointed at pangolin-01v.
+- unifi-01p: forward 25565/tcp, 24454/udp (Simple Voice Chat) and 19132/udp (Bedrock) to the AMP host at 10.0.10.8. The forwards that pointed at pangolin-01v (10.0.10.7) are repointed.
 - DNS: `mc.dsw.test`, `boys.dsw.test`, `vanilla.dsw.test` → 203.0.113.10 (not the VPS).
 - Pangolin keeps HTTP resources only. The portal, its WireGuard tunnel and everything on the VPS are unchanged.
 - Why not Caddy or Traefik on the AMP host: their TCP routing matches TLS SNI, and Minecraft's handshake is not TLS, so they cannot see the hostname. mc-router parses the Minecraft handshake itself.
@@ -55,7 +55,7 @@ Because the AMP host is now internet-facing on 25565: no `--default` route in mc
 
 ## Task for Alex
 
-- unifi-01p: port forwards 25565/tcp, 24454/udp, 19132/udp → AMP host LAN IP. Delete the Minecraft forwards to pangolin-01v and any Minecraft raw resources in Pangolin.
+- unifi-01p: port forwards 25565/tcp (`mc-java`), 24454/udp (`mc-voice`), 19132/udp (`mc-bedrock`) → AMP host **10.0.10.8**, WAN1. The old `pang-minecraf-java` and `pang-minecraft-bedrock` rules are repointed from 10.0.10.7 (Pangolin) to 10.0.10.8 and renamed; remove any Minecraft raw resources in Pangolin.
 - DNS: `mc.dsw.test`, `boys.dsw.test`, `vanilla.dsw.test` → 203.0.113.10.
 - Voice chat: one UDP port per server that runs it; Deepslate Works uses 24454. Another server wanting voice chat needs its own port and forward.
 

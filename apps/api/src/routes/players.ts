@@ -43,7 +43,7 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
   app.get("/console/tail", async (req, reply) => {
     if (!requireAdmin(req, reply)) return;
     const n = Math.min(300, Math.max(1, Number((req.query as { lines?: string }).lines ?? 200) || 200));
-    return { state: tail.state, lines: tail.lines.slice(-n) };
+    return { state: tail.state, lines: tail.lines.slice(-n), entries: tail.entries.slice(-n).map((e) => ({ seq: e.seq, text: e.text })) };
   });
 
   app.post("/server/:op", async (req, reply) => {

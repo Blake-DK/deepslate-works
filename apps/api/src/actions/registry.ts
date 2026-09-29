@@ -115,6 +115,13 @@ export const actions = {
     input: z.object({ text: z.string().min(1).max(200).regex(/^[^\n\r]+$/) }),
     build: (_ctx, { text }) => [`say ${text.replace(/[§]/g, "")}`],
   }),
+  "server.restartWarning": define({
+    name: "server.restartWarning",
+    role: "system",
+    input: z.object({ minutes: z.number().int().min(0).max(120) }),
+    build: (_ctx, { minutes }) => [minutes === 0 ? "say Restarting now. Back in a minute or two." : `say Server restarts in ${minutes} minute${minutes === 1 ? "" : "s"}. Get somewhere safe.`],
+  }),
+  "server.restartCancelled": define({ name: "server.restartCancelled", role: "system", input: z.object({}), build: () => ["say The restart has been called off."] }),
   "server.list": define({ name: "server.list", role: "system", input: z.object({}), build: () => ["list"] }),
 };
 

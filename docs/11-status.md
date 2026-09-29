@@ -17,12 +17,8 @@ Last updated 2026-09-29 (OOM incident and the deploy change that follows from it
 The VPS has no Node, and **it never builds images** (see "OOM incident" below). Checks run in a throwaway container with a memory cap; images come from CI:
 
 ```
-# checks (typecheck, lint, tests): capped, and as ladm so nothing in the repo ends up owned by root
-docker run --rm --memory=1500m --memory-swap=2500m --cpus=2 -u 1009:1009 -e HOME=/tmp -e CI=1 \
-  -v /home/ladm/Minecraft-site:/app -w /app node:22-alpine sh -c \
-  'npm i -g --prefix /tmp/pnpm pnpm@10 >/dev/null 2>&1 && export PATH=/tmp/pnpm/bin:$PATH \
-   && pnpm install --frozen-lockfile && (cd apps/web && pnpm exec prisma generate) \
-   && (cd apps/api && pnpm exec prisma generate) && pnpm typecheck && pnpm lint && pnpm test'
+# checks (typecheck, lint, tests): in a container capped at 1.5 GB, as ladm so nothing ends up owned by root
+deploy/check.sh                 # everything;  deploy/check.sh api test  for one package and step
 
 # deploy: the only way (docs/09). Push to main, wait for CI, then:
 sudo /home/ladm/Minecraft-site/deploy/deploy.sh
@@ -36,6 +32,25 @@ docker exec deepslate-web node apps/web/scripts/invite.mjs "for Alex" 14
 ```
 
 Gotchas found the hard way: `CI=1` makes pnpm default to `--frozen-lockfile`; pnpm 10 needs `pnpm.onlyBuiltDependencies` (root `package.json`) for Prisma/esbuild postinstalls; ESLint plugins need the `public-hoist-pattern` lines in `.npmrc`; if you change `.npmrc`, delete `node_modules` before reinstalling.
+
+## Phase 3 · dashboard (2026-09-29, started on the planner's go-ahead; Phase 2's last boxes wait on the vote and Alex's first install)
+
+Built and deployed in this order; docs/16 follows (tables and parsers, then its pages).
+
+- **api**: status poller (`src/status/poller.ts`, 10 s), `ServerSnapshot` writer with thinning, `/status` served from memory, planned restart with the in-game countdown (`src/status/restart.ts`, lines built in the registry: `server.restartWarning`, `server.restartCancelled`), backup endpoints, console entries numbered and streamed (`/console/stream`), `lastSeenAt` stamped on join and leave.
+- **web**: Home (status pill, players with heads, TPS chip, memory, uptime, 24 h sparkline, News, map), `/map` (full screen, back button), `/players`, Admin → Server (restart with a warning, call it off, backup, announcement composer with "also say it in game", announcement list, live console). Pages refresh themselves every 10 to 15 s while the tab is visible.
+- **"Asleep"** is its own state on the pill. AMP puts the instance to sleep when nobody is on (states 30 and 50) and wakes it on the first connection; the portal says so instead of calling it offline. The download rule is unchanged: players can download only while the state is Running (`server/modpack/gate.ts`), so a sleeping server means no downloads for players. Alex to decide whether asleep should count as up.
+- **BlueMap** was already in the manifest (`bluemap`, server side) with `modpack/server/config/bluemap/webserver.conf` at ip `10.77.0.2`, port `8100`, from the 2026-09-29 server build; nothing to change. The map only answers while the Minecraft server runs, so Home and `/map` show it only when the state is online.
+- **Backup now** is built but switched off by AMP: `webapp` lacks `LocalFileBackupPlugin.Backup.TakeBackup`. The page says so. Alex's to-do 12.
+- Tests: api 33, web 27, modpack 9.
+
+### Phase 3 acceptance · state
+
+- [ ] Home shows Online/Offline within 20 s of a real change, names with heads, TPS and memory. *Built (10 s poll + 10 s page refresh); needs watching through a real start and stop.*
+- [ ] The map loads at `map.<domain>` only when logged in; logged out redirects to login and back. *Redirect verified earlier; embedding on Home needs the server running to check.*
+- [ ] Admin restart with a 5-minute countdown warns every minute and restarts on time. *Unit-tested with a fake clock; needs one real run.*
+- [ ] Console tail streams live for admins; players cannot reach it. *Built; route answers 403 for non-admins.*
+- [x] `/api/health` is green. Monitoring (UptimeRobot or similar) still to be set up by Alex.
 
 ## OOM incident, 2026-09-29 03:58 UTC
 
@@ -216,10 +231,13 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 8. **Test the wait room** with one friend: connect to `mc.dsw.test`, confirm the room + chat link, click it, confirm release and `whitelist.json`. Then tick docs/14 acceptance.
 9. Optional `DISCORD_BOT_TOKEN` (a bot in the Discord server) so api re-checks membership every 5 min; without it, leaving the server only bites at the next Discord login.
 10. ~~GHCR login on the VPS~~ Done 2026-09-29: classic token, `read:packages` only, login stored in `/root/.docker/config.json`. Fine-grained tokens get 403 from GHCR.
+12. **AMP: allow backups from the portal** (optional): give the `webapp` user's role the permission `LocalFileBackupPlugin.Backup.TakeBackup`. Until then Admin → Server → "Backup now" stays greyed out and AMP's own schedule is the backup.
+13. **Decide: does a sleeping server count as "up" for downloads?** Today players can download only while AMP says Running.
 11. ~~Rotate the GitHub token~~ New token in place 2026-09-29 (expires 2026-11-28). **Alex: revoke the old one on GitHub** (Settings → Developer settings → Fine-grained tokens); replacing it on the VPS does not invalidate it.
 
 ## Session log
 
+- **2026-09-29 morning** · Phase 3 dashboard built (see "Phase 3 · dashboard"); `deploy/check.sh` runs the checks in a capped container.
 - **2026-09-29 05:22** · Stack registered in Dockhand as pull-only (`deploy/dockhand-sync.py`, mirror in `/data/stacks/deepslate`); compose host paths now built from `DEEPSLATE_DIR` so a redeploy from Dockhand mounts the same directories. GitHub token rotated (new fine-grained token, expires 2026-11-28); to-do 11 done.
 - **2026-09-29 05:09** · First deploy from GHCR images via `deploy/deploy.sh`; images, AMP smoke, rsync listing and the in-api Build verified (see "OOM incident"). Planner specs 15, 15a, 16 arrived by push (`ba5decf`); read, not started.
 - **2026-09-29 early morning** · OOM at 03:58 during `up --build`, reboot 04:07. Recovery check of every site, guardrails on the host (swap, earlyoom, capped builder, tooling hook), deploy moved to CI + GHCR + `deploy/deploy.sh`, `modpack build` moved into `api`, memory limits adjusted, `fetchJar` streams. api tests 21, modpack 9, web 20. Wait-room audit helper (`apps/api/src/audit.ts`: an audit row from a caller id that is not a user is kept with no user instead of failing the request) committed; it was already in the running image.

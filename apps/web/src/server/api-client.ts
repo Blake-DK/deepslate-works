@@ -10,7 +10,7 @@ export class ApiError extends Error {
   }
 }
 
-type Opts = { method?: "GET" | "POST"; body?: unknown; caller?: Caller; timeoutMs?: number };
+type Opts = { method?: "GET" | "POST" | "DELETE"; body?: unknown; caller?: Caller; timeoutMs?: number; signal?: AbortSignal };
 
 function request(path: string, opts: Opts, accept: string) {
   if (!env.API_URL || !env.API_SERVICE_TOKEN) throw new ApiError(503, "api_unconfigured", "Backend not configured");
@@ -25,7 +25,7 @@ function request(path: string, opts: Opts, accept: string) {
     method: opts.method ?? "GET",
     headers,
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
-    signal: AbortSignal.timeout(opts.timeoutMs ?? 8000),
+    signal: opts.signal ? AbortSignal.any([opts.signal, AbortSignal.timeout(opts.timeoutMs ?? 8000)]) : AbortSignal.timeout(opts.timeoutMs ?? 8000),
     cache: "no-store",
   });
 }

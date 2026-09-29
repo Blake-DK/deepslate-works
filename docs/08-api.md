@@ -26,6 +26,21 @@ The app's own API is small; most pages are server components. These are the rout
 | POST | `/api/admin/announce` | store + `say` in game |
 | GET | `/api/admin/audit?…` | audit log |
 
+## What Phase 3 actually built (2026-09-29)
+
+The pages render on the server and read the data directly, so most of the routes listed above never became HTTP routes in `web`. What exists:
+
+| Where | Route | Does |
+|---|---|---|
+| web | `GET /api/admin/console` | live console as `text/event-stream`, admin only. Each event's `id` is the line's sequence number; a reconnecting browser sends `Last-Event-ID` and gets only what it missed. Ends after 10 min, the browser reconnects. |
+| web | server actions in `app/(app)/admin/server/actions.ts` | start / stop / restart, restart with a warning, call it off, backup, announce (+ `say`), pin / unpin / delete an announcement |
+| api | `GET /status` | the poller's last answer (at most 10 s old): `state`, `stateCode`, `availability` (`online` \| `starting` \| `sleeping` \| `offline`), `players[]`, `online[{name, uuid}]`, `maxPlayers`, `cpu`, `memMb`, `memMaxMb`, `tps`, `uptime`, `at`. Falls back to asking AMP when the poller's answer is older than 30 s. |
+| api | `GET /server/schedule`, `POST /server/restart-in {minutes 1..120}`, `DELETE /server/schedule` | the planned restart (one at a time, in memory) |
+| api | `GET /server/backup`, `POST /server/backup` | whether `webapp` may take backups (`Core.CurrentSessionHasPermission`), and `LocalFileBackupPlugin.TakeBackup` |
+| api | `GET /console/tail?lines=`, `GET /console/stream?since=` | last lines (now with `entries[{seq, text}]`), and the live stream as newline-delimited JSON with a heartbeat every 15 s |
+
+`api` polls `Core.GetStatus` + `Core.GetUserList` every 10 s (`apps/api/src/status/poller.ts`) and writes `ServerSnapshot`: on every change of state or player list, otherwise every 15 s while running and every 5 min while not. Rows older than 48 h are thinned to one per five minutes, rows older than 30 days are deleted (hourly). TPS, memory and the player limit come from AMP's own metrics (`TPS`, `Memory Usage`, `Active Users`); no console command is sent to measure anything.
+
 ## Server actions registry (`apps/api/src/actions/registry.ts`)
 
 The registry lives in `api`, the only service with a route to AMP. `web` mirrors `POST /api/actions/<name>` for the browser and forwards to `api` with the service token and the user headers; `api` applies the role, rate limit and validation itself.
@@ -79,6 +94,8 @@ All calls go to the ADS (`AMP_URL=http://10.77.0.2:8080`) at `/API/ADSModule/Ser
 | `Core.GetAMPRolePermissions` | | `Unauthorized Access` (correct) |
 
 Errors from AMP for missing rights come back as HTTP 200 with `{"Title":"Unauthorized Access","Message":…}`; the wrapper treats `Title` present as an error.
+
+Added 2026-09-29 (checked against `Core.GetAPISpec` on the live instance): `Core.CurrentSessionHasPermission(PermissionNode)`, `LocalFileBackupPlugin.TakeBackup(Title, Description, Sticky, Local, S3, WasCreatedAutomatically, DirtyOnly, BackupWhileRunning)`, `LocalFileBackupPlugin.BackupWillStopServer()`. For docs/16: `FileManagerPlugin.GetDirectoryListing(Dir)`, `FileManagerPlugin.GetFileChunk(Filename, Position, Length)`, `FileManagerPlugin.ReadFileChunk(Filename, Offset, ChunkSize)`. `webapp` today: `FileManager.FileManager.BrowseFiles` yes, `FileManager.FileManager.DownloadFiles` yes, `Core.AppManagement.RestartApplication` yes, `LocalFileBackupPlugin.Backup.TakeBackup` **no**. `GetStatus.Metrics` keys: `CPU Usage`, `Memory Usage`, `Active Users`, `TPS` (each `{RawValue, MaxValue, Percent, Units}`). States seen: 20 Running, 30 Sleeping, 50 PreparingForSleep, 0 Stopped.
 
 ## Errors
 

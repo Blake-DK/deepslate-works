@@ -4,41 +4,83 @@ import { db } from "@/server/db";
 import { env } from "@/env";
 import { getOpenVote } from "@/server/vote/votes";
 import { formatDate } from "@/lib/utils";
+import { timeAgo } from "@/lib/series";
 import { canSeeServer, getSettings } from "@/server/settings";
+import { getStatus, playersLast24h } from "@/server/status";
+import { getAnnouncements } from "@/server/announcements";
 import { LaunchBanner } from "@/components/launch-banner";
+import { AutoRefresh } from "@/components/auto-refresh";
+import { StatusCard } from "@/components/server/status-card";
+import { MapEmbed } from "@/components/server/map-embed";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 
 export default async function HomePage() {
   const user = await requireOnboardedUser();
-  const [members, openVote, settings] = await Promise.all([db.user.count(), getOpenVote(), getSettings()]);
+  const [members, openVote, settings, status, series, news] = await Promise.all([
+    db.user.count(),
+    getOpenVote(),
+    getSettings(),
+    getStatus(),
+    playersLast24h().catch(() => [] as Array<number | null>),
+    getAnnouncements(3),
+  ]);
   const showServer = canSeeServer(user, settings);
+  const mapUp = Boolean(env.MAP_URL) && status?.availability === "online";
   return (
     <div className="space-y-6">
+      <AutoRefresh seconds={10} />
       <div>
         <h1 className="text-2xl font-semibold">Welcome back, {user.displayName}</h1>
         <p className="text-muted-foreground">{user.mcUsername ? <>Linked to Minecraft account <span className="font-mono">{user.mcUsername}</span>.</> : <>Your Minecraft account gets linked the first time you join the server.</>} {members} {members === 1 ? "person" : "people"} in the group so far.</p>
       </div>
       {!settings.live && <LaunchBanner launchAt={settings.launchAt} admin={user.role === "ADMIN"} />}
       <div className="grid gap-4 sm:grid-cols-2">
+        <StatusCard status={status} series={series} address={showServer ? env.SERVER_ADDRESS : null} />
+        <div className="space-y-4">
+          <Card className={openVote ? "border-primary" : undefined}>
+            <CardHeader>
+              <CardTitle>{openVote ? `Vote open: ${openVote.title}` : "The mod list"}</CardTitle>
+              <CardDescription>{openVote ? `Tick the mods you want${openVote.closesAt ? ` before ${formatDate(openVote.closesAt)}` : ""}. Takes two minutes on a phone.` : "Read up on every mod, with videos and wiki links. The season vote will show up here when it opens."}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-2">
+              {openVote && <Link href="/vote" className={buttonClasses("primary", "sm")}>Vote now</Link>}
+              <Link href="/mods" className={buttonClasses("secondary", "sm")}>Mod list</Link>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>News</CardTitle>
+              {news.length === 0 && <CardDescription>Nothing announced yet.</CardDescription>}
+            </CardHeader>
+            {news.length > 0 && (
+              <CardContent>
+                <ul className="space-y-3">
+                  {news.map((n) => (
+                    <li key={n.id} className="text-sm">
+                      <p className="whitespace-pre-line">{n.pinned && <Badge tone="warn" className="mr-2">Pinned</Badge>}{n.body}</p>
+                      <p className="text-xs text-muted-foreground">{n.author} · {timeAgo(n.createdAt)}</p>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            )}
+          </Card>
+        </div>
+      </div>
+      {env.MAP_URL && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">Server <Badge>{settings.live ? "Live" : "Coming soon"}</Badge></CardTitle>
-            <CardDescription>Live status, who&apos;s online and the map arrive in phase 3.{showServer && <> Address: <span className="font-mono">{env.SERVER_ADDRESS}</span></>}</CardDescription>
+            <CardTitle>Live map</CardTitle>
+            <CardDescription>{mapUp ? "The world in 3D, with everyone who is online on it." : "The map comes from the game server, so it is only there while the server is running."}</CardDescription>
           </CardHeader>
-        </Card>
-        <Card className={openVote ? "border-primary" : undefined}>
-          <CardHeader>
-            <CardTitle>{openVote ? `Vote open: ${openVote.title}` : "The mod list"}</CardTitle>
-            <CardDescription>{openVote ? `Tick the mods you want${openVote.closesAt ? ` before ${formatDate(openVote.closesAt)}` : ""}. Takes two minutes on a phone.` : "Read up on every mod, with videos and wiki links. The season vote will show up here when it opens."}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex gap-2">
-            {openVote && <Link href="/vote" className={buttonClasses("primary", "sm")}>Vote now</Link>}
-            <Link href="/mods" className={buttonClasses("secondary", "sm")}>Mod list</Link>
+          <CardContent className="space-y-3">
+            {mapUp && <MapEmbed url={env.MAP_URL} startOpen={user.pcTier !== "LOW"} />}
+            <Link href="/map" className={buttonClasses(mapUp ? "primary" : "secondary", "lg")}>Open live map</Link>
           </CardContent>
         </Card>
-      </div>
+      )}
     </div>
   );
 }

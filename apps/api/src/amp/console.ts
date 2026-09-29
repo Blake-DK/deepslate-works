@@ -31,8 +31,13 @@ export function parseConsoleLine(text: string): ConsoleEvent[] {
 type Entry = { Timestamp?: string; Source?: string; Type?: string; Contents?: string };
 type Updates = { Status?: { State?: number }; ConsoleEntries?: Entry[] };
 
+export type ConsoleEntry = { seq: number; at: string; text: string };
+const KEEP = 300;
+
 export class ConsoleTail {
-  readonly lines: string[] = [];
+  /** Last 300 console lines, oldest first; `seq` only ever grows, so a reader can ask for "everything after n". */
+  readonly entries: ConsoleEntry[] = [];
+  private seq = 0;
   readonly uuidByName = new Map<string, string>();
   readonly online = new Set<string>();
   state = -1;
@@ -42,8 +47,44 @@ export class ConsoleTail {
 
   constructor(private readonly amp: Amp, private readonly log: (o: unknown, msg: string) => void) {}
 
+  get lines(): string[] {
+    return this.entries.map((e) => e.text);
+  }
+
   on(handler: (e: ConsoleEvent) => void) {
     this.handlers.push(handler);
+  }
+
+  off(handler: (e: ConsoleEvent) => void) {
+    this.handlers = this.handlers.filter((h) => h !== handler);
+  }
+
+  /** Entries after `since` (exclusive), at most `max` of the newest. */
+  after(since: number, max = 200): ConsoleEntry[] {
+    const out = this.entries.filter((e) => e.seq > since);
+    return out.length > max ? out.slice(-max) : out;
+  }
+
+  /** Adds one console line and notifies the handlers; `poll` calls it for every new AMP entry. */
+  ingest(text: string, at: Date = new Date()) {
+    this.entries.push({ seq: ++this.seq, at: at.toISOString(), text });
+    if (this.entries.length > KEEP) this.entries.splice(0, this.entries.length - KEEP);
+    for (const e of parseConsoleLine(text)) {
+      if (e.type === "uuid") this.uuidByName.set(e.name, e.uuid);
+      if (e.type === "join") this.online.add(e.name);
+      if (e.type === "leave") this.online.delete(e.name);
+      if (e.type === "list") {
+        this.online.clear();
+        for (const n of e.names) this.online.add(n);
+      }
+      for (const h of [...this.handlers]) {
+        try {
+          h(e);
+        } catch (err) {
+          this.log({ err: String(err) }, "console handler failed");
+        }
+      }
+    }
   }
 
   start() {
@@ -71,25 +112,7 @@ export class ConsoleTail {
       }
       for (const entry of u.ConsoleEntries ?? []) {
         const text = entry.Contents ?? "";
-        if (!text) continue;
-        this.lines.push(text);
-        if (this.lines.length > 300) this.lines.splice(0, this.lines.length - 300);
-        for (const e of parseConsoleLine(text)) {
-          if (e.type === "uuid") this.uuidByName.set(e.name, e.uuid);
-          if (e.type === "join") this.online.add(e.name);
-          if (e.type === "leave") this.online.delete(e.name);
-          if (e.type === "list") {
-            this.online.clear();
-            for (const n of e.names) this.online.add(n);
-          }
-          for (const h of this.handlers) {
-            try {
-              h(e);
-            } catch (err) {
-              this.log({ err: String(err) }, "console handler failed");
-            }
-          }
-        }
+        if (text) this.ingest(text);
       }
     } finally {
       this.busy = false;

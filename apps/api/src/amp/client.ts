@@ -8,13 +8,27 @@ export const AMP_STATE: Record<number, string> = {
 
 export type AmpStatus = {
   state: string;
+  stateCode?: number | null;
   players: string[];
+  maxPlayers?: number | null;
   cpu: number | null;
   memMb: number | null;
   memMaxMb?: number | null;
+  tps?: number | null;
   uptime: string | null;
   raw?: unknown;
 };
+
+/** What the portal shows. Sleeping is AMP's idle mode: the server wakes when someone connects. */
+export type Availability = "online" | "starting" | "sleeping" | "offline";
+export function availability(stateCode: number | null | undefined): Availability {
+  switch (stateCode) {
+    case 20: return "online";
+    case 5: case 7: case 10: case 40: case 60: return "starting";
+    case 30: case 50: return "sleeping";
+    default: return "offline";
+  }
+}
 
 export interface Amp {
   /** Verifies login works; throws on failure. */
@@ -76,12 +90,17 @@ export class AmpClient implements Amp {
     const r = await this.call<{ State?: number; Uptime?: string; Metrics?: Record<string, Metric> }>("Core", "GetStatus");
     const users = await this.call<Record<string, string>>("Core", "GetUserList").catch(() => ({}) as Record<string, string>);
     const players = Object.values(users ?? {}).filter((v): v is string => typeof v === "string");
+    const running = r.State === 20;
     return {
       state: typeof r.State === "number" ? (AMP_STATE[r.State] ?? `State${r.State}`) : "Unknown",
+      stateCode: typeof r.State === "number" ? r.State : null,
       players,
+      maxPlayers: r.Metrics?.["Active Users"]?.MaxValue ?? null,
       cpu: r.Metrics?.["CPU Usage"]?.RawValue ?? null,
       memMb: r.Metrics?.["Memory Usage"]?.RawValue ?? null,
       memMaxMb: r.Metrics?.["Memory Usage"]?.MaxValue ?? null,
+      // AMP reports 0 TPS for a server that is not running; that is "no reading", not a bad one.
+      tps: running ? (r.Metrics?.["TPS"]?.RawValue ?? null) : null,
       uptime: r.Uptime ?? null,
       raw: r,
     };
@@ -92,7 +111,7 @@ export class AmpClient implements Amp {
 export class MockAmp implements Amp {
   async ping() {}
   async getStatus(): Promise<AmpStatus> {
-    return { state: "Running", players: ["Alex"], cpu: 12, memMb: 3100, memMaxMb: 6144, uptime: "01:23:45" };
+    return { state: "Running", stateCode: 20, players: ["Alex"], maxPlayers: 20, cpu: 12, memMb: 3100, memMaxMb: 6144, tps: 20, uptime: "01:23:45" };
   }
   async call<T>(): Promise<T> {
     return {} as T;

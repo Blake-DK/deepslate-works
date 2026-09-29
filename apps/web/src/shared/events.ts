@@ -82,6 +82,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "modpack.sync-dry": "checked what a mod sync would change",
   "server.start": "started the server",
   "server.stop": "stopped the server",
+  "server.kill": "ended the server's process by force (it hung while shutting down)",
   "server.restart": (p) => (p.scheduled ? "the planned restart went ahead" : "restarted the server"),
   "server.restart.scheduled": (p) => `planned a restart in ${s(p.minutes)} minutes`,
   "server.restart.cancelled": "called off the planned restart",

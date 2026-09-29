@@ -219,11 +219,12 @@ export const actions = {
     build: (_ctx, { what, id, x, z }) => [`execute in minecraft:overworld positioned ${x} 64 ${z} run locate ${what} ${id}`],
   }),
   // Can someone stand there? Three answers: the block below is not air ("Test failed"), the two above it are ("Test passed").
+  // `if` belongs to `execute` itself: no `run` in front of it (the first version had one and the game refused it).
   "world.standable": define({
     name: "world.standable",
     role: "ADMIN",
     input: z.object({ x: z.number().int().min(-100_000).max(100_000), y: z.number().int().min(-63).max(318), z: z.number().int().min(-100_000).max(100_000) }),
-    build: (_ctx, { x, y, z }) => [ow(`if block ${x} ${y - 1} ${z} minecraft:air`), ow(`if block ${x} ${y} ${z} minecraft:air`), ow(`if block ${x} ${y + 1} ${z} minecraft:air`)],
+    build: (_ctx, { x, y, z }) => [y - 1, y, y + 1].map((h) => `execute in minecraft:overworld if block ${x} ${h} ${z} minecraft:air`),
   }),
   "map.list": define({ name: "map.list", role: "ADMIN", input: z.object({}), build: () => ["bluemap maps"] }),
   "map.purge": define({ name: "map.purge", role: "ADMIN", input: z.object({ map: z.string().regex(/^[a-z0-9_-]{1,40}$/) }), build: (_ctx, { map }) => [`bluemap purge ${map}`] }),

@@ -49,8 +49,10 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
   app.post("/server/:op", async (req, reply) => {
     if (!requireAdmin(req, reply)) return;
     const op = (req.params as { op: string }).op;
-    const method = ({ start: "Start", stop: "Stop", restart: "Restart" } as Record<string, string>)[op];
-    if (!method) return reply.code(404).send({ error: { code: "validation", message: "start|stop|restart" } });
+    // `kill` is for a server that hangs while it shuts down (2026-09-29: stuck at "Saving worlds" for ten minutes,
+    // AMP in "Stopping" and deaf to Stop). What had not been saved is lost, so it is not on any page: api only.
+    const method = ({ start: "Start", stop: "Stop", restart: "Restart", kill: "Kill" } as Record<string, string>)[op];
+    if (!method) return reply.code(404).send({ error: { code: "validation", message: "start|stop|restart|kill" } });
     try {
       const r = await amp.call<unknown>("Core", method);
       await audit({ userId: req.caller.userId, action: `server.${op}`, params: {}, result: "OK" });

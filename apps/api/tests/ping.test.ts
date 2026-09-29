@@ -62,7 +62,7 @@ describe("ping rounds", () => {
     expect(actions["world.locate"].build(ctx, { what: "biome", id: "minecraft:cherry_grove", x: 0, z: 0 })).toEqual(["execute in minecraft:overworld positioned 0 64 0 run locate biome minecraft:cherry_grove"]);
     expect(actions["world.locate"].input.safeParse({ what: "biome", id: "minecraft:plains run op x", x: 0, z: 0 }).success).toBe(false);
     expect(actions["map.purge"].input.safeParse({ map: "overworld; stop" }).success).toBe(false);
-    expect(actions["world.standable"].build(ctx, { x: 0, y: 105, z: 0 })[0]).toBe("execute in minecraft:overworld run if block 0 104 0 minecraft:air");
+    expect(actions["world.standable"].build(ctx, { x: 0, y: 105, z: 0 })[0]).toBe("execute in minecraft:overworld if block 0 104 0 minecraft:air");
   });
   it("shows a ping only while it is recent and its player is here", () => {
     const now = 1_000_000;

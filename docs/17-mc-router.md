@@ -69,3 +69,18 @@ None required. The portal's manifest already says `mc.dsw.test`, no port. If mor
 - [ ] Connecting by raw IP (203.0.113.10) is refused by mc-router (no default route).
 - [ ] A sleeping AMP instance wakes on the first connection through mc-router (AMP's own wake-on-connect handles it; mc-router just forwards).
 - [ ] Voice chat and Bedrock still work as before.
+
+## Bedrock: NetherNet, not RakNet (found 2026-09-29)
+
+This Bedrock server build refuses RakNet ("NetherNet is the only supported transport type"), so the classic UDP 19132 forward is wrong. NetherNet uses **TCP 19132** for the join handshake and a **UDP port range** for gameplay; the range was unset (random ports, unforwardable) and is now pinned to **19134–19153** in the instance config. Forwards on unifi-01p:
+
+| Rule | Protocol | Forward |
+|---|---|---|
+| `mc-bedrock` | TCP 19132 | 10.0.10.8:19132 |
+| `mc-bedrock-play` | UDP 19134–19153 | 10.0.10.8 same range |
+
+Remove the old UDP 19132 forward. Monitoring: Bedrock is a plain TCP check on 10.0.10.8:19132; Kuma's Bedrock game monitor (UDP ping) will always fail with NetherNet. Config backups: `/root/mc-router-backup-20260929-091926/bedrock/` on the AMP host.
+
+## Monitoring (Uptime Kuma on 10.0.10.7)
+
+Java: "Minecraft Server" monitors on `mc.dsw.test`, `boys.dsw.test`, `vanilla.dsw.test`, port 25565 (hostnames, because mc-router routes by name and backend ports are localhost-only). A sleeping instance reports up: AMP answers status pings without waking it, so the check means "joinable". Voice chat (UDP 24454) has no usable check; it listens only while Deepslate Works is awake.

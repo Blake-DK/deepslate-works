@@ -31,3 +31,12 @@ export function updateAvailable(current: string | null | undefined, last: string
 export function nothingHappened(s: { visible: boolean; focused: boolean; lostFocus: boolean }): boolean {
   return s.visible && s.focused && !s.lostFocus;
 }
+
+/**
+ * Is Deepslate Works on their PC, as far as the site knows? Not when their latest report is a successful uninstall
+ * (1.5.2): then the Play button offers the download again, as it does the first time.
+ */
+export function installedNow(latest: { mode: string; outcome: string } | null | undefined): boolean {
+  return !(latest && latest.mode === "uninstall" && latest.outcome === "ok");
+}
+

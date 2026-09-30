@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { installedNow } from "@/lib/play";
 import { db } from "@/server/db";
 import { requireAdmin } from "@/server/auth/session";
 import { getSettings } from "@/server/settings";
@@ -32,11 +33,12 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     db.user.findMany({ orderBy: [{ role: "asc" }, { createdAt: "asc" }] }),
     getSettings(),
     // the installer each member used last: their latest report
-    db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, installerVersion: true } }),
+    db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, installerVersion: true, mode: true, outcome: true } }),
     getInstaller(),
   ]);
   const current = installer?.version ?? null;
   const lastInstaller = new Map(lastRuns.map((r) => [r.userId, r.installerVersion]));
+  const uninstalled = new Set(lastRuns.filter((r) => !installedNow(r)).map((r) => r.userId));
   const all = users.map((u) => {
     const installerVersion = lastInstaller.get(u.id) ?? null;
     return { ...u, installerVersion, installerOutdated: installerVersion !== null && isOutdated(installerVersion, current) };
@@ -59,7 +61,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         <span className="flex min-w-0 items-center gap-2"><Clip text={u.mcUsername} mono />{u.verifiedAt && <Badge tone="good" className="shrink-0">verified</Badge>}</span>
       ) : <Badge className="shrink-0">Unlinked</Badge>,
       pc: u.pcTier ? <Badge tone={PC[u.pcTier][1]} className="shrink-0" title={`${PC[u.pcTier][0]} PC${u.pcTierSource === "measured" ? ", measured by the installer" : ", their own pick"}`}>{PC[u.pcTier][0]} PC</Badge> : <span className="text-muted-foreground" title="No tier yet">–</span>,
-      installer: <InstallerVersion version={u.installerVersion} current={current} outdated={u.installerOutdated} />,
+      installer: uninstalled.has(u.id) ? <span className="text-muted-foreground" title="Their latest report is the uninstaller's">uninstalled</span> : <InstallerVersion version={u.installerVersion} current={current} outdated={u.installerOutdated} />,
       seen: <span className="text-muted-foreground" title={u.lastSeenAt ? u.lastSeenAt.toISOString() : "never"}>{timeAgo(u.lastSeenAt)}</span>,
       early: <Switch action={setEarlyAccessAction} fields={{ id: u.id, on: u.earlyAccess ? "0" : "1" }} on={u.earlyAccess} label={`Early access for ${u.displayName}`} disabled={admin} why={admin ? "Admins don't need it" : early} />,
       menu: <MemberMenu u={u} meId={me.id} />,

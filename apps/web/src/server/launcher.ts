@@ -56,6 +56,14 @@ export async function revokeLauncherTokens(userId: string): Promise<number> {
   return r.count;
 }
 
+/** One PC signs itself out (the uninstaller, 1.5.2): only this token, not the member's other PCs. */
+export async function revokeLauncherToken(token: string): Promise<{ userId: string } | null> {
+  const row = await db.launcherAuth.findFirst({ where: { tokenHash: hash(token), status: "approved" }, select: { code: true, userId: true } });
+  if (!row?.userId) return null;
+  await db.launcherAuth.update({ where: { code: row.code }, data: { status: "denied" } });
+  return { userId: row.userId };
+}
+
 export function bearer(req: Request): string | null {
   const h = req.headers.get("authorization");
   return h?.startsWith("Bearer ") ? h.slice(7).trim() : null;

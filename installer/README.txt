@@ -17,5 +17,6 @@ What Setup.bat puts on your PC (for your Windows user only, no admin rights):
 The game itself goes in %APPDATA%\.minecraft-deepslate-works, with a "Deepslate Works" profile in the launcher.
 It never touches your normal Minecraft. Anything you drop into its mods folder is removed on the next run.
 
-To remove: delete the "Deepslate Works" profile in the launcher, the two folders above, the two shortcuts and
-the registry key above.
+To remove it: close the Minecraft Launcher, then Settings -> Apps -> "Deepslate Works" -> Uninstall, or
+"Uninstall Deepslate Works" in the Start Menu. It removes all of the above and keeps your screenshots (moved to
+Pictures), Java, the launcher and your other profiles.

@@ -196,10 +196,10 @@ model InstallReport {
   at               DateTime @default(now())
   packVersion      String
   installerVersion String
-  mode             String   @default("install") // install (Setup.bat) | play (the Play button, or Update and Play.bat)
+  mode             String   @default("install") // install | play | first_install | update | already_running | uninstall (lib/install-report.ts MODES)
   updatedFrom      String?  // the installer version that fetched this one and started it (docs/07 "The installer updates itself")
   updateProblem    String?  // why an update that was due was not applied, e.g. the checksum did not match
-  outcome          String   // ok | failed | cancelled
+  outcome          String   // ok | failed | cancelled | skipped
   failedStep       String?
   durationSec      Int
   system           Json

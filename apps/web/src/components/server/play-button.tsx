@@ -22,6 +22,8 @@ type Props = {
   /** docs/13 §12: the server in the site's words, and a wake that is running. */
   server: { state: ServerState; line: string; hint: string };
   wake: WakeView;
+  /** False after an uninstall (1.5.2): the download is offered straight away, as the first time. */
+  installed?: boolean;
 };
 
 const POLL_MS = 3000;
@@ -30,7 +32,7 @@ const POLL_MS = 3000;
  * docs/05 "Play from the site". A plain link to deepslate://play. After the click the page waits 2.5 s: if it is
  * still in front and never lost focus, nothing on this PC took the link, and the installer download is offered.
  */
-export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false, server, wake: initialWake }: Props) {
+export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false, server, wake: initialWake, installed = true }: Props) {
   const [wake, setWake] = useState<WakeView>(initialWake);
   const poller = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -65,7 +67,7 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
       .catch(() => follow());
   }
 
-  const [state, setState] = useState<"idle" | "waiting" | "missing">("idle");
+  const [state, setState] = useState<"idle" | "waiting" | "missing">(installed ? "idle" : "missing");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lostFocus = useRef(false);
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -137,7 +139,8 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
       {update && ready && <p className="text-sm text-muted-foreground">Press Play: it fetches what changed, then opens the launcher.</p>}
       {state === "missing" && (
         <Alert tone="info" data-testid="play-missing">
-          <p className="font-medium">Looks like the launcher isn&apos;t set up on this PC</p>
+          <p className="font-medium">{installed ? "Looks like the launcher isn\u2019t set up on this PC" : "Download Deepslate Works"}</p>
+          {!installed && <p className="mt-1">It was taken off your PC. To play again, set it up once more:</p>}
           <p className="mt-1">Download, unzip and double-click <span className="font-mono">Setup.bat</span> once. After that, Play works from here and it keeps itself up to date.{!stepsHere && <> The steps are under <Link href="/help" className="underline">Help → Getting in</Link>.</>}</p>
           <p className="mt-2 flex flex-wrap items-center gap-3">
             <a href="/downloads/installer.zip" className={buttonClasses("secondary", "sm")}>Download installer</a>

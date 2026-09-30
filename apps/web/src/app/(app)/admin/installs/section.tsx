@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDate } from "@/lib/utils";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { MODE_LABEL, OUTCOMES, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
@@ -33,7 +34,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   const total = counts.reduce((a, c) => a + c._count._all, 0);
   const now = new Date();
   // The group's PCs: each member's latest report, whatever the filter above says.
-  const latest = await db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, at: true, system: true, tierMeasured: true, user: { select: { displayName: true, mcUuid: true } } } });
+  const latest = await db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, at: true, system: true, tierMeasured: true, mode: true, outcome: true, user: { select: { displayName: true, mcUuid: true } } } });
   const members = await db.user.count();
   const tiers = { HIGH: 0, MID: 0, LOW: 0 } as Record<string, number>;
   for (const l of latest) if (l.tierMeasured) tiers[l.tierMeasured] = (tiers[l.tierMeasured] ?? 0) + 1;
@@ -44,7 +45,8 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
     cpu: <Short full={summary(l.system as SystemInfo).cpu} short={shortCpu(summary(l.system as SystemInfo).cpu)} />,
     gpu: <Short full={summary(l.system as SystemInfo).gpu} short={shortGpu(summary(l.system as SystemInfo).gpu)} />,
     tier: l.tierMeasured ? <Badge tone={l.tierMeasured === "HIGH" ? "good" : l.tierMeasured === "LOW" ? "warn" : "neutral"} className="whitespace-nowrap">{TIER[l.tierMeasured]}</Badge> : <span className="text-muted-foreground" title="Not enough in the report to go on">–</span>,
-    when: <span title={l.at.toISOString()}>{timeAgo(l.at, now)}</span>,
+    // the member took Deepslate Works off their PC (the uninstaller, 1.5.2): their account and link stay
+    when: l.mode === "uninstall" && l.outcome === "ok" ? <Badge className="whitespace-nowrap" title={l.at.toISOString()}>Uninstalled on {formatDate(l.at)}</Badge> : <span title={l.at.toISOString()}>{timeAgo(l.at, now)}</span>,
   });
   const run = (r: (typeof rows)[number]) => {
     const changed = r.tierMeasured && r.tierBefore && r.tierMeasured !== r.tierBefore;

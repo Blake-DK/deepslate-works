@@ -55,7 +55,7 @@ export default async function HomePage() {
               </CardHeader>
               <CardContent>
                 {isWindows(agent)
-                  ? <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null)}  server={play.server} wake={play.wake} />
+                  ? <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null)}  server={play.server} wake={play.wake} installed={play.installed} />
                   : <p className="text-sm text-muted-foreground">{WINDOWS_ONLY(play.name)}</p>}
               </CardContent>
             </Card>

@@ -33,11 +33,11 @@ export default async function MePage() {
     getManifest(),
     getSettings(),
     // their own last install report: the outcome and the date, nothing else
-    db.installReport.findFirst({ where: { userId: user.id }, orderBy: { at: "desc" }, select: { at: true, outcome: true, packVersion: true, failedStep: true, installerVersion: true } }),
+    db.installReport.findFirst({ where: { userId: user.id }, orderBy: { at: "desc" }, select: { at: true, outcome: true, packVersion: true, failedStep: true, installerVersion: true, mode: true } }),
     getInstaller(),
   ]);
   // Their last run came from an older installer than the site hands out: until a report from a new one arrives.
-  const oldInstaller = install && installer && mustDownloadAgain(install.installerVersion, installer.version) ? installer.version : null;
+  const oldInstaller = install && install.mode !== "uninstall" && installer && mustDownloadAgain(install.installerVersion, installer.version) ? installer.version : null;
   const showServer = canSeeServer(user, settings);
   const play = showServer ? await getPlayInfo(user) : null;
   const join = play ? joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null) : null;
@@ -49,7 +49,9 @@ export default async function MePage() {
       </div>
       {install && (
         <p className="text-sm text-muted-foreground" data-testid="last-install">
-          {install.outcome === "ok"
+          {install.mode === "uninstall" && install.outcome === "ok"
+            ? <>Deepslate Works was taken off your PC on {formatDate(install.at)}. To play again, <Link href="/help" className="underline">download it from Help → Getting in</Link>.</>
+            : install.outcome === "ok"
             ? <>Installed {install.packVersion.split("+")[0]} on {formatDate(install.at)}, all good.</>
             : install.outcome === "cancelled"
               ? <>The installer was stopped on {formatDate(install.at)}{install.failedStep ? <> at &quot;{install.failedStep}&quot;</> : null}. Press Play again when you are ready.</>

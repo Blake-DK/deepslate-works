@@ -485,3 +485,32 @@ describe("the render step after a restart", () => {
   });
 });
 
+// 2026-09-30 06:50: after an api restart the plan "generate, then render" asked chunky to carry on every 10 s and
+// chunky said "No tasks to continue." every time; the portal never got to the render.
+describe("chunky with nothing left", () => {
+  it("reads the line the server printed", () => {
+    expect(parse("No tasks to continue.")).toEqual([{ type: "pregen", what: "none-left" }]);
+    expect(parse("[Chunky] No tasks to continue.")).toEqual([{ type: "pregen", what: "none-left" }]);
+    expect(parse("<bramble09> No tasks to continue.").some((e) => e.type === "pregen")).toBe(false);
+  });
+  it("moves a plan that generates and then renders on to the render", async () => {
+    const r = rig();
+    const plan: PregenPlan = { mode: "empty", what: "both", area: AREA, window: null, capHours: null, ranMs: 0, since: "2026-09-29T19:42:05.573Z", by: null, fresh: false, sleepWas: false, mapAsked: "2026-09-29T19:43:12.094Z", mapStopped: false, purge: false };
+    const w = new PregenWatch(r.tail, () => r.clock.t);
+    w.start();
+    const p = new Pregen(r.amp, r.tail, w, () => ({ limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" }), { load: async () => plan, save: async () => {} }, () => {}, () => r.clock.t, async () => {}, { map: new MapWatch(r.tail, () => r.clock.t) });
+    r.pregen.stop();
+    await p.start(); p.stop();
+    r.tail.state = 20;
+    r.clock.t += 30_000; await p.tick();
+    expect(r.amp.console).toContain("chunky continue");
+    r.say(["No tasks to continue."]);
+    r.clock.t += 30_000; await p.tick();
+    r.clock.t += 30_000; await p.tick();
+    expect(r.amp.console.filter((c) => c.startsWith("bluemap update"))).toEqual(["bluemap update world 0 0 1500"]);
+    const continues = r.amp.console.filter((c) => c === "chunky continue").length;
+    r.clock.t += 60_000; await p.tick();
+    expect(r.amp.console.filter((c) => c === "chunky continue").length).toBe(continues); // no more asking
+  });
+});
+

@@ -34,21 +34,30 @@ export async function distFile(name: string): Promise<{ file: string; size: numb
   }
 }
 
-let installerCache: { key: string; sha256: string } | null = null;
+const hashCache = new Map<string, { key: string; sha256: string }>();
 
-/** The installer the site hands out: its version and the checksum of `installer.zip` as it is on disk now. */
+/** SHA-256 and size of a file in dist/ as it is on disk now (worked out again only when it changes). */
+async function distSum(name: string): Promise<{ sha256: string; size: number } | null> {
+  const f = await distFile(name);
+  if (!f) return null;
+  const key = `${f.size}:${f.mtime.getTime()}`;
+  let c = hashCache.get(name);
+  if (c?.key !== key) {
+    const hash = createHash("sha256");
+    for await (const chunk of createReadStream(f.file)) hash.update(chunk as Buffer);
+    c = { key, sha256: hash.digest("hex") };
+    hashCache.set(name, c);
+  }
+  return { sha256: c.sha256, size: f.size };
+}
+
+/** The installer the site hands out: its version and the checksums of `installer.zip` and `DeepslateWorks.ps1` as they are on disk now. */
 export async function getInstaller(): Promise<InstallerInfo | null> {
-  const zip = await distFile("installer.zip");
-  if (!zip) return null;
   try {
-    const key = `${zip.size}:${zip.mtime.getTime()}`;
-    if (installerCache?.key !== key) {
-      const hash = createHash("sha256");
-      for await (const chunk of createReadStream(zip.file)) hash.update(chunk as Buffer);
-      installerCache = { key, sha256: hash.digest("hex") };
-    }
+    const [zip, script] = await Promise.all([distSum("installer.zip"), distSum("DeepslateWorks.ps1")]);
+    if (!zip) return null;
     const sidecar: unknown = JSON.parse(await readFile(path.join(P.dist, "installer.json"), "utf8"));
-    return installerInfo(sidecar, { sha256: installerCache.sha256, size: zip.size });
+    return installerInfo(sidecar, zip, script);
   } catch {
     return null;
   }

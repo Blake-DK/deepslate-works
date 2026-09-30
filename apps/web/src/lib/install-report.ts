@@ -6,9 +6,13 @@ import { reportedVersion } from "./installer-version";
 // a name or an address into the database. Pure, so it is tested.
 
 export const MAX_LOG_BYTES = 512 * 1024;
-export const OUTCOMES = ["ok", "failed", "cancelled"] as const;
+// "skipped": another copy was already running (installer 1.5.0's lock); nothing was done, and it is not a failure.
+export const OUTCOMES = ["ok", "failed", "cancelled", "skipped"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
-export const MODES = ["install", "play"] as const; // docs/05 "Play from the site"
+// 1.5.0 on (docs/07): first_install, update, play, already_running; "install" (Setup.bat) and "play" before that.
+export const MODES = ["install", "play", "first_install", "update", "already_running"] as const;
+/** What a run of each kind is called on the admin pages. */
+export const MODE_LABEL: Record<string, string> = { install: "Setup.bat", play: "Play", first_install: "First install", update: "Update", already_running: "Already running" };
 export type Mode = (typeof MODES)[number];
 
 const short = (max: number) => z.string().max(max).transform((v) => v.trim());

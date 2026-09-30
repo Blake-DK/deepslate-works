@@ -28,7 +28,14 @@ export type Back = { dimension: string; x: number; y: number; z: number };
 /** `kind`: waiting to link their Discord, or (docs/14 "Play first") a member who has not pressed Play. */
 /** "closed": a member for whom the server is not open yet (not live, no early access; docs/13 §9). */
 /** `lastReminder`: when the prompt last went to them (docs/14 "The prompt"). */
-type Held = { uuid: string; code: string; since: number; lastReminder: number; kind: "link" | "play" | "closed"; userId?: string; back?: Back | null };
+/** "old": their last run was from an installer below Settings → Joining "Minimum installer version". */
+type Held = { uuid: string; code: string; since: number; lastReminder: number; kind: "link" | HeldFor; userId?: string; back?: Back | null };
+type HeldFor = "play" | "closed" | "old";
+/** Which wait a reason at the door is. */
+export const waitFor = (reason: BlockReason): HeldFor => (reason === "not live" ? "closed" : reason === "old installer" ? "old" : "play");
+const HOLD = { play: "limbo.holdPlay", closed: "limbo.holdClosed", old: "limbo.holdOld" } as const;
+const REMIND = { play: "limbo.remindPlay", closed: "limbo.remindClosed", old: "limbo.remindOld" } as const;
+const KICK = { link: "limbo.kickIdle", play: "limbo.kickIdlePlay", closed: "limbo.kickIdleClosed", old: "limbo.kickIdleOld" } as const;
 type Known = Member & { id: string };
 
 export type JoinDecision = { action: "release" | "hold"; reason: string };
@@ -49,10 +56,10 @@ export function decideJoin(user: { verifiedAt: Date | null; guildMember: boolean
  * `run` is their latest run of Play or of the installer that went through. Null: in. Joining and having just
  * linked in the room both come through here (2026-09-29: a member who linked was let in without Play first).
  */
-export function doorReason(user: Member, d: { live: boolean; requirePlay: boolean; windowMin: number; run: PlayRun | null; pack: string | null; now: Date }): BlockReason | null {
+export function doorReason(user: Member, d: { live: boolean; requirePlay: boolean; windowMin: number; run: PlayRun | null; pack: string | null; now: Date; minInstaller?: string }): BlockReason | null {
   if (doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: true }) === "not open") return "not live";
   if (doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: false }) === "in") return null; // Play is not asked of them
-  const gate = playGate(d.run, d.pack, d.windowMin, d.now);
+  const gate = playGate(d.run, d.pack, d.windowMin, d.now, d.minInstaller ?? "");
   return gate.ok ? null : gate.reason;
 }
 
@@ -166,10 +173,10 @@ export class Limbo {
     const [live, joining, run, pack] = await Promise.all([
       this.live(),
       getSection("joining"),
-      db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { at: true, packVersion: true } }),
+      db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { at: true, packVersion: true, installerVersion: true } }),
       serverPack(),
     ]);
-    return doorReason(user, { live, requirePlay: joining.requirePlay, windowMin: joining.windowMin, run, pack, now: new Date() });
+    return doorReason(user, { live, requirePlay: joining.requirePlay, windowMin: joining.windowMin, run, pack, now: new Date(), minInstaller: joining.minInstaller });
   }
 
   /** Asks the server where they are and waits for the answer; null when none comes. */
@@ -192,16 +199,16 @@ export class Limbo {
   protected async holdMember(name: string, uuid: string, userId: string, reason: BlockReason, inRoom = false) {
     const back = inRoom ? null : await this.where(name); // before they are moved
     if (!this.tail.online.has(name)) return; // gone while we asked
-    const kind = reason === "not live" ? "closed" : "play";
+    const kind = waitFor(reason);
     this.held.set(name, { uuid, code: "", since: Date.now(), lastReminder: Date.now(), kind, userId, back });
-    await runAction(this.amp, this.ctx, kind === "closed" ? "limbo.holdClosed" : "limbo.holdPlay", { name }, null);
+    await runAction(this.amp, this.ctx, HOLD[kind], { name }, null);
     await audit({ userId, action: "join.blocked", params: { name, uuid, reason, back: Boolean(back) }, result: "OK" });
   }
 
   private async releaseBack(name: string, h: Held) {
     this.held.delete(name);
     const r = await runAction(this.amp, this.ctx, "limbo.releaseBack", { name, back: h.back ?? null }, null);
-    await audit({ userId: h.userId ?? null, action: "join.ready", params: { name, uuid: h.uuid, back: Boolean(h.back), was: h.kind === "closed" ? "not live" : "play" }, result: r.ok ? "OK" : "FAILED", detail: r.detail ?? null });
+    await audit({ userId: h.userId ?? null, action: "join.ready", params: { name, uuid: h.uuid, back: Boolean(h.back), was: h.kind === "closed" ? "not live" : h.kind === "old" ? "old installer" : "play" }, result: r.ok ? "OK" : "FAILED", detail: r.detail ?? null });
   }
 
   private async hold(name: string, uuid: string, reason: string) {
@@ -253,7 +260,7 @@ export class Limbo {
       if (this.held.get(name) !== h) return; // let in, or gone, while the code was looked up
       await runAction(this.amp, this.ctx, "limbo.remind", { name, code: h.code }, null);
     } else {
-      await runAction(this.amp, this.ctx, h.kind === "closed" ? "limbo.remindClosed" : "limbo.remindPlay", { name }, null);
+      await runAction(this.amp, this.ctx, REMIND[h.kind], { name }, null);
     }
   }
 
@@ -264,11 +271,11 @@ export class Limbo {
     const now = Date.now();
     for (const [name, h] of this.held) {
       if (now - h.since > IDLE_KICK_MS) {
-        await runAction(this.amp, this.ctx, h.kind === "play" ? "limbo.kickIdlePlay" : h.kind === "closed" ? "limbo.kickIdleClosed" : "limbo.kickIdle", { name }, null);
+        await runAction(this.amp, this.ctx, KICK[h.kind], { name }, null);
         this.held.delete(name);
         continue;
       }
-      if (h.kind === "play" || h.kind === "closed") {
+      if (h.kind !== "link") {
         // The site may have gone live, the flag may have been given, they may have pressed Play: looked at every
         // round, so that the door opens within seconds.
         const user = h.userId ? await db.user.findUnique({ where: { id: h.userId }, select: { id: true, role: true, earlyAccess: true } }) : null;
@@ -277,7 +284,7 @@ export class Limbo {
           await this.releaseBack(name, h);
           continue;
         }
-        const kind = blocked === "not live" ? "closed" : "play";
+        const kind = blocked ? waitFor(blocked) : h.kind;
         if (user && blocked && kind !== h.kind) {
           // open for them now, but Play first has not been met (or the other way round): the other words, at once
           h.kind = kind;
@@ -294,7 +301,7 @@ export class Limbo {
     const name = [...this.tail.uuidByName.entries()].find(([, u]) => u === uuid)?.[0];
     if (!name || !this.tail.online.has(name)) return { released: false };
     const was = this.held.get(name);
-    if (was?.kind === "play" || was?.kind === "closed") return { released: false }; // linked long ago; they wait for something else
+    if (was && was.kind !== "link") return { released: false }; // linked long ago; they wait for something else
     // They have just linked: the door as for anybody who walks in (`doorReason`), open for them and then Play
     // first. Held, they stay in the room with that line (not open yet, or press Play) instead of the link line.
     const user = await this.memberByUuid(uuid);

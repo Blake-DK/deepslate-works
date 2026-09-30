@@ -23,6 +23,8 @@ export const sections = {
   joining: z.object({
     requirePlay: z.boolean().default(true), // members press Play on the site before they join; admins never need to
     windowMin: z.number().int().min(5).max(1440).default(30), // how long a run of Play counts for
+    // a run of an installer older than this does not count for Play first (installer 1.5.0, docs/07); "" = any
+    minInstaller: z.string().regex(/^(\d{1,4}(\.\d{1,4}){1,3})?$/).default("1.5.0"),
   }),
   files: z.object({
     maxDownloadMb: z.number().int().min(1).max(500).default(50),

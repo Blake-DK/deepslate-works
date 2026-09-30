@@ -28,7 +28,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
         <Card>
           <CardHeader>
             <CardTitle>{title}</CardTitle>
-            <CardDescription>Measured by the installer{user.pcTierWhy ? `: ${user.pcTierWhy}` : ""}. It is checked again every time you run the installer, so if you get a new PC or a new graphics card, just run it.</CardDescription>
+            <CardDescription>Measured by the installer{user.pcTierWhy ? `: ${user.pcTierWhy}` : ""}. It is checked again every time Deepslate Works runs, so a new PC or a new graphics card is picked up the next time you press Play.</CardDescription>
           </CardHeader>
           <CardContent><Link href="/me" className={buttonClasses("secondary", "sm")}>Back</Link></CardContent>
         </Card>

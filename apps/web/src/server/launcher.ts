@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { db } from "@/server/db";
 import { generateInviteCode } from "@/server/auth/invite-codes";
 
-// Device-style sign-in for the Windows installer/updater (docs/07 "Update and Play").
+// Device-style sign-in for the Windows installer/updater (docs/07).
 export const APPROVAL_WINDOW_MS = 10 * 60_000;
 export const TOKEN_LIFETIME_MS = 7 * 86_400_000;
 

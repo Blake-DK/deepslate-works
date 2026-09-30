@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { OUTCOMES, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
+import { MODE_LABEL, OUTCOMES, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
 import { timeAgo } from "@/lib/series";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,8 @@ import { InstallerVersion } from "@/components/admin/installer-version";
 
 export const metadata: Metadata = { title: "Installs" };
 
-const TONE = { ok: "good", failed: "bad", cancelled: "warn" } as const;
-const LABEL = { ok: "All good", failed: "Failed", cancelled: "Stopped" } as const;
+const TONE = { ok: "good", failed: "bad", cancelled: "warn", skipped: "neutral" } as const;
+const LABEL = { ok: "All good", failed: "Failed", cancelled: "Stopped", skipped: "Already running" } as const;
 const TIER: Record<string, string> = { LOW: "Older PC", MID: "Decent PC", HIGH: "Gaming PC" };
 
 /** The short form in the column, the whole of it on hover. */
@@ -60,7 +60,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
       gpu: <Short full={summary(r.system as SystemInfo).gpu} short={shortGpu(summary(r.system as SystemInfo).gpu)} />,
       when: <span title={r.at.toISOString()}>{timeAgo(r.at, now)}</span>,
       installer: <InstallerVersion version={r.installerVersion} current={current} outdated={isOutdated(r.installerVersion, current)} />,
-      from: <span title={r.updatedFrom ? `updated itself, ${r.updatedFrom} to ${r.installerVersion}` : `installer ${r.installerVersion}`}>{r.mode === "play" ? "Play" : "Installer"}{r.updateProblem ? <span className="text-danger" title="The installer could not update itself"> !</span> : null}</span>,
+      from: <span title={r.updatedFrom ? `updated itself, ${r.updatedFrom} to ${r.installerVersion}` : `installer ${r.installerVersion}`}>{MODE_LABEL[r.mode] ?? r.mode}{r.updateProblem ? <span className="text-danger" title="The installer could not update itself"> !</span> : null}</span>,
       outcome: <Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"} className="whitespace-nowrap" title={about || undefined}>{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}{r.failedStep ? " …" : ""}</Badge>,
     };
   };

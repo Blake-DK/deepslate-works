@@ -9,6 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { buttonClasses } from "@/components/ui/button";
 
+/** What each kind of run was (docs/07). Before 1.5.0 "install" was Setup.bat and "play" the Play button. */
+const RUN: Record<string, string> = {
+  install: "Setup.bat (installer before 1.5.0)",
+  play: "Play (from 1.5.0 on: everything was already current)",
+  first_install: "First install",
+  update: "Play: the pack had changed and was updated",
+  already_running: "Play while another copy was running: nothing done",
+};
+
 export const metadata: Metadata = { title: "Install report" };
 
 const TONE = { ok: "good", failed: "bad", cancelled: "warn" } as const;
@@ -34,7 +43,7 @@ export default async function InstallReportPage({ params }: { params: Promise<{ 
     ["Launcher", sys.launcher?.version || sys.launcher?.kind ? `${sys.launcher.kind ?? ""} ${sys.launcher.version ?? ""}`.trim() : "not known"],
     ["Java", sys.java?.version ? `${sys.java.version}${sys.java.source ? ` (${sys.java.source})` : ""}` : "not found"], ["Java path", sys.java?.path],
     ["NeoForge", sys.neoforge ? `${sys.neoforge.version ?? "?"}: ${sys.neoforge.before ? "there before" : "not there before"}, ${sys.neoforge.after ? "there after" : "not there after"}` : "not known"],
-    ["PowerShell", sys.powershell], ["Started from", r.mode === "play" ? "the Play button (or Update and Play.bat)" : "Setup.bat"], ["Installer", r.updatedFrom ? `${r.installerVersion} (updated itself from ${r.updatedFrom} on this run)` : r.installerVersion], ...(r.updateProblem ? [["Installer update", `not applied: ${r.updateProblem}`] as [string, string]] : []), ["Pack", r.packVersion], ["Took", `${r.durationSec} s`],
+    ["PowerShell", sys.powershell], ["Run", RUN[r.mode] ?? r.mode], ["Installer", r.updatedFrom ? `${r.installerVersion} (updated itself from ${r.updatedFrom} on this run)` : r.installerVersion], ...(r.updateProblem ? [["Installer update", `not applied: ${r.updateProblem}`] as [string, string]] : []), ["Pack", r.packVersion], ["Took", `${r.durationSec} s`],
   ];
   return (
     <div className="space-y-4">
@@ -42,9 +51,9 @@ export default async function InstallReportPage({ params }: { params: Promise<{ 
         <h1 className="flex-1 text-2xl font-semibold">{r.user.displayName} <span className="text-base font-normal text-muted-foreground">· {when.format(r.at)}</span></h1>
         <Link href="/admin/installs" className={buttonClasses("secondary", "sm")}>All installs</Link>
       </div>
-      <Alert tone={r.outcome === "ok" ? "success" : "error"}>
+      <Alert tone={r.outcome === "ok" ? "success" : r.outcome === "skipped" ? "info" : "error"}>
         <Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"} className="mr-2">{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}</Badge>
-        {r.outcome === "ok" ? "The installer ran through." : r.failedStep ? <>Stopped at the step &quot;{r.failedStep}&quot;. It is marked in the log below.</> : "Stopped before the first step."}
+        {r.outcome === "ok" ? "The installer ran through." : r.outcome === "skipped" ? "Another copy was already running on this PC, so this one did nothing." : r.failedStep ? <>Stopped at the step &quot;{r.failedStep}&quot;. It is marked in the log below.</> : "Stopped before the first step."}
       </Alert>
       <Card>
         <CardHeader>

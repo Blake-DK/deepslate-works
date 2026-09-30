@@ -100,32 +100,40 @@ export async function sha256File(file: string): Promise<string> {
   return hash.digest("hex");
 }
 
+/** The files in installer.zip (docs/07, installer 1.5.0): the one script, the bootstrap that puts it in place, a note. */
+export const INSTALLER_ZIP_FILES = ["Setup.bat", "DeepslateWorks.ps1", "README.txt"] as const;
+export const INSTALLER_SCRIPT = "DeepslateWorks.ps1";
+
 /**
- * installer.zip: Setup.bat + install.ps1 with the manifest URL and pack version stamped in.
- * installer.json next to it: the installer's version and the zip's SHA-256, which the mod list passes on so that
- * an installed copy can fetch a newer one and check it (docs/07 "The installer updates itself").
+ * installer.zip: Setup.bat + DeepslateWorks.ps1 (with the site's address and the pack version stamped in) + README.
+ * dist/DeepslateWorks.ps1: the same stamped script on its own, which an installed copy fetches to update itself.
+ * installer.json next to them: the version, the zip's SHA-256 and the script's, which the mod list passes on so that
+ * an installed copy can check what it fetched (docs/07 "Updates").
  */
 export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist: string; installer: string }, portalUrl: string, log: (s: string) => void): Promise<string> {
   const stage = path.join(paths.dist, "_installer");
   await rm(stage, { recursive: true, force: true });
   await mkdir(stage, { recursive: true });
-  const ps1 = await readFile(path.join(paths.installer, "install.ps1"), "utf8");
+  const ps1 = await readFile(path.join(paths.installer, INSTALLER_SCRIPT), "utf8");
   const stamped = ps1
     .replace(/^\$PortalUrl\s*=.*$/m, `$PortalUrl = "${portalUrl}"`)
     .replace(/^\$PackName\s*=.*$/m, `$PackName = "${m.name}"`)
     .replace(/^\$PackVersion\s*=.*$/m, `$PackVersion = "${m.version}+${shortHash(lock)}"`);
-  if (stamped === ps1) throw new Error("install.ps1: config block not found to stamp");
+  if (stamped === ps1) throw new Error(`${INSTALLER_SCRIPT}: config block not found to stamp`);
   const version = installerVersion(stamped);
-  if (!version) throw new Error("install.ps1: $InstallerVersion not found");
-  await writeFile(path.join(stage, "install.ps1"), stamped);
-  for (const f of ["Setup.bat", "Update and Play.bat", "README.txt"]) await cp(path.join(paths.installer, f), path.join(stage, f));
+  if (!version) throw new Error(`${INSTALLER_SCRIPT}: $InstallerVersion not found`);
+  await writeFile(path.join(stage, INSTALLER_SCRIPT), stamped);
+  for (const f of INSTALLER_ZIP_FILES) if (f !== INSTALLER_SCRIPT) await cp(path.join(paths.installer, f), path.join(stage, f));
+  const script = path.join(paths.dist, INSTALLER_SCRIPT);
+  await writeFile(script, stamped);
   const out = path.join(paths.dist, "installer.zip");
   await zipDir([{ dir: stage, name: false as unknown as string }], out);
   await rm(stage, { recursive: true, force: true });
   const sha256 = await sha256File(out);
   const { size } = await stat(out);
-  await writeFile(path.join(paths.dist, "installer.json"), `${JSON.stringify({ version, sha256, size, builtAt: new Date().toISOString() }, null, 2)}\n`);
+  const scriptInfo = { sha256: await sha256File(script), size: (await stat(script)).size };
+  await writeFile(path.join(paths.dist, "installer.json"), `${JSON.stringify({ version, sha256, size, script: scriptInfo, builtAt: new Date().toISOString() }, null, 2)}\n`);
   log(`installer.zip stamped with ${portalUrl} and version ${m.version}+${shortHash(lock)}`);
-  log(`installer ${version}, sha256 ${sha256}`);
+  log(`installer ${version}: zip sha256 ${sha256}, ${INSTALLER_SCRIPT} sha256 ${scriptInfo.sha256}`);
   return out;
 }

@@ -86,22 +86,21 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
 
         <Card>
           <CardHeader>
-            <CardTitle>First time on this PC: three steps</CardTitle>
-            <CardDescription>About five minutes, most of it downloading.</CardDescription>
+            <CardTitle>First time on this PC</CardTitle>
+            <CardDescription>Download, double-click Setup.bat once. After that, just press Play here or open Deepslate Works from your desktop. It keeps itself up to date.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ol className="space-y-3">
-              <li className="rounded-lg border p-3"><span className="font-medium">1. Install the normal Minecraft Launcher</span> from <a className="underline" href="https://www.minecraft.net/download" target="_blank" rel="noreferrer">minecraft.net</a> if you don&apos;t have it, and open it once (log in, let it update). Already have it? Skip this. <strong>Then close it completely</strong>: if its icon is still next to the clock, right-click the icon and choose Quit. While the launcher is open it throws the new profile away; the installer checks and tells you.</li>
+              <li className="rounded-lg border p-3"><span className="font-medium">1. Install the normal Minecraft Launcher</span> from <a className="underline" href="https://www.minecraft.net/download" target="_blank" rel="noreferrer">minecraft.net</a> if you don&apos;t have it, and open it once (log in, let it update). Already have it? Skip this. <strong>Then close it completely</strong>: if its icon is still next to the clock, right-click the icon and choose Quit. While the launcher is open it throws the new profile away; Deepslate Works checks and tells you.</li>
               <li className="rounded-lg border p-3">
-                <span className="font-medium">2. Download the installer, unzip it somewhere you&apos;ll keep (Desktop is fine), double-click <span className="font-mono">Setup.bat</span></span>. Your browser opens once to sign you in with Discord and asks &quot;is this you?&quot;: say yes. Then a black window shows green ticks and offers to open the launcher for you.
+                <span className="font-medium">2. Download, unzip, double-click <span className="font-mono">Setup.bat</span> once</span>. Your browser opens to sign you in with Discord and asks &quot;is this you?&quot;: say yes. A window installs everything (about five minutes, most of it downloading), puts &quot;{m.name}&quot; on your desktop and in the Start Menu, and opens the Minecraft Launcher on the &quot;{m.name}&quot; profile: press Play there. You can delete the zip afterwards.
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <a href="/downloads/installer.zip" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")} aria-disabled={!ready}>Download installer{installer ? ` (${(installer.size / 1024).toFixed(0)} KB)` : ""}</a>
+                  <a href="/downloads/installer.zip" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")} aria-disabled={!ready}>Download{installer ? ` (${(installer.size / 1024).toFixed(0)} KB)` : ""}</a>
                   <span className="text-xs text-muted-foreground">Windows may warn about an unknown app: choose &quot;More info&quot; then &quot;Run anyway&quot;. It&apos;s a plain script; you can read it.</span>
                 </div>
               </li>
-              <li className="rounded-lg border p-3"><span className="font-medium">3. In the Minecraft Launcher, pick &quot;{m.name}&quot;</span> in the dropdown next to Play, press Play. The server is already in your server list.</li>
             </ol>
-            <p className="text-sm text-muted-foreground">Once installed, use the Play button here to launch. It checks for updates every time. Your browser asks once whether this site may open Windows PowerShell: say yes, and tick &quot;always allow&quot; if you like. <span className="font-mono">Update and Play.bat</span> in the folder you unzipped does the same job without the browser.</p>
+            <p className="text-sm text-muted-foreground">After that, just press Play here or open {m.name} from your desktop. It keeps itself and the mods up to date, then opens the launcher. The first time you press Play here your browser asks whether this site may open Windows PowerShell: say yes, and tick &quot;always allow&quot; if you like. The server is already in your server list.</p>
           </CardContent>
         </Card>
 

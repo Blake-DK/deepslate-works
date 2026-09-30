@@ -75,6 +75,15 @@ describe("join (the door)", () => {
   ] as const)("a player: live %s, early access %s, Play first %s, has pressed Play %s: %s", (live, flag, requirePlay, played, door) => {
     expect(doorRule({ role: "PLAYER", earlyAccess: flag }, { live, requirePlay, hasPlayed: played ? pressed : never })).toBe(door);
   });
+  it("a run of Play from an installer below the minimum is no run of Play (installer 1.5.0)", () => {
+    const recent = new Date("2026-09-29T13:55:00Z");
+    const old = playGate({ at: recent, packVersion: PACK, installerVersion: "1.4.3" }, PACK, 30, now, "1.5.0");
+    expect(old).toEqual({ ok: false, reason: "old installer" });
+    expect(doorRule(player, { live: true, requirePlay: true, hasPlayed: old.ok })).toBe("play first");
+    expect(doorRule(early, { live: false, requirePlay: true, hasPlayed: old.ok })).toBe("play first");
+    expect(doorRule(admin, { live: true, requirePlay: true, hasPlayed: old.ok })).toBe("in"); // admins are not held
+    expect(playGate({ at: recent, packVersion: PACK, installerVersion: "1.5.0" }, PACK, 30, now, "1.5.0").ok).toBe(true);
+  });
   it("admins come in, whatever is on or off", () => {
     for (const live of LIVE) for (const flag of [true, false]) for (const requirePlay of [true, false]) for (const hasPlayed of [true, false]) expect(doorRule({ role: "ADMIN", earlyAccess: flag }, { live, requirePlay, hasPlayed })).toBe("in");
   });

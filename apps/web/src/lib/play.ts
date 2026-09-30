@@ -1,7 +1,7 @@
 // docs/05 "Play from the site". The Play button is a link, deepslate://play, which Windows hands to the
-// installed copy of install.ps1. Pure, so it is tested.
+// installed copy of DeepslateWorks.ps1. Pure, so it is tested.
 
-/** The only link the installer accepts (install.ps1 `Test-PlayLink`). Never built from anything a user typed. */
+/** The only link the installer accepts (DeepslateWorks.ps1 `Test-PlayLink`). Never built from anything a user typed. */
 export const PLAY_LINK = "deepslate://play";
 
 /** How long after the click the page looks at itself: still in front means nothing took the link. */
@@ -10,9 +10,10 @@ export const PLAY_WAIT_MS = 2500;
 export type LastLaunch = { version: string; at: Date };
 
 /** docs/14 "Play first": the line next to the Play button. `time` is the end of the window, already written out. */
-export function joinLine(join: { ok: true; time: string } | { ok: false; reason: "no report" | "stale" | "wrong version" } | null): { text: string; ready: boolean } | null {
+export function joinLine(join: { ok: true; time: string } | { ok: false; reason: "no report" | "old installer" | "stale" | "wrong version" } | null): { text: string; ready: boolean } | null {
   if (!join) return null;
   if (join.ok) return { text: `Ready to join until ${join.time}`, ready: true };
+  if (join.reason === "old installer") return { text: "Download Deepslate Works again from deepslate.dsw.test/install, run Setup.bat once, then press Play. It keeps itself up to date after that.", ready: false };
   if (join.reason === "wrong version") return { text: "The pack has changed since you pressed Play. Press it again before you join.", ready: false };
   if (join.reason === "stale") return { text: "Press Play before you join: the last time was a while ago.", ready: false };
   return { text: "Press Play before you join. That checks your mods are up to date.", ready: false };

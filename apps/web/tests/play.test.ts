@@ -5,7 +5,7 @@ import { reportSchema } from "@/lib/install-report";
 describe("the Play link", () => {
   it("is the one link the installer accepts", () => {
     expect(PLAY_LINK).toBe("deepslate://play");
-    expect(PLAY_LINK).toMatch(/^deepslate:\/\/play\/?$/); // install.ps1 Test-PlayLink
+    expect(PLAY_LINK).toMatch(/^deepslate:\/\/play\/?$/); // DeepslateWorks.ps1 Test-PlayLink
     expect(PLAY_WAIT_MS).toBe(2500);
   });
 });
@@ -64,7 +64,7 @@ describe("the installer updates itself", () => {
 
   it("names the installer in the mod list only while installer.json describes the zip that is there", async () => {
     const { installerInfo } = await import("@/lib/installer-info");
-    expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: sha, size: 16022 })).toEqual({ version: "1.4.0", sha256: sha, size: 16022 });
+    expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: sha, size: 16022 })).toEqual({ version: "1.4.0", sha256: sha, size: 16022, script: null });
     expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: "b".repeat(64), size: 16022 })).toBeNull(); // another zip
     expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: sha, size: 1 })).toBeNull();
     expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, null)).toBeNull(); // no zip
@@ -72,6 +72,18 @@ describe("the installer updates itself", () => {
     expect(installerInfo({ version: "1.4.0; calc", sha256: sha, size: 16022 }, { sha256: sha, size: 16022 })).toBeNull();
     expect(installerInfo({ version: "1.4.0", sha256: "A".repeat(64), size: 16022 }, { sha256: "A".repeat(64), size: 16022 })).toBeNull(); // lower case only
     expect(installerInfo({ version: "1.4.0", sha256: "abc", size: 3 }, { sha256: "abc", size: 3 })).toBeNull();
+  });
+
+  it("names DeepslateWorks.ps1 (1.5.0) only while installer.json describes the script that is there", async () => {
+    const { installerInfo } = await import("@/lib/installer-info");
+    const ps = "c".repeat(64);
+    const side = { version: "1.5.0", sha256: sha, size: 30000, script: { sha256: ps, size: 70000 } };
+    const zip = { sha256: sha, size: 30000 };
+    expect(installerInfo(side, zip, { sha256: ps, size: 70000 })).toEqual({ version: "1.5.0", sha256: sha, size: 30000, script: { sha256: ps, size: 70000 } });
+    expect(installerInfo(side, zip, { sha256: "d".repeat(64), size: 70000 })?.script).toBeNull(); // another script: no PC is told to fetch it
+    expect(installerInfo(side, zip, null)?.script).toBeNull(); // not on disk
+    expect(installerInfo({ ...side, script: { sha256: "nope", size: 70000 } }, zip, { sha256: "nope", size: 70000 })?.script).toBeNull();
+    expect(installerInfo(side, { sha256: "e".repeat(64), size: 30000 }, { sha256: ps, size: 70000 })).toBeNull(); // the zip decides whether there is an installer at all
   });
 
   it("is in the report", () => {

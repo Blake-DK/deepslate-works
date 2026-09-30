@@ -10,8 +10,10 @@ import { getManifest } from "@/server/modpack/manifest";
 import { logDownload } from "@/server/download-log";
 import { viaOf } from "@/lib/download-log";
 
-const TYPES: Record<string, string> = { ".zip": "application/zip" };
-const ALLOWED = new Set(["installer.zip", "config.zip"]); // Windows only since 2026-09-29: no client.mrpack
+const TYPES: Record<string, string> = { ".zip": "application/zip", ".ps1": "text/plain; charset=utf-8" };
+// Windows only since 2026-09-29: no client.mrpack. DeepslateWorks.ps1 on its own is what an installed copy fetches to
+// update itself (installer 1.5.0, docs/07 "Updates").
+const ALLOWED = new Set(["installer.zip", "config.zip", "DeepslateWorks.ps1"]);
 
 // Gated like the manifest: admin, or player while the server is online; config.zip also with the installer's key.
 export async function GET(req: Request, { params }: { params: Promise<{ file: string }> }) {
@@ -38,7 +40,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
   const f = await distFile(file);
   if (!f) return new Response("Not built yet", { status: 404 });
   const [installer, lock, manifest] = await Promise.all([getInstaller(), getLock(), getManifest()]).catch(() => [null, null, null] as const);
-  await logDownload({ userId: who, what: "file", via, file, size: f.size, version: file === "installer.zip" ? (installer?.version ?? null) : lock && manifest ? `${manifest.version}+${lock.hash.slice(0, 8)}` : null });
+  await logDownload({ userId: who, what: "file", via, file, size: f.size, version: file === "installer.zip" || file === "DeepslateWorks.ps1" ? (installer?.version ?? null) : lock && manifest ? `${manifest.version}+${lock.hash.slice(0, 8)}` : null });
   const ext = file.slice(file.lastIndexOf("."));
   return new Response(Readable.toWeb(createReadStream(f.file)) as ReadableStream, {
     headers: {

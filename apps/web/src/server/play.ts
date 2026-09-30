@@ -38,10 +38,10 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
     canDownload(user),
     db.installReport.findFirst({ where: { userId: user.id, outcome: "ok" }, orderBy: { at: "desc" }, select: { packVersion: true, at: true } }),
     getSection("joining"),
-    db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { packVersion: true, at: true } }),
+    db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { packVersion: true, at: true, installerVersion: true } }),
     serverPack(),
   ]);
-  const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date()) : null;
+  const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date(), joining.minInstaller) : null;
   const current = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const last = report ? { version: report.packVersion, at: report.at } : null;
   return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, last, update: updateAvailable(current, last?.version), join };

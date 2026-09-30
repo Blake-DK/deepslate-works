@@ -17,7 +17,7 @@ import { getPlayInfo } from "@/server/play";
 import { joinLine } from "@/lib/play";
 import { clock } from "@/lib/utils";
 import { getInstaller } from "@/server/modpack/lock";
-import { isOutdated } from "@/lib/installer-version";
+import { mustDownloadAgain } from "@/lib/installer-version";
 import { Alert } from "@/components/ui/alert";
 
 export const metadata: Metadata = { title: "Me" };
@@ -37,7 +37,7 @@ export default async function MePage() {
     getInstaller(),
   ]);
   // Their last run came from an older installer than the site hands out: until a report from a new one arrives.
-  const oldInstaller = install && installer && isOutdated(install.installerVersion, installer.version) ? installer.version : null;
+  const oldInstaller = install && installer && mustDownloadAgain(install.installerVersion, installer.version) ? installer.version : null;
   const showServer = canSeeServer(user, settings);
   const play = showServer ? await getPlayInfo(user) : null;
   const join = play ? joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null) : null;
@@ -49,14 +49,14 @@ export default async function MePage() {
           {install.outcome === "ok"
             ? <>Installed {install.packVersion.split("+")[0]} on {formatDate(install.at)}, all good.</>
             : install.outcome === "cancelled"
-              ? <>The installer was stopped on {formatDate(install.at)}{install.failedStep ? <> at &quot;{install.failedStep}&quot;</> : null}. Run it again when you are ready.</>
-              : <>The installer ran into trouble on {formatDate(install.at)}{install.failedStep ? <> at &quot;{install.failedStep}&quot;</> : null}. Alex has the log; run it again, or ask him.</>}
+              ? <>The installer was stopped on {formatDate(install.at)}{install.failedStep ? <> at &quot;{install.failedStep}&quot;</> : null}. Press Play again when you are ready.</>
+              : <>The installer ran into trouble on {formatDate(install.at)}{install.failedStep ? <> at &quot;{install.failedStep}&quot;</> : null}. Alex has the log; press Play again, or ask him.</>}
         </p>
       )}
       {oldInstaller && (
         <Alert tone="info" data-testid="installer-outdated">
-          <strong>Your installer is out of date, download it again.</strong> Your last run used {install!.installerVersion === "unknown" ? "an old installer" : <>installer {install!.installerVersion}</>}; the current one is {oldInstaller}.{" "}
-          <Link href="/install" className="font-medium underline">Download it from the Install page</Link> and run Setup.bat once.
+          <strong>Download Deepslate Works again.</strong> Your last run used {install!.installerVersion === "unknown" ? "an old installer" : <>installer {install!.installerVersion}</>}, which cannot update itself; the current one is {oldInstaller}.{" "}
+          <Link href="/install" className="font-medium underline">Download it from the Install page</Link> and double-click Setup.bat once. After that it keeps itself up to date.
         </Alert>
       )}
       {join && (

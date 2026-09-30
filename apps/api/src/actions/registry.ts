@@ -82,14 +82,15 @@ export function linkTellraw(name: string, portalUrl: string, code: string, siteN
   return `tellraw ${name} ${JSON.stringify(payload)}`;
 }
 
-/** Who waits in the room, and for what: to link their Discord, for Play first, or for the server to open. */
-export type HeldKind = "link" | "play" | "closed";
+/** Who waits in the room, and for what: to link their Discord, for Play first, for the server to open, or for a new installer. */
+export type HeldKind = "link" | "play" | "closed" | "old";
 
 /** What stays on their screen while they wait (docs/14 "The prompt"). */
 export function screenText(kind: HeldKind, portalUrl: string, code = ""): { title: string; subtitle: string } {
   const host = hostOf(portalUrl);
   if (kind === "link") return { title: "Sign in to play", subtitle: `Click the link in chat, or go to ${host}/join and enter ${showCode(code)}` };
   if (kind === "play") return { title: "Press Play first", subtitle: `Press Play on ${host} and you'll be let in` };
+  if (kind === "old") return { title: "Download Deepslate Works again", subtitle: `from ${host}/install, then press Play` };
   return { title: "Not open yet", subtitle: "You'll be let in when the server goes live" };
 }
 
@@ -115,6 +116,19 @@ const COORD = z.number().finite().min(-30_000_000).max(30_000_000);
 
 export function closedTellraw(name: string): string {
   return `tellraw ${name} ${JSON.stringify(["", { text: NOT_OPEN_TEXT, color: "gold" }])}`;
+}
+
+/** Settings → Joining "Minimum installer version": their last run was from an older installer (planner, installer 1.5.0). */
+export function oldTellraw(name: string, portalUrl: string): string {
+  const host = hostOf(portalUrl);
+  const url = `${portalUrl.replace(/\/+$/, "")}/install`;
+  const payload = [
+    "",
+    { text: "Download Deepslate Works again from ", color: "gold" },
+    { text: `${host}/install`, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: url }, hoverEvent: { action: "show_text", value: "Opens the install page in your browser" } },
+    { text: ". Run Setup.bat once, then press Play; from then on it keeps itself up to date.", color: "gold" },
+  ];
+  return `tellraw ${name} ${JSON.stringify(payload)}`;
 }
 
 export function playTellraw(name: string, portalUrl: string): string {
@@ -147,7 +161,7 @@ export const actions = {
   "limbo.bar": define({
     name: "limbo.bar",
     role: "system",
-    input: z.object({ name: MC_NAME, kind: z.enum(["link", "play", "closed"]), code: z.string().regex(CODE_RE).optional() }),
+    input: z.object({ name: MC_NAME, kind: z.enum(["link", "play", "closed", "old"]), code: z.string().regex(CODE_RE).optional() }),
     build: (ctx, { name, kind, code }) => [`title @a[name=${name},tag=!verified] actionbar ${component(screenText(kind, ctx.portalUrl, code).subtitle, "yellow")}`],
   }),
   "limbo.keep": define({
@@ -230,6 +244,20 @@ export const actions = {
   }),
   "limbo.remindClosed": define({ name: "limbo.remindClosed", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [...screenCommands(name, "closed", ctx.portalUrl), closedTellraw(name)] }),
   "limbo.kickIdleClosed": define({ name: "limbo.kickIdleClosed", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${NOT_OPEN_TEXT}`] }),
+  // Settings → Joining "Minimum installer version": held until a run from a new enough installer arrives.
+  "limbo.holdOld": define({
+    name: "limbo.holdOld",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [...intoRoom(ctx, name), ...screenCommands(name, "old", ctx.portalUrl), oldTellraw(name, ctx.portalUrl)],
+  }),
+  "limbo.remindOld": define({ name: "limbo.remindOld", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [...screenCommands(name, "old", ctx.portalUrl), oldTellraw(name, ctx.portalUrl)] }),
+  "limbo.kickIdleOld": define({
+    name: "limbo.kickIdleOld",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [`kick ${name} Download Deepslate Works again from ${ctx.portalUrl.replace(/^https?:\/\//, "")}/install and join again.`],
+  }),
   "limbo.kickIdlePlay": define({
     name: "limbo.kickIdlePlay",
     role: "system",

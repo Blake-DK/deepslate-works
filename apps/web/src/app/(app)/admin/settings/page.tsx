@@ -69,6 +69,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <Label htmlFor="windowMin">A run of Play counts for, minutes</Label>
               <Input id="windowMin" name="windowMin" type="number" min={5} max={1440} defaultValue={joining.windowMin} required />
             </div>
+            <div className="max-w-xs">
+              <Label htmlFor="minInstaller">Minimum installer version</Label>
+              <Input id="minInstaller" name="minInstaller" defaultValue={joining.minInstaller} pattern="(\d{1,4}(\.\d{1,4}){1,3})?" placeholder="1.5.0" />
+              <p className="mt-1 text-xs text-muted-foreground">A run of Play from an older installer does not count: the member is held with &quot;Download Deepslate Works again from deepslate.dsw.test/install&quot;. Empty: any installer. Admins are never held.</p>
+            </div>
             <Button type="submit">Save</Button>
           </form>
         </CardContent>

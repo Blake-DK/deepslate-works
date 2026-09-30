@@ -8,7 +8,7 @@ import { getSettings } from "@/server/settings";
 import { mayReport } from "@/shared/access";
 import { getInstaller } from "@/server/modpack/lock";
 import { env } from "@/env";
-import { isOutdated, outdatedNotice } from "@/lib/installer-version";
+import { isOutdated, mustDownloadAgain, outdatedNotice } from "@/lib/installer-version";
 
 export const dynamic = "force-dynamic";
 
@@ -54,11 +54,12 @@ export async function POST(req: Request) {
     await db.user.update({ where: { id: user.id }, data: { pcTier: measured.tier, pcTierSource: "measured", pcTierWhy: measured.why.slice(0, 200), pcTierAt: new Date() } });
     if (user.pcTier !== measured.tier || user.pcTierSource !== "measured") await audit({ userId: user.id, action: "profile.tier.measured", params: { from: user.pcTier, to: measured.tier, why: measured.why, reportId: row.id }, result: "OK" });
   }
-  // Which installer ran against the one the site hands out now. An old one's run still counts (Play first looks
-  // at the pack, not at the installer); the window is told to fetch the new one before the next run.
+  // Which installer ran against the one the site hands out now. From 1.5.0 on a copy that is behind updates itself on
+  // the next Play; one below 1.5.0 cannot, and its window is told to download Deepslate Works again (its runs do not
+  // count for Play first below Settings → Joining "Minimum installer version").
   const current = (await getInstaller())?.version ?? null;
   const outdated = isOutdated(r.installerVersion, current);
-  await audit({ userId: user.id, action: "installer.report", params: { reportId: row.id, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, packVersion: r.packVersion, installerVersion: r.installerVersion, currentInstaller: outdated ? current : undefined, durationSec: r.durationSec }, result: r.outcome === "ok" ? "OK" : "FAILED" });
-  const notice = outdated && current ? outdatedNotice(r.installerVersion, current, env.AUTH_URL.replace(/^https?:\/\//, "").replace(/\/$/, "")) : null;
+  await audit({ userId: user.id, action: "installer.report", params: { reportId: row.id, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, packVersion: r.packVersion, installerVersion: r.installerVersion, currentInstaller: outdated ? current : undefined, durationSec: r.durationSec }, result: r.outcome === "ok" || r.outcome === "skipped" ? "OK" : "FAILED" });
+  const notice = current && mustDownloadAgain(r.installerVersion, current) ? outdatedNotice(r.installerVersion, current, env.AUTH_URL.replace(/^https?:\/\//, "").replace(/\/$/, "")) : null;
   return Response.json({ ok: true, id: row.id, tier: measured?.tier ?? null, installer: { ran: r.installerVersion, current, outdated }, notice });
 }

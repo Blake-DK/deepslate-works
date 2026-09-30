@@ -144,9 +144,11 @@ model LauncherAuth {
 
 model Announcement {
   id        String   @id @default(cuid())
-  image     String?  // a picture's file name under data/news (docs/05)
-  body      String
-  pinned    Boolean  @default(false)
+  image       String?   // a picture's file name under data/news (docs/05)
+  body        String
+  pinned      Boolean   @default(false)
+  pinnedUntil DateTime? // pinned only until then; null = until unpinned (docs/05)
+  expiresAt   DateTime? // not shown to members from then on; null = always (docs/05)
   createdAt DateTime @default(now())
   authorId  String
 }

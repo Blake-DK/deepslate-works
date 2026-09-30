@@ -102,6 +102,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "announcement.delete": "deleted an announcement",
   "announcement.picture": "added a picture to an announcement",
   "announcement.nopicture": "took the picture off an announcement",
+  "announcement.dates": "set the dates of an announcement",
   "modpack.lock": "locked the mod versions",
   "modpack.build": "built the modpack",
   "modpack.sync": "synced the mods to the server",

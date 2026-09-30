@@ -1,4 +1,5 @@
 "use server";
+import { parseNewsDates } from "@/lib/news";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -139,7 +140,10 @@ export async function announceAction(formData: FormData) {
   const admin = await requireAdmin();
   const parsed = announcement.safeParse({ body: formData.get("body"), pinned: formData.get("pinned") === "on", say: formData.get("say") === "on" });
   if (!parsed.success) redirect(back("error", "Write something first (600 characters at most)."));
-  const { body, pinned, say } = parsed.data;
+  const { body, say } = parsed.data;
+  const dates = parseNewsDates(String(formData.get("pinnedUntil") ?? ""), String(formData.get("expiresAt") ?? ""), new Date());
+  if (!dates.ok) redirect(back("error", dates.reason));
+  const pinned = parsed.data.pinned || dates.pinnedUntil !== null; // a "pinned until" date pins it
   const upload = formData.get("image");
   let image: string | null = null;
   if (upload instanceof File && upload.size > 0) {
@@ -147,7 +151,7 @@ export async function announceAction(formData: FormData) {
     if (!stored.ok) redirect(back("error", stored.reason));
     image = stored.file;
   }
-  await db.announcement.create({ data: { body, pinned, authorId: admin.id, image } });
+  await db.announcement.create({ data: { body, pinned, pinnedUntil: dates.pinnedUntil, expiresAt: dates.expiresAt, authorId: admin.id, image } });
   await audit({ userId: admin.id, action: "announcement.create", params: { pinned, say, length: body.length, image: Boolean(image) }, result: "OK" });
   for (const p of ["/", "/admin/server"]) revalidatePath(p);
   let said = "";
@@ -188,8 +192,23 @@ export async function announcementChangeAction(which: string, formData: FormData
   } else if (what.data === "nopicture") {
     await db.announcement.update({ where: { id: id.data }, data: { image: null } });
     await drop(row.image);
-  } else await db.announcement.updateMany({ where: { id: id.data }, data: { pinned: what.data === "pin" } });
+  } else await db.announcement.updateMany({ where: { id: id.data }, data: { pinned: what.data === "pin", pinnedUntil: null } }); // Pin = until unpinned
   await audit({ userId: admin.id, action: `announcement.${what.data}`, params: { id: id.data }, result: "OK" });
   for (const p of ["/", "/admin/server"]) revalidatePath(p);
   redirect(back("action", `announcement ${what.data}`));
+}
+
+/** The two optional dates of one news item; empty boxes clear them. A "pinned until" date pins it. */
+export async function announcementDatesAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = z.string().min(1).max(40).safeParse(formData.get("id"));
+  if (!id.success) redirect(back("error", "Unknown announcement."));
+  const dates = parseNewsDates(String(formData.get("pinnedUntil") ?? ""), String(formData.get("expiresAt") ?? ""), new Date());
+  if (!dates.ok) redirect(back("error", dates.reason));
+  const row = await db.announcement.findUnique({ where: { id: id.data }, select: { pinned: true } });
+  if (!row) redirect(back("error", "Unknown announcement."));
+  await db.announcement.update({ where: { id: id.data }, data: { pinnedUntil: dates.pinnedUntil, expiresAt: dates.expiresAt, ...(dates.pinnedUntil ? { pinned: true } : {}) } });
+  await audit({ userId: admin.id, action: "announcement.dates", params: { id: id.data, pinnedUntil: dates.pinnedUntil?.toISOString() ?? null, expiresAt: dates.expiresAt?.toISOString() ?? null }, result: "OK" });
+  for (const p of ["/", "/admin/server"]) revalidatePath(p);
+  redirect(back("action", "announcement dates"));
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { dateToUkLocal } from "@/lib/uk-time";
 import { getSettings } from "@/server/settings";
 import { getManifest } from "@/server/modpack/manifest";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,13 +14,8 @@ import { saveFilesAction, savePrivacyAction, saveRetentionAction, saveSettingsAc
 
 export const metadata: Metadata = { title: "Settings" };
 
-function toLocalInput(d: Date | null): string {
-  if (!d) return "";
-  // Show the stored instant as UK wall-clock time in the datetime-local box.
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
-}
+// Show the stored instant as UK wall-clock time in the datetime-local box.
+const toLocalInput = dateToUkLocal;
 
 const SECTION: Record<string, string> = { privacy: "Privacy", retention: "How long things are kept", files: "File browser", joining: "Joining", "1": "Launch" };
 

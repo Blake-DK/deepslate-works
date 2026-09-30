@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { dateToUkLocal, ukShort } from "@/lib/uk-time";
 import { requireAdmin } from "@/server/auth/session";
 import { apiFetch } from "@/server/api-client";
 import { getStatus, AVAILABILITY_TEXT } from "@/server/status";
@@ -11,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Input, Label } from "@/components/ui/input";
 import { LiveConsole } from "./live-console";
-import { announceAction, announcementChangeAction, backupAction, cancelRestartAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
+import { announceAction, announcementChangeAction, announcementDatesAction, backupAction, cancelRestartAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
 import { mapProgress, modeText, pregenCost, progress, sleepText, type Pregen } from "@/lib/pregen";
 import { ConfirmSubmit } from "@/components/server/confirm-submit";
 
@@ -38,7 +39,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
     apiFetch<Tail>("/console/tail?lines=200", { caller }).catch(() => null),
     apiFetch<Schedule>("/server/schedule", { caller }).catch(() => null),
     apiFetch<Backup>("/server/backup", { caller }).catch(() => null),
-    getAnnouncements(10),
+    getAnnouncements(10, true),
     apiFetch<Pregen>("/pregen", { caller }).catch(() => null),
   ]);
   const mode = modeText(pregen);
@@ -218,7 +219,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Announce</CardTitle><CardDescription>Shows under News on the home page, with a picture if you add one (PNG, JPEG or WebP, 3 MB at most). Tick the box to also say it in game (first line, 200 characters).</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Announce</CardTitle><CardDescription>Shows under News on the home page, with a picture if you add one (PNG, JPEG or WebP, 3 MB at most). Tick the box to also say it in game (first line, 200 characters). Dates are UK time and optional: &quot;Pinned until&quot; pins it until then, &quot;Hide from&quot; takes it off the home page from then.</CardDescription></CardHeader>
           <CardContent>
             <form action={announceAction} className="space-y-2">
               <Label htmlFor="body" className="sr-only">Announcement</Label>
@@ -226,6 +227,8 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
               <div><Label htmlFor="newsimage">Picture (optional)</Label><input id="newsimage" name="image" type="file" accept="image/png,image/jpeg,image/webp" className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:bg-muted file:px-3 file:py-1.5 file:text-sm" /></div>
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <label className="flex items-center gap-2"><input type="checkbox" name="pinned" className="h-4 w-4" /> Pin to the top</label>
+                <label className="flex items-center gap-2">Pinned until <Input name="pinnedUntil" type="datetime-local" className="h-8 w-auto text-sm" /></label>
+                <label className="flex items-center gap-2">Hide from <Input name="expiresAt" type="datetime-local" className="h-8 w-auto text-sm" /></label>
                 <label className="flex items-center gap-2"><input type="checkbox" name="say" className="h-4 w-4" disabled={!running} /> Also say it in game</label>
                 <Button type="submit" size="sm">Post</Button>
               </div>
@@ -242,7 +245,11 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
                 <li key={n.id} className="flex flex-wrap items-start gap-3 py-2 text-sm">
                   {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded picture, served by our own route */}
                   {n.image && <img src={n.image} alt="" loading="lazy" className="h-16 w-28 rounded border object-cover" />}
-                  <p className="min-w-0 flex-1 whitespace-pre-line">{n.pinned && <Badge tone="warn" className="mr-2">Pinned</Badge>}{n.body}<span className="block text-xs text-muted-foreground">{n.author} · {timeAgo(n.createdAt)}</span></p>
+                  <p className="min-w-0 flex-1 whitespace-pre-line">
+                    {n.pinned && <Badge tone="warn" className="mr-2">{n.pinnedUntil ? `Pinned until ${ukShort(n.pinnedUntil)}` : "Pinned"}</Badge>}
+                    {n.expired ? <Badge className="mr-2">Hidden since {ukShort(n.expiresAt!)}</Badge> : n.expiresAt && <Badge className="mr-2">Hidden from {ukShort(n.expiresAt)}</Badge>}
+                    {n.body}<span className="block text-xs text-muted-foreground">{n.author} · {timeAgo(n.createdAt)}</span>
+                  </p>
                   <form action={announcementChangeAction.bind(null, "picture")} className="flex items-center gap-1">
                     <input type="hidden" name="id" value={n.id} />
                     <input name="image" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Picture" className="w-44 text-xs file:mr-2 file:rounded file:border file:bg-muted file:px-2 file:py-1 file:text-xs" />
@@ -253,6 +260,12 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
                     <input type="hidden" name="id" value={n.id} />
                     <Button type="submit" formAction={announcementChangeAction.bind(null, n.pinned ? "unpin" : "pin")} size="sm" variant="ghost">{n.pinned ? "Unpin" : "Pin"}</Button>
                     <Button type="submit" formAction={announcementChangeAction.bind(null, "delete")} size="sm" variant="ghost" className="text-danger">Delete</Button>
+                  </form>
+                  <form action={announcementDatesAction} className="flex w-full flex-wrap items-center gap-2 text-xs">
+                    <input type="hidden" name="id" value={n.id} />
+                    <label className="flex items-center gap-1">Pinned until <Input name="pinnedUntil" type="datetime-local" defaultValue={dateToUkLocal(n.pinned ? n.pinnedUntil : null)} className="h-7 w-auto text-xs" /></label>
+                    <label className="flex items-center gap-1">Hide from <Input name="expiresAt" type="datetime-local" defaultValue={dateToUkLocal(n.expired ? null : n.expiresAt)} className="h-7 w-auto text-xs" /></label>
+                    <Button type="submit" size="sm" variant="ghost">Save dates</Button>
                   </form>
                 </li>
               ))}

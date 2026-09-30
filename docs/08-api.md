@@ -42,6 +42,8 @@ Every call carries `Authorization: Bearer <API_SERVICE_TOKEN>` and who is asking
 | GET, POST, DELETE | `/server/schedule`, `/server/restart-in {minutes 1..120}` | the planned restart, with warnings in the game every minute for the last five; one at a time, in memory |
 | GET, POST | `/server/backup` | whether `webapp` may take and list backups, the list, and taking one |
 | GET | `/console/tail?lines=`, `/console/stream?since=` | the last lines (`entries[{seq, at, text}]`, `state`); the console as it happens, as newline-delimited JSON with a heartbeat every 15 s |
+| POST | `/console/send {command}` | admins only (docs/13 §11): one line to the Minecraft console, as typed, a leading `/` dropped, through the action `console.send`. 429 `rate_limited` above 5 a second for one admin; 409 `server_offline` unless running. In the event log as "Alex ran: <command>" |
+| GET | `/players/:uuid/data?fresh=1` | admins only: the player's inventory, ender chest, health, food, XP level, position and dimension from `world/playerdata/<uuid>.dat` (NBT, read through AMP's file manager). `fresh=1` sends `save-all` first and waits up to 10 s for "Saved the game". 404 when the player has never been on |
 | GET | `/pregen` | what chunky last said, the plan, `phase` (`generate`, `render`), `map` (BlueMap's figures for the map `world`: `status`, `percent`, `waiting`, `remaining`, `threads`, `stopped`), AMP's sleep mode and whether the portal may write it, how many are on |
 | POST | `/pregen/on` | `{mode: "empty"|"now", what: "generate"|"render"|"both" (default "generate"), purge: boolean (delete the maps first; only with a `what` that renders), area: {x, z, radius}, window: {from, to}|null, capHours|null}`. 409 `sleep_permission` while AMP does not allow the portal to switch sleep off |
 | POST | `/pregen/off`, `/pregen/cancel` | stop and keep where it got to; stop and forget the area |
@@ -66,7 +68,7 @@ type Action<I> = {
 };
 ```
 
-There is no role for players, no limit on how often and no waiting for an answer: those come with Phase 4. An answer, where one matters, comes back through the console tail like any line (`apps/api/src/events/parse.ts` has every pattern) and is read by whoever asked: the door (`players/limbo.ts`), the pings (`status/ping.ts`), chunky and BlueMap (`status/pregen.ts`, `status/map.ts`), who is on (`status/online.ts`).
+There is no role for players and no waiting for an answer: those come with Phase 4. The one limit on how often is on `console.send` (5 a second for each admin), which is kept out of `POST /actions/:name` (`OWN_ROUTE`) so it can only be sent through `/console/send`. An answer, where one matters, comes back through the console tail like any line (`apps/api/src/events/parse.ts` has every pattern) and is read by whoever asked: the door (`players/limbo.ts`), the pings (`status/ping.ts`), chunky and BlueMap (`status/pregen.ts`, `status/map.ts`), who is on (`status/online.ts`).
 
 Every action that ran is an `Event` (who, what, with what input, the result), except the questions that change nothing and come round every few seconds (`limbo.keep`, `server.list`, `server.pings`, `player.where`, `map.status`, `map.list`, the reminders), and what the portal says to somebody at the door, which has a line of its own there.
 
@@ -93,7 +95,7 @@ All calls go to the ADS (`AMP_URL=http://10.77.0.2:8080`) at `/API/ADSModule/Ser
 | `Core.GetStatus` | `{}` | `State`, `Uptime`, `Metrics` (`CPU Usage`, `Memory Usage`, `Active Users`, `TPS`, each `{RawValue, MaxValue, Percent, Units}`), `Ports`. The poller, every 10 s; also the health check, which reuses the session |
 | `Core.GetUpdates` | `{}` | the same status, and `ConsoleEntries` since this session last asked. The console tail |
 | `Core.GetUserList` | `{}` | who AMP says is on |
-| `Core.SendConsoleMessage` | `{message}` | only from `apps/api/src/actions/run.ts` |
+| `Core.SendConsoleMessage` | `{message}` | only from `apps/api/src/actions/run.ts`. This is the call the planner's ruling of 2026-09-30 calls "SendConsoleInput": the admin console goes through it too |
 | `Core.Start`, `Core.Stop`, `Core.Restart` | `{}` | in use since 2026-09-29 (Admin → Server, Sync, the planned restart). **`Core.Restart` does not start a server that is stopped or has failed**; that takes `Core.Start` |
 | `Core.Kill` | `{}` | only while the server is stuck in Stopping, only by an admin |
 | `Core.GetConfig` | `{node}` | `MinecraftModule.Limits.SleepMode`, `MinecraftModule.Limits.SleepDelayMinutes` (5 on this instance), `MinecraftModule.Minecraft.WorldSeed` |

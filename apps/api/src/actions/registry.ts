@@ -296,6 +296,14 @@ export const actions = {
     input: z.object({ name: MC_NAME, reason: z.string().max(120).regex(/^[\w .,'!?-]*$/).default("Your Discord isn't in the group's server any more.") }),
     build: (_ctx, { name, reason }) => [`tag ${name} remove verified`, `whitelist remove ${name}`, `kick ${name} ${reason}`],
   }),
+  // Planner ruling 2026-09-30 (docs/13): admins get the Minecraft console as it is. One line, sent as typed, with a
+  // leading "/" dropped; no list of allowed commands. Only through POST /console/send, which is rate-limited.
+  "console.send": define({
+    name: "console.send",
+    role: "ADMIN",
+    input: z.object({ command: z.string().max(1000).regex(/^[^\r\n]*$/).transform((c) => c.trim().replace(/^\/+/, "")).pipe(z.string().min(1)) }),
+    build: (_ctx, { command }) => [command],
+  }),
   "server.say": define({
     name: "server.say",
     role: "ADMIN",
@@ -358,4 +366,6 @@ export const actions = {
 };
 
 export type ActionName = keyof typeof actions;
+/** Admin actions with a route of their own, not reachable through POST /actions/:name. */
+export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send"]);
 export const ADMIN_ACTIONS: ActionName[] = (Object.keys(actions) as ActionName[]).filter((n) => actions[n].role === "ADMIN");

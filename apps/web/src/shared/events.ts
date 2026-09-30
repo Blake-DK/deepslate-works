@@ -139,6 +139,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.restart.cancelled": "called off the planned restart",
   "server.backup": "started a backup",
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
+  "console.send": (p) => `ran: ${s(p.command, "")}`,
+  "world.save": "saved the world",
   "installer.report": (p) => p.refused ? "sent a report of a run that cannot have happened: the site is not open for them" : `${p.mode === "play"
     ? (p.outcome === "ok" ? `pressed Play: ${s(p.packVersion, "the pack")}, launcher opened` : p.outcome === "cancelled" ? "pressed Play and closed the window" : `pressed Play and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)
     : (p.outcome === "ok" ? `installed ${s(p.packVersion, "the pack")}: all good` : p.outcome === "cancelled" ? `stopped the installer${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `ran the installer and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)}${p.updatedFrom ? ` (the installer updated itself, ${s(p.updatedFrom)} to ${s(p.installerVersion, "the current one")})` : p.updateProblem ? " (the installer could not update itself)" : ""}${p.currentInstaller ? ` (installer ${s(p.installerVersion, "unknown")}, current ${s(p.currentInstaller)})` : ""}`,

@@ -118,10 +118,28 @@ describe("Play first (docs/14)", () => {
     expect(joinLine({ ok: false, reason: "stale" })?.text).toMatch(/a while ago/);
     expect(joinLine({ ok: false, reason: "wrong version" })?.text).toMatch(/pack has changed/);
     expect(joinLine(null)).toBeNull(); // admins, or Play first switched off
+    expect(joinLine({ ok: false, reason: "old installer" })?.text).toMatch(/^Download Deepslate Works again/); // 1.3.x
+    expect(joinLine({ ok: false, reason: "old installer" }, true)?.text).toBe("Press Play before you join: it updates Deepslate Works first."); // 1.4.x and on
   });
   it("writes the time in UK time", async () => {
     const { clock } = await import("@/lib/utils");
     expect(clock(new Date("2026-09-29T09:35:00Z"))).toBe("10:35"); // summer time
     expect(clock(new Date("2026-12-01T09:35:00Z"))).toBe("09:35");
+  });
+});
+
+// Installer 1.5.3: a copy older than 1.4.0 has no update step; the Play button is the new download until a newer report.
+describe("tooOldToUpdate", () => {
+  it("is true only when the latest report is from an installer older than 1.4.0", async () => {
+    const { tooOldToUpdate } = await import("@/lib/play");
+    const r = (installerVersion: string, mode = "play", outcome = "ok") => ({ mode, outcome, installerVersion });
+    expect(tooOldToUpdate(r("1.3.0"))).toBe(true);
+    expect(tooOldToUpdate(r("1.3.0", "install", "failed"))).toBe(true); // any report counts, a failed one too
+    expect(tooOldToUpdate(r("unknown"))).toBe(true);
+    expect(tooOldToUpdate(r("1.4.0"))).toBe(false);
+    expect(tooOldToUpdate(r("1.4.3"))).toBe(false); // updates itself through the bridge
+    expect(tooOldToUpdate(r("1.5.3"))).toBe(false);
+    expect(tooOldToUpdate(null)).toBe(false); // never ran: the usual first-time offer
+    expect(tooOldToUpdate(r("1.3.0", "uninstall"))).toBe(false); // taken off the PC: the download is offered anyway
   });
 });

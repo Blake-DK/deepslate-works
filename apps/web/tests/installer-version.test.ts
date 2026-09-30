@@ -38,9 +38,11 @@ describe("installer versions", () => {
     expect(outdatedNotice("1.4.3", "1.5.0", "deepslate.dsw.test")).toBe("This PC has installer 1.4.3; the current one is 1.5.0. Download Deepslate Works again from deepslate.dsw.test/install and run Setup.bat once. After that it keeps itself up to date.");
     expect(outdatedNotice("unknown", "1.5.0", "deepslate.dsw.test")).toContain("This PC has an old installer;");
   });
-  it("tells only installers below 1.5.0 to download again: from 1.5.0 on a copy updates itself at the next Play", async () => {
+  it("tells only installers below 1.4.0 to download again: from 1.4.0 on a copy updates itself at the next Play", async () => {
     const { mustDownloadAgain } = await import("@/lib/installer-version");
-    expect(mustDownloadAgain("1.4.3", "1.5.0")).toBe(true);
+    expect(mustDownloadAgain("1.3.0", "1.5.3")).toBe(true); // no update step at all
+    expect(mustDownloadAgain("1.4.3", "1.5.3")).toBe(false); // updates through install.ps1 in the zip (1.5.3)
+    expect(mustDownloadAgain("1.4.0", "1.5.3")).toBe(false);
     expect(mustDownloadAgain("unknown", "1.5.0")).toBe(true);
     expect(mustDownloadAgain("1.5.0", "1.5.1")).toBe(false); // behind, but it updates itself
     expect(mustDownloadAgain("1.5.0", "1.5.0")).toBe(false);

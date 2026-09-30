@@ -34,12 +34,15 @@ export function isOutdated(version: string | null | undefined, current: string |
   return c === null || c < 0;
 }
 
-/** From this version on an installed copy updates itself on the next Play (installer 1.5.0, docs/07). */
-export const SELF_UPDATING_FROM = "1.5.0";
+/**
+ * From this version on an installed copy updates itself on the next Play (docs/07). 1.4.x updates through the
+ * install.ps1 bridge in the zip (installer 1.5.3); 1.3.x and older have no update step at all.
+ */
+export const SELF_UPDATING_FROM = "1.4.0";
 
 /**
- * Has to be downloaded again by hand: out of date and older than 1.5.0, whose Play handler cannot update itself into
- * the one-script layout. A 1.5.0 copy that is behind is simply updated the next time Play is pressed.
+ * Has to be downloaded again by hand: out of date and older than 1.4.0, which has no update step. A 1.4.0 or later
+ * copy that is behind is simply updated the next time Play is pressed.
  */
 export function mustDownloadAgain(version: string | null | undefined, current: string | null | undefined): boolean {
   return isOutdated(version, current) && isOutdated(version, SELF_UPDATING_FROM);

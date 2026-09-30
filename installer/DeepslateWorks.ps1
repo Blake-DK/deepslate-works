@@ -20,7 +20,11 @@ param(
   [string[]]$PretendRunning = @(),  # tests: process names to treat as running
   [switch]$Uninstall,       # remove Deepslate Works from this PC (Settings -> Apps, or "Uninstall Deepslate Works" in the Start Menu)
   [Alias("Quiet")]
-  [switch]$Yes              # -Uninstall without the question (tests)
+  [switch]$Yes,             # -Uninstall without the question (tests)
+  # What a 1.4.x copy passes when its update step starts this script in its place (install.ps1 -Play "deepslate://play",
+  # or -Play -Root / -NoPrompt). Taken so that start does not fail, written to the log, and otherwise ignored (1.5.3).
+  [switch]$Play,
+  [switch]$NoPrompt
 )
 
 # ---- started from a link on a web page ------------------------------------------------------------------
@@ -29,6 +33,7 @@ param(
 # from the site it was built for, and does nothing a normal run would not do.
 function Test-PlayLink([string]$l) { return ($l -match '^deepslate://play/?$') }
 
+$FromOldUpdater = ($Play -or $NoPrompt)   # logged once the log is there
 $FromLink = ($Link -ne "")
 if ($FromLink) {
   if (-not (Test-PlayLink $Link)) {
@@ -36,14 +41,14 @@ if ($FromLink) {
     Start-Sleep -Seconds 6
     exit 1
   }
-  $Setup = $false; $DryRun = $false; $SelfTest = $false; $Root = ""; $PretendRunning = @(); $Uninstall = $false; $Yes = $false
+  $Setup = $false; $DryRun = $false; $SelfTest = $false; $Root = ""; $PretendRunning = @(); $Uninstall = $false; $Yes = $false; $Play = $false; $NoPrompt = $false
 }
 # ---- config block (stamped by `modpack build installer`) ----
 $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.5.2"   # 1.5.2: -Uninstall, and it is listed in Settings -> Apps. History in docs/07
+$InstallerVersion = "1.5.3"   # 1.5.3: a 1.4.x copy updates itself into this one (install.ps1 in the zip, -Play taken). History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -697,8 +702,7 @@ function Invoke-Uninstall($t, [string]$token, $portal) {
 # The files a copy of 1.3.x / 1.4.x left in the same folder. There is one script now.
 $OldFiles = @("install.ps1", "install.ps1.bak", "install.ps1.new", "Setup.bat", "Setup.bat.new", "play.ps1", "Update and Play.bat")
 
-# Puts this script in place (never an older one over a newer one), removes the old layout, registers the link and
-# the shortcuts. Returns the path of the copy to run.
+# Puts this script in place (never an older one over a newer one). Returns the path of the copy to run.
 function Install-Home([string]$me, [string]$dir) {
   [void][IO.Directory]::CreateDirectory($dir)
   $target = Join-Path $dir $ScriptName
@@ -707,8 +711,62 @@ function Install-Home([string]$me, [string]$dir) {
     if (-not $same -and (Test-Path -LiteralPath $target) -and (Test-Newer (Get-ScriptVersion $target) $InstallerVersion)) { $same = $true; Log ("the copy in " + $dir + " is newer than this one; left as it is") }
     if (-not $same) { Copy-Item -LiteralPath $me -Destination $target -Force; Log ("put " + $ScriptName + " in " + $dir) }
   }
-  foreach ($old in $OldFiles) { $p = Join-Path $dir $old; if (Test-Path -LiteralPath $p) { Remove-Temp $p; Log ("removed the old " + $old) } }
   return $target
+}
+
+# What 1.3.x/1.4.x left in the home folder. Removed only once the Play link points at DeepslateWorks.ps1: until then
+# the link may still name install.ps1, and removing it would leave the Play button starting nothing.
+function Remove-OldLayout([string]$dir) {
+  foreach ($old in $OldFiles) { $p = Join-Path $dir $old; if (Test-Path -LiteralPath $p) { Remove-Temp $p; Log ("removed the old " + $old) } }
+}
+
+# The home folder, the Play link, the shortcuts and the Settings -> Apps entry, put right: after Setup.bat, at the end of
+# every run, and at once on a run under a 1.4.x name (install.ps1, started by 1.4.x's update step). $io says how each is
+# read and written: the registry and the shortcuts on Windows, files in a scratch folder in the self test. Its blocks
+# run inside this function, so they read $io. Returns the home script and whether the Play link points at it.
+function Repair-Home([string]$me, [string]$dir, $io) {
+  $target = Install-Home $me $dir
+  $want = Get-HandlerCommand $target
+  if ((& $io.handler) -ne $want) { if (& $io.setHandler $target) { Log "the Play link was set up again" } }
+  $linked = ((& $io.handler) -eq $want)
+  if (-not (& $io.shortcutsThere)) { $null = & $io.makeShortcuts $target; Log "the shortcuts were made again" }
+  if (-not (& $io.listed $target)) { & $io.list $target; Log "listed in Settings -> Apps" }
+  if ($linked) { Remove-OldLayout $dir } else { Log "the Play link does not point at the new script yet; the old files are kept" }
+  return @{ script = $target; linked = $linked }
+}
+
+# The real ones: this Windows user's registry and shortcuts.
+function Get-WindowsHomeIo([string]$gameDir) {
+  return @{
+    gameDir = $gameDir
+    handler = { try { return [string](Get-Item "HKCU:\Software\Classes\deepslate\shell\open\command" -ErrorAction Stop).GetValue("") } catch { return "" } }
+    setHandler = { param($t) Register-PlayLink $t }
+    shortcutsThere = {
+      $programs = [Environment]::GetFolderPath("Programs")
+      return ((Test-Path -LiteralPath (Join-Path ([Environment]::GetFolderPath("Desktop")) ("{0}.lnk" -f $PackName))) -and (Test-Path -LiteralPath (Join-Path $programs ("{0}.lnk" -f $PackName))) -and (Test-Path -LiteralPath (Join-Path $programs ("Uninstall {0}.lnk" -f $PackName))))
+    }
+    makeShortcuts = { param($t) Set-Shortcuts $t }
+    listed = {
+      param($t)
+      $l = $null
+      try { $l = Get-ItemProperty -LiteralPath ("HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\" + $UninstallKeyName) -ErrorAction Stop } catch {}
+      return [bool]($l -and [string]$l.UninstallString -eq (Get-UninstallEntry $t $io.gameDir 0).UninstallString -and [string]$l.DisplayVersion -eq $InstallerVersion)
+    }
+    list = { param($t) Register-Uninstall $t $io.gameDir }
+  }
+}
+
+# The self test's: the same four things as files in one folder.
+function Get-FileHomeIo([string]$at) {
+  return @{
+    at = $at
+    handler = { $f = Join-Path $io.at "handler.txt"; if ([IO.File]::Exists($f)) { return [IO.File]::ReadAllText($f) }; return "" }
+    setHandler = { param($t) [IO.File]::WriteAllText((Join-Path $io.at "handler.txt"), (Get-HandlerCommand $t)); return $true }
+    shortcutsThere = { return (@(@("Desktop.lnk", "Programs.lnk", "Uninstall.lnk") | Where-Object { -not [IO.File]::Exists((Join-Path $io.at $_)) }).Count -eq 0) }
+    makeShortcuts = { param($t) foreach ($n in @("Desktop.lnk", "Programs.lnk", "Uninstall.lnk")) { [IO.File]::WriteAllText((Join-Path $io.at $n), $t) }; return 3 }
+    listed = { param($t) $f = Join-Path $io.at "apps.txt"; return ([IO.File]::Exists($f) -and [IO.File]::ReadAllText($f) -eq ($t + "|" + $InstallerVersion)) }
+    list = { param($t) [IO.File]::WriteAllText((Join-Path $io.at "apps.txt"), ($t + "|" + $InstallerVersion)) }
+  }
 }
 
 # What kind of run this is, for the report: nothing installed yet, the pack changed, or everything was current.
@@ -888,11 +946,56 @@ if ($SelfTest) {
   [void][IO.Directory]::CreateDirectory((Split-Path -Parent $src))
   [IO.File]::WriteAllText($src, ('$InstallerVersion = "' + $InstallerVersion + '"' + "`nWrite-Host this"))
   $t = Install-Home $src $hd
+  $names = @(Get-ChildItem -LiteralPath $hd -Force | ForEach-Object { $_.Name } | Sort-Object) -join ","
+  Check ("the script is put in place and the old layout is left until the link points at it: " + $names) (($t -eq (Join-Path $hd "DeepslateWorks.ps1")) -and ($names -eq "DeepslateWorks.ps1,install.ps1,install.ps1.bak,Setup.bat"))
+  Remove-OldLayout $hd
   $names = @(Get-ChildItem -LiteralPath $hd -Force | ForEach-Object { $_.Name }) -join ","
-  Check ("Setup leaves one script and nothing of the old layout: " + $names) (($t -eq (Join-Path $hd "DeepslateWorks.ps1")) -and ($names -eq "DeepslateWorks.ps1"))
+  Check ("then Setup leaves one script and nothing of the old layout: " + $names) ($names -eq "DeepslateWorks.ps1")
   [IO.File]::WriteAllText($t, '$InstallerVersion = "9.0.0"' + "`nWrite-Host newer")
   $null = Install-Home $src $hd
   Check "an older script never goes over a newer one that is already there" ((Get-ScriptVersion $t) -eq "9.0.0")
+
+  Write-Host "Self test: a 1.4.x copy updated into this one" -ForegroundColor White
+  # 1.4.x's update step takes install.ps1 and Setup.bat out of the zip, puts them over its own in the home folder and
+  # starts install.ps1 -Play "deepslate://play" with DEEPSLATE_UPDATED_FROM set. Here: that home, with the Play link
+  # (a file standing in for the registry) still naming install.ps1, and this very script started the way 1.4.x starts it.
+  $lad = Join-Path $dir "whole path [1.4.x]\LocalAppData"
+  $wh = Join-Path $lad "DeepslateWorks"
+  $wio = Join-Path $dir "whole path [1.4.x]\registry and shortcuts"
+  [void][IO.Directory]::CreateDirectory($wh); [void][IO.Directory]::CreateDirectory($wio)
+  Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $wh "install.ps1")
+  [IO.File]::WriteAllText((Join-Path $wh "install.ps1.bak"), '$InstallerVersion = "1.4.3"')
+  [IO.File]::WriteAllText((Join-Path $wh "Setup.bat"), "from the zip")
+  $oldHandler = ('"{0}" -NoProfile -ExecutionPolicy Bypass -File "{1}" -Play "%1"' -f (Get-PowerShellExe), (Join-Path $wh "install.ps1"))
+  [IO.File]::WriteAllText((Join-Path $wio "handler.txt"), $oldHandler)
+  $wad = Join-Path $dir "whole path [1.4.x]\Roaming"
+  [void][IO.Directory]::CreateDirectory($wad)
+  $keepEnv = @{ l = $env:LOCALAPPDATA; a = $env:APPDATA; u = $env:DEEPSLATE_UPDATED_FROM; h = $env:DEEPSLATE_SELFTEST_HOME }
+  $env:LOCALAPPDATA = $lad; $env:APPDATA = $wad; $env:DEEPSLATE_UPDATED_FROM = "1.4.3"; $env:DEEPSLATE_SELFTEST_HOME = $wio
+  $o = Join-Path $dir "whole path.out"
+  try {
+    $p = Start-Process -FilePath ((Get-Process -Id $PID).Path) -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f (Join-Path $wh "install.ps1")), "-Play", "deepslate://play") -Wait -PassThru -NoNewWindow -RedirectStandardOutput $o
+    $code = $p.ExitCode
+  } finally { $env:LOCALAPPDATA = $keepEnv.l; $env:APPDATA = $keepEnv.a; $env:DEEPSLATE_UPDATED_FROM = $keepEnv.u; $env:DEEPSLATE_SELFTEST_HOME = $keepEnv.h }
+  $out = if ([IO.File]::Exists($o)) { [IO.File]::ReadAllText($o) } else { "" }
+  $newScript = Join-Path $wh "DeepslateWorks.ps1"
+  Check ("install.ps1 -Play deepslate://play starts (exit " + $code + ") and says why it was given -Play") (($code -eq 0) -and ($out -match "started by an older installer's update step"))
+  $names = @(Get-ChildItem -LiteralPath $wh -Force | ForEach-Object { $_.Name }) -join ","
+  Check ("afterwards the home holds only DeepslateWorks.ps1: " + $names) ($names -eq "DeepslateWorks.ps1")
+  Check "and it is this script" ([IO.File]::Exists($newScript) -and ((Get-FileHash -LiteralPath $newScript -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash))
+  $h = [IO.File]::ReadAllText((Join-Path $wio "handler.txt"))
+  Check ("the Play link points at it: " + $h) ($h -eq (Get-HandlerCommand $newScript))
+  Check "the desktop shortcut, the Start Menu entries and the Settings -> Apps entry are there" ((@("Desktop.lnk", "Programs.lnk", "Uninstall.lnk", "apps.txt") | Where-Object { -not [IO.File]::Exists((Join-Path $wio $_)) }).Count -eq 0)
+  Check "the report says updatedFrom 1.4.3, from this installer" ($out -match ("report: installer=" + [regex]::Escape($InstallerVersion) + " updatedFrom=1\.4\.3"))
+  Check "and it does not update itself again in that run" ($out -match "update step: not again in this run")
+  # a link that could not be set: the old files stay, so the Play button still starts something
+  $lh = Join-Path $dir "no link\DeepslateWorks"
+  [void][IO.Directory]::CreateDirectory($lh)
+  Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $lh "install.ps1")
+  $stuck = Get-FileHomeIo (Join-Path $dir "no link")
+  $stuck.setHandler = { param($t) return $false }
+  $r = Repair-Home (Join-Path $lh "install.ps1") $lh $stuck
+  Check "when the Play link cannot be pointed at the new script, install.ps1 is kept" ((-not $r.linked) -and [IO.File]::Exists((Join-Path $lh "install.ps1")) -and [IO.File]::Exists((Join-Path $lh "DeepslateWorks.ps1")))
 
   Write-Host "Self test: what kind of run it is" -ForegroundColor White
   $prevRun = [pscustomobject]@{ version = "0.1.0+aaaaaaaa"; hash = "aaaa" }
@@ -1269,6 +1372,7 @@ if ($Setup) {
     try {
       $target = Install-Home $me $dir
       $linked = Register-PlayLink $target
+      if ($linked) { Remove-OldLayout $dir }
       $made = Set-Shortcuts $target
       try { Register-Uninstall $target (Join-Path $Root ".minecraft-deepslate-works") } catch { Log ("could not list it in Settings -> Apps: " + $_.Exception.Message) }
       Write-Host ("  Installed in {0}" -f $dir) -ForegroundColor DarkGray
@@ -1320,6 +1424,36 @@ if ($script:UpdatedFrom) {
   Write-Host ("Updated to {0}" -f $InstallerVersion) -ForegroundColor Green
   Log ("STEP Updating Deepslate Works {0} {1} {2}" -f $script:UpdatedFrom, [char]0x2192, $InstallerVersion)
   Log ("OK {0} fetched, checked and started by {1}" -f $InstallerVersion, $script:UpdatedFrom)
+}
+if ($FromOldUpdater) { Log "started by an older installer's update step (its -Play / -NoPrompt are taken and ignored)" }
+
+# ---- the first run under 1.4.x's name (1.5.3) -------------------------------------------------------------
+# 1.4.x's update step puts this script in %LOCALAPPDATA%\DeepslateWorks\install.ps1 and starts it there, with the Play
+# link still naming install.ps1. Before anything else, this run moves the home into the one-script layout: the copy
+# as DeepslateWorks.ps1, the link and the shortcuts pointing at it, the Settings -> Apps entry; then the old files go.
+# DEEPSLATE_SELFTEST_HOME (set by -SelfTest for the copy it starts; a link cannot set it) does the same against files
+# in that folder in place of the registry and the shortcuts, says what it found, and ends the run there.
+$SelfTestHome = [string]$env:DEEPSLATE_SELFTEST_HOME
+$script:MePath = $PSCommandPath   # this script; after the move below, the DeepslateWorks.ps1 it was moved to
+$UnderOldName = $PSCommandPath -and (Get-HomeDir) -and ((Split-Path -Leaf $PSCommandPath) -eq "install.ps1") -and ((Split-Path -Parent (Resolve-Path -LiteralPath $PSCommandPath).Path) -eq (Get-HomeDir))
+if ($UnderOldName -and ($SelfTestHome -or (-not $DryRun -and -not $script:CustomRoot -and $OnWindows))) {
+  $io = if ($SelfTestHome) { Get-FileHomeIo $SelfTestHome } else { Get-WindowsHomeIo $DataDir }
+  try {
+    $moved = Repair-Home (Resolve-Path -LiteralPath $PSCommandPath).Path (Get-HomeDir) $io
+    Log ("moved to the one-script layout: {0}, Play link {1}" -f $moved.script, $(if ($moved.linked) { "points at it" } else { "NOT set" }))
+    if (Test-Path -LiteralPath $moved.script) { $script:MePath = $moved.script }
+  } catch { Log ("could not move to the one-script layout: " + $_.Exception.Message) }
+  if ($SelfTestHome) {
+    $rp = New-Report "ok"
+    Write-Host ("home: " + (@(Get-ChildItem -LiteralPath (Get-HomeDir) -Force | ForEach-Object { $_.Name } | Sort-Object) -join ","))
+    Write-Host ("handler: " + (& $io.handler))
+    Write-Host ("shortcuts: " + (& $io.shortcutsThere) + "; apps: " + (& $io.listed (Join-Path (Get-HomeDir) $ScriptName)))
+    Write-Host ("report: installer={0} updatedFrom={1}" -f $rp.installerVersion, $rp.updatedFrom)
+    Write-Host ("update step: " + $(if ($script:UpdatedFrom) { "not again in this run" } else { "would run" }))
+    Write-Host ("log: " + (($script:RunLog.ToArray()) -join " / "))
+    Exit-Lock
+    exit 0
+  }
 }
 $Minecraft = Join-Path $Root ".minecraft"
 $Profiles = Join-Path $Minecraft "launcher_profiles.json"
@@ -1380,17 +1514,17 @@ try {
   if ($manifest.version) { $script:PackSeen = [string]$manifest.version }
 
   # A newer script on the site: fetched, checked, put in place and started with what this one was started with.
-  if (-not $script:UpdatedFrom -and -not $DryRun -and $PSCommandPath -and @($PretendRunning).Count -eq 0) {
+  if (-not $script:UpdatedFrom -and -not $DryRun -and $script:MePath -and @($PretendRunning).Count -eq 0) {
     $offer = Get-OfferedScript $manifest
     if ($offer -and (Test-Newer $offer.version $InstallerVersion)) {
       Step ("Updating Deepslate Works {0} {1} {2}" -f $InstallerVersion, [char]0x2192, $offer.version)
-      $u = Update-Script $offer $PSCommandPath { param($url, $out) Invoke-WebRequest -Uri $url -Headers $headers -OutFile $out -UseBasicParsing -TimeoutSec 120 }
+      $u = Update-Script $offer $script:MePath { param($url, $out) Invoke-WebRequest -Uri $url -Headers $headers -OutFile $out -UseBasicParsing -TimeoutSec 120 }
       if ($u.status -eq "updated") {
         Log ("OK {0} is in place; starting it" -f $u.version)
         $script:Reported = $true   # the report is the new script's to send
         Exit-Lock
         $env:DEEPSLATE_UPDATED_FROM = $InstallerVersion
-        $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $PSCommandPath))
+        $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $script:MePath))
         if ($FromLink) { $again += $Link }
         elseif ($script:CustomRoot) { $again += @("-Root", ('"{0}"' -f $Root)) }
         $child = Start-Process -FilePath ((Get-Process -Id $PID).Path) -ArgumentList $again -Wait -PassThru -NoNewWindow
@@ -1598,23 +1732,8 @@ try {
 
   # ---- the Play link and the shortcuts: put right when missing (Setup.bat made them; this keeps them) ------
   if (-not $DryRun -and -not $script:CustomRoot -and $OnWindows -and (Get-HomeDir)) {
-    try {
-      $me = (Resolve-Path -LiteralPath $PSCommandPath).Path
-      $homeScript = Install-Home $me (Get-HomeDir)
-      $want = Get-HandlerCommand $homeScript
-      $have = ""
-      try { $have = [string](Get-Item "HKCU:\Software\Classes\deepslate\shell\open\command" -ErrorAction Stop).GetValue("") } catch {}
-      if ($have -ne $want) { if (Register-PlayLink $homeScript) { Log "the Play link was set up again" } }
-      $desk = Join-Path ([Environment]::GetFolderPath("Desktop")) ("{0}.lnk" -f $PackName)
-      $menu = Join-Path ([Environment]::GetFolderPath("Programs")) ("{0}.lnk" -f $PackName)
-      $unmenu = Join-Path ([Environment]::GetFolderPath("Programs")) ("Uninstall {0}.lnk" -f $PackName)
-      if (-not (Test-Path -LiteralPath $desk) -or -not (Test-Path -LiteralPath $menu) -or -not (Test-Path -LiteralPath $unmenu)) { $null = Set-Shortcuts $homeScript; Log "the shortcuts were made again" }
-      # Settings -> Apps (1.5.2): listed on PCs that had an older copy at their next Play, and kept current
-      $listed = $null
-      try { $listed = Get-ItemProperty -LiteralPath ("HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\" + $UninstallKeyName) -ErrorAction Stop } catch {}
-      $wantUn = (Get-UninstallEntry $homeScript $GameDir 0).UninstallString
-      if (-not $listed -or [string]$listed.UninstallString -ne $wantUn -or [string]$listed.DisplayVersion -ne $InstallerVersion) { Register-Uninstall $homeScript $GameDir; Log "listed in Settings -> Apps" }
-    } catch { Log ("could not check the Play link and the shortcuts: " + $_.Exception.Message) }
+    try { $null = Repair-Home (Resolve-Path -LiteralPath $script:MePath).Path (Get-HomeDir) (Get-WindowsHomeIo $GameDir) }
+    catch { Log ("could not check the Play link and the shortcuts: " + $_.Exception.Message) }
   }
 
   if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion } | ConvertTo-Json | Set-Content -LiteralPath $installedFile }

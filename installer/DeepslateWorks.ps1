@@ -1,47 +1,55 @@
-# Deepslate Works client installer. PowerShell 5.1, no modules, no admin rights. See docs/07-installer.md.
+# Deepslate Works. One script does everything: the first install, every update, and every Play.
+# PowerShell 5.1, no modules, no admin rights. See docs/07-installer.md.
+#
+#   Setup.bat (from the download, once)   DeepslateWorks.ps1 -Setup: puts this script in %LOCALAPPDATA%\DeepslateWorks,
+#                                         registers deepslate:// and the "Deepslate Works" shortcuts, then runs that copy
+#   the Play button on the site           deepslate://play  -> the copy in %LOCALAPPDATA%\DeepslateWorks
+#   the desktop / Start Menu shortcut     the same copy, the same steps
+#
+# Every run, in this order, skipping whatever is already current: take the lock, update this script if the site has a
+# newer one, sign in if needed, launcher / Java 21 / NeoForge / mods / settings / profile / server list, report, and
+# open the Minecraft Launcher on the profile.
 [CmdletBinding(PositionalBinding = $false)]
 param(
   [Parameter(Position = 0)]
   [string]$Link = "",       # the deepslate:// link, when Windows starts this from the Play button on the site
+  [switch]$Setup,           # from Setup.bat: put this script in place, register the Play link and the shortcuts, run it
   [switch]$DryRun,          # no downloads, no writes outside -Root, no browser
-  [switch]$Play,            # update quietly, then open the Minecraft Launcher on our profile and exit
   [string]$Root = "",       # override %APPDATA% (tests)
-  [switch]$NoPrompt,        # never ask anything at the end (automation)
   [switch]$SelfTest,        # check the script's own code against scratch files, touch nothing else, exit
   [string[]]$PretendRunning = @()   # tests: process names to treat as running
 )
 
 # ---- started from a link on a web page ------------------------------------------------------------------
-# The Play button is a link, deepslate://play, and Windows hands this script whatever link was clicked.
-# ANY web page can put such a link in front of someone, so: exactly one link is accepted, and when the
-# script was started by a link nothing else on the command line counts. It installs where it always
-# installs, from the site it was built for, and does nothing a normal run would not do.
+# ANY web page can put a deepslate:// link in front of someone, so: exactly one link is accepted, and when the
+# script was started by a link nothing else on the command line counts. It installs where it always installs,
+# from the site it was built for, and does nothing a normal run would not do.
 function Test-PlayLink([string]$l) { return ($l -match '^deepslate://play/?$') }
 
 $FromLink = ($Link -ne "")
 if ($FromLink) {
   if (-not (Test-PlayLink $Link)) {
-    Write-Host "That is not a link this installer knows. Use the Play button on the site." -ForegroundColor Red
+    Write-Host "That is not a link Deepslate Works knows. Use the Play button on the site." -ForegroundColor Red
     Start-Sleep -Seconds 6
     exit 1
   }
-  $Play = $true; $DryRun = $false; $SelfTest = $false; $NoPrompt = $true; $Root = ""; $PretendRunning = @()
+  $Setup = $false; $DryRun = $false; $SelfTest = $false; $Root = ""; $PretendRunning = @()
 }
-$Mode = "install"
-if ($Play) { $Mode = "play" }
-$Quiet = [bool]$Play      # play mode: one grey line per step, no ticks; failures are said in full
 # ---- config block (stamped by `modpack build installer`) ----
 $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.4.3"   # 1.1.0: launcher must be closed, profile read back; 1.2.0: install report; 1.3.0: Play from the site; 1.4.0: updates itself; 1.4.1: a Java on PATH no longer ends the install; 1.4.2: paths are taken literally, a temp file left behind ends nothing; 1.4.3: shows what the site says about an old installer
+$InstallerVersion = "1.5.0"   # 1.5.0: one script for install, update and Play; a lock; staged downloads (history in docs/07)
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
+$ScriptName = "DeepslateWorks.ps1"
+$LockName = "Global\DeepslateWorks"
+$ExitAlreadyRunning = 3
 
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $Temp = if ($env:TEMP) { $env:TEMP } else { [IO.Path]::GetTempPath() }   # $env:TEMP is unset when testing under pwsh on Linux
-$LogFile = Join-Path $Temp "deepslate-install.log"
+$LogFile = Join-Path $Temp "deepslate-works.log"
 $script:Step = 0
 $script:StepName = ""          # the step in hand: what a report calls "the step that failed"
 $script:Started = Get-Date
@@ -49,11 +57,19 @@ $script:RunLog = New-Object System.Collections.Generic.List[string]   # this run
 $script:Token = $null
 $script:Reported = $false
 $script:PackSeen = $PackVersion
+$script:Lock = $null
+# What kind of run this is (docs/07): first_install (nothing installed yet), update (the pack changed since the last
+# run), play (everything was current), already_running (another copy holds the lock). Worked out as the run goes.
+$Mode = "play"
+$Quiet = $true
 # Set when an older copy of this script fetched this one and started it in its place. It comes through the
 # environment, which a link cannot reach, and it is also what stops a second update in the same run.
 $script:UpdatedFrom = $null
 if ($env:DEEPSLATE_UPDATED_FROM -match '^\d{1,4}(\.\d{1,4}){1,3}$') { $script:UpdatedFrom = [string]$env:DEEPSLATE_UPDATED_FROM }
 $script:UpdateProblem = $null  # why an update that was due was not applied
+# Started by Setup.bat (the window stays open by itself), or by the Play link or a shortcut (it has to wait so a
+# message can be read). Set by the -Setup run for the copy it starts; a link cannot set it.
+$FromSetup = ($env:DEEPSLATE_FROM_SETUP -eq "1")
 $script:Facts = @{ java = $null; neoforge = $null; launcher = $null }
 # Words that would identify the person or the PC. They are blanked in everything that is sent.
 $script:Personal = @(@($env:USERNAME, [Environment]::UserName, $env:COMPUTERNAME, [Environment]::MachineName) | Where-Object { $_ -and ([string]$_).Length -ge 3 } | Select-Object -Unique)
@@ -69,17 +85,16 @@ function Step($msg) {
   Log "STEP $msg"
 }
 function Tick($msg) { if (-not $Quiet) { Write-Host ("   [OK] {0}" -f $msg) -ForegroundColor Green }; Log "OK $msg" }
-# 1.4.2: every file operation takes its path literally (-LiteralPath). With -Path, PowerShell reads [ ] in a
-# path as a pattern and can fail to resolve a user folder at all; on Pabulum's PC (2026-09-29) deleting the
-# NeoForge installer from %TEMP% ended a run whose install had just gone through.
+# Every file operation takes its path literally (-LiteralPath): with -Path PowerShell reads [ ] in a path as a pattern
+# and can fail to resolve a user folder at all (Pabulum's PC, 2026-09-29, installer 1.4.1).
 function Remove-Temp($path) {
   # A leftover temporary file is never a reason to stop.
   try { if ($path -and [IO.File]::Exists($path)) { [IO.File]::Delete($path) } } catch { Log ("could not remove " + $path + ": " + $_.Exception.Message) }
 }
 function Note($msg) { if (-not $Quiet) { Write-Host ("   {0}" -f $msg) -ForegroundColor Gray }; Log $msg }
 function Hold-Window {
-  # Started from the Play button there is no .bat to keep the window open: wait, so the message can be read.
-  if ($FromLink -and -not $script:Held) { $script:Held = $true; try { [void](Read-Host "Press Enter to close this window") } catch {} }
+  # Started from the Play button or a shortcut there is no .bat to keep the window open: wait, so the message can be read.
+  if (-not $FromSetup -and -not $SelfTest -and -not $DryRun -and -not $script:Held) { $script:Held = $true; try { [void](Read-Host "Press Enter to close this window") } catch {} }
 }
 function Gate-Message($err) {
   $body = ""
@@ -88,12 +103,29 @@ function Gate-Message($err) {
   if ($body -match "server_offline") { return "The server is offline right now, so updates are paused. Try again later." }
   return "The site said no (" + $body.Substring(0, [Math]::Min(120, $body.Length)) + ")"
 }
+
+# ---- one copy at a time (docs/07 "The lock") -------------------------------------------------------------
+# 2026-09-29: m1owl pressed Play while Setup.bat was still downloading; both wrote the same file in mods/ and the
+# second run failed. A named mutex is held for the whole run; a second copy says so and leaves without touching
+# anything. A copy that was killed leaves the mutex "abandoned", which the next run simply takes over.
+function Enter-Lock {
+  $m = New-Object System.Threading.Mutex($false, $LockName)
+  $got = $false
+  try { $got = $m.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $got = $true; Log "the last run did not end properly; carrying on" }
+  if (-not $got) { $m.Dispose(); return $null }
+  return $m
+}
+function Exit-Lock {
+  if ($script:Lock) { try { $script:Lock.ReleaseMutex() } catch {}; try { $script:Lock.Dispose() } catch {}; $script:Lock = $null }
+}
+
 function Fail($msg) {
   Write-Host ""
   Write-Host ("   {0}" -f $msg) -ForegroundColor Red
   Write-Host ("   Details are in {0}" -f $LogFile) -ForegroundColor DarkGray
   Log "FAIL $msg"
   Send-Report "failed"
+  Exit-Lock
   Hold-Window
   exit 1
 }
@@ -196,7 +228,7 @@ function Show-Notice($answer) {
   Write-Host ""
   Write-Host ("   {0}" -f $text) -ForegroundColor Yellow
   Log ("the site says: " + $text)
-  if ($Play) { Hold-Window }
+  Hold-Window
   return $true
 }
 
@@ -214,7 +246,7 @@ function Send-Report([string]$outcome) {
     $answer = Invoke-RestMethod -Uri "$PortalUrl/api/installer/report" -Method Post -Headers @{ Authorization = "Bearer $($script:Token)" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($json)) -UseBasicParsing -TimeoutSec 20
     Write-Host "   Sent." -ForegroundColor Gray
     Log "install report sent"
-    Show-Notice $answer
+    $null = Show-Notice $answer
   } catch {
     Write-Host ("   That didn't go through. No harm done: the log is still on this PC, at {0}" -f $LogFile) -ForegroundColor Yellow
     Log ("install report not sent: " + $_.Exception.Message)
@@ -308,28 +340,7 @@ function Get-LauncherFacts {
   return $f
 }
 
-# ---- Play from the site (docs/07 "Play from the site") ------------------------------------------------
-# The script keeps a copy of itself in %LOCALAPPDATA%\DeepslateWorks and tells Windows, for this user
-# only (HKCU, no admin rights), to run that copy for deepslate:// links.
-
-function Get-HandlerCommand([string]$scriptPath) {
-  $ps = ([string]$env:SystemRoot).TrimEnd("\") + "\System32\WindowsPowerShell\v1.0\powershell.exe"   # the full path: never whatever "powershell" is found first
-  return ('"{0}" -NoProfile -ExecutionPolicy Bypass -File "{1}" -Play "%1"' -f $ps, $scriptPath)
-}
-
-function Register-PlayLink([string]$scriptPath) {
-  $base = "HKCU:\Software\Classes\deepslate"
-  New-Item -Path "$base\shell\open\command" -Force | Out-Null
-  Set-Item -Path $base -Value ("URL:{0}" -f $PackName)
-  New-ItemProperty -Path $base -Name "URL Protocol" -Value "" -PropertyType String -Force | Out-Null
-  Set-Item -Path "$base\shell\open\command" -Value (Get-HandlerCommand $scriptPath)
-}
-
-# ---- the installer updates itself (docs/07 "The installer updates itself") ------------------------------
-# The mod list names the installer the site hands out and the SHA-256 of its zip. In -Play mode a script
-# older than that fetches the zip, checks it, replaces install.ps1 and Setup.bat next to itself and starts
-# the new script in its own place. Nothing is replaced unless every check has passed.
-
+# ---- versions ------------------------------------------------------------------------------------------
 function Test-Newer([string]$theirs, [string]$ours) {
   if ($theirs -notmatch '^\d{1,4}(\.\d{1,4}){1,3}$' -or $ours -notmatch '^\d{1,4}(\.\d{1,4}){1,3}$') { return $false }
   try { return ([version]$theirs -gt [version]$ours) } catch { return $false }
@@ -343,91 +354,137 @@ function Get-ScriptVersion([string]$path) {
   return ""
 }
 
-# "" when install.ps1 and Setup.bat in $dir are now the ones from the zip. Otherwise what was wrong, in
-# words, and nothing in $dir has been touched.
-function Install-Update([string]$zip, [string]$sha256, [string]$version, [string]$dir) {
-  if ($sha256 -notmatch '^[0-9a-fA-F]{64}$') { return "the site gave no checksum for it" }
-  $got = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLower()
-  if ($got -ne $sha256.ToLower()) { return ("the checksum of the download ({0}...) is not the one the site gave ({1}...)" -f $got.Substring(0, 12), $sha256.Substring(0, 12).ToLower()) }
-  Add-Type -AssemblyName System.IO.Compression
-  Add-Type -AssemblyName System.IO.Compression.FileSystem
-  $names = @("Setup.bat", "install.ps1")   # these two and nothing else, whatever the zip holds; taken by name, never unpacked by path
-  $files = @{}
-  $archive = [IO.Compression.ZipFile]::OpenRead($zip)
-  try {
-    foreach ($name in $names) {
-      $entry = @($archive.Entries | Where-Object { $_.FullName -ceq $name }) | Select-Object -First 1
-      if (-not $entry) { return ("{0} is not in the download" -f $name) }
-      if ($entry.Length -lt 1 -or $entry.Length -gt 2MB) { return ("{0} in the download has an unlikely size" -f $name) }
-      $ms = New-Object IO.MemoryStream
-      $in = $entry.Open()
-      try { $in.CopyTo($ms) } finally { $in.Dispose() }
-      $files[$name] = $ms.ToArray()
-    }
-  } finally { $archive.Dispose() }
-  $text = (New-Object Text.UTF8Encoding($false)).GetString($files["install.ps1"])
-  if ($text -notmatch ('(?m)^\$InstallerVersion = "' + [regex]::Escape($version) + '"')) { return ("the script in the download is not version {0}" -f $version) }
-  $errs = $null; $tokens = $null
-  [void][System.Management.Automation.Language.Parser]::ParseInput($text, [ref]$tokens, [ref]$errs)
-  if ($errs -and @($errs).Count -gt 0) { return "the script in the download does not read as PowerShell" }
+# ---- the script updates itself (docs/07 "Updates") ----------------------------------------------------
+# The mod list names the version of this script the site hands out and the SHA-256 of that script. An older
+# copy fetches it from this site's /downloads (never from an address in the mod list), checks the checksum, the
+# version written inside it and that it reads as PowerShell, keeps itself as .bak and moves the new one over
+# itself, then starts it with the same arguments. On any problem nothing is replaced and the run carries on.
 
-  # Everything has been checked. Written next to the old files first, then moved over them.
-  foreach ($name in $names) { [IO.File]::WriteAllBytes((Join-Path $dir ($name + ".new")), [byte[]]$files[$name]) }
-  $old = Join-Path $dir "install.ps1"
-  if (Test-Path -LiteralPath $old) { Copy-Item -LiteralPath $old -Destination ($old + ".bak") -Force }
-  foreach ($name in $names) { Move-Item -Force -LiteralPath (Join-Path $dir ($name + ".new")) -Destination (Join-Path $dir $name) }
+# What the site says about the script: @{ version; sha256 } or $null.
+function Get-OfferedScript($manifest) {
+  try {
+    if (-not $manifest -or -not $manifest.PSObject.Properties["installer"] -or -not $manifest.installer) { return $null }
+    $i = $manifest.installer
+    if (-not $i.PSObject.Properties["script"] -or -not $i.script) { return $null }
+    return @{ version = [string]$i.version; sha256 = [string]$i.script.sha256 }
+  } catch { return $null }
+}
+
+# @{ status = "current" | "updated" | "failed"; version; problem }. $fetch: { param($url, $outFile) } downloads a file.
+function Update-Script($offer, [string]$scriptPath, [scriptblock]$fetch) {
+  if (-not $offer -or -not (Test-Newer $offer.version $InstallerVersion)) { return @{ status = "current"; version = $InstallerVersion; problem = $null } }
+  $new = [string]$offer.version
+  $fail = { param($why) return @{ status = "failed"; version = $new; problem = $why } }
+  if ($offer.sha256 -notmatch '^[0-9a-fA-F]{64}$') { return (& $fail "the site gave no checksum for it") }
+  $tmp = "$scriptPath.new"
+  Remove-Temp $tmp
+  try { & $fetch "$PortalUrl/downloads/$ScriptName" $tmp } catch { Remove-Temp $tmp; return (& $fail ("it could not be downloaded: {0}" -f $_.Exception.Message)) }
+  try {
+    if (-not [IO.File]::Exists($tmp)) { return (& $fail "the download is empty") }
+    $got = (Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLower()
+    if ($got -ne $offer.sha256.ToLower()) { Remove-Temp $tmp; return (& $fail ("the checksum of the download ({0}...) is not the one the site gave ({1}...)" -f $got.Substring(0, 12), $offer.sha256.Substring(0, 12).ToLower())) }
+    $text = [IO.File]::ReadAllText($tmp)
+    if ($text -notmatch ('(?m)^\$InstallerVersion = "' + [regex]::Escape($new) + '"')) { Remove-Temp $tmp; return (& $fail ("the script in the download is not version {0}" -f $new)) }
+    $errs = $null; $tokens = $null
+    [void][System.Management.Automation.Language.Parser]::ParseInput($text, [ref]$tokens, [ref]$errs)
+    if ($errs -and @($errs).Count -gt 0) { Remove-Temp $tmp; return (& $fail "the script in the download does not read as PowerShell") }
+    if ([IO.File]::Exists($scriptPath)) { Copy-Item -LiteralPath $scriptPath -Destination ($scriptPath + ".bak") -Force }
+    Move-Item -Force -LiteralPath $tmp -Destination $scriptPath
+  } catch { Remove-Temp $tmp; return (& $fail ("it could not be written: {0}" -f $_.Exception.Message)) }
+  return @{ status = "updated"; version = $new; problem = $null }
+}
+
+# ---- downloads land in a folder of their own first (docs/07 "Downloads") -------------------------------
+# A mod is downloaded into .downloading\ next to mods\, checked, and only then moved into mods\ in one step. A run
+# that is killed half-way leaves a part file in .downloading\ (emptied at the start of the next run), never a
+# half-written jar in mods\.
+function Save-ModFile([string]$url, [string]$dest, [string]$sha512, [string]$staging, [scriptblock]$fetch) {
+  [void][IO.Directory]::CreateDirectory($staging)
+  $part = Join-Path $staging ([IO.Path]::GetFileName($dest) + ".part")
+  Remove-Temp $part
+  & $fetch $url $part
+  $sha = [System.Security.Cryptography.SHA512]::Create()
+  $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($part))).Replace("-", "").ToLower()
+  if ($hash -ne $sha512) { Remove-Temp $part; return "wrong" }
+  try { Move-Item -Force -LiteralPath $part -Destination $dest } catch { Log ("could not put " + $dest + " in place: " + $_.Exception.Message); Remove-Temp $part; return "in use" }
   return ""
 }
 
-# $true when the newer script is in place and has to be started; the caller does that and leaves.
-function Update-Self($manifest, $headers) {
-  if ($Mode -ne "play" -or $DryRun -or $script:UpdatedFrom -or @($PretendRunning).Count -gt 0 -or -not $PSCommandPath) { return $false }
-  $inst = $null
-  if ($manifest.PSObject.Properties["installer"]) { $inst = $manifest.installer }
-  if (-not $inst -or -not (Test-Newer ([string]$inst.version) $InstallerVersion)) { return $false }
-  $new = [string]$inst.version
-  Step ("Updating the installer {0} {1} {2}" -f $InstallerVersion, [char]0x2192, $new)
-  $zip = Join-Path $Temp "deepslate-installer-update.zip"
-  $problem = ""
-  try {
-    # From this site's /downloads and nowhere else: the mod list says which version and which checksum, never where from.
-    Invoke-WebRequest -Uri "$PortalUrl/downloads/installer.zip" -Headers $headers -OutFile $zip -UseBasicParsing -TimeoutSec 120
-    $problem = Install-Update $zip ([string]$inst.sha256) $new (Split-Path -Parent $PSCommandPath)
-  } catch { $problem = ("it could not be fetched or written: {0}" -f $_.Exception.Message) }
-  finally { Remove-Temp $zip }
-  if ($problem -ne "") {
-    $script:UpdateProblem = $problem
-    Log ("UPDATE NOT APPLIED: " + $problem)
-    Write-Host ("   The installer was not updated: {0}." -f $problem) -ForegroundColor Yellow
-    Write-Host ("   Nothing was replaced. Carrying on with installer {0}." -f $InstallerVersion) -ForegroundColor Gray
-    return $false
-  }
-  Tick ("Installer {0} is in place; starting it" -f $new)
-  return $true
+# Leftovers of a run that was stopped: part files in .downloading\ and, from installers before 1.5.0, in mods\.
+function Clear-Leftovers([string]$gameDir) {
+  $staging = Join-Path $gameDir ".downloading"
+  if (Test-Path -LiteralPath $staging) { Get-ChildItem -LiteralPath $staging -File -Force | ForEach-Object { Remove-Temp $_.FullName } }
+  $mods = Join-Path $gameDir "mods"
+  if (Test-Path -LiteralPath $mods) { Get-ChildItem -LiteralPath $mods -File -Force | Where-Object { $_.Name -like "*.part" } | ForEach-Object { Log ("removing a part file left by an earlier run: " + $_.Name); Remove-Temp $_.FullName } }
 }
 
-# $true when the Play button will work on this PC afterwards.
-function Install-Self {
-  if ($DryRun -or $script:CustomRoot -or $env:OS -ne "Windows_NT" -or -not $env:LOCALAPPDATA -or -not $PSCommandPath) { return $false }
-  $dir = Join-Path $env:LOCALAPPDATA "DeepslateWorks"
-  $target = Join-Path $dir "install.ps1"
-  New-Item -ItemType Directory -Force -Path $dir | Out-Null
-  $me = (Resolve-Path -LiteralPath $PSCommandPath).Path
+# ---- where it lives, the Play link and the shortcuts (docs/07 "Setup") --------------------------------
+# One copy in %LOCALAPPDATA%\DeepslateWorks. Windows is told, for this user only (HKCU, no admin rights), to run it
+# for deepslate:// links, and a "Deepslate Works" shortcut on the desktop and in the Start Menu runs it too.
+
+function Get-HomeDir { if ($env:LOCALAPPDATA) { return (Join-Path $env:LOCALAPPDATA "DeepslateWorks") } return $null }
+function Get-PowerShellExe { return (([string]$env:SystemRoot).TrimEnd("\") + "\System32\WindowsPowerShell\v1.0\powershell.exe") }   # the full path: never whatever "powershell" is found first
+
+function Get-HandlerCommand([string]$scriptPath) {
+  return ('"{0}" -NoProfile -ExecutionPolicy Bypass -File "{1}" "%1"' -f (Get-PowerShellExe), $scriptPath)
+}
+
+function Get-ShortcutSpec([string]$scriptPath) {
+  return [ordered]@{
+    target = Get-PowerShellExe
+    arguments = ('-NoProfile -ExecutionPolicy Bypass -File "{0}"' -f $scriptPath)
+    workingDirectory = (Split-Path -Parent $scriptPath)
+    description = "Updates Deepslate Works and opens the Minecraft Launcher on it"
+  }
+}
+
+function Register-PlayLink([string]$scriptPath) {
+  $base = "HKCU:\Software\Classes\deepslate"
+  New-Item -Path "$base\shell\open\command" -Force | Out-Null
+  Set-Item -Path $base -Value ("URL:{0}" -f $PackName)
+  New-ItemProperty -Path $base -Name "URL Protocol" -Value "" -PropertyType String -Force | Out-Null
+  Set-Item -Path "$base\shell\open\command" -Value (Get-HandlerCommand $scriptPath)
+  return ([string](Get-Item "HKCU:\Software\Classes\deepslate\shell\open\command").GetValue("") -eq (Get-HandlerCommand $scriptPath))
+}
+
+function Set-Shortcuts([string]$scriptPath) {
+  $spec = Get-ShortcutSpec $scriptPath
+  $shell = New-Object -ComObject WScript.Shell
+  $made = 0
+  foreach ($folder in @([Environment]::GetFolderPath("Desktop"), [Environment]::GetFolderPath("Programs"))) {
+    if (-not $folder) { continue }
+    try {
+      $s = $shell.CreateShortcut((Join-Path $folder ("{0}.lnk" -f $PackName)))
+      $s.TargetPath = $spec.target; $s.Arguments = $spec.arguments; $s.WorkingDirectory = $spec.workingDirectory; $s.Description = $spec.description
+      $s.IconLocation = ("{0},0" -f $spec.target)
+      $s.Save(); $made++
+    } catch { Log ("could not make the shortcut in " + $folder + ": " + $_.Exception.Message) }
+  }
+  return $made
+}
+
+# The files a copy of 1.3.x / 1.4.x left in the same folder. There is one script now.
+$OldFiles = @("install.ps1", "install.ps1.bak", "install.ps1.new", "Setup.bat", "Setup.bat.new", "play.ps1", "Update and Play.bat")
+
+# Puts this script in place (never an older one over a newer one), removes the old layout, registers the link and
+# the shortcuts. Returns the path of the copy to run.
+function Install-Home([string]$me, [string]$dir) {
+  [void][IO.Directory]::CreateDirectory($dir)
+  $target = Join-Path $dir $ScriptName
   if ($me -ne $target) {
     $same = (Test-Path -LiteralPath $target) -and ((Get-FileHash -LiteralPath $me -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash)
-    # Never an older script over a newer one: the copy may have updated itself since this folder was unzipped.
-    if (-not $same -and (Test-Path -LiteralPath $target) -and (Test-Newer (Get-ScriptVersion $target) $InstallerVersion)) { $same = $true; Log ("the copy in " + $dir + " is newer than this script; left as it is") }
-    if (-not $same) {
-      Copy-Item -LiteralPath $me -Destination $target -Force
-      $bat = Join-Path (Split-Path -Parent $me) "Setup.bat"
-      if (Test-Path -LiteralPath $bat) { Copy-Item -LiteralPath $bat -Destination (Join-Path $dir "Setup.bat") -Force }
-      Log ("copied the installer to " + $target)
-    }
+    if (-not $same -and (Test-Path -LiteralPath $target) -and (Test-Newer (Get-ScriptVersion $target) $InstallerVersion)) { $same = $true; Log ("the copy in " + $dir + " is newer than this one; left as it is") }
+    if (-not $same) { Copy-Item -LiteralPath $me -Destination $target -Force; Log ("put " + $ScriptName + " in " + $dir) }
   }
-  if (-not (Test-Path -LiteralPath $target)) { return $false }
-  Register-PlayLink $target
-  $got = [string](Get-Item "HKCU:\Software\Classes\deepslate\shell\open\command").GetValue("")
-  return ($got -eq (Get-HandlerCommand $target))
+  foreach ($old in $OldFiles) { $p = Join-Path $dir $old; if (Test-Path -LiteralPath $p) { Remove-Temp $p; Log ("removed the old " + $old) } }
+  return $target
+}
+
+# What kind of run this is, for the report: nothing installed yet, the pack changed, or everything was current.
+function Get-RunMode($prev, [string]$packHash) {
+  if (-not $prev) { return "first_install" }
+  if ($packHash -and [string]$prev.hash -ne $packHash) { return "update" }
+  return "play"
 }
 
 # Java says its version on stderr. It is asked through a process of its own and both streams are read as text:
@@ -496,7 +553,7 @@ function Open-Launcher {
 }
 
 if ($SelfTest) {
-  # Runs the profile code against a scratch copy of what the launcher writes on a fresh install.
+  # Runs the code against scratch copies of what it works on (a launcher profile file, a mods folder, a home folder).
   # Works under Windows PowerShell 5.1 and under pwsh on Linux. Touches nothing outside its own folder.
   $dir = Join-Path $Temp ("deepslate-selftest-" + [Guid]::NewGuid().ToString("N"))
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -579,80 +636,145 @@ if ($SelfTest) {
   Check ("a notice is shown as plain text on one line: " + $script:RunLog[-1]) ($script:RunLog[-1].EndsWith("] the site says: a [2J b"))
   $script:Token = $null
 
-  Write-Host "Self test: the Play link" -ForegroundColor White
+  Write-Host "Self test: the Play link, the handler and the shortcuts" -ForegroundColor White
   Check "deepslate://play is accepted, with or without the slash a browser adds" ((Test-PlayLink "deepslate://play") -and (Test-PlayLink "deepslate://play/") -and (Test-PlayLink "DEEPSLATE://PLAY"))
-  $no = @("deepslate://play/../x", "deepslate://play?root=\\evil\share", "deepslate://play -Root C:\x", 'deepslate://play" -SelfTest "', "deepslate://update", "deepslate://", "deepslate:play", "http://deepslate.dsw.test/play", "deepslate://play/ ", " deepslate://play", "deepslate://play`n-DryRun", "")
+  $no = @("deepslate://play/../x", "deepslate://play?root=\\evil\share", "deepslate://play -Root C:\x", 'deepslate://play" -SelfTest "', "deepslate://update", "deepslate://", "deepslate:play", "http://deepslate.dsw.test/play", "deepslate://play/ ", " deepslate://play", "deepslate://play`n-DryRun", "deepslate://play -Setup", "")
   $let = @($no | Where-Object { Test-PlayLink $_ })
   Check ("every other link is refused (let through: " + $let.Count + ")") ($let.Count -eq 0)
-  $env:SystemRoot = "C:\Windows"
-  $cmd = Get-HandlerCommand "C:\Users\x\AppData\Local\DeepslateWorks\install.ps1"
-  Check ("Windows is told to run: " + $cmd) ($cmd -eq '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "C:\Users\x\AppData\Local\DeepslateWorks\install.ps1" -Play "%1"')
-  $Mode = "play"
-  Check "a run from the Play button says so in its report" ((New-Report "ok").mode -eq "play")
-  $Mode = "install"
-  Check "a normal run says so too" ((New-Report "ok").mode -eq "install")
+  $keepRoot = $env:SystemRoot; $env:SystemRoot = "C:\Windows"
+  $home2 = "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1"
+  $cmd = Get-HandlerCommand $home2
+  Check ("Windows is told to run the one script for the link: " + $cmd) ($cmd -eq '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1" "%1"')
+  $sc = Get-ShortcutSpec $home2
+  Check ("the shortcuts run the same script, with nothing else: " + $sc.arguments) (($sc.target -eq "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe") -and ($sc.arguments -eq '-NoProfile -ExecutionPolicy Bypass -File "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1"'))
+  $env:SystemRoot = $keepRoot
 
-  Write-Host "Self test: the installer updates itself" -ForegroundColor White
-  Check "1.4.0 is newer than 1.3.0, and 1.10.0 than 1.9.0" ((Test-Newer "1.4.0" "1.3.0") -and (Test-Newer "1.10.0" "1.9.0"))
-  $notNewer = @(@("1.3.0", "1.3.0"), @("1.2.9", "1.3.0"), @("banana", "1.3.0"), @("", "1.3.0"), @("9.9.9; calc", "1.3.0"), @("v2.0.0", "1.3.0")) | Where-Object { Test-Newer $_[0] $_[1] }
-  Check "the same, an older one and anything that is not a version are not" (@($notNewer).Count -eq 0)
-  Add-Type -AssemblyName System.IO.Compression
-  Add-Type -AssemblyName System.IO.Compression.FileSystem
-  function New-TestZip($path, $entries) {
-    if (Test-Path $path) { Remove-Item $path -Force }
-    $z = [IO.Compression.ZipFile]::Open($path, [IO.Compression.ZipArchiveMode]::Create)
-    try {
-      foreach ($k in $entries.Keys) {
-        $w = New-Object IO.StreamWriter($z.CreateEntry($k).Open())
-        try { $w.Write([string]$entries[$k]) } finally { $w.Dispose() }
-      }
-    } finally { $z.Dispose() }
-    return (Get-FileHash -Path $path -Algorithm SHA256).Hash
+  Write-Host "Self test: the home folder" -ForegroundColor White
+  $hd = Join-Path $dir "LocalAppData [x]\DeepslateWorks"
+  [void][IO.Directory]::CreateDirectory($hd)
+  foreach ($old in @("install.ps1", "install.ps1.bak", "Setup.bat")) { [IO.File]::WriteAllText((Join-Path $hd $old), "old") }
+  $src = Join-Path $dir "zip folder\DeepslateWorks.ps1"
+  [void][IO.Directory]::CreateDirectory((Split-Path -Parent $src))
+  [IO.File]::WriteAllText($src, ('$InstallerVersion = "' + $InstallerVersion + '"' + "`nWrite-Host this"))
+  $t = Install-Home $src $hd
+  $names = @(Get-ChildItem -LiteralPath $hd -Force | ForEach-Object { $_.Name }) -join ","
+  Check ("Setup leaves one script and nothing of the old layout: " + $names) (($t -eq (Join-Path $hd "DeepslateWorks.ps1")) -and ($names -eq "DeepslateWorks.ps1"))
+  [IO.File]::WriteAllText($t, '$InstallerVersion = "9.0.0"' + "`nWrite-Host newer")
+  $null = Install-Home $src $hd
+  Check "an older script never goes over a newer one that is already there" ((Get-ScriptVersion $t) -eq "9.0.0")
+
+  Write-Host "Self test: what kind of run it is" -ForegroundColor White
+  $prevRun = [pscustomobject]@{ version = "0.1.0+aaaaaaaa"; hash = "aaaa" }
+  Check "nothing installed yet: first_install" ((Get-RunMode $null "aaaa") -eq "first_install")
+  Check "the pack changed since the last run: update" ((Get-RunMode $prevRun "bbbb") -eq "update")
+  Check "everything current: play" ((Get-RunMode $prevRun "aaaa") -eq "play")
+  foreach ($m in @("first_install", "update", "play", "already_running")) {
+    $Mode = $m
+    $rp = New-Report $(if ($m -eq "already_running") { "skipped" } else { "ok" })
+    Check ("the report says " + $m) ($rp.mode -eq $m)
   }
-  $up = Join-Path $dir "update"
-  $home1 = Join-Path $up "folder"
-  New-Item -ItemType Directory -Force -Path $home1 | Out-Null
-  $oldPs = '$InstallerVersion = "1.3.0"' + "`nWrite-Host old"
-  $newPs = '$InstallerVersion = "1.4.0"' + "`nWrite-Host new"
-  function Reset-Folder { [IO.File]::WriteAllText((Join-Path $home1 "install.ps1"), $oldPs); [IO.File]::WriteAllText((Join-Path $home1 "Setup.bat"), "old bat"); Get-ChildItem $home1 | Where-Object { $_.Name -notin @("install.ps1", "Setup.bat") } | Remove-Item -Force -Recurse }
-  function Test-Untouched { return ((([IO.File]::ReadAllText((Join-Path $home1 "install.ps1"))) -eq $oldPs) -and (([IO.File]::ReadAllText((Join-Path $home1 "Setup.bat"))) -eq "old bat") -and (@(Get-ChildItem $home1).Count -eq 2)) }
-  $zip = Join-Path $up "installer.zip"
+  $Mode = "play"
+  $rp = New-Report "failed"
+  Check "a run that failed is a failed run of its kind" (($rp.mode -eq "play") -and ($rp.outcome -eq "failed"))
 
-  Reset-Folder
-  $sum = New-TestZip $zip ([ordered]@{ "install.ps1" = $newPs; "Setup.bat" = "new bat"; "README.txt" = "read me" })
-  $r = Install-Update $zip "0000000000000000000000000000000000000000000000000000000000000000" "1.4.0" $home1
-  Check ("a download with another checksum replaces nothing: " + $r) (($r -ne "") -and (Test-Untouched))
-  $r = Install-Update $zip "" "1.4.0" $home1
-  Check ("no checksum from the site, nothing replaced: " + $r) (($r -ne "") -and (Test-Untouched))
-  $r = Install-Update $zip $sum "1.5.0" $home1
-  Check ("a script of another version than the site named, nothing replaced: " + $r) (($r -ne "") -and (Test-Untouched))
-  $r = Install-Update $zip $sum "1.4.0" $home1
-  Check "the right download replaces install.ps1 and Setup.bat" (($r -eq "") -and ([IO.File]::ReadAllText((Join-Path $home1 "install.ps1")) -eq $newPs) -and ([IO.File]::ReadAllText((Join-Path $home1 "Setup.bat")) -eq "new bat"))
-  Check "the script it replaced is kept as install.ps1.bak, and nothing else was written" (([IO.File]::ReadAllText((Join-Path $home1 "install.ps1.bak")) -eq $oldPs) -and (@(Get-ChildItem $home1).Count -eq 3))
-  Check "the version of a script file can be read" ((Get-ScriptVersion (Join-Path $home1 "install.ps1")) -eq "1.4.0")
+  Write-Host "Self test: one copy at a time" -ForegroundColor White
+  $pwshExe = (Get-Process -Id $PID).Path
+  $scratchRoot = Join-Path $dir "second run"
+  [void][IO.Directory]::CreateDirectory($scratchRoot)
+  function Invoke-Second {
+    $o = Join-Path $dir "second.out"
+    $p = Start-Process -FilePath $pwshExe -ArgumentList @("-NoProfile", "-File", ('"{0}"' -f $PSCommandPath), "-DryRun", "-Root", ('"{0}"' -f $scratchRoot)) -Wait -PassThru -NoNewWindow -RedirectStandardOutput $o
+    return @{ code = $p.ExitCode; out = [IO.File]::ReadAllText($o) }
+  }
+  $script:Lock = Enter-Lock
+  Check "this run takes the lock" ($null -ne $script:Lock)
+  $before = @(Get-ChildItem -LiteralPath $scratchRoot -Recurse -Force).Count
+  $r2 = Invoke-Second
+  Check ("a second run while it is held says so and leaves (exit " + $r2.code + ")") (($r2.code -eq $ExitAlreadyRunning) -and ($r2.out -match "already running in another window\. Let it finish, then press Play again\."))
+  Check "and touches nothing" (@(Get-ChildItem -LiteralPath $scratchRoot -Recurse -Force).Count -eq $before)
+  Exit-Lock
+  $r3 = Invoke-Second
+  Check ("once it is let go the next run goes ahead (exit " + $r3.code + ")") (($r3.code -ne $ExitAlreadyRunning) -and ($r3.out -notmatch "already running"))
+  # a copy that takes the lock and ends without letting go of it, as a killed run would
+  $held = Join-Path $dir "held.txt"
+  $code = ('$m = New-Object System.Threading.Mutex($false, "{0}"); if ($m.WaitOne(0)) {{ [IO.File]::WriteAllText("{1}", "held") }}; exit 0' -f $LockName, $held)
+  $p = Start-Process -FilePath $pwshExe -ArgumentList @("-NoProfile", "-EncodedCommand", [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($code))) -Wait -PassThru -NoNewWindow
+  $script:Lock = Enter-Lock
+  Check "a run that was killed with the lock held does not keep everybody out" (([IO.File]::Exists($held)) -and ($null -ne $script:Lock))
+  Exit-Lock
 
-  Reset-Folder
-  $sum = New-TestZip $zip ([ordered]@{ "install.ps1" = ('$InstallerVersion = "1.4.0"' + "`nif ((( {"); "Setup.bat" = "new bat" })
-  $r = Install-Update $zip $sum "1.4.0" $home1
-  Check ("a script that does not parse replaces nothing: " + $r) (($r -ne "") -and (Test-Untouched))
-  $sum = New-TestZip $zip ([ordered]@{ "install.ps1" = $newPs })
-  $r = Install-Update $zip $sum "1.4.0" $home1
-  Check ("a download without Setup.bat replaces nothing: " + $r) (($r -ne "") -and (Test-Untouched))
-  $sum = New-TestZip $zip ([ordered]@{ "sub/install.ps1" = $newPs; "../install.ps1" = $newPs; "INSTALL.PS1" = $newPs; "Setup.bat" = "new bat" })
-  $r = Install-Update $zip $sum "1.4.0" $home1
-  Check ("install.ps1 under another path or spelling is not taken: " + $r) (($r -ne "") -and (Test-Untouched))
+  Write-Host "Self test: the script updates itself" -ForegroundColor White
+  Check "1.5.1 is newer than 1.5.0, and 1.10.0 than 1.9.0" ((Test-Newer "1.5.1" "1.5.0") -and (Test-Newer "1.10.0" "1.9.0"))
+  $notNewer = @(@("1.5.0", "1.5.0"), @("1.4.9", "1.5.0"), @("banana", "1.5.0"), @("", "1.5.0"), @("9.9.9; calc", "1.5.0"), @("v2.0.0", "1.5.0")) | Where-Object { Test-Newer $_[0] $_[1] }
+  Check "the same, an older one and anything that is not a version are not" (@($notNewer).Count -eq 0)
+  $ud = Join-Path $dir "update"
+  $site = Join-Path $dir "site"
+  [void][IO.Directory]::CreateDirectory($ud); [void][IO.Directory]::CreateDirectory($site)
+  $mineNow = Join-Path $ud "DeepslateWorks.ps1"
+  $oldText = '$InstallerVersion = "' + $InstallerVersion + '"' + "`nWrite-Host old"
+  $newText = '$InstallerVersion = "9.9.1"' + "`nWrite-Host new"
+  function Reset-Update { Get-ChildItem -LiteralPath $ud -Force | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }; [IO.File]::WriteAllText($mineNow, $oldText) }
+  function Test-UpdateUntouched { return (([IO.File]::ReadAllText($mineNow) -eq $oldText) -and (@(Get-ChildItem -LiteralPath $ud -Force).Count -eq 1)) }
+  function Set-Site([string]$text) { $f = Join-Path $site "DeepslateWorks.ps1"; [IO.File]::WriteAllText($f, $text); return (Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash.ToLower() }
+  $script:Asked = 0
+  $fromSite = { param($url, $out) $script:Asked++; if ($url -notmatch '/downloads/DeepslateWorks\.ps1$') { throw "asked for $url" }; Copy-Item -LiteralPath (Join-Path $site "DeepslateWorks.ps1") -Destination $out -Force }
+  $offline = { param($url, $out) $script:Asked++; [IO.File]::WriteAllText($out, "half"); throw "The remote name could not be resolved" }
 
-  Reset-Folder
-  $sum = New-TestZip $zip ([ordered]@{ "../evil.ps1" = "evil"; "..\evil2.ps1" = "evil"; "sub/evil.exe" = "evil"; "evil.bat" = "evil"; "install.ps1" = $newPs; "Setup.bat" = "new bat" })
-  $r = Install-Update $zip $sum "1.4.0" $home1
-  $strays = @(Get-ChildItem $up -Recurse -Force | Where-Object { $_.Name -like "*evil*" })
-  Check "whatever else the zip holds stays in the zip" (($r -eq "") -and ($strays.Count -eq 0) -and (@(Get-ChildItem $home1).Count -eq 3))
-  $script:UpdatedFrom = "1.3.0"; $script:UpdateProblem = $null
-  Check "a report from an updated script says which version fetched it" ((New-Report "ok").updatedFrom -eq "1.3.0")
-  $script:UpdatedFrom = $null; $script:UpdateProblem = "could not write C:\Users\" + $script:Personal[0] + "\AppData\Local\DeepslateWorks\install.ps1.new"
+  Reset-Update; $sum = Set-Site $newText
+  $u = Update-Script @{ version = "9.9.1"; sha256 = $sum } $mineNow $fromSite
+  Check "a newer version: fetched from the site's /downloads, checked, put in place" (($u.status -eq "updated") -and ([IO.File]::ReadAllText($mineNow) -eq $newText))
+  Check "the script it replaced is kept as .bak, and nothing else is left" (([IO.File]::ReadAllText("$mineNow.bak") -eq $oldText) -and (@(Get-ChildItem -LiteralPath $ud -Force).Count -eq 2))
+  Reset-Update; $script:Asked = 0
+  $u = Update-Script @{ version = $InstallerVersion; sha256 = $sum } $mineNow $fromSite
+  Check "the same version: nothing fetched, nothing replaced" (($u.status -eq "current") -and ($script:Asked -eq 0) -and (Test-UpdateUntouched))
+  $u = Update-Script $null $mineNow $fromSite
+  Check "a mod list that names no script: nothing happens" (($u.status -eq "current") -and (Test-UpdateUntouched))
+  $u = Update-Script @{ version = "9.9.1"; sha256 = $sum } $mineNow $offline
+  Check ("the download fails: carried on with this version, nothing replaced, nothing left: " + $u.problem) (($u.status -eq "failed") -and ($u.problem -match "could not be downloaded") -and (Test-UpdateUntouched))
+  $u = Update-Script @{ version = "9.9.1"; sha256 = ("0" * 64) } $mineNow $fromSite
+  Check ("another checksum: nothing replaced: " + $u.problem) (($u.status -eq "failed") -and (Test-UpdateUntouched))
+  $u = Update-Script @{ version = "9.9.1"; sha256 = "" } $mineNow $fromSite
+  Check "no checksum from the site: nothing fetched, nothing replaced" (($u.status -eq "failed") -and (Test-UpdateUntouched))
+  $sum = Set-Site ('$InstallerVersion = "9.9.2"' + "`nWrite-Host other")
+  $u = Update-Script @{ version = "9.9.1"; sha256 = $sum } $mineNow $fromSite
+  Check ("a script of another version than the site named: nothing replaced: " + $u.problem) (($u.status -eq "failed") -and (Test-UpdateUntouched))
+  $sum = Set-Site ('$InstallerVersion = "9.9.1"' + "`nif ((( {")
+  $u = Update-Script @{ version = "9.9.1"; sha256 = $sum } $mineNow $fromSite
+  Check ("a script that does not read as PowerShell: nothing replaced: " + $u.problem) (($u.status -eq "failed") -and (Test-UpdateUntouched))
+  $man = [pscustomobject]@{ installer = [pscustomobject]@{ version = "9.9.1"; sha256 = ("a" * 64); size = 1; script = [pscustomobject]@{ sha256 = ("b" * 64); size = 1 } } }
+  $o = Get-OfferedScript $man
+  Check "the mod list's script, not the zip, is what is checked" (($o.version -eq "9.9.1") -and ($o.sha256 -eq ("b" * 64)))
+  Check "a mod list from before 1.5.0 offers no script" ($null -eq (Get-OfferedScript ([pscustomobject]@{ installer = [pscustomobject]@{ version = "1.4.3"; sha256 = ("a" * 64); size = 1 } })))
+  $script:UpdatedFrom = "1.5.0"; $script:UpdateProblem = $null
+  Check "a report from an updated script says which version fetched it" ((New-Report "ok").updatedFrom -eq "1.5.0")
+  $script:UpdatedFrom = $null; $script:UpdateProblem = "it could not be downloaded: C:\Users\" + $script:Personal[0] + "\x"
   $rp = New-Report "ok"
-  Check ("an update that was not applied is in the report, without the name: " + $rp.updateProblem) (($rp.updatedFrom -eq $null) -and ($rp.updateProblem -like "could not write C:\Users\~\*") )
+  Check ("an update that was not applied is in the report, without the name: " + $rp.updateProblem) (($rp.updatedFrom -eq $null) -and ($rp.updateProblem -like "*C:\Users\~*"))
   $script:UpdateProblem = $null
+
+  Write-Host "Self test: downloads land in mods\ only when complete" -ForegroundColor White
+  $gd = Join-Path $dir "game [x]"
+  $md = Join-Path $gd "mods"; $stg = Join-Path $gd ".downloading"
+  [void][IO.Directory]::CreateDirectory($md)
+  [IO.File]::WriteAllText((Join-Path $md "create-6.0.jar"), "old jar")
+  $jarBytes = [Text.Encoding]::UTF8.GetBytes("a whole jar")
+  $jarSha = [BitConverter]::ToString([System.Security.Cryptography.SHA512]::Create().ComputeHash($jarBytes)).Replace("-", "").ToLower()
+  function Get-ModsState { return (@(Get-ChildItem -LiteralPath $md -Force | ForEach-Object { $_.Name + "=" + [IO.File]::ReadAllText($_.FullName) }) -join ";") }
+  $was = Get-ModsState
+  $killed = { param($url, $out) $b = [Text.Encoding]::UTF8.GetBytes("a who"); [IO.File]::WriteAllBytes($out, $b); throw "the run was killed here" }
+  $threw = $false
+  try { $null = Save-ModFile "https://cdn.modrinth.com/x.jar" (Join-Path $md "create-6.1.jar") $jarSha $stg $killed } catch { $threw = $true }
+  Check "a download cut off half-way leaves mods\ exactly as it was" ($threw -and ((Get-ModsState) -eq $was))
+  Check "what was half-downloaded is in .downloading\, not in mods\" ([IO.File]::Exists((Join-Path $stg "create-6.1.jar.part")))
+  [IO.File]::WriteAllText((Join-Path $md "old-mod.jar.part"), "from 1.4.x")
+  Clear-Leftovers $gd
+  Check "the next run clears both kinds of part file first" ((@(Get-ChildItem -LiteralPath $stg -Force).Count -eq 0) -and (-not [IO.File]::Exists((Join-Path $md "old-mod.jar.part"))))
+  $wrong = { param($url, $out) [IO.File]::WriteAllText($out, "not what the mod list says") }
+  $r = Save-ModFile "https://cdn.modrinth.com/x.jar" (Join-Path $md "create-6.1.jar") $jarSha $stg $wrong
+  Check "a download with the wrong checksum never reaches mods\" (($r -eq "wrong") -and ((Get-ModsState) -eq $was) -and (@(Get-ChildItem -LiteralPath $stg -Force).Count -eq 0))
+  $whole = { param($url, $out) [IO.File]::WriteAllBytes($out, $jarBytes) }
+  $r = Save-ModFile "https://cdn.modrinth.com/x.jar" (Join-Path $md "create-6.1.jar") $jarSha $stg $whole
+  Check "a whole, checked download is moved into mods\ in one step" (($r -eq "") -and ([IO.File]::ReadAllText((Join-Path $md "create-6.1.jar")) -eq "a whole jar") -and (@(Get-ChildItem -LiteralPath $stg -Force).Count -eq 0))
 
   Write-Host "Self test: finding Java" -ForegroundColor White
   # Stand-ins for java that say their version the way java does: on stderr, and nothing on stdout.
@@ -741,119 +863,170 @@ if ($SelfTest) {
   exit 0
 }
 
-Write-Host ("{0} installer ({1})" -f $PackName, $PackVersion) -ForegroundColor White
-Log ("=== {0} {1} start ===" -f $PackName, $PackVersion)
-$script:CustomRoot = ($Root -ne "")   # a test run: nothing is copied or registered
-if ($script:UpdatedFrom) {
-  Log ("STEP Updating the installer {0} {1} {2}" -f $script:UpdatedFrom, [char]0x2192, $InstallerVersion)
-  Log ("OK installer {0} fetched, checked and started by installer {1}" -f $InstallerVersion, $script:UpdatedFrom)
-}
+Write-Host ("{0} {1}" -f $PackName, $InstallerVersion) -ForegroundColor White
+$script:CustomRoot = ($Root -ne "")   # a test run: nothing is copied, registered or linked
 if ($Root -eq "") { $Root = $env:APPDATA }
+$OnWindows = ($env:OS -eq "Windows_NT")
+
+# ---- Setup.bat: put the script in its home, then run that copy in this window --------------------------
+if ($Setup) {
+  $me = (Resolve-Path -LiteralPath $PSCommandPath).Path
+  $target = $me
+  $dir = Get-HomeDir
+  if (-not $DryRun -and -not $script:CustomRoot -and $OnWindows -and $dir) {
+    try {
+      $target = Install-Home $me $dir
+      $linked = Register-PlayLink $target
+      $made = Set-Shortcuts $target
+      Write-Host ("  Installed in {0}" -f $dir) -ForegroundColor DarkGray
+      if ($linked) { Write-Host "  The Play button on the site now starts Deepslate Works on this PC" -ForegroundColor DarkGray }
+      if ($made -gt 0) { Write-Host ("  '{0}' is on your desktop and in the Start Menu" -f $PackName) -ForegroundColor DarkGray }
+    } catch {
+      Log ("setup: " + $_.Exception.Message)
+      Write-Host ("  Could not set up the Play button and the shortcuts ({0}). Carrying on from this folder." -f $_.Exception.Message) -ForegroundColor Yellow
+      $target = $me
+    }
+  }
+  $env:DEEPSLATE_FROM_SETUP = "1"
+  $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $target))
+  if ($DryRun) { $again += "-DryRun" }
+  if ($script:CustomRoot) { $again += @("-Root", ('"{0}"' -f $Root)) }
+  $child = Start-Process -FilePath ((Get-Process -Id $PID).Path) -ArgumentList $again -Wait -PassThru -NoNewWindow
+  exit $child.ExitCode
+}
+
+$DataDir = Join-Path $Root ".minecraft-deepslate-works"   # the game folder (the mod list's profile.dir; it has always been this)
+$tokenFile = Join-Path $DataDir "launcher.json"
+function Read-Token {
+  $t = $null
+  if (Test-Path -LiteralPath $tokenFile) { try { $t = (Get-Content -LiteralPath $tokenFile -Raw | ConvertFrom-Json).token } catch {} }
+  if ($DryRun -and $env:DEEPSLATE_LAUNCHER_TOKEN) { $t = $env:DEEPSLATE_LAUNCHER_TOKEN }   # tests under pwsh on Linux
+  return $t
+}
+
+# ---- a. the lock ----------------------------------------------------------------------------------------
+$script:Lock = Enter-Lock
+if (-not $script:Lock) {
+  $Mode = "already_running"
+  Write-Host ""
+  Write-Host "Deepslate Works is already running in another window. Let it finish, then press Play again." -ForegroundColor Yellow
+  Log "another copy holds the lock: nothing was touched"
+  $script:Token = Read-Token
+  Send-Report "skipped"
+  Hold-Window
+  exit $ExitAlreadyRunning
+}
+
+$installedFile = Join-Path $DataDir "installed.json"
+$prev = $null
+if (Test-Path -LiteralPath $installedFile) { try { $prev = Get-Content -LiteralPath $installedFile -Raw | ConvertFrom-Json } catch {} }
+$Mode = Get-RunMode $prev ""
+if ($Mode -eq "first_install") { $Quiet = $false }
+Log ("=== {0} {1} ({2}) start, {3} ===" -f $PackName, $InstallerVersion, $PackVersion, $Mode)
+if ($script:UpdatedFrom) {
+  Write-Host ("Updated to {0}" -f $InstallerVersion) -ForegroundColor Green
+  Log ("STEP Updating Deepslate Works {0} {1} {2}" -f $script:UpdatedFrom, [char]0x2192, $InstallerVersion)
+  Log ("OK {0} fetched, checked and started by {1}" -f $InstallerVersion, $script:UpdatedFrom)
+}
 $Minecraft = Join-Path $Root ".minecraft"
 $Profiles = Join-Path $Minecraft "launcher_profiles.json"
 
 try {
-  # 1. sign in with Discord through the portal (device-style flow); token remembered for a week.
-  #    First, so that whatever goes wrong afterwards can be reported under their name.
-  Step "Signing in"
-  $token = $null
-  $tokenFile = Join-Path (Join-Path $Root ".minecraft-deepslate-works") "launcher.json"
-  if (Test-Path -LiteralPath $tokenFile) { try { $token = (Get-Content -LiteralPath $tokenFile -Raw | ConvertFrom-Json).token } catch {} }
-  if ($DryRun -and $env:DEEPSLATE_LAUNCHER_TOKEN) { $token = $env:DEEPSLATE_LAUNCHER_TOKEN }   # tests under pwsh on Linux
+  Clear-Leftovers $DataDir
+
+  # ---- b. what the site has, and this script brought up to date --------------------------------------
+  $token = Read-Token
   $headers = @{}
-  if ($token) {
-    $headers = @{ Authorization = "Bearer $token" }
-    try { $null = Invoke-RestMethod -Uri $ManifestUrl -Headers $headers -UseBasicParsing -TimeoutSec 30; Tick "Still signed in" }
+  $manifest = $null
+  function Get-Manifest {
+    try { return (Invoke-RestMethod -Uri $ManifestUrl -Headers $headers -UseBasicParsing -TimeoutSec 60) }
     catch {
       $code = 0; try { $code = [int]$_.Exception.Response.StatusCode } catch {}
-      if ($code -eq 401) { $token = $null; Note "Your sign-in expired; signing in again" }
-      elseif ($code -eq 403) { Fail (Gate-Message $_) }
-      else { Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $PortalUrl) }
+      if ($code -eq 401) { return "unauthorized" }
+      if ($code -eq 403) { Fail (Gate-Message $_) }
+      Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $PortalUrl)
     }
   }
+  if ($token) {
+    Step "Checking for updates"
+    $headers = @{ Authorization = "Bearer $token" }
+    $manifest = Get-Manifest
+    if ($manifest -eq "unauthorized") { $manifest = $null; $token = $null; Note "Your sign-in expired; signing in again" }
+    else { Tick "Signed in" }
+  }
+
+  # ---- c. sign in, only when not signed in --------------------------------------------------------------
   if (-not $token) {
-    if ($DryRun) { Note "(dry run) would open the browser to sign in"; $headers = @{} }
-    else {
-      try { $start = Invoke-RestMethod -Uri "$PortalUrl/api/launcher/start" -Method Post -ContentType "application/json" -Body (@{ hostname = $env:COMPUTERNAME } | ConvertTo-Json) -UseBasicParsing -TimeoutSec 30 }
-      catch { Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $PortalUrl) }
-      Write-Host ("   Your code is  {0}  - a browser window is opening. Sign in with Discord and press 'Yes, that's me'." -f $start.code) -ForegroundColor Yellow
-      Write-Host ("   If nothing opens, go to {0}" -f $start.url) -ForegroundColor Gray
-      Start-Process $start.url
-      $deadline = (Get-Date).AddSeconds([int]$start.expiresInSec)
-      while ((Get-Date) -lt $deadline) {
-        Start-Sleep -Seconds ([int]$start.pollEverySec)
-        try { $poll = Invoke-RestMethod -Uri ("{0}/api/launcher/poll?token={1}" -f $PortalUrl, $start.pollToken) -UseBasicParsing -TimeoutSec 30 } catch { continue }
-        if ($poll.status -eq "approved" -and $poll.launcherToken) { $token = $poll.launcherToken; break }
-        if ($poll.status -eq "denied") { Fail "Sign-in was denied in the browser." }
-        if ($poll.status -eq "expired") { Fail "The sign-in code expired. Run this again." }
-      }
-      if (-not $token) { Fail "Timed out waiting for the browser sign-in. Run this again." }
-      New-Item -ItemType Directory -Force -Path (Split-Path $tokenFile) | Out-Null
-      @{ token = $token; savedAt = (Get-Date).ToString("s") } | ConvertTo-Json | Set-Content -LiteralPath $tokenFile
-      $headers = @{ Authorization = "Bearer $token" }
-      Tick ("Signed in as {0}" -f $poll.displayName)
+    Step "Signing in"
+    if ($DryRun) { Note "(dry run) would open the browser to sign in"; Fail "(dry run) not signed in; the mod list needs a sign-in" }
+    try { $start = Invoke-RestMethod -Uri "$PortalUrl/api/launcher/start" -Method Post -ContentType "application/json" -Body (@{ hostname = $env:COMPUTERNAME } | ConvertTo-Json) -UseBasicParsing -TimeoutSec 30 }
+    catch { Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $PortalUrl) }
+    Write-Host ("   Your code is  {0}  - a browser window is opening. Sign in with Discord and press 'Yes, that's me'." -f $start.code) -ForegroundColor Yellow
+    Write-Host ("   If nothing opens, go to {0}" -f $start.url) -ForegroundColor Gray
+    Start-Process $start.url
+    $deadline = (Get-Date).AddSeconds([int]$start.expiresInSec)
+    while ((Get-Date) -lt $deadline) {
+      Start-Sleep -Seconds ([int]$start.pollEverySec)
+      try { $poll = Invoke-RestMethod -Uri ("{0}/api/launcher/poll?token={1}" -f $PortalUrl, $start.pollToken) -UseBasicParsing -TimeoutSec 30 } catch { continue }
+      if ($poll.status -eq "approved" -and $poll.launcherToken) { $token = $poll.launcherToken; break }
+      if ($poll.status -eq "denied") { Fail "Sign-in was denied in the browser." }
+      if ($poll.status -eq "expired") { Fail "The sign-in code expired. Press Play again." }
     }
+    if (-not $token) { Fail "Timed out waiting for the browser sign-in. Press Play again." }
+    New-Item -ItemType Directory -Force -Path (Split-Path $tokenFile) | Out-Null
+    @{ token = $token; savedAt = (Get-Date).ToString("s") } | ConvertTo-Json | Set-Content -LiteralPath $tokenFile
+    $headers = @{ Authorization = "Bearer $token" }
+    Tick ("Signed in as {0}" -f $poll.displayName)
+    $manifest = Get-Manifest
+    if ($manifest -eq "unauthorized") { Fail "The site did not take the new sign-in. Press Play again." }
   }
-
   $script:Token = $token
-
-  # 2. launcher present, and closed?
-  Step "Checking the Minecraft Launcher"
-  if (-not (Test-Path -LiteralPath $Profiles)) {
-    $script:Facts.launcher = [ordered]@{ kind = "not found"; version = $null; profilesFormat = $null }
-    if (-not $DryRun) { try { Start-Process "https://www.minecraft.net/download" } catch {} }
-    Fail "Install the Minecraft Launcher from minecraft.net, open it once, then run this again."
-  }
-  $script:Facts.launcher = Get-LauncherFacts
-  $script:LauncherOpen = $false
-  if ($Mode -eq "play") {
-    # Pressing Play with the launcher already open is ordinary. The mods can be brought up to date all the
-    # same; only NeoForge and the profile need it closed, and they are checked when their turn comes.
-    $script:LauncherOpen = (@(Find-Launcher).Count -gt 0)
-    if ($script:LauncherOpen) { Log "the launcher is open; carrying on with the mods" }
-    Tick "Launcher found"
-  } else {
-    Require-LauncherClosed "anything is changed"   # asked for before NeoForge and before the profile; said first, so nobody waits through the downloads to hear it
-    Tick "Launcher found, and closed"
-  }
-
-  # 3. manifest
-  Step "Fetching the mod list"
-  try { $manifest = Invoke-RestMethod -Uri $ManifestUrl -Headers $headers -UseBasicParsing -TimeoutSec 60 }
-  catch {
-    $code = 0; try { $code = [int]$_.Exception.Response.StatusCode } catch {}
-    if ($code -eq 403) { Fail (Gate-Message $_) }
-    if ($code -eq 401 -and $DryRun) { Fail "(dry run) not signed in; the manifest needs a sign-in" }
-    Fail ("Couldn't reach {0}. Check your internet, or ask Alex if the site is down." -f $ManifestUrl)
-  }
   if ($manifest.version) { $script:PackSeen = [string]$manifest.version }
 
-  # A newer installer on the site? (-Play only.) The new script starts again from the top, with what this one was started with.
-  if (Update-Self $manifest $headers) {
-    $env:DEEPSLATE_UPDATED_FROM = $InstallerVersion
-    $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $PSCommandPath), "-Play")
-    if ($FromLink) { $again += $Link }
-    else {
-      if ($script:CustomRoot) { $again += @("-Root", ('"{0}"' -f $Root)) }
-      if ($NoPrompt) { $again += "-NoPrompt" }
+  # A newer script on the site: fetched, checked, put in place and started with what this one was started with.
+  if (-not $script:UpdatedFrom -and -not $DryRun -and $PSCommandPath -and @($PretendRunning).Count -eq 0) {
+    $offer = Get-OfferedScript $manifest
+    if ($offer -and (Test-Newer $offer.version $InstallerVersion)) {
+      Step ("Updating Deepslate Works {0} {1} {2}" -f $InstallerVersion, [char]0x2192, $offer.version)
+      $u = Update-Script $offer $PSCommandPath { param($url, $out) Invoke-WebRequest -Uri $url -Headers $headers -OutFile $out -UseBasicParsing -TimeoutSec 120 }
+      if ($u.status -eq "updated") {
+        Log ("OK {0} is in place; starting it" -f $u.version)
+        $script:Reported = $true   # the report is the new script's to send
+        Exit-Lock
+        $env:DEEPSLATE_UPDATED_FROM = $InstallerVersion
+        $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $PSCommandPath))
+        if ($FromLink) { $again += $Link }
+        elseif ($script:CustomRoot) { $again += @("-Root", ('"{0}"' -f $Root)) }
+        $child = Start-Process -FilePath ((Get-Process -Id $PID).Path) -ArgumentList $again -Wait -PassThru -NoNewWindow
+        exit $child.ExitCode
+      }
+      $script:UpdateProblem = $u.problem
+      Log ("UPDATE NOT APPLIED: " + $u.problem)
+      Write-Host ("   Deepslate Works could not update itself ({0}). Carrying on with {1}." -f $u.problem, $InstallerVersion) -ForegroundColor Yellow
     }
-    $script:Reported = $true   # the report is the new script's to send
-    $child = Start-Process -FilePath ((Get-Process -Id $PID).Path) -ArgumentList $again -Wait -PassThru -NoNewWindow
-    exit $child.ExitCode
   }
+
   $neo = $manifest.neoforge
   $mc = $manifest.minecraft
   $profile = $manifest.profile
   $GameDir = Join-Path $Root $profile.dir
   $files = @($manifest.files | Where-Object { $_.side -ne "server" })
-  Tick ("{0} mods for Minecraft {1} / NeoForge {2}" -f $files.Count, $mc, $neo)
+  $Mode = Get-RunMode $prev ([string]$manifest.hash)
+  if ($Mode -eq "update") { Note ("Pack {0} {1} {2}" -f $prev.version, [char]0x2192, $script:PackSeen) }
+  Log ("{0} mods for Minecraft {1} / NeoForge {2}; this run: {3}" -f $files.Count, $mc, $neo, $Mode)
 
-  # already up to date?
-  $installedFile = Join-Path $GameDir "installed.json"
-  $prev = $null
-  if (Test-Path -LiteralPath $installedFile) { try { $prev = Get-Content -LiteralPath $installedFile -Raw | ConvertFrom-Json } catch {} }
+  # ---- the launcher: there? Open is fine until something it would overwrite has to be written -------------
+  Step "Checking the Minecraft Launcher"
+  if (-not (Test-Path -LiteralPath $Profiles)) {
+    $script:Facts.launcher = [ordered]@{ kind = "not found"; version = $null; profilesFormat = $null }
+    if (-not $DryRun) { try { Start-Process "https://www.minecraft.net/download" } catch {} }
+    Fail "Install the Minecraft Launcher from minecraft.net, open it once, close it, then press Play again."
+  }
+  $script:Facts.launcher = Get-LauncherFacts
+  if (@(Find-Launcher).Count -gt 0) { Log "the launcher is open; it only has to be closed if NeoForge or the profile has to be written" }
+  Tick "Launcher found"
 
-  # 3. Java 21
+  # ---- Java 21: the launcher's own, then one on PATH that is 21 or newer, then one downloaded for us -------
   Step "Finding Java 21"
   $bundled = Join-Path $Minecraft "runtime\java-runtime-delta\windows-x64\java-runtime-delta\bin\java.exe"
   $cmd = Get-Command java -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -874,7 +1047,7 @@ try {
       Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $GameDir "runtime") -Force
       Remove-Temp $zip
       $found = Get-ChildItem -LiteralPath (Join-Path $GameDir "runtime") -Filter java.exe -Recurse | Select-Object -First 1
-      if (-not $found) { Fail "Java download didn't work. Run this again, or ask Alex." }
+      if (-not $found) { Fail "Java download didn't work. Press Play again, or ask Alex." }
       $java = $found.FullName
       $javaSource = "downloaded on this run"
       Tick "Java 21 downloaded"
@@ -884,7 +1057,7 @@ try {
   if (-not $DryRun) { $javaVersion = Get-JavaVersionText $java }
   $script:Facts.java = [ordered]@{ source = $javaSource; path = [string]$java; version = $javaVersion; passedOver = $javaPassedOver }
 
-  # 4. NeoForge
+  # ---- NeoForge ---------------------------------------------------------------------------------------------
   Step ("Installing NeoForge {0}" -f $neo)
   $versionId = "neoforge-$neo"
   $neoBefore = Test-Path -LiteralPath (Join-Path $Minecraft ("versions\{0}" -f $versionId))
@@ -902,36 +1075,34 @@ try {
     Get-Content -LiteralPath (Join-Path $Temp "neoforge-install.out") -ErrorAction SilentlyContinue | ForEach-Object { Log ("neoforge: " + $_) }
     Remove-Temp $jar
     Remove-Temp (Join-Path $Temp "neoforge-install.out")
-    if (-not (Test-Path -LiteralPath (Join-Path $Minecraft ("versions\{0}" -f $versionId)))) { Fail "NeoForge didn't install. Open the Minecraft Launcher, make sure vanilla 1.21.1 has been run once, then try again." }
+    if (-not (Test-Path -LiteralPath (Join-Path $Minecraft ("versions\{0}" -f $versionId)))) { Fail "NeoForge didn't install. Open the Minecraft Launcher, make sure vanilla 1.21.1 has been run once, close it, then press Play again." }
     $script:Facts.neoforge.after = $true
     Tick "NeoForge installed"
   }
 
-  # 5. game dir + mods
+  # ---- mods: downloaded into .downloading\, checked, then moved into mods\ ----------------------------------
   Step "Setting up the mods"
   foreach ($d in @("mods", "config", "resourcepacks")) { New-Item -ItemType Directory -Force -Path (Join-Path $GameDir $d) | Out-Null }
   $modsDir = Join-Path $GameDir "mods"
+  $staging = Join-Path $GameDir ".downloading"
   $sha = [System.Security.Cryptography.SHA512]::Create()
   $keep = @{}
   $i = 0
+  $fetched = 0
   foreach ($f in $files) {
     $i++
     $dest = Join-Path $modsDir $f.filename
     $keep[$f.filename] = $true
-    $ok = $false
     if (Test-Path -LiteralPath $dest) {
       $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($dest))).Replace("-", "").ToLower()
-      $ok = ($hash -eq $f.sha512)
+      if ($hash -eq $f.sha512) { continue }
     }
-    if ($ok) { continue }
     Write-Progress -Activity "Downloading mods" -Status $f.filename -PercentComplete ([int](100 * $i / $files.Count))
     if ($DryRun) { Note ("(dry run) would download {0}" -f $f.filename); continue }
-    $tmp = "$dest.part"
-    Invoke-WebRequest -Uri $f.url -OutFile $tmp -UseBasicParsing
-    $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($tmp))).Replace("-", "").ToLower()
-    if ($hash -ne $f.sha512) { Remove-Temp $tmp; Fail ("{0} downloaded wrong. Run this again." -f $f.filename) }
-    try { Move-Item -Force -LiteralPath $tmp -Destination $dest }
-    catch { Log ("could not replace " + $f.filename + ": " + $_.Exception.Message); Remove-Temp $tmp; Fail ("{0} is in use. Close Minecraft (the game, not only the launcher), then try again." -f $f.filename) }
+    $r = Save-ModFile $f.url $dest $f.sha512 $staging { param($url, $out) Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing }
+    if ($r -eq "wrong") { Fail ("{0} downloaded wrong. Press Play again." -f $f.filename) }
+    if ($r -eq "in use") { Fail ("{0} is in use. Close Minecraft (the game, not only the launcher), then press Play again." -f $f.filename) }
+    $fetched++
     Log ("downloaded " + $f.filename)
   }
   Write-Progress -Activity "Downloading mods" -Completed
@@ -940,21 +1111,21 @@ try {
     if (-not $DryRun) {
       $gone = $_.Name
       try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop }
-      catch { Log ("could not remove " + $gone + ": " + $_.Exception.Message); Fail ("{0} is in use. Close Minecraft (the game, not only the launcher), then try again." -f $gone) }
+      catch { Log ("could not remove " + $gone + ": " + $_.Exception.Message); Fail ("{0} is in use. Close Minecraft (the game, not only the launcher), then press Play again." -f $gone) }
     }
   }
-  Tick ("{0} mods in place" -f $files.Count)
+  Tick ("{0} mods in place ({1} downloaded)" -f $files.Count, $fetched)
 
-  # 6. configs (zip from the site) and options.txt
+  # ---- settings: the pack's config files (zip from the site) and, the first time, options.txt ---------------
   Step "Settings"
   if ($manifest.config_url -and -not $DryRun) {
     $cz = Join-Path $Temp "deepslate-config.zip"
     try {
       Invoke-WebRequest -Uri $manifest.config_url -Headers $headers -OutFile $cz -UseBasicParsing
       Expand-Archive -LiteralPath $cz -DestinationPath $GameDir -Force
-      Remove-Temp $cz
       Tick "Config files updated"
-    } catch { Note "No config files this time" }
+    } catch { Note ("The config files could not be updated this time: " + $_.Exception.Message) }
+    finally { Remove-Temp $cz }
   }
   $options = Join-Path $GameDir "options.txt"
   if (-not (Test-Path -LiteralPath $options)) {
@@ -965,7 +1136,7 @@ try {
     Tick ("Render distance set to {0}" -f $rd)
   } else { Tick "Kept your existing settings" }
 
-  # 7. servers.dat (uncompressed NBT, one entry)
+  # ---- the server list (servers.dat: uncompressed NBT, one entry), the first time --------------------------
   $serversDat = Join-Path $GameDir "servers.dat"
   if (-not (Test-Path -LiteralPath $serversDat) -and -not $DryRun) {
     $ms = New-Object IO.MemoryStream
@@ -984,7 +1155,7 @@ try {
     Tick ("Server added to your list: {0}" -f $manifest.server_address)
   }
 
-  # 8. RAM + launcher profile
+  # ---- the launcher profile ---------------------------------------------------------------------------------
   Step "Adding the launcher profile"
   $totalGb = 8
   try { $totalGb = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB) } catch {}
@@ -994,12 +1165,10 @@ try {
   $javaArgs = "-Xmx${xmx}G -Xms1G -XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:MaxGCPauseMillis=50 -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20"
   $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
   $entry = [ordered]@{ name = $PackName; type = "custom"; lastVersionId = $versionId; gameDir = $GameDir; javaArgs = $javaArgs; javaDir = $java; icon = $profile.icon; created = $now; lastUsed = $now }
-  $profileSaved = $false
   $profileLeft = $false
-  if ($Mode -eq "play" -and -not $DryRun -and @(Find-Launcher).Count -gt 0 -and (Test-LauncherProfile $Profiles $profile.id $versionId) -eq "") {
+  if (-not $DryRun -and @(Find-Launcher).Count -gt 0 -and (Test-LauncherProfile $Profiles $profile.id $versionId) -eq "") {
     # Launcher open, profile already there and pointing at the right NeoForge: nothing to write.
     $profileLeft = $true
-    $profileSaved = $true
     Log "the launcher is open and the profile is right: launcher_profiles.json left as it is"
   }
   if ($DryRun) { Note "(dry run) would write the profile to launcher_profiles.json" }
@@ -1018,64 +1187,58 @@ try {
       Write-Host ""
       Write-Host "   THE LAUNCHER PROFILE WAS NOT SAVED." -ForegroundColor Red
       Write-Host ("   What is wrong: {0}." -f $problem) -ForegroundColor Red
-      Write-Host "   Close the Minecraft Launcher completely (also its icon next to the clock), then run this again." -ForegroundColor Yellow
+      Write-Host "   Close the Minecraft Launcher completely (also its icon next to the clock), then press Play again." -ForegroundColor Yellow
       Write-Host "   The mods are in place; only the profile is missing." -ForegroundColor Gray
       Write-Host ("   Log file: {0}" -f $LogFile) -ForegroundColor White
       Log "FAIL the launcher profile was not saved"
       Send-Report "failed"
+      Exit-Lock
       Hold-Window
       exit 1
     }
-    $profileSaved = $true
   }
   if ($profileLeft) { Tick ("Profile '{0}' is already in the launcher" -f $PackName) }
   else { Tick ("Profile '{0}' with {1} GB of RAM (your PC has {2} GB), saved and checked" -f $PackName, $xmx, $totalGb) }
 
-  # 9. the Play button on the site
-  if ($profileSaved) {
-    Step "Setting up the Play button"
-    $linked = $false
-    try { $linked = Install-Self } catch { Log ("could not set up the Play button: " + $_.Exception.Message) }
-    if ($linked) { Tick "The Play button on the site now starts the game on this PC" }
-    else { Note "The Play button was not set up this time; Update and Play.bat does the same job" }
+  # ---- the Play link and the shortcuts: put right when missing (Setup.bat made them; this keeps them) ------
+  if (-not $DryRun -and -not $script:CustomRoot -and $OnWindows -and (Get-HomeDir)) {
+    try {
+      $me = (Resolve-Path -LiteralPath $PSCommandPath).Path
+      $homeScript = Install-Home $me (Get-HomeDir)
+      $want = Get-HandlerCommand $homeScript
+      $have = ""
+      try { $have = [string](Get-Item "HKCU:\Software\Classes\deepslate\shell\open\command" -ErrorAction Stop).GetValue("") } catch {}
+      if ($have -ne $want) { if (Register-PlayLink $homeScript) { Log "the Play link was set up again" } }
+      $desk = Join-Path ([Environment]::GetFolderPath("Desktop")) ("{0}.lnk" -f $PackName)
+      $menu = Join-Path ([Environment]::GetFolderPath("Programs")) ("{0}.lnk" -f $PackName)
+      if (-not (Test-Path -LiteralPath $desk) -or -not (Test-Path -LiteralPath $menu)) { $null = Set-Shortcuts $homeScript; Log "the shortcuts were made again" }
+    } catch { Log ("could not check the Play link and the shortcuts: " + $_.Exception.Message) }
   }
 
-  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash } | ConvertTo-Json | Set-Content -LiteralPath $installedFile }
+  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion } | ConvertTo-Json | Set-Content -LiteralPath $installedFile }
 
-  Write-Host ""
-  if ($prev -and $prev.hash -eq $manifest.hash) { Write-Host "Already up to date." -ForegroundColor Green }
-  elseif ($Quiet -and $prev) { Write-Host ("Updated to {0}." -f $script:PackSeen) -ForegroundColor Green }
-  if (-not $Quiet) { Write-Host ("Server address: {0}" -f $manifest.server_address) -ForegroundColor White }
-  if ($DryRun) {
-    Write-Host ("(dry run) Done. Nothing was changed." ) -ForegroundColor Green
-  } elseif ($Play) {
-    if ($profileLeft) { Write-Host ("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play." -f $PackName) -ForegroundColor Green }
-    else { Write-Host ("Opening the Minecraft Launcher on {0}. Press Play." -f $PackName) -ForegroundColor Green }
-    if (-not (Open-Launcher)) { Write-Host "Couldn't find the launcher automatically; open it from the Start menu." -ForegroundColor Yellow }
-    Start-Sleep -Seconds 2
-  } else {
-    Write-Host ("Done. '{0}' is in the Minecraft Launcher, next to the Play button." -f $PackName) -ForegroundColor Green
-    $open = $false
-    if ($profileSaved -and -not $NoPrompt) {
-      $answer = "n"
-      try { $answer = Read-Host "Open the Minecraft Launcher now? [Y/n]" } catch { $answer = "n" }   # no console to ask on: don't
-      $open = ($answer -eq $null -or $answer.Trim() -eq "" -or $answer.Trim() -match '^(y|yes)$')
-    }
-    if ($open) {
-      if (Open-Launcher) { Write-Host ("Choose {0} next to Play, then press Play." -f $PackName) -ForegroundColor Green }
-      else { Write-Host "Couldn't find the launcher automatically; open it from the Start menu." -ForegroundColor Yellow }
-    } else {
-      Write-Host ("Open the Minecraft Launcher, choose {0}, press Play." -f $PackName) -ForegroundColor Green
-    }
-    Write-Host ("Next time, press Play on {0}: it checks for updates and opens the launcher for you." -f $PortalUrl.Replace("https://", "")) -ForegroundColor Gray
-  }
+  # ---- d. the report, e. the game -------------------------------------------------------------------------
   Log "=== done ==="
   $script:StepName = ""
+  Write-Host ""
+  if ($Mode -eq "first_install") { Write-Host ("Installed {0} {1}." -f $PackName, $script:PackSeen) -ForegroundColor Green }
+  elseif ($Mode -eq "update") { Write-Host ("Updated to {0}." -f $script:PackSeen) -ForegroundColor Green }
+  else { Write-Host "Everything is up to date." -ForegroundColor Green }
   Send-Report "ok"
+  Exit-Lock
+  if ($DryRun) { Write-Host "(dry run) Nothing was changed." -ForegroundColor Green }
+  else {
+    if ($profileLeft) { Write-Host ("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play." -f $PackName) -ForegroundColor Green }
+    elseif (Open-Launcher) { Write-Host ("Opening the Minecraft Launcher on {0}. Press Play." -f $PackName) -ForegroundColor Green }
+    else { Write-Host ("Open the Minecraft Launcher from the Start menu, choose {0}, press Play." -f $PackName) -ForegroundColor Yellow }
+    if ($Mode -eq "first_install") { Write-Host ("From now on, press Play on {0} or open {1} from your desktop. It keeps itself up to date." -f $PortalUrl.Replace("https://", ""), $PackName) -ForegroundColor Gray }
+    if (-not $FromSetup) { Start-Sleep -Seconds 3 }
+  }
 } catch {
   Log ($_ | Out-String)
   Fail "Something went wrong. Send Alex the log file and he'll sort it."
 } finally {
   # Reached without a report having gone: the window was closed or Ctrl+C was pressed part-way.
   if (-not $script:Reported) { Log "stopped before the end"; Send-Report "cancelled" }
+  Exit-Lock
 }

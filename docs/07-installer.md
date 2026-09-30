@@ -2,7 +2,33 @@
 
 ## Goal
 
-A friend downloads one zip, double-clicks `Setup.bat`, waits, opens the normal Minecraft launcher and sees a **Deepslate Works** profile with the server already in the server list. Running it again later updates the mods. It never touches their vanilla installation.
+A friend downloads one zip and double-clicks `Setup.bat` once. After that they press Play on the site or open **Deepslate Works** from their desktop; it keeps itself and the mods up to date and opens the normal Minecraft launcher on the Deepslate Works profile, with the server already in the server list. It never touches their vanilla installation.
+
+## Installer 1.5.0: one script does everything (planner, 2026-09-30)
+
+One script, `DeepslateWorks.ps1`, in `%LOCALAPPDATA%\DeepslateWorks\`. The Play button (`deepslate://play`), the desktop shortcut and the Start Menu entry (both "Deepslate Works") run that same copy. There is no separate "install" or "update": pressing Play on a fresh PC installs everything, on an old PC it updates everything. `install.ps1`, `Update and Play.bat` and every code path that only one of them had are gone.
+
+**The zip** (`/downloads/installer.zip`): `Setup.bat`, `DeepslateWorks.ps1`, `README.txt`. `Setup.bat` runs `DeepslateWorks.ps1 -Setup` once: it copies the script into `%LOCALAPPDATA%\DeepslateWorks\` (never an older one over a newer one), removes what 1.3.x/1.4.x left there (`install.ps1`, `.bak`, `Setup.bat`), registers `deepslate://` for this Windows user (`HKCU\Software\Classes\deepslate`, the command `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "…\DeepslateWorks.ps1" "%1"`), makes the two shortcuts, then runs the installed copy in the same window. Nobody needs the zip again. Every later run checks the link and the shortcuts and puts them back if they are missing.
+
+**In `%LOCALAPPDATA%\DeepslateWorks\`**: `DeepslateWorks.ps1`, and `DeepslateWorks.ps1.bak` once it has updated itself. Nothing else.
+
+**Every run, in this order**, skipping what is already current:
+
+1. **Lock.** A named mutex `Global\DeepslateWorks` for the whole run. If another copy holds it: "Deepslate Works is already running in another window. Let it finish, then press Play again.", a report with `mode=already_running`, `outcome=skipped` (not a failure), exit code 3, nothing touched. A run that was killed leaves the mutex abandoned; the next run takes it over. Why: 2026-09-29 22:33, m1owl pressed Play while Setup.bat was still downloading and both wrote the same file.
+2. **Self-update.** The mod list's `installer` now carries `script: {sha256, size}` for `DeepslateWorks.ps1` on its own (`/downloads/DeepslateWorks.ps1`, gated like the zip). If it names a newer version: download it from this site's `/downloads` (never from an address in the mod list) to `DeepslateWorks.ps1.new`, check the SHA-256, the `$InstallerVersion` written inside and that it parses, keep the old one as `.bak`, move the new one over, and start it with the same arguments; it says "Updated to 1.5.x" and its report carries `updatedFrom`. On any problem nothing is replaced, the run carries on with the version it has, and the report's `updateProblem` says why. Without a sign-in the mod list cannot be read, so a fresh PC signs in first and then checks.
+3. **Sign in** (only if not signed in), the launcher (there; open is fine until NeoForge or the profile has to be written, see "The launcher must be closed"), **Java 21** (the launcher's own → a `java` on PATH that is 21 or newer → one downloaded earlier → Temurin 21), **NeoForge**, **mods**, **settings** (`config.zip`, `options.txt` the first time), the **launcher profile**, the **server list** (the first time).
+4. **Report**: the full log (redacted as before), the installer version, `mode` = `first_install` (nothing installed yet), `update` (the pack changed since the last run), `play` (everything was current) or `already_running`. A run that fails is reported with its mode and `outcome=failed` and the step it failed at; a closed window is `outcome=cancelled`.
+5. **Launch**: the Minecraft Launcher is opened on the profile.
+
+**Downloads land in `mods\` only when complete.** A mod is downloaded into `.downloading\` next to `mods\`, checked against the mod list's SHA-512, and only then moved into `mods\`. A run killed half-way leaves a part file in `.downloading\`, never a half-written jar in `mods\`; the next run empties `.downloading\` (and removes any `*.part` 1.4.x left in `mods\`) before it starts.
+
+**What a person sees.** A fresh PC (Setup.bat, or Play once the zip has been run): numbered steps with green ticks, "Installed Deepslate Works 0.1.0+…", the launcher opens, and "From now on, press Play on deepslate.dsw.test or open Deepslate Works from your desktop. It keeps itself up to date." An up-to-date PC: a few grey lines ("Checking for updates …", "Setting up the mods …"), "Everything is up to date.", the launcher opens, the window closes after three seconds. A PC one version behind: "Updating Deepslate Works 1.5.0 → 1.5.1 …", then "Updated to 1.5.1", then the same as an up-to-date PC (or "Updated to <pack>" if the pack changed too).
+
+**PCs on 1.3.x / 1.4.x** cannot update themselves into this layout: their update step looks for `install.ps1` in the zip, does not find it, replaces nothing and carries on (its report says so). They need the zip once. Until then Settings → Joining "Minimum installer version" (1.5.0 by default) holds them at the door with "Download Deepslate Works again from deepslate.dsw.test/install"; the site's `/me` and the report answer say the same. From 1.5.0 on, a copy that is behind is simply updated at the next Play and is never told to download again.
+
+**Tests.** `DeepslateWorks.ps1 -SelfTest` (86 checks under `pwsh` on Linux): the lock (a second run while it is held exits 3 and touches nothing; after it is let go the next run goes ahead; a run killed with the lock held keeps nobody out), self-update (newer, same, failed download, wrong checksum, wrong version inside, does not parse), a download cut off half-way, the home folder, the link, the shortcuts, every mode in the report, plus the older checks. End to end with the real script against a stand-in portal: `/root/.config/deepslate/e2e150/run.sh` (first install, play, update, two runs at once, a run killed mid-download, self-update newer / failed / same).
+
+*The sections below describe installers up to 1.4.x and are kept as the record of how it got here.*
 
 ## Sign-in and "Update and Play" (Alex, 2026-09-28)
 
@@ -175,7 +201,7 @@ Remote-desktop and virtual adapters (Parsec, Microsoft Basic Display, Hyper-V) a
 
 **Limits of the measurement.** It reads what Windows says is installed: memory and the names of the graphics adapters. It does not run a benchmark, so an old high-end card and a new one of the same name count the same, and thermal or driver trouble does not show. The processor is recorded and shown but does not move the tier.
 
-## Files
+## Files (up to 1.4.x; for 1.5.0 see the top)
 
 - `Setup.bat`: `powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"` then `pause`. Exists so nobody has to know what an execution policy is.
 - `Update and Play.bat`: the same with `-Play`; pauses only on failure.
@@ -183,7 +209,7 @@ Remote-desktop and virtual adapters (Parsec, Microsoft Basic Display, Hyper-V) a
 - `install.ps1`: PowerShell 5.1 compatible (ships with Windows 10/11). No modules, no admin rights.
 - `README.txt`: what the two `.bat` files are for, what the Play button on the site does and what it leaves in the registry (`HKCU\Software\Classes\deepslate`), and how to remove the pack.
 
-## `install.ps1` behaviour, in order (installer 1.4.1)
+## `install.ps1` behaviour, in order (installer 1.4.1; replaced by 1.5.0, see the top)
 
 **Parameters.** None for a person: `Setup.bat` and the Play button supply them. `-Play` (bring up to date quietly, open the launcher, leave), `-NoPrompt` (ask nothing at the end), `-DryRun` (no downloads, nothing written outside `-Root`, no browser), `-Root <folder>` (in place of `%APPDATA%`, for tests), `-SelfTest`, `-PretendRunning <names>` (tests: processes to take as running), and one word without a name: the link Windows hands over when Play is pressed on the site. Only `deepslate://play` is accepted, and with a link every other parameter is set aside.
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PLAY_MODES, playGate, type BlockReason } from "../src/shared/join-gate.js";
-import { doorReason } from "../src/players/limbo.js";
+import { olderThan, PLAY_MODES, playGate, type BlockReason } from "../src/shared/join-gate.js";
+import { doorReason, waitFor } from "../src/players/limbo.js";
 import { parse } from "../src/events/parse.js";
 import { actions, closedTellraw, parsePlace, playTellraw, screenCommands } from "../src/actions/registry.js";
 import { doorRule } from "../src/shared/access.js";
@@ -29,8 +29,9 @@ describe("playGate (docs/14 \"Play first\")", () => {
   });
   it("follows the window from the settings", () => {
     expect(playGate({ at: ago(100), packVersion: PACK }, PACK, 120, now).ok).toBe(true);
-    expect(parseSection("joining", undefined)).toEqual({ requirePlay: true, windowMin: 30 });
-    expect(parseSection("joining", { requirePlay: false, windowMin: 60 })).toEqual({ requirePlay: false, windowMin: 60 });
+    expect(parseSection("joining", undefined)).toEqual({ requirePlay: true, windowMin: 30, minInstaller: "1.5.0" });
+    expect(parseSection("joining", { requirePlay: false, windowMin: 60 })).toEqual({ requirePlay: false, windowMin: 60, minInstaller: "1.5.0" }); // saved before there was a minimum: 1.5.0
+    expect(parseSection("joining", { requirePlay: true, windowMin: 30, minInstaller: "" })).toEqual({ requirePlay: true, windowMin: 30, minInstaller: "" });
   });
 });
 
@@ -145,7 +146,7 @@ describe("the door after linking: the same order as at a join", () => {
   const early = { role: "PLAYER" as const, earlyAccess: true };
   const player = { role: "PLAYER" as const, earlyAccess: false };
   const admin = { role: "ADMIN" as const, earlyAccess: false };
-  const run = (mode: "play" | "install", min: number, pack = PACK) => ({ mode, at: ago(min), packVersion: pack });
+  const run = (mode: "play" | "install" | "first_install" | "update", min: number, pack = PACK, installer = "1.5.0") => ({ mode, at: ago(min), packVersion: pack, installerVersion: installer });
 
   it.each([
     // who, live, Play first, their latest run that went through, at the door
@@ -161,13 +162,42 @@ describe("the door after linking: the same order as at a join", () => {
     ["player", player, true, true, run("install", 10), null],
     ["player", player, true, true, run("play", 31), "stale"],
     ["admin", admin, false, true, null, null],
+    // installer 1.5.0 (planner): Settings → Joining "Minimum installer version", 1.5.0 by default
+    ["player", player, true, true, run("play", 5, PACK, "1.4.3"), "old installer"], // a fresh run of Play, but from 1.4.3
+    ["early access", early, false, true, run("install", 5, PACK, "1.4.1"), "old installer"],
+    ["player", player, true, true, run("play", 45, PACK, "1.4.3"), "old installer"], // said before "stale": pressing Play again with it would not help
+    ["player", player, true, true, run("first_install", 5, PACK, "1.5.0"), null],
+    ["player", player, true, true, run("update", 5, PACK, "1.5.1"), null],
+    ["player", player, true, true, run("play", 5, PACK, "unknown"), "old installer"], // an installer that did not say
+    ["player", player, false, true, run("play", 5, PACK, "1.4.3"), "not live"], // open first, whatever else
+    ["admin", admin, true, true, run("play", 5, PACK, "1.3.0"), null], // admins are not held
     // the same rule for both ways to the door: walking in linked (onJoin) and having just linked (release, below)
   ] as const)("%s, live %s, Play first %s, run %o: %s", (_who, user, live, requirePlay, r, expected) => {
-    expect(doorReason(user, { live, requirePlay, windowMin: 30, run: r, pack: PACK, now })).toBe(expected);
+    expect(doorReason(user, { live, requirePlay, windowMin: 30, run: r, pack: PACK, now, minInstaller: "1.5.0" })).toBe(expected);
   });
 
-  it("counts a run of the installer as a run of Play", () => {
-    expect(PLAY_MODES).toEqual(["play", "install"]);
+  it("counts a run of the installer as a run of Play, but not a run that found another one already running", () => {
+    expect(PLAY_MODES).toEqual(["play", "install", "first_install", "update"]);
+    expect(PLAY_MODES).not.toContain("already_running");
+  });
+  it("takes no minimum when the setting is empty", () => {
+    expect(doorReason(player, { live: true, requirePlay: true, windowMin: 30, run: run("play", 5, PACK, "1.3.0"), pack: PACK, now, minInstaller: "" })).toBeNull();
+  });
+  it("compares versions as versions", () => {
+    expect([olderThan("1.4.3", "1.5.0"), olderThan("1.5.0", "1.5.0"), olderThan("1.10.0", "1.5.0"), olderThan("1.5", "1.5.0"), olderThan(null, "1.5.0"), olderThan("unknown", "1.5.0"), olderThan("1.4.9", "")]).toEqual([true, false, false, false, true, true, false]);
+  });
+  it("puts a member with an old installer in the room with the planner's words, as a title that stays and in chat", () => {
+    const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
+    const cmds = actions["limbo.holdOld"].build(ctx, { name: "samoyedx" });
+    expect(cmds).toContain("execute in deepslate:limbo run tp samoyedx 0.5 65 0.5");
+    expect(cmds).toContain('title @a[name=samoyedx,tag=!verified] title {"text":"Download Deepslate Works again","color":"gold"}');
+    expect(cmds).toContain("title @a[name=samoyedx,tag=!verified] times 0 400 0");
+    const chat = JSON.parse(cmds.at(-1)!.replace(/^tellraw samoyedx /, "")) as Array<string | { text: string }>;
+    expect(chat.map((p) => (typeof p === "string" ? p : p.text)).join("")).toMatch(/^Download Deepslate Works again from deepslate\.dsw\.test\/install\./);
+    expect(actions["limbo.remindOld"].build(ctx, { name: "samoyedx" })).toEqual(cmds.slice(-5));
+    expect(actions["limbo.kickIdleOld"].build(ctx, { name: "samoyedx" })).toEqual(["kick samoyedx Download Deepslate Works again from deepslate.dsw.test/install and join again."]);
+    expect(waitFor("old installer")).toBe("old");
+    expect(describeAction("join.blocked", { role: "PLAYER", name: "Pabulum" }, { name: "Pabulum", reason: "old installer" })).toBe("Pabulum was held in the entrance room: their installer is older than the minimum; they were told to download it again");
   });
 
   async function roomWith(blocked: BlockReason | null) {

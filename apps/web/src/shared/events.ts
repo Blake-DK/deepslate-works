@@ -28,7 +28,7 @@ export type Actor = { role: "ADMIN" | "PLAYER" | "system" | null; name: string |
 
 /** Must agree with the CASE in prisma/migrations/0005_events_sessions_settings. */
 export function kindOf(action: string, role: Actor["role"]): EventKind {
-  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "limbo.kickIdleClosed" || action === "join.ready") return "LINK";
+  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "limbo.kickIdleClosed" || action === "limbo.kickIdleOld" || action === "join.ready") return "LINK";
   if (action === "player.revoke" || action === "user.remove" || action === "user.clearMinecraft") return "REVOKE";
   if (action.startsWith("modpack.sync")) return "SYNC";
   if (action === "server.backup") return "BACKUP";
@@ -43,7 +43,7 @@ const s = (v: unknown, fallback = "?") => (typeof v === "string" && v ? v : type
 
 const size = (v: unknown) => (typeof v === "number" && v > 0 ? (v < 1_048_576 ? `${Math.max(1, Math.round(v / 1024))} KB` : `${(v / 1_048_576).toFixed(1)} MB`) : "");
 const WHY_NOT: Record<string, string> = { not_live: "the site is not open yet and they have no early access", server_offline: "downloads are open while the server is up" };
-const WHAT: Record<string, string> = { "installer.zip": "the installer", "config.zip": "the pack's settings" };
+const WHAT: Record<string, string> = { "installer.zip": "the installer", "config.zip": "the pack's settings", "DeepslateWorks.ps1": "the new Deepslate Works script" };
 const how = (p: P) => (p.via === "installer" ? ", from the installer" : "");
 
 /** "downloaded the installer 1.4.1 (21 KB)", "was refused the installer: the site is not open yet …" */
@@ -86,9 +86,10 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "link.bind": (p) => (p.refused ? "was stopped from trying more join codes: too many wrong ones" : `linked their Minecraft account ${s(p.mcUsername)}${p.via === "join" ? " with the code on /join" : ""}`),
   "link.release": (p) => `let ${s(p.name)} in`,
   "limbo.held": (p) => `${s(p.name)} is waiting in the entrance room`,
-  "join.blocked": (p) => `${s(p.name)} was held in the entrance room: ${p.reason === "not live" ? "the server is not open yet" : p.reason === "no report" ? "has not pressed Play on the site" : p.reason === "stale" ? "pressed Play too long ago" : p.reason === "wrong version" ? "pressed Play before the pack changed" : s(p.reason, "Play first")}`,
-  "join.ready": (p) => `${s(p.name)} ${p.was === "not live" ? "was let in: the server is open for them now" : "pressed Play and was let in"}${p.back ? ", back to where they were" : ""}`,
+  "join.blocked": (p) => `${s(p.name)} was held in the entrance room: ${p.reason === "not live" ? "the server is not open yet" : p.reason === "no report" ? "has not pressed Play on the site" : p.reason === "stale" ? "pressed Play too long ago" : p.reason === "wrong version" ? "pressed Play before the pack changed" : p.reason === "old installer" ? "their installer is older than the minimum; they were told to download it again" : s(p.reason, "Play first")}`,
+  "join.ready": (p) => `${s(p.name)} ${p.was === "not live" ? "was let in: the server is open for them now" : p.was === "old installer" ? "installed the new Deepslate Works and was let in" : "pressed Play and was let in"}${p.back ? ", back to where they were" : ""}`,
   "limbo.kickIdleClosed": (p) => `${s(p.name)} waited too long in the entrance room while the server is not open and was disconnected`,
+  "limbo.kickIdleOld": (p) => `${s(p.name)} waited too long in the entrance room with an old installer and was disconnected`,
   "limbo.kickIdlePlay": (p) => `${s(p.name)} waited too long in the entrance room without pressing Play and was disconnected`,
   "limbo.kickIdle": (p) => `${s(p.name)} waited too long in the entrance room and was disconnected`,
   "limbo.build": "built the entrance room",
@@ -141,7 +142,9 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
   "console.send": (p) => `ran: ${s(p.command, "")}`,
   "world.save": "saved the world",
-  "installer.report": (p) => p.refused ? "sent a report of a run that cannot have happened: the site is not open for them" : `${p.mode === "play"
+  "installer.report": (p) => p.refused ? "sent a report of a run that cannot have happened: the site is not open for them" : p.mode === "already_running" ? "pressed Play while Deepslate Works was already running in another window: nothing done" : `${p.mode === "first_install" || p.mode === "update"
+    ? (p.outcome === "ok" ? (p.mode === "first_install" ? `installed ${s(p.packVersion, "the pack")}: all good` : `pressed Play and updated to ${s(p.packVersion, "the new pack")}`) : p.outcome === "cancelled" ? `closed the window during the ${p.mode === "update" ? "update" : "first install"}${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `${p.mode === "update" ? "updated" : "installed"} and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)
+    : p.mode === "play"
     ? (p.outcome === "ok" ? `pressed Play: ${s(p.packVersion, "the pack")}, launcher opened` : p.outcome === "cancelled" ? "pressed Play and closed the window" : `pressed Play and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)
     : (p.outcome === "ok" ? `installed ${s(p.packVersion, "the pack")}: all good` : p.outcome === "cancelled" ? `stopped the installer${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `ran the installer and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)}${p.updatedFrom ? ` (the installer updated itself, ${s(p.updatedFrom)} to ${s(p.installerVersion, "the current one")})` : p.updateProblem ? " (the installer could not update itself)" : ""}${p.currentInstaller ? ` (installer ${s(p.installerVersion, "unknown")}, current ${s(p.currentInstaller)})` : ""}`,
   "files.download": (p) => `downloaded ${s(p.path)} from the server`,
@@ -155,7 +158,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
 };
 
 // Phrases that already say who (or have no who).
-const SELF_CONTAINED = new Set(["download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "world.pregenAutoPause"]);
+const SELF_CONTAINED = new Set(["download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "world.pregenAutoPause"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
 const OUTCOME_IN_PHRASE = new Set(["installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);

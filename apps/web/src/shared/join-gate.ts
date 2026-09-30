@@ -5,24 +5,42 @@
 // than the window, with the pack the server runs. api decides with this at every join; the portal uses the same
 // rule to say "Ready to join until 10:35". Pure, so it is tested.
 
-export const GATE_REASONS = ["no report", "stale", "wrong version"] as const;
+export const GATE_REASONS = ["no report", "old installer", "stale", "wrong version"] as const;
 
 /**
  * The runs that count as "pressed Play": the Play button, and a run of Setup.bat that went through. A fresh install
  * is the current pack by definition (planner, 2026-09-29, after Pabulum was held although he had just installed).
  */
-export const PLAY_MODES = ["play", "install"] as const;
+export const PLAY_MODES = ["play", "install", "first_install", "update"] as const; // not already_running: that run did nothing
 export type GateReason = (typeof GATE_REASONS)[number];
 
-export type PlayRun = { at: Date; packVersion: string };
+/** `installerVersion`: which installer made the run ("unknown" from installers that did not say). */
+export type PlayRun = { at: Date; packVersion: string; installerVersion?: string | null };
+
+/** Is version `a` older than `b`? Anything that is not a version counts as older (it is from before installers said). */
+export function olderThan(a: string | null | undefined, b: string): boolean {
+  const parse = (v: string) => (/^\d{1,4}(\.\d{1,4}){1,3}$/.test(v) ? v.split(".").map(Number) : null);
+  const want = parse(b);
+  if (!want) return false;
+  const have = a ? parse(a) : null;
+  if (!have) return true;
+  for (let i = 0; i < Math.max(have.length, want.length); i++) {
+    const x = have[i] ?? 0, y = want[i] ?? 0;
+    if (x !== y) return x < y;
+  }
+  return false;
+}
 export type Gate = { ok: true; until: Date } | { ok: false; reason: GateReason };
 
 /**
  * `run`: their latest run of Play, or of the installer, that went through (PLAY_MODES). `serverPack`: the pack last synced to the server, null when
  * that is not known (then the version is not looked at). Time first: a run from yesterday is "stale" whatever its pack.
  */
-export function playGate(run: PlayRun | null, serverPack: string | null, windowMin: number, now: Date): Gate {
+export function playGate(run: PlayRun | null, serverPack: string | null, windowMin: number, now: Date, minInstaller = ""): Gate {
   if (!run) return { ok: false, reason: "no report" };
+  // Settings → Joining "Minimum installer version": a run from an older installer does not count. Pressing Play again
+  // with it would not help, so this comes before "stale".
+  if (minInstaller && olderThan(run.installerVersion, minInstaller)) return { ok: false, reason: "old installer" };
   const until = new Date(run.at.getTime() + windowMin * 60_000);
   if (now.getTime() > until.getTime()) return { ok: false, reason: "stale" };
   if (serverPack && run.packVersion !== serverPack) return { ok: false, reason: "wrong version" };
@@ -35,6 +53,10 @@ export type BlockReason = GateReason | "not live";
 export const GATE_TEXT: Record<BlockReason, string> = {
   "not live": "the server is not open yet",
   "no report": "has not pressed Play on the site",
+  "old installer": "has an installer older than the minimum",
   stale: "pressed Play too long ago",
   "wrong version": "pressed Play before the pack changed",
 };
+
+/** What somebody reads in the room while their installer is below the minimum (planner, installer 1.5.0). */
+export const OLD_INSTALLER_TEXT = "Download Deepslate Works again from deepslate.dsw.test/install";

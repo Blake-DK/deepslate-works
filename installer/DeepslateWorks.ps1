@@ -40,7 +40,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.5.0"   # 1.5.0: one script for install, update and Play; a lock; staged downloads (history in docs/07)
+$InstallerVersion = "1.5.1"   # 1.5.1: wakes a sleeping server the moment Play is pressed (docs/13 §12). History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -96,12 +96,65 @@ function Hold-Window {
   # Started from the Play button or a shortcut there is no .bat to keep the window open: wait, so the message can be read.
   if (-not $FromSetup -and -not $SelfTest -and -not $DryRun -and -not $script:Held) { $script:Held = $true; try { [void](Read-Host "Press Enter to close this window") } catch {} }
 }
-function Gate-Message($err) {
+# What the site answered when it said no: the response body (Windows PowerShell), ErrorDetails (pwsh), or the message
+# itself when it is the JSON (the self test's stand-ins throw that).
+function Read-ErrorBody($err) {
   $body = ""
   try { $body = (New-Object IO.StreamReader($err.Exception.Response.GetResponseStream())).ReadToEnd() } catch {}
+  if (-not $body) { try { $body = [string]$err.ErrorDetails.Message } catch {} }
+  if (-not $body) { try { $m = [string]$err.Exception.Message; if ($m.TrimStart().StartsWith("{")) { $body = $m } } catch {} }
+  return [string]$body
+}
+function Gate-Message($err) {
+  $body = Read-ErrorBody $err
   if ($body -match "not_live") { return "The server hasn't launched yet. Watch Discord for the date." }
-  if ($body -match "server_offline") { return "The server is offline right now, so updates are paused. Try again later." }
+  if ($body -match "server_offline") {
+    if ($script:WakeRefused) { return $WakeRefusedText[$script:WakeRefused] }
+    return "The server isn't up right now (it is starting, stopping or out of reach), so updates are paused. Try again in a minute."
+  }
   return "The site said no (" + $body.Substring(0, [Math]::Min(120, $body.Length)) + ")"
+}
+
+# ---- wake on Play (docs/13 §12 B) ---------------------------------------------------------------------------
+# Play on a sleeping server starts it through the site before the updates are fetched, so it boots while the game
+# loads. The site decides (only from Asleep, one start however often Play is pressed); nothing here can start a
+# server that is switched off or crashed. A wake that cannot be asked for is never a reason to stop.
+$WakeUrl = "$PortalUrl/api/play/wake"
+$WakeText = @{ waking = "Waking the server, ready in about 30 s"; ready = "Server ready"; failed = "The server didn't wake up. Try again in a minute or tell Alex" }
+$WakeRefusedText = @{ off = "The server is switched off. Ask Alex in Discord."; crashed = "The server has crashed. Ask Alex in Discord."; unreachable = "The site can't reach the server right now. Try again in a minute." }
+$script:WakeRefused = $null
+$script:Waking = $false
+# $call: { param($method) ... } returns the site's answer; the self test hands in stand-ins.
+function Request-Wake($call) {
+  try { $r = & $call "POST" }
+  catch {
+    $body = Read-ErrorBody $_
+    $code = ""; try { $code = [string](($body | ConvertFrom-Json).error.code) } catch {}
+    if ($code -and $WakeRefusedText.ContainsKey($code)) { $script:WakeRefused = $code }
+    Log ("wake: not started ({0})" -f $(if ($code) { $code } else { $_.Exception.Message }))
+    return "no"
+  }
+  if ($r.result -eq "started" -or $r.result -eq "already" -or [string]$r.wake.phase -eq "waking") {
+    Write-Host ("   {0}" -f $WakeText.waking) -ForegroundColor Yellow
+    Log "wake: the server is waking"
+    return "waking"
+  }
+  Log ("wake: " + [string]$r.result)
+  return [string]$r.result
+}
+# After the launcher opens: asks every 5 s until the server is up or the wake has failed, and says which.
+function Watch-Wake($call, $sleep, $limitSec = 200) {
+  $t0 = Get-Date
+  while (((Get-Date) - $t0).TotalSeconds -lt $limitSec) {
+    $phase = ""
+    try { $phase = [string](& $call "GET").wake.phase } catch {}
+    if ($phase -eq "ready") { Write-Host ("   {0}" -f $WakeText.ready) -ForegroundColor Green; Log "wake: server ready"; return "ready" }
+    if ($phase -eq "failed") { Write-Host ("   {0}" -f $WakeText.failed) -ForegroundColor Red; Log "wake: failed"; return "failed" }
+    if ($phase -eq "idle") { return "idle" }
+    & $sleep 5
+  }
+  Log "wake: stopped watching"
+  return "gave up"
 }
 
 # ---- one copy at a time (docs/07 "The lock") -------------------------------------------------------------
@@ -853,6 +906,31 @@ if ($SelfTest) {
   }
   Check ("every file operation outside the self test takes its path literally" + $(if ($loose.Count) { ": line(s) " + ($loose -join ", ") } else { "" })) ($loose.Count -eq 0)
 
+  Write-Host "Self test: wake on Play" -ForegroundColor White
+  # a list, not a variable: the stand-ins are closures with a scope of their own, and they add to the same list
+  $wakeAsked = New-Object System.Collections.Generic.List[string]
+  $answer = { param($json) { param($m) $wakeAsked.Add($m); return ($json | ConvertFrom-Json) }.GetNewClosure() }
+  $refuse = { param($code) { param($m) $wakeAsked.Add($m); throw ('{"error":{"code":"' + $code + '","message":"no"}}') }.GetNewClosure() }
+  $script:WakeRefused = $null
+  Check "a sleeping server: the wake is asked for once, with a POST, and the window says it is waking" (((Request-Wake (& $answer '{"result":"started","wake":{"phase":"waking"}}')) -eq "waking") -and (($wakeAsked -join ",") -eq "POST"))
+  Check "a wake already running (somebody else pressed Play): waking, no second start asked for" ((Request-Wake (& $answer '{"result":"already","wake":{"phase":"waking"}}')) -eq "waking")
+  Check "a server that is up: nothing to wait for" ((Request-Wake (& $answer '{"result":"awake","wake":{"phase":"idle"}}')) -eq "awake")
+  $script:WakeRefused = $null
+  Check "switched off: not woken, and later messages say so" (((Request-Wake (& $refuse "off")) -eq "no") -and ($script:WakeRefused -eq "off"))
+  $closed = $null; try { throw '{"error":{"code":"server_offline"}}' } catch { $closed = Gate-Message $_ }
+  Check ("the mod list then refuses with the reason: " + $closed) ($closed -eq "The server is switched off. Ask Alex in Discord.")
+  $script:WakeRefused = $null
+  Check "crashed: not woken" (((Request-Wake (& $refuse "crashed")) -eq "no") -and ($script:WakeRefused -eq "crashed"))
+  $script:WakeRefused = $null
+  Check "the site out of reach: carried on, nothing remembered" (((Request-Wake { param($m) throw "The remote name could not be resolved" }) -eq "no") -and ($null -eq $script:WakeRefused))
+  $script:Seq = @("waking", "waking", "ready"); $script:Slept = 0
+  $seqCall = { param($m) $p = $script:Seq[0]; if ($script:Seq.Count -gt 1) { $script:Seq = $script:Seq[1..($script:Seq.Count - 1)] }; return @{ wake = @{ phase = $p } } }
+  Check "watched after the launcher opens: says Server ready once the site does" (((Watch-Wake $seqCall { param($s) $script:Slept += $s }) -eq "ready") -and ($script:Slept -eq 10))
+  $script:Seq = @("waking", "failed")
+  Check "a wake that failed says so" ((Watch-Wake $seqCall { param($s) }) -eq "failed")
+  Check "stops watching after its time" ((Watch-Wake $seqCall { param($s) } 0) -eq "gave up")
+  $script:WakeRefused = $null
+
   $own = [IO.File]::ReadAllText($PSCommandPath)
   $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
   Check "no command's stderr is sent through 2>&1 anywhere in this script" ($left -eq 0)
@@ -938,6 +1016,7 @@ try {
   $token = Read-Token
   $headers = @{}
   $manifest = $null
+  $wakeCall = { param($m) Invoke-RestMethod -Uri $WakeUrl -Method $m -Headers $headers -UseBasicParsing -TimeoutSec 15 }
   function Get-Manifest {
     try { return (Invoke-RestMethod -Uri $ManifestUrl -Headers $headers -UseBasicParsing -TimeoutSec 60) }
     catch {
@@ -948,8 +1027,9 @@ try {
     }
   }
   if ($token) {
-    Step "Checking for updates"
     $headers = @{ Authorization = "Bearer $token" }
+    if (-not $DryRun) { $script:Waking = ((Request-Wake $wakeCall) -eq "waking") }
+    Step "Checking for updates"
     $manifest = Get-Manifest
     if ($manifest -eq "unauthorized") { $manifest = $null; $token = $null; Note "Your sign-in expired; signing in again" }
     else { Tick "Signed in" }
@@ -977,6 +1057,7 @@ try {
     @{ token = $token; savedAt = (Get-Date).ToString("s") } | ConvertTo-Json | Set-Content -LiteralPath $tokenFile
     $headers = @{ Authorization = "Bearer $token" }
     Tick ("Signed in as {0}" -f $poll.displayName)
+    if (-not $script:Waking) { $script:Waking = ((Request-Wake $wakeCall) -eq "waking") }
     $manifest = Get-Manifest
     if ($manifest -eq "unauthorized") { Fail "The site did not take the new sign-in. Press Play again." }
   }
@@ -1232,6 +1313,7 @@ try {
     elseif (Open-Launcher) { Write-Host ("Opening the Minecraft Launcher on {0}. Press Play." -f $PackName) -ForegroundColor Green }
     else { Write-Host ("Open the Minecraft Launcher from the Start menu, choose {0}, press Play." -f $PackName) -ForegroundColor Yellow }
     if ($Mode -eq "first_install") { Write-Host ("From now on, press Play on {0} or open {1} from your desktop. It keeps itself up to date." -f $PortalUrl.Replace("https://", ""), $PackName) -ForegroundColor Gray }
+    if ($script:Waking) { [void](Watch-Wake $wakeCall { param($s) Start-Sleep -Seconds $s }) }
     if (-not $FromSetup) { Start-Sleep -Seconds 3 }
   }
 } catch {

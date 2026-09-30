@@ -1,6 +1,7 @@
 import { dateToUkLocal, ukShort } from "@/lib/uk-time";
 import { apiFetch } from "@/server/api-client";
-import { AVAILABILITY_TEXT, type LiveStatus } from "@/server/status";
+import type { LiveStatus } from "@/server/status";
+import { statusText } from "@/lib/server-status";
 import { formatUptime, timeAgo } from "@/lib/series";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,17 +46,19 @@ export function Flash({ msg, detail }: { msg?: string; detail?: string }) {
 /** A hidden field that sends the admin back to the Control Room after the action, when the card sits there. */
 const Back = ({ to }: { to?: "/admin" }) => (to ? <input type="hidden" name="back" value={to} /> : null);
 
-export function PowerCard({ status, players, back }: { status: LiveStatus | null; players: Players | null; back?: "/admin" }) {
-  const a = AVAILABILITY_TEXT[status?.availability ?? "unknown"];
-  const running = status?.availability === "online";
-  const startable = status?.availability === "offline" || status?.availability === "sleeping";
-  const stuck = status?.stateCode === 45;
+export function PowerCard({ status, players, back }: { status: LiveStatus; players: Players | null; back?: "/admin" }) {
+  const a = statusText(status, true);
+  const running = status.server === "online";
+  // an admin may start it from anything that is not up or on its way: switched off, crashed, asleep
+  const startable = status.server === "off" || status.server === "crashed" || status.server === "asleep";
+  const stuck = status.stateCode === 45;
   return (
     <Card data-testid="power">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">Status <Badge tone={a.tone}>{status ? `${a.label} (${status.state})` : "backend unreachable"}</Badge></CardTitle>
+        <CardTitle className="flex flex-wrap items-center gap-2">Status <Badge tone={a.tone} data-testid="power-state">{a.line}</Badge>{status.server !== "unreachable" && <span className="text-xs font-normal text-muted-foreground">AMP: {status.state}</span>}</CardTitle>
+        {(a.reason || status.server === "off" || status.server === "crashed") && <CardDescription>{a.hint}{a.reason && <> {a.reason}</>}</CardDescription>}
         <CardDescription>
-          {status ? <>{running ? <>Up for {formatUptime(status.uptime) ?? "?"} · </> : null}CPU {status.cpu ?? "?"}% · RAM {status.memMb ?? "?"}{status.memMaxMb ? ` / ${status.memMaxMb}` : ""} MB · TPS {status.tps?.toFixed(1) ?? "no reading"} · online: {players?.online.length ? players.online.map((p) => `${p.name}${p.held ? " (in the room)" : ""}`).join(", ") : "nobody"}</> : "Can't reach the site's backend (api)."}
+          {status.server !== "unreachable" ? <>{running ? <>Up for {formatUptime(status.uptime) ?? "?"} · </> : null}CPU {status.cpu ?? "?"}% · RAM {status.memMb ?? "?"}{status.memMaxMb ? ` / ${status.memMaxMb}` : ""} MB · TPS {status.tps?.toFixed(1) ?? "no reading"} · online: {players?.online.length ? players.online.map((p) => `${p.name}${p.held ? " (in the room)" : ""}`).join(", ") : "nobody"}</> : null}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

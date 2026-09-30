@@ -1,4 +1,7 @@
 import "server-only";
+import { getStatus, type WakeView } from "@/server/status";
+import { statusText } from "@/lib/server-status";
+import type { ServerState } from "@/shared/server-state";
 import { db } from "@/server/db";
 import { getManifest } from "@/server/modpack/manifest";
 import { distFile, getLock } from "@/server/modpack/lock";
@@ -20,6 +23,9 @@ export type PlayInfo = {
   update: boolean;
   /** docs/14 "Play first": may they join right now, and until when. Null when Play is not asked of them. */
   join: Gate | null;
+  /** docs/13 §12: how the server is, in the site's words, and a wake if one is running. */
+  server: { state: ServerState; line: string; hint: string };
+  wake: WakeView;
 };
 
 /** The pack last synced to the server, written down by api at every sync. */
@@ -31,7 +37,7 @@ export async function serverPack(): Promise<string | null> {
 
 /** docs/05 "Play from the site": what stands next to the Play button. */
 export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; role?: string | null }): Promise<PlayInfo> {
-  const [m, lock, installer, gate, report, joining, run, pack] = await Promise.all([
+  const [m, lock, installer, gate, report, joining, run, pack, status] = await Promise.all([
     getManifest(),
     getLock(),
     distFile("installer.zip"),
@@ -40,9 +46,11 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
     getSection("joining"),
     db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { packVersion: true, at: true, installerVersion: true } }),
     serverPack(),
+    getStatus(),
   ]);
+  const said = statusText(status, user.role === "ADMIN");
   const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date(), joining.minInstaller) : null;
   const current = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const last = report ? { version: report.packVersion, at: report.at } : null;
-  return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, last, update: updateAvailable(current, last?.version), join };
+  return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, last, update: updateAvailable(current, last?.version), join, server: { state: said.state, line: said.line, hint: said.hint }, wake: status.wake };
 }

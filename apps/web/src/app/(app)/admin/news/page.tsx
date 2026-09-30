@@ -16,7 +16,7 @@ export default async function NewsAdminPage({ searchParams }: { searchParams: Pa
     <TabbedPage title="News" intro="What members read under News on the home page." base="/admin/news" tabs={[]} current="">
       <Flash msg={typeof q.msg === "string" ? q.msg : undefined} detail={typeof q.detail === "string" ? q.detail : undefined} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <AnnounceCard running={status?.availability === "online"} />
+        <AnnounceCard running={status.server === "online"} />
         <AnnouncementsCard news={news} />
       </div>
     </TabbedPage>

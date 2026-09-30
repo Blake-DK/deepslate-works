@@ -65,6 +65,8 @@ export function toLive(s: AmpStatus, tail: Pick<ConsoleTail, "online" | "uuidByN
 export class StatusPoller {
   latest: LiveStatus | null = null;
   lastError: string | null = null;
+  /** The state name a snapshot row is saved with; docs/13 §12 saves "Waking" while a wake runs, so it counts as available. */
+  stateName: ((live: LiveStatus) => string) | null = null;
   private lastSaved: Snapshot | null = null;
   private lastPrune = 0;
   private timer: NodeJS.Timeout | null = null;
@@ -123,7 +125,7 @@ export class StatusPoller {
     }
     if (!this.store) return;
     const measured = live.online.filter((p) => p.ping !== null).map((p) => [p.uuid ?? `name:${p.name.toLowerCase()}`, p.ping as number] as const);
-    const snap: Snapshot = { at: now, state: live.state, players: live.players, tps: live.tps, cpu: live.cpu, memMb: live.memMb, pings: measured.length ? Object.fromEntries(measured) : null };
+    const snap: Snapshot = { at: now, state: this.stateName?.(live) ?? live.state, players: live.players, tps: live.tps, cpu: live.cpu, memMb: live.memMb, pings: measured.length ? Object.fromEntries(measured) : null };
     try {
       if (shouldSnapshot(this.lastSaved, snap, now, live.stateCode === 20)) {
         await this.store.save(snap);

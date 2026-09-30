@@ -35,7 +35,7 @@ export default async function HomePage() {
     headers().then((h) => h.get("user-agent")),
   ]);
   const showServer = canSeeServer(user, settings);
-  const mapUp = Boolean(env.MAP_URL) && status?.availability === "online";
+  const mapUp = Boolean(env.MAP_URL) && status.server === "online";
   return (
     <div className="space-y-6">
       <AutoRefresh seconds={10} />
@@ -45,7 +45,7 @@ export default async function HomePage() {
       </div>
       {!settings.live && !(user.earlyAccess && user.role !== "ADMIN") && <LaunchBanner launchAt={settings.launchAt} admin={user.role === "ADMIN"} />}
       <div className="grid gap-4 sm:grid-cols-2">
-        <StatusCard status={status} series={series} address={showServer ? env.SERVER_ADDRESS : null} />
+        <StatusCard status={status} series={series} address={showServer ? env.SERVER_ADDRESS : null} admin={user.role === "ADMIN"} />
         <div className="space-y-4">
           {showServer && (
             <Card data-testid="play-card">
@@ -55,7 +55,7 @@ export default async function HomePage() {
               </CardHeader>
               <CardContent>
                 {isWindows(agent)
-                  ? <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null)} />
+                  ? <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null)}  server={play.server} wake={play.wake} />
                   : <p className="text-sm text-muted-foreground">{WINDOWS_ONLY(play.name)}</p>}
               </CardContent>
             </Card>

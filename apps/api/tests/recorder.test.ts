@@ -116,22 +116,22 @@ describe("Recorder: the server going up and down", () => {
     await t.say(L("m1_owl joined the game"));
     await t.poll(t.status({ state: "Sleeping", stateCode: 30, availability: "sleeping" }), online);
     expect(t.events.map((e) => e.kind)).toEqual(["JOIN", "LEAVE", "SERVER_STOP"]);
-    expect(t.events.at(-1)?.message).toBe("The server went to sleep (nobody on)");
+    expect(t.events.at(-1)?.message).toBe("Server asleep (nobody on)");
     expect(t.sessions[0]?.leftAt).not.toBeNull();
 
     await t.say(L("Stopping server"));
     t.tick(5);
     await t.poll(t.status({ state: "Stopped", stateCode: 0, availability: "offline" }), online);
-    expect(t.events.at(-1)).toMatchObject({ kind: "SERVER_STOP", message: "The server stopped" });
+    expect(t.events.at(-1)).toMatchObject({ kind: "SERVER_STOP", message: "Server switched off" });
 
     t.tick(600);
     await t.poll(t.status({ state: "Restarting", stateCode: 40, availability: "starting" }), online);
-    expect(t.events.at(-1)).toMatchObject({ kind: "SERVER_STOP", message: "The server is restarting" });
+    expect(t.events.at(-1)).toMatchObject({ kind: "SERVER_STOP", message: "Server restarting" });
 
     t.tick(600);
     const gone = t.status({ state: "Stopped", stateCode: 0, availability: "offline" });
     await t.poll(gone, online);
-    expect(t.events.at(-1)).toMatchObject({ message: "The server is restarting" }); // not yet: no stop line may still be on its way
+    expect(t.events.at(-1)).toMatchObject({ message: "Server restarting" }); // not yet: no stop line may still be on its way
     t.tick(90);
     await t.poll(gone, gone);
     expect(t.events.at(-1)).toMatchObject({ kind: "CRASH", at: new Date("2026-09-29T10:20:05Z") }); // dated when it went down
@@ -149,10 +149,10 @@ describe("Recorder: the server going up and down", () => {
     "ThreadedAnvilChunkStorage: All dimensions are saved",
   ];
   it.each([
-    ["the sleep state at once", [{ state: "PreparingForSleep", stateCode: 50, availability: "sleeping" }], "The server went to sleep (nobody on)"],
-    ["a state between, then sleep", [{ state: "Stopping", stateCode: 45, availability: "offline" }, { state: "Sleeping", stateCode: 30, availability: "sleeping" }], "The server went to sleep (nobody on)"],
-    ["Stopped, then sleep", [{ state: "Stopped", stateCode: 0, availability: "offline" }, { state: "Sleeping", stateCode: 30, availability: "sleeping" }], "The server went to sleep (nobody on)"],
-    ["a state between for longer than the wait", [{ state: "Stopping", stateCode: 45, availability: "offline" }, { state: "Stopping", stateCode: 45, availability: "offline" }], "The server stopped"],
+    ["the sleep state at once", [{ state: "PreparingForSleep", stateCode: 50, availability: "sleeping" }], "Server asleep (nobody on)"],
+    ["a state between, then sleep", [{ state: "Stopping", stateCode: 45, availability: "offline" }, { state: "Sleeping", stateCode: 30, availability: "sleeping" }], "Server asleep (nobody on)"],
+    ["Stopped, then sleep", [{ state: "Stopped", stateCode: 0, availability: "offline" }, { state: "Sleeping", stateCode: 30, availability: "sleeping" }], "Server asleep (nobody on)"],
+    ["a state between for longer than the wait", [{ state: "Stopping", stateCode: 45, availability: "offline" }, { state: "Stopping", stateCode: 45, availability: "offline" }], "Server switched off"],
   ] as const)("a sleep with the stop lines read after the poll, %s: never a crash", async (_how, states, message) => {
     const t = setup();
     let prev = t.status({});
@@ -179,7 +179,7 @@ describe("Recorder: the server going up and down", () => {
     await t.say(L("Stopping the server"));
     t.tick(3);
     await t.poll(t.status({ state: "Stopped", stateCode: 0, availability: "offline" }), t.status({}));
-    expect(t.events.map((e) => [e.kind, e.message])).toEqual([["SERVER_STOP", "The server stopped"]]);
+    expect(t.events.map((e) => [e.kind, e.message])).toEqual([["SERVER_STOP", "Server switched off"]]);
   });
   it("records the start once: from the Done line, or from the state if the line was missed", async () => {
     const t = setup();
@@ -187,12 +187,12 @@ describe("Recorder: the server going up and down", () => {
     await t.say('[29Sep2026 03:46:07.132] [Server thread/INFO] [net.minecraft.server.dedicated.DedicatedServer/]: Done (1.756s)! For help, type "help"');
     t.tick(5);
     await t.poll(t.status({}), asleep);
-    expect(t.events.map((e) => e.message)).toEqual(["The server is up (started in 1.8 s)"]);
+    expect(t.events.map((e) => e.message)).toEqual(["Server online (started in 1.8 s)"]);
     t.tick(3600);
     await t.poll(asleep, t.status({}));
     t.tick(3600);
     await t.poll(t.status({}), asleep);
-    expect(t.events.at(-1)).toMatchObject({ kind: "SERVER_START", message: "The server is up", meta: { inferred: true } });
+    expect(t.events.at(-1)).toMatchObject({ kind: "SERVER_START", message: "Server online", meta: { inferred: true } });
     expect(t.events.filter((e) => e.kind === "SERVER_START")).toHaveLength(2);
   });
   it("says nothing on api's own first poll", async () => {

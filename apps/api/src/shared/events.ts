@@ -139,6 +139,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.restart.scheduled": (p) => `planned a restart in ${s(p.minutes)} minutes`,
   "server.restart.cancelled": "called off the planned restart",
   "server.backup": "started a backup",
+  "server.wake": (p) => (p.failed ? "tried to wake the server (Play); it didn't wake up" : "woke the server (Play)"),
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
   "console.send": (p) => `ran: ${s(p.command, "")}`,
   "world.save": "saved the world",
@@ -161,7 +162,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
 const SELF_CONTAINED = new Set(["download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "world.pregenAutoPause"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
-const OUTCOME_IN_PHRASE = new Set(["installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);
+const OUTCOME_IN_PHRASE = new Set(["server.wake", "installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);
 
 export function describeAction(action: string, actor: Actor, params: unknown, result: AuditResult = "OK"): string {
   const p = (params && typeof params === "object" ? params : {}) as P;

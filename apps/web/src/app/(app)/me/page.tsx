@@ -28,7 +28,7 @@ export default async function MePage() {
   const user = await requireOnboardedUser();
   const weekAgo = new Date(Date.now() - 7 * 86_400_000);
   const [status, week] = await Promise.all([getStatus(), user.mcUuid ? averagePing(user.mcUuid, weekAgo, new Date()) : Promise.resolve(null)]);
-  const me = status?.availability === "online" ? (status.online.find((p) => (user.mcUuid && p.uuid === user.mcUuid) || (user.mcUsername && p.name.toLowerCase() === user.mcUsername.toLowerCase())) ?? null) : null;
+  const me = status.server === "online" ? (status.online.find((p) => (user.mcUuid && p.uuid === user.mcUuid) || (user.mcUsername && p.name.toLowerCase() === user.mcUsername.toLowerCase())) ?? null) : null;
   const [m, settings, install, installer] = await Promise.all([
     getManifest(),
     getSettings(),

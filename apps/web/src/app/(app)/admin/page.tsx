@@ -13,6 +13,7 @@ import { PlayerHead } from "@/components/server/player-head";
 import { LiveConsole } from "@/components/server/live-console";
 import { InventoryPanel } from "@/components/players/inventory-panel";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { statusText } from "@/lib/server-status";
 import type { PageQuery } from "@/components/tabs";
 import { BackupCard, consoleLines, Flash, loadBackup, loadPlayers, loadSchedule, loadTail, PowerCard, RestartCard } from "./server/cards";
 import { cn } from "@/lib/utils";
@@ -36,7 +37,7 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
     loadTail(caller),
     db.user.findMany({ where: { mcUuid: { not: null } }, select: { displayName: true, mcUsername: true, mcUuid: true, lastSeenAt: true } }),
   ]);
-  const online = status?.availability === "online" ? status.online : [];
+  const online = status.server === "online" ? status.online : [];
   const held = new Set((players?.held ?? []).map((h) => h.name.toLowerCase()));
   const byUuid = new Map(members.map((m) => [m.mcUuid!, m]));
   const onlineRows: Row[] = online.filter((p) => !held.has(p.name.toLowerCase()) && p.uuid && byUuid.has(p.uuid)).map((p) => ({ key: p.uuid!, name: p.name, uuid: p.uuid, sub: byUuid.get(p.uuid!)!.displayName, ping: p.ping }));
@@ -92,7 +93,7 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
     inspector = (
       <div className="space-y-3" data-testid="inspector-server">
         <PowerCard status={status} players={players} back="/admin" />
-        <RestartCard schedule={schedule} running={status?.availability === "online"} back="/admin" />
+        <RestartCard schedule={schedule} running={status.server === "online"} back="/admin" />
         <BackupCard backup={backup} back="/admin" list={false} />
         <p className="text-sm text-muted-foreground"><Link href="/admin/people" className="underline">{members} members</Link> · <Link href="/admin/people?tab=invites" className="underline">{invites} open {invites === 1 ? "invite" : "invites"}</Link></p>
         <div>
@@ -121,7 +122,7 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
       {!who && <AutoRefresh seconds={30} />}
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-2xl font-semibold">Control Room</h1>
-        <span className="text-sm text-muted-foreground">{status ? <>TPS {status.tps?.toFixed(1) ?? "?"} · RAM {status.memMb ?? "?"}{status.memMaxMb ? ` / ${status.memMaxMb}` : ""} MB · {online.length} on</> : "Can't reach the site's backend."}</span>
+        <span className="text-sm text-muted-foreground" data-testid="control-status">{statusText(status, true).line}{status.server === "online" && <> · TPS {status.tps?.toFixed(1) ?? "?"} · RAM {status.memMb ?? "?"}{status.memMaxMb ? ` / ${status.memMaxMb}` : ""} MB</>}{status.server === "unreachable" && status.reason && <> · {status.reason}</>}</span>
       </div>
       <Flash msg={typeof q.msg === "string" ? q.msg : undefined} detail={typeof q.detail === "string" ? q.detail : undefined} />
       <div className="grid gap-3 xl:grid-cols-[13rem_minmax(0,1fr)_22rem]">

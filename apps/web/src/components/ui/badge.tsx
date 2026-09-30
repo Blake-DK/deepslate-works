@@ -6,6 +6,7 @@ const tones = {
   good: "bg-accent/15 text-accent",
   warn: "bg-primary/15 text-primary",
   bad: "bg-danger/15 text-danger",
+  info: "bg-info/15 text-info",
 } as const;
 
 export function Badge({ tone = "neutral", className, ...props }: React.HTMLAttributes<HTMLSpanElement> & { tone?: keyof typeof tones }) {

@@ -66,6 +66,8 @@ export class Recorder {
   private lastStopLine = 0;
   private lastStart = 0;
   /** The server went down at `at` and what it was is not known yet (see `settle`). */
+  /** How the server last went down, once it is known (docs/13 §12: "Crashed" is this, not a guess). Null while up. */
+  lastDown: "crash" | "stop" | "sleep" | "restart" | null = null;
   private down: { at: number; state: string } | null = null;
   private readonly now: () => Date;
 
@@ -140,7 +142,7 @@ export class Recorder {
         return;
       case "started":
         this.lastStart = at.getTime();
-        await this.d.store.addEvent({ at, kind: "SERVER_START", actor: null, message: `The server is up (started in ${e.seconds.toFixed(1)} s)`, raw: this.raw, meta: { seconds: e.seconds } });
+        await this.d.store.addEvent({ at, kind: "SERVER_START", actor: null, message: `Server online (started in ${e.seconds.toFixed(1)} s)`, raw: this.raw, meta: { seconds: e.seconds } });
         return;
       case "stopping":
         this.lastStopLine = at.getTime();
@@ -207,17 +209,20 @@ export class Recorder {
     const said = this.lastStopLine > down.at - STOP_LINE_MS;
     const waited = now.getTime() - down.at >= SETTLE_MS;
     let message: string | null = null;
-    if (next.availability === "sleeping") message = "The server went to sleep (nobody on)";
-    else if (next.availability === "starting" || next.availability === "online") message = "The server is restarting";
-    else if (said && (next.stateCode === 0 || waited)) message = "The server stopped";
+    let how: "sleep" | "restart" | "stop" | null = null;
+    if (next.availability === "sleeping") [message, how] = ["Server asleep (nobody on)", "sleep"];
+    else if (next.availability === "starting" || next.availability === "online") [message, how] = ["Server restarting", "restart"];
+    else if (said && (next.stateCode === 0 || waited)) [message, how] = ["Server switched off", "stop"];
     if (message) {
       this.down = null;
+      this.lastDown = how;
       await this.d.store.addEvent({ at, kind: "SERVER_STOP", actor: null, message, meta: { state: next.state, ...(said ? { stopLine: true } : {}) } });
       return;
     }
     if (!waited) return;
     this.down = null;
-    await this.d.store.addEvent({ at, kind: "CRASH", actor: null, message: "The server went down without shutting down first", meta: { state: next.state, wentDownAs: down.state } });
+    this.lastDown = "crash";
+    await this.d.store.addEvent({ at, kind: "CRASH", actor: null, message: "Server crashed (it went down without shutting down first)", meta: { state: next.state, wentDownAs: down.state } });
   }
 
   private async closeAll(at: Date) {
@@ -231,9 +236,10 @@ export class Recorder {
     if (!is && this.open.size > 0) await this.closeAll(at);
     if (was && !is && !this.down) this.down = { at: at.getTime(), state: next.state };
     if (this.down) await this.settle(next, at);
+    if (is) this.lastDown = null;
     if (prev && !was && is && at.getTime() - this.lastStart > START_LINE_MS) {
       this.lastStart = at.getTime();
-      await this.d.store.addEvent({ at, kind: "SERVER_START", actor: null, message: "The server is up", meta: { inferred: true } });
+      await this.d.store.addEvent({ at, kind: "SERVER_START", actor: null, message: "Server online", meta: { inferred: true } });
     }
     if (!is) return;
     // Reconcile with AMP's player list: it catches a join or a leave the console tail missed.

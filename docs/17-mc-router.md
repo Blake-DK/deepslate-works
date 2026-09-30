@@ -96,3 +96,10 @@ The instance is **unmanaged** (`Login.UseAuthServer=False`, kept on purpose so `
 - **Portal impact:** the api still reaches the instance through the ADS proxy path on 8080; nothing on the VPS used `127.0.0.1:8083`. The VPS session re-checks the `webapp` login (`result: 10`) after the rebind.
 - **State after the work:** server stopped (not asleep), so 25569 is closed and `mc.dsw.test` is offline until started; Kuma red until then.
 - Backups of changed files: `/root/deepslate-backup-20260929-102917/` on the AMP host. The AMP host session's own copy of this doc lives at `/home/ladm/17-mc-router.md`; this file is canonical.
+
+## DeepslateWorks01 JVM and auto-start (2026-09-30)
+
+- **Auto-start:** `DaemonAutostart: True` (set with `ampinstmgr --SetStartBoot DeepslateWorks01 yes`, which needs ADS stopped). On 2026-09-30 05:26 UTC the VM was power-cycled from the hypervisor, ADS came back but the instance didn't (autostart was off), and the portal showed AMP login failures until the instance was started by hand at 05:54. If the portal says it can't reach the server and the instance isn't running: `ampinstmgr --StartInstance DeepslateWorks01`.
+- **Heap:** 4096 / 10240 MB (AMP `Java.MinHeapSizeMB` / `MaxHeapSizeMB`). The VM has 15 GB, so the other Minecraft instances can't run alongside Deepslate at full heap.
+- **Additional java options** (`MinecraftModule.Java.CustomOpts`): Aikar's G1 flags, without `-XX:G1RSetUpdatingPeriodMillis=5`, which Java 21 no longer recognises (the JVM refuses to start with it):
+  `-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1`

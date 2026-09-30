@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { enchantLabel, itemHue, itemInitials, itemMod, itemName } from "@/lib/items";
 import { clampCount, slotName } from "@/shared/slots";
 import { cn } from "@/lib/utils";
@@ -22,9 +22,14 @@ const iconUrl = (id: string) => `/items/icon/${id.replace(":", "/")}.png`;
 
 function Icon({ id }: { id: string }) {
   const [broken, setBroken] = useState(false);
+  const img = useRef<HTMLImageElement>(null);
+  // a picture that failed before the page's script ran (no icon for the item, e.g. TaCZ's guns) never fires onError here
+  useEffect(() => {
+    if (img.current?.complete && img.current.naturalWidth === 0) setBroken(true);
+  }, [id]);
   if (broken) return <span className="grid h-[78%] w-[78%] place-items-center rounded text-[10px] font-bold text-white [text-shadow:0_1px_1px_rgba(0,0,0,.6)] sm:text-xs" style={{ background: `hsl(${itemHue(id)} 38% 42%)` }}>{itemInitials(id)}</span>;
   // eslint-disable-next-line @next/next/no-img-element -- a 16 px texture from our own route, drawn pixel for pixel
-  return <img src={iconUrl(id)} alt="" onError={() => setBroken(true)} className="h-[78%] w-[78%] object-cover object-top [image-rendering:pixelated]" />;
+  return <img ref={img} src={iconUrl(id)} alt="" onError={() => setBroken(true)} className="h-[78%] w-[78%] object-cover object-top [image-rendering:pixelated]" />;
 }
 
 function tooltip(item: Item, names: Map<string, CatalogueItem>) {

@@ -94,14 +94,14 @@ describe("the entrance room in a dimension of its own (docs/14)", () => {
       "execute as @a[tag=!verified] at @s if dimension deepslate:limbo unless entity @s[x=-4,y=65,z=-4,dx=8,dy=4,dz=8] run tp @s 0.5 65 0.5",
     ]);
   });
-  it("is glass, with a floor of sea lanterns under the feet and two signs (the server's name, where to sign in), the size it always was", () => {
+  it("is glass, with a floor of sea lanterns under the feet and two signs (the book, where to sign in), the size it always was", () => {
     expect(roomBounds(ctx.limbo)).toEqual({ x1: -5, y1: 64, z1: -5, x2: 5, y2: 70, z2: 5 });
     expect(actions["limbo.build"].build({ ...ctx, siteName: "Alex's Works" }, {})).toEqual([
       "execute in deepslate:limbo run forceload add -5 -5 5 5",
       "execute in deepslate:limbo run fill -5 64 -5 5 70 5 minecraft:glass hollow",
       "execute in deepslate:limbo run fill -5 64 -5 5 64 5 minecraft:sea_lantern",
-      `execute in deepslate:limbo run setblock -1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":""}','{"text":"Alexs Works"}','{"text":""}','{"text":""}']},is_waxed:1b}`,
-      `execute in deepslate:limbo run setblock 1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":"Sign in at"}','{"text":"deepslate."}','{"text":"dsw.test/join"}','{"text":"code in chat"}']},is_waxed:1b}`,
+      `execute in deepslate:limbo run setblock -1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":"Right-click"}','{"text":"the book"}','{"text":"to sign in"}','{"text":""}']},is_waxed:1b}`,
+      `execute in deepslate:limbo run setblock 1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":"Sign in at"}','{"text":"deepslate."}','{"text":"dsw.test/join"}','{"text":"code on screen"}']},is_waxed:1b}`,
       "gamerule logAdminCommands false",
     ]);
   });

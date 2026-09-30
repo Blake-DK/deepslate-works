@@ -24,6 +24,16 @@ export const showCode = (code: string) => (code.length === CODE_LENGTH ? `${code
 /** What somebody typed, as it is looked up: "abc 123", "ABC-123" and " abc123 " are all "ABC123". */
 export const readCode = (raw: string) => raw.normalize("NFKC").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
 
+/**
+ * The /join box as it is typed (Alex, 2026-09-30): letters and digits only, capitals, at most six, and the hyphen put in
+ * after the third. Typing the third character adds the hyphen at once; deleting does not put it back, so Backspace works.
+ */
+export function typedCode(raw: string, deleting = false): string {
+  const s = readCode(raw).slice(0, CODE_LENGTH);
+  if (s.length > 3) return `${s.slice(0, 3)}-${s.slice(3)}`;
+  return s.length === 3 && !deleting ? `${s}-` : s;
+}
+
 /** A code that can still be used by this member: not expired, and not used by somebody else. */
 export function codeUsable(link: { expiresAt: Date; usedById: string | null } | null, userId: string, now: Date): boolean {
   return Boolean(link && link.expiresAt.getTime() > now.getTime() && (!link.usedById || link.usedById === userId));

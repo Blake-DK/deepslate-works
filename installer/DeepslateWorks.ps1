@@ -48,7 +48,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.5.4"   # 1.5.4: render distance by PC tier, also on PCs installed before. History in docs/07
+$InstallerVersion = "1.5.5"   # 1.5.5: chat links switched on in options.txt (the sign-in link must be clickable). History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -777,7 +777,7 @@ function Get-FileHomeIo([string]$at) {
 # Returns @{ status = "written" | "changed" | "left" | "same"; ours = <the value to remember>; text = <what to say> }.
 function Set-RenderDistance([string]$path, $ours, [int]$render, [int]$sim) {
   if (-not [IO.File]::Exists($path)) {
-    [IO.File]::WriteAllText($path, ("renderDistance:{0}`r`nsimulationDistance:{1}`r`nfullscreen:false`r`n" -f $render, $sim), (New-Object Text.UTF8Encoding($false)))
+    [IO.File]::WriteAllText($path, ("renderDistance:{0}`r`nsimulationDistance:{1}`r`nfullscreen:false`r`nchatLinks:true`r`nchatLinksPrompt:true`r`n" -f $render, $sim), (New-Object Text.UTF8Encoding($false)))
     return @{ status = "written"; ours = $render; text = ("Render distance set to {0}" -f $render) }
   }
   if ($null -eq $ours -or "$ours" -notmatch '^\d{1,2}$') { $ours = 8 }
@@ -796,6 +796,20 @@ function Set-RenderDistance([string]$path, $ours, [int]$render, [int]$sim) {
   [IO.File]::WriteAllText($tmp, $new, (New-Object Text.UTF8Encoding($false)))
   Move-Item -LiteralPath $tmp -Destination $path -Force
   return @{ status = "changed"; ours = $render; text = ("Render distance {0} {1} {2}" -f $now, [char]0x2192, $render) }
+}
+
+# Chat links (1.5.5, planner): with chatLinks off, the sign-in link in the white room's chat line cannot be clicked. It
+# cannot mend a Microsoft account that has chat switched off (the book in the room is for that), but it rules out the
+# other reason. Only a "chatLinks:false" line is changed, and only that line. $null when nothing was changed.
+function Set-ChatLinks([string]$path) {
+  if (-not [IO.File]::Exists($path)) { return $null }
+  $text = [IO.File]::ReadAllText($path)
+  if (-not [regex]::IsMatch($text, '(?m)^chatLinks:false\r?$')) { return $null }
+  $new = [regex]::Replace($text, '(?m)^chatLinks:false(?=\r?$)', 'chatLinks:true')
+  $tmp = $path + ".new"
+  [IO.File]::WriteAllText($tmp, $new, (New-Object Text.UTF8Encoding($false)))
+  Move-Item -LiteralPath $tmp -Destination $path -Force
+  return "Chat links switched on (they were off in the game's settings)"
 }
 
 # What kind of run this is, for the report: nothing installed yet, the pack changed, or everything was current.
@@ -1031,7 +1045,7 @@ if ($SelfTest) {
   [void][IO.Directory]::CreateDirectory($od)
   $of = Join-Path $od "options.txt"
   $r = Set-RenderDistance $of $null 12 8
-  Check ("first install: written with the tier's values: " + $r.text) (($r.status -eq "written") -and ($r.ours -eq 12) -and ([IO.File]::ReadAllText($of) -eq "renderDistance:12`r`nsimulationDistance:8`r`nfullscreen:false`r`n"))
+  Check ("first install: written with the tier's values: " + $r.text) (($r.status -eq "written") -and ($r.ours -eq 12) -and ([IO.File]::ReadAllText($of) -eq "renderDistance:12`r`nsimulationDistance:8`r`nfullscreen:false`r`nchatLinks:true`r`nchatLinksPrompt:true`r`n"))
   $game = "version:3955`r`nautoJump:false`r`nrenderDistance:8`r`nsimulationDistance:6`r`nlang:en_gb`r`nkey_key.jump:key.keyboard.space`r`nlastServer:mc.dsw.test`r`n"
   [IO.File]::WriteAllText($of, $game)
   $r = Set-RenderDistance $of 8 12 8
@@ -1054,6 +1068,19 @@ if ($SelfTest) {
   [IO.File]::WriteAllText($of, $game)
   $r = Set-RenderDistance $of "banana" 12 8
   Check "nonsense in installed.json counts as 8" ($r.status -eq "changed")
+
+  Write-Host "Self test: chat links (1.5.5)" -ForegroundColor White
+  Remove-Temp $of
+  $null = Set-RenderDistance $of $null 12 8
+  Check "first install: chat links on, and the prompt before a link opens" (([IO.File]::ReadAllText($of) -match "(?m)^chatLinks:true\r?$") -and ([IO.File]::ReadAllText($of) -match "(?m)^chatLinksPrompt:true\r?$"))
+  Check "and nothing more to do on the next run" ($null -eq (Set-ChatLinks $of))
+  $withOff = $game.Replace("lang:en_gb", "chatLinks:false`r`nchatLinksPrompt:false`r`nlang:en_gb")
+  [IO.File]::WriteAllText($of, $withOff)
+  $said = Set-ChatLinks $of
+  Check ("switched off by the player: on again, said in the log: " + $said) (($said -like "Chat links switched on*") -and ([IO.File]::ReadAllText($of) -eq $withOff.Replace("chatLinks:false", "chatLinks:true")))
+  Check "only that line: the prompt setting and everything else as it was" ([IO.File]::ReadAllText($of) -match "(?m)^chatLinksPrompt:false\r?$")
+  [IO.File]::WriteAllText($of, $game)
+  Check "no chatLinks line at all (the game's default is on): left alone" (($null -eq (Set-ChatLinks $of)) -and ([IO.File]::ReadAllText($of) -eq $game))
 
   Write-Host "Self test: what kind of run it is" -ForegroundColor White
   $prevRun = [pscustomobject]@{ version = "0.1.0+aaaaaaaa"; hash = "aaaa" }
@@ -1727,6 +1754,8 @@ try {
       $r = Set-RenderDistance $options $prevOurs $rd $sd
       $script:OurRender = $r.ours
       Tick $r.text
+      $cl = Set-ChatLinks $options
+      if ($cl) { Tick $cl }
     } catch { Note ("The render distance was left as it is: " + $_.Exception.Message) }
   }
 

@@ -92,8 +92,11 @@ describe("parse", () => {
       "[29Sep2026 03:46:05.063] [main/WARN] [ModernFix/]: Initial datapack load took 1.984 s",
       "[29Sep2026 03:46:07.580] [Server thread/WARN] [ModernFix/]: Dedicated server took 14.379 seconds to load",
       "[28Sep2026 19:46:54.582] [main/WARN] [net.minecraft.server.Eula/]: Failed to load eula.txt",
+      "[30Sep2026 19:06:45.101] [modloading-worker-0/WARN] [mixin/]: Discarding @Unique public method useItemOn in copycats-neoforge.mixins.json:foundation.copycat.CopycatBlockMixin from mod copycats because it already exists in com.copycatsplus.copycats.content.copycat.slab.CopycatSlabBlock",
     ]) expect(parse(noise)).toEqual([]);
     expect(parse(L("\tat net.minecraft.server.MinecraftServer.run(MinecraftServer.java:1)", "Server thread", "ERROR"))).toEqual([]);
+    // a recipe a mod ships broken is still reported (Create Deco 2.1.3, 2026-09-30)
+    expect(parse("[30Sep2026 19:06:49.677] [main/ERROR] [net.minecraft.world.item.crafting.RecipeManager/]: Parsing error loading recipe createdeco:placard: com.google.gson.JsonParseException: Failed to parse either.")).toMatchObject([{ type: "problem", level: "ERROR" }]);
   });
   it("says nothing about ordinary lines", () => {
     expect(parse(L("Preparing spawn area: 84%", "Worker-Main-3", "INFO", "net.minecraft.server.level.progress.LoggerChunkProgressListener/"))).toEqual([]);

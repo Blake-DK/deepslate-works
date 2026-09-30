@@ -223,6 +223,7 @@ export function isPingChatter(text: string): boolean {
 const NOISE = [
   /^Reference map '.*refmap\.json' for .* could not be read/,
   /^Method overwrite conflict for /,
+  /^Discarding @Unique public method \w+ in [\w.-]+\.mixins\.json:/, // Copycats+ at every start: a method Create already has (2026-09-30)
   /^Assets URL 'union:/,
   /^Failed to parse level-type /,
   /^Initial datapack load took /,

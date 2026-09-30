@@ -24,6 +24,8 @@ type Props = {
   wake: WakeView;
   /** False after an uninstall (1.5.2): the download is offered straight away, as the first time. */
   installed?: boolean;
+  /** Their copy is older than 1.4.0 and cannot update itself (1.5.3): the button is the new download instead. */
+  tooOld?: boolean;
 };
 
 const POLL_MS = 3000;
@@ -32,7 +34,7 @@ const POLL_MS = 3000;
  * docs/05 "Play from the site". A plain link to deepslate://play. After the click the page waits 2.5 s: if it is
  * still in front and never lost focus, nothing on this PC took the link, and the installer download is offered.
  */
-export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false, server, wake: initialWake, installed = true }: Props) {
+export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false, server, wake: initialWake, installed = true, tooOld = false }: Props) {
   const [wake, setWake] = useState<WakeView>(initialWake);
   const poller = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -115,9 +117,11 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
   return (
     <div className="space-y-3" data-testid="play">
       <div className="flex flex-wrap items-center gap-3">
-        <a href={PLAY_LINK} onClick={clicked} aria-disabled={!ready} className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")}>
-          {state === "waiting" ? "Starting…" : "Play"}
-        </a>
+        {tooOld
+          ? <a href="/downloads/installer.zip" onClick={(e) => { if (!ready) e.preventDefault(); }} aria-disabled={!ready} data-testid="play-download" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")}>Download the new installer</a>
+          : <a href={PLAY_LINK} onClick={clicked} aria-disabled={!ready} className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")}>
+              {state === "waiting" ? "Starting…" : "Play"}
+            </a>}
         <div className="text-sm text-muted-foreground">
           <p>
             {current ? <>{name} <span className="font-mono">{current}</span></> : <>The pack hasn&apos;t been built yet</>}
@@ -127,6 +131,7 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
           <p data-testid="last-launch">{last ? <>Your last launch: <span className="font-mono">{last.version}</span> on {last.on}</> : <>You haven&apos;t launched from this account yet</>}</p>
         </div>
       </div>
+      {tooOld && <p className="text-sm font-medium text-foreground" data-testid="play-too-old">Your copy is too old to update itself. Run Setup.bat from this download once; after that Play keeps it up to date.</p>}
       {(() => {
         const line = wakeLine(wake);
         if (!line) return null;
@@ -136,7 +141,7 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
       {!ready && current && (JOINABLE.has(server.state)
         ? <p className="text-sm text-muted-foreground">Play opens when the pack is ready for you.</p>
         : <p className="text-sm text-muted-foreground" data-testid="play-closed"><span className="font-medium text-foreground">{server.line}.</span> {server.hint}</p>)}
-      {update && ready && <p className="text-sm text-muted-foreground">Press Play: it fetches what changed, then opens the launcher.</p>}
+      {update && ready && !tooOld && <p className="text-sm text-muted-foreground">Press Play: it fetches what changed, then opens the launcher.</p>}
       {state === "missing" && (
         <Alert tone="info" data-testid="play-missing">
           <p className="font-medium">{installed ? "Looks like the launcher isn\u2019t set up on this PC" : "Download Deepslate Works"}</p>

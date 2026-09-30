@@ -40,7 +40,7 @@ export default async function MePage() {
   const oldInstaller = install && install.mode !== "uninstall" && installer && mustDownloadAgain(install.installerVersion, installer.version) ? installer.version : null;
   const showServer = canSeeServer(user, settings);
   const play = showServer ? await getPlayInfo(user) : null;
-  const join = play ? joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null) : null;
+  const join = play ? joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null, !play.tooOld) : null;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">

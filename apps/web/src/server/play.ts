@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { getManifest } from "@/server/modpack/manifest";
 import { distFile, getLock } from "@/server/modpack/lock";
 import { canDownload } from "@/server/modpack/gate";
-import { installedNow, updateAvailable, type LastLaunch } from "@/lib/play";
+import { installedNow, tooOldToUpdate, updateAvailable, type LastLaunch } from "@/lib/play";
 import { getSection } from "@/server/site-settings";
 import { PLAY_MODES, playGate, type Gate } from "@/shared/join-gate";
 
@@ -25,6 +25,8 @@ export type PlayInfo = {
   join: Gate | null;
   /** False when their latest report is an uninstall: the Play button offers the download again. */
   installed: boolean;
+  /** Their latest report is from an installer older than 1.4.0, which cannot update itself: the button is the download. */
+  tooOld: boolean;
   /** docs/13 §12: how the server is, in the site's words, and a wake if one is running. */
   server: { state: ServerState; line: string; hint: string };
   wake: WakeView;
@@ -50,11 +52,12 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
     serverPack(),
     getStatus(),
   ]);
-  const latest = await db.installReport.findFirst({ where: { userId: user.id }, orderBy: { at: "desc" }, select: { mode: true, outcome: true } });
+  const latest = await db.installReport.findFirst({ where: { userId: user.id }, orderBy: { at: "desc" }, select: { mode: true, outcome: true, installerVersion: true } });
   const installed = installedNow(latest);
+  const tooOld = tooOldToUpdate(latest);
   const said = statusText(status, user.role === "ADMIN");
   const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date(), joining.minInstaller) : null;
   const current = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const last = report && installed ? { version: report.packVersion, at: report.at } : null;
-  return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, last, update: updateAvailable(current, last?.version), join, installed, server: { state: said.state, line: said.line, hint: said.hint }, wake: status.wake };
+  return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, last, update: updateAvailable(current, last?.version), join, installed, tooOld, server: { state: said.state, line: said.line, hint: said.hint }, wake: status.wake };
 }

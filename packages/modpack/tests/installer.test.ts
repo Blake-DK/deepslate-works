@@ -3,7 +3,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
-import { INSTALLER_SCRIPT, INSTALLER_ZIP_FILES, installerVersion, sha256File } from "../src/build";
+import { buildInstaller, INSTALLER_BRIDGE, INSTALLER_SCRIPT, INSTALLER_ZIP_FILES, installerVersion, sha256File } from "../src/build";
+import { openZip } from "../src/zip";
+import type { Manifest } from "../src/schema";
+import type { LockFile } from "../src/lock";
 
 describe("installerVersion", () => {
   it("reads the version a script calls itself", () => {
@@ -41,11 +44,42 @@ describe("the script that is shipped", () => {
 
 // Installer 1.5.0 (planner): one script does everything; Setup.bat only puts it in place the first time.
 describe("the download", () => {
-  it("holds the one script, the bootstrap and a note, and nothing else", async () => {
-    expect([...INSTALLER_ZIP_FILES].sort()).toEqual(["DeepslateWorks.ps1", "README.txt", "Setup.bat"]);
+  it("holds the one script, the bootstrap, a note and the 1.4.x bridge, and nothing else", async () => {
+    expect([...INSTALLER_ZIP_FILES].sort()).toEqual(["DeepslateWorks.ps1", "README.txt", "Setup.bat", "install.ps1"]);
     expect(INSTALLER_SCRIPT).toBe("DeepslateWorks.ps1");
+    expect(INSTALLER_BRIDGE).toBe("install.ps1");
     const { readdir } = await import("node:fs/promises");
+    // install.ps1 is made by the build from DeepslateWorks.ps1; it is not a file of its own in the repo
     expect((await readdir(path.join(__dirname, "../../../installer"))).sort()).toEqual(["DeepslateWorks.ps1", "README.txt", "Setup.bat"]);
+  });
+  // Installer 1.5.3: 1.4.x's update step takes "Setup.bat" and "install.ps1" out of the zip by those names, top level,
+  // under 2 MB each, and checks the script's version line. Without install.ps1 no 1.4.x copy can update itself.
+  it("is built with Setup.bat, DeepslateWorks.ps1, install.ps1 and README.txt at the top level, install.ps1 the same script", async () => {
+    const dist = await mkdtemp(path.join(tmpdir(), "installer-build-"));
+    try {
+      const m = { name: "Deepslate Works", version: "0.1.0" } as Manifest;
+      const lock = { hash: "abcdef0123456789" } as LockFile;
+      const zip = await buildInstaller(m, lock, { dist, installer: path.join(__dirname, "../../../installer") }, "https://deepslate.example", () => {});
+      const z = openZip(await readFile(zip));
+      expect([...z.names].sort()).toEqual(["DeepslateWorks.ps1", "README.txt", "Setup.bat", "install.ps1"]);
+      const script = z.read("DeepslateWorks.ps1")!;
+      const bridge = z.read("install.ps1")!;
+      expect(bridge.equals(script)).toBe(true);
+      expect(bridge.equals(await readFile(path.join(dist, "DeepslateWorks.ps1")))).toBe(true);
+      expect(script.toString("utf8")).toMatch(/^\$PortalUrl = "https:\/\/deepslate\.example"$/m);
+      const version = installerVersion(bridge.toString("utf8"));
+      expect(bridge.toString("utf8")).toMatch(new RegExp(`^\\$InstallerVersion = "${version!.replace(/\./g, "\\.")}"`, "m")); // what 1.4.x checks
+      for (const name of ["Setup.bat", "install.ps1", "DeepslateWorks.ps1"]) {
+        const b = z.read(name)!;
+        expect(b.length).toBeGreaterThan(0);
+        expect(b.length).toBeLessThan(2 * 1024 * 1024);
+      }
+      const info = JSON.parse(await readFile(path.join(dist, "installer.json"), "utf8")) as { version: string; sha256: string };
+      expect(info.version).toBe(version);
+      expect(info.sha256).toBe(await sha256File(zip)); // the zip's, which is what 1.4.x checks
+    } finally {
+      await rm(dist, { recursive: true, force: true });
+    }
   });
   it("Setup.bat runs the one script with -Setup and nothing else", async () => {
     const bat = await readFile(path.join(__dirname, "../../../installer/Setup.bat"), "utf8");

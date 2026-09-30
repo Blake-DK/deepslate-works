@@ -100,12 +100,21 @@ export async function sha256File(file: string): Promise<string> {
   return hash.digest("hex");
 }
 
-/** The files in installer.zip (docs/07, installer 1.5.0): the one script, the bootstrap that puts it in place, a note. */
-export const INSTALLER_ZIP_FILES = ["Setup.bat", "DeepslateWorks.ps1", "README.txt"] as const;
+/**
+ * The files in installer.zip (docs/07, installer 1.5.0): the one script, the bootstrap that puts it in place, a note,
+ * and install.ps1.
+ * install.ps1 is a byte-for-byte copy of the stamped DeepslateWorks.ps1 and exists ONLY so that 1.4.x copies can
+ * update themselves: their update step takes "Setup.bat" and "install.ps1" out of the zip by those names (installer
+ * 1.5.3, docs/07). Remove it once no report from a 1.4.x installer has arrived for 30 days.
+ */
+export const INSTALLER_ZIP_FILES = ["Setup.bat", "DeepslateWorks.ps1", "README.txt", "install.ps1"] as const;
 export const INSTALLER_SCRIPT = "DeepslateWorks.ps1";
+/** The name 1.4.x looks for in the zip; see INSTALLER_ZIP_FILES. */
+export const INSTALLER_BRIDGE = "install.ps1";
 
 /**
- * installer.zip: Setup.bat + DeepslateWorks.ps1 (with the site's address and the pack version stamped in) + README.
+ * installer.zip: Setup.bat + DeepslateWorks.ps1 (with the site's address and the pack version stamped in) + README, and
+ * the same script again as install.ps1 for 1.4.x copies. The zip's SHA-256 is what 1.4.x checks, so it stays the zip's.
  * dist/DeepslateWorks.ps1: the same stamped script on its own, which an installed copy fetches to update itself.
  * installer.json next to them: the version, the zip's SHA-256 and the script's, which the mod list passes on so that
  * an installed copy can check what it fetched (docs/07 "Updates").
@@ -123,7 +132,8 @@ export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist:
   const version = installerVersion(stamped);
   if (!version) throw new Error(`${INSTALLER_SCRIPT}: $InstallerVersion not found`);
   await writeFile(path.join(stage, INSTALLER_SCRIPT), stamped);
-  for (const f of INSTALLER_ZIP_FILES) if (f !== INSTALLER_SCRIPT) await cp(path.join(paths.installer, f), path.join(stage, f));
+  await writeFile(path.join(stage, INSTALLER_BRIDGE), stamped);
+  for (const f of INSTALLER_ZIP_FILES) if (f !== INSTALLER_SCRIPT && f !== INSTALLER_BRIDGE) await cp(path.join(paths.installer, f), path.join(stage, f));
   const script = path.join(paths.dist, INSTALLER_SCRIPT);
   await writeFile(script, stamped);
   const out = path.join(paths.dist, "installer.zip");

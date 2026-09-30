@@ -47,7 +47,8 @@ export type PregenState = {
 export type PregenEvent =
   | { type: "pregen"; what: "running"; world: string; chunks: number; percent: number; eta: string | null; rate: number | null }
   | { type: "pregen"; what: "started" | "continued" | "paused" | "stopped" | "cancelled"; world: string | null }
-  | { type: "pregen"; what: "finished"; world: string; chunks: number | null };
+  | { type: "pregen"; what: "finished"; world: string; chunks: number | null }
+  | { type: "pregen"; what: "none-left" };
 
 const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, at: null };
 
@@ -68,6 +69,10 @@ export function nextPregen(s: PregenState, e: PregenEvent, at: Date): PregenStat
       return { ...NONE, status: "cancelled", at: when };
     case "finished":
       return { status: "finished", world: e.world, chunks: e.chunks ?? s.chunks, percent: 100, eta: null, rate: null, at: when };
+    case "none-left":
+      // asked to carry on and there is nothing: the area it had is done (chunky forgets finished tasks). Only ever
+      // the answer to `chunky continue`, which the portal sends for an area it has handed over already.
+      return s.status === "cancelled" || s.status === "finished" ? s : { ...s, status: "finished", percent: 100, eta: null, rate: null, at: when };
   }
 }
 

@@ -177,7 +177,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
       {tab === "inventory" && admin && (
         <Card>
           <CardHeader><CardTitle>Inventory</CardTitle><CardDescription>Admins only. Inventory, armour, off-hand and ender chest, health, food, XP and where they are.</CardDescription></CardHeader>
-          <CardContent><InventoryPanel uuid={id} caller={{ id: viewer.id, role: "ADMIN" }} fresh={q.fresh === "1"} refresh={`${base}?tab=inventory&fresh=1`} /></CardContent>
+          <CardContent><InventoryPanel uuid={id} name={name} caller={{ id: viewer.id, role: "ADMIN" }} fresh={q.fresh === "1"} refresh={`${base}?tab=inventory&fresh=1`} /></CardContent>
         </Card>
       )}
 

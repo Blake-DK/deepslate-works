@@ -7,6 +7,9 @@
 // `Type` of their own ("Console", "Chat", ...). Both are reduced to the bare message first; the patterns
 // below are anchored to the start of that message, so nothing a player types in chat can pass for a join.
 
+import { parseSnbt } from "./snbt.js";
+import type { Nbt } from "../players/nbt.js";
+
 export type Meta = { source?: string | null; type?: string | null };
 export type Level = "INFO" | "WARN" | "ERROR" | "FATAL" | "DEBUG" | "TRACE";
 
@@ -29,6 +32,8 @@ export type GameEvent =
   | { type: "pregen"; what: "none-left" }
   | { type: "pos"; name: string; x: number; y: number; z: number }
   | { type: "dimension"; name: string; dimension: string }
+  // `data get entity <name>` (docs/13 §13, the admin's inventory editor): the whole player, read like a save file
+  | { type: "entitydata"; name: string; data: { [key: string]: Nbt } }
   | { type: "map"; line: MapLine }
   | { type: "problem"; level: "WARN" | "ERROR"; text: string; logger: string | null };
 
@@ -94,6 +99,9 @@ const RE = {
   pregenFinished: /^(?:\[Chunky\] )?Task finished for ([a-z0-9_.:\/-]{1,80})\.(?: Processed: (\d+) chunks)?/,
   pregenOther: /^(?:\[Chunky\] )?Task (started|continuing|continued|paused|stopped|cancelled|canceled)\b(?: (?:in|for) ([a-z0-9_.:\/-]{1,80}?))?[. ]/,
   // `data get entity <name> Pos` and `... Dimension`, asked before a member is moved to the entrance room
+  entityData: new RegExp(`^(${NAME}) has the following entity data: (\\{.*\\})$`),
+  gave: new RegExp(`^Gave (\\d+) \\[(.+)\\] to (${NAME})$`),
+  replaced: new RegExp(`^Replaced a slot on (${NAME}) with \\[(.+)\\]$`),
   pos: new RegExp(`^(${NAME}) has the following entity data: \\[(-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d, (-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d, (-?\\d+(?:\\.\\d+)?(?:E-?\\d+)?)d\\]$`),
   dimension: new RegExp(`^(${NAME}) has the following entity data: "([a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64})"$`),
   // spark, `spark ping --player Bramble09`. Its source has "[⚡] Player Bramble09 has 23 ms ping."; the console of
@@ -170,6 +178,41 @@ export function isMapChatter(text: string): boolean {
 }
 
 /** What a round of `pingall` prints. Read for the numbers, then kept out of the console page: it comes every 15 s. */
+/** A whole player as `data get entity` prints it: long, and for the inventory editor, not for the console page. */
+export function isEntityDump(text: string): boolean {
+  return / has the following entity data: \{/.test(text);
+}
+
+export type InvReply = { ok: true; what: "gave" | "replaced"; item: string } | { ok: false; message: string; maxStack?: number };
+
+// What the server answers to `give` and `item replace` (docs/13 §13), and the refusals that can come back instead.
+const INV_ERRORS: RegExp[] = [
+  /^Unknown item '[^']+'/,
+  /^.+ can only stack up to \d+$/,
+  /^Malformed .+/,
+  /^Unknown (?:item )?component '[^']+'/,
+  /^Expected .+ at position \d+/,
+  /^Invalid .+/,
+  /^No player was found$/,
+  /^No entity was found$/,
+  /^The target does not have slot .+$/,
+  /^Unknown or incomplete command/,
+  /^Incorrect argument for command/,
+];
+
+/** The server's answer to a change made to `name`'s inventory, or null when the line is about something else. */
+export function invReply(message: string, name: string): InvReply | null {
+  const t = message.trim();
+  let m: RegExpExecArray | null;
+  if ((m = RE.gave.exec(t)) && m[3]!.toLowerCase() === name.toLowerCase()) return { ok: true, what: "gave", item: m[2]! };
+  if ((m = RE.replaced.exec(t)) && m[1]!.toLowerCase() === name.toLowerCase()) return { ok: true, what: "replaced", item: m[2]! };
+  if (INV_ERRORS.some((re) => re.test(t))) {
+    const over = /can only stack up to (\d+)$/.exec(t);
+    return over ? { ok: false, message: t, maxStack: Number(over[1]) } : { ok: false, message: t };
+  }
+  return null;
+}
+
 export function isPingChatter(text: string): boolean {
   const { message } = reduce(text);
   const t = message.trim();
@@ -238,6 +281,14 @@ export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) =
     return [x, y, z].every(Number.isFinite) ? [{ type: "pos", name: m[1]!, x: x!, y: y!, z: z! }] : [];
   }
   if ((m = RE.dimension.exec(message))) return [{ type: "dimension", name: m[1]!, dimension: m[2]! }];
+  if ((m = RE.entityData.exec(message))) {
+    try {
+      const data = parseSnbt(m[2]!);
+      return data && typeof data === "object" && !Array.isArray(data) ? [{ type: "entitydata", name: m[1]!, data }] : [];
+    } catch {
+      return [];
+    }
+  }
   if ((m = RE.sparkPing.exec(message.trim()) ?? RE.ping.exec(message.trim()))) return [{ type: "ping", name: m[1]!, ms: Number(m[2]) }];
   if ((m = RE.started.exec(message))) return [{ type: "started", seconds: Number(m[1]) }];
   if (RE.stopping.test(message)) return [{ type: "stopping" }];

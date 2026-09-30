@@ -10,7 +10,6 @@ import { KIND_LABEL, type EventKind } from "@/shared/events";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { PlayerHead } from "@/components/server/player-head";
-import { LiveConsole } from "@/components/server/live-console";
 import { InventoryPanel } from "@/components/players/inventory-panel";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { statusText } from "@/lib/server-status";
@@ -22,8 +21,9 @@ export const metadata: Metadata = { title: "Control Room" };
 
 type Row = { key: string; name: string; uuid: string | null; sub: string; ping?: number | null };
 
-// docs/13 §11 layout: the admin's home. Players on the left, the console in the middle, and on the right whatever is
-// picked: the server (power, planned restart, backup, what admins did lately) or a player (their inventory).
+// docs/13 §11 layout: the admin's home. Players on the left; on the right the last console lines (docs/13 §13: the
+// console itself is on Admin → Server → Console) and whatever is picked: the server (power, planned restart, backup,
+// what admins did lately) or a player (their inventory).
 // With the server picked, the page's figures refresh every 30 s (router.refresh keeps what is typed in the console);
 // with a player picked they do not, so the inventory is read once, or again with Refresh. The console streams by itself.
 export default async function ControlRoom({ searchParams }: { searchParams: PageQuery }) {
@@ -78,7 +78,7 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
           <div className="min-w-0 flex-1"><p className="truncate font-mono font-semibold">{who.name}</p><p className="truncate text-xs text-muted-foreground">{who.sub}</p></div>
           <Link href={`/players/${who.uuid}`} className={buttonClasses("secondary", "sm")}>Profile</Link>
         </div>
-        <InventoryPanel uuid={who.uuid} caller={caller} fresh={q.fresh === "1"} refresh={`/admin?p=${who.uuid}&fresh=1`} />
+        <InventoryPanel uuid={who.uuid} name={who.name} caller={caller} fresh={q.fresh === "1"} refresh={`/admin?p=${who.uuid}&fresh=1`} />
         <Link href="/admin" className="text-sm text-primary underline">Back to the server</Link>
       </div>
     );
@@ -125,7 +125,7 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
         <span className="text-sm text-muted-foreground" data-testid="control-status">{statusText(status, true).line}{status.server === "online" && <> · TPS {status.tps?.toFixed(1) ?? "?"} · RAM {status.memMb ?? "?"}{status.memMaxMb ? ` / ${status.memMaxMb}` : ""} MB</>}{status.server === "unreachable" && status.reason && <> · {status.reason}</>}</span>
       </div>
       <Flash msg={typeof q.msg === "string" ? q.msg : undefined} detail={typeof q.detail === "string" ? q.detail : undefined} />
-      <div className="grid gap-3 xl:grid-cols-[13rem_minmax(0,1fr)_22rem]">
+      <div className="grid gap-3 xl:grid-cols-[13rem_minmax(0,1fr)]">
         <section aria-label="Players" className="rounded-xl border bg-card p-2 xl:max-h-[75vh] xl:overflow-y-auto">
           <Link href="/admin" aria-current={!who ? "true" : undefined} className={cn("flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-muted", !who && "bg-primary/10")}>
             <span className="grid h-6 w-6 place-items-center rounded bg-primary text-xs text-primary-foreground" aria-hidden>S</span> Server
@@ -135,10 +135,17 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
           {guests.length > 0 && group("Not linked yet", guests)}
           {group("Offline", offline)}
         </section>
-        <section aria-label="Console" className="flex min-h-[24rem] flex-col rounded-xl border bg-card p-3 xl:h-[75vh]">
-          <LiveConsole initial={consoleLines(tail)} compact />
-        </section>
-        <section aria-label="Details" className="rounded-xl border bg-card p-3 xl:max-h-[75vh] xl:overflow-y-auto">{inspector}</section>
+        <div className="min-w-0 space-y-3">
+          {/* docs/13 §13: the console itself (output and command line) is on Admin → Server → Console only */}
+          <section aria-label="Last console lines" className="rounded-xl border bg-card p-3" data-testid="console-preview">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold">Last 5 console lines</h2>
+              <Link href="/admin/server?tab=console" className="text-sm text-primary underline">Open console</Link>
+            </div>
+            <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-2 font-mono text-xs leading-relaxed">{consoleLines(tail).slice(-5).map((l) => l.text).join("\n") || "(nothing yet)"}</pre>
+          </section>
+          <section aria-label="Details" className="rounded-xl border bg-card p-3">{inspector}</section>
+        </div>
       </div>
     </div>
   );

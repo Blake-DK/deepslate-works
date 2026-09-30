@@ -7,6 +7,7 @@ import { audit } from "./audit.js";
 import { Wake } from "./status/wake.js";
 import { ServerView, reasonFor } from "./status/view.js";
 import { wakeRoutes } from "./routes/wake.js";
+import { Catalogue, InventoryEditor } from "./players/editor.js";
 import { statusRoutes } from "./routes/status.js";
 import { modpackRoutes } from "./routes/modpack.js";
 import { playerRoutes } from "./routes/players.js";
@@ -68,7 +69,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   serverRoutes(app, ampClient, tail, restarts);
   fileRoutes(app, ampClient);
   consoleRoutes(app, ampClient, tail, () => limbo.actionCtx);
-  inventoryRoutes(app, ampClient, tail, () => limbo.actionCtx, pregenWatch);
+  const editor = new InventoryEditor(ampClient, tail, () => limbo.actionCtx, new Catalogue(`${env.REPO_DIR}/dist/items/catalogue.json`), (a) => audit(a as Parameters<typeof audit>[0]));
+  inventoryRoutes(app, ampClient, tail, () => limbo.actionCtx, pregenWatch, undefined, editor);
 
   // docs/16: sessions and the event log, fed by the console tail and the status poller.
   const recorder = new Recorder({

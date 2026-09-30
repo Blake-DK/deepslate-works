@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { NOT_OPEN_TEXT } from "../shared/access.js";
 import { CODE_RE, showCode } from "../shared/join-code.js";
+import { COMPONENTS_RE, ITEM_RE, SLOT_RE } from "../shared/slots.js";
 
 // docs/08 + docs/14: every console command the api ever sends is built here from validated input.
 // "system" actions are run by the api itself (join hook, timers); the rest need an ADMIN caller.
@@ -387,6 +388,23 @@ export const actions = {
     input: z.object({ map: z.string().regex(/^[a-z0-9_-]{1,40}$/), x: z.number().int().min(-100_000).max(100_000).optional(), z: z.number().int().min(-100_000).max(100_000).optional(), radius: z.number().int().min(16).max(10_000).optional() }),
     build: (_ctx, { map, x, z: zz, radius }) => [radius === undefined ? `bluemap update ${map}` : `bluemap update ${map} ${x ?? 0} ${zz ?? 0} ${radius}`],
   }),
+  // docs/13 §13: the admin's inventory editor. Vanilla commands only, built from checked input; only through
+  // POST /players/:name/inventory (routes/inventory.ts), which is rate-limited and writes the event log itself.
+  "inv.read": define({ name: "inv.read", role: "ADMIN", input: z.object({ player: MC_NAME }), build: (_ctx, { player }) => [`data get entity ${player}`] }),
+  "inv.set": define({
+    name: "inv.set",
+    role: "ADMIN",
+    input: z.object({ player: MC_NAME, slot: z.string().regex(SLOT_RE), item: z.string().regex(ITEM_RE), count: z.number().int().min(1).max(99), components: z.string().regex(COMPONENTS_RE).optional() }),
+    build: (_ctx, { player, slot, item, count, components }) => [`item replace entity ${player} ${slot} with ${item}${components ?? ""} ${count}`],
+  }),
+  "inv.clear": define({ name: "inv.clear", role: "ADMIN", input: z.object({ player: MC_NAME, slot: z.string().regex(SLOT_RE) }), build: (_ctx, { player, slot }) => [`item replace entity ${player} ${slot} with air`] }),
+  "inv.give": define({
+    name: "inv.give",
+    role: "ADMIN",
+    input: z.object({ player: MC_NAME, item: z.string().regex(ITEM_RE), count: z.number().int().min(1).max(99), components: z.string().regex(COMPONENTS_RE).optional() }),
+    build: (_ctx, { player, item, count, components }) => [`give ${player} ${item}${components ?? ""} ${count}`],
+  }),
+  "inv.notify": define({ name: "inv.notify", role: "ADMIN", input: z.object({ player: MC_NAME }), build: (_ctx, { player }) => [`tellraw ${player} {"text":"An admin changed your inventory.","color":"gray"}`] }),
   // Reads BlueMap's config files again (render threads and the like) without a restart of the server. BlueMap drops
   // its queued renders when it reloads: status/pregen.ts asks for the map again afterwards.
   "map.reload": define({ name: "map.reload", role: "ADMIN", input: z.object({}), build: () => ["bluemap reload"] }),
@@ -398,5 +416,5 @@ export const actions = {
 
 export type ActionName = keyof typeof actions;
 /** Admin actions with a route of their own, not reachable through POST /actions/:name. */
-export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send"]);
+export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify"]);
 export const ADMIN_ACTIONS: ActionName[] = (Object.keys(actions) as ActionName[]).filter((n) => actions[n].role === "ADMIN");

@@ -35,7 +35,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
       redirect(`/login?next=${encodeURIComponent(`/downloads/${file}`)}`);
     }
     if (!gate.ok && fromToken) return Response.json({ error: { code: gate.reason === "not_live" ? "not_live" : "server_offline", message: gate.reason === "not_live" ? "Not launched yet" : "Downloads open when the server is online" } }, { status: 403 });
-    if (!gate.ok) redirect(gate.reason === "not_live" ? "/install" : "/install?offline=1");
+    if (!gate.ok) redirect(gate.reason === "not_live" ? "/help" : "/help?offline=1");
   }
   const f = await distFile(file);
   if (!f) return new Response("Not built yet", { status: 404 });

@@ -3,57 +3,117 @@ import { signOut } from "@/auth";
 import { loadCurrentUser } from "@/server/auth/session";
 import { ThemeToggle } from "./theme-toggle";
 import { getBranding } from "@/server/branding";
+import { AVAILABILITY_TEXT, getStatus } from "@/server/status";
+import { getOpenVote } from "@/server/vote/votes";
+import { getSection } from "@/server/site-settings";
+import { MobileMenu, NavLink } from "./nav-link";
 
-const LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/guide", label: "Guide" },
-  { href: "/mods", label: "Mods" },
-  { href: "/vote", label: "Vote" },
-  { href: "/install", label: "Install" },
-  { href: "/map", label: "Map" },
-  { href: "/players", label: "Players" },
-  { href: "/analytics", label: "Stats" },
-  { href: "/events", label: "Events" },
-  { href: "/rules", label: "Rules" },
-  { href: "/me", label: "Me" },
-];
+const DOT = { good: "bg-accent", warn: "bg-primary", bad: "bg-danger", neutral: "bg-muted-foreground" } as const;
 
-export async function Nav() {
-  const [user, brand] = await Promise.all([loadCurrentUser(), getBranding()]);
+function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <header className="border-b bg-card">
-      <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3">
-        <Link href="/" className="flex shrink-0 items-center gap-2 whitespace-nowrap font-semibold tracking-tight">
-          {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded logo, already sized; the optimiser does not handle SVG */}
-          {brand.logoUrl && <img src={brand.logoUrl} alt="" className="h-7 w-auto max-w-32 object-contain" />}
-          <span>{brand.name}</span>
-        </Link>
-        {/* twelve entries: on one line from 1100 px; under that the row below the header has them, to scroll sideways */}
-        <nav className="ml-2 hidden min-w-0 gap-0.5 min-[1100px]:flex" aria-label="Main">
-          {user?.pcTier && LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted">{l.label}</Link>
-          ))}
-          {user?.role === "ADMIN" && (
-            <Link href="/admin" className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm text-primary hover:bg-muted">Admin</Link>
-          )}
-        </nav>
-        <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle />
-          {user && (
-            <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}>
-              <button className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm hover:bg-muted" title={user.displayName}>Sign out</button>
-            </form>
-          )}
-        </div>
-      </div>
-      {user?.pcTier && (
-        <nav className="flex gap-1 overflow-x-auto border-t px-2 py-1 min-[1100px]:hidden" aria-label="Main (mobile)">
-          {LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm hover:bg-muted">{l.label}</Link>
-          ))}
-          {user.role === "ADMIN" && <Link href="/admin" className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm text-primary">Admin</Link>}
-        </nav>
+    <div className="space-y-0.5">
+      <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The page frame (docs/13 §11 layout). Signed-in members get the sidebar in four groups (Play, Community, You, and
+ * for admins Run the server); under 1024 px it is a drawer behind a Menu button. Everyone else gets a plain header.
+ */
+export async function AppFrame({ children, footer }: { children: React.ReactNode; footer: React.ReactNode }) {
+  const [user, brand] = await Promise.all([loadCurrentUser(), getBranding()]);
+  const signOutForm = user && (
+    <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}>
+      <button className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm hover:bg-muted" title={user.displayName}>Sign out</button>
+    </form>
+  );
+  const brandBlock = (
+    <Link href="/" className="flex min-w-0 items-center gap-2 font-semibold tracking-tight">
+      {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded logo, already sized; the optimiser does not handle SVG */}
+      {brand.logoUrl && <img src={brand.logoUrl} alt="" className="h-7 w-auto max-w-32 object-contain" />}
+      <span className="truncate">{brand.name}</span>
+    </Link>
+  );
+
+  if (!user?.pcTier) {
+    return (
+      <>
+        <header className="border-b bg-card">
+          <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3">
+            {brandBlock}
+            <div className="ml-auto flex items-center gap-2"><ThemeToggle />{signOutForm}</div>
+          </div>
+        </header>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+        {footer}
+      </>
+    );
+  }
+
+  const admin = user.role === "ADMIN";
+  const [status, vote, privacy] = await Promise.all([getStatus(), getOpenVote(), getSection("privacy")]);
+  const stats = admin || privacy.analyticsForPlayers;
+  const a = AVAILABILITY_TEXT[status?.availability ?? "unknown"];
+  const playing = status?.availability === "online" ? status.online.length : null;
+  const statusLine = (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground" data-testid="nav-status">
+      <span className={`inline-block h-2 w-2 rounded-full ${DOT[a.tone]}`} aria-hidden />
+      Server {a.label.toLowerCase()}{playing !== null && <> · {playing} on</>}
+    </span>
+  );
+  const nav = (
+    <nav aria-label="Main" className="space-y-4">
+      <Group label="Play">
+        <NavLink href="/" exact>Home</NavLink>
+        <NavLink href="/map">Map</NavLink>
+        <NavLink href="/help">Help</NavLink>
+      </Group>
+      <Group label="Community">
+        <NavLink href="/players">{stats ? "Players & stats" : "Players"}</NavLink>
+        <NavLink href="/pack" badge={vote ? <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">vote</span> : null}>Mods &amp; vote</NavLink>
+        <NavLink href="/activity">Activity</NavLink>
+      </Group>
+      <Group label="You">
+        <NavLink href="/me">Me</NavLink>
+      </Group>
+      {admin && (
+        <Group label="Run the server">
+          <NavLink href="/admin" exact>Control Room</NavLink>
+          <NavLink href="/admin/server">Server</NavLink>
+          <NavLink href="/admin/pack">Pack</NavLink>
+          <NavLink href="/admin/people" also={["/admin/installs"]}>People</NavLink>
+          <NavLink href="/admin/news">News</NavLink>
+          <NavLink href="/admin/site">Site settings</NavLink>
+        </Group>
       )}
-    </header>
+    </nav>
+  );
+  const foot = (
+    <div className="mt-auto flex items-center gap-1 border-t pt-3">
+      <span className="min-w-0 flex-1 truncate px-2 text-sm text-muted-foreground">{user.displayName}</span>
+      <ThemeToggle />
+      {signOutForm}
+    </div>
+  );
+
+  return (
+    <div className="flex min-h-dvh">
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-4 overflow-y-auto border-r bg-card p-3 lg:flex" aria-label="Sidebar">
+        <div className="space-y-1 px-2 pt-1">{brandBlock}{statusLine}</div>
+        {nav}
+        {foot}
+      </aside>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <MobileMenu brand={brand.name} status={statusLine}>
+          <div className="space-y-4">{nav}</div>
+          <div className="mt-4">{foot}</div>
+        </MobileMenu>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+        {footer}
+      </div>
+    </div>
   );
 }

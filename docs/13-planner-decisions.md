@@ -199,3 +199,11 @@ Print both in `11-status.md` so Alex can copy them:
 - **The AMP instance stays unmanaged.** ADS refuses Manage for it; Alex uses `http://10.0.10.8:8083/` directly (see docs/17). Not converting to managed, because that would move `webapp` to ADS auth and rework the api login.
 - **FallingTree is base**, not votable. **TabTPS is dropped** (clashes with BlueMap).
 - **News items may carry a picture** (PNG/JPEG/WebP, 3 MB, members only).
+
+## 11. Decisions of 2026-09-30 (planner, from Alex)
+
+- **Admins get the Minecraft server console.** A command line under the live console (Admin → Server → Console, the console drawer on the admin pages, and the Control Room). What an admin types goes to the server as it is, through AMP's console input (`Core.SendConsoleMessage`, the call the api already used): no list of allowed commands, no parsing, a leading `/` dropped. Up and down arrows for history; the answer shows in the live console straight away.
+- It is the Minecraft console and nothing lower: never a shell on the VPS, the AMP host or a container, and never AMP's own settings or the instance's files.
+- Admins only, checked in `web` and again in `api`; players and early-access members get 403. Every command is in the event log as "Alex ran: <command>". At most 5 a second for each admin (429 above that), so a stuck key cannot flood the server.
+- the working rules's rule now reads: "Players never get raw console or shell access through the app. Admins get the Minecraft server console (AMP SendConsoleInput) and nothing lower; no shell, ever. Every admin console command is audited."
+- **Inventory for admins** comes from the game's save of the player, `world/playerdata/<uuid>.dat`, read through AMP's file manager (VPS session's choice, allowed by this ruling): it works while the player is offline and is NBT rather than console text. "Refresh" sends `save-all` first and waits for "Saved the game", so it is as current as `data get entity` would be. The file browser's deny list is unchanged; only this route reads that one file.

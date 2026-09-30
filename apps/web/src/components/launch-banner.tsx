@@ -14,7 +14,7 @@ export function LaunchBanner({ launchAt, admin }: { launchAt: Date | null; admin
   return (
     <div className="rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm">
       <span className="font-medium">Not live yet.</span> {launchText(launchAt)}
-      {admin && <span className="text-muted-foreground"> Players see this instead of the address and downloads. Flip it in Admin → Settings.</span>}
+      {admin && <span className="text-muted-foreground"> Players see this instead of the address and downloads. Flip it in Site settings → Launch.</span>}
     </div>
   );
 }

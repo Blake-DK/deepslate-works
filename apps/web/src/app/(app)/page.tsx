@@ -66,8 +66,8 @@ export default async function HomePage() {
               <CardDescription>{openVote ? `Tick the mods you want${openVote.closesAt ? ` before ${formatDate(openVote.closesAt)}` : ""}. Takes two minutes on a phone.` : "Read up on every mod, with videos and wiki links. The season vote will show up here when it opens."}</CardDescription>
             </CardHeader>
             <CardContent className="flex gap-2">
-              {openVote && <Link href="/vote" className={buttonClasses("primary", "sm")}>Vote now</Link>}
-              <Link href="/mods" className={buttonClasses("secondary", "sm")}>Mod list</Link>
+              {openVote && <Link href="/pack?tab=vote" className={buttonClasses("primary", "sm")}>Vote now</Link>}
+              <Link href="/pack" className={buttonClasses("secondary", "sm")}>Mod list</Link>
             </CardContent>
           </Card>
           <Card>

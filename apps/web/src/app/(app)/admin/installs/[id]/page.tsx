@@ -49,7 +49,7 @@ export default async function InstallReportPage({ params }: { params: Promise<{ 
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="flex-1 text-2xl font-semibold">{r.user.displayName} <span className="text-base font-normal text-muted-foreground">· {when.format(r.at)}</span></h1>
-        <Link href="/admin/installs" className={buttonClasses("secondary", "sm")}>All installs</Link>
+        <Link href="/admin/people?tab=installs" className={buttonClasses("secondary", "sm")}>All installs</Link>
       </div>
       <Alert tone={r.outcome === "ok" ? "success" : r.outcome === "skipped" ? "info" : "error"}>
         <Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"} className="mr-2">{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}</Badge>

@@ -15,6 +15,8 @@ import { StatusPoller } from "./status/poller.js";
 import { PingWatch } from "./status/ping.js";
 import { PLAN_KEY, Pregen, PregenWatch, type PregenPlan } from "./status/pregen.js";
 import { pregenRoutes } from "./routes/pregen.js";
+import { consoleRoutes } from "./routes/console.js";
+import { inventoryRoutes } from "./routes/inventory.js";
 import { OnlineWatch } from "./status/online.js";
 import { db } from "./db.js";
 import { prismaSnapshotStore } from "./status/store.js";
@@ -55,6 +57,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   playerRoutes(app, ampClient, tail, limbo, () => pregen.quiesce());
   serverRoutes(app, ampClient, tail, restarts);
   fileRoutes(app, ampClient);
+  consoleRoutes(app, ampClient, tail, () => limbo.actionCtx);
+  inventoryRoutes(app, ampClient, tail, () => limbo.actionCtx, pregenWatch);
 
   // docs/16: sessions and the event log, fed by the console tail and the status poller.
   const recorder = new Recorder({

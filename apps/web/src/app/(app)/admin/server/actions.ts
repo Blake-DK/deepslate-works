@@ -10,24 +10,32 @@ import { audit } from "@/server/events";
 import { removePhoto, storePhoto } from "@/server/news-images";
 
 const ops = z.enum(["start", "stop", "restart"]);
-const back = (msg: string, detail?: string) => `/admin/server?msg=${msg}${detail ? `&detail=${encodeURIComponent(detail)}` : ""}`;
+// Where to go after an action: the tab it belongs to, or the Control Room when its form says so. The form only
+// picks from this list; an address it sends is never used as such.
+const TABS = { power: "/admin/server", backups: "/admin/server?tab=backups", pregen: "/admin/server?tab=pregen", room: "/admin/server?tab=room", news: "/admin/news" } as const;
+function place(formData: FormData | undefined, tab: keyof typeof TABS) {
+  const base = formData?.get("back") === "/admin" ? "/admin" : TABS[tab];
+  return (msg: string, detail?: string) => `${base}${base.includes("?") ? "&" : "?"}msg=${msg}${detail ? `&detail=${encodeURIComponent(detail)}` : ""}`;
+}
 
 // Which button was pressed travels as a bound argument (`action.bind(null, "stop")` as the button's formAction),
 // never as the button's own name/value: the browser posted forms without it (2026-09-29, "Unknown announcement").
 export async function serverOpAction(which: string, formData: FormData) {
+  const to = place(formData, "power");
   const admin = await requireAdmin();
   const op = ops.safeParse(which);
-  if (!op.success || formData.get("sure") !== "on") redirect(back("confirm"));
+  if (!op.success || formData.get("sure") !== "on") redirect(to("confirm"));
   try {
     await apiFetch(`/server/${op.data}`, { method: "POST", body: {}, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 });
   } catch (e) {
-    if (e instanceof ApiError) redirect(back("error", e.message));
+    if (e instanceof ApiError) redirect(to("error", e.message));
     throw e;
   }
-  redirect(back(op.data));
+  redirect(to(op.data));
 }
 
 export async function runActionAction(formData: FormData) {
+  const to = place(formData, "room");
   const admin = await requireAdmin();
   const name = String(formData.get("action") ?? "");
   const input: Record<string, string> = {};
@@ -38,10 +46,10 @@ export async function runActionAction(formData: FormData) {
   try {
     await apiFetch(`/actions/${encodeURIComponent(name)}`, { method: "POST", body: input, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 60_000 });
   } catch (e) {
-    if (e instanceof ApiError) redirect(back("error", e.message));
+    if (e instanceof ApiError) redirect(to("error", e.message));
     throw e;
   }
-  redirect(back("action", name));
+  redirect(to("action", name));
 }
 
 const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
@@ -60,6 +68,7 @@ const pregenOn = z.object({
 
 /** Pre-generation is a mode, off by default (docs/05). */
 export async function pregenAction(formData: FormData) {
+  const to = place(formData, "pregen");
   const admin = await requireAdmin();
   const caller = { id: admin.id, role: "ADMIN" as const };
   const op = String(formData.get("op") ?? "");
@@ -67,93 +76,98 @@ export async function pregenAction(formData: FormData) {
     if (op === "on") {
       const mode = String(formData.get("mode") ?? "");
       const parsed = pregenOn.safeParse({ mode, what: formData.get("what") || "both", purge: formData.get("purge") === "1", radius: formData.get("radius") || 1500, x: formData.get("x") || 0, z: formData.get("z") || 0, from: blank(formData.get("from")), to: blank(formData.get("to")), hours: blank(formData.get(mode === "now" ? "hoursNow" : "hoursEmpty")) });
-      if (!parsed.success) redirect(back("error", "The radius is between 16 and 10000, the hours between a quarter and 240, the times like 02:00."));
+      if (!parsed.success) redirect(to("error", "The radius is between 16 and 10000, the hours between a quarter and 240, the times like 02:00."));
       const d = parsed.data;
-      if (d.mode === "empty" && Boolean(d.from) !== Boolean(d.to)) redirect(back("error", "A window has a from and a to. Leave both empty for any time of day."));
+      if (d.mode === "empty" && Boolean(d.from) !== Boolean(d.to)) redirect(to("error", "A window has a from and a to. Leave both empty for any time of day."));
       await apiFetch("/pregen/on", { method: "POST", body: { mode: d.mode, what: d.purge && d.what === "generate" ? "render" : d.what, purge: d.purge, area: { x: d.x, z: d.z, radius: d.radius }, window: d.mode === "empty" && d.from && d.to ? { from: d.from, to: d.to } : null, capHours: d.hours }, caller, timeoutMs: 60_000 });
     } else if (op === "off") {
       await apiFetch("/pregen/off", { method: "POST", body: {}, caller, timeoutMs: 60_000 });
     } else if (op === "cancel") {
       await apiFetch("/pregen/cancel", { method: "POST", body: {}, caller, timeoutMs: 60_000 });
-    } else redirect(back("error", "Unknown."));
+    } else redirect(to("error", "Unknown."));
   } catch (e) {
-    if (e instanceof ApiError) redirect(back("error", e.message));
+    if (e instanceof ApiError) redirect(to("error", e.message));
     throw e;
   }
   revalidatePath("/admin/server");
-  redirect(back(op === "on" ? "pregenOn" : op === "off" ? "pregenPaused" : "pregenOff"));
+  redirect(to(op === "on" ? "pregenOn" : op === "off" ? "pregenPaused" : "pregenOff"));
 }
 
 /** Ends the server's process. Only offered, and only accepted by api, while the server is stuck in "Stopping". */
-export async function killAction() {
+export async function killAction(formData?: FormData) {
+  const to = place(formData, "power");
   const admin = await requireAdmin();
   try {
     await apiFetch("/server/kill", { method: "POST", body: {}, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 });
   } catch (e) {
-    if (e instanceof ApiError) redirect(back("error", e.message));
+    if (e instanceof ApiError) redirect(to("error", e.message));
     throw e;
   }
   revalidatePath("/admin/server");
-  redirect(back("killed"));
+  redirect(to("killed"));
 }
 
 export async function scheduleRestartAction(formData: FormData) {
+  const to = place(formData, "power");
   const admin = await requireAdmin();
   const minutes = z.coerce.number().int().min(1).max(120).safeParse(formData.get("minutes"));
-  if (!minutes.success) redirect(back("error", "Pick between 1 and 120 minutes."));
-  if (formData.get("sure") !== "on") redirect(back("confirm"));
+  if (!minutes.success) redirect(to("error", "Pick between 1 and 120 minutes."));
+  if (formData.get("sure") !== "on") redirect(to("confirm"));
   try {
     await apiFetch("/server/restart-in", { method: "POST", body: { minutes: minutes.data }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 15_000 });
   } catch (e) {
-    if (e instanceof ApiError) redirect(back("error", e.message));
+    if (e instanceof ApiError) redirect(to("error", e.message));
     throw e;
   }
-  redirect(back("scheduled", `${minutes.data} min`));
+  redirect(to("scheduled", `${minutes.data} min`));
 }
 
-export async function cancelRestartAction() {
+export async function cancelRestartAction(formData?: FormData) {
+  const to = place(formData, "power");
   const admin = await requireAdmin();
   try {
     await apiFetch("/server/schedule", { method: "DELETE", caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 15_000 });
   } catch (e) {
-    if (e instanceof ApiError) redirect(back("error", e.message));
+    if (e instanceof ApiError) redirect(to("error", e.message));
     throw e;
   }
-  redirect(back("cancelled"));
+  redirect(to("cancelled"));
 }
 
 export async function backupAction(formData: FormData) {
+  const to = place(formData, "backups");
   const admin = await requireAdmin();
-  if (formData.get("sure") !== "on") redirect(back("confirm"));
+  if (formData.get("sure") !== "on") redirect(to("confirm"));
   try {
     await apiFetch("/server/backup", { method: "POST", body: {}, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 60_000 });
   } catch (e) {
-    if (e instanceof ApiError) redirect(back("error", e.message));
+    if (e instanceof ApiError) redirect(to("error", e.message));
     throw e;
   }
-  redirect(back("backup"));
+  redirect(to("backup"));
 }
 
 const announcement = z.object({ body: z.string().trim().min(1).max(600), pinned: z.boolean(), say: z.boolean() });
 
 export async function announceAction(formData: FormData) {
+  const to = place(formData, "news");
   const admin = await requireAdmin();
   const parsed = announcement.safeParse({ body: formData.get("body"), pinned: formData.get("pinned") === "on", say: formData.get("say") === "on" });
-  if (!parsed.success) redirect(back("error", "Write something first (600 characters at most)."));
+  if (!parsed.success) redirect(to("error", "Write something first (600 characters at most)."));
   const { body, say } = parsed.data;
   const dates = parseNewsDates(String(formData.get("pinnedUntil") ?? ""), String(formData.get("expiresAt") ?? ""), new Date());
-  if (!dates.ok) redirect(back("error", dates.reason));
+  if (!dates.ok) redirect(to("error", dates.reason));
   const pinned = parsed.data.pinned || dates.pinnedUntil !== null; // a "pinned until" date pins it
   const upload = formData.get("image");
   let image: string | null = null;
   if (upload instanceof File && upload.size > 0) {
     const stored = await storePhoto(upload);
-    if (!stored.ok) redirect(back("error", stored.reason));
+    if (!stored.ok) redirect(to("error", stored.reason));
     image = stored.file;
   }
   await db.announcement.create({ data: { body, pinned, pinnedUntil: dates.pinnedUntil, expiresAt: dates.expiresAt, authorId: admin.id, image } });
   await audit({ userId: admin.id, action: "announcement.create", params: { pinned, say, length: body.length, image: Boolean(image) }, result: "OK" });
-  for (const p of ["/", "/admin/server"]) revalidatePath(p);
+  for (const p of ["/", "/admin/news"]) revalidatePath(p);
   let said = "";
   if (say) {
     // In game it is one chat line: first line only, 200 characters.
@@ -165,16 +179,17 @@ export async function announceAction(formData: FormData) {
       said = `but not said in game: ${e instanceof ApiError ? e.message : "the server could not be reached"}`;
     }
   }
-  redirect(back("announced", said));
+  redirect(to("announced", said));
 }
 
 export async function announcementChangeAction(which: string, formData: FormData) {
+  const to = place(formData, "news");
   const admin = await requireAdmin();
   const id = z.string().min(1).max(40).safeParse(formData.get("id"));
   const what = z.enum(["pin", "unpin", "delete", "picture", "nopicture"]).safeParse(which);
-  if (!id.success || !what.success) redirect(back("error", "Unknown announcement."));
+  if (!id.success || !what.success) redirect(to("error", "Unknown announcement."));
   const row = await db.announcement.findUnique({ where: { id: id.data }, select: { image: true } });
-  if (!row) redirect(back("error", "Unknown announcement."));
+  if (!row) redirect(to("error", "Unknown announcement."));
   // a picture file is removed only when no other news item shows the same picture
   const drop = async (file: string | null) => {
     if (file && (await db.announcement.count({ where: { image: file } })) === 0) await removePhoto(file);
@@ -184,9 +199,9 @@ export async function announcementChangeAction(which: string, formData: FormData
     await drop(row.image);
   } else if (what.data === "picture") {
     const upload = formData.get("image");
-    if (!(upload instanceof File) || upload.size === 0) redirect(back("error", "Choose a picture first."));
+    if (!(upload instanceof File) || upload.size === 0) redirect(to("error", "Choose a picture first."));
     const stored = await storePhoto(upload);
-    if (!stored.ok) redirect(back("error", stored.reason));
+    if (!stored.ok) redirect(to("error", stored.reason));
     await db.announcement.update({ where: { id: id.data }, data: { image: stored.file } });
     if (row.image !== stored.file) await drop(row.image);
   } else if (what.data === "nopicture") {
@@ -194,21 +209,22 @@ export async function announcementChangeAction(which: string, formData: FormData
     await drop(row.image);
   } else await db.announcement.updateMany({ where: { id: id.data }, data: { pinned: what.data === "pin", pinnedUntil: null } }); // Pin = until unpinned
   await audit({ userId: admin.id, action: `announcement.${what.data}`, params: { id: id.data }, result: "OK" });
-  for (const p of ["/", "/admin/server"]) revalidatePath(p);
-  redirect(back("action", `announcement ${what.data}`));
+  for (const p of ["/", "/admin/news"]) revalidatePath(p);
+  redirect(to("action", `announcement ${what.data}`));
 }
 
 /** The two optional dates of one news item; empty boxes clear them. A "pinned until" date pins it. */
 export async function announcementDatesAction(formData: FormData) {
+  const to = place(formData, "news");
   const admin = await requireAdmin();
   const id = z.string().min(1).max(40).safeParse(formData.get("id"));
-  if (!id.success) redirect(back("error", "Unknown announcement."));
+  if (!id.success) redirect(to("error", "Unknown announcement."));
   const dates = parseNewsDates(String(formData.get("pinnedUntil") ?? ""), String(formData.get("expiresAt") ?? ""), new Date());
-  if (!dates.ok) redirect(back("error", dates.reason));
+  if (!dates.ok) redirect(to("error", dates.reason));
   const row = await db.announcement.findUnique({ where: { id: id.data }, select: { pinned: true } });
-  if (!row) redirect(back("error", "Unknown announcement."));
+  if (!row) redirect(to("error", "Unknown announcement."));
   await db.announcement.update({ where: { id: id.data }, data: { pinnedUntil: dates.pinnedUntil, expiresAt: dates.expiresAt, ...(dates.pinnedUntil ? { pinned: true } : {}) } });
   await audit({ userId: admin.id, action: "announcement.dates", params: { id: id.data, pinnedUntil: dates.pinnedUntil?.toISOString() ?? null, expiresAt: dates.expiresAt?.toISOString() ?? null }, result: "OK" });
-  for (const p of ["/", "/admin/server"]) revalidatePath(p);
-  redirect(back("action", "announcement dates"));
+  for (const p of ["/", "/admin/news"]) revalidatePath(p);
+  redirect(to("action", "announcement dates"));
 }

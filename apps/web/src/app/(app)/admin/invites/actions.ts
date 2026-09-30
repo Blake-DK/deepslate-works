@@ -14,7 +14,7 @@ export async function createInviteAction(formData: FormData) {
   if (!parsed.success) return;
   await createInvite(admin.id, parsed.data.note || null, parsed.data.days);
   await audit({ userId: admin.id, action: "invite.create", params: { note: parsed.data.note ?? null }, result: "OK" });
-  revalidatePath("/admin/invites");
+  revalidatePath("/admin/people");
 }
 
 export async function revokeInviteAction(formData: FormData) {
@@ -22,5 +22,5 @@ export async function revokeInviteAction(formData: FormData) {
   const code = String(formData.get("code") ?? "");
   const res = await db.invite.deleteMany({ where: { code, usedBy: null } });
   if (res.count) await audit({ userId: admin.id, action: "invite.revoke", params: { code }, result: "OK" });
-  revalidatePath("/admin/invites");
+  revalidatePath("/admin/people");
 }

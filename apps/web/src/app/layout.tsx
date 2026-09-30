@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Nav } from "@/components/nav";
+import { AppFrame } from "@/components/nav";
 import { getBranding } from "@/server/branding";
 
 export const dynamic = "force-dynamic";
@@ -37,12 +37,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <style dangerouslySetInnerHTML={{ __html: accentCss }} />
       </head>
       <body className="min-h-dvh flex flex-col">
-        <Nav />
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
-        <footer className="space-y-1 px-4 py-4 text-center text-xs text-muted-foreground">
-          <p>{b.tagline}</p>
-          {(b.footer || b.discordInvite) && <p>{b.footer}{b.footer && b.discordInvite ? " · " : ""}{b.discordInvite && <a href={b.discordInvite} className="underline" target="_blank" rel="noreferrer noopener">Discord</a>}</p>}
-        </footer>
+        <AppFrame
+          footer={
+            <footer className="space-y-1 px-4 py-4 text-center text-xs text-muted-foreground">
+              <p>{b.tagline}</p>
+              {(b.footer || b.discordInvite) && <p>{b.footer}{b.footer && b.discordInvite ? " · " : ""}{b.discordInvite && <a href={b.discordInvite} className="underline" target="_blank" rel="noreferrer noopener">Discord</a>}</p>}
+            </footer>
+          }
+        >
+          {children}
+        </AppFrame>
       </body>
     </html>
   );

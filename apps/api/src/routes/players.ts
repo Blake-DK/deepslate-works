@@ -5,7 +5,7 @@ import type { ConsoleTail } from "../amp/console.js";
 import type { Limbo } from "../players/limbo.js";
 import { requireAdmin } from "../auth.js";
 import { runAction } from "../actions/run.js";
-import { ADMIN_ACTIONS, actions, type ActionName } from "../actions/registry.js";
+import { ADMIN_ACTIONS, OWN_ROUTE, actions, type ActionName } from "../actions/registry.js";
 import { audit } from "../audit.js";
 
 export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, limbo: Limbo, beforeStop: () => Promise<unknown> = async () => undefined) {
@@ -32,7 +32,7 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
   app.post("/actions/:name", async (req, reply) => {
     if (!requireAdmin(req, reply)) return;
     const name = (req.params as { name: string }).name as ActionName;
-    if (!ADMIN_ACTIONS.includes(name)) return reply.code(404).send({ error: { code: "validation", message: "unknown action" } });
+    if (!ADMIN_ACTIONS.includes(name) || OWN_ROUTE.has(name)) return reply.code(404).send({ error: { code: "validation", message: "unknown action" } });
     if (tail.state !== 20) return reply.code(409).send({ error: { code: "server_offline", message: "The server isn't running" } });
     const r = await runAction(amp, limbo.actionCtx, name, req.body ?? {}, req.caller.userId);
     return r.ok ? r : reply.code(400).send({ ...r, error: { code: r.detail === "validation" ? "validation" : "amp_error", message: r.detail ?? "failed" } });

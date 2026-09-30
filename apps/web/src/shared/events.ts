@@ -140,6 +140,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.restart.cancelled": "called off the planned restart",
   "server.backup": "started a backup",
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
+  "console.send": (p) => `ran: ${s(p.command, "")}`,
+  "world.save": "saved the world",
   "installer.report": (p) => p.refused ? "sent a report of a run that cannot have happened: the site is not open for them" : p.mode === "already_running" ? "pressed Play while Deepslate Works was already running in another window: nothing done" : `${p.mode === "first_install" || p.mode === "update"
     ? (p.outcome === "ok" ? (p.mode === "first_install" ? `installed ${s(p.packVersion, "the pack")}: all good` : `pressed Play and updated to ${s(p.packVersion, "the new pack")}`) : p.outcome === "cancelled" ? `closed the window during the ${p.mode === "update" ? "update" : "first install"}${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `${p.mode === "update" ? "updated" : "installed"} and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)
     : p.mode === "play"

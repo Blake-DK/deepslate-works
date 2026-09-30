@@ -29,14 +29,17 @@ const WIDTHS = ["25%", "20%", "9%", "14%", "11%", "12%", "56px"];
 export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; show?: string; q?: string }> }) {
   const me = await requireAdmin();
   const { error, show, q } = await searchParams;
-  const [users, settings, lastRuns, installer] = await Promise.all([
+  const [users, settings, lastRuns, installer, linkRuns] = await Promise.all([
     db.user.findMany({ orderBy: [{ role: "asc" }, { createdAt: "asc" }] }),
     getSettings(),
     // the installer each member used last: their latest report
     db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, installerVersion: true, mode: true, outcome: true } }),
     getInstaller(),
+    // installer 1.5.6: the latest report that says whether the Play button has a working link on their PC
+    db.installReport.findMany({ where: { playLinkMissing: { not: null } }, orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, playLinkMissing: true } }),
   ]);
   const current = installer?.version ?? null;
+  const noPlayLink = new Set(linkRuns.filter((r) => r.playLinkMissing).map((r) => r.userId));
   const lastInstaller = new Map(lastRuns.map((r) => [r.userId, r.installerVersion]));
   const uninstalled = new Set(lastRuns.filter((r) => !installedNow(r)).map((r) => r.userId));
   const all = users.map((u) => {
@@ -61,7 +64,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         <span className="flex min-w-0 items-center gap-2"><Clip text={u.mcUsername} mono />{u.verifiedAt && <Badge tone="good" className="shrink-0">verified</Badge>}</span>
       ) : <Badge className="shrink-0">Unlinked</Badge>,
       pc: u.pcTier ? <Badge tone={PC[u.pcTier][1]} className="shrink-0" title={`${PC[u.pcTier][0]} PC${u.pcTierSource === "measured" ? ", measured by the installer" : ", their own pick"}`}>{PC[u.pcTier][0]} PC</Badge> : <span className="text-muted-foreground" title="No tier yet">–</span>,
-      installer: uninstalled.has(u.id) ? <span className="text-muted-foreground" title="Their latest report is the uninstaller's">uninstalled</span> : <InstallerVersion version={u.installerVersion} current={current} outdated={u.installerOutdated} />,
+      installer: uninstalled.has(u.id) ? <span className="text-muted-foreground" title="Their latest report is the uninstaller's">uninstalled</span> : noPlayLink.has(u.id)
+        ? <span className="flex min-w-0 items-center gap-1"><InstallerVersion version={u.installerVersion} current={current} outdated={u.installerOutdated} /><Badge tone="warn" className="shrink-0 whitespace-nowrap" title="Setup could not set up the Play button on their PC; it clears when a later run reports it in place">Play button not set up</Badge></span>
+        : <InstallerVersion version={u.installerVersion} current={current} outdated={u.installerOutdated} />,
       seen: <span className="text-muted-foreground" title={u.lastSeenAt ? u.lastSeenAt.toISOString() : "never"}>{timeAgo(u.lastSeenAt)}</span>,
       early: <Switch action={setEarlyAccessAction} fields={{ id: u.id, on: u.earlyAccess ? "0" : "1" }} on={u.earlyAccess} label={`Early access for ${u.displayName}`} disabled={admin} why={admin ? "Admins don't need it" : early} />,
       menu: <MemberMenu u={u} meId={me.id} />,

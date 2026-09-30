@@ -4,6 +4,7 @@ import { verifyLinks } from "./verify-links";
 import { buildLock, diffLocks, type LockFile } from "./lock";
 import { buildConfigZip, buildInstaller, buildServer, removeClientPack } from "./build";
 import { modpackPaths } from "./paths";
+import { buildItems } from "./items";
 import type { Manifest } from "./schema";
 
 const [cmd = "help", ...rest] = process.argv.slice(2);
@@ -90,7 +91,9 @@ async function main() {
       if (what === "config" || what === "all") await buildConfigZip(P, log);
       if (what === "server" || what === "all") await buildServer(manifest, lock, P, log);
       if (what === "installer" || what === "all") await buildInstaller(manifest, lock, P, portalUrl, log);
-      if (!["config", "server", "installer", "all"].includes(what)) {
+      // after the server jars: the item catalogue is read out of them (docs/13 §13)
+      if (what === "items" || what === "all") await buildItems({ dist: P.dist, vanilla: P.items }, log);
+      if (!["config", "server", "installer", "items", "all"].includes(what)) {
         console.error(`unknown build target ${what}`);
         process.exit(1);
       }
@@ -103,7 +106,7 @@ async function main() {
       process.exit(2);
     // falls through never
     default:
-      log(`usage: modpack <lint|verify-links|lock [--force]|build [config|server|installer|all]> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
+      log(`usage: modpack <lint|verify-links|lock [--force]|build [config|server|installer|items|all]> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
       process.exit(cmd === "help" ? 0 : 1);
   }
 }

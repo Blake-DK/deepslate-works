@@ -144,6 +144,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.wake": (p) => (p.failed ? "tried to wake the server (Play); it didn't wake up" : "woke the server (Play)"),
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
   "console.send": (p) => `ran: ${s(p.command, "")}`,
+  // docs/13 §13, the inventory editor (the same words as invPhrase in slots.ts)
+  "inv.change": (p) => (p.op === "give" ? `gave ${s(p.player)} ${s(p.count, "1")} × ${s(p.item)}` : p.op === "clear" ? `cleared ${s(p.player)}'s ${s(p.slot)}` : `set ${s(p.player)}'s ${s(p.slot)} to ${s(p.item)}${Number(p.count) > 1 ? ` × ${s(p.count)}` : ""}`),
   "world.save": "saved the world",
   "installer.report": (p) => p.refused ? "sent a report of a run that cannot have happened: the site is not open for them" : p.mode === "already_running" ? "pressed Play while Deepslate Works was already running in another window: nothing done" : p.mode === "uninstall" ? (p.outcome === "ok" ? "removed Deepslate Works from their PC" : "tried to remove Deepslate Works from their PC") : `${p.mode === "first_install" || p.mode === "update"
     ? (p.outcome === "ok" ? (p.mode === "first_install" ? `installed ${s(p.packVersion, "the pack")}: all good` : `pressed Play and updated to ${s(p.packVersion, "the new pack")}`) : p.outcome === "cancelled" ? `closed the window during the ${p.mode === "update" ? "update" : "first install"}${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `${p.mode === "update" ? "updated" : "installed"} and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)

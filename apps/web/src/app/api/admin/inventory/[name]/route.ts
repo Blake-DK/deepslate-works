@@ -1,0 +1,25 @@
+import { auth } from "@/auth";
+import { db } from "@/server/db";
+import { apiFetch, ApiError } from "@/server/api-client";
+
+export const dynamic = "force-dynamic";
+
+// docs/13 §13: change an online player's inventory or ender chest. Admins only (api checks again, limits to 5 a second
+// and writes the event log). Same-site JSON only, so a form elsewhere cannot use an admin's cookie.
+export async function POST(req: Request, { params }: { params: Promise<{ name: string }> }) {
+  const session = await auth();
+  const user = session?.user?.id ? await db.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } }) : null;
+  if (!user || user.role !== "ADMIN") return Response.json({ error: { code: "forbidden", message: "admin only" } }, { status: 403 });
+  const origin = req.headers.get("origin");
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (!req.headers.get("content-type")?.startsWith("application/json") || (origin && host && new URL(origin).host !== host)) return Response.json({ error: { code: "forbidden", message: "same-site JSON only" } }, { status: 403 });
+  const { name } = await params;
+  if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) return Response.json({ error: { code: "validation", message: "Minecraft name" } }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  try {
+    return Response.json(await apiFetch(`/players/${name}/inventory`, { method: "POST", body, caller: { id: user.id, role: "ADMIN" }, timeoutMs: 15_000 }));
+  } catch (e) {
+    if (e instanceof ApiError) return Response.json({ error: { code: e.code, message: e.message } }, { status: e.status });
+    return Response.json({ error: { code: "api_error", message: "The site's backend did not answer." } }, { status: 502 });
+  }
+}

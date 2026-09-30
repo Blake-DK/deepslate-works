@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { statusText } from "@/lib/server-status";
 import { redirect } from "next/navigation";
 import { requireOnboardedUser } from "@/server/auth/session";
 import { getSection } from "@/server/site-settings";
@@ -34,7 +35,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const { range, now, sessions, firstSeen, people } = data;
   // docs/05 "Connection"
   const [status, low, pings, held] = await Promise.all([getStatus(), tpsLow(now), pingByPlayer(range.from, range.to), heldAtTheDoor(range.from, range.to)]);
-  const worst = status?.availability === "online" ? worstPing(status.online) : null;
+  const worst = status.server === "online" ? worstPing(status.online) : null;
 
   const t = totals(sessions, range.from, range.to, now, firstSeen);
   const p = range.prevFrom ? totals(sessions, range.prevFrom, range.from, now, firstSeen) : null;
@@ -82,7 +83,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <Tile label="Sessions per player" value={t.perPlayer === null ? "–" : t.perPlayer.toFixed(1)} delta={change(t.perPlayer, p?.perPlayer ?? null)} />
         <Tile label="Longest session" value={hours(t.longestMs)} delta={change(t.longestMs, p?.longestMs ?? null)} />
         <Tile label="Most on at once" value={String(peak)} delta={change(peak, prevPeak)} />
-        <Tile label="Server available" value={percent(data.uptime.available)} hint={data.uptime.running === null ? "not measured yet" : `running ${percent(data.uptime.running)}, asleep the rest`} delta={change(data.uptime.available, data.uptime.prevAvailable)} />
+        <Tile label="Server available" value={percent(data.uptime.available)} hint={data.uptime.running === null ? "not measured yet" : `running ${percent(data.uptime.running)}, asleep or waking the rest`} delta={change(data.uptime.available, data.uptime.prevAvailable)} />
       </section>
 
       <Card>
@@ -130,7 +131,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             <dl className="grid grid-cols-3 gap-3 text-sm">
               <div>
                 <dt className="text-xs text-muted-foreground">Server speed now</dt>
-                <dd>{status?.availability === "online" && status.tps != null ? <Badge tone={tpsTone(status.tps)} title="Ticks per second. 20 is perfect.">{status.tps.toFixed(1)} TPS</Badge> : <span className="text-muted-foreground">{status?.availability === "sleeping" ? "asleep" : "not running"}</span>}</dd>
+                <dd>{status.server === "online" && status.tps != null ? <Badge tone={tpsTone(status.tps)} title="Ticks per second. 20 is perfect.">{status.tps.toFixed(1)} TPS</Badge> : <span className="text-muted-foreground">{statusText(status, false).line}</span>}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Lowest, last 24 h</dt>
@@ -138,7 +139,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Worst ping right now</dt>
-                <dd>{worst ? <><Badge tone={pingTone(worst.ms)}>{worst.ms} ms</Badge> <span className="font-mono text-xs text-muted-foreground">{worst.name}</span></> : <span className="text-muted-foreground">{status?.availability === "online" && status.online.length > 0 ? "not measured yet" : "nobody on"}</span>}</dd>
+                <dd>{worst ? <><Badge tone={pingTone(worst.ms)}>{worst.ms} ms</Badge> <span className="font-mono text-xs text-muted-foreground">{worst.name}</span></> : <span className="text-muted-foreground">{status.server === "online" && status.online.length > 0 ? "not measured yet" : "nobody on"}</span>}</dd>
               </div>
             </dl>
           </CardContent>

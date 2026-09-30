@@ -2,7 +2,11 @@ import Fastify from "fastify";
 import { AmpClient, MockAmp, type Amp } from "./amp/client.js";
 import { serviceAuth } from "./auth.js";
 import type { Env } from "./env.js";
-import { health } from "./health.js";
+import { health, tcpReachable } from "./health.js";
+import { audit } from "./audit.js";
+import { Wake } from "./status/wake.js";
+import { ServerView, reasonFor } from "./status/view.js";
+import { wakeRoutes } from "./routes/wake.js";
 import { statusRoutes } from "./routes/status.js";
 import { modpackRoutes } from "./routes/modpack.js";
 import { playerRoutes } from "./routes/players.js";
@@ -53,7 +57,13 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const online = new OnlineWatch(ampClient, tail, () => limbo.actionCtx, () => poller.fresh()?.players ?? null, log);
   const poller: StatusPoller = new StatusPoller(ampClient, tail, env.AMP_MOCK === "1" ? null : prismaSnapshotStore, log, undefined, () => pings.current());
   const restarts = new RestartSchedule(ampClient, () => limbo.actionCtx, log, () => pregen.quiesce());
-  statusRoutes(app, ampClient, poller, tail, () => pings.current());
+  // docs/13 §12: one set of words for the server's state, and wake on Play.
+  const wake = new Wake(ampClient, (a) => audit(a as Parameters<typeof audit>[0]));
+  let tunnelUp: boolean | null = null;
+  const view = new ServerView({ poller, wake, lastDown: () => recorder.lastDown, sleep: () => ({ on: pregen.sleep.on, delayMin: pregen.sleep.delayMin }), tunnelUp: () => tunnelUp });
+  poller.stateName = (live) => (wake.waking && live.stateCode !== 20 ? "Waking" : live.state);
+  statusRoutes(app, ampClient, poller, tail, () => pings.current(), view);
+  wakeRoutes(app, wake, view);
   playerRoutes(app, ampClient, tail, limbo, () => pregen.quiesce());
   serverRoutes(app, ampClient, tail, restarts);
   fileRoutes(app, ampClient);
@@ -69,12 +79,42 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     log,
   });
   let housekeeping: NodeJS.Timeout | null = null;
+  let watching: NodeJS.Timeout | null = null;
 
   app.addHook("onReady", async () => {
     if (env.AMP_MOCK === "1") return;
     await recorder.init().catch((err) => log({ err: String(err) }, "could not load open sessions"));
     tail.on(recorder.onConsole);
     poller.onStatus(recorder.onStatus);
+    poller.onStatus((next) => {
+      view.observe(next);
+      void wake.update(next.stateCode).catch((err) => log({ err: String(err) }, "wake update failed"));
+    });
+    // "Crashed" survives a restart of the api: the newest up/down row says how the server last went down.
+    const last = await db.event.findFirst({ where: { kind: { in: ["SERVER_START", "SERVER_STOP", "CRASH"] } }, orderBy: { at: "desc" }, select: { kind: true, meta: true } }).catch(() => null);
+    if (last?.kind === "CRASH") recorder.lastDown = "crash";
+    // Every 10 s: a wake that ran out of time fails even when AMP is out of reach, and losing or regaining AMP
+    // goes into the event log in the same words the site shows. The sleep delay is read again every 10 min.
+    let reachable: boolean | null = null;
+    let sleepLooked = 0;
+    watching = setInterval(() => {
+      void (async () => {
+        const live = poller.fresh();
+        await wake.update(live?.stateCode ?? null);
+        tunnelUp = live ? true : await tcpReachable(env.AMP_TUNNEL_IP, 22);
+        const now = live !== null;
+        if (reachable !== null && now !== reachable) {
+          await prismaRecorderStore.addEvent(now
+            ? { at: new Date(), kind: "WARN", actor: null, message: "The portal can reach the server again", meta: {} }
+            : { at: new Date(), kind: "ERROR", actor: null, message: `Can't reach the server (${reasonFor(poller.lastError, tunnelUp)})`, meta: { error: poller.lastError } });
+        }
+        reachable = now;
+        if (now && Date.now() - sleepLooked > 10 * 60_000) {
+          sleepLooked = Date.now();
+          await pregen.lookAtSleep();
+        }
+      })().catch((err) => log({ err: String(err) }, "status watch failed"));
+    }, 10_000);
     tail.start();
     poller.start();
     limbo.start();
@@ -95,6 +135,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     pregen.stop();
     restarts.stop();
     if (housekeeping) clearInterval(housekeeping);
+    if (watching) clearInterval(watching);
   });
   return app;
 }

@@ -4,7 +4,7 @@ import { authConfig } from "@/auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC = [/^\/login$/, /^\/branding\/[a-z]+-[0-9a-f]{12}\.(png|webp|svg)$/, /^\/join\/[^/]+(\/.*)?$/, /^\/api\/auth\//, /^\/api\/health$/, /^\/api\/modpack\/manifest$/, /^\/downloads\//, /^\/api\/launcher\//, /^\/api\/installer\/report$/];
+const PUBLIC = [/^\/login$/, /^\/branding\/[a-z]+-[0-9a-f]{12}\.(png|webp|svg)$/, /^\/join\/[^/]+(\/.*)?$/, /^\/api\/auth\//, /^\/api\/health$/, /^\/api\/modpack\/manifest$/, /^\/downloads\//, /^\/api\/launcher\//, /^\/api\/installer\/report$/, /^\/api\/play\/wake$/];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;

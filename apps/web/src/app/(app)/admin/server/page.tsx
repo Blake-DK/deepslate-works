@@ -28,7 +28,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
   const msg = typeof q.msg === "string" ? q.msg : undefined;
   const detail = typeof q.detail === "string" ? q.detail : undefined;
   const status = await getStatus();
-  const running = status?.availability === "online";
+  const running = status.server === "online";
 
   let body: React.ReactNode;
   if (tab === "power") {

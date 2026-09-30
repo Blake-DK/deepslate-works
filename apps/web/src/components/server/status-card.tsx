@@ -2,26 +2,39 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatUptime, tpsTone } from "@/lib/series";
 import { pingTone } from "@/lib/ping";
-import { AVAILABILITY_TEXT, type LiveStatus } from "@/server/status";
+import type { LiveStatus } from "@/server/status";
+import { statusText } from "@/lib/server-status";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { serverOpAction } from "@/app/(app)/admin/server/actions";
 import { PlayerHead } from "./player-head";
 import { Sparkline } from "./sparkline";
 
-export function StatusCard({ status, series, address }: { status: LiveStatus | null; series: Array<number | null>; address: string | null }) {
-  const a = AVAILABILITY_TEXT[status?.availability ?? "unknown"];
-  const online = status?.availability === "online";
-  const uptime = online ? formatUptime(status?.uptime) : null;
-  const memPct = status?.memMb != null && status.memMaxMb ? Math.min(100, Math.round((status.memMb / status.memMaxMb) * 100)) : null;
+/** docs/13 §12: the server in the site's words; admins also get Start where joining can't wake it. */
+export function StatusCard({ status, series, address, admin = false }: { status: LiveStatus; series: Array<number | null>; address: string | null; admin?: boolean }) {
+  const a = statusText(status, admin);
+  const online = status.server === "online";
+  const uptime = online ? formatUptime(status.uptime) : null;
+  const memPct = status.memMb != null && status.memMaxMb ? Math.min(100, Math.round((status.memMb / status.memMaxMb) * 100)) : null;
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2">
           Server <Badge tone={a.tone} data-testid="status-pill">{a.label}</Badge>
-          {online && status && <span className="text-sm font-normal text-muted-foreground">{status.online.length}{status.maxPlayers ? ` of ${status.maxPlayers}` : ""} playing</span>}
         </CardTitle>
-        <CardDescription>{a.hint}{address && <> Address: <span className="font-mono text-foreground">{address}</span></>}</CardDescription>
+        <p className="font-medium" data-testid="status-line">{a.line}</p>
+        <CardDescription>{a.hint}{a.reason && <> {a.reason}</>}{address && !["off", "crashed", "unreachable"].includes(a.state) && <> Address: <span className="font-mono text-foreground">{address}</span></>}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {online && status && (
+        {admin && (a.state === "off" || a.state === "crashed") && (
+          <form action={serverOpAction.bind(null, "start")} className="flex flex-wrap items-center gap-3" data-testid="status-start">
+            <input type="hidden" name="sure" value="on" />
+            <input type="hidden" name="back" value="/" />
+            <Button type="submit" size="sm">Start the server</Button>
+            {a.state === "crashed" && <Link href="/admin/server?tab=console" className="text-sm text-primary underline">The last console lines</Link>}
+          </form>
+        )}
+        {online && (
           <>
             {status.online.length > 0 ? (
               <ul className="flex flex-wrap gap-2" aria-label="Players online">

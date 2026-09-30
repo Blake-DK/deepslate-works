@@ -207,3 +207,24 @@ Print both in `11-status.md` so Alex can copy them:
 - Admins only, checked in `web` and again in `api`; players and early-access members get 403. Every command is in the event log as "Alex ran: <command>". At most 5 a second for each admin (429 above that), so a stuck key cannot flood the server.
 - the working rules's rule now reads: "Players never get raw console or shell access through the app. Admins get the Minecraft server console (AMP SendConsoleInput) and nothing lower; no shell, ever. Every admin console command is audited."
 - **Inventory for admins** comes from the game's save of the player, `world/playerdata/<uuid>.dat`, read through AMP's file manager (VPS session's choice, allowed by this ruling): it works while the player is offline and is NBT rather than console text. "Refresh" sends `save-all` first and waits for "Saved the game", so it is as current as `data get entity` would be. The file browser's deny list is unchanged; only this route reads that one file.
+
+## 12. Server status wording and wake on Play (planner, 2026-09-30)
+
+**One set of words** (`shared/server-state.ts`, the same file in web and api), worked out in api from AMP's state plus what only the portal knows, and shown the same way on Home, the sidebar, the Control Room, the Server page, the Play button, the map and Stats:
+
+| State | When | Words | Colour |
+|---|---|---|---|
+| online | AMP 20 | "Online, N playing" / "Online, nobody on, goes to sleep in about X min" (from AMP's `SleepDelayMinutes` and when it became empty; no sleep line while sleep mode is off) | green |
+| asleep | AMP 30, 50 | "Asleep, join to wake it" | blue |
+| waking | a wake from Play is running, until AMP says 20 | "Waking up… about N s" | amber |
+| starting / restarting / stopping | AMP 5, 7, 10, 60 / 40 / 45 | "Starting…" / "Restarting…" / "Stopping…" | amber |
+| off | AMP 0 after a clean stop, 200, 250 | "Switched off"; players: "The server is switched off. Ask Alex in Discord."; admins: the same and a Start button | grey |
+| crashed | AMP 100, or 0 after a fall without a stop line (the recorder decides; kept across api restarts from the newest up/down row) | "Crashed"; admins: Start and a link to the last console lines | red |
+| unreachable | api cannot reach AMP (no fresh status), AMP gives no state, or web cannot reach api | "Can't reach the server"; admins see the reason: login refused / tunnel down / instance not running / AMP not answering / the site's backend (api) isn't answering | red |
+
+- `/status` answers 200 with `server`, `reason`, `sleepInMin` and `wake` also when AMP cannot be reached (it used to answer 502, which the site showed as "Unknown").
+- The event log records the transitions in the same words: "Server online (started in X s)", "Server asleep (nobody on)", "Server restarting", "Server switched off", "Server crashed (it went down without shutting down first)", and, for admins, "Can't reach the server (<reason>)" / "The portal can reach the server again".
+- Uptime counts Asleep and Waking as available (snapshots are saved as "Waking" while a wake runs). Downloads and Play are open while Online, Asleep or Waking.
+
+**Wake on Play.** `POST /server/wake` in api (web: `/api/play/wake`, a member's session or the launcher token). For any member the door would let in (`isOpenFor`: admin, live, early access), checked in web's route and again in api from the database; only from Asleep; one `Core.Start` however often Play is pressed (a second Play while it wakes answers "already"); never from Switched off, Crashed, Starting/Stopping/Restarting or out of reach. Audited "<name> woke the server (Play)"; if AMP does not report Running within 3 minutes, "<name> tried to wake the server (Play); it didn't wake up" (FAILED). The Play button and DeepslateWorks.ps1 1.5.1 ask for it the moment Play is pressed, say "Waking the server, ready in about 30 s", then "Server ready" or "The server didn't wake up. Try again in a minute or tell Alex". Admins keep their Start; joining a sleeping server directly still wakes it through AMP.
+

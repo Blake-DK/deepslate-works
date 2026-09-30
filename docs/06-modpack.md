@@ -186,3 +186,9 @@ A Sync that changes settings only does not restart the server. What is running r
 ## FallingTree (2026-09-29)
 
 `fallingtree` on Modrinth. **Part of the default pack since 2026-09-29** (Alex: "tree felling is a default mod pack"): category base, switched on, not voted on. Since the evening of the same day a tree falls whatever is in the hand (`tools.ignoreTools: true`, shipped with the pack; Alex: "it should work without an axe"); sneaking takes one log. VeinMiner is the key you hold, for ore.
+
+## Libraries inside other mods, and what waits for the next Lock (2026-09-30)
+
+- **Sable Companion 1.6.0 (`sablecompanion`)** shows in the server's mod list but is not in `mods.json` or the lock: it travels inside **Create: Crafts & Additions 1.6.0** (`createaddition-1.6.0.jar`, `META-INF/jarjar/sable-companion-common-1.21.1-1.6.0.jar`), declared there as a required library (`dev.ryanhcode.sable-companion:sable-companion-common-1.21.1`, range `[1.6.0,)`). NeoForge loads such jar-in-jar libraries by itself, so it is not a separate download and it is not removed. The same goes for Create's own Flywheel, Ponder and Registrate, and BlueMap's BlueNBT and flow-math.
+- **Pending for the next Lock** (taken together with anything else that has changed, so that everyone updates once): Simple Voice Chat 2.6.22 → 2.6.24 (the server says OUTDATED). Nothing to pin: `lock` takes the newest release of every mod that is not pinned.
+

@@ -5,6 +5,8 @@ import { buttonClasses } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { PLAY_LINK, PLAY_WAIT_MS, nothingHappened } from "@/lib/play";
+import { JOINABLE, WAKE_TIMEOUT_MS, wakeLine, type ServerState } from "@/shared/server-state";
+import type { WakeView } from "@/server/status";
 
 type Props = {
   name: string;
@@ -17,13 +19,52 @@ type Props = {
   join?: { text: string; ready: boolean } | null;
   /** On /install the steps are on the page already; elsewhere the prompt links to them. */
   stepsHere?: boolean;
+  /** docs/13 §12: the server in the site's words, and a wake that is running. */
+  server: { state: ServerState; line: string; hint: string };
+  wake: WakeView;
 };
+
+const POLL_MS = 3000;
 
 /**
  * docs/05 "Play from the site". A plain link to deepslate://play. After the click the page waits 2.5 s: if it is
  * still in front and never lost focus, nothing on this PC took the link, and the installer download is offered.
  */
-export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false }: Props) {
+export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false, server, wake: initialWake }: Props) {
+  const [wake, setWake] = useState<WakeView>(initialWake);
+  const poller = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // docs/13 §12 B: while a wake runs, ask how it is going every 3 s, for as long as a wake may take.
+  const follow = useCallback(() => {
+    if (poller.current) return;
+    const until = Date.now() + WAKE_TIMEOUT_MS + 30_000;
+    poller.current = setInterval(async () => {
+      try {
+        const r = await fetch("/api/play/wake", { cache: "no-store" });
+        const j = (await r.json()) as { wake?: WakeView };
+        if (j.wake) setWake(j.wake);
+        if (!j.wake || j.wake.phase !== "waking" || Date.now() > until) {
+          if (poller.current) clearInterval(poller.current);
+          poller.current = null;
+        }
+      } catch {}
+    }, POLL_MS);
+  }, []);
+
+  useEffect(() => {
+    if (initialWake.phase === "waking") follow();
+    return () => { if (poller.current) clearInterval(poller.current); };
+  }, [initialWake.phase, follow]);
+
+  /** Pressed while the server sleeps: wake it now, so it boots while the game loads. api decides; one start at most. */
+  function wakeIt() {
+    if (server.state !== "asleep" && server.state !== "waking") return;
+    void fetch("/api/play/wake", { method: "POST", keepalive: true })
+      .then((r) => r.json() as Promise<{ wake?: WakeView }>)
+      .then((j) => { if (j.wake) setWake(j.wake); follow(); })
+      .catch(() => follow());
+  }
+
   const [state, setState] = useState<"idle" | "waiting" | "missing">("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lostFocus = useRef(false);
@@ -48,6 +89,7 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
 
   function clicked(e: React.MouseEvent<HTMLAnchorElement>) {
     if (!ready) { e.preventDefault(); return; }
+    wakeIt();
     stop();
     lostFocus.current = false;
     setState("waiting");
@@ -83,7 +125,15 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
           <p data-testid="last-launch">{last ? <>Your last launch: <span className="font-mono">{last.version}</span> on {last.on}</> : <>You haven&apos;t launched from this account yet</>}</p>
         </div>
       </div>
-      {!ready && current && <p className="text-sm text-muted-foreground">Play opens when the server is up. It&apos;s off right now, or the site can&apos;t reach it.</p>}
+      {(() => {
+        const line = wakeLine(wake);
+        if (!line) return null;
+        const tone = wake.phase === "ready" ? "text-accent" : wake.phase === "failed" ? "text-danger" : "text-primary";
+        return <p className={`text-sm font-medium ${tone}`} data-testid="wake-line" aria-live="polite">{line}</p>;
+      })()}
+      {!ready && current && (JOINABLE.has(server.state)
+        ? <p className="text-sm text-muted-foreground">Play opens when the pack is ready for you.</p>
+        : <p className="text-sm text-muted-foreground" data-testid="play-closed"><span className="font-medium text-foreground">{server.line}.</span> {server.hint}</p>)}
       {update && ready && <p className="text-sm text-muted-foreground">Press Play: it fetches what changed, then opens the launcher.</p>}
       {state === "missing" && (
         <Alert tone="info" data-testid="play-missing">

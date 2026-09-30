@@ -67,9 +67,9 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
         </p>
       </div>
       {!(lock && installer) && <Alert tone="info">The pack hasn&apos;t been built yet. Alex will post in Discord when the download is up.</Alert>}
-      {lock && installer && !gate.ok && <Alert tone="info">Downloads open when the server is up. It&apos;s off right now (or the site can&apos;t reach it); check back later or ask in Discord.</Alert>}
+      {lock && installer && !gate.ok && <Alert tone="info">Downloads open while the server is online, asleep or waking. Right now: <strong>{play.server.line}</strong>. {play.server.hint}</Alert>}
       {offline && gate.ok && <Alert tone="info">The server was offline a moment ago; it&apos;s reachable now, try again.</Alert>}
-      {gate.reason === "admin" && <Alert tone="info">Admin: downloads are always open for you. Players only see them while the server is running or asleep.</Alert>}
+      {gate.reason === "admin" && <Alert tone="info">Admin: downloads are always open for you. Players only see them while the server is online, asleep or waking.</Alert>}
 
       <Card className="border-primary">
         <CardHeader>
@@ -77,7 +77,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
           <CardDescription>Once installed, use the Play button here to launch. It checks for updates every time.</CardDescription>
         </CardHeader>
         <CardContent>
-          <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null)} stepsHere />
+          <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null)} stepsHere  server={play.server} wake={play.wake} />
         </CardContent>
       </Card>
 

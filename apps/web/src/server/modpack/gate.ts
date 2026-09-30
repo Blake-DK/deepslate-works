@@ -11,7 +11,7 @@ import { downloadRule, type DownloadReason, type Member } from "@/shared/access"
 // nobody anonymous. Starting, stopped, failed or out of reach all mean no.
 
 export async function serverOnline(): Promise<boolean> {
-  return downloadsOpen((await getStatus())?.availability); // getStatus caches for 5 s
+  return downloadsOpen((await getStatus()).server); // getStatus caches for 5 s
 }
 
 /** The rule itself is `downloadRule` (shared/access.ts); this fetches what it needs. Early access counts as live (docs/13). */

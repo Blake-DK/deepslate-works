@@ -14,7 +14,8 @@ const ops = z.enum(["start", "stop", "restart"]);
 // picks from this list; an address it sends is never used as such.
 const TABS = { power: "/admin/server", backups: "/admin/server?tab=backups", pregen: "/admin/server?tab=pregen", room: "/admin/server?tab=room", news: "/admin/news" } as const;
 function place(formData: FormData | undefined, tab: keyof typeof TABS) {
-  const base = formData?.get("back") === "/admin" ? "/admin" : TABS[tab];
+  const back = formData?.get("back");
+  const base = back === "/admin" || back === "/" ? back : TABS[tab];
   return (msg: string, detail?: string) => `${base}${base.includes("?") ? "&" : "?"}msg=${msg}${detail ? `&detail=${encodeURIComponent(detail)}` : ""}`;
 }
 

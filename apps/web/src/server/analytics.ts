@@ -20,7 +20,7 @@ async function uptime(from: Date, to: Date): Promise<{ available: number | null;
   // (the site's backend was not watching) and counts neither way.
   const rows = await db.$queryRaw<Array<{ running: number | null; available: number | null; known: number | null }>>`
     SELECT sum(CASE WHEN state = 'Running' THEN d ELSE 0 END)::float AS running,
-           sum(CASE WHEN state IN ('Running', 'Sleeping', 'PreparingForSleep') THEN d ELSE 0 END)::float AS available,
+           sum(CASE WHEN state IN ('Running', 'Sleeping', 'PreparingForSleep', 'Waking') THEN d ELSE 0 END)::float AS available,
            sum(d)::float AS known
     FROM (SELECT state, extract(epoch FROM lead(at) OVER (ORDER BY at) - at) AS d FROM "ServerSnapshot" WHERE at >= ${from} AND at < ${to}) x
     WHERE d IS NOT NULL AND d <= 600`;

@@ -3,12 +3,13 @@ import { signOut } from "@/auth";
 import { loadCurrentUser } from "@/server/auth/session";
 import { ThemeToggle } from "./theme-toggle";
 import { getBranding } from "@/server/branding";
-import { AVAILABILITY_TEXT, getStatus } from "@/server/status";
+import { getStatus } from "@/server/status";
+import { statusText } from "@/lib/server-status";
 import { getOpenVote } from "@/server/vote/votes";
 import { getSection } from "@/server/site-settings";
 import { MobileMenu, NavLink } from "./nav-link";
 
-const DOT = { good: "bg-accent", warn: "bg-primary", bad: "bg-danger", neutral: "bg-muted-foreground" } as const;
+const DOT = { good: "bg-accent", info: "bg-info", warn: "bg-primary", bad: "bg-danger", neutral: "bg-muted-foreground" } as const;
 
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -56,12 +57,11 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
   const admin = user.role === "ADMIN";
   const [status, vote, privacy] = await Promise.all([getStatus(), getOpenVote(), getSection("privacy")]);
   const stats = admin || privacy.analyticsForPlayers;
-  const a = AVAILABILITY_TEXT[status?.availability ?? "unknown"];
-  const playing = status?.availability === "online" ? status.online.length : null;
+  const a = statusText(status, admin);
   const statusLine = (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground" data-testid="nav-status">
-      <span className={`inline-block h-2 w-2 rounded-full ${DOT[a.tone]}`} aria-hidden />
-      Server {a.label.toLowerCase()}{playing !== null && <> · {playing} on</>}
+    <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground" data-testid="nav-status" title={`${a.line}. ${a.hint}`}>
+      <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${DOT[a.tone]}`} aria-hidden />
+      <span className="truncate">{a.line}</span>
     </span>
   );
   const nav = (

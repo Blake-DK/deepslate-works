@@ -17,6 +17,8 @@ export type RecorderStore = {
   openSessions(): Promise<OpenSession[]>;
   openSession(s: NewSession): Promise<OpenSession>;
   closeSession(id: string, leftAt: Date): Promise<void>;
+  /** A reconnect within REJOIN_MS: the session is open again. */
+  reopenSession(id: string): Promise<void>;
   setSessionAddress(id: string, ip: string, country: string | null): Promise<void>;
   /** Rows stored under "name:<lowercase name>" get the real UUID once it is known. */
   adoptUuid(name: string, uuid: string): Promise<void>;
@@ -36,7 +38,12 @@ export type RecorderDeps = {
 const DEDUPE_MS = 60_000;
 const STOP_LINE_MS = 120_000;
 const START_LINE_MS = 180_000;
-const MISSING_POLLS = 3;
+/**
+ * A leave and a join again within this long are one session (a reconnect). Sessions start on a real join line and end
+ * on a real leave line or when the server goes down; what AMP's player list or a `list` answer says never opens or
+ * closes one (2026-09-29: a name AMP kept after the server had turned it away made 1,204 sessions of nothing).
+ */
+export const REJOIN_MS = 60_000;
 /**
  * How long a server that went down is watched before it is called a crash. The console tail and the status poller
  * run on their own clocks (2 s and 10 s; the tail slows to 15 s once the server is not running), so the poller can
@@ -60,7 +67,7 @@ const ADVANCEMENT = { advancement: "has made the advancement", challenge: "has c
 export class Recorder {
   private chain: Promise<void> = Promise.resolve();
   private open = new Map<string, OpenSession>(); // by lowercase name
-  private missing = new Map<string, number>();
+  private leftRecently = new Map<string, { session: OpenSession; at: number }>(); // by lowercase name, real leaves only
   private recent = new Map<string, { id: string; at: number }>();
   private raw: string | null = null;
   private lastStopLine = 0;
@@ -87,7 +94,9 @@ export class Recorder {
   onConsole = (e: ConsoleEvent, info?: { replay: boolean }) => {
     // Old lines, read again after a restart: they were recorded when they were new. Who is online is put right
     // from AMP's player list (see `status`). The UUIDs in them are still worth having.
-    if (info?.replay && e.type !== "uuid" && e.type !== "line") return;
+    // A stop line in the backlog counts: api may be restarting just as the server stops (2026-09-30 05:26, a deploy),
+    // and without it a clean stop is taken for a crash.
+    if (info?.replay && e.type !== "uuid" && e.type !== "line" && e.type !== "stopping") return;
     this.enqueue(() => this.console(e));
   };
 
@@ -124,11 +133,8 @@ export class Recorder {
         return this.join(e.name, e.ip, at, false);
       case "leave":
         return this.leave(e.name, e.reason, at, false);
-      case "list": {
-        const here = new Set(e.names.map((n) => n.toLowerCase()));
-        for (const [key, s] of [...this.open]) if (!here.has(key)) await this.leave(s.mcName, null, at, true);
-        return;
-      }
+      case "list":
+        return; // who the server says is on is for "who's on" (console tail), not for sessions
       case "chat": {
         if (!(await this.d.privacy()).chat) return;
         await this.d.store.addEvent({ at, kind: "CHAT", actor: await this.actorFor(e.name), message: `<${e.name}> ${e.text}`.slice(0, 500), raw: this.raw, meta: { name: e.name } });
@@ -165,7 +171,6 @@ export class Recorder {
 
   private async join(name: string, ip: string | null, at: Date, inferred: boolean) {
     const key = name.toLowerCase();
-    this.missing.delete(key);
     const existing = this.open.get(key);
     if (existing) {
       // "logged in with entity id" and "joined the game" are two lines for one join
@@ -174,6 +179,15 @@ export class Recorder {
         await this.d.store.setSessionAddress(existing.id, ip, country);
         existing.ip = ip;
       }
+      return;
+    }
+    const back = this.leftRecently.get(key);
+    this.leftRecently.delete(key);
+    if (back && at.getTime() - back.at < REJOIN_MS) {
+      // a reconnect: the session they left goes on
+      await this.d.store.reopenSession(back.session.id);
+      this.open.set(key, back.session);
+      await this.d.store.addEvent({ at, kind: "JOIN", actor: back.session.mcUuid, message: `${name} joined`, raw: inferred ? null : this.raw, meta: { name, rejoin: true } });
       return;
     }
     const mcUuid = await this.actorFor(name);
@@ -187,10 +201,10 @@ export class Recorder {
   private async leave(name: string, reason: string | null, at: Date, inferred: boolean) {
     const key = name.toLowerCase();
     const s = this.open.get(key);
-    this.missing.delete(key);
     if (!s) return; // the second of the two leave lines, or someone who never got in
     this.open.delete(key);
     await this.d.store.closeSession(s.id, at);
+    if (!inferred) this.leftRecently.set(key, { session: s, at: at.getTime() });
     const ms = at.getTime() - s.joinedAt.getTime();
     await this.d.store.addEvent({
       at, kind: "LEAVE", actor: s.mcUuid, message: `${s.mcName} left after ${duration(ms)}`, raw: inferred ? null : this.raw,
@@ -226,6 +240,7 @@ export class Recorder {
   }
 
   private async closeAll(at: Date) {
+    this.leftRecently.clear(); // the server went down: a join after it is a new session
     for (const s of [...this.open.values()]) await this.leave(s.mcName, null, at, true);
   }
 
@@ -240,19 +255,6 @@ export class Recorder {
     if (prev && !was && is && at.getTime() - this.lastStart > START_LINE_MS) {
       this.lastStart = at.getTime();
       await this.d.store.addEvent({ at, kind: "SERVER_START", actor: null, message: "Server online", meta: { inferred: true } });
-    }
-    if (!is) return;
-    // Reconcile with AMP's player list: it catches a join or a leave the console tail missed.
-    const here = new Set(next.players.map((n) => n.toLowerCase()));
-    for (const name of next.players) if (!this.open.has(name.toLowerCase())) await this.join(name, null, at, true);
-    for (const [key, s] of [...this.open]) {
-      if (here.has(key)) {
-        this.missing.delete(key);
-        continue;
-      }
-      const n = (this.missing.get(key) ?? 0) + 1;
-      this.missing.set(key, n);
-      if (n >= MISSING_POLLS) await this.leave(s.mcName, null, at, true);
     }
   }
 }

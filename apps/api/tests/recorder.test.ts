@@ -15,10 +15,11 @@ function setup(opts: { chat?: boolean; geo?: boolean; users?: Record<string, str
   const uuids = new Map<string, string>();
   const store: RecorderStore = {
     userIdByUuid: async (u) => (u === UUID ? "user1" : null),
-    uuidByName: async (n) => opts.users?.[n] ?? null,
+    uuidByName: async (n) => opts.users?.[n] ?? sessions.find((x) => x.mcName.toLowerCase() === n.toLowerCase() && !x.mcUuid.startsWith("name:"))?.mcUuid ?? null, // as the real store: a linked member, or an earlier session
     openSessions: async () => sessions.filter((s) => !s.leftAt).map((s): OpenSession => ({ id: s.id, mcUuid: s.mcUuid, mcName: s.mcName, joinedAt: s.joinedAt, ip: s.ip })),
     openSession: async (s) => { const row = { ...s, id: `s${sessions.length + 1}`, leftAt: null }; sessions.push(row); return { id: row.id, mcUuid: s.mcUuid, mcName: s.mcName, joinedAt: s.joinedAt, ip: s.ip }; },
     closeSession: async (id, leftAt) => { const s = sessions.find((x) => x.id === id); if (s && !s.leftAt) s.leftAt = leftAt; },
+    reopenSession: async (id) => { const s = sessions.find((x) => x.id === id); if (s) s.leftAt = null; },
     setSessionAddress: async (id, ip, country) => { const s = sessions.find((x) => x.id === id); if (s) { s.ip = ip; s.country = country; } },
     adoptUuid: async (name, uuid) => { for (const s of sessions) if (s.mcUuid === `name:${name.toLowerCase()}`) s.mcUuid = uuid; for (const e of events) if (e.actor === `name:${name.toLowerCase()}`) e.actor = uuid; },
     addEvent: async (e) => { const id = String(events.length + 1); events.push({ ...e, id, count: 1 }); return id; },
@@ -32,7 +33,7 @@ function setup(opts: { chat?: boolean; geo?: boolean; users?: Record<string, str
     }
     await rec.idle();
   };
-  const status = (over: Partial<LiveStatus>): LiveStatus => ({ state: "Running", stateCode: 20, availability: "online", players: [], online: [], maxPlayers: 20, cpu: 1, memMb: 1, memMaxMb: 6144, tps: 20, uptime: "0:00:10:00", at: new Date(clock).toISOString(), ...over });
+  const status = (over: Partial<LiveStatus>): LiveStatus => ({ state: "Running", stateCode: 20, availability: "online", players: [], ampPlayers: [], online: [], maxPlayers: 20, cpu: 1, memMb: 1, memMaxMb: 6144, tps: 20, uptime: "0:00:10:00", at: new Date(clock).toISOString(), ...over });
   const poll = async (next: LiveStatus, prev: LiveStatus | null) => { rec.onStatus(next, prev); await rec.idle(); };
   return { rec, events, sessions, say, status, poll, tick: (s: number) => (clock += s * 1000) };
 }
@@ -174,6 +175,18 @@ describe("Recorder: the server going up and down", () => {
     expect(t.events.filter((e) => e.kind === "CRASH")).toEqual([]);
     expect(t.events.filter((e) => e.kind === "SERVER_STOP").map((e) => e.message)).toEqual([message]);
   });
+  it("2026-09-30 05:26: api restarting as the server stops reads the stop line in the backlog; still a stop, not a crash", async () => {
+    const t = setup();
+    for (const l of ["Stopping the server", "Stopping server", "Saving players", "Saving worlds"]) {
+      for (const e of parseConsoleLine(L(l), {})) t.rec.onConsole(e, { replay: true });
+    }
+    await t.rec.idle();
+    t.tick(5);
+    await t.poll(t.status({ state: "Stopped", stateCode: 0, availability: "offline" }), t.status({}));
+    t.tick(120);
+    await t.poll(t.status({ state: "Stopped", stateCode: 0, availability: "offline" }), t.status({ state: "Stopped", stateCode: 0, availability: "offline" }));
+    expect(t.events.map((e) => e.kind)).toEqual(["SERVER_STOP"]);
+  });
   it("a stop line read before the poll is enough too", async () => {
     const t = setup();
     await t.say(L("Stopping the server"));
@@ -202,23 +215,75 @@ describe("Recorder: the server going up and down", () => {
   });
 });
 
-describe("Recorder: catching up with AMP's player list", () => {
-  it("opens a session for someone the console tail missed and closes one after three polls without them", async () => {
+// Planner, 2026-09-30: "a session starts on a real join line and ends on a real leave line (or server stop/crash/
+// sleep); poll disagreements never create or end a session. A leave and rejoin within 60 s counts as one session."
+describe("Recorder: sessions come from join and leave lines only", () => {
+  const UUID_M1 = "9e2b7c41-0a5d-4f36-8c19-b4e07d2a6f53";
+  it("2026-09-29 22:44: a player the server turned away, whom AMP kept in its list for hours, has no session at all", async () => {
     const t = setup();
-    const a = t.status({ players: ["m1_owl"] });
-    await t.poll(a, t.status({}));
-    expect(t.events.at(-1)).toMatchObject({ kind: "JOIN", meta: { name: "m1_owl", inferred: true } });
-    const empty = t.status({ players: [] });
-    await t.poll(empty, a);
-    await t.poll(empty, empty);
-    expect(t.rec.openCount).toBe(1);
-    await t.poll(a, empty); // back within the grace period: the count starts again
-    await t.poll(empty, a);
-    await t.poll(empty, empty);
-    expect(t.rec.openCount).toBe(1);
-    await t.poll(empty, empty);
-    expect(t.rec.openCount).toBe(0);
-    expect(t.events.at(-1)).toMatchObject({ kind: "LEAVE", meta: { inferred: true } });
+    const ghost = t.status({ players: ["m1_owl"] }); // AMP's list; the console's is empty
+    const nobody = "[29Sep2026 22:45:13.880] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: There are 0 of a max of 20 players online: ";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await t.say(`[29Sep2026 22:44:51.063] [User Authenticator #1/INFO] [net.minecraft.server.network.ServerLoginPacketListenerImpl/]: UUID of player m1_owl is ${UUID_M1}`);
+      await t.say("[29Sep2026 22:44:51.222] [Server thread/INFO] [net.minecraft.server.network.ServerConfigurationPacketListenerImpl/]: com.mojang.authlib.GameProfile@2299b547[id=9e2b7c41-0a5d-4f36-8c19-b4e07d2a6f53,name=m1_owl,properties={}] lost connection: Incompatible client! Please use NeoForge 21.1.252");
+      t.tick(120);
+    }
+    let prev = t.status({});
+    for (let i = 0; i < 60; i++) { t.tick(10); await t.poll(ghost, prev); prev = ghost; if (i % 2 === 0) await t.say(nobody); }
+    expect(t.sessions).toEqual([]);
+    expect(t.events.filter((e) => e.kind === "JOIN" || e.kind === "LEAVE")).toEqual([]);
+  });
+  it("a player list that flaps while someone plays is one session", async () => {
+    const t = setup();
+    await t.say(L(`UUID of player m1_owl is ${UUID_M1}`));
+    await t.say(L("m1_owl joined the game"));
+    const on = t.status({ players: ["m1_owl"] });
+    const off = t.status({ players: [] });
+    let prev = on;
+    for (let i = 0; i < 40; i++) { t.tick(10); const next = i % 3 === 0 ? off : on; await t.poll(next, prev); prev = next; if (i % 4 === 0) await t.say(L("There are 0 of a max of 20 players online: ")); }
+    t.tick(10);
+    await t.say(L("m1_owl left the game"));
+    expect(t.sessions).toHaveLength(1);
+    expect(t.events.map((e) => e.kind)).toEqual(["JOIN", "LEAVE"]);
+    expect(t.events.at(-1)?.message).toBe("m1_owl left after 7 min");
+  });
+  it("a 30 s reconnect is one session; a join 90 s after leaving is a new one", async () => {
+    const t = setup();
+    await t.say(L(`UUID of player m1_owl is ${UUID_M1}`));
+    await t.say(L("m1_owl joined the game"));
+    t.tick(600);
+    await t.say(L("m1_owl lost connection: Timed out"));
+    t.tick(30);
+    await t.say(L("m1_owl joined the game"));
+    expect(t.sessions).toHaveLength(1);
+    expect(t.sessions[0]?.leftAt).toBeNull();
+    t.tick(600);
+    await t.say(L("m1_owl left the game"));
+    expect(t.sessions).toHaveLength(1);
+    expect(t.sessions[0]?.leftAt?.toISOString()).toBe("2026-09-29T10:20:30.000Z");
+    t.tick(90);
+    await t.say(L("m1_owl joined the game"));
+    expect(t.sessions).toHaveLength(2);
+  });
+  it("a join after the server went down is a new session, however soon", async () => {
+    const t = setup();
+    await t.say(L("m1_owl joined the game"));
+    await t.poll(t.status({ state: "Sleeping", stateCode: 30, availability: "sleeping" }), t.status({}));
+    t.tick(20);
+    await t.say(L("m1_owl joined the game"));
+    expect(t.sessions).toHaveLength(2);
+  });
+  it("a name seen before with a UUID keeps that UUID, even when the UUID line is not in what was read (a restart of api)", async () => {
+    const t = setup();
+    await t.say(L(`UUID of player m1_owl is ${UUID_M1}`));
+    await t.say(L("m1_owl joined the game"));
+    t.tick(60);
+    await t.say(L("m1_owl left the game"));
+    const store = (t as unknown as { rec: { d: { store: RecorderStore } } }).rec.d.store;
+    const again = new Recorder({ store, privacy: async () => ({ chat: true, geo: true }), country: async () => null, uuidOf: () => undefined, log: () => {}, now: () => new Date(Date.parse("2026-09-29T12:00:00Z")) });
+    again.onConsole({ type: "join", name: "M1_OWL", ip: null });
+    await again.idle();
+    expect(t.sessions.map((x) => x.mcUuid)).toEqual([UUID_M1, UUID_M1]); // never "name:m1_owl"
   });
   it("picks up sessions left open by a previous run", async () => {
     const t = setup();

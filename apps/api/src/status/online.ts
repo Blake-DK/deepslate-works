@@ -10,6 +10,8 @@ import type { ActionCtx } from "../actions/registry.js";
 // the console tail reads like any line, puts the console's list right.
 
 export const ASK_EVERY_MS = 20_000;
+/** The same disagreement is asked about again only this long after, so a name AMP keeps is not asked about every 20 s. */
+export const ASK_AGAIN_MS = 10 * 60_000;
 
 /** Pure: do the two lists name other people? Names are compared without their case. */
 export function differ(amp: readonly string[] | null, console: Iterable<string>): boolean {
@@ -22,6 +24,7 @@ export function differ(amp: readonly string[] | null, console: Iterable<string>)
 export class OnlineWatch {
   private timer: NodeJS.Timeout | null = null;
   asked = 0;
+  private lastAsked: { amp: string; at: number } | null = null;
 
   constructor(
     private readonly amp: Amp,
@@ -41,8 +44,14 @@ export class OnlineWatch {
     if (this.timer) clearInterval(this.timer);
   }
 
-  async check() {
-    if (this.tail.state === 20 && differ(this.players(), this.tail.online)) await this.ask("differ");
+  /** `players`: AMP's own list. Asked when it disagrees with the console, once per disagreement (again after ASK_AGAIN_MS). */
+  async check(now = Date.now()) {
+    const amp = this.players();
+    if (this.tail.state !== 20 || !differ(amp, this.tail.online)) return;
+    const key = [...(amp ?? [])].map((n) => n.toLowerCase()).sort().join(",");
+    if (this.lastAsked && this.lastAsked.amp === key && now - this.lastAsked.at < ASK_AGAIN_MS) return;
+    this.lastAsked = { amp: key, at: now };
+    await this.ask("differ");
   }
 
   async ask(why: string) {

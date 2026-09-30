@@ -36,6 +36,7 @@ describe("what a player may see", () => {
   });
   it("admins get everything by default", () => {
     expect(eventWhere(readFilter({}, true), true, null).kind.in).toHaveLength(19);
+    expect(eventWhere(readFilter({}, true), true, null).NOT).toEqual({ meta: { path: ["superseded"], equals: true } }); // superseded rows are kept, not shown
     expect(eventWhere(readFilter({}, false), false, null).kind.in).not.toContain("JOIN_BLOCKED");
     expect(eventWhere(readFilter({ kind: "INSTALL" }, false), false, null).kind.in).not.toContain("INSTALL");
   });

@@ -41,6 +41,8 @@ export type EventWhere = {
   id?: { lt: bigint };
   actor?: { in: string[] };
   message?: { contains: string; mode: "insensitive" };
+  /** Rows marked `meta.superseded` stay in the table and out of the log (2026-09-30: the player-list loop's 2,408 joins and leaves). */
+  NOT: { meta: { path: string[]; equals: boolean } };
 };
 
 /**
@@ -50,7 +52,7 @@ export type EventWhere = {
 export function eventWhere(f: EventFilter, admin: boolean, actors: string[] | null): EventWhere {
   const allowed: readonly EventKind[] = admin ? EVENT_KINDS : PLAYER_KINDS;
   const kinds = f.kinds.filter((k) => allowed.includes(k));
-  const where: EventWhere = { kind: { in: kinds.length ? kinds : [...allowed] } };
+  const where: EventWhere = { kind: { in: kinds.length ? kinds : [...allowed] }, NOT: { meta: { path: ["superseded"], equals: true } } };
   if (f.from || f.to) where.at = { ...(f.from ? { gte: f.from } : {}), ...(f.to ? { lte: f.to } : {}) };
   if (f.before !== null) where.id = { lt: f.before };
   if (f.player) where.actor = { in: actors ?? [] };

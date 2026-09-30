@@ -9,6 +9,8 @@ export type LiveStatus = {
   stateCode: number | null;
   availability: Availability;
   players: string[];
+  /** AMP's own list, as it came. Only for deciding whether to ask the server again (status/online.ts), never shown. */
+  ampPlayers: string[];
   online: Array<{ name: string; uuid: string | null; ping: number | null }>;
   maxPlayers: number | null;
   cpu: number | null;
@@ -42,15 +44,17 @@ export function shouldSnapshot(prev: Pick<Snapshot, "at" | "state" | "players"> 
   return now.getTime() - prev.at.getTime() >= (running ? RUNNING_EVERY_MS : IDLE_EVERY_MS) - 500;
 }
 
-export function toLive(s: AmpStatus, tail: Pick<ConsoleTail, "online" | "uuidByName"> | null, now: Date, pings: Record<string, number> = {}): LiveStatus {
+export function toLive(s: AmpStatus, tail: (Pick<ConsoleTail, "online" | "uuidByName"> & { listedAt?: number | null }) | null, now: Date, pings: Record<string, number> = {}): LiveStatus {
   const running = s.stateCode === 20;
-  // AMP's list lags the console by a few seconds either way; while running, anyone in either counts.
-  const names = running ? [...new Set([...s.players, ...(tail?.online ?? [])])] : [];
+  // Once the server has answered `list`, the console's list is who is on: joins and leaves keep it current. Before
+  // that (api just started, the server just came up) anyone in either list counts, and the server is asked.
+  const names = !running ? [] : tail?.listedAt ? [...tail.online] : [...new Set([...s.players, ...(tail?.online ?? [])])];
   return {
     state: s.state,
     stateCode: s.stateCode ?? null,
     availability: availability(s.stateCode),
     players: names,
+    ampPlayers: running ? [...s.players] : [],
     online: names.map((name) => ({ name, uuid: tail?.uuidByName.get(name) ?? null, ping: pings[name] ?? null })),
     maxPlayers: s.maxPlayers ?? null,
     cpu: s.cpu,

@@ -54,7 +54,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     },
   }, log, undefined, undefined, { tps: () => poller.fresh()?.tps ?? null, players: () => poller.fresh()?.players.length ?? null });
   pregenRoutes(app, tail, pregen, () => poller.fresh()?.players.length ?? null);
-  const online = new OnlineWatch(ampClient, tail, () => limbo.actionCtx, () => poller.fresh()?.players ?? null, log);
+  const online = new OnlineWatch(ampClient, tail, () => limbo.actionCtx, () => poller.fresh()?.ampPlayers ?? null, log);
   const poller: StatusPoller = new StatusPoller(ampClient, tail, env.AMP_MOCK === "1" ? null : prismaSnapshotStore, log, undefined, () => pings.current());
   const restarts = new RestartSchedule(ampClient, () => limbo.actionCtx, log, () => pregen.quiesce());
   // docs/13 §12: one set of words for the server's state, and wake on Play.

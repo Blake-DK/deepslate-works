@@ -76,7 +76,7 @@ describe("wakeDecision", () => {
   });
 });
 
-const live = (stateCode: number, players: string[] = []): LiveStatus => ({ state: `S${stateCode}`, stateCode, availability: "offline", players, online: [], maxPlayers: 10, cpu: 0, memMb: 0, memMaxMb: 0, tps: null, uptime: null, at: new Date().toISOString() });
+const live = (stateCode: number, players: string[] = []): LiveStatus => ({ state: `S${stateCode}`, stateCode, availability: "offline", players, ampPlayers: players, online: [], maxPlayers: 10, cpu: 0, memMb: 0, memMaxMb: 0, tps: null, uptime: null, at: new Date().toISOString() });
 
 function setup(o: { state?: number | null; crashed?: boolean; member?: { role: "ADMIN" | "PLAYER"; earlyAccess?: boolean } | null; live?: boolean } = {}) {
   let clock = 1_000_000;

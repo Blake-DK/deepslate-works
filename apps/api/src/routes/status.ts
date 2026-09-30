@@ -21,6 +21,6 @@ export function statusRoutes(app: FastifyInstance, amp: Amp, poller?: StatusPoll
     if (!view) return live ?? reply.code(502).send({ error: { code: "amp_error", message: error ?? "no status" } });
     const extra = view.extra(live);
     if (live) return { ...live, ...extra };
-    return { state: "Unknown", stateCode: null, availability: "offline", players: [], online: [], maxPlayers: null, cpu: null, memMb: null, memMaxMb: null, tps: null, uptime: null, at: new Date().toISOString(), ...extra };
+    return { state: "Unknown", stateCode: null, availability: "offline", players: [], ampPlayers: [], online: [], maxPlayers: null, cpu: null, memMb: null, memMaxMb: null, tps: null, uptime: null, at: new Date().toISOString(), ...extra };
   });
 }

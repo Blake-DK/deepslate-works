@@ -29,6 +29,12 @@ export class ConsoleTail {
   private seq = 0;
   readonly uuidByName = new Map<string, string>();
   readonly online = new Set<string>();
+  /**
+   * When the server last answered `list` (its own word on who is on); null until it has since the server came up.
+   * From then on `online` is what counts: AMP's own list can keep a name the server never let in (2026-09-29 22:44,
+   * m1_owl turned away three times for the wrong NeoForge stayed in AMP's list for hours).
+   */
+  listedAt: number | null = null;
   state = -1;
   private handlers: ConsoleHandler[] = [];
   private resyncHandlers: Array<() => void> = [];
@@ -80,6 +86,7 @@ export class ConsoleTail {
       if (e.type === "join") this.online.add(e.name);
       if (e.type === "leave") this.online.delete(e.name);
       if (e.type === "list") {
+        this.listedAt = Date.now();
         this.online.clear();
         for (const n of e.names) this.online.add(n);
       }
@@ -121,6 +128,7 @@ export class ConsoleTail {
       this.state = typeof u.Status?.State === "number" ? u.Status.State : this.state;
       if (prev === 20 && this.state !== 20) {
         this.online.clear(); // server went down: everyone is gone
+        this.listedAt = null;
       }
       // The first batch of an AMP session is AMP's backlog, not news. Lines already read are dropped; the rest
       // (after a restart of api: all of them) are read as history.

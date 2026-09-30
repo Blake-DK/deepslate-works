@@ -17,6 +17,7 @@ Last updated 2026-09-29, 19:00 UTC: the first friend is in, and the recommended 
 - Ballot with suggested mods pre-ticked, pick-one groups (guns), server-settings questions (difficulty, PvP, death rule, play times), and a live load estimate that warns weak-PC players.
 - Results with per-mod percentages and a per-PC-tier breakdown; Heavy mods need a weak-PC majority.
 - Apply results writes the winning set into `mods.json` and commits it.
+- Building and decoration section (2026-09-30): Create Deco, Copycats+, Macaw's roofs, windows and doors, and Handcrafted suggested and on; eleven more votable (more Macaw's mods, Another Furniture, Supplementaries, Rechiseled).
 
 ### Modpack pipeline
 - `mods.json` is the single source of truth; a lockfile pins exact Modrinth versions and hashes.

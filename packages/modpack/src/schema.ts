@@ -35,6 +35,11 @@ export const categorySchema = z.object({
   votable: z.boolean().default(true), // base pack and server-only categories are not voted on
 });
 
+export const TIERS = ["LOW", "MID", "HIGH"] as const;
+export type Tier = (typeof TIERS)[number];
+/** Chunks, as options.txt holds them: renderDistance and simulationDistance. */
+export const distanceSchema = z.object({ render: z.number().int().min(2).max(32), simulation: z.number().int().min(5).max(32) });
+
 export const manifestSchema = z.object({
   name: z.string().min(1),
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
@@ -47,6 +52,10 @@ export const manifestSchema = z.object({
   // What server.properties is expected to hold. Not pushed anywhere (AMP writes that file from its own
   // settings on every start); Admin → Files shows where the live file differs.
   server_properties: z.record(z.string().regex(/^[a-z0-9._-]+$/), z.string().max(200)).default({}),
+  // What the installer sets in options.txt, by the PC tier measured for the member (docs/07 "Render distance").
+  render_by_tier: z.object({ LOW: distanceSchema, MID: distanceSchema, HIGH: distanceSchema }).default({
+    LOW: { render: 8, simulation: 6 }, MID: { render: 8, simulation: 6 }, HIGH: { render: 8, simulation: 6 },
+  }),
   categories: z.array(categorySchema).min(1),
   mods: z.array(modSchema).min(1),
 });
@@ -56,3 +65,8 @@ export type Mod = z.infer<typeof modSchema>;
 export type Category = z.infer<typeof categorySchema>;
 export type Load = (typeof LOADS)[number];
 export type Video = z.infer<typeof videoSchema>;
+
+/** The render and simulation distance for a member's PC tier. No tier known: the weak PC's, which is safe anywhere. */
+export function distancesFor(m: Pick<Manifest, "render_by_tier">, tier: string | null | undefined): { render: number; simulation: number } {
+  return (TIERS as readonly string[]).includes(tier ?? "") ? m.render_by_tier[tier as Tier] : m.render_by_tier.LOW;
+}

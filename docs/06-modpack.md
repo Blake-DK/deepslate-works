@@ -192,6 +192,29 @@ A Sync that changes settings only does not restart the server. What is running r
 - **Sable Companion 1.6.0 (`sablecompanion`)** shows in the server's mod list but is not in `mods.json` or the lock: it travels inside **Create: Crafts & Additions 1.6.0** (`createaddition-1.6.0.jar`, `META-INF/jarjar/sable-companion-common-1.21.1-1.6.0.jar`), declared there as a required library (`dev.ryanhcode.sable-companion:sable-companion-common-1.21.1`, range `[1.6.0,)`). NeoForge loads such jar-in-jar libraries by itself, so it is not a separate download and it is not removed. The same goes for Create's own Flywheel, Ponder and Registrate, and BlueMap's BlueNBT and flow-math.
 - **Pending for the next Lock** (taken together with anything else that has changed, so that everyone updates once): Simple Voice Chat 2.6.22 → 2.6.24 (the server says OUTDATED). Nothing to pin: `lock` takes the newest release of every mod that is not pinned.
 
+## Building and decoration (planner, 2026-09-30)
+
+A category of its own, `building`, after "Quality of life & world": "Extra blocks for making your base look good. No machines, no new mobs, nothing that changes how the game plays." Every slug and its NeoForge 1.21.1 build checked against the Modrinth API before it went in; all 17 are the planner's slugs, none differed. Side `both` for all (Modrinth: required on both sides).
+
+| Slug | Load | Suggested and on | Needs |
+|---|---|---|---|
+| `create-deco` | L | yes | Create |
+| `copycats` (Create: Copycats+) | L | yes | Create |
+| `macaws-roofs`, `macaws-windows`, `macaws-doors` | L | yes | |
+| `handcrafted` | L | yes | `resourceful-lib` |
+| `macaws-furniture`, `macaws-fences-and-walls`, `macaws-bridges`, `macaws-paths-and-pavings`, `macaws-lights-and-lamps`, `macaws-trapdoors`, `macaws-stairs`, `another-furniture` | L | no, votable | |
+| `supplementaries` | M | no, votable | `moonlight` |
+| `rechiseled` | M | no, votable | `supermartijn642s-core-lib`, `supermartijn642s-config-lib`, `fusion-connected-textures` (client only) |
+| `rechiseled-create` | L | no, votable | Rechiseled and Create |
+
+The libraries are hidden `base` entries, switched on only while the mod that needs them is (today only `resourceful-lib`). Apply results does not touch them and needs not: Lock pulls a library in whenever a mod that needs it is on (Modrinth's required dependencies), whatever the library's own entry says. Chipped is left out (last update 2024; Rechiseled covers the same ground). No Macaw's mod needs a library on NeoForge 1.21.1. Rechiseled: Create has no video of its own; it shows the Rechiseled 1.21.1 showcase. The six suggested mods add 6 points to a ballot that has not been saved: the default ballot goes from 12 (Medium) to 18 (Heavy), so a LOW-tier member who has not saved sees the Heavy warning (flagged to the planner).
+
+The player guide has a "Building" section tagged with all six suggested slugs (shown only while every one of them is on).
+
+## Render distance by PC tier (planner, 2026-09-30)
+
+`mods.json` `render_by_tier`, next to `server_properties`: HIGH 12 / 8, MID 10 / 8, LOW 8 / 6 (render / simulation, in chunks). The mod list (`/api/modpack/manifest`) sends `render_distance` and `simulation_distance` for the caller's measured PC tier (`User.pcTier`; none known: LOW), as plain numbers every installer reads, plus `tier`. The server's own `view-distance` is 12 and `simulation-distance` stays 8 (the expected values in `server_properties`; AMP writes the file, see docs/15).
+
 ## The item catalogue (`modpack build items`, 2026-09-30)
 
 For the admin's inventory editor (docs/13 §13): `dist/items/catalogue.json` (id, name, mod, stack size, icon) and `dist/items/icons/<namespace>/<path>.png`. Vanilla: every item and its stack size from the game's own data report (`modpack/items/vanilla-1.21.1.json`, made once with the 1.21.1 server jar's `--reports`), names, item models and textures from the client jar (downloaded from Mojang into `dist/cache`, SHA-1 checked). Mods: the item models, `en_us` names and textures in each jar of `dist/server/mods` (block items follow their model to the block texture); their stack size is not in the jar and is left empty (the server's answer tells). 2026-09-30: 2,550 items (1,332 Minecraft, 1,218 from mods), 2,524 with a picture, 11 MB. Run it after a Build of the server: Admin → Pack → Build, or `POST /modpack/build {target:"items"}`.

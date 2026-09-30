@@ -4,6 +4,17 @@
 
 A friend downloads one zip and double-clicks `Setup.bat` once. After that they press Play on the site or open **Deepslate Works** from their desktop; it keeps itself and the mods up to date and opens the normal Minecraft launcher on the Deepslate Works profile, with the server already in the server list. It never touches their vanilla installation.
 
+## Installer 1.5.4: render distance by PC tier (planner, 2026-09-30)
+
+The mod list sends the render and simulation distance for the member's measured PC tier (HIGH 12 / 8, MID 10 / 8, LOW 8 / 6; `mods.json` `render_by_tier`, docs/06). `options.txt` is the game's own file, so on every run (Play, Setup, a shortcut):
+
+- **No `options.txt` yet** (first install): written with `renderDistance`, `simulationDistance` and `fullscreen:false`, as before, with the tier's values.
+- **`renderDistance` is still the value this script wrote last time** (kept in `installed.json` as `renderDistance`; an install from before 1.5.4 has none, and then 8 counts as its own): `renderDistance` and `simulationDistance` are set to the tier's values ("Render distance 8 → 12"). Only those two lines change; every other line and the line endings stay as they are (a missing `simulationDistance` line is added). Written to `options.txt.new` and moved over.
+- **Anything else**: the player chose it and it is left alone ("Render distance left at 16 (set by you)").
+- Already the tier's value: nothing is written, and that value counts as the script's from then on (also after a run that changed it and failed before `installed.json` was written).
+
+`Set-RenderDistance`; self test 136 checks, 9 of them this (first install, still ours, changed by the player, no value in installed.json, already the value, a failed run, LF endings and no simulation line, nonsense in installed.json). Older installers (1.5.3 and before) read the same two numbers but only on a first install; they update to 1.5.4 at their next Play.
+
 ## Installer 1.5.3: Play brings any copy from 1.4.0 up to date (planner, 2026-09-30)
 
 **The fault.** 2026-09-30, Alex pressed Play on a PC with 1.4.3: "The installer was not updated: install.ps1 is not in the download. Nothing was replaced. Carrying on with installer 1.4.3." 1.4.x's update step takes exactly two entries out of `installer.zip`, `Setup.bat` and `install.ps1` (by those names, top level, under 2 MB each), checks that `install.ps1` holds the line `$InstallerVersion = "<the version the mod list names>"` and that it parses, moves both over the old ones in `%LOCALAPPDATA%\DeepslateWorks\`, then starts `install.ps1 -Play "deepslate://play"` (or `-Play -Root …` / `-NoPrompt`) with `DEEPSLATE_UPDATED_FROM` set. From 1.5.0 the zip had no `install.ps1`, so no 1.4.x copy could ever update itself.

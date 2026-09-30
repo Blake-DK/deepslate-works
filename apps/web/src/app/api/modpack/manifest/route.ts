@@ -1,4 +1,5 @@
 import { getManifest } from "@/server/modpack/manifest";
+import { distancesFor } from "modpack/schema";
 import { getInstaller, getLock } from "@/server/modpack/lock";
 import { loadCurrentUser } from "@/server/auth/session";
 import { canDownload, manifestKeyOk } from "@/server/modpack/gate";
@@ -12,12 +13,14 @@ import { viaOf } from "@/lib/download-log";
 export async function GET(req: Request) {
   const key = new URL(req.url).searchParams.get("key");
   let who: string | null = null;
+  let tier: string | null = null;
   let via = viaOf(false, manifestKeyOk(key));
   if (!manifestKeyOk(key)) {
     // The installer/updater authenticates with its launcher token (approved in the browser after a Discord login).
     const fromToken = await userFromLauncherToken(bearer(req));
     const user = fromToken ?? (await loadCurrentUser());
     who = user?.id ?? null;
+    tier = user?.pcTier ?? null;
     via = viaOf(Boolean(fromToken), false);
     const gate = await canDownload(user);
     if (!gate.ok && gate.reason !== "anonymous") await logDownload({ userId: who, what: "modlist", via, file: "mod list", refused: gate.reason === "not_live" ? "not_live" : "server_offline" });
@@ -29,6 +32,9 @@ export async function GET(req: Request) {
   }
   const [m, lock, installer] = await Promise.all([getManifest(), getLock(), getInstaller()]);
   if (!lock) return Response.json({ error: { code: "no_lock", message: "Pack not built yet" } }, { status: 503 });
+  // The member's measured PC tier picks the distances (mods.json render_by_tier); as plain numbers, which every
+  // installer reads. Only a first install and a value the installer set itself are changed (docs/07).
+  const dist = distancesFor(m, tier);
   const k = key && manifestKeyOk(key) ? `?key=${encodeURIComponent(key)}` : "";
   const body = {
     name: m.name,
@@ -40,8 +46,9 @@ export async function GET(req: Request) {
     server_address: m.server_address,
     profile: m.profile,
     ram: m.ram,
-    render_distance: 8,
-    simulation_distance: 6,
+    render_distance: dist.render,
+    simulation_distance: dist.simulation,
+    tier: tier ?? null,
     config_url: lock.configs.length ? `${env.AUTH_URL}/downloads/config.zip${k}` : null,
     files: lock.files.map((f) => ({ slug: f.slug, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size, side: f.side })),
     configs: lock.configs,

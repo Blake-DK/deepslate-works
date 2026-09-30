@@ -53,7 +53,7 @@ Then configure it by editing the instance's config files rather than through the
 - Java: **21** (confirm a Java 21 runtime exists on this host, `ls /usr/lib/jvm`; if not, install `openjdk-21-jre-headless` and restart AMP only with Alex's OK)
 - Memory: min 4096 MB, max 8192 MB, unless the host has under 16 GB free, then 6144 max; report what you chose
 - Game port: leave AMP's default for the instance (Pangolin will point at it later; report the port)
-- `server.properties` when it exists after first install: `online-mode=true`, `white-list=false`, `enforce-whitelist=false`, `spawn-protection=0`, `motd=Deepslate Works`, `max-players=20`, `view-distance=10`, `simulation-distance=8`, `difficulty=normal`, `pvp=false`. EULA accepted (`eula=true`) on Alex's behalf; he has agreed.
+- `server.properties` when it exists after first install: `online-mode=true`, `white-list=false`, `enforce-whitelist=false`, `spawn-protection=0`, `motd=Deepslate Works`, `max-players=20`, `view-distance=12` (10 until 2026-09-30), `simulation-distance=8` (AMP writes this file from the instance's own settings at every start: change them there, not in the file), `difficulty=normal`, `pvp=false`. EULA accepted (`eula=true`) on Alex's behalf; he has agreed.
 
 Ask Alex before the first start, then start it once (`ampinstmgr start DeepslateWorks01` or via ADS) so AMP downloads and installs NeoForge and generates the world folder, wait for "Done" in the console, then stop it. Mods come later from the VPS via rsync; the `mods/` folder should be empty after this step.
 

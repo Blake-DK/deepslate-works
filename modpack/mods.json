@@ -21,10 +21,24 @@
     "spawn-protection": "0",
     "motd": "Deepslate Works",
     "max-players": "20",
-    "view-distance": "10",
+    "view-distance": "12",
     "simulation-distance": "8",
     "difficulty": "normal",
     "pvp": "false"
+  },
+  "render_by_tier": {
+    "HIGH": {
+      "render": 12,
+      "simulation": 8
+    },
+    "MID": {
+      "render": 10,
+      "simulation": 8
+    },
+    "LOW": {
+      "render": 8,
+      "simulation": 6
+    }
   },
   "categories": [
     {
@@ -55,6 +69,12 @@
       "id": "world",
       "title": "Quality of life & world",
       "blurb": "Small additions that make a friends server nicer. All light.",
+      "votable": true
+    },
+    {
+      "id": "building",
+      "title": "Building and decoration",
+      "blurb": "Extra blocks for making your base look good. No machines, no new mobs, nothing that changes how the game plays.",
       "votable": true
     },
     {
@@ -1046,6 +1066,421 @@
       "requires": []
     },
     {
+      "slug": "create-deco",
+      "name": "Create Deco",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Metal bricks, catwalks, lamps, doors and windows in Create's style, so a factory can look good as well as work.",
+      "note": "Needs Create",
+      "wiki": "https://github.com/talrey/CreateDeco",
+      "videos": [
+        {
+          "title": "Create Deco is AMAZING and We're Decorating with It!",
+          "url": "https://www.youtube.com/watch?v=HeHIdIWr7BA"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "create"
+      ]
+    },
+    {
+      "slug": "copycats",
+      "name": "Create: Copycats+",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Slopes, steps, panels and other shapes that take on the look of any block you put in them.",
+      "note": "Needs Create",
+      "wiki": "https://github.com/copycats-plus/copycats/wiki",
+      "videos": [
+        {
+          "title": "Infinite Decoration! | Create Copycats+",
+          "url": "https://www.youtube.com/watch?v=jrC30auMZls"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "create"
+      ]
+    },
+    {
+      "slug": "macaws-roofs",
+      "name": "Macaw's Roofs",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Proper roofs: sloped, peaked and curved pieces in every wood and stone, so houses stop looking like boxes.",
+      "wiki": "https://modrinth.com/mod/macaws-roofs",
+      "videos": [
+        {
+          "title": "Macaw's Minecraft Roofs Mod 2.1.0 Update",
+          "url": "https://www.youtube.com/watch?v=QkOnZcAbpoo"
+        },
+        {
+          "title": "Macaw's Roofs - Minecraft Mod Review",
+          "url": "https://www.youtube.com/watch?v=LpXvNvFZC9k"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "macaws-windows",
+      "name": "Macaw's Windows",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Windows with frames, shutters, curtains and window boxes, in every wood.",
+      "wiki": "https://modrinth.com/mod/macaws-windows",
+      "videos": [
+        {
+          "title": "Minecraft Shutters & Curtains mod (Macaw's Windows 2.1.0 Update)",
+          "url": "https://www.youtube.com/watch?v=pYutYYR2AYQ"
+        },
+        {
+          "title": "Macaw's Windows mod in Minecraft",
+          "url": "https://www.youtube.com/watch?v=WHfudQ7-O48"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "macaws-doors",
+      "name": "Macaw's Doors",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Dozens of new doors: barn doors, stable doors, glass doors and more, in every wood.",
+      "wiki": "https://github.com/sketchmacaw/MacawsDoors",
+      "videos": [
+        {
+          "title": "NEW DOOR VARIANTS in MINECRAFT!!! (Macaw's Doors)",
+          "url": "https://www.youtube.com/watch?v=HG4l6_YOu-A"
+        },
+        {
+          "title": "Macaw's Doors Mod in Minecraft",
+          "url": "https://www.youtube.com/watch?v=KOD7JkO9JnU"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "handcrafted",
+      "name": "Handcrafted",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Furniture you can use: chairs and benches to sit on, tables, shelves, cupboards, beds and more.",
+      "wiki": "https://github.com/terrarium-earth/Handcrafted",
+      "videos": [
+        {
+          "title": "Handcrafted (Minecraft Mod Showcase) | A Great Quality Decoration Mod",
+          "url": "https://www.youtube.com/watch?v=_vsw-xZEmvM"
+        },
+        {
+          "title": "Handcrafted mod in Minecraft",
+          "url": "https://www.youtube.com/watch?v=jFObd4lbDvI"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "resourceful-lib"
+      ]
+    },
+    {
+      "slug": "macaws-furniture",
+      "name": "Macaw's Furniture",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Tables, chairs, desks, wardrobes, kitchen counters and cupboards in every wood.",
+      "wiki": "https://modrinth.com/mod/macaws-furniture",
+      "videos": [
+        {
+          "title": "Minecraft: Macaw's Furniture Mod | Minecraft Mods Showcase 1.21+",
+          "url": "https://www.youtube.com/watch?v=f19swTHzNXU"
+        },
+        {
+          "title": "Best furniture mod for Minecraft!!! (Macaw's Furniture)",
+          "url": "https://www.youtube.com/watch?v=4mQWK4JYv0E"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "macaws-fences-and-walls",
+      "name": "Macaw's Fences and Walls",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Fences, walls and railings in many more styles, from picket fences to metal railings.",
+      "wiki": "https://github.com/sketchmacaw/Fences",
+      "videos": [
+        {
+          "title": "Forge Minecraft Fences & Walls Mod",
+          "url": "https://www.youtube.com/watch?v=g3V3lcidXmU"
+        },
+        {
+          "title": "Macaw's Fences and Walls mod in Minecraft",
+          "url": "https://www.youtube.com/watch?v=DsKO2UqERFo"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "macaws-bridges",
+      "name": "Macaw's Bridges",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Ready-made bridge pieces in wood, stone and rope, with railings and supports.",
+      "wiki": "https://github.com/sketchmacaw/Bridges",
+      "videos": [
+        {
+          "title": "Minecraft: Macaw's Bridges Mod | Minecraft Mod Showcase 1.21+",
+          "url": "https://www.youtube.com/watch?v=jVqNal-bUhA"
+        },
+        {
+          "title": "Macaw's Bridges Minecraft 2.0.0 Update",
+          "url": "https://www.youtube.com/watch?v=jwQf46NnCtE"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "macaws-paths-and-pavings",
+      "name": "Macaw's Paths and Pavings",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Paths, paving slabs and edgings for laying out roads, yards and gardens.",
+      "wiki": "https://github.com/sketchmacaw/Paths-Pavings",
+      "videos": [
+        {
+          "title": "Macaw's Paths & Pavings Minecraft Mod",
+          "url": "https://www.youtube.com/watch?v=gsb-qaMct6c"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "macaws-lights-and-lamps",
+      "name": "Macaw's Lights and Lamps",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Lamps, lanterns, chandeliers and wall lights in lots of styles.",
+      "wiki": "https://modrinth.com/mod/macaws-lights-and-lamps",
+      "videos": [
+        {
+          "title": "Macaw's Minecraft Light & Lamps Mod",
+          "url": "https://www.youtube.com/watch?v=CxSGE7RF5MA"
+        },
+        {
+          "title": "Macaw's Lights and Lamps | Best Lighting Mod for Minecraft",
+          "url": "https://www.youtube.com/watch?v=i0kv2gqbb3I"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "macaws-trapdoors",
+      "name": "Macaw's Trapdoors",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Many more trapdoor designs in every wood, handy for shutters and small details.",
+      "wiki": "https://github.com/sketchmacaw/Trapdoors",
+      "videos": [
+        {
+          "title": "Macaw's Trapdoors Minecraft Mod - 1.0.2 Update",
+          "url": "https://www.youtube.com/watch?v=5rCpU9apUVw"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "macaws-stairs",
+      "name": "Macaw's Stairs",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "More kinds of stairs, with railings and balconies to match, in every wood.",
+      "wiki": "https://github.com/sketchmacaw/Macaws-Stairs",
+      "videos": [
+        {
+          "title": "Yankee Mod Review: Macaws Stairs and Windows 1.21",
+          "url": "https://www.youtube.com/watch?v=hDE_lJPS5_8"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "another-furniture",
+      "name": "Another Furniture",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Chairs, tables, benches, shelves, curtains and lamps with a cosy look that fits in with the normal game.",
+      "wiki": "https://starfish-studios.com/mods/another-furniture",
+      "videos": [
+        {
+          "title": "Minecraft Mod Showcase | Another Furniture Mod",
+          "url": "https://www.youtube.com/watch?v=VNUA_Ezgd7I"
+        }
+      ],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "supplementaries",
+      "name": "Supplementaries",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Jars, signposts, planters, item shelves and lots of small details that make a place feel lived in.",
+      "wiki": "https://github.com/MehVahdJukaar/Supplementaries/wiki",
+      "videos": [
+        {
+          "title": "Supplementaries (1.21.1) | (Full Showcase)",
+          "url": "https://www.youtube.com/watch?v=Qt2UkAojgAw"
+        },
+        {
+          "title": "Supplementaries Mod: A Trailer",
+          "url": "https://www.youtube.com/watch?v=ZTN_DWP5d3o"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "moonlight"
+      ]
+    },
+    {
+      "slug": "rechiseled",
+      "name": "Rechiseled",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Hundreds of new looks for ordinary blocks, changed in a chiseling table. No new materials, just new textures.",
+      "wiki": "https://github.com/SuperMartijn642/Rechiseled",
+      "videos": [
+        {
+          "title": "Rechiseled Mod Update - Minecraft 1.21.1 (Mod Showcase)",
+          "url": "https://www.youtube.com/watch?v=V3LRK3oMbPY"
+        },
+        {
+          "title": "Minecraft Mod Review: Rechiseled",
+          "url": "https://www.youtube.com/watch?v=wUBysBUFSZU"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "supermartijn642s-core-lib",
+        "supermartijn642s-config-lib",
+        "fusion-connected-textures"
+      ]
+    },
+    {
+      "slug": "rechiseled-create",
+      "name": "Rechiseled: Create",
+      "category": "building",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Chiseled versions of Create's blocks. Only makes sense with Rechiseled: vote for both or neither.",
+      "note": "Needs Rechiseled and Create",
+      "wiki": "https://github.com/SuperMartijn642/RechiseledCreate",
+      "videos": [
+        {
+          "title": "Rechiseled Mod Update - Minecraft 1.21.1 (Mod Showcase)",
+          "url": "https://www.youtube.com/watch?v=V3LRK3oMbPY"
+        }
+      ],
+      "version": "latest",
+      "requires": [
+        "rechiseled",
+        "create"
+      ]
+    },
+    {
       "slug": "chunky",
       "name": "Chunky",
       "category": "server",
@@ -1176,6 +1611,86 @@
       "exclusiveGroup": null,
       "description": "Library needed by the Quarry mod.",
       "wiki": "https://modrinth.com/mod/scalable-cats-force",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "resourceful-lib",
+      "name": "Resourceful Lib",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Handcrafted.",
+      "wiki": "https://modrinth.com/mod/resourceful-lib",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "moonlight",
+      "name": "Moonlight Lib",
+      "category": "base",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Supplementaries.",
+      "wiki": "https://modrinth.com/mod/moonlight",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "supermartijn642s-core-lib",
+      "name": "SuperMartijn642's Core Lib",
+      "category": "base",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Rechiseled.",
+      "wiki": "https://modrinth.com/mod/supermartijn642s-core-lib",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "supermartijn642s-config-lib",
+      "name": "SuperMartijn642's Config Lib",
+      "category": "base",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Rechiseled.",
+      "wiki": "https://modrinth.com/mod/supermartijn642s-config-lib",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "fusion-connected-textures",
+      "name": "Fusion (Connected Textures)",
+      "category": "base",
+      "side": "client",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Rechiseled, for its connected textures. Only on PCs.",
+      "wiki": "https://modrinth.com/mod/fusion-connected-textures",
       "videos": [],
       "version": "latest",
       "requires": []

@@ -48,7 +48,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.5.3"   # 1.5.3: a 1.4.x copy updates itself into this one (install.ps1 in the zip, -Play taken). History in docs/07
+$InstallerVersion = "1.5.4"   # 1.5.4: render distance by PC tier, also on PCs installed before. History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -769,6 +769,35 @@ function Get-FileHomeIo([string]$at) {
   }
 }
 
+# ---- render distance (docs/07 "Render distance", 1.5.4) ----------------------------------------------------
+# options.txt is the game's own file. The first install writes it with the distances for the member's PC tier. Later
+# runs change renderDistance and simulationDistance only while renderDistance is still the value this script wrote
+# last time ($ours, kept in installed.json; installs from before 1.5.4 wrote 8), so a value the player chose is never
+# touched. Only those two lines change; every other line and the line endings are kept as they are.
+# Returns @{ status = "written" | "changed" | "left" | "same"; ours = <the value to remember>; text = <what to say> }.
+function Set-RenderDistance([string]$path, $ours, [int]$render, [int]$sim) {
+  if (-not [IO.File]::Exists($path)) {
+    [IO.File]::WriteAllText($path, ("renderDistance:{0}`r`nsimulationDistance:{1}`r`nfullscreen:false`r`n" -f $render, $sim), (New-Object Text.UTF8Encoding($false)))
+    return @{ status = "written"; ours = $render; text = ("Render distance set to {0}" -f $render) }
+  }
+  if ($null -eq $ours -or "$ours" -notmatch '^\d{1,2}$') { $ours = 8 }
+  $ours = [int]$ours
+  $text = [IO.File]::ReadAllText($path)
+  $m = [regex]::Match($text, '(?m)^renderDistance:(\d+)\r?$')
+  if (-not $m.Success) { return @{ status = "left"; ours = $ours; text = "Render distance left as it is (not in options.txt)" } }
+  $now = [int]$m.Groups[1].Value
+  # already the tier's value: ours from now on (also after a run that changed it but failed before installed.json)
+  if ($now -eq $render) { return @{ status = "same"; ours = $render; text = ("Render distance {0}" -f $render) } }
+  if ($now -ne $ours) { return @{ status = "left"; ours = $ours; text = ("Render distance left at {0} (set by you)" -f $now) } }
+  $new = [regex]::Replace($text, '(?m)^renderDistance:\d+(?=\r?$)', ("renderDistance:{0}" -f $render))
+  if ([regex]::IsMatch($new, '(?m)^simulationDistance:\d+\r?$')) { $new = [regex]::Replace($new, '(?m)^simulationDistance:\d+(?=\r?$)', ("simulationDistance:{0}" -f $sim)) }
+  else { $nl = if ($text -match "`r`n") { "`r`n" } else { "`n" }; if ($new.Length -gt 0 -and -not $new.EndsWith("`n")) { $new += $nl }; $new += ("simulationDistance:{0}{1}" -f $sim, $nl) }
+  $tmp = $path + ".new"
+  [IO.File]::WriteAllText($tmp, $new, (New-Object Text.UTF8Encoding($false)))
+  Move-Item -LiteralPath $tmp -Destination $path -Force
+  return @{ status = "changed"; ours = $render; text = ("Render distance {0} {1} {2}" -f $now, [char]0x2192, $render) }
+}
+
 # What kind of run this is, for the report: nothing installed yet, the pack changed, or everything was current.
 function Get-RunMode($prev, [string]$packHash) {
   if (-not $prev) { return "first_install" }
@@ -996,6 +1025,35 @@ if ($SelfTest) {
   $stuck.setHandler = { param($t) return $false }
   $r = Repair-Home (Join-Path $lh "install.ps1") $lh $stuck
   Check "when the Play link cannot be pointed at the new script, install.ps1 is kept" ((-not $r.linked) -and [IO.File]::Exists((Join-Path $lh "install.ps1")) -and [IO.File]::Exists((Join-Path $lh "DeepslateWorks.ps1")))
+
+  Write-Host "Self test: render distance (1.5.4)" -ForegroundColor White
+  $od = Join-Path $dir "options [x]"
+  [void][IO.Directory]::CreateDirectory($od)
+  $of = Join-Path $od "options.txt"
+  $r = Set-RenderDistance $of $null 12 8
+  Check ("first install: written with the tier's values: " + $r.text) (($r.status -eq "written") -and ($r.ours -eq 12) -and ([IO.File]::ReadAllText($of) -eq "renderDistance:12`r`nsimulationDistance:8`r`nfullscreen:false`r`n"))
+  $game = "version:3955`r`nautoJump:false`r`nrenderDistance:8`r`nsimulationDistance:6`r`nlang:en_gb`r`nkey_key.jump:key.keyboard.space`r`nlastServer:mc.dsw.test`r`n"
+  [IO.File]::WriteAllText($of, $game)
+  $r = Set-RenderDistance $of 8 12 8
+  Check ("still the value it wrote last time: " + $r.text) (($r.status -eq "changed") -and ($r.ours -eq 12) -and ($r.text -eq ("Render distance 8 {0} 12" -f [char]0x2192)))
+  Check "only those two lines changed, everything else as it was" ([IO.File]::ReadAllText($of) -eq $game.Replace("renderDistance:8", "renderDistance:12").Replace("simulationDistance:6", "simulationDistance:8"))
+  [IO.File]::WriteAllText($of, $game.Replace("renderDistance:8", "renderDistance:16"))
+  $r = Set-RenderDistance $of 8 12 8
+  Check ("changed by the player: left alone: " + $r.text) (($r.status -eq "left") -and ($r.ours -eq 8) -and ($r.text -eq "Render distance left at 16 (set by you)") -and ([IO.File]::ReadAllText($of) -eq $game.Replace("renderDistance:8", "renderDistance:16")))
+  [IO.File]::WriteAllText($of, $game)
+  $r = Set-RenderDistance $of $null 10 8
+  Check ("no value in installed.json (installed before 1.5.4): 8 counts as its own: " + $r.text) (($r.status -eq "changed") -and ([IO.File]::ReadAllText($of) -match "(?m)^renderDistance:10\r?$"))
+  $r = Set-RenderDistance $of 10 10 8
+  Check "already the tier's value: nothing written" (($r.status -eq "same") -and ($r.ours -eq 10))
+  $r = Set-RenderDistance $of 8 10 8
+  Check "changed on a run that failed before it could remember it: taken as its own, not as the player's" (($r.status -eq "same") -and ($r.ours -eq 10))
+  $lf = "renderDistance:8`nfullscreen:false`n"
+  [IO.File]::WriteAllText($of, $lf)
+  $r = Set-RenderDistance $of $null 12 8
+  Check "a file with no simulationDistance line and Unix line endings keeps them, and gets the line" ([IO.File]::ReadAllText($of) -eq "renderDistance:12`nfullscreen:false`nsimulationDistance:8`n")
+  [IO.File]::WriteAllText($of, $game)
+  $r = Set-RenderDistance $of "banana" 12 8
+  Check "nonsense in installed.json counts as 8" ($r.status -eq "changed")
 
   Write-Host "Self test: what kind of run it is" -ForegroundColor White
   $prevRun = [pscustomobject]@{ version = "0.1.0+aaaaaaaa"; hash = "aaaa" }
@@ -1658,13 +1716,19 @@ try {
     finally { Remove-Temp $cz }
   }
   $options = Join-Path $GameDir "options.txt"
-  if (-not (Test-Path -LiteralPath $options)) {
-    $rd = 8; $sd = 6
-    if ($manifest.render_distance) { $rd = [int]$manifest.render_distance }
-    if ($manifest.simulation_distance) { $sd = [int]$manifest.simulation_distance }
-    if (-not $DryRun) { Set-Content -LiteralPath $options -Value @("renderDistance:$rd", "simulationDistance:$sd", "fullscreen:false") }
-    Tick ("Render distance set to {0}" -f $rd)
-  } else { Tick "Kept your existing settings" }
+  $rd = 8; $sd = 6
+  try { if ($manifest.render_distance) { $rd = [int]$manifest.render_distance }; if ($manifest.simulation_distance) { $sd = [int]$manifest.simulation_distance } } catch {}
+  $prevOurs = $null
+  if ($prev -and $prev.PSObject.Properties["renderDistance"]) { $prevOurs = $prev.renderDistance }
+  $script:OurRender = $prevOurs
+  if ($DryRun) { Note ("(dry run) render distance for this PC: {0}" -f $rd) }
+  else {
+    try {
+      $r = Set-RenderDistance $options $prevOurs $rd $sd
+      $script:OurRender = $r.ours
+      Tick $r.text
+    } catch { Note ("The render distance was left as it is: " + $_.Exception.Message) }
+  }
 
   # ---- the server list (servers.dat: uncompressed NBT, one entry), the first time --------------------------
   $serversDat = Join-Path $GameDir "servers.dat"
@@ -1736,7 +1800,7 @@ try {
     catch { Log ("could not check the Play link and the shortcuts: " + $_.Exception.Message) }
   }
 
-  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion } | ConvertTo-Json | Set-Content -LiteralPath $installedFile }
+  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender } | ConvertTo-Json | Set-Content -LiteralPath $installedFile }
 
   # ---- d. the report, e. the game -------------------------------------------------------------------------
   Log "=== done ==="

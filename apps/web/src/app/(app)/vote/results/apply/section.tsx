@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/server/auth/session";
@@ -11,12 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input, Label } from "@/components/ui/input";
 import { applyResultsAction } from "../actions";
 
-export const metadata: Metadata = { title: "Apply results" };
-
 export default async function ApplyPage({ searchParams }: { searchParams: Promise<{ threshold?: string }> }) {
   await requireAdmin();
   const vote = await getResultsVote();
-  if (!vote || vote.status !== "CLOSED") redirect("/vote/results?applied=not-closed");
+  if (!vote || vote.status !== "CLOSED") redirect("/pack?tab=results&applied=not-closed");
   const { threshold: tRaw } = await searchParams;
   const threshold = Math.min(100, Math.max(1, Number(tRaw ?? 50) || 50));
   const manifest = await getManifest();
@@ -24,7 +21,7 @@ export default async function ApplyPage({ searchParams }: { searchParams: Promis
   const changes = decisions.filter((d) => d.from !== d.to);
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Apply &quot;{vote.title}&quot; to the mod list</h1>
+      <h2 className="text-xl font-semibold">Apply &quot;{vote.title}&quot; to the mod list</h2>
       <Card>
         <CardHeader>
           <CardTitle>What would change in mods.json</CardTitle>
@@ -56,7 +53,7 @@ export default async function ApplyPage({ searchParams }: { searchParams: Promis
               <input type="hidden" name="threshold" value={threshold} />
               <Button type="submit" disabled={changes.length === 0}>Write mods.json and commit</Button>
             </form>
-            <Link href="/vote/results" className={buttonClasses("secondary")}>Back</Link>
+            <Link href="/pack?tab=results" className={buttonClasses("secondary")}>Back</Link>
           </div>
         </CardContent>
       </Card>

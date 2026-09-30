@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { requireOnboardedUser } from "@/server/auth/session";
 import { getManifest, sections } from "@/server/modpack/manifest";
@@ -8,8 +7,6 @@ import { PcPanel } from "@/components/mods/pc-panel";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 
-export const metadata: Metadata = { title: "Mods" };
-
 export default async function ModsPage() {
   const user = await requireOnboardedUser();
   const [manifest, openVote] = await Promise.all([getManifest(), getOpenVote()]);
@@ -17,9 +14,9 @@ export default async function ModsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">The mod list</h1>
+        <h2 className="text-xl font-semibold">The mod list</h2>
         <p className="mt-1 max-w-2xl text-muted-foreground">Everyone gets the base pack. The rest is up for vote, each with a PC load rating so people on older laptops can see what they&apos;re signing up for. Minecraft {manifest.minecraft}, pack {manifest.version}.</p>
-        {openVote && <Link href="/vote" className={buttonClasses("primary", "md", "mt-3")}>Vote is open: cast yours</Link>}
+        {openVote && <Link href="/pack?tab=vote" className={buttonClasses("primary", "md", "mt-3")}>Vote is open: cast yours</Link>}
       </div>
       <PcPanel tier={user.pcTier} />
       {all.map(({ category, mods }) => (

@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { requireOnboardedUser } from "@/server/auth/session";
 import { db } from "@/server/db";
@@ -9,8 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { buttonClasses } from "@/components/ui/button";
 import { LoadChip } from "@/components/mods/load-chip";
 import { BallotForm } from "./ballot-form";
-
-export const metadata: Metadata = { title: "Vote" };
 
 export default async function VotePage() {
   const user = await requireOnboardedUser();
@@ -24,8 +21,8 @@ export default async function VotePage() {
           <CardDescription>{last ? "The last vote has closed." : "Alex will open the season vote soon. Until then, have a look at the mod list."}</CardDescription>
         </CardHeader>
         <CardContent className="flex gap-2">
-          {last && <Link href="/vote/results" className={buttonClasses("primary", "sm")}>See the results</Link>}
-          <Link href="/mods" className={buttonClasses("secondary", "sm")}>Mod list</Link>
+          {last && <Link href="/pack?tab=results" className={buttonClasses("primary", "sm")}>See the results</Link>}
+          <Link href="/pack" className={buttonClasses("secondary", "sm")}>Mod list</Link>
         </CardContent>
       </Card>
     );
@@ -36,7 +33,7 @@ export default async function VotePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">{vote.title}</h1>
+        <h2 className="text-xl font-semibold">{vote.title}</h2>
         <p className="mt-1 max-w-2xl text-muted-foreground">Tick what you want. Suggested mods are pre-ticked. You can change your vote until it closes.</p>
         <div className="mt-3 rounded-xl border bg-card p-4 text-sm">
           <p className="font-medium">Rule of thumb</p>
@@ -45,7 +42,7 @@ export default async function VotePage() {
             <li>Create plus one electric tech mod is plenty for a first season. More can be added later.</li>
             <li>Anything marked <LoadChip load="H" /> needs a majority of the &quot;yes&quot; votes from people on weaker PCs, otherwise it stays out.</li>
           </ul>
-          <p className="mt-2 text-muted-foreground">Everyone gets the <Link href="/mods#base" className="underline">base pack</Link> whatever happens. {user.role === "ADMIN" && <Link href="/vote/results" className="underline">Live results</Link>}</p>
+          <p className="mt-2 text-muted-foreground">Everyone gets the <Link href="/pack#base" className="underline">base pack</Link> whatever happens. {user.role === "ADMIN" && <Link href="/pack?tab=results" className="underline">Live results</Link>}</p>
         </div>
       </div>
       <BallotForm

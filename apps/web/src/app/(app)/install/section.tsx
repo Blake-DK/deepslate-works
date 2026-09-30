@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { requireOnboardedUser } from "@/server/auth/session";
 import { getManifest } from "@/server/modpack/manifest";
@@ -18,8 +17,6 @@ import { PlayButton } from "@/components/server/play-button";
 import { joinLine } from "@/lib/play";
 import { clock } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Install" };
-
 export default async function InstallPage({ searchParams }: { searchParams: Promise<{ offline?: string }> }) {
   const user = await requireOnboardedUser();
   const { offline } = await searchParams;
@@ -28,7 +25,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
     const name = (await getManifest()).name;
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Join the server</h1>
+        <h2 className="text-xl font-semibold">Join the server</h2>
         <Alert tone="info">{WINDOWS_ONLY(name)}</Alert>
       </div>
     );
@@ -45,7 +42,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold">Join the server</h1>
+          <h2 className="text-xl font-semibold">Join the server</h2>
           <p className="mt-1 max-w-2xl text-muted-foreground">Not open yet. When it launches, this page turns into a one-click installer for Windows, and the server address appears here.</p>
         </div>
         <LaunchBanner launchAt={settings.launchAt} admin={false} />
@@ -63,7 +60,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
     <div className="space-y-6">
       {!settings.live && user.role === "ADMIN" && <LaunchBanner launchAt={settings.launchAt} admin />}
       <div>
-        <h1 className="text-2xl font-semibold">Join the server</h1>
+        <h2 className="text-xl font-semibold">Join the server</h2>
         <p className="mt-1 max-w-2xl text-muted-foreground">
           One download, one double-click. It installs into the normal Minecraft Launcher as its own profile and never touches your vanilla game.
           {version && <> Current pack: <span className="font-mono">{version}</span>{lock && <> · built {formatDate(new Date(lock.generatedAt))}</>}.</>}

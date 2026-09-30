@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/session";
 import { getBranding } from "@/server/branding";
@@ -8,19 +7,17 @@ import { Alert } from "@/components/ui/alert";
 import { BrandingForm } from "./form";
 import { saveBrandingAction } from "./actions";
 
-export const metadata: Metadata = { title: "Branding" };
-
 export default async function BrandingPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string; note?: string; renamed?: string }> }) {
   await requireAdmin();
   const [{ saved, error, note, renamed }, b, guide] = await Promise.all([searchParams, getBranding(), getGuideSource()]);
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Branding</h1>
+        <h2 className="text-xl font-semibold">Branding</h2>
         <p className="text-muted-foreground">How the site looks and what it is called. Changes show on the next page anyone opens; nothing needs rebuilding.</p>
       </div>
       {saved && <Alert tone="success">Saved. {note}</Alert>}
-      {saved && renamed && <Alert>The installer carries the name it was built with. To put the new name in the launcher profile, press <Link href="/admin/modpack" className="underline">Build</Link> on the Modpack page; players get it the next time they run the installer.</Alert>}
+      {saved && renamed && <Alert>The installer carries the name it was built with. To put the new name in the launcher profile, press <Link href="/admin/pack" className="underline">Build</Link> on the Pack page; players get it the next time they run the installer.</Alert>}
       {error && <Alert tone="error">Not saved. {error}</Alert>}
       <Card>
         <CardHeader>

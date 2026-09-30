@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
@@ -10,8 +9,6 @@ import { cell, Clip, Field, FixedTable } from "@/components/admin/parts";
 import { getInstaller } from "@/server/modpack/lock";
 import { isOutdated } from "@/lib/installer-version";
 import { InstallerVersion } from "@/components/admin/installer-version";
-
-export const metadata: Metadata = { title: "Installs" };
 
 const TONE = { ok: "good", failed: "bad", cancelled: "warn" } as const;
 const LABEL = { ok: "All good", failed: "Failed", cancelled: "Stopped" } as const;
@@ -67,7 +64,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Installs</h1>
+        <h2 className="text-xl font-semibold">Installs</h2>
         <p className="text-muted-foreground">What the Windows installer reported at the end of each run: how it went, the log, and the PC it ran on. No Windows user names, no addresses. Kept for 90 days.{current ? <> The installer the site hands out now is <span className="font-mono">{current}</span>; a run from an older one is marked &quot;outdated&quot;.</> : null}</p>
       </div>
       <Card>
@@ -117,8 +114,8 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
       </Card>
       <h2 className="pt-2 text-lg font-semibold">Every run</h2>
       <nav className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-sm" aria-label="Filter by outcome">
-        <Link href="/admin/installs" aria-current={!only ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${!only ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>All ({total})</Link>
-        {OUTCOMES.map((o) => <Link key={o} href={`/admin/installs?outcome=${o}`} aria-current={only === o ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${only === o ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{LABEL[o]} ({n(o)})</Link>)}
+        <Link href="/admin/people?tab=installs" aria-current={!only ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${!only ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>All ({total})</Link>
+        {OUTCOMES.map((o) => <Link key={o} href={`/admin/people?tab=installs&outcome=${o}`} aria-current={only === o ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${only === o ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{LABEL[o]} ({n(o)})</Link>)}
       </nav>
       {rows.length === 0 ? (
         <Card><CardContent className="p-4 text-sm text-muted-foreground">{only ? "No reports with that outcome." : "No reports yet. They arrive when someone runs the installer."}</CardContent></Card>

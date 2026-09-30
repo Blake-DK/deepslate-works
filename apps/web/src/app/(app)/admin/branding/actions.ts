@@ -53,16 +53,16 @@ export async function saveBrandingAction(formData: FormData) {
   }
   if (problems.length) {
     await audit({ userId: admin.id, action: "branding.save", params: { problems }, result: "DENIED" });
-    redirect(`/admin/branding?error=${encodeURIComponent(problems.join(" ").slice(0, 400))}`);
+    redirect(`/admin/site?tab=branding&error=${encodeURIComponent(problems.join(" ").slice(0, 400))}`);
   }
   const saved = await setSection("branding", next, admin.id);
   if (!saved.ok) {
     await audit({ userId: admin.id, action: "branding.save", params: { problems: saved.problems }, result: "DENIED" });
-    redirect(`/admin/branding?error=${encodeURIComponent(saved.problems.join("; ").slice(0, 400))}`);
+    redirect(`/admin/site?tab=branding&error=${encodeURIComponent(saved.problems.join("; ").slice(0, 400))}`);
   }
   for (const s of stored) await tidy(s.slot, s.file);
   const changed = Object.keys(saved.value).filter((k) => JSON.stringify((saved.value as Record<string, unknown>)[k]) !== JSON.stringify((current as Record<string, unknown>)[k]));
   await audit({ userId: admin.id, action: "branding.save", params: { changed }, result: "OK" });
   revalidatePath("/", "layout");
-  redirect(`/admin/branding?saved=1${notes.length ? `&note=${encodeURIComponent(notes.join(" ").slice(0, 400))}` : ""}${changed.includes("name") ? "&renamed=1" : ""}`);
+  redirect(`/admin/site?tab=branding&saved=1${notes.length ? `&note=${encodeURIComponent(notes.join(" ").slice(0, 400))}` : ""}${changed.includes("name") ? "&renamed=1" : ""}`);
 }

@@ -69,7 +69,7 @@ export function BrandingForm({ initial, action }: { initial: BrandingValues; act
           <div><Label htmlFor="tagline">Tagline</Label><Input id="tagline" name="tagline" value={v.tagline} onChange={set("tagline")} maxLength={120} /><p className="mt-1 text-xs text-muted-foreground">Shown at the foot of every page.</p></div>
           <div><Label htmlFor="footer">Footer text</Label><Input id="footer" name="footer" value={v.footer} onChange={set("footer")} maxLength={200} /></div>
           <div><Label htmlFor="discordInvite">Discord invite link</Label><Input id="discordInvite" name="discordInvite" type="url" value={v.discordInvite} onChange={set("discordInvite")} maxLength={200} placeholder="https://discord.gg/…" /></div>
-          <div><Label htmlFor="motd">Message in the server list</Label><Input id="motd" name="motd" value={v.motd} onChange={set("motd")} maxLength={59} /><p className="mt-1 text-xs text-muted-foreground">What Minecraft shows under the server&apos;s name. The site cannot change it on the server: AMP writes that setting itself. Admin → Files shows whether the server matches; change it in AMP.</p></div>
+          <div><Label htmlFor="motd">Message in the server list</Label><Input id="motd" name="motd" value={v.motd} onChange={set("motd")} maxLength={59} /><p className="mt-1 text-xs text-muted-foreground">What Minecraft shows under the server&apos;s name. The site cannot change it on the server: AMP writes that setting itself. Admin → Server → Files shows whether the server matches; change it in AMP.</p></div>
         </fieldset>
         <fieldset className="space-y-3">
           <legend className="text-sm font-semibold">Colours</legend>

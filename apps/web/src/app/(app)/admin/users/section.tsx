@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/server/db";
 import { requireAdmin } from "@/server/auth/session";
@@ -9,13 +8,12 @@ import { Alert } from "@/components/ui/alert";
 import { buttonClasses } from "@/components/ui/button";
 import { timeAgo } from "@/lib/utils";
 import { memberRows, SHOW, type Show } from "@/lib/admin-lists";
-import { RowMenu, menuItem } from "@/components/admin/row-menu";
-import { ConfirmItem, LinkByName } from "@/components/admin/menu-actions";
 import { cell, Clip, Field, FixedTable, menuCell, Switch } from "@/components/admin/parts";
 import { getInstaller } from "@/server/modpack/lock";
 import { isOutdated } from "@/lib/installer-version";
 import { InstallerVersion } from "@/components/admin/installer-version";
-import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setEarlyAccessAction, setMinecraftNameAction, setRoleAction } from "./actions";
+import { setEarlyAccessAction } from "./actions";
+import { MemberMenu } from "./member-menu";
 
 const ERRORS: Record<string, string> = {
   name: "Minecraft names are 3 to 16 letters, numbers or underscores.",
@@ -23,8 +21,6 @@ const ERRORS: Record<string, string> = {
   unavailable: "Couldn't reach Mojang. Try again in a minute.",
   taken: "That Minecraft account is already linked to another member.",
 };
-
-export const metadata: Metadata = { title: "Players" };
 
 const PC = { HIGH: ["high", "good"], MID: ["mid", "neutral"], LOW: ["low", "warn"] } as const;
 const WIDTHS = ["25%", "20%", "9%", "14%", "11%", "12%", "56px"];
@@ -52,7 +48,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     if (k !== "all") sp.set("show", k);
     if (query) sp.set("q", query);
     const s = sp.toString();
-    return s ? `/admin/users?${s}` : "/admin/users";
+    return s ? `/admin/people?${s}` : "/admin/people";
   };
 
   const parts = (u: (typeof rows)[number]) => {
@@ -66,36 +62,14 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       installer: <InstallerVersion version={u.installerVersion} current={current} outdated={u.installerOutdated} />,
       seen: <span className="text-muted-foreground" title={u.lastSeenAt ? u.lastSeenAt.toISOString() : "never"}>{timeAgo(u.lastSeenAt)}</span>,
       early: <Switch action={setEarlyAccessAction} fields={{ id: u.id, on: u.earlyAccess ? "0" : "1" }} on={u.earlyAccess} label={`Early access for ${u.displayName}`} disabled={admin} why={admin ? "Admins don't need it" : early} />,
-      menu: (
-        <RowMenu label={`Actions for ${u.displayName}`}>
-          {u.id !== me.id && (
-            <form action={setRoleAction}>
-              <input type="hidden" name="id" value={u.id} />
-              <input type="hidden" name="role" value={admin ? "PLAYER" : "ADMIN"} />
-              <button type="submit" role="menuitem" className={menuItem}>{admin ? "Make player" : "Make admin"}</button>
-            </form>
-          )}
-          {u.mcUsername && (
-            <form action={clearMinecraftNameAction}>
-              <input type="hidden" name="id" value={u.id} />
-              <button type="submit" role="menuitem" className={menuItem}>Unlink</button>
-            </form>
-          )}
-          <LinkByName action={setMinecraftNameAction} id={u.id} who={u.displayName} />
-          <form action={revokeLauncherAction} title="Signs the installer out on all their PCs">
-            <input type="hidden" name="id" value={u.id} />
-            <button type="submit" role="menuitem" className={menuItem}>Sign out installer</button>
-          </form>
-          {u.id !== me.id && <ConfirmItem action={removeUserAction} fields={{ id: u.id }} question={`Remove ${u.displayName} from the group? Their votes and their link to Minecraft go with them.`}>Remove</ConfirmItem>}
-        </RowMenu>
-      ),
+      menu: <MemberMenu u={u} meId={me.id} />,
     };
   };
 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Players</h1>
+        <h2 className="text-xl font-semibold">Players</h2>
         <p className="text-sm text-muted-foreground">Minecraft accounts link themselves in game; &quot;Link by name…&quot; in a row&apos;s menu is the fallback.</p>
       </div>
       {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
@@ -103,7 +77,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         <nav className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-sm" aria-label="Filter the players">
           {(Object.keys(SHOW) as Show[]).map((k) => <Link key={k} href={href(k)} aria-current={only === k ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${only === k ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{SHOW[k]} ({count[k]})</Link>)}
         </nav>
-        <form method="get" action="/admin/users" className="flex min-w-0 flex-1 items-center gap-2" role="search">
+        <form method="get" action="/admin/people" className="flex min-w-0 flex-1 items-center gap-2" role="search">
           {only !== "all" && <input type="hidden" name="show" value={only} />}
           <input name="q" type="search" defaultValue={query} placeholder="Search by name" aria-label="Search by name" className="h-9 min-w-0 flex-1 rounded-lg border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[800px]:max-w-xs" />
           <button type="submit" className={buttonClasses("secondary", "sm")}>Search</button>

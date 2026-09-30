@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { inviteState } from "@/server/auth/invite-codes";
@@ -12,8 +11,6 @@ import { CopyButton } from "./copy-button";
 import { RowMenu } from "@/components/admin/row-menu";
 import { ConfirmItem } from "@/components/admin/menu-actions";
 import { cell, Clip, Field, FixedTable, menuCell } from "@/components/admin/parts";
-
-export const metadata: Metadata = { title: "Invites" };
 
 export default async function InvitesPage() {
   const invites = await db.invite.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
@@ -41,7 +38,7 @@ export default async function InvitesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Invites</h1>
+      <h2 className="text-xl font-semibold">Invites</h2>
       <Card>
         <CardHeader>
           <CardTitle>New invite</CardTitle>

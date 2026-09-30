@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/session";
 import { apiFetch, ApiError } from "@/server/api-client";
@@ -12,8 +11,6 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-export const metadata: Metadata = { title: "Files" };
 
 type Entry = { name: string; path: string; dir: boolean; size: number; modified: string | null; denied: boolean; text: boolean };
 type Listing = { path: string; entries: Entry[] };
@@ -56,7 +53,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
     const next: Query = { path: path || undefined, sort: q.sort, dir: q.dir, ...over };
     const sp = new URLSearchParams(Object.entries(next).filter(([, v]) => v) as Array<[string, string]>);
     const s = sp.toString();
-    return s ? `/admin/files?${s}` : "/admin/files";
+    return s ? `/admin/server?tab=files&${s}` : "/admin/server?tab=files";
   };
   const sortLink = (key: string, label: string, right = false) => {
     const active = (q.sort ?? "name") === key;
@@ -68,16 +65,16 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Files</h1>
+        <h2 className="text-xl font-semibold">Files</h2>
         <p className="text-muted-foreground">The game server&apos;s folder, to look at and download from.</p>
       </div>
       <Alert>
-        <strong>Read only.</strong> Nothing can be uploaded, renamed, edited or deleted here. Settings files are changed in the repo (<span className="font-mono">modpack/config/</span>) and sent to the server with Sync, so the mod list and its settings always come from one place. <Link href="/admin/modpack" className="underline">Go to Modpack</Link>
+        <strong>Read only.</strong> Nothing can be uploaded, renamed, edited or deleted here. Settings files are changed in the repo (<span className="font-mono">modpack/config/</span>) and sent to the server with Sync, so the mod list and its settings always come from one place. <Link href="/admin/pack" className="underline">Go to Pack</Link>
       </Alert>
 
       <nav aria-label="Where you are" className="flex flex-wrap items-center gap-1 text-sm">
-        <Link href="/admin/files" className="rounded px-1.5 py-0.5 font-mono hover:bg-muted">Minecraft</Link>
-        {parts.map((p, i) => <span key={i} className="flex items-center gap-1"><span className="text-muted-foreground">/</span><Link href={`/admin/files?path=${encodeURIComponent(parts.slice(0, i + 1).join("/"))}`} className="rounded px-1.5 py-0.5 font-mono hover:bg-muted">{p}</Link></span>)}
+        <Link href="/admin/server?tab=files" className="rounded px-1.5 py-0.5 font-mono hover:bg-muted">Minecraft</Link>
+        {parts.map((p, i) => <span key={i} className="flex items-center gap-1"><span className="text-muted-foreground">/</span><Link href={`/admin/server?tab=files&path=${encodeURIComponent(parts.slice(0, i + 1).join("/"))}`} className="rounded px-1.5 py-0.5 font-mono hover:bg-muted">{p}</Link></span>)}
         {file && <span className="flex items-center gap-1"><span className="text-muted-foreground">/</span><span className="px-1.5 py-0.5 font-mono font-semibold">{file.split("/").at(-1)}</span></span>}
       </nav>
 
@@ -95,7 +92,8 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
 
           <Card>
             <CardHeader className="pb-0">
-              <form method="get" action="/admin/files" className="flex flex-wrap items-center gap-2">
+              <form method="get" action="/admin/server" className="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="tab" value="files" />
                 {path && <input type="hidden" name="path" value={path} />}
                 {q.sort && <input type="hidden" name="sort" value={q.sort} />}
                 {q.dir && <input type="hidden" name="dir" value={q.dir} />}
@@ -114,7 +112,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
                         <tr key={e.path} className={e.denied ? "text-muted-foreground" : undefined}>
                           <td className="px-4 py-2">
                             <span aria-hidden className="mr-2">{e.dir ? "📁" : "📄"}</span>
-                            {e.denied ? <span className="font-mono" title="On the never-shown list">{e.name}{e.dir ? "/" : ""}</span> : e.dir ? <Link href={`/admin/files?path=${encodeURIComponent(e.path)}`} className="font-mono hover:underline">{e.name}/</Link> : e.text ? <Link href={`/admin/files?file=${encodeURIComponent(e.path)}`} className="font-mono hover:underline">{e.name}</Link> : <span className="font-mono">{e.name}</span>}
+                            {e.denied ? <span className="font-mono" title="On the never-shown list">{e.name}{e.dir ? "/" : ""}</span> : e.dir ? <Link href={`/admin/server?tab=files&path=${encodeURIComponent(e.path)}`} className="font-mono hover:underline">{e.name}/</Link> : e.text ? <Link href={`/admin/server?tab=files&file=${encodeURIComponent(e.path)}`} className="font-mono hover:underline">{e.name}</Link> : <span className="font-mono">{e.name}</span>}
                             {e.denied && <Badge className="ml-2">not available</Badge>}
                           </td>
                           <td className="px-4 py-2 text-right tabular-nums">{e.dir ? "" : bytes(e.size)}</td>
@@ -145,14 +143,14 @@ function Tree({ levels, ancestors, open }: { levels: Array<Listing | null>; ance
       <ul className={depth ? "ml-3 border-l pl-1" : undefined}>
         {level.entries.filter((e) => e.dir).map((e) => (
           <li key={e.path}>
-            {e.denied ? <span className="block truncate rounded px-2 py-1 font-mono text-xs text-muted-foreground" title="On the never-shown list">{e.name}/</span> : <Link href={`/admin/files?path=${encodeURIComponent(e.path)}`} className={`block truncate rounded px-2 py-1 font-mono text-xs hover:bg-muted ${e.path === open ? "bg-muted font-semibold" : ""}`}>{e.name}/</Link>}
+            {e.denied ? <span className="block truncate rounded px-2 py-1 font-mono text-xs text-muted-foreground" title="On the never-shown list">{e.name}/</span> : <Link href={`/admin/server?tab=files&path=${encodeURIComponent(e.path)}`} className={`block truncate rounded px-2 py-1 font-mono text-xs hover:bg-muted ${e.path === open ? "bg-muted font-semibold" : ""}`}>{e.name}/</Link>}
             {e.path === next && render(depth + 1)}
           </li>
         ))}
       </ul>
     );
   };
-  return <nav aria-label="Folders"><Link href="/admin/files" className={`block rounded px-2 py-1 font-mono text-xs hover:bg-muted ${open === "" ? "bg-muted font-semibold" : ""}`}>Minecraft/</Link>{render(0)}</nav>;
+  return <nav aria-label="Folders"><Link href="/admin/server?tab=files" className={`block rounded px-2 py-1 font-mono text-xs hover:bg-muted ${open === "" ? "bg-muted font-semibold" : ""}`}>Minecraft/</Link>{render(0)}</nav>;
 }
 
 function FileView({ preview, expected, capMb }: { preview: Preview; expected: Record<string, string>; capMb: number }) {

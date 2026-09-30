@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { modpackStatus } from "@/server/modpack/run";
 import { distFile } from "@/server/modpack/lock";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,15 +6,13 @@ import { LoadChip } from "@/components/mods/load-chip";
 import { formatDate } from "@/lib/utils";
 import { Runner } from "./runner";
 
-export const metadata: Metadata = { title: "Modpack" };
-
 export default async function ModpackAdminPage() {
   const { manifest, lock, issues, rows } = await modpackStatus();
   const installer = await distFile("installer.zip");
   const tone = (s: string) => (s === "ok" ? "good" : s === "off" ? "neutral" : s === "beta" || s === "alpha" ? "warn" : "bad");
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Modpack</h1>
+      <h2 className="text-xl font-semibold">Modpack</h2>
       <Card>
         <CardHeader>
           <CardTitle>Pack {manifest.version}{lock ? `+${lock.hash.slice(0, 8)}` : ""}</CardTitle>

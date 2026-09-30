@@ -8,7 +8,7 @@ import type { EventRow } from "@/server/event-log";
 import { EventItem } from "./event-list";
 import { LiveTail } from "./live-tail";
 
-/** The event log, for admins (/admin/events) and, trimmed, for players (/events). */
+/** The event log at /activity: everything for admins, trimmed for players. */
 export function EventPage({ base, admin, filter, rows, more, newest }: { base: string; admin: boolean; filter: EventFilter; rows: EventRow[]; more: boolean; newest: string }) {
   const kinds = admin ? EVENT_KINDS : PLAYER_KINDS;
   const query = filterToQuery(filter);
@@ -16,7 +16,7 @@ export function EventPage({ base, admin, filter, rows, more, newest }: { base: s
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">{admin ? "Event log" : "What's been happening"}</h1>
+        <h1 className="text-2xl font-semibold">Activity</h1>
         <p className="text-muted-foreground">{admin ? "Everything the server and the site have seen or done. Open a row for the original console line and the details." : "Who came and went, deaths, advancements, and when the server was up."}</p>
       </div>
       <Card>

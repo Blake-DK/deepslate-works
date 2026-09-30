@@ -88,7 +88,7 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
       {state === "missing" && (
         <Alert tone="info" data-testid="play-missing">
           <p className="font-medium">Looks like the launcher isn&apos;t set up on this PC</p>
-          <p className="mt-1">Download the installer, unzip it and double-click <span className="font-mono">Setup.bat</span>. After that, Play works from here.{!stepsHere && <> The steps are on the <Link href="/install" className="underline">install page</Link>.</>}</p>
+          <p className="mt-1">Download the installer, unzip it and double-click <span className="font-mono">Setup.bat</span>. After that, Play works from here.{!stepsHere && <> The steps are under <Link href="/help" className="underline">Help → Getting in</Link>.</>}</p>
           <p className="mt-2 flex flex-wrap items-center gap-3">
             <a href="/downloads/installer.zip" className={buttonClasses("secondary", "sm")}>Download installer</a>
             <span className="text-xs text-muted-foreground">Already installed? If your browser asked whether to open Windows PowerShell, answer yes.</span>

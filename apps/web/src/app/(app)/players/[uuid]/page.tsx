@@ -20,6 +20,12 @@ import { suggestTier, summary, type SystemInfo } from "@/lib/install-report";
 import { pingReadings, sessionPings } from "@/server/ping";
 import { average, pingSlots, pingTone } from "@/lib/ping";
 import { Sparkline } from "@/components/server/sparkline";
+import { pickTab, tabHref, type PageQuery } from "@/components/tabs";
+import { InventoryPanel } from "@/components/players/inventory-panel";
+import { MemberMenu } from "../../admin/users/member-menu";
+import { setEarlyAccessAction } from "../../admin/users/actions";
+import { Switch } from "@/components/admin/parts";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Player" };
 
@@ -27,14 +33,16 @@ const TIER: Record<string, string> = { LOW: "Older PC", MID: "Decent PC", HIGH: 
 const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
 const ID = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|name:[a-z0-9_]{3,16})$/;
 
-export default async function PlayerPage({ params }: { params: Promise<{ uuid: string }> }) {
+// docs/13 §11 layout: the header and the totals, then tabs. Everyone: Overview, Sessions, Activity. Admins also:
+// Inventory (from the game's save of the player) and PC & access (last install, addresses, the member's menu).
+export default async function PlayerPage({ params, searchParams }: { params: Promise<{ uuid: string }>; searchParams: PageQuery }) {
   const viewer = await requireOnboardedUser();
   const admin = viewer.role === "ADMIN";
   const id = decodeURIComponent((await params).uuid).toLowerCase();
   if (!ID.test(id)) notFound();
   const now = new Date();
   const [member, rows, status] = await Promise.all([
-    db.user.findFirst({ where: { mcUuid: id }, select: { id: true, displayName: true, pcTier: true, pcTierSource: true, mcUsername: true, verifiedAt: true, guildMember: true, role: true } }),
+    db.user.findFirst({ where: { mcUuid: id }, select: { id: true, displayName: true, pcTier: true, pcTierSource: true, mcUsername: true, verifiedAt: true, guildMember: true, role: true, earlyAccess: true } }),
     db.session.findMany({ where: { mcUuid: id }, orderBy: { joinedAt: "desc" }, take: 2000 }),
     getStatus(),
   ]);
@@ -67,6 +75,16 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
   const guess = install ? suggestTier(install.system as SystemInfo) : null;
   const countries = [...new Set(sessions.map((s) => s.country).filter((c): c is string => Boolean(c)))];
   const addresses = admin ? rows.filter((r) => r.ip).slice(0, 40) : [];
+  const tabs = [
+    { key: "overview", label: "Overview" },
+    { key: "sessions", label: "Sessions", count: rows.length || null },
+    { key: "activity", label: "Activity" },
+    ...(admin && !id.startsWith("name:") ? [{ key: "inventory", label: "Inventory" }] : []),
+    ...(admin ? [{ key: "pc", label: "PC & access" }] : []),
+  ];
+  const q = await searchParams;
+  const tab = pickTab(q.tab, tabs);
+  const base = `/players/${encodeURIComponent(id)}`;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-4">
@@ -81,7 +99,15 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
             {member ? (member.verifiedAt ? <>Linked in game {timeAgo(member.verifiedAt, now)}.{!member.guildMember && " No longer in the Discord server: they wait in the entrance room when they join."}</> : "Minecraft account set by an admin, not yet confirmed in game.") : "They wait in the entrance room until they link their Discord."}
           </p>
         </div>
-        <Link href="/players" className={buttonClasses("secondary", "sm")}>All players</Link>
+        <div className="flex items-center gap-2">
+          {admin && member && (
+            <>
+              <Switch action={setEarlyAccessAction} fields={{ id: member.id, on: member.earlyAccess ? "0" : "1" }} on={member.earlyAccess} label={`Early access for ${member.displayName}`} disabled={member.role === "ADMIN"} why={member.role === "ADMIN" ? "Admins don't need it" : "Early access: plays before the site is live"} />
+              <MemberMenu u={member} meId={viewer.id} />
+            </>
+          )}
+          <Link href="/players" className={buttonClasses("secondary", "sm")}>All players</Link>
+        </div>
       </div>
 
       <section aria-label="Totals" className="grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -92,7 +118,15 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
         <Tile label="Last on" value={online ? "now" : rows[0] ? timeAgo(rows[0].leftAt ?? rows[0].joinedAt, now) : "never"} />
       </section>
 
-      {online && (
+      <nav aria-label="About this player" className="-mx-1 flex gap-1 overflow-x-auto border-b px-1" data-testid="tabs">
+        {tabs.map((t) => (
+          <Link key={t.key} href={tabHref(base, tabs, t.key)} aria-current={t.key === tab ? "page" : undefined} className={cn("-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm", t.key === tab ? "border-primary font-semibold" : "border-transparent text-muted-foreground hover:text-foreground")}>
+            {t.label}{t.count != null && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{t.count}</span>}
+          </Link>
+        ))}
+      </nav>
+
+      {tab === "overview" && online && (
         <Card data-testid="connection">
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2">Connection {pingNow !== null && <Badge tone={pingTone(pingNow)}>{pingNow} ms</Badge>}</CardTitle>
@@ -104,12 +138,14 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
         </Card>
       )}
 
-      <Card>
-        <CardHeader><CardTitle>Minutes played per day</CardTitle><CardDescription>The last 30 days.</CardDescription></CardHeader>
-        <CardContent><AreaChart points={perDay} unit={["minute", "minutes"]} height={120} /></CardContent>
-      </Card>
+      {tab === "overview" && (
+        <Card>
+          <CardHeader><CardTitle>Minutes played per day</CardTitle><CardDescription>The last 30 days.</CardDescription></CardHeader>
+          <CardContent><AreaChart points={perDay} unit={["minute", "minutes"]} height={120} /></CardContent>
+        </Card>
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {tab === "sessions" && (
         <Card>
           <CardHeader><CardTitle>Sessions</CardTitle><CardDescription>{rows.length > 25 ? "The latest 25." : "Every visit."} With the average ping where it was measured.</CardDescription></CardHeader>
           <CardContent>
@@ -118,6 +154,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
             )}
           </CardContent>
         </Card>
+      )}
+
+      {tab === "overview" && (
         <Card>
           <CardHeader><CardTitle>Advancements</CardTitle><CardDescription>The latest dozen.</CardDescription></CardHeader>
           <CardContent>
@@ -126,14 +165,23 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
             )}
           </CardContent>
         </Card>
-      </div>
+      )}
 
+      {tab === "activity" && (
       <Card>
         <CardHeader><CardTitle>What they have been up to</CardTitle><CardDescription>{admin ? "Their latest 40 events. Open a row for the console line." : "Joins, leaves, deaths and advancements."}</CardDescription></CardHeader>
         <CardContent className="p-0">{history.rows.length === 0 ? <p className="p-4 text-sm text-muted-foreground">Nothing yet.</p> : <ul className="divide-y">{history.rows.map((e) => <EventItem key={e.id} e={e} admin={admin} />)}</ul>}</CardContent>
       </Card>
+      )}
 
-      {admin && member && (
+      {tab === "inventory" && admin && (
+        <Card>
+          <CardHeader><CardTitle>Inventory</CardTitle><CardDescription>Admins only. Inventory, armour, off-hand and ender chest, health, food, XP and where they are.</CardDescription></CardHeader>
+          <CardContent><InventoryPanel uuid={id} caller={{ id: viewer.id, role: "ADMIN" }} fresh={q.fresh === "1"} refresh={`${base}?tab=inventory&fresh=1`} /></CardContent>
+        </Card>
+      )}
+
+      {tab === "pc" && admin && member && (
         <Card>
           <CardHeader>
             <CardTitle>Their PC and last install</CardTitle>
@@ -151,7 +199,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ uuid: s
         </Card>
       )}
 
-      {admin && (
+      {tab === "pc" && admin && (
         <Card>
           <CardHeader><CardTitle>Addresses</CardTitle><CardDescription>Admins only. Kept for 30 days, then cleared.</CardDescription></CardHeader>
           <CardContent>

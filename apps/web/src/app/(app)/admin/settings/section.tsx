@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { dateToUkLocal } from "@/lib/uk-time";
 import { getSettings } from "@/server/settings";
 import { getManifest } from "@/server/modpack/manifest";
@@ -11,8 +10,6 @@ import { launchText } from "@/components/launch-banner";
 import { getSection } from "@/server/site-settings";
 import { serverPack } from "@/server/play";
 import { saveFilesAction, savePrivacyAction, saveRetentionAction, saveSettingsAction, saveJoiningAction } from "./actions";
-
-export const metadata: Metadata = { title: "Settings" };
 
 // Show the stored instant as UK wall-clock time in the datetime-local box.
 const toLocalInput = dateToUkLocal;
@@ -28,18 +25,20 @@ function Tick({ name, checked, title, children }: { name: string; checked: boole
   );
 }
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string; detail?: string }> }) {
+/** Site settings' first five tabs (docs/13 §11 layout): one card each. `tab` picks which. */
+export default async function SettingsPage({ searchParams, tab }: { searchParams: Promise<{ saved?: string; error?: string; detail?: string }>; tab: "launch" | "joining" | "privacy" | "kept" | "files" }) {
+  const show = (t: typeof tab) => t === tab;
   const [{ saved, error, detail }, settings, manifest, privacy, retention, files, joining, pack] = await Promise.all([searchParams, getSettings(), getManifest(), getSection("privacy"), getSection("retention"), getSection("files"), getSection("joining"), serverPack()]);
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Settings</h1>
       {saved && <Alert tone="success">Saved{SECTION[saved] ? `: ${SECTION[saved]}` : ""}.</Alert>}
       {error && <Alert tone="error">{error === "form" ? "Check the launch date and try again." : <>Not saved ({SECTION[error] ?? error}). {detail}</>}</Alert>}
-      <Card>
+      {show("launch") && (
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">Launch {settings.live ? <Badge tone="good">live</Badge> : <Badge tone="warn">not live</Badge>}</CardTitle>
           <CardDescription>
-            Until you flip this, players never see the server address (<span className="font-mono">{manifest.server_address}</span>) or the installer and pack downloads; the Install and Home pages show the launch date instead. Once live, downloads open whenever the server is running. Admins always see everything.
+            Until you flip this, players never see the server address (<span className="font-mono">{manifest.server_address}</span>) or the installer and pack downloads; Home and Help show the launch date instead. Once live, downloads open whenever the server is running. Admins always see everything.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -56,8 +55,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Button type="submit">Save</Button>
           </form>
         </CardContent>
-      </Card>
-      <Card>
+        </Card>
+      )}
+      {show("joining") && (
+        <Card>
         <CardHeader>
           <CardTitle>Joining</CardTitle>
           <CardDescription>Members press Play on the site before they join, so that their mods are the server&apos;s. Whoever has not is kept in the entrance room with a line that says so, and is let through, back to where they stood, within seconds of pressing it. Admins are never kept. The server runs <span className="font-mono">{pack ?? "a pack nobody has written down yet (it is after the next sync)"}</span>.</CardDescription>
@@ -72,8 +73,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Button type="submit">Save</Button>
           </form>
         </CardContent>
-      </Card>
-      <Card>
+        </Card>
+      )}
+      {show("privacy") && (
+        <Card>
         <CardHeader>
           <CardTitle>Privacy</CardTitle>
           <CardDescription>What the site keeps about the people who play. Changes take effect within half a minute.</CardDescription>
@@ -82,12 +85,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <form action={savePrivacyAction} className="space-y-3">
             <Tick name="geo" checked={privacy.geo} title="Work out which country players connect from">Used for the countries panel on the analytics page. Looked up in a file on this server; nothing is sent anywhere. The address itself is only ever visible to admins. Off: the panel says &quot;Location off&quot;.</Tick>
             <Tick name="chat" checked={privacy.chat} title="Keep chat in the event log">In-game chat lines are stored so admins can read back what was said. Say so on the rules page. Off: chat is not stored at all.</Tick>
-            <Tick name="analyticsForPlayers" checked={privacy.analyticsForPlayers} title="Players can see the analytics page">Play time, sessions and who plays when, for everyone in the group. Addresses and console lines are never shown to players.</Tick>
+            <Tick name="analyticsForPlayers" checked={privacy.analyticsForPlayers} title="Players can see the Stats tab">Play time, sessions and who plays when, for everyone in the group. Addresses and console lines are never shown to players. Off: the Stats tab is hidden for players.</Tick>
             <Button type="submit">Save privacy</Button>
           </form>
         </CardContent>
-      </Card>
-      <Card>
+        </Card>
+      )}
+      {show("kept") && (
+        <Card>
         <CardHeader>
           <CardTitle>How long things are kept</CardTitle>
           <CardDescription>Cleared once a day. What admins did is kept for good.</CardDescription>
@@ -103,11 +108,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Button type="submit">Save</Button>
           </form>
         </CardContent>
-      </Card>
-      <Card>
+        </Card>
+      )}
+      {show("files") && (
+        <Card>
         <CardHeader>
           <CardTitle>File browser</CardTitle>
-          <CardDescription>Limits for Admin → Files. The browser can only read; nothing here allows changing files on the server.</CardDescription>
+          <CardDescription>Limits for Admin → Server → Files. The browser can only read; nothing here allows changing files on the server.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={saveFilesAction} className="space-y-3">
@@ -123,7 +130,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Button type="submit">Save</Button>
           </form>
         </CardContent>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }

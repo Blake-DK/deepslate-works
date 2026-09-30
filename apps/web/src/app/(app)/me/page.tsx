@@ -43,7 +43,10 @@ export default async function MePage() {
   const join = play ? joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null) : null;
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">{user.displayName}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">{user.displayName}</h1>
+        {user.mcUuid && <Link href={`/players/${user.mcUuid}`} className={buttonClasses("secondary", "sm")}>My player page</Link>}
+      </div>
       {install && (
         <p className="text-sm text-muted-foreground" data-testid="last-install">
           {install.outcome === "ok"
@@ -56,7 +59,7 @@ export default async function MePage() {
       {oldInstaller && (
         <Alert tone="info" data-testid="installer-outdated">
           <strong>Your installer is out of date, download it again.</strong> Your last run used {install!.installerVersion === "unknown" ? "an old installer" : <>installer {install!.installerVersion}</>}; the current one is {oldInstaller}.{" "}
-          <Link href="/install" className="font-medium underline">Download it from the Install page</Link> and run Setup.bat once.
+          <Link href="/help" className="font-medium underline">Download it from Help → Getting in</Link> and run Setup.bat once.
         </Alert>
       )}
       {join && (
@@ -81,7 +84,7 @@ export default async function MePage() {
           </CardDescription>
         </CardHeader>
         {!user.mcUsername && (
-          <CardContent><Link href="/install" className={buttonClasses("primary", "sm")}>Get the game set up first</Link></CardContent>
+          <CardContent><Link href="/help" className={buttonClasses("primary", "sm")}>Get the game set up first</Link></CardContent>
         )}
       </Card>
       {(me || week) && (
@@ -110,12 +113,6 @@ export default async function MePage() {
               ? <>Measured by the installer{user.pcTierWhy ? <> ({user.pcTierWhy})</> : null}{user.pcTierAt ? <> on {formatDate(user.pcTierAt)}</> : null}. It is checked again each time you run it.</>
               : <>This is what you picked. The installer measures your PC and sets it for you. <Link href="/onboarding" className="underline">Change</Link>.</>}
           </CardDescription>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick actions</CardTitle>
-          <CardDescription>Take me home, take me to spawn, where am I, and the rest arrive in phase 4.</CardDescription>
         </CardHeader>
       </Card>
     </div>

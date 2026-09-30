@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireOnboardedUser } from "@/server/auth/session";
@@ -22,13 +21,11 @@ import { GATE_TEXT, type BlockReason } from "@/shared/join-gate";
 import { pingTone, worstPing } from "@/lib/ping";
 import { tpsTone } from "@/lib/series";
 
-export const metadata: Metadata = { title: "Stats" };
-
 const TIER: Record<string, string> = { LOW: "Older PC", MID: "Decent PC", HIGH: "Gaming PC" };
 type Query = { range?: string; show?: string; view?: string; sort?: string; dir?: string };
 
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<Query> }) {
-  const user = await requireOnboardedUser("/analytics");
+  const user = await requireOnboardedUser("/players?tab=stats");
   const admin = user.role === "ADMIN";
   const privacy = await getSection("privacy");
   if (!admin && !privacy.analyticsForPlayers) redirect("/");
@@ -54,7 +51,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
     const next = { range: range.key, show: q.show, view: q.view, sort: q.sort, dir: q.dir, ...over };
     const sp = new URLSearchParams(Object.entries(next).filter(([k, v]) => v && !(k === "range" && v === "30d")) as Array<[string, string]>);
     const s = sp.toString();
-    return s ? `/analytics?${s}` : "/analytics";
+    return s ? `/players?tab=stats&${s}` : "/players?tab=stats";
   };
   const sortLink = (key: string, label: string) => {
     const active = (q.sort ?? "time") === key;
@@ -66,7 +63,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Stats</h1>
+          <h2 className="text-xl font-semibold">Stats</h2>
           <p className="text-muted-foreground">Who has been playing, when, and for how long. Times are UK time.</p>
         </div>
         <nav className="flex gap-1 rounded-lg bg-muted p-1" aria-label="Period">

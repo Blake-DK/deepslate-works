@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/server/db";
 import { DEFAULT_QUESTIONS } from "@/server/vote/tally";
@@ -9,8 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { formatDate } from "@/lib/utils";
 import { closeVoteAdminAction, createVoteAction, deleteVoteAction, openVoteAction } from "./actions";
-
-export const metadata: Metadata = { title: "Votes" };
 
 const ERRORS: Record<string, string> = {
   form: "Give the vote a title (2 to 80 characters) and a valid closing date.",
@@ -24,7 +21,7 @@ export default async function VotesAdminPage({ searchParams }: { searchParams: P
   const tone = { DRAFT: "neutral", OPEN: "good", CLOSED: "warn" } as const;
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Votes</h1>
+      <h2 className="text-xl font-semibold">Votes</h2>
       {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
       <Card>
         <CardHeader><CardTitle>New vote</CardTitle><CardDescription>The mod list comes from mods.json; the questions below are the settings questions.</CardDescription></CardHeader>
@@ -52,7 +49,7 @@ export default async function VotesAdminPage({ searchParams }: { searchParams: P
                   <Badge tone={tone[v.status]}>{v.status.toLowerCase()}</Badge>
                   <span className="text-muted-foreground">{v._count.ballots} ballot{v._count.ballots === 1 ? "" : "s"}{v.opensAt ? ` · opened ${formatDate(v.opensAt)}` : ""}{v.closesAt ? ` · closes ${formatDate(v.closesAt)}` : ""}</span>
                   <span className="ml-auto flex gap-2">
-                    {v.status !== "DRAFT" && <Link href="/vote/results" className="rounded-lg px-3 py-1.5 text-sm hover:bg-muted">Results</Link>}
+                    {v.status !== "DRAFT" && <Link href="/pack?tab=results" className="rounded-lg px-3 py-1.5 text-sm hover:bg-muted">Results</Link>}
                     {v.status === "DRAFT" && <form action={openVoteAction}><input type="hidden" name="id" value={v.id} /><Button type="submit" size="sm">Open</Button></form>}
                     {v.status === "OPEN" && <form action={closeVoteAdminAction}><input type="hidden" name="id" value={v.id} /><Button type="submit" size="sm" variant="danger">Close</Button></form>}
                     {v.status !== "OPEN" && <form action={deleteVoteAction}><input type="hidden" name="id" value={v.id} /><Button type="submit" size="sm" variant="ghost">Delete</Button></form>}

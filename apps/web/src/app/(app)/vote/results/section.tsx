@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOnboardedUser } from "@/server/auth/session";
@@ -12,8 +11,6 @@ import { Alert } from "@/components/ui/alert";
 import { LoadChip } from "@/components/mods/load-chip";
 import { formatDate } from "@/lib/utils";
 import { closeVoteAction } from "./actions";
-
-export const metadata: Metadata = { title: "Results" };
 
 const APPLIED: Record<string, { tone: "success" | "error" | "info"; text: string }> = {
   ok: { tone: "success", text: "Results applied and committed. The mod list now reflects the vote." },
@@ -32,7 +29,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   const isAdmin = user.role === "ADMIN";
   if (vote.status === "OPEN" && !isAdmin) {
     return (
-      <Card><CardHeader><CardTitle>Results come when the vote closes</CardTitle><CardDescription>Until then, <Link href="/vote" className="underline">cast or change your vote</Link>.</CardDescription></CardHeader></Card>
+      <Card><CardHeader><CardTitle>Results come when the vote closes</CardTitle><CardDescription>Until then, <Link href="/pack?tab=vote" className="underline">cast or change your vote</Link>.</CardDescription></CardHeader></Card>
     );
   }
   const manifest = await getManifest();
@@ -45,7 +42,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{vote.title} · results</h1>
+          <h2 className="text-xl font-semibold">{vote.title} · results</h2>
           <p className="text-sm text-muted-foreground">
             {vote.status === "OPEN" ? "Live, only admins can see this while the vote is open." : `Closed ${formatDate(vote.closesAt)}.`} {t.ballots} ballot{t.ballots === 1 ? "" : "s"}:{" "}
             {TIER_KEYS.filter((k) => t.byTier[k]).map((k) => `${t.byTier[k]} ${TIER_LABEL[k]}`).join(", ") || "none yet"}.
@@ -56,7 +53,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
             {vote.status === "OPEN" ? (
               <form action={closeVoteAction}><input type="hidden" name="voteId" value={vote.id} /><Button type="submit" variant="danger" size="sm">Close vote</Button></form>
             ) : (
-              <Link href="/vote/results/apply" className={buttonClasses("primary", "sm")}>Apply results</Link>
+              <Link href="/admin/pack?tab=apply" className={buttonClasses("primary", "sm")}>Apply results</Link>
             )}
           </div>
         )}

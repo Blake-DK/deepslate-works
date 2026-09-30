@@ -1,30 +1,15 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { requireAdmin } from "@/server/auth/session";
+import { ConsoleDock } from "@/components/server/console-dock";
 
-const LINKS = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/votes", label: "Votes" },
-  { href: "/admin/modpack", label: "Modpack" },
-  { href: "/admin/server", label: "Server" },
-  { href: "/admin/events", label: "Events" },
-  { href: "/admin/installs", label: "Installs" },
-  { href: "/admin/files", label: "Files" },
-  { href: "/admin/branding", label: "Branding" },
-  { href: "/admin/invites", label: "Invites" },
-  { href: "/admin/users", label: "Players" },
-  { href: "/admin/settings", label: "Settings" },
-];
-
+// Everything under /admin: admins only. The pages are in the sidebar's "Run the server" group; the console drawer
+// sits under each of them (docs/13 §11 layout).
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();
   return (
     <div className="space-y-4">
-      <nav className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1" aria-label="Admin">
-        {LINKS.map((l) => (
-          <Link key={l.href} href={l.href} className="whitespace-nowrap rounded-md px-3 py-1.5 text-sm hover:bg-card">{l.label}</Link>
-        ))}
-      </nav>
       {children}
+      <Suspense><ConsoleDock /></Suspense>
     </div>
   );
 }

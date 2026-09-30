@@ -34,6 +34,21 @@ export const systemSchema = z
   .strip();
 export type SystemInfo = z.infer<typeof systemSchema>;
 
+// Installer 1.5.6 (planner, 2026-09-30): what could not be set up on the PC, part by part, with a reason code.
+export const SETUP_PARTS = ["copy", "link", "shortcuts", "apps", "setup"] as const;
+export const SETUP_CODES = ["in_zip", "copy_denied", "link_failed", "shortcut_blocked", "other"] as const;
+const setupProblemSchema = z.object({ part: z.enum(SETUP_PARTS), code: z.enum(SETUP_CODES), message: z.string().max(500) }).strip();
+export type SetupProblem = z.infer<typeof setupProblemSchema>;
+
+/**
+ * The Play button has no working link on that PC: run from inside the zip, the copy refused, or the link itself not
+ * set. A desktop shortcut the ransomware protection blocked is only a note. Null when the report does not say.
+ */
+export function playLinkMissing(problems: SetupProblem[] | null | undefined): boolean | null {
+  if (!problems) return null;
+  return problems.some((p) => p.code === "in_zip" || p.code === "copy_denied" || p.code === "link_failed");
+}
+
 export const reportSchema = z
   .object({
     packVersion: short(60),
@@ -47,6 +62,7 @@ export const reportSchema = z
     durationSec: z.number().finite().min(0).max(86_400).transform((v) => Math.round(v)),
     log: z.string().max(MAX_LOG_BYTES * 2),
     system: systemSchema.nullish().transform((v) => v ?? systemSchema.parse({})), // an uninstall (1.5.2) sends none: all fields empty
+    setupProblems: z.array(setupProblemSchema).max(10).nullish().transform((v) => v ?? null), // since 1.5.6
   })
   .strip();
 export type Report = z.infer<typeof reportSchema>;
@@ -103,6 +119,7 @@ export function sanitizeReport(r: Report, names: string[] = []): Report {
     failedStep: r.failedStep ? blank(redactLog(r.failedStep)).slice(0, 120) : null,
     updateProblem: r.updateProblem ? blank(redactLog(r.updateProblem)).slice(0, 300) : null,
     log: truncateMiddle(blank(redactLog(r.log.replace(/\r\n?/g, "\n").replace(/\u0000/g, "")))),
+    setupProblems: r.setupProblems ? r.setupProblems.map((p) => ({ ...p, message: blank(redactLog(p.message)).slice(0, 500) })) : null,
     // versions are left readable: addresses are only looked for in the fields that could hold one
     system: deep(r.system, (s, key) => blank(/version|driver|build|display|caption|name|kind|arch|powershell|source|drive/i.test(key) ? redactText(s) : redactLog(s))),
   };

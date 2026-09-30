@@ -29,12 +29,14 @@ export default async function MePage() {
   const weekAgo = new Date(Date.now() - 7 * 86_400_000);
   const [status, week] = await Promise.all([getStatus(), user.mcUuid ? averagePing(user.mcUuid, weekAgo, new Date()) : Promise.resolve(null)]);
   const me = status.server === "online" ? (status.online.find((p) => (user.mcUuid && p.uuid === user.mcUuid) || (user.mcUsername && p.name.toLowerCase() === user.mcUsername.toLowerCase())) ?? null) : null;
-  const [m, settings, install, installer] = await Promise.all([
+  const [m, settings, install, installer, linkRun] = await Promise.all([
     getManifest(),
     getSettings(),
     // their own last install report: the outcome and the date, nothing else
     db.installReport.findFirst({ where: { userId: user.id }, orderBy: { at: "desc" }, select: { at: true, outcome: true, packVersion: true, failedStep: true, installerVersion: true, mode: true } }),
     getInstaller(),
+    // installer 1.5.6: the latest report that says whether the Play button has a working link on their PC
+    db.installReport.findFirst({ where: { userId: user.id, playLinkMissing: { not: null } }, orderBy: { at: "desc" }, select: { playLinkMissing: true } }),
   ]);
   // Their last run came from an older installer than the site hands out: until a report from a new one arrives.
   const oldInstaller = install && install.mode !== "uninstall" && installer && mustDownloadAgain(install.installerVersion, installer.version) ? installer.version : null;
@@ -57,6 +59,11 @@ export default async function MePage() {
               ? <>The installer was stopped on {formatDate(install.at)}{install.failedStep ? <> at &quot;{install.failedStep}&quot;</> : null}. Press Play again when you are ready.</>
               : <>The installer ran into trouble on {formatDate(install.at)}{install.failedStep ? <> at &quot;{install.failedStep}&quot;</> : null}. Alex has the log; press Play again, or ask him.</>}
         </p>
+      )}
+      {linkRun?.playLinkMissing && install?.mode !== "uninstall" && (
+        <Alert tone="info" data-testid="play-link-missing">
+          The Play button isn&apos;t set up on your PC yet. Run Setup.bat again from the extracted download; if it still fails, tell Alex.
+        </Alert>
       )}
       {oldInstaller && (
         <Alert tone="info" data-testid="installer-outdated">

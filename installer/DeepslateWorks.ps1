@@ -48,7 +48,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.5.5"   # 1.5.5: chat links switched on in options.txt (the sign-in link must be clickable). History in docs/07
+$InstallerVersion = "1.5.6"   # 1.5.6: Setup sets up each part on its own and says why one failed. History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -75,6 +75,10 @@ $Quiet = $true
 $script:UpdatedFrom = $null
 if ($env:DEEPSLATE_UPDATED_FROM -match '^\d{1,4}(\.\d{1,4}){1,3}$') { $script:UpdatedFrom = [string]$env:DEEPSLATE_UPDATED_FROM }
 $script:UpdateProblem = $null  # why an update that was due was not applied
+# What could not be set up: the home copy, the Play link, the shortcuts, the Settings -> Apps entry (1.5.6). Filled by
+# Repair-Home; a run started by Setup.bat starts from what Setup found (DEEPSLATE_SETUP_PROBLEMS, which a link cannot set).
+$script:SetupProblems = New-Object System.Collections.Generic.List[object]
+$script:SetupChecked = $false
 # Started by Setup.bat (the window stays open by itself), or by the Play link or a shortcut (it has to wait so a
 # message can be read). Set by the -Setup run for the copy it starts; a link cannot set it.
 $FromSetup = ($env:DEEPSLATE_FROM_SETUP -eq "1")
@@ -269,6 +273,7 @@ function New-Report([string]$outcome) {
     installerVersion = $InstallerVersion
     updatedFrom      = $script:UpdatedFrom
     updateProblem    = $problem
+    setupProblems    = $(if ($script:SetupChecked) { ,@($script:SetupProblems.ToArray()) } else { $null })
     mode             = $Mode
     outcome          = $outcome
     failedStep       = $failed
@@ -509,18 +514,21 @@ function Register-PlayLink([string]$scriptPath) {
   return ([string](Get-Item "HKCU:\Software\Classes\deepslate\shell\open\command").GetValue("") -eq (Get-HandlerCommand $scriptPath))
 }
 
+# @{ made = <how many>; failed = @(@{ where = "desktop" | "menu" | "uninstall"; message }) } (1.5.6: which one failed)
 function Set-Shortcuts([string]$scriptPath) {
   $spec = Get-ShortcutSpec $scriptPath
   $shell = New-Object -ComObject WScript.Shell
   $made = 0
-  foreach ($folder in @([Environment]::GetFolderPath("Desktop"), [Environment]::GetFolderPath("Programs"))) {
+  $failed = New-Object System.Collections.Generic.List[object]
+  foreach ($f in @(@{ where = "desktop"; folder = [Environment]::GetFolderPath("Desktop") }, @{ where = "menu"; folder = [Environment]::GetFolderPath("Programs") })) {
+    $folder = $f.folder
     if (-not $folder) { continue }
     try {
       $s = $shell.CreateShortcut((Join-Path $folder ("{0}.lnk" -f $PackName)))
       $s.TargetPath = $spec.target; $s.Arguments = $spec.arguments; $s.WorkingDirectory = $spec.workingDirectory; $s.Description = $spec.description
       $s.IconLocation = ("{0},0" -f $spec.target)
       $s.Save(); $made++
-    } catch { Log ("could not make the shortcut in " + $folder + ": " + $_.Exception.Message) }
+    } catch { $failed.Add(@{ where = $f.where; message = $_.Exception.Message }); Log ("could not make the shortcut in " + $folder + ": " + $_.Exception.Message) }
   }
   # "Uninstall Deepslate Works" next to it in the Start Menu (1.5.2)
   $programs = [Environment]::GetFolderPath("Programs")
@@ -531,9 +539,9 @@ function Set-Shortcuts([string]$scriptPath) {
       $s.TargetPath = $u.target; $s.Arguments = $u.arguments; $s.WorkingDirectory = $u.workingDirectory; $s.Description = $u.description
       $s.IconLocation = ("{0},0" -f $u.target)
       $s.Save(); $made++
-    } catch { Log ("could not make the uninstall shortcut: " + $_.Exception.Message) }
+    } catch { $failed.Add(@{ where = "uninstall"; message = $_.Exception.Message }); Log ("could not make the uninstall shortcut: " + $_.Exception.Message) }
   }
-  return $made
+  return @{ made = $made; failed = @($failed.ToArray()) }
 }
 
 # ---- uninstall (docs/07 "Uninstall", planner 2026-09-30) ----------------------------------------------------
@@ -703,13 +711,16 @@ function Invoke-Uninstall($t, [string]$token, $portal) {
 $OldFiles = @("install.ps1", "install.ps1.bak", "install.ps1.new", "Setup.bat", "Setup.bat.new", "play.ps1", "Update and Play.bat")
 
 # Puts this script in place (never an older one over a newer one). Returns the path of the copy to run.
-function Install-Home([string]$me, [string]$dir) {
+function Install-Home([string]$me, [string]$dir, $copier = $null) {
   [void][IO.Directory]::CreateDirectory($dir)
   $target = Join-Path $dir $ScriptName
   if ($me -ne $target) {
     $same = (Test-Path -LiteralPath $target) -and ((Get-FileHash -LiteralPath $me -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash)
     if (-not $same -and (Test-Path -LiteralPath $target) -and (Test-Newer (Get-ScriptVersion $target) $InstallerVersion)) { $same = $true; Log ("the copy in " + $dir + " is newer than this one; left as it is") }
-    if (-not $same) { Copy-Item -LiteralPath $me -Destination $target -Force; Log ("put " + $ScriptName + " in " + $dir) }
+    if (-not $same) {
+      if ($copier) { & $copier $me $target } else { Copy-Item -LiteralPath $me -Destination $target -Force }
+      Log ("put " + $ScriptName + " in " + $dir)
+    }
   }
   return $target
 }
@@ -720,19 +731,129 @@ function Remove-OldLayout([string]$dir) {
   foreach ($old in $OldFiles) { $p = Join-Path $dir $old; if (Test-Path -LiteralPath $p) { Remove-Temp $p; Log ("removed the old " + $old) } }
 }
 
-# The home folder, the Play link, the shortcuts and the Settings -> Apps entry, put right: after Setup.bat, at the end of
-# every run, and at once on a run under a 1.4.x name (install.ps1, started by 1.4.x's update step). $io says how each is
-# read and written: the registry and the shortcuts on Windows, files in a scratch folder in the self test. Its blocks
-# run inside this function, so they read $io. Returns the home script and whether the Play link points at it.
-function Repair-Home([string]$me, [string]$dir, $io) {
-  $target = Install-Home $me $dir
-  $want = Get-HandlerCommand $target
-  if ((& $io.handler) -ne $want) { if (& $io.setHandler $target) { Log "the Play link was set up again" } }
-  $linked = ((& $io.handler) -eq $want)
-  if (-not (& $io.shortcutsThere)) { $null = & $io.makeShortcuts $target; Log "the shortcuts were made again" }
-  if (-not (& $io.listed $target)) { & $io.list $target; Log "listed in Settings -> Apps" }
-  if ($linked) { Remove-OldLayout $dir } else { Log "the Play link does not point at the new script yet; the old files are kept" }
-  return @{ script = $target; linked = $linked }
+# ---- setting up each part on its own (1.5.6, planner) ----------------------------------------------------------
+# Setup on Rowan's PC (2026-09-30) said "Could not set up the Play button and the shortcuts (Access to the path
+# '...\DeepslateWorks\DeepslateWorks.ps1' is denied.)": the home copy failed, and because the copy, the link, the
+# shortcuts and the Apps entry were in one try, nothing after it was done either. Each part now has its own try, its
+# own line, and a reason code in the report: in_zip, copy_denied, link_failed, shortcut_blocked, other.
+
+function Add-SetupProblem($list, [string]$part, [string]$code, [string]$message) {
+  $list.Add([ordered]@{ part = $part; code = $code; message = ([string]$message).Substring(0, [Math]::Min(500, ([string]$message).Length)) })
+  Log ("setup: {0} {1}: {2}" -f $part, $code, $message)
+}
+
+# Under %TEMP%: never the place the Play link or the shortcuts point at, it is emptied.
+function Test-UnderTemp([string]$path, [string]$temp) {
+  if (-not $path -or -not $temp) { return $false }
+  $t = $temp.TrimEnd("\", "/") + [IO.Path]::DirectorySeparatorChar
+  return $path.StartsWith($t, [StringComparison]::OrdinalIgnoreCase)
+}
+
+# Started from inside the zip: Explorer runs it from %TEMP%\Temp1_installer.zip\ and throws that folder away later.
+function Test-InsideZip([string]$path, [string]$temp) {
+  if (-not (Test-UnderTemp $path $temp)) { return $false }
+  $rel = (Split-Path -Parent $path).Substring($temp.TrimEnd("\", "/").Length)
+  return @($rel -split '[\\/]' | Where-Object { $_ -match '\.zip$' }).Count -gt 0
+}
+
+# Access denied, or the file in use: what antivirus scanning a new .ps1 looks like.
+function Test-Denied($ex) {
+  for ($e = $ex; $e; $e = $e.InnerException) {
+    if ($e -is [UnauthorizedAccessException]) { return $true }
+    if ($e -is [IO.IOException] -and (($e.HResult -band 0xFFFF) -in @(32, 33))) { return $true }
+    if ([string]$e.Message -match 'is denied|being used by another process') { return $true }
+  }
+  return $false
+}
+
+# The home copy, tried again once after 2 s when it was refused. @{ ok; script } or @{ ok = $false; code; message }.
+function Copy-Home([string]$me, [string]$dir, $copier = $null, $sleep = $null) {
+  for ($try = 1; $try -le 2; $try++) {
+    try { return @{ ok = $true; script = (Install-Home $me $dir $copier) } }
+    catch {
+      $why = $_.Exception.Message
+      if ((Test-Denied $_.Exception) -and $try -eq 1) {
+        Log ("copying the installer to " + $dir + " was refused (" + $why + "); trying again in 2 s")
+        if ($sleep) { & $sleep 2 } else { Start-Sleep -Seconds 2 }
+        continue
+      }
+      if (Test-Denied $_.Exception) {
+        $attrs = ""; try { $attrs = [string](Get-Item -LiteralPath (Join-Path $dir $ScriptName) -Force -ErrorAction Stop).Attributes } catch {}
+        Log ("refused again: " + $why + $(if ($attrs) { " (the file there: " + $attrs + ")" } else { "" }))
+        return @{ ok = $false; code = "copy_denied"; message = ("Your antivirus or Windows stopped the installer copying itself to {0}. The game is installed and works from the Deepslate Works launcher profile; the Play button on the site won't work on this PC until this is fixed." -f $dir) }
+      }
+      return @{ ok = $false; code = "other"; message = ("Could not copy the installer to {0}: {1}" -f $dir, $why) }
+    }
+  }
+}
+
+# The home folder, the Play link, the shortcuts and the Settings -> Apps entry, each on its own: after Setup.bat
+# (-Force: the shortcuts are made again), at the end of every run, and at once on a run under a 1.4.x name. $io says
+# how each is read and written (the registry and the shortcuts on Windows, files in a scratch folder in the self test);
+# its blocks run inside this function, so they read $io. Returns the script to run, whether the Play link points at
+# it, what could not be done (`problems`, reason codes), the lines to show (`said`), and `fixed` when the link was not
+# right before and is now.
+function Repair-Home([string]$me, [string]$dir, $io, [switch]$Force) {
+  $problems = New-Object System.Collections.Generic.List[object]
+  $said = New-Object System.Collections.Generic.List[object]
+
+  # 1. the copy in the home folder
+  $copy = Copy-Home $me $dir $io.copier $io.sleep
+  $target = $me
+  if ($copy.ok) { $target = $copy.script; $said.Add(@{ tone = "ok"; text = ("Installed in {0}" -f $dir) }) }
+  else { Add-SetupProblem $problems "copy" $copy.code $copy.message; $said.Add(@{ tone = "problem"; text = $copy.message }) }
+
+  # 2. the Play link: to the home copy, or to the script where it ran, never to a temporary folder
+  $linked = $false; $wasLinked = $false
+  if (-not $copy.ok -and (Test-UnderTemp $me $io.temp)) {
+    $why = "Could not set up the Play button: the installer ran from a temporary folder and could not copy itself anywhere lasting"
+    Add-SetupProblem $problems "link" "link_failed" $why; $said.Add(@{ tone = "problem"; text = $why })
+  } else {
+    $want = Get-HandlerCommand $target
+    try {
+      $wasLinked = ((& $io.handler) -eq $want)
+      if (-not $wasLinked) { if (& $io.setHandler $target) { Log "the Play link was set up again" } }
+      $linked = ((& $io.handler) -eq $want)
+      if ($linked) { $said.Add(@{ tone = "ok"; text = "The Play button on the site now starts Deepslate Works on this PC" }) }
+      else { $why = "Could not set up the Play button: Windows did not keep it"; Add-SetupProblem $problems "link" "link_failed" $why; $said.Add(@{ tone = "problem"; text = $why }) }
+    } catch { $why = "Could not set up the Play button: " + $_.Exception.Message; Add-SetupProblem $problems "link" "link_failed" $why; $said.Add(@{ tone = "problem"; text = $why }) }
+  }
+
+  # 3. the shortcuts: not to a temporary folder either
+  if (-not $copy.ok -and (Test-UnderTemp $me $io.temp)) { }
+  else {
+    try {
+      if ($Force -or -not (& $io.shortcutsThere)) {
+        $sc = & $io.makeShortcuts $target
+        $failed = @($sc.failed)
+        if ($failed.Count -eq 0) { $said.Add(@{ tone = "ok"; text = "Shortcuts made" }); if (-not $Force) { Log "the shortcuts were made again" } }
+        elseif (@($failed | Where-Object { $_.where -ne "desktop" }).Count -eq 0 -and (& $io.cfa)) {
+          $why = "Windows' ransomware protection blocked the desktop shortcut. The Start Menu entry and the Play button still work."
+          Add-SetupProblem $problems "shortcuts" "shortcut_blocked" $why; $said.Add(@{ tone = "note"; text = $why })
+        } else {
+          $why = "Could not make the shortcuts: " + [string]$failed[0].message
+          Add-SetupProblem $problems "shortcuts" "other" $why; $said.Add(@{ tone = "problem"; text = $why })
+        }
+      }
+    } catch { $why = "Could not make the shortcuts: " + $_.Exception.Message; Add-SetupProblem $problems "shortcuts" "other" $why; $said.Add(@{ tone = "problem"; text = $why }) }
+  }
+
+  # 4. Settings -> Apps
+  try { if (-not (& $io.listed $target)) { & $io.list $target; Log "listed in Settings -> Apps" } }
+  catch { Add-SetupProblem $problems "apps" "other" ("Could not list it in Settings -> Apps: " + $_.Exception.Message) }
+
+  # the old layout goes once the link points at the new script in its home
+  if ($linked -and $copy.ok) { Remove-OldLayout $dir } else { Log "the old files are kept: the Play link does not point at the installed copy" }
+  $fixed = $linked -and -not $wasLinked
+  if ($fixed -and -not $Force) { Log "Play button set up on this run" }
+  return @{ script = $target; linked = $linked; problems = @($problems.ToArray()); said = @($said.ToArray()); fixed = $fixed }
+}
+
+# The setup problems a run reports: the ones found now (Repair-Home), replacing what Setup found.
+function Set-SetupState($r) {
+  $script:SetupChecked = $true
+  $script:SetupProblems.Clear()
+  foreach ($p in @($r.problems)) { $script:SetupProblems.Add($p) }
 }
 
 # The real ones: this Windows user's registry and shortcuts.
@@ -746,6 +867,8 @@ function Get-WindowsHomeIo([string]$gameDir) {
       return ((Test-Path -LiteralPath (Join-Path ([Environment]::GetFolderPath("Desktop")) ("{0}.lnk" -f $PackName))) -and (Test-Path -LiteralPath (Join-Path $programs ("{0}.lnk" -f $PackName))) -and (Test-Path -LiteralPath (Join-Path $programs ("Uninstall {0}.lnk" -f $PackName))))
     }
     makeShortcuts = { param($t) Set-Shortcuts $t }
+    cfa = { try { return ([int](Get-MpPreference -ErrorAction Stop).EnableControlledFolderAccess -eq 1) } catch { return $false } }
+    temp = $Temp
     listed = {
       param($t)
       $l = $null
@@ -763,7 +886,9 @@ function Get-FileHomeIo([string]$at) {
     handler = { $f = Join-Path $io.at "handler.txt"; if ([IO.File]::Exists($f)) { return [IO.File]::ReadAllText($f) }; return "" }
     setHandler = { param($t) [IO.File]::WriteAllText((Join-Path $io.at "handler.txt"), (Get-HandlerCommand $t)); return $true }
     shortcutsThere = { return (@(@("Desktop.lnk", "Programs.lnk", "Uninstall.lnk") | Where-Object { -not [IO.File]::Exists((Join-Path $io.at $_)) }).Count -eq 0) }
-    makeShortcuts = { param($t) foreach ($n in @("Desktop.lnk", "Programs.lnk", "Uninstall.lnk")) { [IO.File]::WriteAllText((Join-Path $io.at $n), $t) }; return 3 }
+    makeShortcuts = { param($t) foreach ($n in @("Desktop.lnk", "Programs.lnk", "Uninstall.lnk")) { [IO.File]::WriteAllText((Join-Path $io.at $n), $t) }; return @{ made = 3; failed = @() } }
+    cfa = { return $false }
+    temp = (Join-Path $at "temp")
     listed = { param($t) $f = Join-Path $io.at "apps.txt"; return ([IO.File]::Exists($f) -and [IO.File]::ReadAllText($f) -eq ($t + "|" + $InstallerVersion)) }
     list = { param($t) [IO.File]::WriteAllText((Join-Path $io.at "apps.txt"), ($t + "|" + $InstallerVersion)) }
   }
@@ -1039,6 +1164,73 @@ if ($SelfTest) {
   $stuck.setHandler = { param($t) return $false }
   $r = Repair-Home (Join-Path $lh "install.ps1") $lh $stuck
   Check "when the Play link cannot be pointed at the new script, install.ps1 is kept" ((-not $r.linked) -and [IO.File]::Exists((Join-Path $lh "install.ps1")) -and [IO.File]::Exists((Join-Path $lh "DeepslateWorks.ps1")))
+
+  Write-Host "Self test: Setup, part by part (1.5.6)" -ForegroundColor White
+  $ft = Join-Path $dir "fake temp"
+  Check "a script in %TEMP%\Temp1_installer.zip is inside the zip; one in an extracted folder is not" ((Test-InsideZip (Join-Path $ft "Temp1_installer.zip\DeepslateWorks.ps1") $ft) -and (Test-InsideZip (Join-Path $ft "Temp2_installer (1).zip\installer\DeepslateWorks.ps1") $ft) -and -not (Test-InsideZip (Join-Path $dir "Downloads\installer\DeepslateWorks.ps1") $ft) -and -not (Test-InsideZip (Join-Path $ft "deepslate-update\DeepslateWorks.ps1") $ft))
+  # run from inside the zip: the real -Setup in a copy of this script, with its own TEMP and LOCALAPPDATA
+  $zd = Join-Path $ft "Temp1_installer.zip"
+  [void][IO.Directory]::CreateDirectory($zd)
+  Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $zd "DeepslateWorks.ps1")
+  $zl = Join-Path $dir "zip LocalAppData"; $za = Join-Path $dir "zip Roaming"
+  [void][IO.Directory]::CreateDirectory($za)
+  $keepZ = @{ t = $env:TEMP; l = $env:LOCALAPPDATA; a = $env:APPDATA }
+  $env:TEMP = $ft; $env:LOCALAPPDATA = $zl; $env:APPDATA = $za
+  $zo = Join-Path $dir "zip.out"
+  try {
+    $p = Start-Process -FilePath ((Get-Process -Id $PID).Path) -ArgumentList @("-NoProfile", "-File", ('"{0}"' -f (Join-Path $zd "DeepslateWorks.ps1")), "-Setup") -Wait -PassThru -NoNewWindow -RedirectStandardOutput $zo
+    $zc = $p.ExitCode
+  } finally { $env:TEMP = $keepZ.t; $env:LOCALAPPDATA = $keepZ.l; $env:APPDATA = $keepZ.a }
+  $zt = if ([IO.File]::Exists($zo)) { [IO.File]::ReadAllText($zo) } else { "" }
+  Check ("run from inside the zip: stops (exit " + $zc + ") and says to extract it first") (($zc -eq 2) -and ($zt -match "Setup\.bat was started from inside the zip\. Right-click the zip, choose Extract All, then run Setup\.bat from the new folder\."))
+  Check "and nothing was copied or registered" ((-not (Test-Path -LiteralPath $zl)) -and (@(Get-ChildItem -LiteralPath $za -Force).Count -eq 0))
+
+  $dl = Join-Path $dir "Downloads [x]\installer"
+  [void][IO.Directory]::CreateDirectory($dl)
+  $dlScript = Join-Path $dl "DeepslateWorks.ps1"
+  Copy-Item -LiteralPath $PSCommandPath -Destination $dlScript
+  function New-SetupIo([string]$name) { $a = Join-Path $dir $name; [void][IO.Directory]::CreateDirectory($a); $x = Get-FileHomeIo $a; $x.sleep = { param($n) $script:Slept += $n }; return $x }
+  $denied = { param($from, $to) $script:Tries++; throw (New-Object UnauthorizedAccessException ("Access to the path '" + $to + "' is denied.")) }
+
+  $script:Tries = 0; $script:Slept = 0
+  $io2 = New-SetupIo "denied twice"; $io2.copier = $denied
+  $h2 = Join-Path $dir "denied twice home\DeepslateWorks"
+  $r2 = Repair-Home $dlScript $h2 $io2 -Force
+  $c2 = @($r2.problems | Where-Object { $_.part -eq "copy" })
+  Check ("copy refused twice: tried twice, 2 s apart, and says so: " + $c2[0].message) (($script:Tries -eq 2) -and ($script:Slept -eq 2) -and ($c2.Count -eq 1) -and ($c2[0].code -eq "copy_denied") -and ($c2[0].message -eq ("Your antivirus or Windows stopped the installer copying itself to {0}. The game is installed and works from the Deepslate Works launcher profile; the Play button on the site won't work on this PC until this is fixed." -f $h2)))
+  Check "and the Play link is still set up, to the script where it ran" (($r2.linked) -and ([IO.File]::ReadAllText((Join-Path $io2.at "handler.txt")) -eq (Get-HandlerCommand $dlScript)) -and (@($r2.problems).Count -eq 1))
+  Check "each part has its own line on screen" ((@($r2.said | ForEach-Object { $_.text }) -join "|") -eq ($c2[0].message + "|The Play button on the site now starts Deepslate Works on this PC|Shortcuts made"))
+
+  $script:Tries = 0; $script:Slept = 0
+  $io3 = New-SetupIo "denied once"; $io3.copier = { param($from, $to) $script:Tries++; if ($script:Tries -eq 1) { throw (New-Object IO.IOException "The process cannot access the file because it is being used by another process.") }; Copy-Item -LiteralPath $from -Destination $to -Force }
+  $h3 = Join-Path $dir "denied once home\DeepslateWorks"
+  $r3 = Repair-Home $dlScript $h3 $io3 -Force
+  Check "copy refused once (antivirus scanning): the second try works, nothing to report" (($script:Tries -eq 2) -and ($script:Slept -eq 2) -and (@($r3.problems).Count -eq 0) -and ($r3.script -eq (Join-Path $h3 "DeepslateWorks.ps1")) -and [IO.File]::Exists($r3.script) -and ($r3.said[0].text -eq ("Installed in " + $h3)))
+
+  $io4 = New-SetupIo "no desktop"; $io4.makeShortcuts = { param($t) return @{ made = 2; failed = @(@{ where = "desktop"; message = "Access is denied." }) } }; $io4.cfa = { return $true }
+  $h4 = Join-Path $dir "no desktop home\DeepslateWorks"
+  $r4 = Repair-Home $dlScript $h4 $io4 -Force
+  Check "desktop not writable with ransomware protection on: a note, and the home copy and the link are fine" ((@($r4.problems).Count -eq 1) -and ($r4.problems[0].code -eq "shortcut_blocked") -and $r4.linked -and ($r4.script -eq (Join-Path $h4 "DeepslateWorks.ps1")) -and (@($r4.said | Where-Object { $_.tone -eq "note" })[0].text -eq "Windows' ransomware protection blocked the desktop shortcut. The Start Menu entry and the Play button still work."))
+  $io4.cfa = { return $false }
+  $r5 = Repair-Home $dlScript (Join-Path $dir "no desktop 2\DeepslateWorks") $io4 -Force
+  Check "without it: a problem that names the reason" ((@($r5.problems).Count -eq 1) -and ($r5.problems[0].code -eq "other") -and ($r5.problems[0].message -eq "Could not make the shortcuts: Access is denied.") -and $r5.linked)
+  $io6 = New-SetupIo "temp run"; $io6.copier = $denied; $io6.temp = $ft
+  $tmpScript = Join-Path $ft "deepslate-update\DeepslateWorks.ps1"
+  $r6 = Repair-Home $tmpScript (Join-Path $dir "temp run home\DeepslateWorks") $io6 -Force
+  Check "copy refused while running from a temporary folder: no link and no shortcuts to it" ((-not $r6.linked) -and (-not [IO.File]::Exists((Join-Path $io6.at "handler.txt"))) -and (-not [IO.File]::Exists((Join-Path $io6.at "Desktop.lnk"))) -and (@($r6.problems | Where-Object { $_.code -eq "link_failed" }).Count -eq 1))
+  $io7 = New-SetupIo "fixed later"
+  [IO.File]::WriteAllText((Join-Path $io7.at "handler.txt"), "something else")
+  $r7 = Repair-Home $dlScript (Join-Path $dir "fixed later home\DeepslateWorks") $io7
+  Check "a later run puts right what Setup could not, and says so" ($r7.fixed -and $r7.linked -and (@($r7.problems).Count -eq 0))
+  $keepSP = @($script:SetupProblems.ToArray()); $keepSC = $script:SetupChecked
+  Set-SetupState $r2
+  $j2 = (New-Report "ok") | ConvertTo-Json -Depth 8 -Compress
+  Set-SetupState $r7
+  $j7 = (New-Report "ok") | ConvertTo-Json -Depth 8 -Compress
+  $script:SetupChecked = $false
+  $j0 = (New-Report "ok") | ConvertTo-Json -Depth 8 -Compress
+  Check "the report lists what was not set up, [] once all is in place, null when it was not looked at" (($j2 -match '"setupProblems":\[\{"part":"copy","code":"copy_denied","message":"Your antivirus') -and ($j7 -match '"setupProblems":\[\]') -and ($j0 -match '"setupProblems":null'))
+  $script:SetupProblems.Clear(); foreach ($x in $keepSP) { $script:SetupProblems.Add($x) }; $script:SetupChecked = $keepSC
 
   Write-Host "Self test: render distance (1.5.4)" -ForegroundColor White
   $od = Join-Path $dir "options [x]"
@@ -1453,21 +1645,30 @@ if ($Setup) {
   $me = (Resolve-Path -LiteralPath $PSCommandPath).Path
   $target = $me
   $dir = Get-HomeDir
+  # Started from inside the zip: nothing is copied or registered from a folder Windows will empty (1.5.6).
+  if (Test-InsideZip $me $Temp) {
+    $why = "Setup.bat was started from inside the zip. Right-click the zip, choose Extract All, then run Setup.bat from the new folder."
+    Write-Host ""
+    Write-Host $why -ForegroundColor Yellow
+    $p = New-Object System.Collections.Generic.List[object]
+    Add-SetupProblem $p "setup" "in_zip" $why
+    foreach ($x in $p) { $script:SetupProblems.Add($x) }
+    $script:SetupChecked = $true
+    $script:StepName = "Setup"
+    $tf = Join-Path (Join-Path $Root ".minecraft-deepslate-works") "launcher.json"
+    if (-not $script:CustomRoot -and [IO.File]::Exists($tf)) { try { $script:Token = (Get-Content -LiteralPath $tf -Raw | ConvertFrom-Json).token } catch {} }
+    Send-Report "failed"
+    exit 2
+  }
   if (-not $DryRun -and -not $script:CustomRoot -and $OnWindows -and $dir) {
-    try {
-      $target = Install-Home $me $dir
-      $linked = Register-PlayLink $target
-      if ($linked) { Remove-OldLayout $dir }
-      $made = Set-Shortcuts $target
-      try { Register-Uninstall $target (Join-Path $Root ".minecraft-deepslate-works") } catch { Log ("could not list it in Settings -> Apps: " + $_.Exception.Message) }
-      Write-Host ("  Installed in {0}" -f $dir) -ForegroundColor DarkGray
-      if ($linked) { Write-Host "  The Play button on the site now starts Deepslate Works on this PC" -ForegroundColor DarkGray }
-      if ($made -gt 0) { Write-Host ("  '{0}' is on your desktop and in the Start Menu" -f $PackName) -ForegroundColor DarkGray }
-    } catch {
-      Log ("setup: " + $_.Exception.Message)
-      Write-Host ("  Could not set up the Play button and the shortcuts ({0}). Carrying on from this folder." -f $_.Exception.Message) -ForegroundColor Yellow
-      $target = $me
+    $r = Repair-Home $me $dir (Get-WindowsHomeIo (Join-Path $Root ".minecraft-deepslate-works")) -Force
+    foreach ($line in $r.said) {
+      $colour = @{ ok = "DarkGray"; note = "Gray"; problem = "Yellow" }[$line.tone]
+      Write-Host ("  " + $line.text) -ForegroundColor $colour
     }
+    $target = $r.script
+    if (@($r.problems).Count -gt 0) { $env:DEEPSLATE_SETUP_PROBLEMS = (ConvertTo-Json -InputObject @($r.problems) -Compress -Depth 4) }
+    else { $env:DEEPSLATE_SETUP_PROBLEMS = "[]" }
   }
   $env:DEEPSLATE_FROM_SETUP = "1"
   $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $target))
@@ -1525,6 +1726,7 @@ if ($UnderOldName -and ($SelfTestHome -or (-not $DryRun -and -not $script:Custom
   $io = if ($SelfTestHome) { Get-FileHomeIo $SelfTestHome } else { Get-WindowsHomeIo $DataDir }
   try {
     $moved = Repair-Home (Resolve-Path -LiteralPath $PSCommandPath).Path (Get-HomeDir) $io
+    Set-SetupState $moved
     Log ("moved to the one-script layout: {0}, Play link {1}" -f $moved.script, $(if ($moved.linked) { "points at it" } else { "NOT set" }))
     if (Test-Path -LiteralPath $moved.script) { $script:MePath = $moved.script }
   } catch { Log ("could not move to the one-script layout: " + $_.Exception.Message) }
@@ -1539,6 +1741,18 @@ if ($UnderOldName -and ($SelfTestHome -or (-not $DryRun -and -not $script:Custom
     Exit-Lock
     exit 0
   }
+}
+# What Setup.bat found, when it started this run (1.5.6): in the log and the report, until this run's own check.
+if ($FromSetup -and $env:DEEPSLATE_SETUP_PROBLEMS) {
+  try {
+    $script:SetupChecked = $true
+    foreach ($x in @($env:DEEPSLATE_SETUP_PROBLEMS | ConvertFrom-Json)) {
+      if ([string]$x.part -notmatch '^(copy|link|shortcuts|apps|setup)$' -or [string]$x.code -notmatch '^(in_zip|copy_denied|link_failed|shortcut_blocked|other)$') { continue }
+      $m = [string]$x.message; $m = $m.Substring(0, [Math]::Min(500, $m.Length))
+      $script:SetupProblems.Add([ordered]@{ part = [string]$x.part; code = [string]$x.code; message = $m })
+      Log ("Setup said: {0} {1}: {2}" -f $x.part, $x.code, $m)
+    }
+  } catch { Log ("could not read what Setup found: " + $_.Exception.Message) }
 }
 $Minecraft = Join-Path $Root ".minecraft"
 $Profiles = Join-Path $Minecraft "launcher_profiles.json"
@@ -1825,8 +2039,12 @@ try {
 
   # ---- the Play link and the shortcuts: put right when missing (Setup.bat made them; this keeps them) ------
   if (-not $DryRun -and -not $script:CustomRoot -and $OnWindows -and (Get-HomeDir)) {
-    try { $null = Repair-Home (Resolve-Path -LiteralPath $script:MePath).Path (Get-HomeDir) (Get-WindowsHomeIo $GameDir) }
-    catch { Log ("could not check the Play link and the shortcuts: " + $_.Exception.Message) }
+    try {
+      $rh = Repair-Home (Resolve-Path -LiteralPath $script:MePath).Path (Get-HomeDir) (Get-WindowsHomeIo $GameDir)
+      Set-SetupState $rh
+      if ($rh.fixed) { Tick "Play button set up on this run" }
+      foreach ($line in @($rh.said | Where-Object { $_.tone -ne "ok" })) { Note $line.text }
+    } catch { Log ("could not check the Play link and the shortcuts: " + $_.Exception.Message) }
   }
 
   if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender } | ConvertTo-Json | Set-Content -LiteralPath $installedFile }

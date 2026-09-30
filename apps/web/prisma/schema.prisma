@@ -206,6 +206,8 @@ model InstallReport {
   log              String
   tierBefore       String?  // the member's PC tier when the report arrived
   tierMeasured     String?  // the tier worked out from this report's hardware
+  setupProblems    Json?    // 1.5.6: [{part, code, message}] what could not be set up on the PC; null when the installer does not say
+  playLinkMissing  Boolean? // 1.5.6: the Play button has no working link on that PC after this run (lib/install-report.ts)
 
   @@index([at])
   @@index([userId, at])

@@ -4,6 +4,30 @@
 
 A friend downloads one zip and double-clicks `Setup.bat` once. After that they press Play on the site or open **Deepslate Works** from their desktop; it keeps itself and the mods up to date and opens the normal Minecraft launcher on the Deepslate Works profile, with the server already in the server list. It never touches their vanilla installation.
 
+## Installer 1.5.6: when Setup can't set up the Play button (planner, 2026-09-30)
+
+**The fault.** Rowan (Pabulum) ran Setup.bat on 2026-09-30 and saw "Could not set up the Play button and the shortcuts (…). Carrying on from this folder." The copy into `%LOCALAPPDATA%\DeepslateWorks\` was refused ("Access to the path '…\DeepslateWorks\DeepslateWorks.ps1' is denied."), and because the copy, the Play link, the shortcuts and the Settings → Apps entry were in one `try`, nothing after the copy was done either. The Setup window's own line never reached a report (Setup runs in a process of its own and the report is sent by the run it starts); his 19:57 UTC report (1.5.4 → 1.5.5, run from the extracted download) shows the same refusal at the end of the run.
+
+**Each part on its own** (`Repair-Home`, used by Setup with `-Force`, by the first run under 1.4.x's name, and at the end of every run). On screen after Setup, one line each:
+
+| Part | Went through | Did not |
+|---|---|---|
+| Home copy | "Installed in <dir>" | "Could not copy the installer to <dir>: <reason>", or for a refusal see below |
+| Play link | "The Play button on the site now starts Deepslate Works on this PC" | "Could not set up the Play button: <reason>" |
+| Shortcuts | "Shortcuts made" | "Could not make the shortcuts: <reason>" |
+
+If the home copy fails, the Play link still points at the script where it ran (the extracted download), unless that is under `%TEMP%`; the shortcuts likewise. The old 1.4.x files are removed only when the link points at the installed copy.
+
+**Known causes, in plain English:**
+- **Started from inside the zip** (the script's folder is under `%TEMP%` with a `…zip` folder in the path, e.g. `Temp1_installer.zip`): stops before anything is installed: "Setup.bat was started from inside the zip. Right-click the zip, choose Extract All, then run Setup.bat from the new folder." Nothing copied, nothing registered; a report (code `in_zip`) goes if the PC was signed in before. Exit code 2.
+- **Access denied or file in use** while copying: tried again once after 2 s (antivirus scanning a new .ps1 is the usual reason). Refused again: "Your antivirus or Windows stopped the installer copying itself to <dir>. The game is installed and works from the Deepslate Works launcher profile; the Play button on the site won't work on this PC until this is fixed." The log gets the file's attributes. Code `copy_denied`.
+- **Controlled folder access** on (`Get-MpPreference` `EnableControlledFolderAccess = 1`, read inside a try) and only the desktop shortcut failed: "Windows' ransomware protection blocked the desktop shortcut. The Start Menu entry and the Play button still work." A note, not a problem (code `shortcut_blocked`).
+- Anything else: the exception's message (code `other`).
+
+**Report and portal.** Each report carries `setupProblems` (`[{part: copy|link|shortcuts|apps|setup, code: in_zip|copy_denied|link_failed|shortcut_blocked|other, message}]`, `[]` when everything is in place, null when it was not looked at). What Setup found reaches the report of the run it starts (`DEEPSLATE_SETUP_PROBLEMS`, which a link cannot set) and the log ("Setup said: …"), until that run's own check replaces it. The portal stores it with `playLinkMissing` (in_zip, copy_denied or link_failed; migration 0015): Admin → Installs shows "Play button not set up" on those runs; Admin → Players shows it on the member until a later report says the link is in place; the member's Me page says "The Play button isn't set up on your PC yet. Run Setup.bat again from the extracted download; if it still fails, tell Alex." Every later run retries the failed parts; when the link is put right the run says "Play button set up on this run".
+
+**Tests.** Self test 153 checks: run from a fake `Temp1_installer.zip` folder (the real `-Setup` in a child: exit 2, the message, nothing written), copy refused twice (tried twice 2 s apart, the message, the link still set to the script where it ran, one line per part), refused once then fine, desktop not writable with and without ransomware protection, a run from a temporary folder (no link, no shortcuts), a later run putting the link right, the report's `setupProblems`. Web: `tests/setup-problems.test.ts`.
+
 ## Installer 1.5.5: chat links on (planner, 2026-09-30)
 
 A first install writes `chatLinks:true` and `chatLinksPrompt:true` into `options.txt` with the render distance lines. Later runs change a `chatLinks:false` line to `true` and log "Chat links switched on"; no other line is touched, and a file with no such line (the game's default, on) is left alone (`Set-ChatLinks`). It cannot mend a Microsoft account that has chat switched off (the white room's book is for that, docs/14), but it rules out the other reason a link will not click. Self test 141.

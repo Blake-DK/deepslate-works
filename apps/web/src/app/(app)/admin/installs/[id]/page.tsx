@@ -45,6 +45,9 @@ export default async function InstallReportPage({ params }: { params: Promise<{ 
     ["Java", sys.java?.version ? `${sys.java.version}${sys.java.source ? ` (${sys.java.source})` : ""}` : "not found"], ["Java path", sys.java?.path],
     ["NeoForge", sys.neoforge ? `${sys.neoforge.version ?? "?"}: ${sys.neoforge.before ? "there before" : "not there before"}, ${sys.neoforge.after ? "there after" : "not there after"}` : "not known"],
     ["PowerShell", sys.powershell], ["Run", RUN[r.mode] ?? r.mode], ["Installer", r.updatedFrom ? `${r.installerVersion} (updated itself from ${r.updatedFrom} on this run)` : r.installerVersion], ...(r.updateProblem ? [["Installer update", `not applied: ${r.updateProblem}`] as [string, string]] : []), ["Pack", r.packVersion], ["Took", `${r.durationSec} s`],
+    // installer 1.5.6: what could not be set up on the PC, each with its reason code
+    ...(((r.setupProblems as Array<{ part: string; code: string; message: string }> | null) ?? []).map((p, i): [string, string] => [i === 0 ? "Setup" : " ".repeat(i), `${p.message} (${p.part}, ${p.code})`])),
+    ...(Array.isArray(r.setupProblems) && r.setupProblems.length === 0 ? [["Setup", "Home copy, Play button, shortcuts and Settings entry all in place"] as [string, string]] : []),
   ];
   return (
     <div className="space-y-4">

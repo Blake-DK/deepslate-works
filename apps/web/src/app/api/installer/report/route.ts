@@ -1,9 +1,9 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { audit } from "@/server/events";
 import { bearer, userFromLauncherToken } from "@/server/launcher";
 import { RateLimiter } from "@/server/auth/rate-limit";
-import { reportSchema, sanitizeReport, suggestTier } from "@/lib/install-report";
+import { playLinkMissing, reportSchema, sanitizeReport, suggestTier } from "@/lib/install-report";
 import { getSettings } from "@/server/settings";
 import { mayReport } from "@/shared/access";
 import { getInstaller } from "@/server/modpack/lock";
@@ -48,7 +48,8 @@ export async function POST(req: Request) {
   // The PC tier is measured, not asked (Alex, 2026-09-29): every report that says enough about the hardware sets it.
   const measured = r.mode === "uninstall" ? null : suggestTier(r.system);
   const row = await db.installReport.create({
-    data: { userId: user.id, packVersion: r.packVersion, installerVersion: r.installerVersion, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, durationSec: r.durationSec, system: r.system as Prisma.InputJsonValue, log: r.log, tierBefore: user.pcTier, tierMeasured: measured?.tier ?? null },
+    data: { userId: user.id, packVersion: r.packVersion, installerVersion: r.installerVersion, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, durationSec: r.durationSec, system: r.system as Prisma.InputJsonValue, log: r.log, tierBefore: user.pcTier, tierMeasured: measured?.tier ?? null,
+      setupProblems: r.setupProblems ? (r.setupProblems as Prisma.InputJsonValue) : Prisma.DbNull, playLinkMissing: playLinkMissing(r.setupProblems) },
     select: { id: true },
   });
   if (measured) {

@@ -83,6 +83,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "user.clearMinecraft": "unlinked a member's Minecraft account",
   "launcher.approve": (p) => (p.approve === false ? "refused an installer sign-in" : "approved an installer sign-in"),
   "launcher.revoke": "signed a member's installers out",
+  "launcher.revoke.self": "signed this PC's installer out (uninstall)",
   "link.bind": (p) => (p.refused ? "was stopped from trying more join codes: too many wrong ones" : `linked their Minecraft account ${s(p.mcUsername)}${p.via === "join" ? " with the code on /join" : ""}`),
   "link.release": (p) => `let ${s(p.name)} in`,
   "limbo.held": (p) => `${s(p.name)} is waiting in the entrance room`,
@@ -144,7 +145,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
   "console.send": (p) => `ran: ${s(p.command, "")}`,
   "world.save": "saved the world",
-  "installer.report": (p) => p.refused ? "sent a report of a run that cannot have happened: the site is not open for them" : p.mode === "already_running" ? "pressed Play while Deepslate Works was already running in another window: nothing done" : `${p.mode === "first_install" || p.mode === "update"
+  "installer.report": (p) => p.refused ? "sent a report of a run that cannot have happened: the site is not open for them" : p.mode === "already_running" ? "pressed Play while Deepslate Works was already running in another window: nothing done" : p.mode === "uninstall" ? (p.outcome === "ok" ? "removed Deepslate Works from their PC" : "tried to remove Deepslate Works from their PC") : `${p.mode === "first_install" || p.mode === "update"
     ? (p.outcome === "ok" ? (p.mode === "first_install" ? `installed ${s(p.packVersion, "the pack")}: all good` : `pressed Play and updated to ${s(p.packVersion, "the new pack")}`) : p.outcome === "cancelled" ? `closed the window during the ${p.mode === "update" ? "update" : "first install"}${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `${p.mode === "update" ? "updated" : "installed"} and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)
     : p.mode === "play"
     ? (p.outcome === "ok" ? `pressed Play: ${s(p.packVersion, "the pack")}, launcher opened` : p.outcome === "cancelled" ? "pressed Play and closed the window" : `pressed Play and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)

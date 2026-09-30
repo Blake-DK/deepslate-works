@@ -17,7 +17,10 @@ param(
   [switch]$DryRun,          # no downloads, no writes outside -Root, no browser
   [string]$Root = "",       # override %APPDATA% (tests)
   [switch]$SelfTest,        # check the script's own code against scratch files, touch nothing else, exit
-  [string[]]$PretendRunning = @()   # tests: process names to treat as running
+  [string[]]$PretendRunning = @(),  # tests: process names to treat as running
+  [switch]$Uninstall,       # remove Deepslate Works from this PC (Settings -> Apps, or "Uninstall Deepslate Works" in the Start Menu)
+  [Alias("Quiet")]
+  [switch]$Yes              # -Uninstall without the question (tests)
 )
 
 # ---- started from a link on a web page ------------------------------------------------------------------
@@ -33,14 +36,14 @@ if ($FromLink) {
     Start-Sleep -Seconds 6
     exit 1
   }
-  $Setup = $false; $DryRun = $false; $SelfTest = $false; $Root = ""; $PretendRunning = @()
+  $Setup = $false; $DryRun = $false; $SelfTest = $false; $Root = ""; $PretendRunning = @(); $Uninstall = $false; $Yes = $false
 }
 # ---- config block (stamped by `modpack build installer`) ----
 $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.5.1"   # 1.5.1: wakes a sleeping server the moment Play is pressed (docs/13 §12). History in docs/07
+$InstallerVersion = "1.5.2"   # 1.5.2: -Uninstall, and it is listed in Settings -> Apps. History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -266,7 +269,7 @@ function New-Report([string]$outcome) {
     failedStep       = $failed
     durationSec      = [int]((Get-Date) - $script:Started).TotalSeconds
     log              = Shorten (Redact (($script:RunLog.ToArray()) -join "`n") -Addresses) (512 * 1024)
-    system           = Redact-Tree (Get-SystemInfo)
+    system           = $(if ($Mode -eq "uninstall") { $null } else { Redact-Tree (Get-SystemInfo) })   # no PC details when leaving
   }
 }
 
@@ -293,7 +296,8 @@ function Send-Report([string]$outcome) {
   $site = $PortalUrl
   try { $site = ([uri]$PortalUrl).Host } catch {}
   Write-Host ""
-  Write-Host ("Sending the install log to {0} so Alex can help if something went wrong." -f $site) -ForegroundColor Gray
+  if ($Mode -eq "uninstall") { Write-Host ("Telling {0} that Deepslate Works is being taken off this PC." -f $site) -ForegroundColor Gray }
+  else { Write-Host ("Sending the install log to {0} so Alex can help if something went wrong." -f $site) -ForegroundColor Gray }
   try {
     $json = (New-Report $outcome) | ConvertTo-Json -Depth 8 -Compress
     $answer = Invoke-RestMethod -Uri "$PortalUrl/api/installer/report" -Method Post -Headers @{ Authorization = "Bearer $($script:Token)" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($json)) -UseBasicParsing -TimeoutSec 20
@@ -513,7 +517,181 @@ function Set-Shortcuts([string]$scriptPath) {
       $s.Save(); $made++
     } catch { Log ("could not make the shortcut in " + $folder + ": " + $_.Exception.Message) }
   }
+  # "Uninstall Deepslate Works" next to it in the Start Menu (1.5.2)
+  $programs = [Environment]::GetFolderPath("Programs")
+  if ($programs) {
+    try {
+      $u = Get-UninstallShortcutSpec $scriptPath
+      $s = $shell.CreateShortcut((Join-Path $programs ("Uninstall {0}.lnk" -f $PackName)))
+      $s.TargetPath = $u.target; $s.Arguments = $u.arguments; $s.WorkingDirectory = $u.workingDirectory; $s.Description = $u.description
+      $s.IconLocation = ("{0},0" -f $u.target)
+      $s.Save(); $made++
+    } catch { Log ("could not make the uninstall shortcut: " + $_.Exception.Message) }
+  }
   return $made
+}
+
+# ---- uninstall (docs/07 "Uninstall", planner 2026-09-30) ----------------------------------------------------
+# Removes what Deepslate Works put on the PC and nothing else. Every path is a parameter, so the self test runs the
+# whole thing against scratch folders; on Windows the registry keys are "HKCU:\..." paths, which Test-Path and
+# Remove-Item treat the same way.
+$UninstallKeyName = "DeepslateWorks"
+$ProfileId = "deepslate-works"   # the mod list's profile.id; it has always been this
+
+function Get-UninstallShortcutSpec([string]$scriptPath) {
+  $s = Get-ShortcutSpec $scriptPath
+  $s.arguments = $s.arguments + " -Uninstall"
+  $s.description = "Removes Deepslate Works from this PC"
+  return $s
+}
+
+# What Settings -> Apps shows, and what its Uninstall button runs.
+function Get-UninstallEntry([string]$scriptPath, [string]$gameDir, [int]$sizeKb) {
+  return [ordered]@{
+    DisplayName     = $PackName
+    DisplayVersion  = $InstallerVersion
+    Publisher       = "Deepslate Works"
+    DisplayIcon     = ("{0},0" -f (Get-PowerShellExe))
+    UninstallString = ('"{0}" -NoProfile -ExecutionPolicy Bypass -File "{1}" -Uninstall' -f (Get-PowerShellExe), $scriptPath)
+    InstallLocation = $gameDir
+    EstimatedSize   = $sizeKb
+    NoModify        = 1
+    NoRepair        = 1
+  }
+}
+
+function Get-FolderSizeKb([string]$path) {
+  if (-not $path -or -not (Test-Path -LiteralPath $path)) { return 0 }
+  $sum = [long]0
+  try { Get-ChildItem -LiteralPath $path -Recurse -Force -File -ErrorAction SilentlyContinue | ForEach-Object { $sum += $_.Length } } catch {}
+  return [int][Math]::Min([long][int]::MaxValue, [Math]::Ceiling($sum / 1024))
+}
+
+function Register-Uninstall([string]$scriptPath, [string]$gameDir) {
+  $key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$UninstallKeyName"
+  $e = Get-UninstallEntry $scriptPath $gameDir (Get-FolderSizeKb $gameDir)
+  New-Item -Path $key -Force | Out-Null
+  foreach ($k in $e.Keys) {
+    $type = if ($e[$k] -is [int]) { "DWord" } else { "String" }
+    New-ItemProperty -Path $key -Name $k -Value $e[$k] -PropertyType $type -Force | Out-Null
+  }
+}
+
+# Where everything is. $hkcu is "HKCU:" on a PC, a scratch folder in the self test.
+function Get-UninstallTargets([string]$root, [string]$homeDir, [string]$desktop, [string]$programs, [string]$pictures, [string]$hkcu) {
+  $links = @()
+  if ($desktop) { $links += (Join-Path $desktop ("{0}.lnk" -f $PackName)) }
+  if ($programs) { $links += (Join-Path $programs ("{0}.lnk" -f $PackName)); $links += (Join-Path $programs ("Uninstall {0}.lnk" -f $PackName)) }
+  return [ordered]@{
+    gameDir      = (Join-Path $root ".minecraft-deepslate-works")
+    profiles     = (Join-Path (Join-Path $root ".minecraft") "launcher_profiles.json")
+    homeDir      = $homeDir
+    shortcuts    = $links
+    handlerKey   = ($hkcu + "\Software\Classes\deepslate")
+    uninstallKey = ($hkcu + "\Software\Microsoft\Windows\CurrentVersion\Uninstall\" + $UninstallKeyName)
+    pictures     = $(if ($pictures) { Join-Path $pictures ("{0} screenshots" -f $PackName) } else { $null })
+  }
+}
+
+function Test-OurProfile([string]$path) {
+  if (-not (Test-Path -LiteralPath $path)) { return $false }
+  try { $j = Read-Json $path; return [bool]($j.PSObject.Properties["profiles"] -and $j.profiles.PSObject.Properties[$ProfileId]) } catch { return $false }
+}
+
+# Is anything of ours on this PC?
+function Test-UninstallFootprint($t) {
+  if (Test-OurProfile $t.profiles) { return $true }
+  foreach ($p in @($t.gameDir, $t.homeDir, $t.handlerKey, $t.uninstallKey) + @($t.shortcuts)) { if ($p -and (Test-Path -LiteralPath $p)) { return $true } }
+  return $false
+}
+
+# Takes our profile out of launcher_profiles.json and nothing else. Backed up first; read back; the other profiles
+# must come back exactly as they were, or the backup is put back and the error goes up.
+function Remove-LauncherProfile([string]$path, [string]$id) {
+  if (-not (Test-Path -LiteralPath $path)) { return "none" }
+  $json = Read-Json $path
+  if (-not $json.PSObject.Properties["profiles"] -or -not $json.profiles.PSObject.Properties[$id]) { return "none" }
+  $others = @($json.profiles.PSObject.Properties | Where-Object { $_.Name -ne $id } | ForEach-Object { $_.Name + "=" + ($_.Value | ConvertTo-Json -Depth 20 -Compress) })
+  $backup = "$path.deepslate-backup"
+  Copy-Item -LiteralPath $path -Destination $backup -Force
+  try {
+    $json.profiles.PSObject.Properties.Remove($id)
+    if ($json.PSObject.Properties["selectedProfile"] -and [string]$json.selectedProfile -eq $id) { $json.PSObject.Properties.Remove("selectedProfile") }
+    Write-Json $path $json
+    $after = Read-Json $path
+    $now = @($after.profiles.PSObject.Properties | ForEach-Object { $_.Name + "=" + ($_.Value | ConvertTo-Json -Depth 20 -Compress) })
+    if ($after.profiles.PSObject.Properties[$id] -or (($now -join "`n") -ne ($others -join "`n"))) { throw "the other profiles did not read back the same" }
+  } catch {
+    Copy-Item -LiteralPath $backup -Destination $path -Force
+    Remove-Temp $backup
+    throw
+  }
+  Remove-Temp $backup
+  return "removed"
+}
+
+# Screenshots taken in the game go to Pictures\Deepslate Works screenshots before the game folder goes.
+function Move-Screenshots([string]$from, [string]$to) {
+  if (-not $to -or -not (Test-Path -LiteralPath $from)) { return 0 }
+  $files = @(Get-ChildItem -LiteralPath $from -File -Force)
+  if ($files.Count -eq 0) { return 0 }
+  [void][IO.Directory]::CreateDirectory($to)
+  foreach ($f in $files) {
+    $dest = Join-Path $to $f.Name
+    $n = 1
+    while (Test-Path -LiteralPath $dest) { $dest = Join-Path $to ("{0} ({1}){2}" -f $f.BaseName, $n, $f.Extension); $n++ }
+    Move-Item -LiteralPath $f.FullName -Destination $dest
+  }
+  return $files.Count
+}
+
+# The launcher open means no (it would write our profile back). Null when it may go ahead.
+function Get-UninstallRefusal {
+  if (Find-Launcher) { return "Close the Minecraft Launcher (including the tray icon) and run this again. While it is open it would put the Deepslate Works profile back." }
+  return $null
+}
+
+# Does it. $portal: @{ report = { param($token) }; revoke = { param($token) } }; either may throw (no internet).
+function Invoke-Uninstall($t, [string]$token, $portal) {
+  $removed = New-Object System.Collections.Generic.List[string]
+  $kept = New-Object System.Collections.Generic.List[string]
+  $problems = New-Object System.Collections.Generic.List[string]
+  try {
+    if ((Remove-LauncherProfile $t.profiles $ProfileId) -eq "removed") { $removed.Add("the Deepslate Works profile in the Minecraft Launcher (your other profiles are as they were)") }
+  } catch { $problems.Add("the launcher profile could not be taken out, so the file was left as it was (" + $_.Exception.Message + ")") }
+  try {
+    $moved = Move-Screenshots (Join-Path $t.gameDir "screenshots") $t.pictures
+    if ($moved -gt 0) { $kept.Add(("{0} screenshot(s), moved to {1}" -f $moved, $t.pictures)) }
+  } catch { $problems.Add("the screenshots could not be moved, so the game folder was kept (" + $_.Exception.Message + ")"); return @{ removed = $removed; kept = $kept; problems = $problems } }
+  if ($token) {
+    try { $null = & $portal.report $token } catch { Log ("uninstall report not sent: " + $_.Exception.Message) }
+    $out = $false
+    try { $null = & $portal.revoke $token; $out = $true } catch { Log ("sign-in not revoked on the site: " + $_.Exception.Message) }
+    if ($out) { $removed.Add("this PC's sign-in, also signed out on the site") } else { $removed.Add("this PC's sign-in (the site could not be reached; it expires by itself within 7 days)") }
+  }
+  $folders = @(
+    @($t.gameDir, "the game folder (mods, settings, the Java it downloaded, logs, the server list)"),
+    @($t.homeDir, "Deepslate Works itself, in your AppData")
+  )
+  foreach ($f in $folders) {
+    if (-not $f[0] -or -not (Test-Path -LiteralPath $f[0])) { continue }
+    try { Remove-Item -LiteralPath $f[0] -Recurse -Force -ErrorAction Stop; $removed.Add($f[1]) }
+    catch { $problems.Add(("{0} could not be removed completely: is Minecraft still running? ({1})" -f $f[1], $_.Exception.Message)) }
+  }
+  if (Test-Path -LiteralPath $t.handlerKey) {
+    try { Remove-Item -LiteralPath $t.handlerKey -Recurse -Force -ErrorAction Stop; $removed.Add("the Play button's link to this PC (deepslate://)") } catch { $problems.Add("the deepslate:// link: " + $_.Exception.Message) }
+  }
+  $links = 0
+  foreach ($l in @($t.shortcuts)) { if ($l -and (Test-Path -LiteralPath $l)) { try { Remove-Item -LiteralPath $l -Force -ErrorAction Stop; $links++ } catch { $problems.Add("a shortcut: " + $_.Exception.Message) } } }
+  if ($links -gt 0) { $removed.Add(("the shortcuts on the desktop and in the Start Menu ({0})" -f $links)) }
+  # last: the entry in Settings -> Apps
+  if (Test-Path -LiteralPath $t.uninstallKey) {
+    try { Remove-Item -LiteralPath $t.uninstallKey -Recurse -Force -ErrorAction Stop; $removed.Add("its entry in Settings -> Apps") } catch { $problems.Add("the Settings -> Apps entry: " + $_.Exception.Message) }
+  }
+  $kept.Add("Java (the Minecraft Launcher's own, or one you installed yourself)")
+  $kept.Add("the Minecraft Launcher, your other profiles and worlds, and NeoForge's shared files in .minecraft")
+  $kept.Add("your account on the site and your link to Minecraft: your things on the server are safe")
+  return @{ removed = $removed; kept = $kept; problems = $problems }
 }
 
 # The files a copy of 1.3.x / 1.4.x left in the same folder. There is one script now.
@@ -691,7 +869,7 @@ if ($SelfTest) {
 
   Write-Host "Self test: the Play link, the handler and the shortcuts" -ForegroundColor White
   Check "deepslate://play is accepted, with or without the slash a browser adds" ((Test-PlayLink "deepslate://play") -and (Test-PlayLink "deepslate://play/") -and (Test-PlayLink "DEEPSLATE://PLAY"))
-  $no = @("deepslate://play/../x", "deepslate://play?root=\\evil\share", "deepslate://play -Root C:\x", 'deepslate://play" -SelfTest "', "deepslate://update", "deepslate://", "deepslate:play", "http://deepslate.dsw.test/play", "deepslate://play/ ", " deepslate://play", "deepslate://play`n-DryRun", "deepslate://play -Setup", "")
+  $no = @("deepslate://play/../x", "deepslate://play?root=\\evil\share", "deepslate://play -Root C:\x", 'deepslate://play" -SelfTest "', "deepslate://update", "deepslate://", "deepslate:play", "http://deepslate.dsw.test/play", "deepslate://play/ ", " deepslate://play", "deepslate://play`n-DryRun", "deepslate://play -Setup", "deepslate://uninstall", "deepslate://play -Uninstall", "")
   $let = @($no | Where-Object { Test-PlayLink $_ })
   Check ("every other link is refused (let through: " + $let.Count + ")") ($let.Count -eq 0)
   $keepRoot = $env:SystemRoot; $env:SystemRoot = "C:\Windows"
@@ -906,6 +1084,86 @@ if ($SelfTest) {
   }
   Check ("every file operation outside the self test takes its path literally" + $(if ($loose.Count) { ": line(s) " + ($loose -join ", ") } else { "" })) ($loose.Count -eq 0)
 
+  Write-Host "Self test: uninstall" -ForegroundColor White
+  # A whole PC in a scratch folder (brackets in the path on purpose): the game folder, vanilla .minecraft with a
+  # profile file that has other profiles in it, the script's home, the shortcuts, and "registry" keys as folders.
+  function New-Footprint([string]$r) {
+    $g = Join-Path $r ".minecraft-deepslate-works"
+    foreach ($d in @("mods", "config", "logs", "screenshots", "runtime\jdk-21.0.4+7-jre\bin")) { [void][IO.Directory]::CreateDirectory((Join-Path $g $d)) }
+    foreach ($f in @("mods\create.jar", "config\x.toml", "logs\latest.log", "runtime\jdk-21.0.4+7-jre\bin\java.exe", "servers.dat", "installed.json")) { [IO.File]::WriteAllText((Join-Path $g $f), "x") }
+    [IO.File]::WriteAllText((Join-Path $g "launcher.json"), '{"token":"t0k"}')
+    [IO.File]::WriteAllText((Join-Path $g "screenshots\2026-09-30_10.00.00.png"), "png")
+    $m = Join-Path $r ".minecraft"
+    foreach ($d in @("saves\World 1", "versions\neoforge-21.1.252", "versions\1.21.1", "runtime\java-runtime-delta")) { [void][IO.Directory]::CreateDirectory((Join-Path $m $d)) }
+    foreach ($f in @("options.txt", "saves\World 1\level.dat", "versions\neoforge-21.1.252\neoforge-21.1.252.json", "versions\1.21.1\1.21.1.jar")) { [IO.File]::WriteAllText((Join-Path $m $f), "vanilla") }
+    $pf = Join-Path $m "launcher_profiles.json"
+    [IO.File]::WriteAllText($pf, $defaults, $utf8)
+    Set-LauncherProfile $pf "deepslate-works" $entry
+    Remove-Temp "$pf.bak"
+    $h = Join-Path $r "LocalAppData\DeepslateWorks"
+    $null = Install-Home $PSCommandPath $h
+    foreach ($d in @("Desktop", "Programs", "Pictures")) { [void][IO.Directory]::CreateDirectory((Join-Path $r $d)) }
+    foreach ($l in @("Desktop\Deepslate Works.lnk", "Programs\Deepslate Works.lnk", "Programs\Uninstall Deepslate Works.lnk", "Desktop\Somebody else.lnk")) { [IO.File]::WriteAllText((Join-Path $r $l), "lnk") }
+    foreach ($k in @("registry\Software\Classes\deepslate\shell\open\command", "registry\Software\Microsoft\Windows\CurrentVersion\Uninstall\DeepslateWorks", "registry\Software\Classes\other")) { [void][IO.Directory]::CreateDirectory((Join-Path $r $k)) }
+    return (Get-UninstallTargets $r $h (Join-Path $r "Desktop") (Join-Path $r "Programs") (Join-Path $r "Pictures") (Join-Path $r "registry"))
+  }
+  function Get-Vanilla([string]$r) {
+    $m = Join-Path $r ".minecraft"
+    return (@(Get-ChildItem -LiteralPath $m -Recurse -Force -File | Where-Object { $_.Name -ne "launcher_profiles.json" } | ForEach-Object { $_.FullName.Substring($m.Length) + " " + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }) -join "`n")
+  }
+  function Get-OtherProfiles([string]$pf) { $j = Read-Json $pf; return (@($j.profiles.PSObject.Properties | Where-Object { $_.Name -ne "deepslate-works" } | ForEach-Object { $_.Name + "=" + ($_.Value | ConvertTo-Json -Depth 20 -Compress) }) -join "`n") }
+
+  $ur = Join-Path $dir "pc [1]"
+  $ut = New-Footprint $ur
+  $vanilla = Get-Vanilla $ur
+  $otherProfiles = Get-OtherProfiles $ut.profiles
+  $calls = New-Object System.Collections.Generic.List[string]
+  $portalUp = @{ report = { param($x) $calls.Add("report " + $x) }.GetNewClosure(); revoke = { param($x) $calls.Add("revoke " + $x) }.GetNewClosure() }
+  $e = Get-UninstallEntry "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1" "C:\Users\x\AppData\Roaming\.minecraft-deepslate-works" 1234
+  Check "Settings -> Apps: name, version, publisher, size, and Uninstall runs this script with -Uninstall" (($e.DisplayName -eq $PackName) -and ($e.DisplayVersion -eq $InstallerVersion) -and ($e.Publisher -eq "Deepslate Works") -and ($e.EstimatedSize -eq 1234) -and ($e.UninstallString -match 'DeepslateWorks\.ps1" -Uninstall$') -and ($e.UninstallString -match 'powershell\.exe" -NoProfile'))
+  Check "the Start Menu's Uninstall Deepslate Works runs the same script with -Uninstall" ((Get-UninstallShortcutSpec "C:\h\DeepslateWorks.ps1").arguments -match '-File "C:\\h\\DeepslateWorks\.ps1" -Uninstall$')
+  Check "an installed PC is found as one" (Test-UninstallFootprint $ut)
+  $PretendRunning = @("MinecraftLauncher")
+  Check "with the Minecraft Launcher open it refuses, and says why" ((Get-UninstallRefusal) -match "Close the Minecraft Launcher")
+  $PretendRunning = @()
+  Check "with the launcher closed it goes ahead" ($null -eq (Get-UninstallRefusal))
+  $res = Invoke-Uninstall $ut "t0k" $portalUp
+  Check ("uninstall: nothing went wrong " + ($res.problems -join "; ")) ($res.problems.Count -eq 0)
+  Check "the game folder is gone (mods, settings, our Java, logs, the sign-in)" (-not (Test-Path -LiteralPath $ut.gameDir))
+  Check "Deepslate Works' own folder in AppData is gone" (-not (Test-Path -LiteralPath $ut.homeDir))
+  Check "the deepslate:// link and the Settings -> Apps entry are gone, another program's key is not" ((-not (Test-Path -LiteralPath $ut.handlerKey)) -and (-not (Test-Path -LiteralPath $ut.uninstallKey)) -and (Test-Path -LiteralPath (Join-Path $ur "registry\Software\Classes\other")))
+  Check "the three shortcuts are gone, somebody else's is not" ((@($ut.shortcuts | Where-Object { Test-Path -LiteralPath $_ }).Count -eq 0) -and (Test-Path -LiteralPath (Join-Path $ur "Desktop\Somebody else.lnk")))
+  $pj = Read-Json $ut.profiles
+  Check "our launcher profile is gone and it is no longer the one selected" ((-not $pj.profiles.PSObject.Properties["deepslate-works"]) -and (-not ($pj.PSObject.Properties["selectedProfile"] -and $pj.selectedProfile -eq "deepslate-works")))
+  Check "the other launcher profiles are exactly as they were" ((Get-OtherProfiles $ut.profiles) -eq $otherProfiles)
+  Check "vanilla .minecraft is untouched (worlds, options, versions, NeoForge's shared files), and no backup is left" (((Get-Vanilla $ur) -eq $vanilla) -and (-not (Test-Path -LiteralPath ($ut.profiles + ".deepslate-backup"))))
+  Check "the screenshots are in Pictures\Deepslate Works screenshots, and it says so" ((Test-Path -LiteralPath (Join-Path $ut.pictures "2026-09-30_10.00.00.png")) -and (($res.kept -join " ") -match "1 screenshot"))
+  Check "the site is told (the report), then this PC's sign-in is revoked, before it is deleted" (($calls -join ",") -eq "report t0k,revoke t0k")
+  Check "the list of what was kept names Java and the account" ((($res.kept -join " ") -match "Java") -and (($res.kept -join " ") -match "account"))
+  Check "run again: nothing of ours is found" (-not (Test-UninstallFootprint $ut))
+  $again = Invoke-Uninstall $ut $null $portalUp
+  Check "and a second uninstall removes nothing and has no problems" (($again.removed.Count -eq 0) -and ($again.problems.Count -eq 0))
+
+  $ur2 = Join-Path $dir "pc [2]"
+  $ut2 = New-Footprint $ur2
+  $offline = @{ report = { param($x) throw "The remote name could not be resolved" }; revoke = { param($x) throw "The remote name could not be resolved" } }
+  $res2 = Invoke-Uninstall $ut2 "t0k" $offline
+  Check "the site out of reach: it still uninstalls" (($res2.problems.Count -eq 0) -and (-not (Test-Path -LiteralPath $ut2.gameDir)) -and (-not (Test-UninstallFootprint $ut2)))
+  Check "and says the sign-in expires by itself" (($res2.removed -join " ") -match "expires by itself")
+
+  $ur3 = Join-Path $dir "pc [3]"
+  $ut3 = New-Footprint $ur3
+  [IO.File]::WriteAllText($ut3.profiles, "{ this is not json")
+  $res3 = Invoke-Uninstall $ut3 $null $portalUp
+  Check "a launcher file that cannot be read is left exactly as it was, and it says so" (([IO.File]::ReadAllText($ut3.profiles) -eq "{ this is not json") -and (($res3.problems -join " ") -match "launcher profile"))
+  $ur4 = Join-Path $dir "pc [4]"
+  $ut4 = New-Footprint $ur4
+  $before4 = [IO.File]::ReadAllText($ut4.profiles)
+  function Write-Json($path, $obj) { [IO.File]::WriteAllText($path, "{ half"); throw "disk full" }
+  $threw = $false; try { $null = Remove-LauncherProfile $ut4.profiles "deepslate-works" } catch { $threw = $true }
+  Remove-Item Function:\Write-Json
+  Check "a write that fails half-way: the backup is put back and nothing is left over" ($threw -and ([IO.File]::ReadAllText($ut4.profiles) -eq $before4) -and (-not (Test-Path -LiteralPath ($ut4.profiles + ".deepslate-backup"))))
+
   Write-Host "Self test: wake on Play" -ForegroundColor White
   # a list, not a variable: the stand-ins are closures with a scope of their own, and they add to the same list
   $wakeAsked = New-Object System.Collections.Generic.List[string]
@@ -946,6 +1204,62 @@ $script:CustomRoot = ($Root -ne "")   # a test run: nothing is copied, registere
 if ($Root -eq "") { $Root = $env:APPDATA }
 $OnWindows = ($env:OS -eq "Windows_NT")
 
+# ---- -Uninstall: Settings -> Apps, or "Uninstall Deepslate Works" in the Start Menu ------------------------
+if ($Uninstall) {
+  $Mode = "uninstall"
+  $Quiet = $false
+  if ($script:CustomRoot -or -not $OnWindows) {
+    # a test run keeps everything, the "registry" too, inside -Root
+    $t = Get-UninstallTargets $Root (Join-Path $Root "LocalAppData\DeepslateWorks") (Join-Path $Root "Desktop") (Join-Path $Root "Programs") (Join-Path $Root "Pictures") (Join-Path $Root "registry")
+  } else {
+    $t = Get-UninstallTargets $Root (Get-HomeDir) ([Environment]::GetFolderPath("Desktop")) ([Environment]::GetFolderPath("Programs")) ([Environment]::GetFolderPath("MyPictures")) "HKCU:"
+  }
+  Log ("=== {0} {1} uninstall start ===" -f $PackName, $InstallerVersion)
+  $script:Lock = Enter-Lock
+  if (-not $script:Lock) {
+    Write-Host ""
+    Write-Host "Deepslate Works is already running in another window. Let it finish, then run the uninstall again." -ForegroundColor Yellow
+    Hold-Window
+    exit $ExitAlreadyRunning
+  }
+  $no = Get-UninstallRefusal
+  if ($no) { Write-Host ""; Write-Host $no -ForegroundColor Yellow; Log "uninstall refused: the launcher is open"; Exit-Lock; Hold-Window; exit 1 }
+  if (-not (Test-UninstallFootprint $t)) {
+    Write-Host ""
+    Write-Host "Deepslate Works isn't on this PC. There is nothing to remove." -ForegroundColor Green
+    Exit-Lock; Hold-Window; exit 0
+  }
+  if (-not $Yes) {
+    Write-Host ""
+    Write-Host "Remove Deepslate Works from this PC? Your worlds on the server are safe; this only removes the mods and files on this computer." -ForegroundColor White
+    $answer = ""
+    try { $answer = [string](Read-Host "Type Y and press Enter to remove it, or just press Enter to keep it") } catch {}
+    if ($answer -notmatch '^\s*y(es)?\s*$') { Write-Host "Nothing was removed." -ForegroundColor Green; Log "uninstall: the answer was no"; Exit-Lock; Hold-Window; exit 0 }
+  }
+  $tok = $null
+  $tf = Join-Path $t.gameDir "launcher.json"
+  if (Test-Path -LiteralPath $tf) { try { $tok = (Get-Content -LiteralPath $tf -Raw | ConvertFrom-Json).token } catch {} }
+  $portal = @{
+    report = { param($token) $script:Token = $token; $script:Reported = $false; Send-Report "ok" }
+    revoke = { param($token) Invoke-RestMethod -Uri "$PortalUrl/api/launcher/revoke" -Method Post -Headers @{ Authorization = "Bearer $token" } -UseBasicParsing -TimeoutSec 15 }
+  }
+  $r = Invoke-Uninstall $t $tok $portal
+  $script:Reported = $true
+  Write-Host ""
+  if ($r.removed.Count -gt 0) { Write-Host "Removed:" -ForegroundColor Green; foreach ($x in $r.removed) { Write-Host ("   - {0}" -f $x) } }
+  Write-Host "Kept:" -ForegroundColor Gray
+  foreach ($x in $r.kept) { Write-Host ("   - {0}" -f $x) -ForegroundColor Gray }
+  if ($r.problems.Count -gt 0) { Write-Host "Not done:" -ForegroundColor Yellow; foreach ($x in $r.problems) { Write-Host ("   - {0}" -f $x) -ForegroundColor Yellow } }
+  Write-Host ""
+  if ($r.problems.Count -eq 0) { Write-Host "Deepslate Works is off this PC. To play again, download it from the site and run Setup.bat." -ForegroundColor Green }
+  else { Write-Host "Most of it is gone. Close Minecraft and run the uninstall again for the rest." -ForegroundColor Yellow }
+  Log ("uninstall done: {0} removed, {1} problems" -f $r.removed.Count, $r.problems.Count)
+  Exit-Lock
+  if ($r.problems.Count -eq 0 -and -not $script:CustomRoot) { Remove-Temp $LogFile }   # the last trace: this run's log
+  Hold-Window
+  exit $(if ($r.problems.Count -eq 0) { 0 } else { 1 })
+}
+
 # ---- Setup.bat: put the script in its home, then run that copy in this window --------------------------
 if ($Setup) {
   $me = (Resolve-Path -LiteralPath $PSCommandPath).Path
@@ -956,6 +1270,7 @@ if ($Setup) {
       $target = Install-Home $me $dir
       $linked = Register-PlayLink $target
       $made = Set-Shortcuts $target
+      try { Register-Uninstall $target (Join-Path $Root ".minecraft-deepslate-works") } catch { Log ("could not list it in Settings -> Apps: " + $_.Exception.Message) }
       Write-Host ("  Installed in {0}" -f $dir) -ForegroundColor DarkGray
       if ($linked) { Write-Host "  The Play button on the site now starts Deepslate Works on this PC" -ForegroundColor DarkGray }
       if ($made -gt 0) { Write-Host ("  '{0}' is on your desktop and in the Start Menu" -f $PackName) -ForegroundColor DarkGray }
@@ -1292,7 +1607,13 @@ try {
       if ($have -ne $want) { if (Register-PlayLink $homeScript) { Log "the Play link was set up again" } }
       $desk = Join-Path ([Environment]::GetFolderPath("Desktop")) ("{0}.lnk" -f $PackName)
       $menu = Join-Path ([Environment]::GetFolderPath("Programs")) ("{0}.lnk" -f $PackName)
-      if (-not (Test-Path -LiteralPath $desk) -or -not (Test-Path -LiteralPath $menu)) { $null = Set-Shortcuts $homeScript; Log "the shortcuts were made again" }
+      $unmenu = Join-Path ([Environment]::GetFolderPath("Programs")) ("Uninstall {0}.lnk" -f $PackName)
+      if (-not (Test-Path -LiteralPath $desk) -or -not (Test-Path -LiteralPath $menu) -or -not (Test-Path -LiteralPath $unmenu)) { $null = Set-Shortcuts $homeScript; Log "the shortcuts were made again" }
+      # Settings -> Apps (1.5.2): listed on PCs that had an older copy at their next Play, and kept current
+      $listed = $null
+      try { $listed = Get-ItemProperty -LiteralPath ("HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\" + $UninstallKeyName) -ErrorAction Stop } catch {}
+      $wantUn = (Get-UninstallEntry $homeScript $GameDir 0).UninstallString
+      if (-not $listed -or [string]$listed.UninstallString -ne $wantUn -or [string]$listed.DisplayVersion -ne $InstallerVersion) { Register-Uninstall $homeScript $GameDir; Log "listed in Settings -> Apps" }
     } catch { Log ("could not check the Play link and the shortcuts: " + $_.Exception.Message) }
   }
 

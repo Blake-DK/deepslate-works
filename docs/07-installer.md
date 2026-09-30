@@ -4,6 +4,22 @@
 
 A friend downloads one zip and double-clicks `Setup.bat` once. After that they press Play on the site or open **Deepslate Works** from their desktop; it keeps itself and the mods up to date and opens the normal Minecraft launcher on the Deepslate Works profile, with the server already in the server list. It never touches their vanilla installation.
 
+## Installer 1.5.2: the uninstaller (planner, 2026-09-30)
+
+Same script, `DeepslateWorks.ps1 -Uninstall` (a `deepslate://` link can never ask for it: a link resets every option). People find it without a command line: **Settings → Apps → "Deepslate Works" → Uninstall** (per-user key `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\DeepslateWorks`: DisplayName, DisplayVersion, Publisher "Deepslate Works", DisplayIcon, EstimatedSize, InstallLocation, UninstallString → the script in `%LOCALAPPDATA%\DeepslateWorks` with `-Uninstall`, NoModify, NoRepair), **"Uninstall Deepslate Works" in the Start Menu** next to "Deepslate Works", and a "Removing Deepslate Works" card on Help → Getting in. Setup.bat registers both; every Play puts them right when missing or older, so PCs on 1.5.0/1.5.1 get them at their next Play through the self-update.
+
+**What it does, in order.** Takes the lock (another run → "already running", exit 3). Refuses while the Minecraft Launcher is open (the same check as an install). If nothing of ours is on the PC: "Deepslate Works isn't on this PC. There is nothing to remove." Otherwise asks once: "Remove Deepslate Works from this PC? Your worlds on the server are safe; this only removes the mods and files on this computer." (`-Uninstall -Yes`, alias `-Quiet`, skips the question). Then:
+
+1. Our profile (`deepslate-works`) out of `.minecraft\launcher_profiles.json`, and `selectedProfile` if it pointed at it: the file is copied to `launcher_profiles.json.deepslate-backup`, written, read back, and the other profiles must come back exactly as they were; on any error the backup is put back. That backup is deleted afterwards. Nothing else in `.minecraft` is touched (worlds, options, `versions\neoforge-*` and `libraries\`, which the launcher shares).
+2. `screenshots\` from the game folder moved to `Pictures\Deepslate Works screenshots` (never overwriting).
+3. The site told: a report with `mode: "uninstall"` (no PC details), then `POST /api/launcher/revoke` signs out this PC's token only. No internet: it carries on, and says the sign-in expires by itself within 7 days.
+4. The game folder `%APPDATA%\.minecraft-deepslate-works` (mods, config, the Java it downloaded under `runtime\`, logs, `servers.dat`, `launcher.json` = the sign-in), `%LOCALAPPDATA%\DeepslateWorks` (the script), `HKCU\Software\Classes\deepslate` (the Play link), the three shortcuts (desktop, Start Menu, Start Menu uninstall), and last the Settings → Apps key; then the log in `%TEMP%`.
+5. A list of what was removed and what was kept (screenshots moved, Java left alone: the launcher's own or one the person installed; the account and the Minecraft link), and the window waits for Enter. Running it again finds nothing and says so.
+
+**Portal.** Uninstall reports are taken from anybody (no "not live" refusal), set no PC tier and carry no "download again" notice. Admin → Installs lists them as "Uninstall"; the member's row in "The group's PCs" says "Uninstalled on <date>", and Admin → People shows "uninstalled" in the Installer column. The account and the Minecraft link are not touched. The Play button of a member whose latest report is an uninstall shows "Download Deepslate Works" straight away; /me says when it was taken off. Event log: "<name> removed Deepslate Works from their PC", "<name> signed this PC's installer out (uninstall)".
+
+**Tests.** `-SelfTest`: 118 checks, 22 of them the uninstaller on scratch PCs (brackets in the paths): install → uninstall → nothing of ours left (folders, "registry" keys, shortcuts, the profile) while the other profiles, vanilla `.minecraft` and another program's key and shortcut are unchanged; the launcher open (refused); the site out of reach; a second run; the screenshots moved; a launcher file that cannot be read; a write that fails half-way (backup restored). End to end with `-Uninstall -Quiet -Root` in pwsh on Linux.
+
 ## Installer 1.5.1: wake on Play (planner, 2026-09-30, docs/13 §12)
 
 As soon as the script knows its sign-in (before "Checking for updates", or right after a fresh sign-in) it asks the site to wake the server: `POST /api/play/wake` with the launcher token. The site starts the server only if it is Asleep and the server is open for the member, once however often Play is pressed, and logs "<name> woke the server (Play)". The window says "Waking the server, ready in about 30 s" (in yellow, also in the quiet Play mode). The updates then run as usual while the server boots; after the launcher opens the script asks `GET /api/play/wake` every 5 s and says "Server ready", or "The server didn't wake up. Try again in a minute or tell Alex" (after 3 minutes), then closes. A server that is switched off or crashed is never woken: the site refuses, and if the mod list then says downloads are closed, the window says "The server is switched off. Ask Alex in Discord." (or "has crashed"). A wake that cannot be asked for (no internet, old site) is never a reason to stop. A dry run never asks for a wake. `-SelfTest`: 96 checks, 10 of them about the wake.
@@ -240,7 +256,7 @@ The render distance is the same for every PC (the mod list says 8 and 6); the me
 ## Non-goals
 - No custom launcher, no Prism install, no CurseForge app.
 - No editing anything inside `.minecraft` except `launcher_profiles.json` and the NeoForge version the installer adds.
-- No uninstaller in v1; the README says "delete the Deepslate Works profile and the `.minecraft-deepslate-works` folder".
+- No uninstaller in v1 (there is one since 1.5.2, see the top); the README says "delete the Deepslate Works profile and the `.minecraft-deepslate-works` folder".
 
 ## Mac / Linux
 Not supported (decided 2026-09-29). Non-Windows browsers get a one-line notice on `/install`.

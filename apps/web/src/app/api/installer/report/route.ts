@@ -40,12 +40,13 @@ export async function POST(req: Request) {
   const r = sanitizeReport(parsed.data);
   // docs/13 §9: "it went through" from somebody who cannot have fetched the mod list is not a report, and must not
   // open the door (docs/14 "Play first").
-  if (!mayReport(user, (await getSettings()).live, r.outcome)) {
+  // an uninstall is taken from anybody: taking the game off a PC opens nothing
+  if (r.mode !== "uninstall" && !mayReport(user, (await getSettings()).live, r.outcome)) {
     await audit({ userId: user.id, action: "installer.report", params: { mode: r.mode, outcome: r.outcome, refused: "not_live" }, result: "DENIED" });
     return no(403, "not_live", "Not launched yet");
   }
   // The PC tier is measured, not asked (Alex, 2026-09-29): every report that says enough about the hardware sets it.
-  const measured = suggestTier(r.system);
+  const measured = r.mode === "uninstall" ? null : suggestTier(r.system);
   const row = await db.installReport.create({
     data: { userId: user.id, packVersion: r.packVersion, installerVersion: r.installerVersion, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, durationSec: r.durationSec, system: r.system as Prisma.InputJsonValue, log: r.log, tierBefore: user.pcTier, tierMeasured: measured?.tier ?? null },
     select: { id: true },
@@ -60,6 +61,6 @@ export async function POST(req: Request) {
   const current = (await getInstaller())?.version ?? null;
   const outdated = isOutdated(r.installerVersion, current);
   await audit({ userId: user.id, action: "installer.report", params: { reportId: row.id, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, packVersion: r.packVersion, installerVersion: r.installerVersion, currentInstaller: outdated ? current : undefined, durationSec: r.durationSec }, result: r.outcome === "ok" || r.outcome === "skipped" ? "OK" : "FAILED" });
-  const notice = current && mustDownloadAgain(r.installerVersion, current) ? outdatedNotice(r.installerVersion, current, env.AUTH_URL.replace(/^https?:\/\//, "").replace(/\/$/, "")) : null;
+  const notice = r.mode !== "uninstall" && current && mustDownloadAgain(r.installerVersion, current) ? outdatedNotice(r.installerVersion, current, env.AUTH_URL.replace(/^https?:\/\//, "").replace(/\/$/, "")) : null;
   return Response.json({ ok: true, id: row.id, tier: measured?.tier ?? null, installer: { ran: r.installerVersion, current, outdated }, notice });
 }

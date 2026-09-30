@@ -77,7 +77,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
           <CardDescription>Once installed, use the Play button here to launch. It checks for updates every time.</CardDescription>
         </CardHeader>
         <CardContent>
-          <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null)} stepsHere  server={play.server} wake={play.wake} />
+          <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null)} stepsHere  server={play.server} wake={play.wake} installed={play.installed} />
         </CardContent>
       </Card>
 
@@ -114,6 +114,14 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
         <CardHeader><CardTitle>Your PC</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           {user.pcTierSource === "measured" ? "The installer measured your PC" : "You told us"}: <strong className="text-foreground">{user.pcTier === "LOW" ? "older laptop / no graphics card" : user.pcTier === "HIGH" ? "proper gaming PC" : "normal desktop or gaming laptop"}</strong>{user.pcTierSource === "measured" && user.pcTierWhy ? <> ({user.pcTierWhy})</> : null}. The installer picks RAM automatically from what your PC has{user.pcTierSource === "measured" ? "" : ", and checks what kind of PC it is when it runs"}; if the game stutters, set render distance to {rd} in Video Settings.
+        </CardContent>
+      </Card>
+
+      <Card data-testid="uninstall-help">
+        <CardHeader><CardTitle>Removing {m.name}</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>Close the Minecraft Launcher first. Then either open Windows <strong className="text-foreground">Settings → Apps</strong>, find &quot;{m.name}&quot; and choose Uninstall, or open <strong className="text-foreground">Uninstall {m.name}</strong> from the Start Menu. It asks once, then removes the mods, its own files, the launcher profile, the shortcuts and the Play button&apos;s link, and signs this PC out.</p>
+          <p>It keeps your screenshots (moved to Pictures\{m.name} screenshots), Java, the Minecraft Launcher and your other profiles, and your account here: your things on the server are safe. To play again later, download it above.</p>
         </CardContent>
       </Card>
     </div>

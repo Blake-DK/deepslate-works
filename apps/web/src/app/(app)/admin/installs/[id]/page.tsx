@@ -16,12 +16,13 @@ const RUN: Record<string, string> = {
   first_install: "First install",
   update: "Play: the pack had changed and was updated",
   already_running: "Play while another copy was running: nothing done",
+  uninstall: "Uninstall: Deepslate Works was taken off this PC (the account and the Minecraft link stay)",
 };
 
 export const metadata: Metadata = { title: "Install report" };
 
-const TONE = { ok: "good", failed: "bad", cancelled: "warn" } as const;
-const LABEL = { ok: "All good", failed: "Failed", cancelled: "Stopped" } as const;
+const TONE = { ok: "good", failed: "bad", cancelled: "warn", skipped: "neutral" } as const;
+const LABEL = { ok: "All good", failed: "Failed", cancelled: "Stopped", skipped: "Already running" } as const;
 const TIER: Record<string, string> = { LOW: "Older PC", MID: "Decent PC", HIGH: "Gaming PC" };
 const MARK = { step: "bg-primary/15 font-semibold", after: "bg-primary/5", fail: "bg-danger/15 font-semibold text-danger" } as const;
 const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });

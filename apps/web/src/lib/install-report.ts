@@ -10,9 +10,9 @@ export const MAX_LOG_BYTES = 512 * 1024;
 export const OUTCOMES = ["ok", "failed", "cancelled", "skipped"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 // 1.5.0 on (docs/07): first_install, update, play, already_running; "install" (Setup.bat) and "play" before that.
-export const MODES = ["install", "play", "first_install", "update", "already_running"] as const;
+export const MODES = ["install", "play", "first_install", "update", "already_running", "uninstall"] as const;
 /** What a run of each kind is called on the admin pages. */
-export const MODE_LABEL: Record<string, string> = { install: "Setup.bat", play: "Play", first_install: "First install", update: "Update", already_running: "Already running" };
+export const MODE_LABEL: Record<string, string> = { install: "Setup.bat", play: "Play", first_install: "First install", update: "Update", already_running: "Already running", uninstall: "Uninstall" };
 export type Mode = (typeof MODES)[number];
 
 const short = (max: number) => z.string().max(max).transform((v) => v.trim());
@@ -46,7 +46,7 @@ export const reportSchema = z
     failedStep: optional(120),
     durationSec: z.number().finite().min(0).max(86_400).transform((v) => Math.round(v)),
     log: z.string().max(MAX_LOG_BYTES * 2),
-    system: systemSchema,
+    system: systemSchema.nullish().transform((v) => v ?? systemSchema.parse({})), // an uninstall (1.5.2) sends none: all fields empty
   })
   .strip();
 export type Report = z.infer<typeof reportSchema>;

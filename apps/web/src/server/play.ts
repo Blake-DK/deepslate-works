@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { getManifest } from "@/server/modpack/manifest";
 import { distFile, getLock } from "@/server/modpack/lock";
 import { canDownload } from "@/server/modpack/gate";
-import { updateAvailable, type LastLaunch } from "@/lib/play";
+import { installedNow, updateAvailable, type LastLaunch } from "@/lib/play";
 import { getSection } from "@/server/site-settings";
 import { PLAY_MODES, playGate, type Gate } from "@/shared/join-gate";
 
@@ -23,6 +23,8 @@ export type PlayInfo = {
   update: boolean;
   /** docs/14 "Play first": may they join right now, and until when. Null when Play is not asked of them. */
   join: Gate | null;
+  /** False when their latest report is an uninstall: the Play button offers the download again. */
+  installed: boolean;
   /** docs/13 §12: how the server is, in the site's words, and a wake if one is running. */
   server: { state: ServerState; line: string; hint: string };
   wake: WakeView;
@@ -42,15 +44,17 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
     getLock(),
     distFile("installer.zip"),
     canDownload(user),
-    db.installReport.findFirst({ where: { userId: user.id, outcome: "ok" }, orderBy: { at: "desc" }, select: { packVersion: true, at: true } }),
+    db.installReport.findFirst({ where: { userId: user.id, outcome: "ok", mode: { not: "uninstall" } }, orderBy: { at: "desc" }, select: { packVersion: true, at: true } }),
     getSection("joining"),
     db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { packVersion: true, at: true, installerVersion: true } }),
     serverPack(),
     getStatus(),
   ]);
+  const latest = await db.installReport.findFirst({ where: { userId: user.id }, orderBy: { at: "desc" }, select: { mode: true, outcome: true } });
+  const installed = installedNow(latest);
   const said = statusText(status, user.role === "ADMIN");
   const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date(), joining.minInstaller) : null;
   const current = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
-  const last = report ? { version: report.packVersion, at: report.at } : null;
-  return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, last, update: updateAvailable(current, last?.version), join, server: { state: said.state, line: said.line, hint: said.hint }, wake: status.wake };
+  const last = report && installed ? { version: report.packVersion, at: report.at } : null;
+  return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, last, update: updateAvailable(current, last?.version), join, installed, server: { state: said.state, line: said.line, hint: said.hint }, wake: status.wake };
 }

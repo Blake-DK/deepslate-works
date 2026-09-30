@@ -81,6 +81,8 @@ export async function pregenAction(formData: FormData) {
       const d = parsed.data;
       if (d.mode === "empty" && Boolean(d.from) !== Boolean(d.to)) redirect(to("error", "A window has a from and a to. Leave both empty for any time of day."));
       await apiFetch("/pregen/on", { method: "POST", body: { mode: d.mode, what: d.purge && d.what === "generate" ? "render" : d.what, purge: d.purge, area: { x: d.x, z: d.z, radius: d.radius }, window: d.mode === "empty" && d.from && d.to ? { from: d.from, to: d.to } : null, capHours: d.hours }, caller, timeoutMs: 60_000 });
+    } else if (op === "map-reload") {
+      await apiFetch("/pregen/map-reload", { method: "POST", body: {}, caller, timeoutMs: 30_000 });
     } else if (op === "off") {
       await apiFetch("/pregen/off", { method: "POST", body: {}, caller, timeoutMs: 60_000 });
     } else if (op === "cancel") {
@@ -91,7 +93,7 @@ export async function pregenAction(formData: FormData) {
     throw e;
   }
   revalidatePath("/admin/server");
-  redirect(to(op === "on" ? "pregenOn" : op === "off" ? "pregenPaused" : "pregenOff"));
+  redirect(to(op === "on" ? "pregenOn" : op === "off" ? "pregenPaused" : op === "map-reload" ? "mapReloaded" : "pregenOff"));
 }
 
 /** Ends the server's process. Only offered, and only accepted by api, while the server is stuck in "Stopping". */

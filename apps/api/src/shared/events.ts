@@ -128,6 +128,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "map.update": (p) => `asked for the map to be brought up to date${p.radius ? `: ${s(p.radius)} blocks around ${s(p.x ?? 0)}, ${s(p.z ?? 0)}` : ""}`,
   "map.purge": (p) => `had the map ${s(p.map)} deleted, to be rendered anew`,
   "map.stop": "paused the map render",
+  "map.reload": "reloaded BlueMap's settings",
   "map.start": "let the map render carry on",
   "world.pregen": (p) => `turned the pre-generation on: ${s(p.radius)} blocks around ${s(p.x)}, ${s(p.z)}`,
   "world.pregenContinue": "turned the pre-generation on again",

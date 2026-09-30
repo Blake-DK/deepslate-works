@@ -417,3 +417,71 @@ describe("who is on", () => {
     expect(amp.console).toEqual(["list"]); // they agree: nothing more is asked
   });
 });
+
+// 2026-09-30 (planner): a render that was not finished carries on by itself after a restart or a power cut. BlueMap
+// loses its queue when the server stops; before this, the portal only asked again when BlueMap said "still loading".
+describe("the render step after a restart", () => {
+  const updates = (c: string[]) => c.filter((x) => x.startsWith("bluemap update") || x.startsWith("bluemap purge"));
+  it("asks BlueMap for the map again when the server comes back up", async () => {
+    const r = rig();
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "empty", what: "render", area: AREA, window: null, capHours: null }, null);
+    await r.on();
+    expect(updates(r.amp.console)).toEqual(["bluemap update world 0 0 1500"]); // turning it on is not a restart
+    r.tail.state = 0; // the power went
+    await r.on();
+    r.tail.state = 20; // somebody started it again
+    await r.on();
+    expect(r.saved()).toMatchObject({ mode: "empty", what: "render", mapAsked: expect.any(String) });
+    expect(updates(r.amp.console)).toEqual(["bluemap update world 0 0 1500", "bluemap update world 0 0 1500"]);
+    expect(r.amp.asked.filter((m) => FORBIDDEN.includes(m))).toEqual([]); // and the server was never started from here
+  });
+  it("an api that starts and finds a render in hand asks again once", async () => {
+    const r = rig();
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "empty", what: "render", area: AREA, window: null, capHours: null }, null);
+    const kept = r.saved();
+    const again = rig();
+    again.pregen.stop();
+    const p2 = new Pregen(again.amp, again.tail, new PregenWatch(again.tail, () => again.clock.t), () => ({ limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" }), { load: async () => kept, save: async () => {} }, () => {}, () => again.clock.t, async () => {}, { map: new MapWatch(again.tail, () => again.clock.t) });
+    await p2.start(); p2.stop();
+    again.tail.state = 20;
+    again.clock.t += 30_000; await p2.tick();
+    again.clock.t += 30_000; await p2.tick();
+    expect(updates(again.amp.console)).toEqual(["bluemap update world 0 0 1500"]);
+    again.clock.t += 30_000; await p2.tick();
+    expect(updates(again.amp.console)).toEqual(["bluemap update world 0 0 1500"]); // once, not every tick
+  });
+  it("a purge is not purged again: every map is brought up to date instead", async () => {
+    const r = rig();
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "empty", what: "render", purge: true, area: AREA, window: null, capHours: null }, null);
+    await r.on();
+    const purged = updates(r.amp.console).filter((c) => c.startsWith("bluemap purge")).length;
+    r.tail.state = 0; await r.on();
+    r.tail.state = 20; await r.on(); await r.on();
+    expect(updates(r.amp.console).filter((c) => c.startsWith("bluemap purge")).length).toBe(purged);
+    expect(updates(r.amp.console).slice(-3)).toEqual(["bluemap update world", "bluemap update world_the_nether", "bluemap update world_the_end"]);
+    expect(r.saved()).toMatchObject({ purge: false, wholeMaps: true });
+  });
+  it("Reload BlueMap's settings: bluemap reload, then the map asked for again; nothing while the server is down", async () => {
+    const r = rig();
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "empty", what: "render", area: AREA, window: null, capHours: null }, null);
+    await r.on();
+    expect(await r.pregen.reloadMap(null)).toBe(true);
+    expect(r.amp.console).toContain("bluemap reload");
+    await r.on();
+    expect(updates(r.amp.console)).toEqual(["bluemap update world 0 0 1500", "bluemap update world 0 0 1500"]);
+    const d = rig();
+    d.tail.state = 0;
+    expect(await d.pregen.reloadMap(null)).toBe(false);
+    expect(d.amp.console).toEqual([]);
+    expect(actions["map.reload"].build({ limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "x" }, {})).toEqual(["bluemap reload"]);
+  });
+});
+

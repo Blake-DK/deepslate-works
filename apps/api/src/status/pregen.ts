@@ -115,6 +115,8 @@ export type PregenPlan =
       mapStopped: boolean;
       /** The maps are deleted first and rendered anew, all of what exists; without it, what has changed inside the area. */
       purge: boolean;
+      /** Asked again after a restart of a purge: every map brought up to date as a whole, the maps not deleted again. */
+      wholeMaps?: boolean;
     };
 
 export type Phase = "generate" | "render" | "done";
@@ -236,6 +238,8 @@ export class Pregen {
   /** The last list of BlueMap's that was looked at, and how many in a row have said "updated". */
   private listSeen = 0;
   private updatedInARow = 0;
+  /** Was the server running at the last tick; null before the first (an api that has just started). */
+  private wasRunning: boolean | null = null;
 
   constructor(
     private readonly amp: Amp,
@@ -324,6 +328,7 @@ export class Pregen {
     if (another && this.tail.state === 20) await runAction(this.amp, this.ctx(), "world.pregenCancel", {}, by);
     const fresh = what !== "render" && (another || was.area === null || status === "finished" || status === "cancelled");
     if (fresh) this.watch.state = NONE;
+    this.wasRunning = this.tail.state === 20; // turning it on is not a server coming up
     this.plan = { mode: input.mode, what, area: input.area, window: input.mode === "empty" ? input.window : null, capHours: input.capHours, ranMs: 0, since: new Date(this.now()).toISOString(), by, fresh, sleepWas: null, mapAsked: null, mapStopped: this.plan.mode === "off" && this.plan.mapStopped === true, purge };
     this.lastCommand = 0;
     this.lastMapCommand = 0;
@@ -410,6 +415,29 @@ export class Pregen {
     return { paused: ok, saved: false };
   }
 
+  /**
+   * BlueMap's queued renders are gone (the server restarted, or BlueMap reloaded): the render step asks for the map
+   * again at its next turn. A purge is not purged again: every map is brought up to date as a whole instead.
+   */
+  private async askMapAgain(why: string) {
+    if (this.plan.mode === "off" || this.plan.what === "generate" || this.plan.mapAsked === null) return;
+    this.plan = { ...this.plan, mapAsked: null, ...(this.plan.purge ? { purge: false, wholeMaps: true } : {}) };
+    this.updatedInARow = 0;
+    await this.store.save(this.plan);
+    this.log({ why }, "the map is asked for again");
+  }
+
+  /** "Reload BlueMap's settings" (Admin → Server → Pre-generation): `bluemap reload`, then the map asked for again. */
+  async reloadMap(by: string | null): Promise<boolean> {
+    if (this.tail.state !== 20) return false;
+    const ok = (await runAction(this.amp, this.ctx(), "map.reload", {}, by)).ok;
+    if (ok) {
+      this.lastMapCommand = this.now();
+      await this.askMapAgain("BlueMap reloaded its settings");
+    }
+    return ok;
+  }
+
   async tick() {
     const now = this.now();
     const dt = Math.max(0, Math.min(60_000, now - this.lastTick));
@@ -418,6 +446,12 @@ export class Pregen {
     const online = Math.max(this.tail.online.size, running ? (this.players() ?? 0) : 0);
     if (!running || online > 0) this.emptySince = null;
     else this.emptySince ??= now;
+    // A server that has just come up (or an api that has just started and finds it up) has lost BlueMap's queue of
+    // renders: the map is asked for again. Until 2026-09-30 only a BlueMap that said "still loading" was asked
+    // again, and a power cut left the render half done until somebody pressed Turn on again.
+    const cameUp = running && this.wasRunning !== true;
+    this.wasRunning = running;
+    if (cameUp) await this.askMapAgain("the server came up");
 
     const tps = this.tps();
     if (tps !== null) this.lag = tps < LAG_TPS ? true : tps >= FINE_TPS ? false : this.lag;
@@ -508,6 +542,7 @@ export class Pregen {
           // Deleting a map makes BlueMap render it anew by itself, all of it, when the deleting is done.
           let ok = true;
           if (this.plan.purge) for (const map of ALL_MAPS) ok = ok && (await runAction(this.amp, this.ctx(), "map.purge", { map }, this.plan.by)).ok;
+          else if (this.plan.wholeMaps) for (const map of ALL_MAPS) ok = ok && (await runAction(this.amp, this.ctx(), "map.update", { map }, this.plan.by)).ok;
           else ok = (await runAction(this.amp, this.ctx(), "map.update", { map: OVERWORLD_MAP, ...this.plan.area }, this.plan.by)).ok;
           if (!ok) return;
           this.updatedInARow = 0;

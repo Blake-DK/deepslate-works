@@ -62,6 +62,13 @@ export function pregenRoutes(app: FastifyInstance, tail: ConsoleTail, pregen: Pr
     return view();
   });
 
+  // BlueMap's config read again (render threads): `bluemap reload`, and a render in hand is asked for again.
+  app.post("/pregen/map-reload", async (req, reply) => {
+    if (!requireAdmin(req, reply)) return;
+    if (!(await pregen.reloadMap(req.caller.userId))) return reply.code(409).send({ error: { code: "server_offline", message: "The server isn't running, or BlueMap did not take the command." } });
+    return view();
+  });
+
   app.post("/pregen/cancel", async (req, reply) => {
     if (!requireAdmin(req, reply)) return;
     await pregen.cancel(req.caller.userId);

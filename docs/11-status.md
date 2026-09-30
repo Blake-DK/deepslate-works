@@ -40,6 +40,8 @@ Last updated 2026-09-29, 19:00 UTC (the evening the first player who is not an a
 
 - **2026-09-30, server status words and wake on Play (planner, docs/13 §12; branch `status-wake`).** One state everywhere (`shared/server-state.ts`), `/status` never 502 when AMP is out of reach, event rows in the same words, "Crashed" from the recorder, uptime counts Waking. `POST /server/wake` (api) and `/api/play/wake` (web), the Play button and DeepslateWorks.ps1 **1.5.1** wake a sleeping server at the moment Play is pressed. After deploy: rebuild the installer download (`POST /modpack/build {target:"installer"}`); 1.5.0 copies update themselves at the next Play. **Not seen live yet:** a real wake (AMP's `Core.Start` from Sleeping), and a crash shown as Crashed. Live 2026-09-30 before this: the inventory of bramble09 read from the real save file (16 stacks, creative, food 12); the console could not be tried, the server was switched off.
 
+- **2026-09-30, BlueMap (planner): three render threads, and a render that resumes by itself.** `core.conf` `render-thread-count: 3`; applied without a restart by "Reload BlueMap's settings" on the Pre-generation card (action `map.reload`, `POST /pregen/map-reload`), which also asks for the map again (a reload drops BlueMap's queue). The render step now asks BlueMap for the map again whenever the server comes up and when the api starts with a render in hand; a purge that was cut off is not purged again, every map is brought up to date as a whole (`wholeMaps`). Found: the plan of 2026-09-29 19:42 still had `mapAsked` from 19:43 after last night's wipe and this morning's power cycle, so nothing asked BlueMap again. Pausing while somebody is on is unchanged (`bluemap stop`/`start`).
+
 ## Where things are
 
 | Thing | Where |

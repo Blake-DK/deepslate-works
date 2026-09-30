@@ -149,7 +149,7 @@ A build makes `dist/server/config/` and `dist/server/datapacks/` afresh each tim
 | Where | What | Goes to |
 |---|---|---|
 | `modpack/config/fallingtree.json`, `tacz-common.toml` | see "Settings shipped with the pack (2026-09-29 evening)" below | the server and every PC |
-| `modpack/server/config/bluemap/core.conf`, `webserver.conf` | BlueMap: one render thread, the address it listens on (the tunnel's) | the server |
+| `modpack/server/config/bluemap/core.conf`, `webserver.conf` | BlueMap: three render threads (one until 2026-09-30, when the VM got 15 GB and the server 10 GB), the address it listens on (the tunnel's). A change is applied by Build, Sync and Admin → Server → Pre-generation → "Reload BlueMap's settings" (`bluemap reload`), no restart | the server |
 | `modpack/datapacks/deepslate-limbo/` | the entrance room's dimension (docs/14) | the server's world; a new dimension counts from the next restart |
 
 Thought of in the first plan and not shipped: Xaero's (minimap on, waypoints for each server), JEI (cheat mode off), Simple Voice Chat (push to talk on `V`), Corpse (corpses never despawn, only the owner can loot for 30 min). Each mod runs on its own defaults. To ship one: start the game or the server once, take the file the mod wrote, change what is to be changed, put it under `modpack/config/`, Lock, Build, Sync.

@@ -32,7 +32,7 @@ export const loadPregen = (caller: Caller) => apiFetch<Pregen>("/pregen", { call
 export const consoleLines = (tail: Tail | null) => tail?.entries ?? (tail?.lines ?? []).map((text, i) => ({ seq: i - (tail?.lines.length ?? 0), text }));
 
 const MSG: Record<string, string> = {
-  pregenOn: "Pre-generation is on.", pregenPaused: "Pre-generation stopped; where it got to is kept.", pregenOff: "The area is called off.", killed: "The server's process has been ended.",
+  pregenOn: "Pre-generation is on.", pregenPaused: "Pre-generation stopped; where it got to is kept.", pregenOff: "The area is called off.", killed: "The server's process has been ended.", mapReloaded: "BlueMap read its settings again; a render in hand is asked for again.",
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
   error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup started in AMP.", announced: "Announcement posted",
 };
@@ -224,8 +224,14 @@ export function PregenCard({ pregen }: { pregen: Pregen | null }) {
           <p>{sleepy.line}</p>
           {sleepy.grant && <p className="mt-1">To allow it: in the instance&apos;s own panel, give the role of the user <span className="font-mono">webapp</span> the permission Settings → MinecraftModule → Limits → SleepMode, <span className="font-mono">{sleepy.grant}</span>. The setting is <span className="font-mono">{pregen?.sleep.node}</span>.</p>}
         </div>
+        <form action={pregenAction} className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <input type="hidden" name="op" value="map-reload" />
+          <Button type="submit" size="sm" variant="secondary">Reload BlueMap&apos;s settings</Button>
+          <span>After a change to BlueMap&apos;s config (render threads) has been synced. A render in hand carries on.</span>
+        </form>
         <HowThisWorks>
           <p>Makes the world around spawn ahead of time and renders the map of it, so that exploring is smooth and the map is whole.</p>
+          <p>A render that was not finished carries on by itself after a restart of the server or a power cut: the portal asks BlueMap for the map again as soon as the server is up.</p>
           <p>The server is never started from here, and never ended. If it is asleep or stopped, the pre-generation carries on the next time it runs. Hours are hours of generating and rendering, not hours on the clock.</p>
         </HowThisWorks>
       </CardContent>

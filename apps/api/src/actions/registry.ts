@@ -387,6 +387,9 @@ export const actions = {
     input: z.object({ map: z.string().regex(/^[a-z0-9_-]{1,40}$/), x: z.number().int().min(-100_000).max(100_000).optional(), z: z.number().int().min(-100_000).max(100_000).optional(), radius: z.number().int().min(16).max(10_000).optional() }),
     build: (_ctx, { map, x, z: zz, radius }) => [radius === undefined ? `bluemap update ${map}` : `bluemap update ${map} ${x ?? 0} ${zz ?? 0} ${radius}`],
   }),
+  // Reads BlueMap's config files again (render threads and the like) without a restart of the server. BlueMap drops
+  // its queued renders when it reloads: status/pregen.ts asks for the map again afterwards.
+  "map.reload": define({ name: "map.reload", role: "ADMIN", input: z.object({}), build: () => ["bluemap reload"] }),
   // BlueMap keeps "stopped" over a restart of the server: whoever stops it owes it a start (status/pregen.ts does).
   "map.stop": define({ name: "map.stop", role: "ADMIN", input: z.object({}), build: () => ["bluemap stop"] }),
   "map.start": define({ name: "map.start", role: "ADMIN", input: z.object({}), build: () => ["bluemap start"] }),

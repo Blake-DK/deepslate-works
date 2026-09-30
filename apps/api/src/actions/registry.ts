@@ -60,6 +60,7 @@ const intoRoom = (ctx: ActionCtx, name: string) => [
   toRoom(ctx, name),
   `effect give ${name} minecraft:slowness infinite 255 true`,
   `effect give ${name} minecraft:jump_boost infinite 250 true`,
+  takeBook(name), // a sign-in book from an earlier wait; limbo.hold gives a new one
 ];
 
 /** Only what is safe to show in chat: the name comes from a settings page, not from code. */
@@ -78,18 +79,74 @@ export function linkTellraw(name: string, portalUrl: string, code: string, siteN
   const payload = [
     { text: "", clickEvent: { action: "open_url", value: url }, hoverEvent: { action: "show_text", value: `Sign in to ${chatSafe(siteName, "Deepslate Works")}: opens ${host}/link/${code}` } },
     { text: "Click here to sign in", color: "gold", underlined: true },
-    { text: `, or go to ${host}/join and enter ${showCode(code)}`, color: "gray" },
+    { text: `, or right-click the book in your hand, or go to ${host}/join and enter ${showCode(code)}`, color: "gray" },
   ];
   return `tellraw ${name} ${JSON.stringify(payload)}`;
+}
+
+// ---- the sign-in book (planner, 2026-09-30) ------------------------------------------------------------------
+// A Microsoft account with chat switched off (Xbox privacy or family settings) never opens the chat screen, so the
+// chat link cannot be clicked. A link in a book opens from the book's own screen, which that setting does not block.
+// The book is ours by its custom_data tag: it is replaced, given again and taken back by that tag and nothing else.
+export const BOOK_TAG = "deepslate_signin";
+const BOOK_MATCH = `minecraft:written_book[minecraft:custom_data={${BOOK_TAG}:1b}]`;
+/** A text component as it goes into SNBT between single quotes. */
+const snbtString = (json: string) => `'${json.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+
+/** The two pages, as text components: the link, then the code for a phone. */
+export function bookPages(portalUrl: string, code: string): unknown[] {
+  const host = hostOf(portalUrl);
+  const url = `${portalUrl.replace(/\/+$/, "")}/link/${code}`;
+  return [
+    ["", { text: "Welcome!\n\nClick the link below to sign in with Discord. It opens in your browser.\n\n" },
+      { text: "Sign in with Discord", color: "blue", underlined: true, clickEvent: { action: "open_url", value: url }, hoverEvent: { action: "show_text", value: `Opens ${host}/link/${code}` } }],
+    ["", { text: `No browser on this PC?\n\nOn your phone, go to ${host}/join and enter ` }, { text: showCode(code), bold: true }, { text: "." }],
+  ];
+}
+
+/** The book as an item stack argument (1.21.1 components: pages are JSON text components in SNBT strings). */
+export function bookItem(portalUrl: string, code: string): string {
+  const pages = bookPages(portalUrl, code).map((p) => snbtString(JSON.stringify(p))).join(",");
+  return `minecraft:written_book[minecraft:written_book_content={title:"Sign in to play",author:"Deepslate Works",pages:[${pages}],resolved:1b},minecraft:custom_data={${BOOK_TAG}:1b}]`;
+}
+
+/**
+ * Into their hand if it is empty, otherwise into the inventory. `who` is a held player's selector. The order matters:
+ * a book put into an empty hand first would make the hand full for the second line.
+ */
+const placeBook = (who: string, item: string) => [
+  `execute as ${who} if items entity @s weapon.mainhand * run give @s ${item}`,
+  `execute as ${who} unless items entity @s weapon.mainhand * run item replace entity @s weapon.mainhand with ${item}`,
+];
+
+/** Our book out of their inventory, and nothing else: matched by its tag. */
+export const takeBook = (who: string) => `clear ${who} ${BOOK_MATCH}`;
+
+/** The book, replacing any earlier one of ours (a new code, a rejoin): never two. */
+export function giveBookCommands(name: string, portalUrl: string, code: string): string[] {
+  const held = `@a[name=${name},tag=!verified]`;
+  return [takeBook(held), ...placeBook(held, bookItem(portalUrl, code))];
+}
+
+/** Every 5 s: if the book is gone (dropped, or thrown into the void), a new one. Nothing is cleared, so nothing to log. */
+export function bookCheckCommands(name: string, portalUrl: string, code: string): string[] {
+  const held = `@a[name=${name},tag=!verified]`;
+  const mark = "deepslate_nobook";
+  return [
+    `execute as ${held} unless items entity @s container.* ${BOOK_MATCH} unless items entity @s weapon.offhand ${BOOK_MATCH} run tag @s add ${mark}`,
+    ...placeBook(`@a[name=${name},tag=!verified,tag=${mark}]`, bookItem(portalUrl, code)),
+    `execute as @a[name=${name},tag=${mark}] run tag @s remove ${mark}`, // says nothing when there is nobody to untag
+  ];
 }
 
 /** Who waits in the room, and for what: to link their Discord, for Play first, for the server to open, or for a new installer. */
 export type HeldKind = "link" | "play" | "closed" | "old";
 
 /** What stays on their screen while they wait (docs/14 "The prompt"). */
-export function screenText(kind: HeldKind, portalUrl: string, code = ""): { title: string; subtitle: string } {
+export function screenText(kind: HeldKind, portalUrl: string, code = ""): { title: string; subtitle: string; bar?: string } {
   const host = hostOf(portalUrl);
-  if (kind === "link") return { title: "Sign in to play", subtitle: `Click the link in chat, or go to ${host}/join and enter ${showCode(code)}` };
+  // 2026-09-30 (planner): an account with chat switched off never opens the chat, so the book comes first on screen
+  if (kind === "link") return { title: "Sign in to play", subtitle: `Right-click the book, or go to ${host}/join and enter ${showCode(code)}`, bar: `Click the link in chat or right-click the book in your hand, or go to ${host}/join and enter ${showCode(code)}` };
   if (kind === "play") return { title: "Press Play first", subtitle: `Press Play on ${host} and you'll be let in` };
   if (kind === "old") return { title: "Download Deepslate Works again", subtitle: `from ${host}/install, then press Play` };
   return { title: "Not open yet", subtitle: "You'll be let in when the server goes live" };
@@ -106,7 +163,7 @@ export function screenCommands(name: string, kind: HeldKind, portalUrl: string, 
     `title ${who} times 0 400 0`,
     `title ${who} subtitle ${component(t.subtitle, "white")}`,
     `title ${who} title ${component(t.title, "gold")}`,
-    `title ${who} actionbar ${component(t.subtitle, "yellow")}`,
+    `title ${who} actionbar ${component(t.bar ?? t.subtitle, "yellow")}`,
   ];
 }
 
@@ -150,7 +207,21 @@ export const actions = {
     name: "limbo.hold",
     role: "system",
     input: z.object({ name: MC_NAME, code: z.string().regex(CODE_RE) }),
-    build: (ctx, { name, code }) => [...intoRoom(ctx, name), ...screenCommands(name, "link", ctx.portalUrl, code), linkTellraw(name, ctx.portalUrl, code, ctx.siteName)],
+    build: (ctx, { name, code }) => [...intoRoom(ctx, name), ...giveBookCommands(name, ctx.portalUrl, code), ...screenCommands(name, "link", ctx.portalUrl, code), linkTellraw(name, ctx.portalUrl, code, ctx.siteName)],
+  }),
+  // The book again: a new code while they wait. Replaces the old one.
+  "limbo.giveBook": define({
+    name: "limbo.giveBook",
+    role: "system",
+    input: z.object({ name: MC_NAME, code: z.string().regex(CODE_RE) }),
+    build: (ctx, { name, code }) => giveBookCommands(name, ctx.portalUrl, code),
+  }),
+  // Every round of the room (5 s): a book that is gone is given again.
+  "limbo.bookCheck": define({
+    name: "limbo.bookCheck",
+    role: "system",
+    input: z.object({ name: MC_NAME, code: z.string().regex(CODE_RE) }),
+    build: (ctx, { name, code }) => bookCheckCommands(name, ctx.portalUrl, code),
   }),
   "limbo.remind": define({
     name: "limbo.remind",
@@ -163,7 +234,10 @@ export const actions = {
     name: "limbo.bar",
     role: "system",
     input: z.object({ name: MC_NAME, kind: z.enum(["link", "play", "closed", "old"]), code: z.string().regex(CODE_RE).optional() }),
-    build: (ctx, { name, kind, code }) => [`title @a[name=${name},tag=!verified] actionbar ${component(screenText(kind, ctx.portalUrl, code).subtitle, "yellow")}`],
+    build: (ctx, { name, kind, code }) => {
+      const t = screenText(kind, ctx.portalUrl, code);
+      return [`title @a[name=${name},tag=!verified] actionbar ${component(t.bar ?? t.subtitle, "yellow")}`];
+    },
   }),
   "limbo.keep": define({
     name: "limbo.keep",
@@ -189,6 +263,7 @@ export const actions = {
         ctx.spawn ? ow(`tp ${held} ${ctx.spawn.x} ${ctx.spawn.y} ${ctx.spawn.z}`) : ow(`spreadplayers 0 0 1 12 false ${held}`),
         `tellraw ${held} ${JSON.stringify([{ text: "Linked. Welcome in, ", color: "green" }, { text: name, color: "aqua" }, { text: ". Have fun.", color: "green" }])}`,
         ...clearScreen(held),
+        takeBook(held),
         `whitelist add ${name}`,
         `tag ${name} add verified`, // last: everything above looks for its absence
       ];
@@ -232,6 +307,7 @@ export const actions = {
           : ctx.spawn ? ow(`tp ${held} ${ctx.spawn.x} ${ctx.spawn.y} ${ctx.spawn.z}`) : ow(`spreadplayers 0 0 1 12 false ${held}`),
         `tellraw ${held} ${JSON.stringify([{ text: "Mods checked. Welcome back, ", color: "green" }, { text: name, color: "aqua" }, { text: ".", color: "green" }])}`,
         ...clearScreen(held),
+        takeBook(held),
         `tag ${name} add verified`,
       ];
     },
@@ -276,7 +352,8 @@ export const actions = {
     role: "ADMIN",
     input: z.object({}),
     // Glass all round, so that the void and the stars are seen; a floor of sea lanterns; two signs in front of
-    // whoever stands there: the server's name, and where to sign in from a phone (docs/14 "The prompt"). `hollow`
+    // whoever stands there: right-click the book (since 2026-09-30; the server's name before), and where to sign in
+    // from a phone (docs/14 "The prompt"). `hollow`
     // empties the inside, so a sign of an earlier build does not stay behind.
     // logAdminCommands off: the room's prompt uses `title` every few seconds, and every `title` sent from the console
     // would otherwise be repeated to each operator in game ("[Server: Showing new title for …]").
@@ -284,7 +361,6 @@ export const actions = {
       const b = roomBounds(ctx.limbo);
       const c = block(ctx.limbo);
       const d = ctx.limbo.dimension;
-      const name = chatSafe(ctx.siteName, "Deepslate Works").replace(/'/g, "");
       const line = (t: string) => `'${JSON.stringify({ text: t })}'`;
       const sign = (x: number, lines: string[]) => inDim(d, `setblock ${x} ${c.y} ${c.z - 3} minecraft:oak_sign[rotation=0]{front_text:{messages:[${lines.map(line).join(",")}]},is_waxed:1b}`);
       const host = hostOf(ctx.portalUrl).replace(/'/g, "");
@@ -294,8 +370,9 @@ export const actions = {
         inDim(d, `forceload add ${b.x1} ${b.z1} ${b.x2} ${b.z2}`),
         inDim(d, `fill ${b.x1} ${b.y1} ${b.z1} ${b.x2} ${b.y2} ${b.z2} minecraft:glass hollow`),
         inDim(d, `fill ${b.x1} ${b.y1} ${b.z1} ${b.x2} ${b.y1} ${b.z2} minecraft:sea_lantern`),
-        sign(c.x - 1, ["", name, "", ""]),
-        sign(c.x + 1, ["Sign in at", where[0]!, where[1]!, "code in chat"]),
+        // 2026-09-30 (planner): the book is the way in that always works, so the first sign points at it
+        sign(c.x - 1, ["Right-click", "the book", "to sign in", ""]),
+        sign(c.x + 1, ["Sign in at", where[0]!, where[1]!, "code on screen"]),
         "gamerule logAdminCommands false",
       ];
     },

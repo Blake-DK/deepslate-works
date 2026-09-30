@@ -256,8 +256,10 @@ export class Limbo {
   protected async prompt(name: string, h: Held, now: number) {
     h.lastReminder = now;
     if (h.kind === "link") {
+      const was = h.code;
       if (h.uuid) h.code = await this.codeFor(h.uuid, name); // the same code, or a new one if it ran out meanwhile
       if (this.held.get(name) !== h) return; // let in, or gone, while the code was looked up
+      if (h.code !== was) await runAction(this.amp, this.ctx, "limbo.giveBook", { name, code: h.code }, null); // the old book's code is dead
       await runAction(this.amp, this.ctx, "limbo.remind", { name, code: h.code }, null);
     } else {
       await runAction(this.amp, this.ctx, REMIND[h.kind], { name }, null);
@@ -292,6 +294,7 @@ export class Limbo {
           continue;
         }
       }
+      if (h.kind === "link" && h.code) await runAction(this.amp, this.ctx, "limbo.bookCheck", { name, code: h.code }, null); // dropped: another within 5 s
       if (now - h.lastReminder >= BAR_GAP_MS) await runAction(this.amp, this.ctx, "limbo.bar", h.kind === "link" ? { name, kind: h.kind, code: h.code } : { name, kind: h.kind }, null);
     }
   }

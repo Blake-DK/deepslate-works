@@ -89,9 +89,9 @@ describe("what a held player sees", () => {
     const remind = actions["limbo.remind"].build(ctx, { name: "Pabulum", code: "ABC234" });
     const screen = [
       "title @a[name=Pabulum,tag=!verified] times 0 400 0",
-      'title @a[name=Pabulum,tag=!verified] subtitle {"text":"Click the link in chat, or go to deepslate.dsw.test/join and enter ABC-234","color":"white"}',
+      'title @a[name=Pabulum,tag=!verified] subtitle {"text":"Right-click the book, or go to deepslate.dsw.test/join and enter ABC-234","color":"white"}',
       'title @a[name=Pabulum,tag=!verified] title {"text":"Sign in to play","color":"gold"}',
-      'title @a[name=Pabulum,tag=!verified] actionbar {"text":"Click the link in chat, or go to deepslate.dsw.test/join and enter ABC-234","color":"yellow"}',
+      'title @a[name=Pabulum,tag=!verified] actionbar {"text":"Click the link in chat or right-click the book in your hand, or go to deepslate.dsw.test/join and enter ABC-234","color":"yellow"}',
     ];
     expect(remind).toEqual([...screen, linkTellraw("Pabulum", URL_, "ABC234")]);
     expect(hold.slice(-5)).toEqual(remind);
@@ -101,7 +101,7 @@ describe("what a held player sees", () => {
 
   it("one chat line, all of it a link to /link/<code>, with the code for /join in it", () => {
     const parts = JSON.parse(linkTellraw("Pabulum", URL_, "ABC234").slice("tellraw Pabulum ".length)) as Array<{ text: string; clickEvent?: { action: string; value: string } }>;
-    expect(parts.map((p) => p.text).join("")).toBe("Click here to sign in, or go to deepslate.dsw.test/join and enter ABC-234");
+    expect(parts.map((p) => p.text).join("")).toBe("Click here to sign in, or right-click the book in your hand, or go to deepslate.dsw.test/join and enter ABC-234");
     expect(parts[0]!.clickEvent).toEqual({ action: "open_url", value: "https://deepslate.dsw.test/link/ABC234" }); // the parent: every part inherits it
     expect(parts.slice(1).every((p) => !p.clickEvent)).toBe(true);
   });
@@ -115,7 +115,7 @@ describe("what a held player sees", () => {
   });
 
   it("the action bar between two prompts", () => {
-    expect(actions["limbo.bar"].build(ctx, { name: "Pabulum", kind: "link", code: "ABC234" })).toEqual(['title @a[name=Pabulum,tag=!verified] actionbar {"text":"Click the link in chat, or go to deepslate.dsw.test/join and enter ABC-234","color":"yellow"}']);
+    expect(actions["limbo.bar"].build(ctx, { name: "Pabulum", kind: "link", code: "ABC234" })).toEqual(['title @a[name=Pabulum,tag=!verified] actionbar {"text":"Click the link in chat or right-click the book in your hand, or go to deepslate.dsw.test/join and enter ABC-234","color":"yellow"}']);
     expect(actions["limbo.bar"].input.safeParse({ name: "Pabulum", kind: "link", code: "ABC23" }).success).toBe(false);
   });
 
@@ -128,10 +128,10 @@ describe("what a held player sees", () => {
     }
   });
 
-  it("the room has a second sign, with where to sign in", () => {
+  it("the room's two signs: the book, and where to sign in from a phone", () => {
     const cmds = actions["limbo.build"].build({ ...ctx, siteName: "Deepslate Works" }, {});
-    expect(cmds).toContain(`execute in deepslate:limbo run setblock -1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":""}','{"text":"Deepslate Works"}','{"text":""}','{"text":""}']},is_waxed:1b}`);
-    expect(cmds).toContain(`execute in deepslate:limbo run setblock 1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":"Sign in at"}','{"text":"deepslate."}','{"text":"dsw.test/join"}','{"text":"code in chat"}']},is_waxed:1b}`);
+    expect(cmds).toContain(`execute in deepslate:limbo run setblock -1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":"Right-click"}','{"text":"the book"}','{"text":"to sign in"}','{"text":""}']},is_waxed:1b}`);
+    expect(cmds).toContain(`execute in deepslate:limbo run setblock 1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":"Sign in at"}','{"text":"deepslate."}','{"text":"dsw.test/join"}','{"text":"code on screen"}']},is_waxed:1b}`);
     expect(cmds).toContain("gamerule logAdminCommands false");
   });
 });

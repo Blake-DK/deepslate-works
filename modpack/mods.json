@@ -112,7 +112,8 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "lithium",
@@ -141,7 +142,8 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "ferrite-core",
@@ -170,7 +172,8 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "modernfix",
@@ -199,7 +202,8 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "entityculling",
@@ -228,7 +232,8 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "immediatelyfast",
@@ -257,7 +262,8 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "dynamic-fps",
@@ -286,7 +292,8 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "jei",
@@ -315,7 +322,35 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "helper",
+      "howTo": "The item list on the right of any inventory screen. Hover over an item and press **R** to see how it's made, **U** to see what it's used in. Type in the search box at the bottom to find anything; `@create` shows only Create's items.",
+      "keys": [
+        {
+          "key": "R",
+          "does": "How this item is made"
+        },
+        {
+          "key": "U",
+          "does": "What this item is used in"
+        },
+        {
+          "key": "A",
+          "does": "Bookmark the item"
+        },
+        {
+          "key": "Ctrl+F",
+          "does": "Jump to the search box"
+        },
+        {
+          "key": "Ctrl+O",
+          "does": "Hide or show the item list"
+        },
+        {
+          "key": "Backspace",
+          "does": "Back to the previous recipe"
+        }
+      ]
     },
     {
       "slug": "jade",
@@ -344,7 +379,23 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "helper",
+      "howTo": "Nothing to do: look at a block, a machine or a mob and a small box at the top of the screen says what it is and which mod it's from, plus things like a furnace's progress or a crop's growth.",
+      "keys": [
+        {
+          "key": "Left Shift",
+          "does": "More details in the box"
+        },
+        {
+          "key": "Keypad 0",
+          "does": "Jade's settings"
+        },
+        {
+          "key": "Keypad 1",
+          "does": "Hide or show the box"
+        }
+      ]
     },
     {
       "slug": "xaeros-minimap",
@@ -373,7 +424,27 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "The minimap sits in the corner and shows waypoints, party members and where you last died. Press **B** to drop a waypoint where you stand (mark your base!) and **U** for the list of waypoints.",
+      "keys": [
+        {
+          "key": "B",
+          "does": "New waypoint where you stand"
+        },
+        {
+          "key": "U",
+          "does": "Waypoint list"
+        },
+        {
+          "key": "Z",
+          "does": "Bigger minimap"
+        },
+        {
+          "key": "Y",
+          "does": "Minimap settings"
+        }
+      ]
     },
     {
       "slug": "xaeros-world-map",
@@ -402,7 +473,19 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Press **M** for a full map of everywhere you've been. Drag to move, scroll to zoom, right-click a spot to add a waypoint or (with Open Parties and Claims) claim chunks.",
+      "keys": [
+        {
+          "key": "M",
+          "does": "Open the world map"
+        },
+        {
+          "key": "]",
+          "does": "World map settings"
+        }
+      ]
     },
     {
       "slug": "open-parties-and-claims",
@@ -427,7 +510,15 @@
         }
       ],
       "version": "3i48dTzz",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Press **'** (apostrophe, next to Enter), **create a party** and invite friends by their Minecraft name; party members show on each other's maps at any distance. To claim your base, open the world map (**M**), right-click a chunk and choose **Claim**: then only your party can build, break and open chests there.",
+      "keys": [
+        {
+          "key": "'",
+          "does": "Parties and claims screen"
+        }
+      ]
     },
     {
       "slug": "appleskin",
@@ -456,7 +547,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "helper",
+      "howTo": "Hover over food in your inventory to see how much hunger (drumsticks) and saturation it gives. Your hunger bar shows how much a held food would fill."
     },
     {
       "slug": "mouse-tweaks",
@@ -485,7 +578,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "helper",
+      "howTo": "- Hold **right-click** and drag across slots to spread a stack evenly.\n- Hold **left-click** and drag to pick up the same item from many slots.\n- **Shift + left-click** and drag to move many stacks at once.\n- **Scroll** over a stack to move items one by one."
     },
     {
       "slug": "corpse",
@@ -510,7 +605,15 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "When you die, your things stay in your body where you fell. It never disappears. For 30 minutes only you can open it; after that your friends can too, so they can bring your things back if you're offline. Your minimap marks where you died.\n\nRight-click the body to open it. The 30 minutes only run while someone is near it. Press **U** for your death history.",
+      "keys": [
+        {
+          "key": "U",
+          "does": "Your death history (where you died)"
+        }
+      ]
     },
     {
       "slug": "simple-voice-chat",
@@ -522,7 +625,7 @@
       "recommended": false,
       "hidden": false,
       "exclusiveGroup": null,
-      "description": "Talk in game. Push to talk on V by default; people near you hear you.",
+      "description": "Talk in game: people near you hear you. Press V for the voice chat menu; choose push to talk or voice activation there.",
       "wiki": "https://modrepo.de/minecraft/voicechat/wiki",
       "videos": [
         {
@@ -539,7 +642,31 @@
         }
       ],
       "version": "qqNx1Yjm",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Press **V** the first time: it asks whether you want **push to talk** or **voice activation** and lets you pick and test your microphone. People near you hear you, quieter with distance. Push to talk has no key until you set one in Options \u2192 Controls \u2192 Simple Voice Chat. **Groups** (G) let you talk to friends anywhere on the map.",
+      "keys": [
+        {
+          "key": "V",
+          "does": "Voice chat menu"
+        },
+        {
+          "key": "M",
+          "does": "Mute your microphone"
+        },
+        {
+          "key": "N",
+          "does": "Switch voice chat off"
+        },
+        {
+          "key": "G",
+          "does": "Groups"
+        },
+        {
+          "key": "(unbound)",
+          "does": "Push to talk: set it in Options \u2192 Controls"
+        }
+      ]
     },
     {
       "slug": "fallingtree",
@@ -564,7 +691,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Break the bottom log of a tree and the whole tree comes down, with an axe or by hand. **Sneak** while breaking to take just one log. Leaves decay quickly afterwards."
     },
     {
       "slug": "bettertabinfo",
@@ -580,7 +709,15 @@
       "wiki": "https://github.com/tricube3/better-tab",
       "videos": [],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "helper",
+      "howTo": "Hold **Tab** in game: who's on, everyone's ping in milliseconds, and the server's TPS (20 is perfect, lower means the server is struggling).",
+      "keys": [
+        {
+          "key": "Tab",
+          "does": "Player list with ping and TPS"
+        }
+      ]
     },
     {
       "slug": "noisium",
@@ -596,7 +733,8 @@
       "wiki": "https://modrinth.com/mod/noisium",
       "videos": [],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "clumps",
@@ -612,7 +750,8 @@
       "wiki": "https://modrinth.com/mod/clumps",
       "videos": [],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "get-it-together-drops",
@@ -628,7 +767,8 @@
       "wiki": "https://modrinth.com/mod/get-it-together-drops",
       "videos": [],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "fastfurnace",
@@ -644,7 +784,8 @@
       "wiki": "https://modrinth.com/mod/fastfurnace",
       "videos": [],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "fastworkbench",
@@ -660,7 +801,8 @@
       "wiki": "https://modrinth.com/mod/fastworkbench",
       "videos": [],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "alternate-current",
@@ -676,7 +818,8 @@
       "wiki": "https://modrinth.com/mod/alternate-current",
       "videos": [],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "flw-vanillin",
@@ -693,7 +836,8 @@
       "videos": [],
       "version": "latest",
       "requires": [],
-      "note": "Uses Create's Flywheel"
+      "note": "Uses Create's Flywheel",
+      "guide": "behind"
     },
     {
       "slug": "badoptimizations",
@@ -709,7 +853,8 @@
       "wiki": "https://modrinth.com/mod/badoptimizations",
       "videos": [],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "create",
@@ -738,7 +883,19 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Start with a **water wheel** next to flowing water and a **shaft**: anything on the shaft turns. Make **andesite alloy** (andesite + iron nugget) for shafts, cogwheels and the **mechanical press**. Next: a press over a belt for automatic plates, a millstone for flour and dyes.\n\nIn JEI, hold **W** over any Create block to watch its Ponder animation; the **Engineer's Goggles** show speed and stress when you look at a machine.",
+      "keys": [
+        {
+          "key": "W",
+          "does": "Ponder: hold over a block in JEI"
+        },
+        {
+          "key": "Left Alt",
+          "does": "Open a toolbox near you"
+        }
+      ]
     },
     {
       "slug": "createaddition",
@@ -770,7 +927,9 @@
       "version": "latest",
       "requires": [
         "create"
-      ]
+      ],
+      "guide": "game",
+      "howTo": "Turns Create's rotation into electricity. Put an **alternator** on a spinning shaft, run **copper wire** (spools) from its connector to a machine's connector, and it has power. **Electric motors** turn power back into rotation; **accumulators** store it."
     },
     {
       "slug": "create-big-cannons",
@@ -803,7 +962,9 @@
       "requires": [
         "create",
         "rpl"
-      ]
+      ],
+      "guide": "game",
+      "howTo": "Build a cannon from a **cannon mount** and barrel blocks, load a shell and powder charges with a deployer or by hand, then fire it with redstone. Ponder (hold **W** over a block in JEI) shows each step."
     },
     {
       "slug": "immersiveengineering",
@@ -832,7 +993,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Start with the **Engineer's Manual** (craft a book with a lever): it explains every machine. Early on: a **coke oven** for coal coke, a **water wheel** or **windmill** with **LV wire** to power machines, then the multiblocks shown in the manual, built and finished with the **Engineer's Hammer**."
     },
     {
       "slug": "mekanism",
@@ -861,7 +1024,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Start with an **Enrichment Chamber** (2 dust per ore) powered by a generator from Mekanism Generators. Upgrade machines with **speed** and **energy** upgrades. Cables carry power, **logistical transporters** carry items. JEI shows every recipe."
     },
     {
       "slug": "mekanism-generators",
@@ -893,7 +1058,9 @@
       "version": "latest",
       "requires": [
         "mekanism"
-      ]
+      ],
+      "guide": "game",
+      "howTo": "Power for Mekanism: start with a **Heat Generator** (burns fuel or sits next to lava), then **solar** or **wind generators**. Connect them to machines with universal cables."
     },
     {
       "slug": "mekanism-tools",
@@ -921,7 +1088,9 @@
       "version": "latest",
       "requires": [
         "mekanism"
-      ]
+      ],
+      "guide": "game",
+      "howTo": "Tools and armour from Mekanism's metals (osmium, bronze, steel and more). Craft them like vanilla tools; JEI shows the recipes."
     },
     {
       "slug": "industrial-foregoing",
@@ -950,7 +1119,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Machines that farm and breed for you. Power them with a **Pitiful Generator** to start. Place a machine, then right-click it to set its **working area**; add range upgrades for a bigger area."
     },
     {
       "slug": "ae2",
@@ -979,7 +1150,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Grow **certus quartz** in your first inscriber recipes, build an **ME Controller**, a **Drive** with **storage cells** and an **ME Terminal**, all joined with cables. Everything in the cells shows up in the terminal, searchable. Autocrafting comes later with pattern providers."
     },
     {
       "slug": "veinminer",
@@ -991,7 +1164,7 @@
       "recommended": true,
       "hidden": false,
       "exclusiveGroup": null,
-      "description": "Hold the key and mine one ore, the whole vein comes out. Works alongside FallingTree: VeinMiner is the key you hold, FallingTree is the axe.",
+      "description": "Mine one ore and the whole vein comes out, no key to hold. Works alongside FallingTree: VeinMiner is ore, FallingTree is trees.",
       "wiki": "https://modrinth.com/mod/veinminer",
       "videos": [
         {
@@ -1008,7 +1181,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Just mine: break one ore block with the right pickaxe and the rest of the vein (up to 100 blocks) comes out with it. No key to hold. It costs hunger and tool durability, so bring food and a spare pickaxe. Trees are FallingTree's job."
     },
     {
       "slug": "sophisticated-backpacks",
@@ -1039,6 +1214,26 @@
       "version": "latest",
       "requires": [
         "sophisticated-core"
+      ],
+      "guide": "game",
+      "howTo": "Craft a **backpack** (leather and a chest) as soon as you can. Wear it in the chest slot and press **B** to open it, or hold it and right-click. Upgrade it later (iron, gold, diamond, netherite) and put upgrades in its side slots: **Pickup** collects items for you, **Magnet** pulls them in, **Crafting** gives a crafting grid inside.",
+      "keys": [
+        {
+          "key": "B",
+          "does": "Open the backpack you wear"
+        },
+        {
+          "key": "C",
+          "does": "Use the backpack's inventory upgrades"
+        },
+        {
+          "key": "Alt+Z",
+          "does": "First upgrade on or off"
+        },
+        {
+          "key": "Alt+X",
+          "does": "Second upgrade on or off"
+        }
       ]
     },
     {
@@ -1070,7 +1265,9 @@
       "version": "latest",
       "requires": [
         "scalable-cats-force"
-      ]
+      ],
+      "guide": "game",
+      "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock."
     },
     {
       "slug": "tacz-1.21.1",
@@ -1100,7 +1297,43 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Watch out: several of TaCZ's keys are also used by other mods (V, G, H, C, Z); change them in Options \u2192 Controls if something clashes.",
+      "keys": [
+        {
+          "key": "Left click",
+          "does": "Shoot"
+        },
+        {
+          "key": "Right click",
+          "does": "Aim"
+        },
+        {
+          "key": "R",
+          "does": "Reload"
+        },
+        {
+          "key": "G",
+          "does": "Fire mode"
+        },
+        {
+          "key": "Z",
+          "does": "Attachments"
+        },
+        {
+          "key": "H",
+          "does": "Inspect"
+        },
+        {
+          "key": "V",
+          "does": "Melee"
+        },
+        {
+          "key": "C",
+          "does": "Crawl"
+        }
+      ]
     },
     {
       "slug": "vics-point-blank",
@@ -1130,7 +1363,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Guns are crafted at the **gun workbench**. Left-click to shoot, right-click to aim; ammo is crafted at the same bench."
     },
     {
       "slug": "waystones",
@@ -1159,7 +1394,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Find **waystones** in villages and the wild, or craft one. Right-click it to activate and name it. From any waystone (or with a **warp scroll** or **warp stone**) you can teleport to every waystone you've activated; it costs a little XP."
     },
     {
       "slug": "farmers-delight",
@@ -1188,7 +1425,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Craft a **cooking pot** and put it on a campfire or stove; meals give long-lasting saturation. A **cutting board** with a knife slices ingredients. Plant **rice** in water and **tomatoes**, **cabbages** and **onions** you find in the wild."
     },
     {
       "slug": "pipez",
@@ -1217,7 +1456,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Place a pipe against a chest or machine; one pipe each for items, fluids, energy and gas. Right-click a pipe's end with the **wrench** to choose whether it pulls out of or pushes into the block. Add filters and speed upgrades in the end's menu."
     },
     {
       "slug": "create-deco",
@@ -1241,7 +1482,9 @@
       "version": "latest",
       "requires": [
         "create"
-      ]
+      ],
+      "guide": "game",
+      "howTo": "Metal bricks, catwalks, lamps, doors and windows in Create's style. Craft them from Create's metals; JEI shows every block (search `@createdeco`)."
     },
     {
       "slug": "copycats",
@@ -1265,6 +1508,14 @@
       "version": "latest",
       "requires": [
         "create"
+      ],
+      "guide": "game",
+      "howTo": "Place a copycat block (slope, step, panel, stair\u2026), then right-click it with any block to make it take on that block's look. Right-click with a wrench to change its shape.",
+      "keys": [
+        {
+          "key": "Left Alt",
+          "does": "Hold while filling to fill every part"
+        }
       ]
     },
     {
@@ -1290,7 +1541,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Craft roof pieces from planks, stone or terracotta at a crafting table; JEI lists them all (search `@mcwroofs`). They place like stairs: the direction you face decides the slope."
     },
     {
       "slug": "macaws-windows",
@@ -1315,7 +1568,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Windows, shutters, curtains and window boxes in every wood. Craft at a crafting table; right-click a window or shutter to open and close it."
     },
     {
       "slug": "macaws-doors",
@@ -1340,7 +1595,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Dozens of doors in every wood: barn, stable, glass and more. Craft at a crafting table; JEI lists them (search `@mcwdoors`)."
     },
     {
       "slug": "handcrafted",
@@ -1367,7 +1624,9 @@
       "version": "latest",
       "requires": [
         "resourceful-lib"
-      ]
+      ],
+      "guide": "game",
+      "howTo": "Furniture you can use: right-click a chair or bench to sit, put items on shelves and tables, store things in cupboards. Most pieces are made with a **hammer** at a crafting table."
     },
     {
       "slug": "macaws-furniture",
@@ -1392,7 +1651,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Tables, chairs, desks, wardrobes and kitchen counters in every wood. Right-click chairs to sit and drawers to store things. JEI lists them all."
     },
     {
       "slug": "macaws-fences-and-walls",
@@ -1417,7 +1678,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Fences, walls and railings in many styles. Craft at a crafting table; JEI lists them all."
     },
     {
       "slug": "macaws-bridges",
@@ -1442,7 +1705,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Bridge pieces and rope bridges with railings and supports. Craft at a crafting table and place them in a row; JEI lists them all."
     },
     {
       "slug": "macaws-paths-and-pavings",
@@ -1463,7 +1728,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Paths, paving and edgings. Craft at a crafting table and lay them like slabs; JEI lists them all."
     },
     {
       "slug": "macaws-lights-and-lamps",
@@ -1488,7 +1755,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Lamps, lanterns, chandeliers and wall lights. Craft at a crafting table; right-click a lamp to switch it on or off."
     },
     {
       "slug": "macaws-trapdoors",
@@ -1509,7 +1778,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Many more trapdoor designs in every wood, for shutters and details. Craft at a crafting table."
     },
     {
       "slug": "macaws-stairs",
@@ -1530,7 +1801,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "More stairs, railings and balconies in every wood. Craft at a crafting table; JEI lists them all."
     },
     {
       "slug": "another-furniture",
@@ -1551,7 +1824,9 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "game",
+      "howTo": "Chairs, tables, benches, shelves, curtains and lamps. Right-click to sit or use; JEI lists every piece."
     },
     {
       "slug": "supplementaries",
@@ -1578,7 +1853,9 @@
       "version": "latest",
       "requires": [
         "moonlight"
-      ]
+      ],
+      "guide": "game",
+      "howTo": "Jars, signposts, planters, item shelves and lots of small details. JEI shows what each one is made of and what it does."
     },
     {
       "slug": "rechiseled",
@@ -1607,7 +1884,9 @@
         "supermartijn642s-core-lib",
         "supermartijn642s-config-lib",
         "fusion-connected-textures"
-      ]
+      ],
+      "guide": "game",
+      "howTo": "Craft a **chiseling table**, put in a stack of an ordinary block and pick a new look for it. No new materials, just new textures."
     },
     {
       "slug": "rechiseled-create",
@@ -1632,7 +1911,9 @@
       "requires": [
         "rechiseled",
         "create"
-      ]
+      ],
+      "guide": "game",
+      "howTo": "Chiseled versions of Create's blocks, made in Rechiseled's **chiseling table**."
     },
     {
       "slug": "chunky",
@@ -1661,7 +1942,8 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "spark",
@@ -1690,7 +1972,8 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "bluemap",
@@ -1719,7 +2002,42 @@
         }
       ],
       "version": "latest",
-      "requires": []
+      "requires": [],
+      "guide": "behind"
+    },
+    {
+      "slug": "servercore",
+      "name": "ServerCore",
+      "category": "server",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Mobs far from every player tick once a second instead of twenty times, and mobs that used to spawn past the mob cap count towards it.",
+      "wiki": "https://github.com/Wesley1808/ServerCore/wiki",
+      "videos": [],
+      "version": "latest",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
+      "slug": "async-locator-refined",
+      "name": "Async Locator Refined",
+      "category": "server",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Structure searches (/locate, explorer maps, dolphins, eyes of ender) run beside the game instead of freezing it.",
+      "wiki": "https://github.com/Alvaro842DEV/AsyncLocator-Refined",
+      "videos": [],
+      "version": "latest",
+      "requires": [],
+      "guide": "behind"
     },
     {
       "slug": "rpl",

@@ -1,0 +1,38 @@
+# Corpse 1.1.13, settings shipped with the pack (planner, 2026-10-01). Sync puts this file into the server's config/
+# folder (NeoForge 21.1 keeps SERVER configs there); Corpse reads it at start.
+#
+# - A body with things in it never disappears (despawn.force_time = -1). An EMPTY body goes after 30 s.
+# - For the first 30 minutes only the owner can open their body (access.only_owner); after that it turns into a
+#   skeleton and anyone can open it (access.skeleton), so friends can recover things for someone who is offline.
+#   Server operators can always open any body (built into Corpse).
+# - The 30 minutes are the body's own clock (its "Age"), which only runs while its chunk is loaded, i.e. while
+#   somebody is near it. A body in an unloaded area keeps its count until someone comes back.
+
+#The time (in real life days) deaths get stored
+#-1 for infinite storage
+#0 for not storing deaths at all
+death_storage_duration = -1
+
+[corpse]
+	#The time passed (in ticks) after a corpse turns into a skeleton (36000 ticks = 30 minutes)
+	skeleton_time = 36000
+	#If the corpse should lie on its face
+	lie_on_face = false
+	#If the corpse should wear the players equipment
+	show_equipment = true
+	#If the corpse should fall into the void
+	fall_into_void = false
+	#If the corpse should get removed when in lava
+	lava_damage = false
+
+	[corpse.access]
+		#If only the owner of the corpse can access the inventory
+		only_owner = true
+		#If everybody can access the corpse in the skeleton stage (Only if only_owner_access is set to true)
+		skeleton = true
+
+	[corpse.despawn]
+		#The time passed (in ticks) after a corpse despawns (only if empty)
+		time = 600
+		#The time passed (in ticks) after a corpse despawns even if its not empty (-1 = never)
+		force_time = -1

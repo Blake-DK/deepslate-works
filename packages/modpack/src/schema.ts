@@ -10,6 +10,15 @@ export const videoSchema = z.object({
   url: z.string().url().regex(/^https:\/\/(www\.)?youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}/, "YouTube watch URL"),
 });
 
+// The Mods guide (/mods, planner 2026-10-01) is generated from these fields, never written by hand.
+// guide: which part of the page a mod is in. "game" = What's in the game, "helper" = Helpers, "behind" = Behind the scenes.
+export const GUIDE_SECTIONS = ["game", "helper", "behind"] as const;
+export type GuideSection = (typeof GUIDE_SECTIONS)[number];
+export const keySchema = z.object({ key: z.string().min(1).max(40), does: z.string().min(1).max(120) });
+export type KeyBind = z.infer<typeof keySchema>;
+/** A short "how to use it", in the portal's small Markdown (bold, lists, links). */
+export const howToSchema = z.string().min(1).max(700);
+
 export const modSchema = z.object({
   slug: z.string().regex(/^[a-z0-9][a-z0-9._-]*$/, "Modrinth slug"),
   name: z.string().min(1),
@@ -26,6 +35,9 @@ export const modSchema = z.object({
   videos: z.array(videoSchema).max(3).default([]),
   version: z.string().default("latest"), // "latest" or a Modrinth version id
   requires: z.array(z.string()).default([]),
+  guide: z.enum(GUIDE_SECTIONS).optional(),
+  howTo: howToSchema.optional(),
+  keys: z.array(keySchema).max(12).optional(),
 });
 
 export const categorySchema = z.object({
@@ -69,4 +81,9 @@ export type Video = z.infer<typeof videoSchema>;
 /** The render and simulation distance for a member's PC tier. No tier known: the weak PC's, which is safe anywhere. */
 export function distancesFor(m: Pick<Manifest, "render_by_tier">, tier: string | null | undefined): { render: number; simulation: number } {
   return (TIERS as readonly string[]).includes(tier ?? "") ? m.render_by_tier[tier as Tier] : m.render_by_tier.LOW;
+}
+
+/** On the Mods guide's first three parts, and so needs a howTo: switched on, not a dependency, and something a player uses. */
+export function isPlayerFacing(mod: Pick<Mod, "enabled" | "hidden" | "guide">): boolean {
+  return mod.enabled && !mod.hidden && (mod.guide === "game" || mod.guide === "helper");
 }

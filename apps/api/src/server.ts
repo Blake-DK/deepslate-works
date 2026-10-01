@@ -28,6 +28,8 @@ import { prismaSnapshotStore } from "./status/store.js";
 import { RestartSchedule } from "./status/restart.js";
 import { Distances } from "./status/distance.js";
 import { distanceRoutes } from "./routes/distance.js";
+import { GroundItems, PLAN_KEY as GROUND_KEY, type GroundPlan } from "./status/ground.js";
+import { groundRoutes } from "./routes/ground.js";
 import { PartyBook } from "./players/parties.js";
 import { partyRoutes } from "./routes/parties.js";
 import { Recorder } from "./events/recorder.js";
@@ -73,6 +75,13 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   serverRoutes(app, ampClient, tail, restarts);
   const distances = new Distances(ampClient, tail, () => limbo.actionCtx, restarts, log);
   distanceRoutes(app, distances);
+  const ground = new GroundItems(ampClient, tail, () => limbo.actionCtx, {
+    load: async () => (await db.setting.findUnique({ where: { key: GROUND_KEY } }))?.value,
+    save: async (p: GroundPlan) => {
+      await db.setting.upsert({ where: { key: GROUND_KEY }, create: { key: GROUND_KEY, value: p }, update: { value: p } });
+    },
+  }, (a) => audit(a as Parameters<typeof audit>[0]), log);
+  groundRoutes(app, ground);
   partyRoutes(app, new PartyBook(ampClient));
   fileRoutes(app, ampClient);
   consoleRoutes(app, ampClient, tail, () => limbo.actionCtx);
@@ -131,6 +140,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     limbo.start();
     pings.start();
     distances.start();
+    ground.start();
     online.start();
     pregenWatch.start();
     await pregen.start();
@@ -146,6 +156,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     online.stop();
     pregen.stop();
     restarts.stop();
+    ground.stop();
     if (housekeeping) clearInterval(housekeeping);
     if (watching) clearInterval(watching);
   });

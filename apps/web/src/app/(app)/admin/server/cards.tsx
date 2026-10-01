@@ -14,7 +14,8 @@ import { mapProgress, modeText, pregenCost, progress, sleepText, type Pregen } f
 import type { getAnnouncements } from "@/server/announcements";
 import { DistanceForm } from "@/components/server/distance-form";
 import { msptTone, waiting, type Distance } from "@/lib/distance";
-import { announceAction, announcementChangeAction, announcementDatesAction, backupAction, cancelRestartAction, distanceAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
+import { clearingText, COUNTED, countTone, LABELS, planText, type Ground } from "@/lib/ground";
+import { announceAction, announcementChangeAction, announcementDatesAction, backupAction, cancelRestartAction, distanceAction, groundClearAction, groundPlanAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
 
 // The cards of Admin → Server and Admin → News, and the ones the Control Room shares. Everything that was on the one
 // long Server page before docs/13 §11, word for word where it was a control; long explanations fold into
@@ -31,12 +32,14 @@ export const loadTail = (caller: Caller) => apiFetch<Tail>("/console/tail?lines=
 export const loadSchedule = (caller: Caller) => apiFetch<Schedule>("/server/schedule", { caller }).catch(() => null);
 export const loadBackup = (caller: Caller) => apiFetch<Backup>("/server/backup", { caller }).catch(() => null);
 export const loadDistance = (caller: Caller) => apiFetch<Distance>("/server/distance", { caller, timeoutMs: 15_000 }).catch(() => null);
+export const loadGround = (caller: Caller) => apiFetch<Ground>("/server/ground", { caller, timeoutMs: 40_000 }).catch(() => null);
 export const loadPregen = (caller: Caller) => apiFetch<Pregen>("/pregen", { caller }).catch(() => null);
 export const consoleLines = (tail: Tail | null) => tail?.entries ?? (tail?.lines ?? []).map((text, i) => ({ seq: i - (tail?.lines.length ?? 0), text }));
 
 const MSG: Record<string, string> = {
   pregenOn: "Pre-generation is on.", pregenPaused: "Pre-generation stopped; where it got to is kept.", pregenOff: "The area is called off.", killed: "The server's process has been ended.", mapReloaded: "BlueMap read its settings again; a render in hand is asked for again.",
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
+  groundClear: "Players have been warned in chat; items on the ground are cleared in 60 seconds.", groundPlan: "Saved.",
   distanceNow: "Saved. The server restarts in 1 minute; players have been warned.", distanceNext: "Saved. It takes effect at the next restart.",
   error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup started in AMP.", announced: "Announcement posted",
 };
@@ -391,6 +394,93 @@ export function AnnouncementsCard({ news }: { news: News }) {
           </ul>
         </CardContent>
       )}
+    </Card>
+  );
+}
+
+/** What is lying around, by type, so a clear is only done when items really are the problem (planner, 2026-10-01). */
+export function EntityCountsCard({ ground }: { ground: Ground | null }) {
+  const c = ground?.counts ?? null;
+  return (
+    <Card data-testid="entity-counts">
+      <CardHeader>
+        <CardTitle>What&apos;s in the world right now</CardTitle>
+        <CardDescription>
+          Entities in loaded chunks, by type{c ? <> · counted {timeAgo(new Date(c.at))}</> : null}. Look here before clearing anything: if it isn&apos;t items, clearing items won&apos;t help.
+        </CardDescription>
+        <HowThisWorks>
+          The portal asks the server <span className="font-mono">execute if entity …</span> for each type, at most once a minute while this page is open; the answers are kept off the console page. Only loaded chunks count: what is near players, plus anything kept loaded. Mob and contraption counts come from the pack&apos;s datapack <span className="font-mono">deepslate-tools</span>, which the server reads at its next start after a Sync.
+        </HowThisWorks>
+      </CardHeader>
+      <CardContent>
+        {!ground ? (
+          <Alert tone="error">Can&apos;t ask the portal&apos;s api right now.</Alert>
+        ) : !ground.running && !c ? (
+          <p className="text-sm text-muted-foreground">The server isn&apos;t running, so there is nothing to count.</p>
+        ) : (
+          <dl className="grid gap-2 sm:grid-cols-2" data-testid="entity-counts-list">
+            {COUNTED.map((what) => {
+              const n = c?.values[what];
+              const problem = c?.problems[what];
+              return (
+                <div key={what} className="flex items-start justify-between gap-3 rounded-lg border p-2" data-testid={`count-${what}`}>
+                  <div className="min-w-0">
+                    <dt className="text-sm font-medium">{LABELS[what].name}</dt>
+                    <dd className="text-xs text-muted-foreground">{problem ? (/tag|function/i.test(problem) ? "Needs a server restart after the next Sync (datapack)." : `No answer: ${problem}`) : LABELS[what].hint}</dd>
+                  </div>
+                  <Badge tone={n === undefined ? "neutral" : countTone(what, n)} className="shrink-0 tabular-nums">{n === undefined ? "?" : n.toLocaleString("en-GB")}</Badge>
+                </div>
+              );
+            })}
+          </dl>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** "Clear ground items now" and the automatic clear (off unless turned on). Every clear is in the event log with its count. */
+export function GroundClearCard({ ground }: { ground: Ground | null }) {
+  const plan = ground?.plan ?? { auto: false, threshold: 1500 };
+  const last = ground?.last ?? null;
+  return (
+    <Card data-testid="ground-clear">
+      <CardHeader>
+        <CardTitle>Clear items on the ground</CardTitle>
+        <CardDescription>Warns everyone in chat 60 seconds and 10 seconds before, then removes dropped items that have been lying there for more than {Math.round((ground?.oldAfterSeconds ?? 120) / 60)} minutes.</CardDescription>
+        <HowThisWorks>
+          Only dropped items (<span className="font-mono">minecraft:item</span> entities) are ever removed, and only ones older than 2 minutes, so something a player just dropped is safe. Corpses, mobs, pets, item frames, armour stands, minecarts and Create or TaCZ entities are never touched. One &quot;item&quot; here is one stack lying on the ground. Every clear goes into the event log with how many went, whether someone pressed the button or the schedule did it.
+        </HowThisWorks>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {ground?.clearing ? (
+          <Alert tone="success" data-testid="ground-clearing">{clearingText(ground.clearing)}</Alert>
+        ) : (
+          <form action={groundClearAction} className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="sure" /> Yes, clear them</label>
+            <ConfirmSubmit variant="secondary" disabled={!ground?.running} question="Warn everyone and clear items on the ground in 60 seconds?">Clear ground items now</ConfirmSubmit>
+            {!ground?.running && <span className="text-xs text-muted-foreground">Only while the server is running.</span>}
+          </form>
+        )}
+        {last && (
+          <p className="text-sm" data-testid="ground-last">
+            Last clear {timeAgo(new Date(last.at))}{last.by === "schedule" ? " (automatic)" : ""}:{" "}
+            {last.problem ? <span className="text-danger">didn&apos;t work: {last.problem}</span> : <>{(last.removed ?? 0).toLocaleString("en-GB")} item{last.removed === 1 ? "" : "s"} removed{last.before !== null ? ` of ${last.before.toLocaleString("en-GB")} on the ground` : ""}.</>}
+          </p>
+        )}
+        <form action={groundPlanAction} className="space-y-2 rounded-lg border p-3" data-testid="ground-plan">
+          <p className="text-sm font-medium">Automatic</p>
+          <p className="text-xs text-muted-foreground" data-testid="ground-plan-text">{planText(plan, ground?.checkEveryMin ?? 10)}</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="auto" defaultChecked={plan.auto} /> Clear by itself when there are too many</label>
+            <div>
+              <Label htmlFor="ground-threshold">More than (items)</Label>
+              <Input id="ground-threshold" name="threshold" type="number" min={200} max={20000} step={100} defaultValue={plan.threshold} className="w-28" />
+            </div>
+            <Button type="submit" variant="secondary">Save</Button>
+          </div>
+        </form>
+      </CardContent>
     </Card>
   );
 }

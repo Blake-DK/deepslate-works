@@ -16,7 +16,6 @@ const nextConfig: NextConfig = {
       to("/guide", "/help?tab=guide"),
       to("/rules", "/help?tab=rules"),
       to("/analytics", "/players?tab=stats"),
-      to("/mods", "/pack"),
       to("/vote", "/pack?tab=vote"),
       to("/vote/results", "/pack?tab=results"),
       to("/vote/results/apply", "/admin/pack?tab=apply"),

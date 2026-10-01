@@ -56,7 +56,7 @@ describe("old addresses", () => {
   it("every one redirects to a page that exists", async () => {
     const list = await nextConfig.redirects!();
     const sources = list.map((r) => r.source);
-    for (const old of ["/install", "/guide", "/rules", "/analytics", "/mods", "/vote", "/vote/results", "/vote/results/apply", "/events", "/admin/events", "/admin/files", "/admin/modpack", "/admin/votes", "/admin/users", "/admin/invites", "/admin/installs", "/admin/settings", "/admin/branding"]) {
+    for (const old of ["/install", "/guide", "/rules", "/analytics", "/vote", "/vote/results", "/vote/results/apply", "/events", "/admin/events", "/admin/files", "/admin/modpack", "/admin/votes", "/admin/users", "/admin/invites", "/admin/installs", "/admin/settings", "/admin/branding"]) {
       expect(sources).toContain(old);
       expect(pageFor(old)).toBe(false); // nothing is left behind at the old address
     }
@@ -65,7 +65,10 @@ describe("old addresses", () => {
       expect([r.destination, pageFor(r.destination)]).toEqual([r.destination, true]);
     }
   });
+  it("/mods is the Mods guide again (planner, 2026-10-01), no longer a redirect to /pack", async () => {
+    expect((await nextConfig.redirects!()).map((r) => r.source)).not.toContain("/mods");
+  });
   it("the pages that stay where they were still exist", () => {
-    for (const p of ["/", "/map", "/me", "/players", "/help", "/pack", "/activity", "/admin", "/admin/server", "/admin/pack", "/admin/people", "/admin/news", "/admin/site"]) expect([p, pageFor(p)]).toEqual([p, true]);
+    for (const p of ["/", "/map", "/me", "/players", "/help", "/mods", "/pack", "/activity", "/admin", "/admin/server", "/admin/pack", "/admin/people", "/admin/news", "/admin/site"]) expect([p, pageFor(p)]).toEqual([p, true]);
   });
 });

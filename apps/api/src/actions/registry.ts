@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NOT_OPEN_TEXT } from "../shared/access.js";
+import { MISSING_MODS_TEXT } from "../shared/join-gate.js";
 import { CODE_RE, showCode } from "../shared/join-code.js";
 import { COMPONENTS_RE, ITEM_RE, SLOT_RE } from "../shared/slots.js";
 
@@ -140,7 +141,7 @@ export function bookCheckCommands(name: string, portalUrl: string, code: string)
 }
 
 /** Who waits in the room, and for what: to link their Discord, for Play first, for the server to open, or for a new installer. */
-export type HeldKind = "link" | "play" | "closed" | "old";
+export type HeldKind = "link" | "play" | "closed" | "old" | "mods";
 
 /** What stays on their screen while they wait (docs/14 "The prompt"). */
 export function screenText(kind: HeldKind, portalUrl: string, code = ""): { title: string; subtitle: string; bar?: string } {
@@ -149,6 +150,7 @@ export function screenText(kind: HeldKind, portalUrl: string, code = ""): { titl
   if (kind === "link") return { title: "Sign in to play", subtitle: `Right-click the book, or go to ${host}/join and enter ${showCode(code)}`, bar: `Click the link in chat or right-click the book in your hand, or go to ${host}/join and enter ${showCode(code)}` };
   if (kind === "play") return { title: "Press Play first", subtitle: `Press Play on ${host} and you'll be let in` };
   if (kind === "old") return { title: "Download Deepslate Works again", subtitle: `from ${host}/install, then press Play` };
+  if (kind === "mods") return { title: "Your game is missing some mods", subtitle: `Press Play on ${host} to fix it` };
   return { title: "Not open yet", subtitle: "You'll be let in when the server goes live" };
 }
 
@@ -185,6 +187,18 @@ export function oldTellraw(name: string, portalUrl: string): string {
     { text: "Download Deepslate Works again from ", color: "gold" },
     { text: `${host}/install`, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: url }, hoverEvent: { action: "show_text", value: "Opens the install page in your browser" } },
     { text: ". Run Setup.bat once, then press Play; from then on it keeps itself up to date.", color: "gold" },
+  ];
+  return `tellraw ${name} ${JSON.stringify(payload)}`;
+}
+
+/** 2.1.0: their game was seen without some of the pack's mods (MISSING_MODS_TEXT, with the site as a link). */
+export function modsTellraw(name: string, portalUrl: string): string {
+  const host = hostOf(portalUrl);
+  const payload = [
+    "",
+    { text: "Your game is missing some mods. Press Play on ", color: "gold" },
+    { text: host, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: portalUrl }, hoverEvent: { action: "show_text", value: "Opens the portal in your browser" } },
+    { text: " to fix it.", color: "gold" },
   ];
   return `tellraw ${name} ${JSON.stringify(payload)}`;
 }
@@ -233,7 +247,7 @@ export const actions = {
   "limbo.bar": define({
     name: "limbo.bar",
     role: "system",
-    input: z.object({ name: MC_NAME, kind: z.enum(["link", "play", "closed", "old"]), code: z.string().regex(CODE_RE).optional() }),
+    input: z.object({ name: MC_NAME, kind: z.enum(["link", "play", "closed", "old", "mods"]), code: z.string().regex(CODE_RE).optional() }),
     build: (ctx, { name, kind, code }) => {
       const t = screenText(kind, ctx.portalUrl, code);
       return [`title @a[name=${name},tag=!verified] actionbar ${component(t.bar ?? t.subtitle, "yellow")}`];
@@ -329,6 +343,15 @@ export const actions = {
     build: (ctx, { name }) => [...intoRoom(ctx, name), ...screenCommands(name, "old", ctx.portalUrl), oldTellraw(name, ctx.portalUrl)],
   }),
   "limbo.remindOld": define({ name: "limbo.remindOld", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [...screenCommands(name, "old", ctx.portalUrl), oldTellraw(name, ctx.portalUrl)] }),
+  // 2.1.0: their game was seen without some of the pack's mods since their last Play; Play repairs it.
+  "limbo.holdMods": define({
+    name: "limbo.holdMods",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [...intoRoom(ctx, name), ...screenCommands(name, "mods", ctx.portalUrl), modsTellraw(name, ctx.portalUrl)],
+  }),
+  "limbo.remindMods": define({ name: "limbo.remindMods", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [...screenCommands(name, "mods", ctx.portalUrl), modsTellraw(name, ctx.portalUrl)] }),
+  "limbo.kickIdleMods": define({ name: "limbo.kickIdleMods", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${MISSING_MODS_TEXT}`] }),
   "limbo.kickIdleOld": define({
     name: "limbo.kickIdleOld",
     role: "system",

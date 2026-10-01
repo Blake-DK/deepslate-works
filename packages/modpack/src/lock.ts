@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile, stat } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type { Manifest, Mod } from "./schema";
-import { getProject, getVersion, getVersions, NotFound, type ModrinthProject, type ModrinthVersion } from "./modrinth";
+import { getProject, getVersion, getVersions, NotFound, type ModrinthVersion } from "./modrinth";
+import { fetchJar } from "./download";
+import { jarChannels, sideFor, widenForDependents } from "./sides";
+import { openZipFile } from "./zip";
 
 // docs/06: mods.lock.json — exact Modrinth versions, file URLs and hashes for every enabled mod plus required deps.
 
@@ -29,15 +32,13 @@ export type LockEntry = {
   size: number;
   side: "both" | "client" | "server";
   requiredBy: string[];
+  /** 2.1.0: what Modrinth says each side needs (client_side / server_side); the side rule and CI check read it. */
+  modrinth?: { client: string; server: string };
+  /** 2.1.0: NeoForge network channels the jar registers (sides.ts `jarChannels`); null when the jar was not looked at. */
+  channels?: "required" | "optional" | "none" | null;
 };
 
 export type LockWarning = string;
-
-const sideFromProject = (p: ModrinthProject): LockEntry["side"] => {
-  if (p.client_side === "unsupported") return "server";
-  if (p.server_side === "unsupported") return "client";
-  return "both";
-};
 
 export function pickVersion(versions: ModrinthVersion[], pinned: string | undefined, slug: string, warn: (w: string) => void): ModrinthVersion {
   const sorted = [...versions].sort((a, b) => b.date_published.localeCompare(a.date_published));
@@ -88,7 +89,7 @@ async function hashConfigs(configDir: string): Promise<LockFile["configs"]> {
   return out;
 }
 
-export async function buildLock(m: Manifest, opts: { configDir: string; onProgress?: (msg: string) => void; /** The NeoForge of the lock in hand: kept when the maven cannot be read. */ previousNeoForge?: string }): Promise<{ lock: LockFile; warnings: LockWarning[] }> {
+export async function buildLock(m: Manifest, opts: { configDir: string; onProgress?: (msg: string) => void; /** The NeoForge of the lock in hand: kept when the maven cannot be read. */ previousNeoForge?: string; /** 2.1.0: where jars are kept, so each can be looked into for network channels. */ jarCache?: string }): Promise<{ lock: LockFile; warnings: LockWarning[] }> {
   const warnings: LockWarning[] = [];
   const warn = (w: string) => warnings.push(w);
   const log = opts.onProgress ?? (() => {});
@@ -115,11 +116,12 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
     const version = pickVersion(versions, mod?.version, project.slug, warn);
     const file = version.files.find((f) => f.primary) ?? version.files[0];
     if (!file) throw new Error(`${project.slug}: version ${version.version_number} has no files`);
-    const side: LockEntry["side"] = mod && mod.side !== "both" ? mod.side : sideFromProject(project);
+    // 2.1.0: mods.json may narrow a mod to one side, never away from a side Modrinth says requires it (sides.ts)
+    const side = sideFor(project.slug, project, mod?.side);
     entries.set(project.id, {
       slug: project.slug, name: mod?.name ?? project.title, projectId: project.id, versionId: version.id, versionNumber: version.version_number,
       versionType: version.version_type, filename: file.filename, url: file.url, sha512: file.hashes.sha512, sha1: file.hashes.sha1, size: file.size,
-      side, requiredBy: item.requiredBy ? [item.requiredBy] : [],
+      side, requiredBy: item.requiredBy ? [item.requiredBy] : [], modrinth: { client: project.client_side, server: project.server_side },
     });
     log(`${project.slug} ${version.version_number} (${(file.size / 1048576).toFixed(1)} MB)${item.requiredBy ? ` <- ${item.requiredBy}` : ""}`);
     for (const dep of version.dependencies) {
@@ -132,6 +134,16 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
   }
 
   const files = [...entries.values()].sort((a, b) => a.slug.localeCompare(b.slug));
+  widenForDependents(files);
+  if (opts.jarCache) {
+    await mkdir(opts.jarCache, { recursive: true });
+    for (const f of files) {
+      const at = path.join(opts.jarCache, f.filename);
+      await fetchJar(f, at);
+      f.channels = jarChannels(await openZipFile(at));
+      if (f.side === "server" && f.channels === "required") throw new Error(`${f.slug}: server-only, but its jar registers network channels every PC must have. Anything both sides need is never server-only: make it "both" in mods.json.`);
+    }
+  }
   // The NeoForged maven's CDN answered 404 to every request for a while on 2026-10-01: the mods are not held up
   // for it, NeoForge stays where it was and the lock says so.
   const neoforge = await resolveNeoForge(m.neoforge).catch((e: unknown) => {

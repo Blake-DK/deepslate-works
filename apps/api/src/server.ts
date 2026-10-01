@@ -34,6 +34,8 @@ import { Recorder } from "./events/recorder.js";
 import { prismaRecorderStore } from "./events/store.js";
 import { countryOf } from "./events/geo.js";
 import { runRetentionIfDue } from "./events/retention.js";
+import { requireAdmin } from "./auth.js";
+import { ServerMods, SERVER_MODS_KEY } from "./modpack/server-mods.js";
 import { getSection } from "./settings.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
@@ -50,6 +52,14 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const log = (o: unknown, m: string) => app.log.info(o, m);
   const tail = new ConsoleTail(ampClient, log);
   const limbo = new Limbo(env, ampClient, tail, log);
+  // 2.1.0: the mod files the server loaded at each start, against the set PCs get (modpack/server-mods.ts)
+  const serverMods = new ServerMods(ampClient, env.REPO_DIR, log);
+  serverMods.start(tail);
+  app.get("/modpack/server-mods", async (req, reply) => {
+    if (!requireAdmin(req, reply)) return;
+    if ((req.query as { fresh?: string }).fresh === "1") await serverMods.capture();
+    return (await db.setting.findUnique({ where: { key: SERVER_MODS_KEY } }))?.value ?? null;
+  });
   const pings = new PingWatch(ampClient, tail, () => limbo.actionCtx, log);
   const pregenWatch = new PregenWatch(tail);
   const pregen = new Pregen(ampClient, tail, pregenWatch, () => limbo.actionCtx, {

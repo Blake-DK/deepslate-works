@@ -1,4 +1,6 @@
 import { readFile, rename, writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
+import { checkSides, clientSet, type ServerLoaded } from "./sides";
 import { lintManifest } from "./lint";
 import { verifyLinks } from "./verify-links";
 import { buildLock, diffLocks, type LockFile } from "./lock";
@@ -60,7 +62,7 @@ async function main() {
     case "lock": {
       const manifest = await loadManifest();
       const prev = await loadLock();
-      const { lock, warnings } = await buildLock(manifest, { configDir: P.config, onProgress: log, previousNeoForge: prev?.neoforge });
+      const { lock, warnings } = await buildLock(manifest, { configDir: P.config, onProgress: log, previousNeoForge: prev?.neoforge, jarCache: path.join(P.dist, "cache", "lock-jars") });
       for (const w of warnings) log(`WARN  ${w}`);
       const d = diffLocks(prev, lock);
       const changed = d.added.length + d.removed.length + d.changed.length + d.configs.length + (d.neoforge ? 1 : 0);
@@ -69,7 +71,10 @@ async function main() {
       for (const r of d.removed) log(`- ${r.slug} ${r.versionNumber}`);
       for (const c of d.changed) log(`~ ${c.slug} ${c.from} -> ${c.to}`);
       if (d.neoforge) log(`~ neoforge ${d.neoforge.from} -> ${d.neoforge.to}`);
-      if (prev && changed === 0 && !rest.includes("--force")) {
+      // 2.1.0: sides, Modrinth's word on them and the jars' channels are written even when no version moved
+      const meta = (l: LockFile) => JSON.stringify(l.files.map((f) => [f.slug, f.side, f.modrinth ?? null, f.channels ?? null]));
+      if (prev && meta(prev) !== meta(lock)) log("~ sides / channels recorded");
+      if (prev && changed === 0 && meta(prev) === meta(lock) && !rest.includes("--force")) {
         log(`mods.lock.json unchanged (${lock.files.length} files, NeoForge ${lock.neoforge}, hash ${lock.hash.slice(0, 8)})`);
         await lockExtras(P, lock, manifest.loader, log);
         process.exit(0);
@@ -80,6 +85,22 @@ async function main() {
       log(`wrote ${P.lock}: ${lock.files.length} files, NeoForge ${lock.neoforge}, hash ${lock.hash.slice(0, 8)}`);
       await lockExtras(P, lock, manifest.loader, log);
       process.exit(0);
+    }
+    // falls through never
+    // 2.1.0 (CI): every mod both sides need is on PCs; also against what the server loaded at its last start
+    case "check-sides": {
+      const lock = await requireLock();
+      let loaded: ServerLoaded | null = null;
+      try {
+        loaded = JSON.parse(await readFile(path.join(path.dirname(P.lock), "server-loaded.json"), "utf8")) as ServerLoaded;
+      } catch {
+        log("no modpack/server-loaded.json: only the lock is checked");
+      }
+      const problems = checkSides(lock, loaded);
+      for (const p of problems) console.error(`ERROR ${p.slug ?? p.filename}: ${p.why}`);
+      const pcs = clientSet(lock).length;
+      log(`${lock.files.length} files in the lock, ${pcs} for PCs, ${lock.files.length - pcs} server-only${loaded ? `; server loaded ${loaded.files.length} files at ${loaded.at} (${loaded.source})` : ""}: ${problems.length ? `${problems.length} problem(s)` : "sides OK"}`);
+      process.exit(problems.length ? 1 : 0);
     }
     // falls through never
     case "build": {
@@ -109,7 +130,7 @@ async function main() {
       process.exit(2);
     // falls through never
     default:
-      log(`usage: modpack <lint|verify-links|lock [--force]|build [config|server|installer|items|all]> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
+      log(`usage: modpack <lint|verify-links|lock [--force]|check-sides|build [config|server|installer|items|all]> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
       process.exit(cmd === "help" ? 0 : 1);
   }
 }

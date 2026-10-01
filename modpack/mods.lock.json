@@ -17,7 +17,12 @@
       "sha1": "17debf7846d5d3b287a2920449154d85e5b9541e",
       "size": 733289,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "alternate-current",
@@ -32,7 +37,12 @@
       "sha1": "1201c14362f2bad7062d315f8a9b26afbabd2c9c",
       "size": 50425,
       "side": "server",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "appleskin",
@@ -47,7 +57,12 @@
       "sha1": "81cf0e668f991f83ac8820c386fbd6c9c3602246",
       "size": 75804,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "optional"
     },
     {
       "slug": "badoptimizations",
@@ -62,7 +77,12 @@
       "sha1": "1461d8e46391efd32a3085150e86094c9f6f5c9d",
       "size": 283566,
       "side": "client",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "balm",
@@ -79,7 +99,12 @@
       "side": "both",
       "requiredBy": [
         "waystones"
-      ]
+      ],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "optional"
     },
     {
       "slug": "bettertabinfo",
@@ -94,7 +119,12 @@
       "sha1": "9c78e9f030054e9d9f423f92e0a7c09a976f63fa",
       "size": 27506,
       "side": "client",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "bluemap",
@@ -109,7 +139,12 @@
       "sha1": "49675ada6be555e6f8393f49aff91750028e1239",
       "size": 5414670,
       "side": "server",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "chunky",
@@ -124,7 +159,12 @@
       "sha1": "ab0c74743a653020fe2dfc4986b43e893947f3e9",
       "size": 340572,
       "side": "server",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "none"
     },
     {
       "slug": "clumps",
@@ -139,7 +179,12 @@
       "sha1": "fa2576297c7bd12b28aa7070e8141792bd66da4c",
       "size": 18382,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "none"
     },
     {
       "slug": "copycats",
@@ -154,7 +199,12 @@
       "sha1": "74de17876c43f5f780bac478b9f9eb11e687b8d7",
       "size": 1799381,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "corpse",
@@ -169,7 +219,12 @@
       "sha1": "a735362c4e5ef705956f1fcbac01fb9f1aae5b8e",
       "size": 253694,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "craft-config",
@@ -186,7 +241,12 @@
       "side": "client",
       "requiredBy": [
         "bettertabinfo"
-      ]
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "create",
@@ -203,7 +263,12 @@
       "side": "both",
       "requiredBy": [
         "copycats"
-      ]
+      ],
+      "modrinth": {
+        "client": "optional",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "create-deco",
@@ -218,7 +283,12 @@
       "sha1": "93d9eff58b46c6953e907d071e6be4e3ce07be38",
       "size": 3328498,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "createaddition",
@@ -233,7 +303,12 @@
       "sha1": "87b539d41ed238e98b26c607c0c81a973323147e",
       "size": 1661802,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "dynamic-fps",
@@ -248,7 +323,12 @@
       "sha1": "35b17e95b2b65930116ccc83e0cc358ac1bfcf9e",
       "size": 220193,
       "side": "client",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "entityculling",
@@ -263,7 +343,12 @@
       "sha1": "2f723582d44b60b41d701a797846eaa45a3fef58",
       "size": 1510018,
       "side": "client",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "fallingtree",
@@ -278,7 +363,12 @@
       "sha1": "7e1b3ee0ba89b556d5a468797bb1b5f4e2b8ccb7",
       "size": 496356,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "required"
+      },
+      "channels": "optional"
     },
     {
       "slug": "farmers-delight",
@@ -293,7 +383,12 @@
       "sha1": "27675ddfcb8cc37e6ea1ab6c15051c7949d94657",
       "size": 3160490,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "fastfurnace",
@@ -308,7 +403,12 @@
       "sha1": "cb77b3bc40bb598cfc50773d491c9e1af06d3833",
       "size": 4622,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "fastworkbench",
@@ -323,7 +423,12 @@
       "sha1": "cfe55dc815979028d2a2211e26115dbd02273f87",
       "size": 28636,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "ferrite-core",
@@ -338,7 +443,12 @@
       "sha1": "9563692efb708b6b568df27a01ec52f6311928ef",
       "size": 121559,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "none"
     },
     {
       "slug": "flw-vanillin",
@@ -353,7 +463,12 @@
       "sha1": "fae8bb9f13cd9d086949b9aca85956bb6fa47f56",
       "size": 870344,
       "side": "client",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "get-it-together-drops",
@@ -368,7 +483,12 @@
       "sha1": "ead940a50f69313802960c497e252acd3956334f",
       "size": 8825,
       "side": "server",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "handcrafted",
@@ -383,7 +503,12 @@
       "sha1": "8ecd27f1d66f9b742cfae3c8ffa773765f574b52",
       "size": 7132842,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "immediatelyfast",
@@ -398,7 +523,12 @@
       "sha1": "fee59af2f39c66d09c4c09f441c799e76af70f97",
       "size": 365195,
       "side": "client",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "jade",
@@ -413,7 +543,12 @@
       "sha1": "88ee316e68900080b017f60c12162e2731924cf8",
       "size": 726853,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "optional"
     },
     {
       "slug": "jei",
@@ -428,7 +563,12 @@
       "sha1": "d19552586f686eae4ef5e7199f31604d1d3cfca7",
       "size": 1804792,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "optional"
     },
     {
       "slug": "kotlin-lang-forge",
@@ -445,7 +585,12 @@
       "side": "both",
       "requiredBy": [
         "veinminer"
-      ]
+      ],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "none"
     },
     {
       "slug": "lithium",
@@ -460,7 +605,12 @@
       "sha1": "97212e45c963730bbfc7c44780df99317814c21b",
       "size": 774220,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "none"
     },
     {
       "slug": "macaws-doors",
@@ -475,7 +625,12 @@
       "sha1": "c127904f23db1a641dd9e065ec51c5c177cb4cd7",
       "size": 1190404,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "macaws-roofs",
@@ -490,7 +645,12 @@
       "sha1": "05806ff152fab56f7c1b4b215d772ea73611283d",
       "size": 1784829,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "macaws-windows",
@@ -505,7 +665,12 @@
       "sha1": "eb1d3c118acb450cc2fe14c2ce7ce247a1bca60c",
       "size": 1261268,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "modernfix",
@@ -520,7 +685,12 @@
       "sha1": "1fe7f8b4176e86507cc8ed5460b6acdd3dac5529",
       "size": 604333,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "optional"
     },
     {
       "slug": "mouse-tweaks",
@@ -535,7 +705,12 @@
       "sha1": "6dae57f4f50f7808d2ed9a18f6cd1c0d4640c6bc",
       "size": 73938,
       "side": "client",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "noisium",
@@ -550,7 +725,12 @@
       "sha1": "1bea6b61378ba80f038256c4345d9ff3b67928c4",
       "size": 60296,
       "side": "server",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "open-parties-and-claims",
@@ -565,7 +745,12 @@
       "sha1": "6d0ebc84bbb75322cb0ab45ffef6a54d3bc6adef",
       "size": 1826827,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "required"
+      },
+      "channels": "optional"
     },
     {
       "slug": "pipez",
@@ -580,7 +765,12 @@
       "sha1": "a5671f7e8d38dfc092ace4091250e8f9e1245e1e",
       "size": 456599,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "placebo",
@@ -598,7 +788,12 @@
       "requiredBy": [
         "fastfurnace",
         "fastworkbench"
-      ]
+      ],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "none"
     },
     {
       "slug": "resourceful-lib",
@@ -615,7 +810,12 @@
       "side": "both",
       "requiredBy": [
         "handcrafted"
-      ]
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "optional"
     },
     {
       "slug": "scalable-cats-force",
@@ -632,7 +832,12 @@
       "side": "both",
       "requiredBy": [
         "additional-enchanted-miner"
-      ]
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "simple-voice-chat",
@@ -647,7 +852,12 @@
       "sha1": "436ee200d5192ffda65fcf70c42c086fcdc00826",
       "size": 4934688,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "required"
     },
     {
       "slug": "sodium",
@@ -662,7 +872,12 @@
       "sha1": "1757289be21ed18db5b0d90703fa3db1b2de5693",
       "size": 1292934,
       "side": "client",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "sophisticated-backpacks",
@@ -677,7 +892,12 @@
       "sha1": "c4f240d4071835631da9b698481ec607b9f1f8be",
       "size": 1239554,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "sophisticated-core",
@@ -694,7 +914,12 @@
       "side": "both",
       "requiredBy": [
         "sophisticated-backpacks"
-      ]
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "spark",
@@ -709,7 +934,12 @@
       "sha1": "9430cc2ab64ff89d698be593769fb9f9ee4efae6",
       "size": 3642581,
       "side": "server",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "none"
     },
     {
       "slug": "tacz-1.21.1",
@@ -724,7 +954,12 @@
       "sha1": "c6ef4976de69a46c4e267bd7f91c730d2dc43a4e",
       "size": 57247579,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "veinminer",
@@ -739,7 +974,12 @@
       "sha1": "19f67a98cf5e7cfeefb089b5ec31450ac6d5bd53",
       "size": 616301,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "required"
+      },
+      "channels": "optional"
     },
     {
       "slug": "waystones",
@@ -754,7 +994,12 @@
       "sha1": "75718161662d9ec957ba22e10e497788ec1687ba",
       "size": 1223229,
       "side": "both",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "xaeros-minimap",
@@ -769,7 +1014,12 @@
       "sha1": "7553dddbe478d1c8c15198090217e723d27f79c4",
       "size": 2185559,
       "side": "client",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "optional"
+      },
+      "channels": "optional"
     },
     {
       "slug": "xaeros-world-map",
@@ -784,7 +1034,12 @@
       "sha1": "82b4ae6c0f2e13f02cbdc1325342909ed083fc24",
       "size": 1422680,
       "side": "client",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "optional"
+      },
+      "channels": "optional"
     }
   ],
   "configs": [

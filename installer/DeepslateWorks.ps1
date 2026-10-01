@@ -57,7 +57,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "2.0.1"   # 2.0.1: Allow all on every question; extras logged, checked, confirmed in game, Apply -> restart. History in docs/07
+$InstallerVersion = "2.1.0"   # 2.1.0: the game only starts once every mod is checked in place; the game's log checked after. History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -283,6 +283,14 @@ function Get-ReportExtras {
     return (Get-ExtrasReport (Get-ExtrasPaths $DataDir) $m (Read-ExtrasState (Join-Path $AppHome $ExtrasStateName)))
   } catch { Log ("extras: not in the report: " + $_.Exception.Message); return $null }
 }
+# 2.1.0: the last check of mods\ in this run (Test-PackMods), as the site takes it; null before the mods step.
+function Get-ReportMods {
+  $c = $script:ModsCheck
+  # a run that stopped part-way through the mods: what mods\ holds now, so the report says what is missing
+  if (-not $c -and $script:PackCheck) { try { $c = Test-PackMods $script:PackCheck.dir $script:PackCheck.files } catch {} }
+  if (-not $c) { return $null }
+  return [ordered]@{ ok = [bool]$c.ok; where = [string]$c.where; checked = [int]$c.checked; missing = @(@($c.missing) | Select-Object -First 200 | ForEach-Object { [ordered]@{ slug = [string]$_.slug; name = [string]$_.name; filename = [string]$_.filename } }); elsewhere = $false }
+}
 function New-Report([string]$outcome) {
   $failed = $null
   if ($outcome -ne "ok" -and $script:StepName) { $failed = $script:StepName }
@@ -295,6 +303,7 @@ function New-Report([string]$outcome) {
     updateProblem    = $problem
     setupProblems    = $(if ($script:SetupChecked) { ,@($script:SetupProblems.ToArray()) } else { $null })
     extras           = (Get-ReportExtras)
+    mods             = (Get-ReportMods)
     mode             = $Mode
     outcome          = $outcome
     failedStep       = $failed
@@ -332,7 +341,7 @@ function Send-Report([string]$outcome) {
   try {
     $rep = New-Report $outcome
     # Reports declined in the app (2.0.0): only "pressed Play, pack version" goes, for Play first. No log, no PC details.
-    if ($script:ReportsOff) { $rep = [ordered]@{ packVersion = $rep.packVersion; installerVersion = $rep.installerVersion; mode = $rep.mode; outcome = $rep.outcome; durationSec = $rep.durationSec; log = ""; system = $null; minimal = $true; extras = $rep.extras } }
+    if ($script:ReportsOff) { $rep = [ordered]@{ packVersion = $rep.packVersion; installerVersion = $rep.installerVersion; mode = $rep.mode; outcome = $rep.outcome; durationSec = $rep.durationSec; log = ""; system = $null; minimal = $true; extras = $rep.extras; mods = $rep.mods } }
     $json = $rep | ConvertTo-Json -Depth 8 -Compress
     $answer = Invoke-RestMethod -Uri "$PortalUrl/api/installer/report" -Method Post -Headers @{ Authorization = "Bearer $($script:Token)" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($json)) -UseBasicParsing -TimeoutSec 20
     Write-Host "   Sent." -ForegroundColor Gray
@@ -1089,6 +1098,20 @@ function Open-Launcher {
   return $false
 }
 
+# 2.1.0: the one way the game is started. mods\ is checked against the mod list first, file by file; anything missing or
+# wrong and the launcher stays shut (the engine fetched and checked everything just before, so this only trips when
+# something took a file away in between). Every launch path goes through the engine and so through here: the Play tab,
+# the Extras tab's Yes, the restart after Apply, deepslate://play and the shortcuts.
+function Open-LauncherChecked([string]$modsDir, $files) {
+  $c = Test-PackMods $modsDir $files
+  $script:ModsCheck = $c
+  if (-not $c.ok) { Log ("NOT opening the launcher: " + (Get-MissingText $c)); return $false }
+  Log ("all {0} mods checked in place; opening the launcher" -f $c.checked)
+  $ok = Open-Launcher
+  Emit ([ordered]@{ t = "launched"; opened = [bool]$ok })
+  return $ok
+}
+
 # ==== the app (2.0.0, planner 2026-10-01): permission per step, and personal extras =========================
 # Nothing in this part draws anything: the window (Show-App, further down) and the install steps (the engine) both
 # use it, and the self test checks it on Linux. Files, in %LOCALAPPDATA%\DeepslateWorks: consent.json (the answers),
@@ -1482,6 +1505,135 @@ function Sync-ExtrasFiles($paths, $manifest, $state, [scriptblock]$fetch) {
 # The jars of the extras that are on: the engine's mod sync leaves them in mods\.
 function Get-AppliedExtraJars($state) { return @($state.applied.mods | Where-Object { $_ }) }
 
+# ---- the pack's mods, before every launch and in the game that started (2.1.0) -----------------------------
+# kanefinch, 2026-10-01: "Channel of mod 'Timeless & Classics Guns: Zero' failed to connect: This channel is missing on
+# the client side, but required on the server (tacz:acknowledge) [+1 more]". The game started without TaCZ. From 2.1.0
+# the Minecraft Launcher is only ever opened by the engine, after mods\ has been checked file by file against the mod
+# list (Test-PackMods), anything missing or wrong fetched again and checked again (Open-LauncherChecked). After a launch
+# the window reads the game's log (Test-GameMods) and says so when the game still started without one.
+$PackListName = "pack.json"   # the client set of the last mod list, so the window can name what is missing offline
+
+function Get-Field($o, [string]$k) {
+  if ($null -eq $o) { return $null }
+  if ($o -is [System.Collections.IDictionary]) { return $o[$k] }
+  if ($o.PSObject.Properties[$k]) { return $o.$k }
+  return $null
+}
+function Get-PackFiles($manifest) { return @(@($manifest.files) | Where-Object { $_ -and [string](Get-Field $_ "side") -ne "server" }) }
+function Get-ModLabel($f) { $n = [string](Get-Field $f "name"); if ($n) { return $n }; return [string](Get-Field $f "slug") }
+
+function Save-PackList([string]$path, $manifest) {
+  $files = @(Get-PackFiles $manifest | ForEach-Object { [ordered]@{ slug = [string](Get-Field $_ "slug"); name = (Get-ModLabel $_); filename = [string](Get-Field $_ "filename"); sha512 = [string](Get-Field $_ "sha512") } })
+  Write-JsonFile $path ([ordered]@{ version = [string](Get-Field $manifest "version"); server = [string](Get-Field $manifest "server_address"); savedAt = (Get-NowIso); files = $files })
+}
+function Read-PackList([string]$path) { $p = Read-JsonFile $path; if ($p -and $p.files) { return @($p.files) } else { return @() } }
+
+# mods\ against the mod list: every file there, whole (sha512). {ok, where = "folder", checked, missing = [{slug, name, filename, why}]}
+function Test-PackMods([string]$modsDir, $files) {
+  $missing = New-Object System.Collections.Generic.List[object]
+  foreach ($f in @($files)) {
+    $name = [string](Get-Field $f "filename")
+    if (-not $name -or $name -match '[\\/]') { continue }
+    $at = Join-Path $modsDir $name
+    $why = $null
+    if (-not [IO.File]::Exists($at)) { $why = "missing" }
+    else { try { if ((Get-Sha512 $at) -ne ([string](Get-Field $f "sha512")).ToLower()) { $why = "wrong" } } catch { $why = "unreadable" } }
+    if ($why) { $missing.Add([ordered]@{ slug = [string](Get-Field $f "slug"); name = (Get-ModLabel $f); filename = $name; why = $why }) }
+  }
+  return [ordered]@{ ok = ($missing.Count -eq 0); where = "folder"; checked = @($files).Count; missing = @($missing.ToArray()); elsewhere = $false }
+}
+
+# The check before the launcher opens; what is missing or wrong is fetched again ($fetch: url, dest -> "ok" | "wrong" |
+# "in use", Save-ModFile) and everything checked once more. Returns the last check; the launcher opens only when it is ok.
+function Repair-PackMods([string]$modsDir, $files, [scriptblock]$fetch) {
+  $check = Test-PackMods $modsDir $files
+  if ($check.ok) { return $check }
+  Log ("before the launch: {0} of {1} mods missing or wrong: {2}" -f @($check.missing).Count, $check.checked, ((@($check.missing) | ForEach-Object { "{0} ({1})" -f $_.filename, $_.why }) -join ", "))
+  foreach ($m in @($check.missing)) {
+    $f = @(@($files) | Where-Object { [string](Get-Field $_ "filename") -eq $m.filename })[0]
+    try { $r = & $fetch $f (Join-Path $modsDir $m.filename); Log ("fetched again: {0}: {1}" -f $m.filename, $r) } catch { Log ("could not fetch {0} again: {1}" -f $m.filename, $_.Exception.Message) }
+  }
+  $check = Test-PackMods $modsDir $files
+  Log ("before the launch, checked again: " + $(if ($check.ok) { "all {0} mods in place" -f $check.checked } else { "{0} still missing or wrong" -f @($check.missing).Count }))
+  return $check
+}
+
+# Planner's words: "Your game started without Timeless & Classics Guns. Press Play to repair."
+function Get-MissingText($check) {
+  if (-not $check -or $check.ok) { return "" }
+  if ($check.elsewhere -and @($check.missing).Count -eq 0) { return "Your game started from another launcher profile, without the Deepslate Works mods. Press Play to repair." }
+  $first = @($check.missing)[0]
+  $n = @($check.missing).Count
+  $who = $(if ($n -le 1) { $first.name } else { "{0} and {1} other mod{2}" -f $first.name, ($n - 1), $(if ($n -eq 2) { "" } else { "s" }) })
+  if ($check.where -eq "folder") { return ("{0} {1} not on this PC yet. Press Play to repair." -f $who, $(if ($n -le 1) { "is" } else { "are" })) }
+  return ("Your game started without {0}. Press Play to repair." -f $who)
+}
+
+# The game that started, from its log ($session: Read-GameSession): which of the pack's mods it found. $elsewhere: that
+# game ran from another folder (another launcher profile) and went for our server. Null when the log says nothing about
+# mod files (no claim is made then).
+function Test-GameMods($session, $files, [bool]$elsewhere = $false) {
+  if (-not $session) { return $null }
+  if ($session.found.Count -eq 0 -and -not $session.refused -and -not $elsewhere) { return $null }
+  $missing = New-Object System.Collections.Generic.List[object]
+  foreach ($f in @($files)) {
+    $name = [string](Get-Field $f "filename")
+    if ($name -and -not $session.found[$name]) { $missing.Add([ordered]@{ slug = [string](Get-Field $f "slug"); name = (Get-ModLabel $f); filename = $name; why = "not loaded" }) }
+  }
+  # the server's own words name the mod even when the log lists no files: put it first
+  if ($session.refusedMod -or $session.refusedChannel) {
+    # by the channel's namespace ("tacz" of tacz:acknowledge) against the slug or the file, else by the name
+    $ns = [string]$session.refusedChannel
+    $hit = @($missing | Where-Object { ($ns -and (([string]$_.slug -like ($ns + "*")) -or ([string]$_.filename -like ($ns + "*")))) -or ($session.refusedMod -and (($session.refusedMod -like ("*" + ($_.name -replace '\s*\(.*$', '') + "*")) -or ($_.name -like ("*" + $session.refusedMod + "*")))) })
+    if ($hit.Count) { [void]$missing.Remove($hit[0]); $missing.Insert(0, $hit[0]) }
+    elseif ($missing.Count -eq 0) { $missing.Add([ordered]@{ slug = $ns; name = $(if ($session.refusedMod) { [string]$session.refusedMod } else { $ns }); filename = ""; why = "refused" }) }
+  }
+  return [ordered]@{ ok = (-not $elsewhere -and $missing.Count -eq 0 -and -not $session.refused); where = "game"; checked = @($files).Count; missing = @($missing.ToArray()); elsewhere = $elsewhere }
+}
+
+# Which game session to look at after a launch at $since: ours (the Deepslate Works folder), or one in .minecraft that
+# went for our server ($serverHost), which means the launcher started another profile. $null until one has loaded far
+# enough to say (resources loaded, mod loading failed, or it connected / was refused).
+function Find-GameSession([string]$gameDir, [string]$minecraftDir, [datetime]$since, [string]$serverHost) {
+  foreach ($c in @(@{ dir = $gameDir; elsewhere = $false }, @{ dir = $minecraftDir; elsewhere = $true })) {
+    if (-not $c.dir) { continue }
+    $log = Join-Path $c.dir "logs\latest.log"
+    if (-not [IO.File]::Exists($log)) { continue }
+    try { if ([IO.File]::GetLastWriteTimeUtc($log) -lt $since.ToUniversalTime()) { continue } } catch { continue }
+    $s = Read-GameSession $log
+    if (-not $s -or -not $s.startedAt -or $s.startedAt -lt $since.ToUniversalTime().AddSeconds(-5)) { continue }
+    if ($s.found.Count -eq 0) {
+      # the mod list may only be in debug.log
+      $dbg = Join-Path $c.dir "logs\debug.log"
+      if ([IO.File]::Exists($dbg)) { $d = Read-GameSession $dbg; if ($d) { $s.found = $d.found } }
+    }
+    if ($c.elsewhere) {
+      $ours = $serverHost -and @($s.connects | Where-Object { $_ -like ("*" + $serverHost + "*") }).Count -gt 0
+      if (-not $ours) { continue }
+      return @{ session = $s; elsewhere = $true }
+    }
+    if ($s.loaded -or $s.failed -or $s.refused -or @($s.connects).Count) { return @{ session = $s; elsewhere = $false } }
+  }
+  return $null
+}
+
+# The window's report of what the game loaded (mode game_check): for Play first and for Alex. The mod check goes even
+# when reports are off (it is what the door needs); no log and no PC details then.
+function Send-GameCheck($check, [string]$pack) {
+  if ($DryRun -or $SelfTest) { return }
+  $token = Read-Token
+  if (-not $token) { return }
+  $off = (Get-ConsentDecision $script:App.Consent "reports") -eq "decline"
+  $lines = @("game check: " + $(if ($check.ok) { "all {0} mods loaded" -f $check.checked } else { Get-MissingText $check }))
+  $mods = [ordered]@{ ok = [bool]$check.ok; where = "game"; checked = [int]$check.checked; missing = @(@($check.missing) | Select-Object -First 200 | ForEach-Object { [ordered]@{ slug = [string]$_.slug; name = [string]$_.name; filename = [string]$_.filename } }); elsewhere = [bool]$check.elsewhere }
+  $rep = [ordered]@{ packVersion = $(if ($pack) { $pack } else { "unknown" }); installerVersion = $InstallerVersion; mode = "game_check"; outcome = $(if ($check.ok) { "ok" } else { "failed" }); durationSec = 0; log = $(if ($off) { "" } else { $lines -join "`n" }); system = $null; minimal = $off; mods = $mods }
+  try {
+    $json = $rep | ConvertTo-Json -Depth 8 -Compress
+    $null = Invoke-RestMethod -Uri "$PortalUrl/api/installer/report" -Method Post -Headers @{ Authorization = "Bearer $token" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($json)) -UseBasicParsing -TimeoutSec 20
+    Log "game check sent to the site"
+  } catch { Log ("game check not sent: " + $_.Exception.Message) }
+}
+
 # ---- checks (planner C): files, settings, dependencies, and the game's own log --------------------------------
 # One check: @{ group = "Files" | "Settings" | "Dependencies" | "In game"; id = <extra id or "">; ok = $true/$false/$null (waiting); text }
 function Test-Extras($paths, $manifest, $state) {
@@ -1544,7 +1696,8 @@ function Read-GameSession([string]$file) {
     $fs = [IO.File]::Open($file, "Open", "Read", "ReadWrite")
     try { $sr = New-Object IO.StreamReader($fs); $lines = @($sr.ReadToEnd() -split "`r?`n") } finally { $fs.Dispose() }
   } catch { return $null }
-  $s = @{ startedAt = $null; found = @{}; packs = @(); failed = $false; errors = @(); loaded = $false }
+  # 2.1.0: connects = servers it went for ("Connecting to host, port"); refused = the server refused it at the handshake
+  $s = @{ startedAt = $null; found = @{}; packs = @(); failed = $false; errors = @(); loaded = $false; connects = @(); refused = $false; refusedMod = $null; refusedChannel = $null }
   $first = @($lines | Where-Object { $_ })[0]
   $m = [regex]::Match([string]$first, '^\[(\d{2}[A-Za-z]{3}\d{4} \d{2}:\d{2}:\d{2}(?:\.\d+)?)\]')
   if ($m.Success) { try { $s.startedAt = [datetime]::ParseExact(($m.Groups[1].Value -replace '\.\d+$', ''), "ddMMMyyyy HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture).ToUniversalTime() } catch {} }
@@ -1553,6 +1706,8 @@ function Read-GameSession([string]$file) {
     $f = [regex]::Match($l, 'Found mod file "([^"]+)"')
     if ($f.Success) { $s.found[$f.Groups[1].Value] = $true; continue }
     if ($l -match 'Reloading ResourceManager: (.*)$') { $s.packs = @($Matches[1] -split ',\s*'); $s.loaded = $true; continue }
+    if ($l -match 'Connecting to ([^,\s]+), ?(\d+)') { $s.connects += ("{0}:{1}" -f $Matches[1], $Matches[2]); continue }
+    if ($l -match 'missing on the client side|neoforge\.network\.negotiation\.failure') { $s.refused = $true; if ($l -match "Channel of mod '([^']{1,80})'") { $s.refusedMod = $Matches[1] }; if ($l -match '\(([a-z0-9_.-]{1,64}):[a-z0-9_./-]{1,64}\)') { $s.refusedChannel = $Matches[1] }; continue }
     if ($l -match 'Mod loading has failed|ModLoadingException|LoadingFailedException|Failed to load mod|requires .* but .* is (missing|not installed)|Mod .* (requires|is incompatible)') { $s.failed = $true; $s.errors += $l.Trim() }
   }
   return $s
@@ -2043,6 +2198,50 @@ function Show-Review {
   Set-PromptButtons $true $true
 }
 
+# 2.1.0: every start of the game from the window goes through Play (the engine checks every mod, then opens the
+# launcher); nothing in the window opens the launcher itself. False when a run is already going (it launches anyway).
+function Request-Play([string]$why) {
+  $A = $script:App
+  Log ("window: the game was asked for ({0}): through Play" -f $why)
+  if ($A.Mode -ne "idle") { return $false }
+  $A.Tabs.SelectedItem = $A.PlayTab
+  Start-Run
+  return $true
+}
+
+# 2.1.0: after a launch, the game's own log: did it start with every mod of the pack? Every 2 s, for up to 30 minutes.
+function Watch-Game {
+  $A = $script:App
+  $w = $A.Watch
+  if (-not $w) { return }
+  if ((Get-Date) -gt $w.until) { Log "game check: no game session seen within 30 minutes of the launch"; $A.Watch = $null; return }
+  $list = Read-JsonFile (Join-Path $AppHome $PackListName)
+  $files = @(Read-PackList (Join-Path $AppHome $PackListName))
+  if ($files.Count -eq 0) { $A.Watch = $null; return }
+  $found = Find-GameSession $DataDir (Join-Path $Root ".minecraft") $w.since $(if ($list -and $list.server) { ([string]$list.server -split ':')[0] } else { "" })
+  if (-not $found) { return }
+  $check = Test-GameMods $found.session $files $found.elsewhere
+  $A.Watch = $null
+  if (-not $check) { Log "game check: the game's log lists no mod files; nothing to compare"; return }
+  Log ("game check: " + $(if ($check.ok) { "the game started with all {0} mods" -f $check.checked } else { "{0} ({1} not loaded{2})" -f (Get-MissingText $check), @($check.missing).Count, $(if ($check.elsewhere) { ", another launcher profile" } else { "" }) }))
+  Send-GameCheck $check $(if ($list) { [string]$list.version } else { "" })
+  if ($check.ok) { return }
+  $A.GameProblem = $check
+  if ($A.Mode -eq "idle") { Show-GameProblem }
+}
+function Show-GameProblem {
+  $A = $script:App
+  $c = $A.GameProblem; if (-not $c) { return }
+  Clear-PlayBody
+  $A.PlayTitle.Text = "Your game is missing mods"
+  $A.PlayStatus.Text = Get-MissingText $c
+  if ($c.elsewhere) { Add-PlayLine "The Minecraft Launcher started another profile. Play puts Deepslate Works back as the one it starts." "#8A5A00" | Out-Null }
+  foreach ($m in @($c.missing | Select-Object -First 8)) { if ($m.name) { Add-PlayLine ([string][char]0x2717 + "  " + $m.name) "#B3261E" | Out-Null } }
+  $A.PlayButton.Content = "Play"; $A.PlayButton.IsEnabled = $true
+  $A.Tabs.SelectedItem = $A.PlayTab
+  try { $A.Window.Activate() | Out-Null; $A.Window.Topmost = $true; $A.Window.Topmost = $false } catch {}
+}
+
 function Start-Run([switch]$NoLaunch) {
   $A = $script:App
   $A.Mode = "running"
@@ -2056,7 +2255,7 @@ function Start-Run([switch]$NoLaunch) {
   $A.StatusPath = Join-Path $Temp ("deepslate-status-{0}.jsonl" -f ([guid]::NewGuid().ToString("N").Substring(0, 8)))
   [IO.File]::WriteAllText($A.StatusPath, "")
   $A.StatusPos = 0
-  $A.LastAsk = $null; $A.LastDeclined = $null; $A.LastFail = $null; $A.Changed = $null
+  $A.LastAsk = $null; $A.LastDeclined = $null; $A.LastFail = $null; $A.Changed = $null; $A.Launched = $null; $A.GameProblem = $null; $A.Watch = $null
   $args2 = @("-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $script:MePath), "-Engine", "-StatusFile", ('"{0}"' -f $A.StatusPath))
   if ($NoLaunch) { $args2 += "-NoLaunch" }
   if (-not [IO.File]::Exists($script:MePath)) { $script:MePath = Join-Path (Get-HomeDir) $ScriptName }   # moved by the 1.5.3 step
@@ -2082,6 +2281,7 @@ function On-Tick {
     $ids = @(Find-GameProcess $DataDir (Get-JavaProcesses) | ForEach-Object { $_.Id })
     $was = $A.GameRunning
     $A.GameRunning = ($ids.Count -gt 0)
+    if ($A.Watch) { try { Watch-Game } catch { Log ("game check failed: " + $_.Exception.Message); $A.Watch = $null } }
     $st = Read-ExtrasState $A.ExtrasStatePath
     if ($st.queued -and -not $A.GameRunning -and $A.Mode -ne "running") {
       XLog ("queued install: the game closed at " + (Get-Date -Format "HH:mm:ss"))
@@ -2120,6 +2320,7 @@ function Read-StatusLines {
       "declined" { $A.LastDeclined = $o }
       "used" { $A.Used[[string]$o.step] = [int]$o.level }
       "changed" { $A.Changed = [string]$o.text }
+      "launched" { $A.Launched = Get-Date }
     }
   }
 }
@@ -2147,7 +2348,9 @@ function On-RunEnded([int]$code) {
     return
   }
   $A.PlayTitle.Text = "Ready"
-  $A.PlayStatus.Text = "The Minecraft Launcher is opening on Deepslate Works: press Play there. This window can stay open, or be closed."
+  $A.PlayStatus.Text = "Every mod is checked and in place. The Minecraft Launcher is opening on Deepslate Works: press Play there. Keep this window open: it checks the game starts with every mod."
+  # 2.1.0: watch the game's log for the session this launch starts
+  if ($A.Launched) { $A.Watch = @{ since = $A.Launched.AddSeconds(-5); until = $A.Launched.AddMinutes(30) } }
   if ($A.Changed) { $A.PlayChanged.Text = $A.Changed; $A.PlayChanged.Visibility = "Visible" }
   if ($A.Tabs.SelectedItem -eq $A.ExtrasTab) { Show-Extras }
   # updated itself on this run: the window starts the new copy and closes
@@ -2437,9 +2640,10 @@ function Install-Now($what, [string]$why) {
     if ($ans -eq "all") { Set-ConsentAnswer $A.Consent "launch" "allow" 1; Save-Consent $A.ConsentPath $A.Consent; $ans = "yes" }
     if ($ans -ne "yes") { $A.ExtrasStatus.Text = "Installed. Ready, starts next time you play."; return }
   }
-  $ok = Open-Launcher
-  XLog ("relaunch: " + $(if ($ok) { "started (the Minecraft Launcher on Deepslate Works)" } else { "the Minecraft Launcher was not found" })) -Err:(-not $ok)
-  $A.ExtrasStatus.Text = "Installed. The Minecraft Launcher is opening: press Play there."
+  # 2.1.0: the game starts the way Play starts it: every mod checked first (Request-Play)
+  $ok = Request-Play "relaunch after Apply"
+  XLog ("relaunch: " + $(if ($ok) { "through Play: the mods are checked, then the Minecraft Launcher opens on Deepslate Works" } else { "not now: Deepslate Works is busy; press Play when it is done" })) -Err:(-not $ok)
+  $A.ExtrasStatus.Text = $(if ($ok) { "Installed. Checking the mods, then the Minecraft Launcher opens: press Play there." } else { "Installed. Press Play on the Play tab to start the game." })
 }
 
 # Yes with the game running: close it, install, check, start it again. One stage per tick of the timer, so the
@@ -2482,8 +2686,9 @@ function Step-Flow {
       if ($f.relaunch) { $f.stage = "starting"; Add-Progress "Starting the game..." } else { $f.stage = "done" }
     }
     "starting" {
-      $ok = Open-Launcher
-      XLog ("restart: relaunch " + $(if ($ok) { "started (the Minecraft Launcher on Deepslate Works)" } else { "failed: the Minecraft Launcher was not found" })) -Err:(-not $ok)
+      # 2.1.0: through Play, so every mod is checked before the game starts again
+      $ok = Request-Play "restart after Apply"
+      XLog ("restart: relaunch " + $(if ($ok) { "through Play: the mods are checked, then the Minecraft Launcher opens on Deepslate Works" } else { "not now: Deepslate Works is busy; press Play when it is done" })) -Err:(-not $ok)
       $f.stage = "done"
     }
     "done" {
@@ -3481,6 +3686,78 @@ if ($SelfTest) {
   Check "the Play tab's questions have Allow all next to Continue, Review permissions has Reset all" (($AppXaml -match 'x:Name="AllowAllButton"[^>]*Content="Allow all"') -and ($AppXaml -match 'x:Name="ResetButton"[^>]*Content="Reset all"'))
   Check "the Extras tab's download question has Allow all" ([IO.File]::ReadAllText($PSCommandPath) -match 'New-Button "Allow all"')
 
+  # ---- 2.1.0: every mod checked before the game starts; the game's log checked after (kanefinch's TaCZ kick) ----
+  Write-Host "Self test: the pack's mods before and after a launch (2.1.0)" -ForegroundColor White
+  $pm = Join-Path $dir "pack-mods"; $pmods = Join-Path $pm "mods"; New-Item -ItemType Directory -Force -Path $pmods | Out-Null
+  $jarBody = @{ "create.jar" = "create body"; "tacz.jar" = "tacz body"; "jei.jar" = "jei body" }
+  $shaOf = { param($text) $h = [System.Security.Cryptography.SHA512]::Create(); [BitConverter]::ToString($h.ComputeHash([Text.Encoding]::UTF8.GetBytes($text))).Replace("-", "").ToLower() }
+  $pmManifest = [pscustomobject]@{ version = "0.1.0+test"; server_address = "mc.example.test:25565"; files = @(
+    [pscustomobject]@{ slug = "create"; name = "Create"; filename = "create.jar"; sha512 = (& $shaOf "create body"); side = "both"; url = "https://cdn.modrinth.com/create.jar" },
+    [pscustomobject]@{ slug = "tacz-1.21.1"; name = "TaCZ (Timeless and Classics Zero)"; filename = "tacz.jar"; sha512 = (& $shaOf "tacz body"); side = "both"; url = "https://cdn.modrinth.com/tacz.jar" },
+    [pscustomobject]@{ slug = "jei"; name = "JEI"; filename = "jei.jar"; sha512 = (& $shaOf "jei body"); side = "both"; url = "https://cdn.modrinth.com/jei.jar" },
+    [pscustomobject]@{ slug = "bluemap"; name = "BlueMap"; filename = "bluemap.jar"; sha512 = "00"; side = "server"; url = "https://cdn.modrinth.com/bluemap.jar" }) }
+  $pmFiles = Get-PackFiles $pmManifest
+  Check "the client set leaves server-only mods out" ($pmFiles.Count -eq 3 -and @($pmFiles | Where-Object { $_.slug -eq "bluemap" }).Count -eq 0)
+  foreach ($n in @("create.jar", "jei.jar")) { [IO.File]::WriteAllText((Join-Path $pmods $n), $jarBody[$n], $utf8) }
+  $c = Test-PackMods $pmods $pmFiles
+  Check ("TaCZ missing from mods\: the check says so: " + (Get-MissingText $c)) ((-not $c.ok) -and @($c.missing).Count -eq 1 -and $c.missing[0].slug -eq "tacz-1.21.1" -and $c.missing[0].why -eq "missing" -and (Get-MissingText $c) -eq "TaCZ (Timeless and Classics Zero) is not on this PC yet. Press Play to repair.")
+  [IO.File]::WriteAllText((Join-Path $pmods "tacz.jar"), "half a jar", $utf8)
+  $c = Test-PackMods $pmods $pmFiles
+  Check "a damaged TaCZ (wrong checksum) counts as missing" ((-not $c.ok) -and $c.missing[0].why -eq "wrong")
+  $script:Fetched = @()
+  $c = Repair-PackMods $pmods $pmFiles { param($f, $dest) $script:Fetched += [string]$f.filename; [IO.File]::WriteAllText($dest, $jarBody[[string]$f.filename], (New-Object Text.UTF8Encoding($false))); "ok" }
+  Check "Repair-PackMods fetches only what is missing or wrong, then everything checks" ($c.ok -and ($script:Fetched -join ",") -eq "tacz.jar" -and $c.checked -eq 3)
+  Remove-Item -LiteralPath (Join-Path $pmods "tacz.jar")
+  $c = Repair-PackMods $pmods $pmFiles { param($f, $dest) throw "no internet" }
+  Check "a fetch that fails leaves the check not ok (the launcher stays shut)" ((-not $c.ok) -and $c.missing[0].slug -eq "tacz-1.21.1")
+  $script:Opened = 0
+  function Open-Launcher { $script:Opened++; return $true }
+  $r = Open-LauncherChecked $pmods $pmFiles
+  Check "Open-LauncherChecked does not open the launcher while a mod is missing" (($r -eq $false) -and $script:Opened -eq 0 -and -not $script:ModsCheck.ok)
+  [IO.File]::WriteAllText((Join-Path $pmods "tacz.jar"), "tacz body", $utf8)
+  $r = Open-LauncherChecked $pmods $pmFiles
+  Check "with every mod in place it opens the launcher, once" (($r -eq $true) -and $script:Opened -eq 1 -and $script:ModsCheck.ok)
+  Remove-Item Function:\Open-Launcher
+  $own2 = [IO.File]::ReadAllText($PSCommandPath)
+  $calls = @([regex]::Matches($own2, '(?m)^(?!\s*#)[^\r\n]*\bOpen-Launcher\b(?!Checked)[^\r\n]*$') | Where-Object { $_.Value -notmatch 'function Open-Launcher|Open-Launcher \{ \$script:Opened|Remove-Item Function:|\(\?!Checked\)|own2 -match' })
+  Check ("the launcher is opened only through Open-LauncherChecked ({0} other call(s))" -f ($calls.Count - 1)) ($calls.Count -eq 1 -and $calls[0].Value -match '\$ok = Open-Launcher' -and $own2 -match '(?s)function Open-LauncherChecked.{0,600}\$ok = Open-Launcher')
+  Check "the Extras tab's Yes and the restart after Apply start the game through Play" (([regex]::Matches($own2, 'Request-Play "(relaunch|restart) after Apply"')).Count -eq 2)
+  Save-PackList (Join-Path $pm "pack.json") $pmManifest
+  $pl = @(Read-PackList (Join-Path $pm "pack.json"))
+  Check "the mod list kept for the game check has the 3 PC mods with names" ($pl.Count -eq 3 -and ($pl | Where-Object { $_.slug -eq "tacz-1.21.1" }).name -eq "TaCZ (Timeless and Classics Zero)" -and (Read-JsonFile (Join-Path $pm "pack.json")).server -eq "mc.example.test:25565")
+  # the game's log after a launch
+  $since = (Get-Date).AddMinutes(-1)
+  $gst = { param($dt) $dt.ToString("ddMMMyyyy HH:mm:ss.fff", [Globalization.CultureInfo]::InvariantCulture) }
+  $fl = { param($n) "[{0}] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found mod file `"{1}`" of type MOD with provider net.neoforged.fml.loading.moddiscovery.locators.ModsFolderLocator" -f (& $gst (Get-Date)), $n }
+  $rl = "[{0}] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources" -f (& $gst (Get-Date))
+  $kick = "[{0}] [Render thread/INFO] [net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl/]: Channel of mod 'Timeless & Classics Guns: Zero' failed to connect: This channel is missing on the client side, but required on the server (tacz:acknowledge) [+1 more]" -f (& $gst (Get-Date))
+  $conn = "[{0}] [Server Connector #1/INFO] [net.minecraft.client.gui.screens.ConnectScreen/]: Connecting to mc.example.test, 25565" -f (& $gst (Get-Date))
+  $ours = Join-Path $pm "game"; $mc = Join-Path $pm ".minecraft"
+  foreach ($d in @($ours, $mc)) { New-Item -ItemType Directory -Force -Path (Join-Path $d "logs") | Out-Null }
+  Check "no game session yet: nothing to say" ($null -eq (Find-GameSession $ours $mc $since "mc.example.test"))
+  [IO.File]::WriteAllText((Join-Path $ours "logs\latest.log"), (@((& $fl "create.jar"), (& $fl "tacz.jar"), (& $fl "jei.jar"), $rl) -join "`n"), $utf8)
+  $g = Find-GameSession $ours $mc $since "mc.example.test"
+  $gc = Test-GameMods $g.session $pl $g.elsewhere
+  Check "the game started with every mod: ok" ($g -and -not $g.elsewhere -and $gc.ok -and $gc.where -eq "game")
+  [IO.File]::WriteAllText((Join-Path $ours "logs\latest.log"), (@((& $fl "create.jar"), (& $fl "jei.jar"), $rl, $conn, $kick) -join "`n"), $utf8)
+  $g = Find-GameSession $ours $mc $since "mc.example.test"
+  $gc = Test-GameMods $g.session $pl $g.elsewhere
+  Check ("the game started without TaCZ and was refused: " + (Get-MissingText $gc)) ((-not $gc.ok) -and $g.session.refused -and $g.session.refusedMod -eq "Timeless & Classics Guns: Zero" -and @($gc.missing).Count -eq 1 -and (Get-MissingText $gc) -eq "Your game started without TaCZ (Timeless and Classics Zero). Press Play to repair.")
+  Remove-Item -LiteralPath (Join-Path $ours "logs\latest.log")
+  [IO.File]::WriteAllText((Join-Path $mc "logs\latest.log"), (@($rl, $conn, $kick) -join "`n"), $utf8)
+  $g = Find-GameSession $ours $mc $since "mc.example.test"
+  $gc = Test-GameMods $g.session $pl $g.elsewhere
+  Check ("another launcher profile (.minecraft, no mods) going for our server: " + (Get-MissingText $gc)) ($g.elsewhere -and (-not $gc.ok) -and $gc.elsewhere -and $gc.missing[0].slug -eq "tacz-1.21.1" -and @($gc.missing).Count -eq 3)
+  [IO.File]::WriteAllText((Join-Path $mc "logs\latest.log"), (@($rl, ("[{0}] [Server Connector #1/INFO] [x/]: Connecting to hypixel.net, 25565" -f (& $gst (Get-Date)))) -join "`n"), $utf8)
+  Check "another profile playing somewhere else is not our business" ($null -eq (Find-GameSession $ours $mc $since "mc.example.test"))
+  [IO.File]::WriteAllText((Join-Path $ours "logs\latest.log"), $rl, $utf8)
+  $g = Find-GameSession $ours $mc $since "mc.example.test"
+  Check "a log that lists no mod files makes no claim" ($null -eq (Test-GameMods $g.session $pl $g.elsewhere))
+  Check "the version is 2.1.0 or later" (-not (Test-Newer "2.1.0" $InstallerVersion))
+  $script:ModsCheck = Test-PackMods $pmods $pmFiles
+  Check "the report carries the mod check" (((Get-ReportMods).ok -eq $true) -and ((Get-ReportMods).checked -eq 3) -and ((Get-ReportMods).where -eq "folder"))
+  $script:ModsCheck = $null
+
   $own = [IO.File]::ReadAllText($PSCommandPath)
   $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
   Check "no command's stderr is sent through 2>&1 anywhere in this script" ($left -eq 0)
@@ -3872,6 +4149,7 @@ try {
   Step "Setting up the mods"
   foreach ($d in @("mods", "config", "resourcepacks")) { New-Item -ItemType Directory -Force -Path (Join-Path $GameDir $d) | Out-Null }
   $modsDir = Join-Path $GameDir "mods"
+  $script:PackCheck = @{ dir = $modsDir; files = $files }   # 2.1.0: for the report of a run that stops part-way
   $staging = Join-Path $GameDir ".downloading"
   $sha = [System.Security.Cryptography.SHA512]::Create()
   $keep = @{}
@@ -4035,6 +4313,17 @@ try {
     } catch { Log ("could not check the Play link and the shortcuts: " + $_.Exception.Message) }
   }
 
+  # ---- 2.1.0: every mod checked once more before anything can start the game ------------------------------------
+  # (kanefinch, 2026-10-01: a game without TaCZ was refused at the server's handshake.) What is missing or wrong is
+  # fetched again and checked again; still not right, and this run stops here: no launcher, no "installed".
+  if (-not $DryRun) {
+    Step "Checking every mod before the game starts"
+    $fetchOne = { param($f, $dest) Save-ModFile ([string]$f.url) $dest ([string]$f.sha512) $staging { param($url, $out) Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing } }
+    $script:ModsCheck = Repair-PackMods $modsDir $files $fetchOne
+    if (-not $script:ModsCheck.ok) { Fail (Get-MissingText $script:ModsCheck) }
+    Tick ("All {0} mods checked" -f $script:ModsCheck.checked)
+    try { Save-PackList (Join-Path $AppHome $PackListName) $manifest } catch { Log ("could not keep the mod list for the game check: " + $_.Exception.Message) }
+  }
   if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $installedFile }
 
   # ---- d. the report, e. the game -------------------------------------------------------------------------
@@ -4050,8 +4339,9 @@ try {
   if ($DryRun) { Write-Host "(dry run) Nothing was changed." -ForegroundColor Green }
   elseif ($NoLaunch) { Log "not opening the launcher (asked not to)" }
   else {
-    if ($profileLeft) { Write-Host ("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play." -f $PackName) -ForegroundColor Green }
-    elseif (Open-Launcher) { Write-Host ("Opening the Minecraft Launcher on {0}. Press Play." -f $PackName) -ForegroundColor Green }
+    if ($profileLeft) { Emit ([ordered]@{ t = "launched"; opened = $false }); Write-Host ("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play." -f $PackName) -ForegroundColor Green }
+    elseif (Open-LauncherChecked $modsDir $files) { Write-Host ("Opening the Minecraft Launcher on {0}. Press Play." -f $PackName) -ForegroundColor Green }
+    elseif (-not $script:ModsCheck.ok) { Fail (Get-MissingText $script:ModsCheck) }
     else { Write-Host ("Open the Minecraft Launcher from the Start menu, choose {0}, press Play." -f $PackName) -ForegroundColor Yellow }
     if ($Mode -eq "first_install") { Write-Host ("From now on, press Play on {0} or open {1} from your desktop. It keeps itself up to date." -f $PortalUrl.Replace("https://", ""), $PackName) -ForegroundColor Gray }
     if ($script:Waking) { [void](Watch-Wake $wakeCall { param($s) Start-Sleep -Seconds $s }) }

@@ -9,6 +9,7 @@ import { parsePlace, parsePos, type ActionCtx } from "../actions/registry.js";
 import { getSection } from "../settings.js";
 import { PLAY_MODES, playGate, type BlockReason, type PlayRun } from "../shared/join-gate.js";
 import { serverPack } from "./pack.js";
+import { modsMissingFor } from "./mods.js";
 import { doorRule, type Member } from "../shared/access.js";
 import { CODE_TTL_MS, makeCode } from "../shared/join-code.js";
 
@@ -30,12 +31,12 @@ export type Back = { dimension: string; x: number; y: number; z: number };
 /** `lastReminder`: when the prompt last went to them (docs/14 "The prompt"). */
 /** "old": their last run was from an installer below Settings → Joining "Minimum installer version". */
 type Held = { uuid: string; code: string; since: number; lastReminder: number; kind: "link" | HeldFor; userId?: string; back?: Back | null };
-type HeldFor = "play" | "closed" | "old";
+type HeldFor = "play" | "closed" | "old" | "mods";
 /** Which wait a reason at the door is. */
-export const waitFor = (reason: BlockReason): HeldFor => (reason === "not live" ? "closed" : reason === "old installer" ? "old" : "play");
-const HOLD = { play: "limbo.holdPlay", closed: "limbo.holdClosed", old: "limbo.holdOld" } as const;
-const REMIND = { play: "limbo.remindPlay", closed: "limbo.remindClosed", old: "limbo.remindOld" } as const;
-const KICK = { link: "limbo.kickIdle", play: "limbo.kickIdlePlay", closed: "limbo.kickIdleClosed", old: "limbo.kickIdleOld" } as const;
+export const waitFor = (reason: BlockReason): HeldFor => (reason === "not live" ? "closed" : reason === "old installer" ? "old" : reason === "missing mods" ? "mods" : "play");
+const HOLD = { play: "limbo.holdPlay", closed: "limbo.holdClosed", old: "limbo.holdOld", mods: "limbo.holdMods" } as const;
+const REMIND = { play: "limbo.remindPlay", closed: "limbo.remindClosed", old: "limbo.remindOld", mods: "limbo.remindMods" } as const;
+const KICK = { link: "limbo.kickIdle", play: "limbo.kickIdlePlay", closed: "limbo.kickIdleClosed", old: "limbo.kickIdleOld", mods: "limbo.kickIdleMods" } as const;
 type Known = Member & { id: string };
 
 export type JoinDecision = { action: "release" | "hold"; reason: string };
@@ -56,10 +57,10 @@ export function decideJoin(user: { verifiedAt: Date | null; guildMember: boolean
  * `run` is their latest run of Play or of the installer that went through. Null: in. Joining and having just
  * linked in the room both come through here (2026-09-29: a member who linked was let in without Play first).
  */
-export function doorReason(user: Member, d: { live: boolean; requirePlay: boolean; windowMin: number; run: PlayRun | null; pack: string | null; now: Date; minInstaller?: string }): BlockReason | null {
+export function doorReason(user: Member, d: { live: boolean; requirePlay: boolean; windowMin: number; run: PlayRun | null; pack: string | null; now: Date; minInstaller?: string; modsMissing?: boolean }): BlockReason | null {
   if (doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: true }) === "not open") return "not live";
   if (doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: false }) === "in") return null; // Play is not asked of them
-  const gate = playGate(d.run, d.pack, d.windowMin, d.now, d.minInstaller ?? "");
+  const gate = playGate(d.run, d.pack, d.windowMin, d.now, d.minInstaller ?? "", d.modsMissing ?? false);
   return gate.ok ? null : gate.reason;
 }
 
@@ -106,6 +107,7 @@ export class Limbo {
       const h = this.held.get(e.name);
       if (h) await this.prompt(e.name, h, Date.now());
     }
+    if (e.type === "refused" && !info.replay) await this.onRefused(e);
     if (e.type === "leave") {
       this.held.delete(e.name);
       this.lastJoin.delete(e.name);
@@ -168,6 +170,21 @@ export class Limbo {
     return live;
   }
 
+  private readonly lastRefused = new Map<string, number>();
+
+  /**
+   * 2.1.0: NeoForge refused them at the handshake because their game lacks a mod the server needs. They never got in,
+   * so the room cannot hold them; it is written down against their account, and from then on the site, the app and
+   * the room say "Your game is missing some mods. Press Play on the site to fix it." until a Play goes through.
+   */
+  private async onRefused(e: Extract<ConsoleEvent, { type: "refused" }>) {
+    const now = Date.now();
+    if (now - (this.lastRefused.get(e.name) ?? 0) < SAME_JOIN_MS) return; // one line per attempt is enough
+    this.lastRefused.set(e.name, now);
+    const user = await db.user.findFirst({ where: e.uuid ? { OR: [{ mcUuid: e.uuid }, { mcUsername: e.name }] } : { mcUsername: e.name }, select: { id: true } });
+    await audit({ userId: user?.id ?? null, action: "join.blocked", params: { name: e.name, uuid: e.uuid, reason: "missing mods", refused: true, mod: e.mod, channel: e.channel }, result: "DENIED", detail: e.reason.slice(0, 300) });
+  }
+
   /** Why this member may not come in yet, or null when they may (`doorReason`). */
   protected async atTheDoor(user: Known): Promise<BlockReason | null> {
     const [live, joining, run, pack] = await Promise.all([
@@ -176,7 +193,8 @@ export class Limbo {
       db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { at: true, packVersion: true, installerVersion: true } }),
       serverPack(),
     ]);
-    return doorReason(user, { live, requirePlay: joining.requirePlay, windowMin: joining.windowMin, run, pack, now: new Date(), minInstaller: joining.minInstaller });
+    const modsMissing = await modsMissingFor(user.id, run);
+    return doorReason(user, { live, requirePlay: joining.requirePlay, windowMin: joining.windowMin, run, pack, now: new Date(), minInstaller: joining.minInstaller, modsMissing });
   }
 
   /** Asks the server where they are and waits for the answer; null when none comes. */
@@ -208,7 +226,7 @@ export class Limbo {
   private async releaseBack(name: string, h: Held) {
     this.held.delete(name);
     const r = await runAction(this.amp, this.ctx, "limbo.releaseBack", { name, back: h.back ?? null }, null);
-    await audit({ userId: h.userId ?? null, action: "join.ready", params: { name, uuid: h.uuid, back: Boolean(h.back), was: h.kind === "closed" ? "not live" : h.kind === "old" ? "old installer" : "play" }, result: r.ok ? "OK" : "FAILED", detail: r.detail ?? null });
+    await audit({ userId: h.userId ?? null, action: "join.ready", params: { name, uuid: h.uuid, back: Boolean(h.back), was: h.kind === "closed" ? "not live" : h.kind === "old" ? "old installer" : h.kind === "mods" ? "missing mods" : "play" }, result: r.ok ? "OK" : "FAILED", detail: r.detail ?? null });
   }
 
   private async hold(name: string, uuid: string, reason: string) {

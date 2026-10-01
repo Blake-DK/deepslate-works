@@ -5,7 +5,7 @@
 // than the window, with the pack the server runs. api decides with this at every join; the portal uses the same
 // rule to say "Ready to join until 10:35". Pure, so it is tested.
 
-export const GATE_REASONS = ["no report", "old installer", "stale", "wrong version"] as const;
+export const GATE_REASONS = ["no report", "old installer", "missing mods", "stale", "wrong version"] as const;
 
 /**
  * The runs that count as "pressed Play": the Play button, and a run of Setup.bat that went through. A fresh install
@@ -36,11 +36,14 @@ export type Gate = { ok: true; until: Date } | { ok: false; reason: GateReason }
  * `run`: their latest run of Play, or of the installer, that went through (PLAY_MODES). `serverPack`: the pack last synced to the server, null when
  * that is not known (then the version is not looked at). Time first: a run from yesterday is "stale" whatever its pack.
  */
-export function playGate(run: PlayRun | null, serverPack: string | null, windowMin: number, now: Date, minInstaller = ""): Gate {
+export function playGate(run: PlayRun | null, serverPack: string | null, windowMin: number, now: Date, minInstaller = "", modsMissing = false): Gate {
   if (!run) return { ok: false, reason: "no report" };
   // Settings → Joining "Minimum installer version": a run from an older installer does not count. Pressing Play again
   // with it would not help, so this comes before "stale".
   if (minInstaller && olderThan(run.installerVersion, minInstaller)) return { ok: false, reason: "old installer" };
+  // 2.1.0 (2026-10-01, kanefinch's TaCZ kick): the game on their PC was seen without some of the pack's mods since
+  // their last Play (`modsMissing`). Play repairs it, so this says so before anything about time or version.
+  if (modsMissing) return { ok: false, reason: "missing mods" };
   const until = new Date(run.at.getTime() + windowMin * 60_000);
   if (now.getTime() > until.getTime()) return { ok: false, reason: "stale" };
   if (serverPack && run.packVersion !== serverPack) return { ok: false, reason: "wrong version" };
@@ -54,9 +57,23 @@ export const GATE_TEXT: Record<BlockReason, string> = {
   "not live": "the server is not open yet",
   "no report": "has not pressed Play on the site",
   "old installer": "has an installer older than the minimum",
+  "missing mods": "started the game without some of the pack's mods",
   stale: "pressed Play too long ago",
   "wrong version": "pressed Play before the pack changed",
 };
+
+/** What somebody reads while their game is missing mods (planner, 2026-10-01): on the site, in the app and in the room. */
+export const MISSING_MODS_TEXT = "Your game is missing some mods. Press Play on the site to fix it.";
+
+/**
+ * Was the game on their PC seen without some of the pack's mods after their last Play that went through? `mods`: the
+ * newest report that says anything about the mod set (a Play run's final check, or the app's look at the game's log
+ * after it started). `refusedAt`: the last time the server refused them at the handshake for a missing mod.
+ */
+export function modsMissingSince(run: PlayRun | null, mods: { at: Date; ok: boolean } | null, refusedAt: Date | null): boolean {
+  if (mods && !mods.ok && (!run || mods.at.getTime() >= run.at.getTime())) return true;
+  return Boolean(refusedAt && (!run || refusedAt.getTime() > run.at.getTime()));
+}
 
 /** What somebody reads in the room while their installer is below the minimum (planner, installer 1.5.0). */
 export const OLD_INSTALLER_TEXT = "Download Deepslate Works again from deepslate.dsw.test/install";

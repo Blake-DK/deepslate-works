@@ -113,6 +113,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "site.settings": "changed the launch settings",
   "settings.save": (p) => `changed the ${s(p.section, "site")} settings`,
   "branding.save": "changed the branding",
+  "branding.logo": (p) => `chose the logo ${s(p.choice, "").replace(/^option:/, "").replace(/^upload:.*/, "they uploaded")}`,
+  "branding.motd": (p) => (p.refused ? "tried to set the server list text; AMP does not let the portal change it" : "set the server list text"),
   "announcement.create": "posted an announcement",
   "announcement.pin": "pinned an announcement",
   "announcement.unpin": "unpinned an announcement",

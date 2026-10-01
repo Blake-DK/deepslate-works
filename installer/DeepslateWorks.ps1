@@ -58,7 +58,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "2.1.0"   # 2.1.0: the game only starts once every mod is checked in place; the game's log checked after. History in docs/07
+$InstallerVersion = "2.1.1"   # 2.1.1: the chosen logo on the window, shortcuts, Settings -> Apps and the launcher profile. History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -607,9 +607,54 @@ function Get-LaunchCommand([string]$scriptPath, [string]$tail, [string]$how = ""
 function Get-HandlerCommand([string]$scriptPath, [string]$how = "") { return (Get-LaunchCommand $scriptPath '"%1"' $how) }
 
 function Get-IconPath([string]$scriptPath) {
+  # the chosen logo (2.1.1) wins over the built-in icon; both live next to the installed script
+  $logo = Join-Name (Get-ParentPath $scriptPath) $LogoIconName
+  if ($scriptPath -and [IO.File]::Exists($logo)) { return $logo }
   $ico = Join-Name (Get-ParentPath $scriptPath) $IconName
   if ($scriptPath -and [IO.File]::Exists($ico)) { return $ico }
   return (Get-PowerShellExe)
+}
+
+# ---- the logo (planner, 2026-10-01; 2.1.1) ---------------------------------------------------------------------
+# The mod list's `branding` block names the chosen logo by a hash. Its .ico is fetched from this script's own site
+# (the address is made here from the hash, never taken from the list) into the home folder as logo.ico, which then
+# wins over the built-in icon for the window, the shortcuts and Settings -> Apps; logo.png (128 px, from the list)
+# goes in the window's header. A new hash is a new logo: fetched at the next Play, shortcuts and Apps made again.
+$LogoIconName = "logo.ico"
+function Test-IcoBytes($b) { return ($null -ne $b -and $b.Length -ge 22 -and $b[0] -eq 0 -and $b[1] -eq 0 -and $b[2] -eq 1 -and $b[3] -eq 0 -and ($b[4] + 256 * $b[5]) -ge 1) }
+function Test-PngBase64([string]$s) { return ($s.Length -gt 0 -and $s.Length -lt 400000 -and $s -match '^[A-Za-z0-9+/]+={0,2}$' -and $s.StartsWith("iVBORw0KGgo")) }
+
+# The launcher profile's picture: the logo as a data: PNG when the list has one, else the mod list's block icon.
+function Get-ProfileIcon($branding, [string]$fallback) {
+  if ($branding -and (Test-PngBase64 ([string]$branding.icon128))) { return ("data:image/png;base64," + [string]$branding.icon128) }
+  return $fallback
+}
+
+function Read-BrandMarker([string]$dir) {
+  try { $f = Join-Path $dir "branding.json"; if ([IO.File]::Exists($f)) { return ([IO.File]::ReadAllText($f) | ConvertFrom-Json) } } catch {}
+  return $null
+}
+
+# "none" (no logo picked), "same", "saved" (a new logo is in place) or "failed: <why>". $fetch: { param($url) -> byte[] }
+function Save-Branding($branding, [string]$dir, $fetch) {
+  if (-not $branding -or ([string]$branding.hash) -notmatch '^[0-9a-f]{12}$') { return "none" }
+  $hash = [string]$branding.hash
+  $was = Read-BrandMarker $dir
+  $ico = Join-Path $dir $LogoIconName
+  $marker = [ordered]@{ hash = $hash; name = [string]$branding.name; tagline = [string]$branding.tagline; pixel = [bool]$branding.pixel }
+  try {
+    if ($was -and [string]$was.hash -eq $hash -and [IO.File]::Exists($ico)) {
+      if ([string]$was.tagline -ne $marker.tagline -or [string]$was.name -ne $marker.name) { [IO.File]::WriteAllText((Join-Path $dir "branding.json"), ($marker | ConvertTo-Json)) }
+      return "same"
+    }
+    $bytes = & $fetch ("{0}/brand/logo.ico?v={1}" -f $PortalUrl, $hash)
+    if (-not (Test-IcoBytes $bytes)) { return "failed: what came back is not an icon" }
+    [IO.File]::WriteAllBytes($ico + ".new", [byte[]]$bytes)
+    Move-Item -LiteralPath ($ico + ".new") -Destination $ico -Force
+    if (Test-PngBase64 ([string]$branding.icon128)) { [IO.File]::WriteAllBytes((Join-Path $dir "logo.png"), [Convert]::FromBase64String([string]$branding.icon128)) }
+    [IO.File]::WriteAllText((Join-Path $dir "branding.json"), ($marker | ConvertTo-Json))
+    return "saved"
+  } catch { return ("failed: " + $_.Exception.Message) }
 }
 
 function Get-ShortcutSpec([string]$scriptPath, [string]$where = "desktop", [string]$how = "") {
@@ -1072,7 +1117,8 @@ function Get-WindowsHomeIo([string]$gameDir) {
       param($t)
       $l = $null
       try { $l = Get-ItemProperty -LiteralPath ("HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\" + $UninstallKeyName) -ErrorAction Stop } catch {}
-      return [bool]($l -and [string]$l.UninstallString -eq (Get-UninstallEntry $t $io.gameDir 0).UninstallString -and [string]$l.DisplayVersion -eq $InstallerVersion)
+      $e = Get-UninstallEntry $t $io.gameDir 0
+      return [bool]($l -and [string]$l.UninstallString -eq $e.UninstallString -and [string]$l.DisplayVersion -eq $InstallerVersion -and [string]$l.DisplayIcon -eq $e.DisplayIcon)
     }
     list = { param($t) Register-Uninstall $t $io.gameDir }
   }
@@ -2060,6 +2106,13 @@ $AppXaml = @'
     <TabItem Header="  Play  " x:Name="PlayTab">
       <DockPanel Margin="14">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+          <StackPanel x:Name="BrandBar" Orientation="Horizontal" Margin="0,0,0,8" Visibility="Collapsed">
+            <Image x:Name="BrandLogo" Width="40" Height="40" Margin="0,0,10,0" VerticalAlignment="Center"/>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock x:Name="BrandName" FontWeight="SemiBold" Text="Deepslate Works"/>
+              <TextBlock x:Name="BrandTagline" Foreground="#C0661F"/>
+            </StackPanel>
+          </StackPanel>
           <TextBlock x:Name="PlayTitle" FontSize="20" FontWeight="SemiBold" Text="Deepslate Works"/>
           <TextBlock x:Name="PlayStatus" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#444"/>
           <TextBlock x:Name="PlayChanged" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#2E7D5B" FontWeight="SemiBold" Visibility="Collapsed"/>
@@ -2197,6 +2250,32 @@ function New-ConsentCard($step, [int]$level = 1, [string]$size = "") {
   return $card
 }
 
+# The window's icon (taskbar too) and the header's logo and tagline, from what the last run put in the home folder.
+# Read from bytes, so the files are never held open while the next run replaces them.
+function Update-AppBrand {
+  $dir = Get-HomeDir
+  if (-not $dir -or -not $A.Window) { return }
+  try {
+    $ico = Join-Path $dir $LogoIconName
+    if ([IO.File]::Exists($ico)) {
+      $ms = New-Object IO.MemoryStream(,[IO.File]::ReadAllBytes($ico))
+      $A.Window.Icon = [Windows.Media.Imaging.BitmapFrame]::Create($ms, [Windows.Media.Imaging.BitmapCreateOptions]::None, [Windows.Media.Imaging.BitmapCacheOption]::OnLoad)
+    }
+    $m = Read-BrandMarker $dir
+    $png = Join-Path $dir "logo.png"
+    if ($m -and [IO.File]::Exists($png)) {
+      $bmp = New-Object Windows.Media.Imaging.BitmapImage
+      $bmp.BeginInit(); $bmp.CacheOption = [Windows.Media.Imaging.BitmapCacheOption]::OnLoad; $bmp.StreamSource = (New-Object IO.MemoryStream(,[IO.File]::ReadAllBytes($png))); $bmp.EndInit()
+      $A.BrandLogo.Source = $bmp
+      # pixel art stays crisp: nearest-neighbour, never smoothed
+      [Windows.Media.RenderOptions]::SetBitmapScalingMode($A.BrandLogo, $(if ($m.pixel) { [Windows.Media.BitmapScalingMode]::NearestNeighbor } else { [Windows.Media.BitmapScalingMode]::HighQuality }))
+      if ([string]$m.name) { $A.BrandName.Text = [string]$m.name }
+      $A.BrandTagline.Text = [string]$m.tagline
+      $A.BrandBar.Visibility = "Visible"
+    }
+  } catch { Log ("the logo could not be shown: " + $_.Exception.Message) }
+}
+
 function Show-App([string]$shotsDir = "") {
   Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
   $script:App = @{}
@@ -2223,9 +2302,10 @@ function Show-App([string]$shotsDir = "") {
   $w = [Windows.Markup.XamlReader]::Parse($AppXaml)
   $A.Window = $w
   foreach ($n in @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody",
-                   "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList")) { $A[$n] = $w.FindName($n) }
+                   "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList", "BrandBar", "BrandLogo", "BrandName", "BrandTagline")) { $A[$n] = $w.FindName($n) }
   try { $w.Title = "{0} {1}" -f $PackName, $InstallerVersion } catch {}
   try { $w.Icon = [Windows.Media.Imaging.BitmapFrame]::Create((New-Object IO.MemoryStream(, (Get-IconBytes)))) } catch {}   # 2.0.3: not PowerShell's
+  Update-AppBrand   # 2.1.1: the chosen logo instead, with the header's logo and tagline
 
   $A.PlayButton.Add_Click({ On-PlayButton })
   $A.AllowAllButton.Add_Click({ On-AllowAll })
@@ -2540,6 +2620,7 @@ function On-RunEnded([int]$code) {
     $A.PlayStatus.Text = $(if ($A.LastFail) { $A.LastFail } else { "Something went wrong. The Log tab has the details; Alex has them too if reports are on." })
     return
   }
+  Update-AppBrand   # a run may have brought a new logo
   $A.PlayTitle.Text = "Ready"
   $A.PlayStatus.Text = "Every mod is checked and in place. The Minecraft Launcher is opening on Deepslate Works: press Play there. Keep this window open: it checks the game starts with every mod."
   # 2.1.0: watch the game's log for the session this launch starts
@@ -3886,7 +3967,7 @@ if ($SelfTest) {
   $okXaml = $true; $names = @()
   try { $x1 = [xml]$AppXaml; $x2 = [xml]$RestartXaml; $names = @($x1.SelectNodes("//*[@*[local-name()='Name']]") | ForEach-Object { $_.GetAttribute("Name", "http://schemas.microsoft.com/winfx/2006/xaml") }) } catch { $okXaml = $false }
   Check "both windows' XAML is well-formed" $okXaml
-  $want = @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody", "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList")
+  $want = @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody", "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList", "BrandBar", "BrandLogo", "BrandName", "BrandTagline")
   Check ("every name the code looks up is in the XAML") (@($want | Where-Object { $names -notcontains $_ }).Count -eq 0)
   Check "the window is titled Deepslate Works with Play, Extras and Log tabs" (($AppXaml -match 'Title="Deepslate Works"') -and ($AppXaml -match 'Header="  Play  "') -and ($AppXaml -match 'Header="  Extras  "') -and ($AppXaml -match 'Header="  Log  "'))
   Check "the questions (restart, start the game) offer Yes, Later and Allow all" (($AskXaml -match 'Content="Yes"') -and ($AskXaml -match 'Content="Later"') -and ($AskXaml -match 'Content="Allow all"'))
@@ -3964,6 +4045,24 @@ if ($SelfTest) {
   $script:ModsCheck = Test-PackMods $pmods $pmFiles
   Check "the report carries the mod check" (((Get-ReportMods).ok -eq $true) -and ((Get-ReportMods).checked -eq 3) -and ((Get-ReportMods).where -eq "folder"))
   $script:ModsCheck = $null
+
+  Write-Host "Self test: the logo (planner, 2026-10-01)" -ForegroundColor White
+  $bd = Join-Path $Temp ("dw-brand-" + [guid]::NewGuid().ToString("N").Substring(0, 8)); New-Item -ItemType Directory -Path $bd -Force | Out-Null
+  $icoBytes = [byte[]](@(0,0,1,0,1,0) + @(16,16,0,0,1,0,32,0,4,0,0,0,22,0,0,0) + @(1,2,3,4))
+  $png64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+  $asked = New-Object System.Collections.Generic.List[string]
+  $fetch = { param($u) $asked.Add($u); return ,$icoBytes }
+  $brand = [pscustomobject]@{ hash = "0123456789ab"; name = "Deepslate Works"; tagline = "Modded Minecraft with friends"; pixel = $true; icon128 = $png64 }
+  $scr = Join-Path $bd "DeepslateWorks.ps1"
+  [IO.File]::WriteAllBytes((Join-Path $bd $IconName), (Get-IconBytes))
+  Check "no logo picked: nothing fetched, the built-in icon stays" (((Save-Branding $null $bd $fetch) -eq "none") -and ($asked.Count -eq 0) -and ((Get-IconPath $scr) -eq (Join-Path $bd $IconName)))
+  Check "a new logo: the .ico comes from this site, by its hash, and is kept" (((Save-Branding $brand $bd $fetch) -eq "saved") -and ($asked[0] -eq ("{0}/brand/logo.ico?v=0123456789ab" -f $PortalUrl)) -and [IO.File]::Exists((Join-Path $bd $LogoIconName)) -and [IO.File]::Exists((Join-Path $bd "logo.png")))
+  Check "the shortcuts and Settings -> Apps then use the logo, not the built-in icon" ((Get-IconPath $scr) -eq (Join-Path $bd $LogoIconName))
+  Check "the same logo next time: not fetched again; a new tagline is still kept" (((Save-Branding ([pscustomobject]@{ hash = "0123456789ab"; name = "Deepslate Works"; tagline = "New words"; pixel = $true; icon128 = $png64 }) $bd $fetch) -eq "same") -and ($asked.Count -eq 1) -and ((Read-BrandMarker $bd).tagline -eq "New words"))
+  Check "a hash that is not one, or bytes that are not an icon, change nothing" (((Save-Branding ([pscustomobject]@{ hash = "../../x" }) $bd $fetch) -eq "none") -and ((Save-Branding ([pscustomobject]@{ hash = "ffffffffffff" }) $bd { param($u) return ,([byte[]](60,104,116,109,108)) }).StartsWith("failed")) -and ((Read-BrandMarker $bd).hash -eq "0123456789ab"))
+  Check "the launcher profile gets the logo as a data: PNG, or keeps its block without one" (((Get-ProfileIcon $brand "Furnace") -eq ("data:image/png;base64," + $png64)) -and ((Get-ProfileIcon $null "Furnace") -eq "Furnace") -and ((Get-ProfileIcon ([pscustomobject]@{ icon128 = "not a png" }) "Furnace") -eq "Furnace"))
+  Check "the window shows the logo (nearest-neighbour for pixel art) and the tagline" (($AppXaml -match 'x:Name="BrandLogo"') -and ($AppXaml -match 'x:Name="BrandTagline"') -and ([IO.File]::ReadAllText($PSCommandPath) -match 'BitmapScalingMode\]::NearestNeighbor'))
+  Remove-Item -LiteralPath $bd -Recurse -Force -ErrorAction SilentlyContinue
 
   $own = [IO.File]::ReadAllText($PSCommandPath)
   $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
@@ -4550,6 +4649,14 @@ try {
     } catch { Note ("The visual extras could not be fetched this time: " + $_.Exception.Message) }
   }
 
+  # ---- the logo: the .ico for the window, shortcuts and Settings -> Apps (planner, 2026-10-01) -----------------
+  $script:BrandChanged = $false
+  if (-not $DryRun -and $OnWindows -and -not $script:CustomRoot -and (Get-HomeDir) -and $manifest.PSObject.Properties["branding"]) {
+    $b = Save-Branding $manifest.branding (Get-HomeDir) { param($u) $wc = New-Object Net.WebClient; try { return ,$wc.DownloadData($u) } finally { $wc.Dispose() } }
+    if ($b -eq "saved") { $script:BrandChanged = $true; Tick "New logo in place" }
+    elseif ($b.StartsWith("failed")) { Note ("The logo could not be updated this time: " + $b.Substring(8)) }
+  }
+
   # ---- the server list (servers.dat: uncompressed NBT, one entry), the first time --------------------------
   $null = Request-Consent "profile"
   $serversDat = Join-Path $GameDir "servers.dat"
@@ -4579,7 +4686,7 @@ try {
   $xmx = [math]::Max($manifest.ram.min_gb, [math]::Min($manifest.ram.max_gb, $xmx))
   $javaArgs = "-Xmx${xmx}G -Xms1G -XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:MaxGCPauseMillis=50 -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20"
   $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-  $entry = [ordered]@{ name = $PackName; type = "custom"; lastVersionId = $versionId; gameDir = $GameDir; javaArgs = $javaArgs; javaDir = $java; icon = $profile.icon; created = $now; lastUsed = $now }
+  $entry = [ordered]@{ name = $PackName; type = "custom"; lastVersionId = $versionId; gameDir = $GameDir; javaArgs = $javaArgs; javaDir = $java; icon = (Get-ProfileIcon $(if ($manifest.PSObject.Properties["branding"]) { $manifest.branding } else { $null }) $profile.icon); created = $now; lastUsed = $now }
   $profileLeft = $false
   if (-not $DryRun -and @(Find-Launcher).Count -gt 0 -and (Test-LauncherProfile $Profiles $profile.id $versionId) -eq "") {
     # Launcher open, profile already there and pointing at the right NeoForge: nothing to write.
@@ -4619,7 +4726,7 @@ try {
   if (-not $DryRun -and -not $script:CustomRoot -and $OnWindows -and (Get-HomeDir)) {
     try {
       $links = Request-Consent "shortcuts"
-      $rh = Repair-Home (Resolve-Path -LiteralPath $script:MePath).Path (Get-HomeDir) (Get-WindowsHomeIo $GameDir) -NoLinks:(-not $links)
+      $rh = Repair-Home (Resolve-Path -LiteralPath $script:MePath).Path (Get-HomeDir) (Get-WindowsHomeIo $GameDir) -NoLinks:(-not $links) -Force:$script:BrandChanged
       Set-SetupState $rh
       if ($rh.fixed) { Tick "Play button set up on this run" }
       foreach ($line in @($rh.said | Where-Object { $_.tone -ne "ok" })) { Note $line.text }

@@ -3,6 +3,7 @@ import path from "node:path";
 import { checkSides, clientSet, type ServerLoaded } from "./sides";
 import { lintManifest } from "./lint";
 import { verifyLinks } from "./verify-links";
+import { buildBranding } from "./branding";
 import { buildLock, diffLocks, type LockFile } from "./lock";
 import { buildConfigZip, buildInstaller, buildServer, removeClientPack } from "./build";
 import { modpackPaths } from "./paths";
@@ -112,12 +113,14 @@ async function main() {
       await mkdir(P.dist, { recursive: true });
       const portalUrl = process.env.AUTH_URL ?? "https://deepslate.dsw.test";
       await removeClientPack(P, log);
+      // first: the logo's sizes, which the server (server-icon.png) and config.zip (window icon) take from
+      if (what === "branding" || what === "all") await buildBranding(P.dist, log);
       if (what === "config" || what === "all") await buildConfigZip(P, log);
       if (what === "server" || what === "all") await buildServer(manifest, lock, P, log);
       if (what === "installer" || what === "all") await buildInstaller(manifest, lock, P, portalUrl, log);
       // after the server jars: the item catalogue is read out of them (docs/13 §13)
       if (what === "items" || what === "all") await buildItems({ dist: P.dist, vanilla: P.items }, log);
-      if (!["config", "server", "installer", "items", "all"].includes(what)) {
+      if (!["branding", "config", "server", "installer", "items", "all"].includes(what)) {
         console.error(`unknown build target ${what}`);
         process.exit(1);
       }

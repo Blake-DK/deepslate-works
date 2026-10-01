@@ -34,7 +34,7 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
   const brandBlock = (
     <Link href="/" className="flex min-w-0 items-center gap-2 font-semibold tracking-tight">
       {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded logo, already sized; the optimiser does not handle SVG */}
-      {brand.logoUrl && <img src={brand.logoUrl} alt="" className="h-7 w-auto max-w-32 object-contain" />}
+      {brand.logoUrl && <img src={brand.logoUrl} alt="" className="h-7 w-auto max-w-32 object-contain" style={brand.generated?.pixel ? { imageRendering: "pixelated" } : undefined} />}
       <span className="truncate">{brand.name}</span>
     </Link>
   );

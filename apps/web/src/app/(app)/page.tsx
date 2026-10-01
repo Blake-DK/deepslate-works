@@ -21,9 +21,11 @@ import { getPlayInfo } from "@/server/play";
 import { PlayButton } from "@/components/server/play-button";
 import { joinLine } from "@/lib/play";
 import { clock } from "@/lib/utils";
+import { getBranding } from "@/server/branding";
 
 export default async function HomePage() {
   const user = await requireOnboardedUser();
+  const brand = await getBranding();
   const [members, openVote, settings, status, series, news, play, agent] = await Promise.all([
     db.user.count(),
     getOpenVote(),
@@ -40,6 +42,7 @@ export default async function HomePage() {
     <div className="space-y-6">
       <AutoRefresh seconds={10} />
       <div>
+        <p className="text-sm font-medium text-primary" data-testid="tagline">{brand.name}{brand.tagline && <> · {brand.tagline}</>}</p>
         <h1 className="text-2xl font-semibold">Welcome back, {user.displayName}</h1>
         <p className="text-muted-foreground">{user.mcUsername ? <>Linked to Minecraft account <span className="font-mono">{user.mcUsername}</span>.</> : <>Your Minecraft account gets linked the first time you join the server.</>} {members} {members === 1 ? "person" : "people"} in the group so far.</p>
       </div>

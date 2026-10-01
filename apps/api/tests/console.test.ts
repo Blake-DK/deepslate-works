@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseConsoleLine } from "../src/amp/console.js";
 import { decideJoin } from "../src/players/limbo.js";
-import { actions, linkTellraw, parsePlace, parsePos, roomBounds } from "../src/actions/registry.js";
+import { actions, linkTellraw, parsePlace, parsePos, roomBounds, signLines, welcomeTellraw } from "../src/actions/registry.js";
 
 describe("parseConsoleLine", () => {
   it("reads uuid, login, join, leave and list lines", () => {
@@ -94,16 +94,23 @@ describe("the entrance room in a dimension of its own (docs/14)", () => {
       "execute as @a[tag=!verified] at @s if dimension deepslate:limbo unless entity @s[x=-4,y=65,z=-4,dx=8,dy=4,dz=8] run tp @s 0.5 65 0.5",
     ]);
   });
-  it("is glass, with a floor of sea lanterns under the feet and two signs (the book, where to sign in), the size it always was", () => {
+  it("is glass, with a floor of sea lanterns under the feet and three signs (the book, the name and tagline, where to sign in), the size it always was", () => {
     expect(roomBounds(ctx.limbo)).toEqual({ x1: -5, y1: 64, z1: -5, x2: 5, y2: 70, z2: 5 });
-    expect(actions["limbo.build"].build({ ...ctx, siteName: "Alex's Works" }, {})).toEqual([
+    expect(actions["limbo.build"].build({ ...ctx, siteName: "Alex's Works", tagline: "Modded Minecraft with friends" }, {})).toEqual([
       "execute in deepslate:limbo run forceload add -5 -5 5 5",
       "execute in deepslate:limbo run fill -5 64 -5 5 70 5 minecraft:glass hollow",
       "execute in deepslate:limbo run fill -5 64 -5 5 64 5 minecraft:sea_lantern",
       `execute in deepslate:limbo run setblock -1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":"Right-click"}','{"text":"the book"}','{"text":"to sign in"}','{"text":""}']},is_waxed:1b}`,
       `execute in deepslate:limbo run setblock 1 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":"Sign in at"}','{"text":"deepslate."}','{"text":"dsw.test/join"}','{"text":"code on screen"}']},is_waxed:1b}`,
+      `execute in deepslate:limbo run setblock 0 65 -3 minecraft:oak_sign[rotation=0]{front_text:{messages:['{"text":"Alexs Works"}','{"text":"Modded"}','{"text":"Minecraft with"}','{"text":"friends"}']},is_waxed:1b}`,
       "gamerule logAdminCommands false",
     ]);
+  });
+  it("greets everyone who joins with the name and tagline, and words fit a sign", () => {
+    expect(welcomeTellraw("bramble09", "Deepslate Works", "Modded Minecraft with friends")).toBe(`tellraw bramble09 ["",{"text":"Deepslate Works","color":"gold","bold":true},{"text":" · Modded Minecraft with friends","color":"gray","bold":false}]`);
+    expect(welcomeTellraw("bramble09", "Deepslate Works", "")).toBe(`tellraw bramble09 ["",{"text":"Deepslate Works","color":"gold","bold":true}]`);
+    expect(signLines("Modded Minecraft with friends")).toEqual(["Modded", "Minecraft with", "friends"]);
+    expect(signLines("a b c d e f g h i j k l m n o p q r s t u v w x y z a b c d e f g h i j k l m n o p q r s t u v w x y z").every((l) => l.length <= 15)).toBe(true);
   });
   it("clears the room of before, the same box it was built as, and never the one that is in use", () => {
     expect(actions["limbo.clear"].build(ctx, { dimension: "minecraft:overworld", x: 0, y: 250, z: 0 })).toEqual(["execute in minecraft:overworld run fill -5 249 -5 5 255 5 minecraft:air", "execute in minecraft:overworld run forceload remove -5 -5 5 5"]);

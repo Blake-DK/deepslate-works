@@ -56,6 +56,15 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; b
     const n = r.out.split("\n").filter((l) => /^[<>ch*]/.test(l)).length;
     lines.push(`${dir}: ${n} file(s) updated`);
   }
+  // 2a. the server-list icon (the chosen logo, 64×64) in the server's own folder; read at start
+  try {
+    await stat(path.join(DIST_SERVER, "server-icon.png"));
+    const r = await run("rsync", ["-t", "--itemize-changes", "-e", ssh, `${DIST_SERVER}/server-icon.png`, `${target}server-icon.png`], 120_000);
+    if (r.code !== 0) return { ok: false, lines: [...lines, `rsync server-icon.png failed (${r.code}):`, ...r.out.trim().split("\n").slice(-5)], restarted: false, dryRun };
+    lines.push(r.out.trim() ? "server-icon.png: updated; the server list shows it after the next start" : "server-icon.png: up to date");
+  } catch {
+    /* no logo chosen */
+  }
   // 2b. datapacks go into the world. A new dimension is only there after a restart; that restart is not made here,
   //     it is for an admin to choose the moment.
   try {

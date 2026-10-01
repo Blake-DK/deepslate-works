@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppFrame } from "@/components/nav";
 import { getBranding } from "@/server/branding";
+import { env } from "@/env";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,17 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: b.name, template: `%s · ${b.name}` },
     description: b.tagline || "Private modded Minecraft server for friends.",
     robots: { index: false, follow: false },
-    icons: b.faviconUrl ? { icon: b.faviconUrl } : undefined,
+    // a picked logo: the .ico and 32/192/512 PNGs and the 180 px apple-touch-icon (planner, 2026-10-01)
+    icons: b.generated
+      ? {
+          icon: [{ url: b.generated.url("ico"), sizes: "any" }, ...[32, 192, 512].map((s) => ({ url: b.generated!.url(s), sizes: `${s}x${s}`, type: "image/png" }))],
+          apple: [{ url: b.generated.url(180), sizes: "180x180" }],
+        }
+      : b.faviconUrl ? { icon: b.faviconUrl } : { icon: "/icon.svg" },
+    // the link preview in Discord and chat apps; the sign-in page is what an unsigned visitor (or bot) gets
+    openGraph: { title: b.name, description: b.tagline, siteName: b.name, type: "website", images: [{ url: `/og.png${b.generated ? `?v=${b.generated.hash}` : ""}`, width: 1200, height: 630, alt: b.name }] },
+    twitter: { card: "summary_large_image", title: b.name, description: b.tagline, images: [`/og.png${b.generated ? `?v=${b.generated.hash}` : ""}`] },
+    metadataBase: new URL(env.AUTH_URL),
   };
 }
 

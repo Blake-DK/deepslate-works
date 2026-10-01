@@ -7,6 +7,7 @@ import { env } from "@/env";
 import { bearer, userFromLauncherToken } from "@/server/launcher";
 import { logDownload } from "@/server/download-log";
 import { viaOf } from "@/lib/download-log";
+import { getBranding, readLogoBase64 } from "@/server/branding";
 
 // Gated: a launcher token or a session that may download (admin, or player while live and the server is online),
 // or the admin-only MANIFEST_KEY. Not cached beyond the client.
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
       return Response.json({ error: { code, message } }, { status: gate.reason === "anonymous" ? 401 : 403 });
     }
   }
-  const [m, lock, installer] = await Promise.all([getManifest(), getLock(), getInstaller()]);
+  const [m, lock, installer, brand] = await Promise.all([getManifest(), getLock(), getInstaller(), getBranding()]);
   if (!lock) return Response.json({ error: { code: "no_lock", message: "Pack not built yet" } }, { status: 503 });
   // The member's measured PC tier picks the distances (mods.json render_by_tier); as plain numbers, which every
   // installer reads. Only a first install and a value the installer set itself are changed (docs/07).
@@ -55,6 +56,9 @@ export async function GET(req: Request) {
     // docs/07 "The installer updates itself": which installer is current, and the checksum of its zip. No address:
     // the installer fetches it from /downloads on the site it was built for, and from nowhere else.
     installer,
+    // the chosen logo (planner, 2026-10-01): the app puts it on the launcher profile (128 px PNG) and fetches the
+    // .ico from /brand/logo.ico?v=<hash> on its own site; null until a logo is picked
+    branding: brand.generated ? { hash: brand.generated.hash, name: brand.name, tagline: brand.tagline, pixel: brand.generated.pixel, icon128: await readLogoBase64(128) } : null,
   };
   await logDownload({ userId: who, what: "modlist", via, file: "mod list", version: body.version, files: body.files.filter((f) => f.side !== "server").length });
   return Response.json(body, { headers: { "cache-control": "private, max-age=60" } });

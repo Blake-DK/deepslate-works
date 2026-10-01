@@ -9,7 +9,7 @@ import type { Env } from "../env.js";
 // on the VPS ran it out of memory. The child's heap is capped below the container limit and it is marked
 // as the first thing to kill, so a runaway build dies alone and api keeps serving.
 
-export const BUILD_TARGETS = ["all", "config", "server", "installer", "items"] as const; // no "client": Windows only, no .mrpack (2026-09-29)
+export const BUILD_TARGETS = ["all", "branding", "config", "server", "installer", "items"] as const; // no "client": Windows only, no .mrpack (2026-09-29)
 export type BuildTarget = (typeof BUILD_TARGETS)[number];
 export type BuildEvent = { line: string } | { done: true; ok: boolean; code: number };
 

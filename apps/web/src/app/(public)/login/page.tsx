@@ -36,9 +36,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       {brand.bannerUrl && <img src={brand.bannerUrl} alt="" className="max-h-40 w-full rounded-xl border object-cover" />}
       <div className="text-center">
         {/* eslint-disable-next-line @next/next/no-img-element -- uploaded logo */}
-        {brand.logoUrl && <img src={brand.logoUrl} alt="" className="mx-auto mb-2 h-16 w-auto max-w-40 object-contain" />}
+        {brand.logoUrl && <img src={brand.logoUrl} alt="" className="mx-auto mb-2 h-16 w-auto max-w-40 object-contain" style={brand.generated?.pixel ? { imageRendering: "pixelated" } : undefined} />}
         <h1 className="text-2xl font-semibold">{brand.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">A private Minecraft server for friends.</p>
+        <p className="mt-1 text-sm text-muted-foreground" data-testid="tagline">{brand.tagline || "A private Minecraft server for friends."}</p>
       </div>
       {message && <Alert tone="error">{message}</Alert>}
       <Card>

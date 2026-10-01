@@ -11,6 +11,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { motdProperty } from "@/lib/motd";
 
 type Entry = { name: string; path: string; dir: boolean; size: number; modified: string | null; denied: boolean; text: boolean };
 type Listing = { path: string; entries: Entry[] };
@@ -45,7 +46,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
     getBranding(),
   ]);
   // The message of the day comes from Admin → Branding; everything else from the mod list.
-  const expected = { ...(manifest.server_properties ?? {}), motd: brand.motd };
+  const expected = { ...(manifest.server_properties ?? {}), motd: motdProperty(brand.motd, brand.motd2) };
   const here = levels.at(-1)!;
   const find = (q.q ?? "").trim().toLowerCase();
   const entries = here.ok ? sortEntries(here.data.entries, q.sort, q.dir).filter((e) => !find || e.name.toLowerCase().includes(find)) : [];

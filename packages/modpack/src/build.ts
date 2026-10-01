@@ -73,6 +73,13 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
   await rm(path.join(out, "config"), { recursive: true, force: true });
   if (await exists(paths.config)) await cp(paths.config, path.join(out, "config"), { recursive: true });
   if (await exists(paths.server)) await cp(paths.server, out, { recursive: true });
+  // the logo next to the server in everyone's server list: server-icon.png, exactly 64×64, in the server's folder
+  await rm(path.join(out, "server-icon.png"), { force: true });
+  const icon = path.join(paths.dist, "branding", "logo-64.png");
+  if (await exists(icon)) {
+    await cp(icon, path.join(out, "server-icon.png"));
+    log("server-icon.png from the chosen logo");
+  }
   // Datapacks are part of the world, not of the server's folder: Sync puts them into <world>/datapacks/.
   await rm(path.join(out, "datapacks"), { recursive: true, force: true });
   if (paths.datapacks && (await exists(paths.datapacks))) {
@@ -88,9 +95,30 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
 export async function buildConfigZip(paths: { dist: string; config: string }, log: (s: string) => void): Promise<string | null> {
   if (!(await exists(paths.config))) return null;
   const out = path.join(paths.dist, "config.zip");
-  await zipDir([{ dir: paths.config, name: "config" }], out);
-  log("config.zip from modpack/config");
+  // The chosen logo becomes the game window's icon (Custom Window Title reads config/customwindowtitle/icon.png;
+  // a power-of-two PNG with transparency). Without a logo the toml keeps icon = '' and Minecraft's own icon shows.
+  const icon = path.join(paths.dist, "branding", "logo-64.png");
+  if (!(await exists(icon))) {
+    await zipDir([{ dir: paths.config, name: "config" }], out);
+    log("config.zip from modpack/config");
+    return out;
+  }
+  const stage = path.join(paths.dist, ".config-stage");
+  await rm(stage, { recursive: true, force: true });
+  await cp(paths.config, stage, { recursive: true });
+  await mkdir(path.join(stage, "customwindowtitle"), { recursive: true });
+  await cp(icon, path.join(stage, "customwindowtitle", "icon.png"));
+  const toml = path.join(stage, "customwindowtitle-client.toml");
+  if (await exists(toml)) await writeFile(toml, windowIcon(await readFile(toml, "utf8"), "customwindowtitle/icon.png"));
+  await zipDir([{ dir: stage, name: "config" }], out);
+  await rm(stage, { recursive: true, force: true });
+  log("config.zip from modpack/config, with the logo as the window icon");
   return out;
+}
+
+/** Pure: Custom Window Title's `icon = '…'` line pointed at `file`. */
+export function windowIcon(toml: string, file: string): string {
+  return /^icon\s*=/m.test(toml) ? toml.replace(/^icon\s*=.*$/m, `icon = '${file}'`) : `${toml.trimEnd()}\nicon = '${file}'\n`;
 }
 
 /** The version a script calls itself: `$InstallerVersion = "1.4.0"`. */

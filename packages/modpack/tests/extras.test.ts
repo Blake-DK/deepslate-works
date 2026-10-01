@@ -19,7 +19,7 @@ describe("modpack/extras.json", () => {
     expect(Object.fromEntries(extras!.extras.map((x) => [x.id, x.modIds]))).toEqual({ iris: ["iris"], "shader-light": [], "shader-full": [], "not-enough-animations": ["notenoughanimations"], "skin-layers": ["skinlayers3d"], "falling-leaves": ["fallingleaves"], "particle-rain": ["particlerain"], "sound-physics": ["sound_physics_remastered"], "fresh-animations": ["entity_model_features", "entity_texture_features"] });
   });
   it("catches a duplicate, an unknown requirement and two shaders for one choice", () => {
-    const x = { id: "aa", name: "A", description: "a", fps: "Low", projects: [{ slug: "aa" }] };
+    const x = { id: "aa", name: "A", description: "a", fps: "Low", howTo: "On in the app.", projects: [{ slug: "aa" }] };
     expect(lintExtras({ extras: [x, x] }).errors.join()).toMatch(/duplicate/);
     expect(lintExtras({ extras: [{ ...x, requires: ["ghost"] }] }).errors.join()).toMatch(/ghost/);
     expect(lintExtras({ extras: [{ ...x, shader: "full" }, { ...x, id: "bb", shader: "full" }] }).errors.join()).toMatch(/more than one shader/);

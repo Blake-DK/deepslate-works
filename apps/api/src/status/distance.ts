@@ -23,6 +23,8 @@ export const LIMITS = { view: { min: 4, max: 16 }, sim: { min: 4, max: 12 } } as
 /** How long a TPS reading is good for, and how long the card waits for the server's answer. */
 export const TICK_FRESH_MS = 10_000;
 const TICK_WAIT_MS = 3_000;
+/** Lines of one `neoforge tps` answer come within this of each other. */
+const BATCH_MS = 400;
 
 export type Pair = { view: number; sim: number };
 export type Tick = { tps: number; mspt: number; at: string };
@@ -70,6 +72,8 @@ export class Distances {
   private tick: Tick | null = null;
   private asked = 0;
   private waiters: Array<() => void> = [];
+  private batch: { at: number; tps: number; mspt: number; overall: boolean } | null = null;
+  private settle: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly amp: Amp,
@@ -81,10 +85,20 @@ export class Distances {
   ) {}
 
   start() {
+    // NeoForge 1.21.1 on this server prints one line per dimension and no "Overall" line (seen 2026-10-01: Overworld,
+    // The Nether, deepslate:limbo, The End). The lines of one answer arrive together: a tick takes as long as all
+    // dimensions' ticks together, and runs as fast as the slowest. An "Overall" line, should one come, wins.
     this.tail.on((e, info) => {
-      if (info.replay || e.type !== "tps" || e.scope !== "overall") return;
-      this.tick = { tps: e.tps, mspt: e.mspt, at: new Date(this.now()).toISOString() };
-      for (const w of this.waiters.splice(0)) w();
+      if (info.replay || e.type !== "tps") return;
+      const at = this.now();
+      if (e.scope === "overall") this.batch = { at, tps: e.tps, mspt: e.mspt, overall: true };
+      else if (!this.batch || at - this.batch.at > BATCH_MS) this.batch = { at, tps: e.tps, mspt: e.mspt, overall: false };
+      else if (!this.batch.overall) this.batch = { at, tps: Math.min(this.batch.tps, e.tps), mspt: this.batch.mspt + e.mspt, overall: false };
+      this.tick = { tps: this.batch.tps, mspt: Math.round(this.batch.mspt * 1000) / 1000, at: new Date(at).toISOString() };
+      if (this.settle) clearTimeout(this.settle);
+      this.settle = setTimeout(() => {
+        for (const w of this.waiters.splice(0)) w();
+      }, BATCH_MS);
     });
   }
 

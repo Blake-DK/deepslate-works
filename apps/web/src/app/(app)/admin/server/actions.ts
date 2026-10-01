@@ -250,3 +250,34 @@ export async function announcementDatesAction(formData: FormData) {
   for (const p of ["/", "/admin/news"]) revalidatePath(p);
   redirect(to("action", "announcement dates"));
 }
+
+/** Admin → Server → Settings: "Clear ground items now" (60 s warning in chat, then items older than 2 minutes go). */
+export async function groundClearAction(formData: FormData) {
+  const to = place(formData, "settings");
+  const admin = await requireAdmin();
+  if (formData.get("sure") !== "on") redirect(to("confirm"));
+  try {
+    await apiFetch("/server/ground/clear", { method: "POST", body: {}, caller: { id: admin.id, role: "ADMIN" } });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/server");
+  redirect(to("groundClear"));
+}
+
+/** Admin → Server → Settings: the automatic clear, off by default; when on, only above the threshold. */
+export async function groundPlanAction(formData: FormData) {
+  const to = place(formData, "settings");
+  const admin = await requireAdmin();
+  const threshold = z.coerce.number().int().min(200).max(20_000).safeParse(formData.get("threshold"));
+  if (!threshold.success) redirect(to("error", "The threshold is a whole number from 200 to 20,000."));
+  try {
+    await apiFetch("/server/ground/plan", { method: "POST", body: { auto: formData.get("auto") === "on", threshold: threshold.data }, caller: { id: admin.id, role: "ADMIN" } });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/server");
+  redirect(to("groundPlan"));
+}

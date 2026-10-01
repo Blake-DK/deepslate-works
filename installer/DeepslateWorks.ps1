@@ -32,7 +32,8 @@ param(
   [switch]$AllowAll,        # tests: every permission taken as given
   [string]$Screenshots = "", # draw the window's main states into PNG files in this folder, then exit
   [switch]$NoLaunch,        # the engine: do not open the Minecraft Launcher at the end (the Extras tab's download)
-  [switch]$VerifyExtras     # 2.0.1: print the Extras tab's checks; exit code 1 when one fails
+  [switch]$VerifyExtras,    # 2.0.1: print the Extras tab's checks; exit code 1 when one fails
+  [string]$From = ""        # 2.0.3: which entry point started this run (desktop, startmenu, apps, setup, update, ...), for the log only
 )
 
 # ---- started from a link on a web page ------------------------------------------------------------------
@@ -50,7 +51,7 @@ if ($FromLink) {
     exit 1
   }
   $Setup = $false; $DryRun = $false; $SelfTest = $false; $Root = ""; $PretendRunning = @(); $Uninstall = $false; $Yes = $false; $Play = $false; $NoPrompt = $false
-  $Engine = $false; $StatusFile = ""; $Console = $false; $AllowAll = $false; $Screenshots = ""; $NoLaunch = $false; $VerifyExtras = $false
+  $Engine = $false; $StatusFile = ""; $Console = $false; $AllowAll = $false; $Screenshots = ""; $NoLaunch = $false; $VerifyExtras = $false; $From = ""
 }
 # ---- config block (stamped by `modpack build installer`) ----
 $PortalUrl = "https://deepslate.dsw.test"
@@ -62,6 +63,10 @@ $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
 $ExitAlreadyRunning = 3
+
+# 2.0.3: started without a console window (the launcher shim, the Play link, the window's own starts). Nobody can read
+# or answer a console then, so questions and messages go in message boxes and nothing waits for Enter.
+$Hidden = ($env:OS -eq "Windows_NT") -and ([Environment]::CommandLine -match '(?i)\s-WindowStyle\s+Hidden(\s|$)')
 
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -116,7 +121,7 @@ function Remove-Temp($path) {
 function Note($msg) { if (-not $Quiet) { Write-Host ("   {0}" -f $msg) -ForegroundColor Gray }; Log $msg; Emit ([ordered]@{ t = "note"; text = [string]$msg }) }
 function Hold-Window {
   # Started from the Play button or a shortcut there is no .bat to keep the window open: wait, so the message can be read.
-  if (-not $FromSetup -and -not $SelfTest -and -not $DryRun -and -not $Engine -and -not $script:Held) { $script:Held = $true; try { [void](Read-Host "Press Enter to close this window") } catch {} }
+  if (-not $FromSetup -and -not $SelfTest -and -not $DryRun -and -not $Engine -and -not $Hidden -and -not $script:Held) { $script:Held = $true; try { [void](Read-Host "Press Enter to close this window") } catch {} }
 }
 # What the site answered when it said no: the response body (Windows PowerShell), ErrorDetails (pwsh), or the message
 # itself when it is the JSON (the self test's stand-ins throw that).
@@ -525,17 +530,159 @@ function Clear-Leftovers([string]$gameDir) {
 function Get-HomeDir { if ($env:LOCALAPPDATA) { return (Join-Path $env:LOCALAPPDATA "DeepslateWorks") } return $null }
 function Get-PowerShellExe { return (([string]$env:SystemRoot).TrimEnd("\") + "\System32\WindowsPowerShell\v1.0\powershell.exe") }   # the full path: never whatever "powershell" is found first
 
-function Get-HandlerCommand([string]$scriptPath) {
-  return ('"{0}" -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{1}" "%1"' -f (Get-PowerShellExe), $scriptPath)
+# ---- starting without a console window (2.0.3, planner) -------------------------------------------------------
+# 2.0.1 started powershell.exe -WindowStyle Hidden straight from the Play link and the shortcuts. Where Windows Terminal
+# is the default console (Windows 11) that flag comes too late: the console is already handed to Terminal, which shows
+# an empty window titled after the app while the real window opens behind it. Since 2.0.3 nothing starts PowerShell
+# with a console window: the link, the shortcuts and Settings -> Apps start DeepslateWorks.vbs (wscript has no console;
+# it starts PowerShell hidden, which Windows never hands to Terminal), or, where VBScript is switched off, conhost
+# --headless; the script's own starts (the install steps, the restart after an update, Setup's hand-over) use
+# CreateNoWindow. The shim and the icon are written by this script next to itself, so an update brings them too.
+$LauncherName = "DeepslateWorks.vbs"
+$IconName = "DeepslateWorks.ico"
+$AppUserModelId = "DeepslateWorks.App"   # its own taskbar button, never grouped under PowerShell
+$EntryPoints = @("desktop", "startmenu", "apps", "setup", "update", "window", "sta", "fallback")
+$IconBase64 = "AAABAAYAEBAAAAEAIACwAAAAZgAAABgYAAABACAABQEAABYBAAAgIAAAAQAgALwAAAAbAgAAMDAAAAEAIAAzAQAA1wIAAEBAAAABACAAOAEAAAoEAAAAAAAAAQAgAPMGAABCBQAAiVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAd0lEQVR42mNgAAIFJbV+IH4PxP+JxCC1/QxImv+TifsZSLQZwyUMyALRCRko2NbR/b+ugdl/a3s3FIysZ7gZANKAjPUMzf6raeqBDUHGOA1AVwjS7Gel878myAgF4zQA3akgQ0AabjbZo+BhaADFSZmyzERpdgYAHPmSP3PyWU4AAAAASUVORK5CYIKJUE5HDQoaCgAAAA1JSERSAAAAGAAAABgIBgAAAOB3PfgAAADMSURBVHjaY2AAAgUlNX4grgfi+0D8n0J8H2oWPwOS4eepYDA6Pg+2BGrbfxrhegYqBQvO4GJAF9QzNPtv6+iOFatr6v1XVtX6r2tghhWrAeXRzcOwAGRQdEIGVgyyHGSItb0bVgyyZNSCUQvUwEkRZBA2DEqiisoaYEuwYZA8QQtAinAZADJcW0P9v5+VDlZsrqdJ2AKQN3EFAcgSkEE3m+yx4pogo1ELRi0AYpAhuIpjUBIGJUWQQdgwyHJsFtC8wqF5lUnbSp/WzRYAUlKLtc/op1gAAAAASUVORK5CYIKJUE5HDQoaCgAAAA1JSERSAAAAIAAAACAIBgAAAHN6evQAAACDSURBVHjaY2BAAgpKavlAfB6I/9MIg8zOZ0AHQEF+GluMzSH8yA6gp+VwRyAH+/8BwvkD5XtEKAyg5WCM0wHRCRkEMUyttb0bQTzqgFEHjDpg1AEkO2DAS8IBdwApwXqzyZ4gHnXAqANGHTDqgEFdEg54s3xgOyYD3jUbFJ3TgeyeAwB5JUi8Y9Kb8wAAAABJRU5ErkJggolQTkcNChoKAAAADUlIRFIAAAAwAAAAMAgGAAAAVwL5hwAAAPpJREFUeNrtmjEKwjAUht9RxKEgaKsOHRQJLro5uLo4eggnL9KjeA6nHqFHiElpS8FWfSFgXv0D39bA/9H3QuCFqGONxpEyZIbcoH9MXmVR9GmZjxLDPYDQfdhsybvwRcDha4oXCUHhuyUCL5vecmo3rBaKoqrDpQpkFMhR6XzEkuDwJV8JnM4XNpvtvtk/m6d6rXZsIAABCEAAAhCAAAQg4EHAhuESL9JmfzSJSwku3gTEX6fFC7j8fls29f7DaqqvxyUbbwIuDdiuYRvmcVNsIAABCEAAAhCAAAQg8AfXafEDDvEjJtlDPvFj1kEMusU/NRjEYw+pz22e/yYiKYd9GGkAAAAASUVORK5CYIKJUE5HDQoaCgAAAA1JSERSAAAAQAAAAEAIBgAAAKppcd4AAAD/SURBVHja7du9DYMwEIbh28RRiiyRgi5LpHDKdOyQRRiFOTKFR3CcyEX+FGzJKcz3In0dQtwDHAj5zH5sm+3OpYwpc0pIiZ0k5HO+n7uz2i0XPnVU8FKmYoi0o+/satfcFb6k+LjyeOXivyPkZz4IAYSXnrCyhlfcGJ+vfhSNs/yuVAUYLX8wqALMJtb8PpqhCRf/SDXA8XRukvfj7odDkwAAAAAAAAAAAAAAAAAAAAAAAAAAANAaQP6XGAAAiAP8q1ldL0OTAAAAAAAAAAAAAAAAAAAAAAAAAAAAwC+xZQD5pbLyi6Xll8trD0zIj8wwNMXYHIOTjM4yPC08Pn8DyXMfKBDmWgkAAAAASUVORK5CYIKJUE5HDQoaCgAAAA1JSERSAAABAAAAAQAIBgAAAFxyqGYAAAa6SURBVHja7d3NjdNAGIDh6cAlZMWBawrg4BvXFMDBHLmlBEs04hK2BJeQM6eUkBLARrOsQdnsJrEX298z0ouEkBCa9Tzxz8SkNOPx8OFj2bXvqrva3LHrpzTDjoPjtM7HbpmMNy32oqvqaroODiatrEM+tvtjvLDinxf9PovpIFGk2nzsFxEX/q7r0UEg/a5fC7sIC79yDS9dvIdQWfgSCKo1LPzSwpfugqBc4sIvXONLo94jKJZ0g+/khyaN2mnWNwrzp37jByVNWjO7s4HuH7SxeUd6101Fm7ks/q1Tfum/XBJs5/B4zw9D+n9VFr8EAYtfgoDFL0Fgwht+Jlqab9spH/W52y/N/+nAZopNPp7zS8vZJ1CMCYAdftLCdgyOubffhErLazfGqb/rfmm59wOKewDwlV5p4V8lvudlHiZQWn7lLQB4k4+0jo52+0l2Cfr0l5wF+PSXnAX49JecBdj0I9kc5Lm/FHZfQN71Z4Kk9VecA2BvYqQQ7c8B0JoYKUSt03/JZYBn/1L4PQEPXvghRasZAuB1X1KsDkMATIgULN/7l6K/J8DzfynwfoDul9pESCGrbQCSIm8IAoAUGwDf/5eivh/AJEiBHwWaBAkAkgCwvL58/aYL3Tu/n8rPuhAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALHIAAAAAAgAAACAAAAAAAgAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAABAAAAAAAQAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAIgcAAAAgAAAAAAIAAAAgAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAFA0poCgAQASQCQBABJAJAEAEkAkAQASQCQBABJAJAEAEkAkAQASQCQBICp8lKKaV9Y8eN7qQsBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwCIHAAAAIAAAAAACAAAAIAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAABAAAAEAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALHIAAAAAAgAAACAAAAAAAgAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAABAAJK0pAEgAkBQVgKOJkEJ27AFoTYQUshYAUnAAahMhhazuAdibCClk+x6A0kRIIStTP0yEFPAR4NPofnMwIVKoDkMAGhMihaoZAlCZEClU1RCAwoRIoSrScNgQJAXaAPTvsB9ACvT8/wwALgOkiKf/AwQeTY606h7TS6P7w50JklbdLl0a3g8grfj7/68NewKkAM/+nQVIPv2dBUg+/Z0FSD79/wbAewKkNX3v/wYE7AuQ1vrc/w0A9LsDTyZRWmSnF3f9XYGAzUHSGjf9XIFAYzKlRdWksUa+FPDaMGkZHe4+9T+DwMb9AGkR1/2bNMXo/uKtCZZm3TZNOewSlFay2w8CksUPAcnih4Bk8d92Y9DTAen97/Zv0xxGfkRon4D0fs/5N2lOI28WsmNQmniH3+ibfEaGYOeSQJrklH+XljDy2YCvEksjfaV31p/6r7xU5OgHKN32Jp+bX+YxMwgqEEhXLfwqrW2AQAq48F+4UegegfR8jb9L0Ua+Wdj/r8Stg0DBavOxXyTjDwZVfs5pU5HWuHmnyce4RX/FU4ReyTqL2bqHoJlfwz8dp3U+dmd9F/8XVOthuNJhDfUAAAAASUVORK5CYII="
+
+# a Windows path joined as text (the self test runs these on Linux, where Join-Path refuses C:\)
+function Get-ParentPath([string]$path) { return ($path -replace '[\\/][^\\/]*$', '') }
+function Join-Name([string]$dir, [string]$name) { if ($dir -match '^([A-Za-z]:\\|\\\\)') { return ($dir.TrimEnd('\') + '\' + $name) }; return (Join-Path $dir $name) }
+function Get-SystemExe([string]$name) { return (([string]$env:SystemRoot).TrimEnd("\") + "\System32\" + $name) }
+function Get-LauncherText {
+  # ASCII only, CRLF: what wscript reads. Every argument is passed on quoted, without quotes or trailing backslashes
+  # of its own, so a link cannot add arguments; the script then checks the link itself (Test-PlayLink).
+  return ((@(
+    "' Deepslate Works: starts DeepslateWorks.ps1 without a console window. Written by DeepslateWorks.ps1 $InstallerVersion; do not edit.",
+    "Option Explicit",
+    "Dim sh, fso, dir, ps, cmd, i, a",
+    "Set sh = CreateObject(""WScript.Shell"")",
+    "Set fso = CreateObject(""Scripting.FileSystemObject"")",
+    "dir = fso.GetParentFolderName(WScript.ScriptFullName)",
+    "ps = sh.ExpandEnvironmentStrings(""%SystemRoot%"") & ""\System32\WindowsPowerShell\v1.0\powershell.exe""",
+    "cmd = """""""" & ps & """""" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File """""" & dir & ""\DeepslateWorks.ps1""""""",
+    "For i = 0 To WScript.Arguments.Count - 1",
+    "  a = Replace(WScript.Arguments(i), """""""", """")",
+    "  Do While Len(a) > 0 And Right(a, 1) = ""\""",
+    "    a = Left(a, Len(a) - 1)",
+    "  Loop",
+    "  cmd = cmd & "" """""" & a & """"""""",
+    "Next",
+    "sh.Run cmd, 0, False"
+  ) -join "`r`n") + "`r`n")
+}
+function Get-IconBytes { return [Convert]::FromBase64String($IconBase64) }
+
+# The shim and the icon next to the installed script; rewritten only when they differ. $true when the shim is there.
+function Write-Launcher([string]$dir) {
+  $vbs = Join-Path $dir $LauncherName
+  $text = Get-LauncherText
+  if (-not [IO.File]::Exists($vbs) -or [IO.File]::ReadAllText($vbs) -ne $text) { [IO.File]::WriteAllText($vbs, $text, [Text.Encoding]::ASCII); Log ("wrote " + $vbs) }
+  $ico = Join-Path $dir $IconName
+  $bytes = Get-IconBytes
+  if (-not [IO.File]::Exists($ico) -or [Convert]::ToBase64String([IO.File]::ReadAllBytes($ico)) -ne $IconBase64) { [IO.File]::WriteAllBytes($ico, $bytes) }
+  return [IO.File]::Exists($vbs)
 }
 
-function Get-ShortcutSpec([string]$scriptPath) {
+# How the entry points start the script in $dir: "vbs" (the shim, when it is there and VBScript works), "conhost"
+# (conhost --headless, Windows 10 1809 and later), or "plain" (powershell.exe straight, as before 2.0.3).
+function Get-LaunchHow([string]$dir) {
+  if ([IO.File]::Exists((Join-Name $dir $LauncherName)) -and [IO.File]::Exists((Get-SystemExe "wscript.exe")) -and [IO.File]::Exists((Get-SystemExe "vbscript.dll"))) { return "vbs" }
+  if ([IO.File]::Exists((Get-SystemExe "conhost.exe")) -and [Environment]::OSVersion.Version.Major -ge 10 -and [Environment]::OSVersion.Version.Build -ge 17763) { return "conhost" }
+  return "plain"
+}
+
+# @{ target; arguments } for starting $scriptPath with $tail (already quoted where needed), the way $how says.
+function Get-LaunchSpec([string]$scriptPath, [string]$tail, [string]$how = "") {
+  if (-not $how) { $how = Get-LaunchHow (Get-ParentPath $scriptPath) }
+  $t = $(if ($tail) { " " + $tail } else { "" })
+  $ps = ('-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}"' -f $scriptPath)
+  switch ($how) {
+    "vbs"     { return @{ how = $how; target = (Get-SystemExe "wscript.exe"); arguments = ('"{0}"{1}' -f (Join-Name (Get-ParentPath $scriptPath) $LauncherName), $t) } }
+    "conhost" { return @{ how = $how; target = (Get-SystemExe "conhost.exe"); arguments = ('--headless "{0}" {1}{2}' -f (Get-PowerShellExe), $ps, $t) } }
+    default   { return @{ how = "plain"; target = (Get-PowerShellExe); arguments = ($ps + $t) } }
+  }
+}
+function Get-LaunchCommand([string]$scriptPath, [string]$tail, [string]$how = "") { $l = Get-LaunchSpec $scriptPath $tail $how; return ('"{0}" {1}' -f $l.target, $l.arguments) }
+
+function Get-HandlerCommand([string]$scriptPath, [string]$how = "") { return (Get-LaunchCommand $scriptPath '"%1"' $how) }
+
+function Get-IconPath([string]$scriptPath) {
+  $ico = Join-Name (Get-ParentPath $scriptPath) $IconName
+  if ($scriptPath -and [IO.File]::Exists($ico)) { return $ico }
+  return (Get-PowerShellExe)
+}
+
+function Get-ShortcutSpec([string]$scriptPath, [string]$where = "desktop", [string]$how = "") {
+  $l = Get-LaunchSpec $scriptPath ("-From " + $where) $how
   return [ordered]@{
-    target = Get-PowerShellExe
-    arguments = ('-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}"' -f $scriptPath)
+    target = $l.target
+    arguments = $l.arguments
     workingDirectory = (Split-Path -Parent $scriptPath)
     description = "Opens Deepslate Works: updates the game and starts the Minecraft Launcher on it"
+    icon = ("{0},0" -f (Get-IconPath $scriptPath))
   }
+}
+
+# A process that never gets a console window, whatever the default console is (the install steps, the restart after
+# an update, Setup's hand-over, the STA restart). The process, so its exit code can be read.
+function Start-Hidden([string[]]$argv) {
+  $psi = New-Object Diagnostics.ProcessStartInfo
+  $psi.FileName = Get-PowerShellExe
+  $psi.Arguments = ($argv -join " ")
+  $psi.UseShellExecute = $false
+  $psi.CreateNoWindow = $true
+  return [Diagnostics.Process]::Start($psi)
+}
+function Get-HiddenArgs([string]$scriptPath, [string[]]$more) { return (@("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ('"{0}"' -f $scriptPath)) + @($more)) }
+
+# Set by the window once it is on screen (2.0.3); Setup.bat's console waits for it, then closes.
+$AppUpEvent = "Local\DeepslateWorks.App.Up"
+# "up" | "exited" (the process ended without a window) | "slow" (still nothing after $sec seconds)
+function Wait-AppUp($up, $proc, [int]$sec) {
+  for ($i = 0; $i -lt ($sec * 4); $i++) {
+    if ($up.WaitOne(250)) { return "up" }
+    if ($proc -and $proc.HasExited) { if ($up.WaitOne(500)) { return "up" }; return "exited" }
+  }
+  return "slow"
+}
+
+# Which entry point started this run, for the log (2.0.3, planner): the Play link, a shortcut, Setup, an update...
+function Get-EntryPoint([bool]$fromLink, [string]$from, [bool]$engine, [bool]$setup) {
+  if ($fromLink) { return "play-link" }
+  if ($engine) { return "engine (started by the window)" }
+  if ($setup) { return "Setup.bat" }
+  if ($from -and ($EntryPoints -contains $from.ToLower())) { return $from.ToLower() }
+  return "unknown (a shortcut made before 2.0.3, or by hand)"
+}
+
+# Win32 for the window (2.0.3): the console PowerShell came with, the foreground, the taskbar button, message boxes.
+function Add-Native {
+  if ("DW.Native" -as [type]) { return }
+  Add-Type -Namespace DW -Name Native -MemberDefinition @"
+[DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow();
+[DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int n);
+[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+[DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr h);
+[DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr pid);
+[DllImport("user32.dll")] public static extern bool AttachThreadInput(uint a, uint b, bool attach);
+[DllImport("user32.dll")] public static extern bool AllowSetForegroundWindow(int pid);
+[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int MessageBoxW(IntPtr h, string text, string caption, uint type);
+[DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern int SetCurrentProcessExplicitAppUserModelID(string id);
+"@
+}
+# Lets whatever this process starts or signals next take the foreground (ASFW_ANY). Never fails.
+function Grant-Foreground { try { Add-Native; [void][DW.Native]::AllowSetForegroundWindow(-1) } catch {} }
+
+# A message box that does not need WPF: user32 first, then WScript.Shell. "ok" | "yes" | "no".
+function Show-Box([string]$text, [switch]$YesNo, [switch]$Warn) {
+  $flags = 0x00010000 -bor 0x00040000   # MB_SETFOREGROUND | MB_TOPMOST
+  if ($YesNo) { $flags = $flags -bor 0x4 }
+  $flags = $flags -bor $(if ($Warn) { 0x30 } elseif ($YesNo) { 0x20 } else { 0x40 })
+  try { Add-Native; $r = [DW.Native]::MessageBoxW([IntPtr]::Zero, $text, $PackName, [uint32]$flags) }
+  catch { try { $r = (New-Object -ComObject WScript.Shell).Popup($text, 0, $PackName, $flags) } catch { $r = 1 } }
+  if ($r -eq 6) { return "yes" } elseif ($r -eq 7) { return "no" } else { return "ok" }
 }
 
 function Register-PlayLink([string]$scriptPath) {
@@ -549,17 +696,17 @@ function Register-PlayLink([string]$scriptPath) {
 
 # @{ made = <how many>; failed = @(@{ where = "desktop" | "menu" | "uninstall"; message }) } (1.5.6: which one failed)
 function Set-Shortcuts([string]$scriptPath) {
-  $spec = Get-ShortcutSpec $scriptPath
   $shell = New-Object -ComObject WScript.Shell
   $made = 0
   $failed = New-Object System.Collections.Generic.List[object]
-  foreach ($f in @(@{ where = "desktop"; folder = [Environment]::GetFolderPath("Desktop") }, @{ where = "menu"; folder = [Environment]::GetFolderPath("Programs") })) {
+  foreach ($f in @(@{ where = "desktop"; from = "desktop"; folder = [Environment]::GetFolderPath("Desktop") }, @{ where = "menu"; from = "startmenu"; folder = [Environment]::GetFolderPath("Programs") })) {
     $folder = $f.folder
     if (-not $folder) { continue }
     try {
+      $spec = Get-ShortcutSpec $scriptPath $f.from
       $s = $shell.CreateShortcut((Join-Path $folder ("{0}.lnk" -f $PackName)))
       $s.TargetPath = $spec.target; $s.Arguments = $spec.arguments; $s.WorkingDirectory = $spec.workingDirectory; $s.Description = $spec.description
-      $s.IconLocation = ("{0},0" -f $spec.target)
+      $s.IconLocation = $spec.icon
       $s.Save(); $made++
     } catch { $failed.Add(@{ where = $f.where; message = $_.Exception.Message }); Log ("could not make the shortcut in " + $folder + ": " + $_.Exception.Message) }
   }
@@ -570,11 +717,28 @@ function Set-Shortcuts([string]$scriptPath) {
       $u = Get-UninstallShortcutSpec $scriptPath
       $s = $shell.CreateShortcut((Join-Path $programs ("Uninstall {0}.lnk" -f $PackName)))
       $s.TargetPath = $u.target; $s.Arguments = $u.arguments; $s.WorkingDirectory = $u.workingDirectory; $s.Description = $u.description
-      $s.IconLocation = ("{0},0" -f $u.target)
+      $s.IconLocation = $u.icon
       $s.Save(); $made++
     } catch { $failed.Add(@{ where = "uninstall"; message = $_.Exception.Message }); Log ("could not make the uninstall shortcut: " + $_.Exception.Message) }
   }
   return @{ made = $made; failed = @($failed.ToArray()) }
+}
+
+# The three shortcuts are there AND start what this version would make them start (2.0.3: the 2.0.1 ones started
+# powershell.exe straight, so they are made again once).
+function Test-Shortcuts([string]$scriptPath) {
+  $programs = [Environment]::GetFolderPath("Programs")
+  $want = @(
+    @{ file = (Join-Path ([Environment]::GetFolderPath("Desktop")) ("{0}.lnk" -f $PackName)); spec = (Get-ShortcutSpec $scriptPath "desktop") },
+    @{ file = (Join-Path $programs ("{0}.lnk" -f $PackName)); spec = (Get-ShortcutSpec $scriptPath "startmenu") },
+    @{ file = (Join-Path $programs ("Uninstall {0}.lnk" -f $PackName)); spec = (Get-UninstallShortcutSpec $scriptPath) })
+  $shell = New-Object -ComObject WScript.Shell
+  foreach ($w in $want) {
+    if (-not (Test-Path -LiteralPath $w.file)) { return $false }
+    $l = $shell.CreateShortcut($w.file)
+    if ([string]$l.TargetPath -ne $w.spec.target -or [string]$l.Arguments -ne $w.spec.arguments) { return $false }
+  }
+  return $true
 }
 
 # ---- uninstall (docs/07 "Uninstall", planner 2026-09-30) ----------------------------------------------------
@@ -584,21 +748,21 @@ function Set-Shortcuts([string]$scriptPath) {
 $UninstallKeyName = "DeepslateWorks"
 $ProfileId = "deepslate-works"   # the mod list's profile.id; it has always been this
 
-function Get-UninstallShortcutSpec([string]$scriptPath) {
-  $s = Get-ShortcutSpec $scriptPath
+function Get-UninstallShortcutSpec([string]$scriptPath, [string]$how = "") {
+  $s = Get-ShortcutSpec $scriptPath "startmenu" $how
   $s.arguments = $s.arguments + " -Uninstall"
   $s.description = "Removes Deepslate Works from this PC"
   return $s
 }
 
 # What Settings -> Apps shows, and what its Uninstall button runs.
-function Get-UninstallEntry([string]$scriptPath, [string]$gameDir, [int]$sizeKb) {
+function Get-UninstallEntry([string]$scriptPath, [string]$gameDir, [int]$sizeKb, [string]$how = "") {
   return [ordered]@{
     DisplayName     = $PackName
     DisplayVersion  = $InstallerVersion
     Publisher       = "Deepslate Works"
-    DisplayIcon     = ("{0},0" -f (Get-PowerShellExe))
-    UninstallString = ('"{0}" -NoProfile -ExecutionPolicy Bypass -File "{1}" -Uninstall' -f (Get-PowerShellExe), $scriptPath)
+    DisplayIcon     = ("{0},0" -f (Get-IconPath $scriptPath))
+    UninstallString = (Get-LaunchCommand $scriptPath "-From apps -Uninstall" $how)
     InstallLocation = $gameDir
     EstimatedSize   = $sizeKb
     NoModify        = 1
@@ -834,6 +998,9 @@ function Repair-Home([string]$me, [string]$dir, $io, [switch]$Force, [switch]$No
   $copy = Copy-Home $me $dir $io.copier $io.sleep
   $target = $me
   if ($copy.ok) { $target = $copy.script; $said.Add(@{ tone = "ok"; text = ("Installed in {0}" -f $dir) }) }
+  # 1b. the shim that starts it without a console window, and its icon (2.0.3); without them the link and the
+  # shortcuts fall back to conhost --headless or powershell.exe (Get-LaunchHow)
+  if ($copy.ok) { try { if (-not (& $io.writeLauncher $dir)) { Log "the launcher shim is not there" } } catch { Log ("could not write the launcher shim: " + $_.Exception.Message) } }
   else { Add-SetupProblem $problems "copy" $copy.code $copy.message; $said.Add(@{ tone = "problem"; text = $copy.message }) }
 
   # 2. the Play link: to the home copy, or to the script where it ran, never to a temporary folder
@@ -857,7 +1024,7 @@ function Repair-Home([string]$me, [string]$dir, $io, [switch]$Force, [switch]$No
   if ($NoLinks -or (-not $copy.ok -and (Test-UnderTemp $me $io.temp))) { }
   else {
     try {
-      if ($Force -or -not (& $io.shortcutsThere)) {
+      if ($Force -or -not (& $io.shortcutsThere $target)) {
         $sc = & $io.makeShortcuts $target
         $failed = @($sc.failed)
         if ($failed.Count -eq 0) { $said.Add(@{ tone = "ok"; text = "Shortcuts made" }); if (-not $Force) { Log "the shortcuts were made again" } }
@@ -896,11 +1063,9 @@ function Get-WindowsHomeIo([string]$gameDir) {
     gameDir = $gameDir
     handler = { try { return [string](Get-Item "HKCU:\Software\Classes\deepslate\shell\open\command" -ErrorAction Stop).GetValue("") } catch { return "" } }
     setHandler = { param($t) Register-PlayLink $t }
-    shortcutsThere = {
-      $programs = [Environment]::GetFolderPath("Programs")
-      return ((Test-Path -LiteralPath (Join-Path ([Environment]::GetFolderPath("Desktop")) ("{0}.lnk" -f $PackName))) -and (Test-Path -LiteralPath (Join-Path $programs ("{0}.lnk" -f $PackName))) -and (Test-Path -LiteralPath (Join-Path $programs ("Uninstall {0}.lnk" -f $PackName))))
-    }
+    shortcutsThere = { param($t) return (Test-Shortcuts $t) }
     makeShortcuts = { param($t) Set-Shortcuts $t }
+    writeLauncher = { param($d) Write-Launcher $d }
     cfa = { try { return ([int](Get-MpPreference -ErrorAction Stop).EnableControlledFolderAccess -eq 1) } catch { return $false } }
     temp = $Temp
     listed = {
@@ -919,8 +1084,9 @@ function Get-FileHomeIo([string]$at) {
     at = $at
     handler = { $f = Join-Path $io.at "handler.txt"; if ([IO.File]::Exists($f)) { return [IO.File]::ReadAllText($f) }; return "" }
     setHandler = { param($t) [IO.File]::WriteAllText((Join-Path $io.at "handler.txt"), (Get-HandlerCommand $t)); return $true }
-    shortcutsThere = { return (@(@("Desktop.lnk", "Programs.lnk", "Uninstall.lnk") | Where-Object { -not [IO.File]::Exists((Join-Path $io.at $_)) }).Count -eq 0) }
-    makeShortcuts = { param($t) foreach ($n in @("Desktop.lnk", "Programs.lnk", "Uninstall.lnk")) { [IO.File]::WriteAllText((Join-Path $io.at $n), $t) }; return @{ made = 3; failed = @() } }
+    shortcutsThere = { param($t) return (@(@("Desktop.lnk", "Programs.lnk", "Uninstall.lnk") | Where-Object { -not [IO.File]::Exists((Join-Path $io.at $_)) -or [IO.File]::ReadAllText((Join-Path $io.at $_)) -ne (Get-LaunchCommand $t "" ) }).Count -eq 0) }
+    makeShortcuts = { param($t) foreach ($n in @("Desktop.lnk", "Programs.lnk", "Uninstall.lnk")) { [IO.File]::WriteAllText((Join-Path $io.at $n), (Get-LaunchCommand $t "")) }; return @{ made = 3; failed = @() } }
+    writeLauncher = { param($d) Write-Launcher $d }
     cfa = { return $false }
     temp = (Join-Path $at "temp")
     listed = { param($t) $f = Join-Path $io.at "apps.txt"; return ([IO.File]::Exists($f) -and [IO.File]::ReadAllText($f) -eq ($t + "|" + $InstallerVersion)) }
@@ -2059,6 +2225,7 @@ function Show-App([string]$shotsDir = "") {
   foreach ($n in @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody",
                    "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList")) { $A[$n] = $w.FindName($n) }
   try { $w.Title = "{0} {1}" -f $PackName, $InstallerVersion } catch {}
+  try { $w.Icon = [Windows.Media.Imaging.BitmapFrame]::Create((New-Object IO.MemoryStream(, (Get-IconBytes)))) } catch {}   # 2.0.3: not PowerShell's
 
   $A.PlayButton.Add_Click({ On-PlayButton })
   $A.AllowAllButton.Add_Click({ On-AllowAll })
@@ -2079,6 +2246,8 @@ function Show-App([string]$shotsDir = "") {
 
   $timer.Start()
   $w.Add_ContentRendered({
+    Show-Front "opened"
+    try { $up = New-Object Threading.EventWaitHandle($false, [Threading.EventResetMode]::ManualReset, $AppUpEvent); [void]$up.Set(); $script:App.UpEvent = $up } catch {}   # Setup.bat's console may close now
     if (@(Get-UnansweredSteps $script:App.Consent).Count -gt 0) { Show-FirstRun } else { Start-Run }
   })
   $w.Add_Closing({ param($s, $e)
@@ -2089,6 +2258,30 @@ function Show-App([string]$shotsDir = "") {
     }
   })
   [void]$w.ShowDialog()
+}
+
+# To the front (2.0.3): restored if minimised, activated, briefly topmost; when Windows still keeps another window in
+# front (a start from the browser has no right to the foreground), the input of the window in front is borrowed for
+# the moment it takes. The launching process grants the right where it can (Grant-Foreground).
+function Show-Front([string]$why) {
+  $w = $script:App.Window
+  try {
+    if ($w.WindowState -eq "Minimized") { $w.WindowState = "Normal" }
+    if (-not $w.IsVisible) { $w.Show() }
+    [void]$w.Activate()
+    $w.Topmost = $true; $w.Topmost = $false
+    $h = (New-Object Windows.Interop.WindowInteropHelper($w)).Handle
+    Add-Native
+    $fg = [DW.Native]::GetForegroundWindow()
+    if ($fg -ne $h) {
+      $theirs = [DW.Native]::GetWindowThreadProcessId($fg, [IntPtr]::Zero)
+      $mine = [DW.Native]::GetCurrentThreadId()
+      $joined = ($theirs -ne 0 -and $theirs -ne $mine -and [DW.Native]::AttachThreadInput($mine, $theirs, $true))
+      try { [void][DW.Native]::BringWindowToTop($h); [void][DW.Native]::SetForegroundWindow($h) }
+      finally { if ($joined) { [void][DW.Native]::AttachThreadInput($mine, $theirs, $false) } }
+    }
+    Log ("window: {0}, in front: {1}" -f $why, ([DW.Native]::GetForegroundWindow() -eq $h))
+  } catch { Log ("window: could not bring it to the front: " + $_.Exception.Message) }
 }
 
 function Update-ContinueButton {
@@ -2256,11 +2449,11 @@ function Start-Run([switch]$NoLaunch) {
   [IO.File]::WriteAllText($A.StatusPath, "")
   $A.StatusPos = 0
   $A.LastAsk = $null; $A.LastDeclined = $null; $A.LastFail = $null; $A.Changed = $null; $A.Launched = $null; $A.GameProblem = $null; $A.Watch = $null
-  $args2 = @("-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $script:MePath), "-Engine", "-StatusFile", ('"{0}"' -f $A.StatusPath))
-  if ($NoLaunch) { $args2 += "-NoLaunch" }
   if (-not [IO.File]::Exists($script:MePath)) { $script:MePath = Join-Path (Get-HomeDir) $ScriptName }   # moved by the 1.5.3 step
+  $args2 = Get-HiddenArgs $script:MePath @("-Engine", "-StatusFile", ('"{0}"' -f $A.StatusPath))
+  if ($NoLaunch) { $args2 += "-NoLaunch" }
   Log ("window: starting the install steps" + $(if ($NoLaunch) { " (extras only, no launcher)" } else { "" }))
-  $A.Proc = Start-Process -FilePath (Get-PowerShellExe) -ArgumentList $args2 -WindowStyle Hidden -PassThru
+  $A.Proc = Start-Hidden $args2   # 2.0.3: CreateNoWindow, never a console window
   $null = $A.Proc.Handle   # Windows PowerShell only keeps the exit code of a process whose handle was read
   if ($env:DEEPSLATE_UPDATED_FROM) { [Environment]::SetEnvironmentVariable("DEEPSLATE_UPDATED_FROM", $null) }   # said once, by the first run
 }
@@ -2269,8 +2462,8 @@ function On-Tick {
   $A = $script:App
   # a second start of the app (the Play button on the site, a shortcut): to the front, and Play when idle
   if ($A.ShowSignal -and $A.ShowSignal.WaitOne(0)) {
-    Log "window: started again (the Play button or a shortcut): brought to the front"
-    try { if ($A.Window.WindowState -eq "Minimized") { $A.Window.WindowState = "Normal" }; $A.Window.Activate() | Out-Null; $A.Window.Topmost = $true; $A.Window.Topmost = $false } catch {}
+    Log "window: started again (the Play button or a shortcut)"
+    Show-Front "started again"
     $A.Tabs.SelectedItem = $A.PlayTab
     if ($A.Mode -eq "idle" -and -not $A.Flow) { Start-Run }
   }
@@ -2357,7 +2550,8 @@ function On-RunEnded([int]$code) {
   $now = Get-ScriptVersion $script:MePath
   if ($now -and (Test-Newer $now $InstallerVersion)) {
     Log ("window: updated to {0}, starting it" -f $now)
-    Start-Process -FilePath (Get-PowerShellExe) -ArgumentList @("-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $script:MePath)) -WindowStyle Hidden
+    Grant-Foreground   # the new window may come to the front in place of this one
+    [void](Start-Hidden (Get-HiddenArgs $script:MePath @("-From", "update")))
     $A.Window.Close()
   }
 }
@@ -2782,15 +2976,18 @@ function Start-AppWindow {
   $mutex = New-Object Threading.Mutex($true, "Local\DeepslateWorks.App", [ref]$created)
   $signal = New-Object Threading.EventWaitHandle($false, [Threading.EventResetMode]::AutoReset, "Local\DeepslateWorks.App.Show")
   if (-not $created) {
+    Grant-Foreground   # the open window may take the foreground from this process
     [void]$signal.Set()
+    try { $up = New-Object Threading.EventWaitHandle($false, [Threading.EventResetMode]::ManualReset, $AppUpEvent); [void]$up.Set(); $up.Dispose() } catch {}
     Log "the window is already open: brought to the front"
     return
   }
   try {
     try {
-      Add-Type -Namespace DW -Name Win -MemberDefinition '[DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow(); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int n);'
-      $null = [DW.Win]::ShowWindow([DW.Win]::GetConsoleWindow(), 0)   # the console window PowerShell came with: hidden
-    } catch {}
+      Add-Native
+      $null = [DW.Native]::ShowWindow([DW.Native]::GetConsoleWindow(), 0)   # a console window PowerShell came with (a start from before 2.0.3): hidden
+      $null = [DW.Native]::SetCurrentProcessExplicitAppUserModelID($AppUserModelId)   # before any window: its own taskbar button
+    } catch { Log ("window: " + $_.Exception.Message) }
     $script:PendingSignal = $signal
     Show-App
   } finally {
@@ -2913,10 +3110,20 @@ if ($SelfTest) {
   Check ("every other link is refused (let through: " + $let.Count + ")") ($let.Count -eq 0)
   $keepRoot = $env:SystemRoot; $env:SystemRoot = "C:\Windows"
   $home2 = "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1"
-  $cmd = Get-HandlerCommand $home2
-  Check ("Windows is told to run the one script for the link, without a console window: " + $cmd) ($cmd -eq '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1" "%1"')
-  $sc = Get-ShortcutSpec $home2
-  Check ("the shortcuts run the same script, with nothing else: " + $sc.arguments) (($sc.target -eq "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe") -and ($sc.arguments -eq '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1"'))
+  $cmd = Get-HandlerCommand $home2 "vbs"
+  Check ("2.0.3: the Play link starts the shim next to the script, never PowerShell with a console: " + $cmd) ($cmd -eq '"C:\Windows\System32\wscript.exe" "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.vbs" "%1"')
+  $cmd = Get-HandlerCommand $home2 "conhost"
+  Check ("2.0.3: without VBScript, conhost --headless: " + $cmd) ($cmd -eq '"C:\Windows\System32\conhost.exe" --headless "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1" "%1"')
+  $cmd = Get-HandlerCommand $home2 "plain"
+  Check ("2.0.3: with neither, powershell.exe hidden as before: " + $cmd) ($cmd -eq '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1" "%1"')
+  $sc = Get-ShortcutSpec $home2 "desktop" "vbs"
+  Check ("the desktop shortcut starts the shim and says where it came from: " + $sc.arguments) (($sc.target -eq "C:\Windows\System32\wscript.exe") -and ($sc.arguments -eq '"C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.vbs" -From desktop'))
+  $sc = Get-ShortcutSpec $home2 "startmenu" "vbs"
+  Check "the Start Menu shortcut too, as startmenu" ($sc.arguments -eq '"C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.vbs" -From startmenu')
+  Check "with no icon file next to the script, the icon is PowerShell's" ($sc.icon -eq "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe,0")
+  $e3 = Get-UninstallEntry $home2 "C:\g" 1 "vbs"
+  Check ("Settings -> Apps' Uninstall goes through the shim as well: " + $e3.UninstallString) ($e3.UninstallString -eq '"C:\Windows\System32\wscript.exe" "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.vbs" -From apps -Uninstall')
+  Check "the Start Menu's Uninstall shortcut too" ((Get-UninstallShortcutSpec $home2 "vbs").arguments -eq '"C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.vbs" -From startmenu -Uninstall')
   $env:SystemRoot = $keepRoot
 
   Write-Host "Self test: the home folder" -ForegroundColor White
@@ -2962,7 +3169,7 @@ if ($SelfTest) {
   $newScript = Join-Path $wh "DeepslateWorks.ps1"
   Check ("install.ps1 -Play deepslate://play starts (exit " + $code + ") and says why it was given -Play") (($code -eq 0) -and ($out -match "started by an older installer's update step"))
   $names = @(Get-ChildItem -LiteralPath $wh -Force | ForEach-Object { $_.Name }) -join ","
-  Check ("afterwards the home holds only DeepslateWorks.ps1: " + $names) ($names -eq "DeepslateWorks.ps1")
+  Check ("afterwards the home holds only DeepslateWorks.ps1 and, since 2.0.3, its shim and icon: " + $names) ($names -eq "DeepslateWorks.ico,DeepslateWorks.ps1,DeepslateWorks.vbs")
   Check "and it is this script" ([IO.File]::Exists($newScript) -and ((Get-FileHash -LiteralPath $newScript -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash))
   $h = [IO.File]::ReadAllText((Join-Path $wio "handler.txt"))
   Check ("the Play link points at it: " + $h) ($h -eq (Get-HandlerCommand $newScript))
@@ -3346,8 +3553,8 @@ if ($SelfTest) {
   $calls = New-Object System.Collections.Generic.List[string]
   $portalUp = @{ report = { param($x) $calls.Add("report " + $x) }.GetNewClosure(); revoke = { param($x) $calls.Add("revoke " + $x) }.GetNewClosure() }
   $e = Get-UninstallEntry "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1" "C:\Users\x\AppData\Roaming\.minecraft-deepslate-works" 1234
-  Check "Settings -> Apps: name, version, publisher, size, and Uninstall runs this script with -Uninstall" (($e.DisplayName -eq $PackName) -and ($e.DisplayVersion -eq $InstallerVersion) -and ($e.Publisher -eq "Deepslate Works") -and ($e.EstimatedSize -eq 1234) -and ($e.UninstallString -match 'DeepslateWorks\.ps1" -Uninstall$') -and ($e.UninstallString -match 'powershell\.exe" -NoProfile'))
-  Check "the Start Menu's Uninstall Deepslate Works runs the same script with -Uninstall" ((Get-UninstallShortcutSpec "C:\h\DeepslateWorks.ps1").arguments -match '-File "C:\\h\\DeepslateWorks\.ps1" -Uninstall$')
+  Check "Settings -> Apps: name, version, publisher, size, and Uninstall runs this script with -Uninstall" (($e.DisplayName -eq $PackName) -and ($e.DisplayVersion -eq $InstallerVersion) -and ($e.Publisher -eq "Deepslate Works") -and ($e.EstimatedSize -eq 1234) -and ($e.UninstallString -match ' -Uninstall$') -and ($e.UninstallString -match 'DeepslateWorks\.(ps1|vbs)"'))
+  Check "the Start Menu's Uninstall Deepslate Works runs the same script with -Uninstall" ((Get-UninstallShortcutSpec "C:\h\DeepslateWorks.ps1" "plain").arguments -match '-File "C:\\h\\DeepslateWorks\.ps1" -From startmenu -Uninstall$')
   Check "an installed PC is found as one" (Test-UninstallFootprint $ut)
   $PretendRunning = @("MinecraftLauncher")
   Check "with the Minecraft Launcher open it refuses, and says why" ((Get-UninstallRefusal) -match "Close the Minecraft Launcher")
@@ -3762,6 +3969,66 @@ if ($SelfTest) {
   $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
   Check "no command's stderr is sent through 2>&1 anywhere in this script" ($left -eq 0)
 
+  Write-Host "Self test: no console window, the window in front (2.0.3)" -ForegroundColor White
+  $lt = Get-LauncherText
+  Check "the shim is plain ASCII with Windows line ends" ((@($lt.ToCharArray() | Where-Object { [int]$_ -gt 126 -or ([int]$_ -lt 32 -and [int]$_ -ne 13 -and [int]$_ -ne 10) }).Count -eq 0) -and ($lt -match "`r`n") -and -not ($lt -match "[^`r]`n"))
+  Check "the shim starts powershell.exe hidden (window style 0), without waiting" (($lt -match 'sh\.Run cmd, 0, False') -and ($lt -match '-WindowStyle Hidden -File """ & dir & "\\DeepslateWorks\.ps1"""'))
+  Check "the shim passes each argument on quoted, without quotes or trailing backslashes of its own" (($lt -match 'Replace\(WScript\.Arguments\(i\), """", ""\)') -and ($lt -match 'Right\(a, 1\) = "\\"') -and ($lt -match 'cmd = cmd & " """ & a & """"'))
+  $ld = Join-Path $dir "launcher home"; [void][IO.Directory]::CreateDirectory($ld)
+  Check "the shim and the icon are written next to the script" ((Write-Launcher $ld) -and [IO.File]::Exists((Join-Path $ld $IconName)))
+  $stamp = (Get-Item -LiteralPath (Join-Path $ld $LauncherName)).LastWriteTimeUtc
+  Start-Sleep -Milliseconds 50; [void](Write-Launcher $ld)
+  Check "and left alone when they are already right" ((Get-Item -LiteralPath (Join-Path $ld $LauncherName)).LastWriteTimeUtc -eq $stamp)
+  [IO.File]::WriteAllText((Join-Path $ld $LauncherName), "MsgBox 1"); [void](Write-Launcher $ld)
+  Check "a changed shim is put right" ([IO.File]::ReadAllText((Join-Path $ld $LauncherName)) -eq $lt)
+  $ib = Get-IconBytes
+  Check "the icon is an .ico with six sizes" ($ib.Length -gt 1000 -and $ib[0] -eq 0 -and $ib[1] -eq 0 -and $ib[2] -eq 1 -and $ib[4] -eq 6)
+  Check "with the icon there, shortcuts and Settings -> Apps use it" ((Get-ShortcutSpec (Join-Path $ld $ScriptName) "desktop" "plain").icon -eq ((Join-Path $ld $IconName) + ",0"))
+  Check "the entry point is logged by name" (((Get-EntryPoint $true "desktop" $false $false) -eq "play-link") -and ((Get-EntryPoint $false "Desktop" $false $false) -eq "desktop") -and ((Get-EntryPoint $false "startmenu" $false $false) -eq "startmenu") -and ((Get-EntryPoint $false "" $true $false) -match '^engine') -and ((Get-EntryPoint $false "" $false $true) -eq "Setup.bat") -and ((Get-EntryPoint $false "" $false $false) -match '^unknown') -and ((Get-EntryPoint $false "<script>" $false $false) -match '^unknown'))
+  $hiddenRx = '(?i)\s-WindowStyle\s+Hidden(\s|$)'
+  Check "a hidden start is recognised from its command line" ((('"C:\x\powershell.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\h\DeepslateWorks.ps1"') -match $hiddenRx) -and -not (('powershell -NoProfile -ExecutionPolicy Bypass -File "C:\h\DeepslateWorks.ps1" -Setup') -match $hiddenRx))
+  $keepHidden = $Hidden; $Hidden = $true; $script:Held = $false; $keepSelf = $SelfTest; $SelfTest = $false
+  Hold-Window   # would wait for Enter forever if it did not know
+  Check "a hidden run never waits for Enter" (-not $script:Held)
+  $Hidden = $keepHidden; $SelfTest = $keepSelf
+  $never = New-Object Threading.EventWaitHandle($false, [Threading.EventResetMode]::ManualReset)
+  $done = New-Object Threading.EventWaitHandle($true, [Threading.EventResetMode]::ManualReset)
+  Check "Setup's console closes once the window is up" ((Wait-AppUp $done ([pscustomobject]@{ HasExited = $false }) 2) -eq "up")
+  Check "and says so when the window's process ended without one" ((Wait-AppUp $never ([pscustomobject]@{ HasExited = $true }) 2) -eq "exited")
+  Check "and gives up waiting after its time" ((Wait-AppUp $never ([pscustomobject]@{ HasExited = $false }) 1) -eq "slow")
+  $never.Dispose(); $done.Dispose()
+  $code = @($own -split "`n" | Where-Object { $_ -notmatch '^\s*#' -and $_ -notmatch 'Check ' })
+  $consoleStarts = @($code | Where-Object { $_ -match 'Start-Process -FilePath \(Get-PowerShellExe\)' })
+  Check ("PowerShell is started with Start-Process only for the visible fallback window (found " + $consoleStarts.Count + ")") (($consoleStarts.Count -eq 1) -and ($consoleStarts[0] -match '"-Console", "-From", "fallback"'))
+  Check "the window has its own taskbar button and icon, and comes to the front when it opens and when started again" (($own -match 'SetCurrentProcessExplicitAppUserModelID\(\$AppUserModelId\)') -and ($own -match '\$w\.Icon = ') -and ($own -match 'Show-Front "opened"') -and ($own -match 'Show-Front "started again"'))
+  Check "the window failing to open says so in a message box with the log, never nothing" ($own -match 'The Deepslate Works window could not open:`r`n\{0\}`r`n`r`nThe log is here')
+  if ($OnWindows) {
+    # the real shim against a stand-in script that writes down what it was given, the way the real one binds it
+    $vd = Join-Path $dir "shim run"; [void][IO.Directory]::CreateDirectory($vd)
+    $argFile = Join-Path $vd "args.txt"
+    [IO.File]::WriteAllText((Join-Path $vd $ScriptName), ('param($Link = "", $From = "", [switch]$Uninstall)' + "`r`n" + '[IO.File]::WriteAllText("' + $argFile + '", ("link=" + $Link + ";from=" + $From + ";uninstall=" + $Uninstall + ";rest=" + ($args -join ",") + "|" + [Environment]::CommandLine))'))
+    [void](Write-Launcher $vd)
+    $cases = @(
+      @{ a = @('"deepslate://play"'); want = '^link=deepslate://play;from=;uninstall=False;rest=\|' },
+      @{ a = @('-From', 'desktop'); want = '^link=;from=desktop;uninstall=False;rest=\|' },
+      @{ a = @('-From', 'apps', '-Uninstall'); want = '^link=;from=apps;uninstall=True;rest=\|' },
+      @{ a = @('"deepslate://x\"', '-Setup'); want = '^link=deepslate://x[^;"]*;from=;uninstall=False;' })
+    foreach ($case in $cases) {
+      Remove-Temp $argFile
+      $p = Start-Process -FilePath (Get-SystemExe "wscript.exe") -ArgumentList (@(('"{0}"' -f (Join-Path $vd $LauncherName))) + $case.a) -Wait -PassThru
+      for ($i = 0; $i -lt 80 -and -not [IO.File]::Exists($argFile); $i++) { Start-Sleep -Milliseconds 250 }
+      Start-Sleep -Milliseconds 200
+      $got = $(if ([IO.File]::Exists($argFile)) { [IO.File]::ReadAllText($argFile) } else { "(nothing)" })
+      Check ("Windows: the shim with " + ($case.a -join " ") + " -> " + ($got -split '\|')[0]) (($got -match $case.want) -and ($got -match '-WindowStyle Hidden'))
+    }
+    Remove-Temp $argFile
+    $hp = Start-Hidden (Get-HiddenArgs (Join-Path $vd $ScriptName) @("-From", "update"))
+    $hp.WaitForExit(20000) | Out-Null
+    $got = $(if ([IO.File]::Exists($argFile)) { [IO.File]::ReadAllText($argFile) } else { "(nothing)" })
+    Check ("Windows: Start-Hidden runs the script, its exit code can be read: " + ($got -split '\|')[0]) ($hp.HasExited -and $hp.ExitCode -eq 0 -and ($got -match '^link=;from=update;'))
+    Check ("Windows: this PC would start Deepslate Works by: " + (Get-LaunchHow $vd)) ((Get-LaunchHow $vd) -ne "plain")
+  }
+
   Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
   if ($script:SelfTestBad -gt 0) { Write-Host ("{0} check(s) failed" -f $script:SelfTestBad) -ForegroundColor Red; exit 1 }
   Write-Host "All checks passed." -ForegroundColor Green
@@ -3772,6 +4039,14 @@ Write-Host ("{0} {1}" -f $PackName, $InstallerVersion) -ForegroundColor White
 $script:CustomRoot = ($Root -ne "")   # a test run: nothing is copied, registered or linked
 if ($Root -eq "") { $Root = $env:APPDATA }
 $OnWindows = ($env:OS -eq "Windows_NT")
+# who started this run (2.0.1): several runs within seconds were seen on 2026-10-01; this says where they came from.
+# 2.0.3: the entry point by name (-From, set by each shortcut, Setup, the restart after an update), and the parent.
+$script:EntryPoint = Get-EntryPoint $FromLink $From $Engine $Setup
+if ($OnWindows -and -not $SelfTest) {
+  $par = $null; $ppid = "?"
+  try { $pp = Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $PID) -ErrorAction Stop; $ppid = $pp.ParentProcessId; $par = Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $ppid) -ErrorAction SilentlyContinue } catch {}
+  Log ("started: {0} {1}, process {2}, from {3}, by {4} ({5}){6}{7}" -f $PackName, $InstallerVersion, $PID, $script:EntryPoint, $(if ($par) { $par.Name } else { "?" }), $ppid, $(if ($Uninstall) { ", uninstall" } else { "" }), $(if ($Hidden) { ", no console" } else { ", console" }))
+}
 
 # ---- -Uninstall: Settings -> Apps, or "Uninstall Deepslate Works" in the Start Menu ------------------------
 if ($Uninstall) {
@@ -3784,26 +4059,32 @@ if ($Uninstall) {
     $t = Get-UninstallTargets $Root (Get-HomeDir) ([Environment]::GetFolderPath("Desktop")) ([Environment]::GetFolderPath("Programs")) ([Environment]::GetFolderPath("MyPictures")) "HKCU:"
   }
   Log ("=== {0} {1} uninstall start ===" -f $PackName, $InstallerVersion)
+  # 2.0.3: started from the Start Menu or Settings -> Apps without a console: the same words, in message boxes
+  function Say-Uninstall([string]$text, [string]$colour = "White") {
+    if ($Hidden) { [void](Show-Box $text -Warn:($colour -eq "Yellow")) } else { Write-Host ""; Write-Host $text -ForegroundColor $colour }
+  }
   $script:Lock = Enter-Lock
   if (-not $script:Lock) {
-    Write-Host ""
-    Write-Host "Deepslate Works is already running in another window. Let it finish, then run the uninstall again." -ForegroundColor Yellow
+    Say-Uninstall "Deepslate Works is already running in another window. Let it finish, then run the uninstall again." "Yellow"
     Hold-Window
     exit $ExitAlreadyRunning
   }
   $no = Get-UninstallRefusal
-  if ($no) { Write-Host ""; Write-Host $no -ForegroundColor Yellow; Log "uninstall refused: the launcher is open"; Exit-Lock; Hold-Window; exit 1 }
+  if ($no) { Say-Uninstall $no "Yellow"; Log "uninstall refused: the launcher is open"; Exit-Lock; Hold-Window; exit 1 }
   if (-not (Test-UninstallFootprint $t)) {
-    Write-Host ""
-    Write-Host "Deepslate Works isn't on this PC. There is nothing to remove." -ForegroundColor Green
+    Say-Uninstall "Deepslate Works isn't on this PC. There is nothing to remove." "Green"
     Exit-Lock; Hold-Window; exit 0
   }
   if (-not $Yes) {
-    Write-Host ""
-    Write-Host "Remove Deepslate Works from this PC? Your worlds on the server are safe; this only removes the mods and files on this computer." -ForegroundColor White
+    $question = "Remove Deepslate Works from this PC? Your worlds on the server are safe; this only removes the mods and files on this computer."
     $answer = ""
-    try { $answer = [string](Read-Host "Type Y and press Enter to remove it, or just press Enter to keep it") } catch {}
-    if ($answer -notmatch '^\s*y(es)?\s*$') { Write-Host "Nothing was removed." -ForegroundColor Green; Log "uninstall: the answer was no"; Exit-Lock; Hold-Window; exit 0 }
+    if ($Hidden) { if ((Show-Box $question -YesNo) -eq "yes") { $answer = "y" } }
+    else {
+      Write-Host ""
+      Write-Host $question -ForegroundColor White
+      try { $answer = [string](Read-Host "Type Y and press Enter to remove it, or just press Enter to keep it") } catch {}
+    }
+    if ($answer -notmatch '^\s*y(es)?\s*$') { if (-not $Hidden) { Write-Host "Nothing was removed." -ForegroundColor Green }; Log "uninstall: the answer was no"; Exit-Lock; Hold-Window; exit 0 }
   }
   $tok = $null
   $tf = Join-Path $t.gameDir "launcher.json"
@@ -3814,6 +4095,15 @@ if ($Uninstall) {
   }
   $r = Invoke-Uninstall $t $tok $portal
   $script:Reported = $true
+  if ($Hidden) {
+    $msg = New-Object System.Collections.Generic.List[string]
+    if ($r.removed.Count -gt 0) { $msg.Add("Removed:"); foreach ($x in $r.removed) { $msg.Add("  - " + $x) } }
+    $msg.Add("Kept:"); foreach ($x in $r.kept) { $msg.Add("  - " + $x) }
+    if ($r.problems.Count -gt 0) { $msg.Add("Not done:"); foreach ($x in $r.problems) { $msg.Add("  - " + $x) } }
+    $msg.Add("")
+    $msg.Add($(if ($r.problems.Count -eq 0) { "Deepslate Works is off this PC. To play again, download it from the site." } else { "Most of it is gone. Close Minecraft and run the uninstall again for the rest." }))
+    [void](Show-Box ($msg -join "`r`n") -Warn:($r.problems.Count -gt 0))
+  }
   Write-Host ""
   if ($r.removed.Count -gt 0) { Write-Host "Removed:" -ForegroundColor Green; foreach ($x in $r.removed) { Write-Host ("   - {0}" -f $x) } }
   Write-Host "Kept:" -ForegroundColor Gray
@@ -3862,9 +4152,24 @@ if ($Setup) {
   }
   $env:DEEPSLATE_FROM_SETUP = "1"
   if ($OnWindows -and -not $DryRun -and -not $script:CustomRoot) {
-    # 2.0.0: the app's window, on its own; this console (Setup.bat's) closes
-    Start-Process -FilePath (Get-PowerShellExe) -ArgumentList @("-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $target)) -WindowStyle Hidden
-    Write-Host "Deepslate Works is opening in its own window." -ForegroundColor Green
+    # 2.0.0: the app's window, on its own. 2.0.3: started without a console window, and this console (Setup.bat's)
+    # stays until the window says it is up, so the first run never shows an empty screen; it closes then.
+    $up = New-Object Threading.EventWaitHandle($false, [Threading.EventResetMode]::ManualReset, $AppUpEvent)
+    Grant-Foreground
+    $app = Start-Hidden (Get-HiddenArgs $target @("-From", "setup"))
+    Write-Host "Deepslate Works is opening in its own window..." -ForegroundColor Green
+    $r = Wait-AppUp $up $app 60
+    Log ("Setup: the window " + $r)
+    if ($r -eq "up") { exit 0 }
+    if ($r -eq "exited") {
+      Write-Host ""
+      Write-Host "The Deepslate Works window did not open." -ForegroundColor Yellow
+      Write-Host ("The log is here: {0}" -f $LogFile) -ForegroundColor White
+      Write-Host "Send it to Alex, or run Setup.bat again." -ForegroundColor Gray
+      exit 1
+    }
+    Write-Host "It is taking a while to start. It opens by itself; this window can be closed." -ForegroundColor Gray
+    Start-Sleep -Seconds 5
     exit 0
   }
   $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $target), "-Console")
@@ -3888,13 +4193,11 @@ function Read-Token {
 # script again as -Engine for the install steps. Tests, -Console and a PC where WPF will not start run the steps here.
 $AppHome = $(if ($script:CustomRoot -or -not (Get-HomeDir)) { Join-Path $Root "LocalAppData\DeepslateWorks" } else { Get-HomeDir })
 $script:MePath = $PSCommandPath
-# who started this run (2.0.1): several runs within seconds were seen on 2026-10-01; this says where they came from
-if ($OnWindows) { try { $pp = Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $PID) -ErrorAction Stop; $par = Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $pp.ParentProcessId) -ErrorAction SilentlyContinue; Log ("started: {0} {1}, process {2}, by {3} ({4}), {5}" -f $PackName, $InstallerVersion, $PID, $(if ($par) { $par.Name } else { "?" }), $pp.ParentProcessId, $(if ($Engine) { "engine" } elseif ($FromLink) { "from the Play link" } elseif ($Setup) { "Setup" } else { "window" })) } catch {} }
 if ($VerifyExtras) { exit (Invoke-VerifyExtras) }
-if ($OnWindows -and -not $Engine -and -not $Console -and -not $DryRun -and -not $script:CustomRoot -and @($PretendRunning).Count -eq 0) {
+if ($OnWindows -and -not $Engine -and -not $Console -and -not $DryRun -and -not $script:CustomRoot -and @($PretendRunning).Count -eq 0 -and -not $env:DEEPSLATE_SELFTEST_HOME) {   # the self test's 1.4.x run (a link) never opens the window
   if ([Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
     # WPF needs a single-threaded apartment: Windows PowerShell gives one, pwsh does not
-    Start-Process -FilePath (Get-PowerShellExe) -ArgumentList @("-NoProfile", "-Sta", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $PSCommandPath)) -WindowStyle Hidden
+    [void](Start-Hidden (@("-Sta") + (Get-HiddenArgs $PSCommandPath @("-From", $(if ($From) { $From } else { "sta" })))))
     exit 0
   }
   try {
@@ -3902,9 +4205,19 @@ if ($OnWindows -and -not $Engine -and -not $Console -and -not $DryRun -and -not 
     Start-AppWindow
     exit 0
   } catch {
-    Log ("the window could not open, running in the console: " + ($_ | Out-String))
-    Write-Host ("The Deepslate Works window could not open ({0}). Carrying on here." -f $_.Exception.Message) -ForegroundColor Yellow
-    $Console = $true
+    $why = $_.Exception.Message
+    Log ("the window could not open: " + ($_ | Out-String))
+    if (-not $Hidden) {
+      Write-Host ("The Deepslate Works window could not open ({0}). Carrying on here." -f $why) -ForegroundColor Yellow
+      $Console = $true
+    } else {
+      # 2.0.3: started without a console, so never a silent nothing: say so, with the log, and offer the plain window
+      try { $up = New-Object Threading.EventWaitHandle($false, [Threading.EventResetMode]::ManualReset, $AppUpEvent); [void]$up.Set() } catch {}
+      $a = Show-Box ("The Deepslate Works window could not open:`r`n{0}`r`n`r`nThe log is here:`r`n{1}`r`n`r`nUpdate and start the game in a plain text window instead?" -f $why, $LogFile) -YesNo -Warn
+      Log ("the window could not open; the message box answer: " + $a)
+      if ($a -eq "yes") { Start-Process -FilePath (Get-PowerShellExe) -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $PSCommandPath), "-Console", "-From", "fallback") }   # visible on purpose
+      exit 1
+    }
   }
 }
 
@@ -3955,7 +4268,7 @@ if ($UnderOldName -and ($SelfTestHome -or (-not $DryRun -and -not $script:Custom
     $rp = New-Report "ok"
     Write-Host ("home: " + (@(Get-ChildItem -LiteralPath (Get-HomeDir) -Force | ForEach-Object { $_.Name } | Sort-Object) -join ","))
     Write-Host ("handler: " + (& $io.handler))
-    Write-Host ("shortcuts: " + (& $io.shortcutsThere) + "; apps: " + (& $io.listed (Join-Path (Get-HomeDir) $ScriptName)))
+    Write-Host ("shortcuts: " + (& $io.shortcutsThere (Join-Path (Get-HomeDir) $ScriptName)) + "; apps: " + (& $io.listed (Join-Path (Get-HomeDir) $ScriptName)))
     Write-Host ("report: installer={0} updatedFrom={1}" -f $rp.installerVersion, $rp.updatedFrom)
     Write-Host ("update step: " + $(if ($script:UpdatedFrom) { "not again in this run" } else { "would run" }))
     Write-Host ("log: " + (($script:RunLog.ToArray()) -join " / "))

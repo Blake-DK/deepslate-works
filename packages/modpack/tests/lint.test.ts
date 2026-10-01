@@ -7,9 +7,9 @@ const base: Record<string, unknown> & { mods: Array<Record<string, unknown>> } =
   profile: { id: "t", dir: ".t", icon: "Furnace" }, ram: { min_gb: 3, max_gb: 6 },
   categories: [{ id: "base", title: "Base", votable: false }, { id: "guns", title: "Guns" }],
   mods: [
-    { slug: "sodium", name: "Sodium", category: "base", side: "client", enabled: true, load: "L", description: "x", wiki: "https://modrinth.com/mod/sodium", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
-    { slug: "gun-a", name: "A", category: "guns", side: "both", enabled: true, load: "M", exclusiveGroup: "guns", description: "x", wiki: "https://modrinth.com/mod/gun-a", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
-    { slug: "gun-b", name: "B", category: "guns", side: "both", enabled: false, load: "M", exclusiveGroup: "guns", description: "x", wiki: "https://modrinth.com/mod/gun-b", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
+    { slug: "sodium", name: "Sodium", category: "base", side: "client", enabled: true, load: "L", guide: "behind", description: "x", wiki: "https://modrinth.com/mod/sodium", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
+    { slug: "gun-a", name: "A", category: "guns", side: "both", enabled: true, load: "M", exclusiveGroup: "guns", guide: "game", howTo: "Press **R** to reload.", description: "x", wiki: "https://modrinth.com/mod/gun-a", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
+    { slug: "gun-b", name: "B", category: "guns", side: "both", enabled: false, load: "M", exclusiveGroup: "guns", guide: "game", description: "x", wiki: "https://modrinth.com/mod/gun-b", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
   ],
 };
 
@@ -44,5 +44,21 @@ describe("estimateLoad", () => {
     expect(estimateLoad([{ load: "M" }, { load: "M" }, { load: "L" }]).label).toBe("Medium");
     expect(estimateLoad([{ load: "H" }, { load: "H" }, { load: "M" }]).label).toBe("Heavy");
     expect(estimateLoad([]).points).toBe(0);
+  });
+  it("the Mods guide: every listed mod says where it goes, every player-facing one says how to use it", () => {
+    const m = structuredClone(base);
+    delete m.mods[0]!.guide;
+    delete m.mods[1]!.howTo;
+    const msgs = lintManifest(m).issues.filter((i) => i.level === "error").map((i) => i.message).join("\n");
+    expect(msgs).toMatch(/sodium: no "guide"/);
+    expect(msgs).toMatch(/gun-a: switched on and player-facing, but has no "howTo"/);
+    expect(msgs).not.toMatch(/gun-b/); // switched off: not on the page yet
+  });
+  it("keys are a short list of key + what it does", () => {
+    const m = structuredClone(base);
+    m.mods[1]!.keys = [{ key: "R", does: "Reload" }];
+    expect(lintManifest(m).manifest?.mods[1]!.keys).toEqual([{ key: "R", does: "Reload" }]);
+    m.mods[1]!.keys = [{ key: "R" }];
+    expect(lintManifest(m).manifest).toBeNull();
   });
 });

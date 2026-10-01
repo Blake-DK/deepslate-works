@@ -45,15 +45,15 @@ const s = (v: unknown, fallback = "?") => (typeof v === "string" && v ? v : type
 const from = (p: P) => (typeof p.ip === "string" && p.ip ? ` from ${p.ip}${typeof p.country === "string" && p.country ? ` (${p.country})` : ""}` : "");
 const size = (v: unknown) => (typeof v === "number" && v > 0 ? (v < 1_048_576 ? `${Math.max(1, Math.round(v / 1024))} KB` : `${(v / 1_048_576).toFixed(1)} MB`) : "");
 const WHY_NOT: Record<string, string> = { not_live: "the site is not open yet and they have no early access", server_offline: "downloads are open while the server is up" };
-const WHAT: Record<string, string> = { "installer.zip": "the installer", "config.zip": "the pack's settings", "DeepslateWorks.ps1": "the new Deepslate Works script" };
+const WHAT: Record<string, string> = { "installer.zip": "the installer", "config.zip": "the pack's settings", "DeepslateWorks.ps1": "the new Deepslate Works script", "DeepslateWorks.exe": "Deepslate Works" };
 const how = (p: P) => (p.via === "installer" ? ", from the installer" : "");
 
 /** "downloaded the installer 1.4.1 (21 KB)", "was refused the installer: the site is not open yet …" */
 function downloaded(p: P, key: boolean): string {
   const file = s(p.file, "a file");
-  const what = `${WHAT[file] ?? file}${p.version && file === "installer.zip" ? ` ${s(p.version)}` : ""}`;
+  const what = `${WHAT[file] ?? file}${p.version && (file === "installer.zip" || file === "DeepslateWorks.exe") ? ` ${s(p.version)}` : ""}`;
   if (p.refused) return `was refused ${what}${how(p)}: ${WHY_NOT[s(p.refused)] ?? s(p.refused)}`;
-  const tail = [size(p.size), p.version && file !== "installer.zip" ? `pack ${s(p.version)}` : ""].filter(Boolean).join(", ");
+  const tail = [size(p.size), p.version && file !== "installer.zip" && file !== "DeepslateWorks.exe" ? `pack ${s(p.version)}` : ""].filter(Boolean).join(", ");
   return key ? `${what} ${tail ? `(${tail}) ` : ""}was downloaded with the pack's key` : `downloaded ${what}${tail ? ` (${tail})` : ""}${how(p)}`;
 }
 
@@ -113,6 +113,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "site.settings": "changed the launch settings",
   "settings.save": (p) => `changed the ${s(p.section, "site")} settings`,
   "branding.save": "changed the branding",
+  "branding.logo": (p) => `chose the logo ${s(p.choice, "").replace(/^option:/, "").replace(/^upload:.*/, "they uploaded")}`,
+  "branding.motd": (p) => (p.refused ? "tried to set the server list text; AMP does not let the portal change it" : "set the server list text"),
   "announcement.create": "posted an announcement",
   "announcement.pin": "pinned an announcement",
   "announcement.unpin": "unpinned an announcement",

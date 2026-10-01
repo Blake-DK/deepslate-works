@@ -18,3 +18,7 @@ deploy/wireguard/*
 *.tsbuildinfo
 # the portal's own data (uploads, screenshots), at the root of the repo; a datapack has a folder of that name too
 /data/
+
+# the Windows app (3.0), built on the windows runner only
+installer/**/bin/
+installer/**/obj/

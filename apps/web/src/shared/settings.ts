@@ -7,6 +7,10 @@ import { z } from "zod";
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
+export const DEFAULT_TAGLINE = "Modded Minecraft with friends";
+const OLD_TAGLINE = "Invite only. Minecraft 1.21.1 · NeoForge.";
+export const DEFAULT_MOTD = ["§8Deepslate Works §6· modded with friends", "§7Create, guns, quarries · press Play on deepslate.dsw.test"] as const;
+
 export const sections = {
   privacy: z.object({
     geo: z.boolean().default(true), // look up the country of a player's address (local database)
@@ -33,7 +37,8 @@ export const sections = {
   }),
   branding: z.object({
     name: z.string().trim().min(1).max(40).default("Deepslate Works"),
-    tagline: z.string().trim().max(120).default("Invite only. Minecraft 1.21.1 · NeoForge."),
+    // the old default is read as "not set": the planner's tagline replaces it (2026-10-01)
+    tagline: z.string().trim().max(120).transform((t) => (t === OLD_TAGLINE ? DEFAULT_TAGLINE : t)).default(DEFAULT_TAGLINE),
     accent: hex.default("#b8652c"),
     accentDark: hex.default("#d9823f"),
     defaultTheme: z.enum(["light", "dark", "system"]).default("system"),
@@ -41,7 +46,12 @@ export const sections = {
     footer: z.string().trim().max(200).default(""),
     rules: z.string().max(8000).default(""),
     guide: z.string().max(20000).default(""), // docs/18; "" = the guide as it ships
-    motd: z.string().trim().max(59).default("Deepslate Works"),
+    // the server list's two lines, with Minecraft colour codes (§8 dark grey, §6 orange, §7 grey). AMP's ServerMOTD
+    // is set from them; the old one-line default is read as "not set".
+    motd: z.string().trim().max(120).transform((t) => (t === "Deepslate Works" ? DEFAULT_MOTD[0] : t)).default(DEFAULT_MOTD[0]),
+    motd2: z.string().trim().max(120).default(DEFAULT_MOTD[1]),
+    // the logo picked in Admin → Branding: "" (none: the look as it was), "option:<file stem>" or "upload:<file>"
+    logoChoice: z.string().max(100).regex(/^(|option:[a-z0-9-]{1,60}|upload:logo-[0-9a-f]{12}\.(png|svg))$/).default(""),
     logo: z.string().max(80).default(""), // file name under data/branding, "" = none
     favicon: z.string().max(80).default(""),
     banner: z.string().max(80).default(""),

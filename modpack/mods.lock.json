@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-01T18:30:03.232Z",
+  "generatedAt": "2026-10-01T19:40:40.565Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "43978c763f160d6c6479d4e5008c8efecd35acd875bcab05760ec223ba262826",
+  "hash": "4362ce7a542f3a3ce0050ec092b3767349055975ee2b6da95a41a27968b73845",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -77,7 +77,12 @@
       "sha1": "287ec5c76bf9f7f8493e789f70759ab993784f5e",
       "size": 299325,
       "side": "server",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "badoptimizations",
@@ -324,6 +329,26 @@
         "server": "required"
       },
       "channels": "required"
+    },
+    {
+      "slug": "custom-window-title",
+      "name": "Custom Window Title",
+      "projectId": "RGH5gtzF",
+      "versionId": "Pqn8PDBd",
+      "versionNumber": "1.4.1",
+      "versionType": "release",
+      "filename": "CustomWindowTitle-1.21.4+v1.4.1.jar",
+      "url": "https://cdn.modrinth.com/data/RGH5gtzF/versions/Pqn8PDBd/CustomWindowTitle-1.21.4%2Bv1.4.1.jar",
+      "sha512": "5909ccf1becb519baba116fefb7e84d3079a7c3a8ee03301adffd4fe4706827a0fdfbcff15f6480eb974f78f939a4dee5785cf4a8cc51a46ab987ff172ae0799",
+      "sha1": "db89df2f80e8842b4ad0ed634d59f35b53f5061b",
+      "size": 24505,
+      "side": "client",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "dynamic-fps",
@@ -867,7 +892,12 @@
       "sha1": "62ce692654e09271b5c55cbb3a1ef7606d067132",
       "size": 1462674,
       "side": "server",
-      "requiredBy": []
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "simple-voice-chat",
@@ -1073,6 +1103,10 @@
     }
   ],
   "configs": [
+    {
+      "path": "config/customwindowtitle-client.toml",
+      "sha256": "cf2767c8bcab9fcef94f775bbb6b84db2e64ca948f0cf7b98694238e3b3ca110"
+    },
     {
       "path": "config/fallingtree.json",
       "sha256": "8398591767375d5dcc635f1a9d487c81f3f8ffa9f15b382749f2d965aca93120"

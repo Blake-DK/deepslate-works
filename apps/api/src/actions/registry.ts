@@ -27,7 +27,7 @@ export function parsePlace(s: string): Place {
   return { dimension, ...parsePos(parts.join(" ")) };
 }
 
-export type ActionCtx = { limbo: Place; spawn: Pos | null; portalUrl: string; siteName?: string };
+export type ActionCtx = { limbo: Place; spawn: Pos | null; portalUrl: string; siteName?: string; /** Admin → Branding tagline */ tagline?: string };
 
 export type Action<I> = {
   name: string;
@@ -92,6 +92,23 @@ const hostOf = (portalUrl: string) => portalUrl.replace(/^https?:\/\//, "").repl
  * Sent again every 15 s while they wait, and at once when they say something (players/limbo.ts), so it is kept to
  * one message: the chat fades after 10 s and would otherwise fill with it.
  */
+/** Pure: a sign's lines (four of 15 characters at most), the words kept whole where they fit. */
+export function signLines(text: string, max = 4): string[] {
+  const out: string[] = [];
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const last = out.at(-1);
+    if (last !== undefined && (last + " " + word).length <= 15) out[out.length - 1] = `${last} ${word}`;
+    else out.push(word.slice(0, 15));
+  }
+  return out.slice(0, max);
+}
+
+/** The first line everyone gets on joining: the server's name and its tagline (Admin → Branding). */
+export function welcomeTellraw(name: string, siteName?: string, tagline?: string): string {
+  const t = chatSafe(tagline, "");
+  return `tellraw ${name} ${JSON.stringify(["", { text: chatSafe(siteName, "Deepslate Works"), color: "gold", bold: true }, ...(t ? [{ text: ` · ${t}`, color: "gray", bold: false }] : [])])}`;
+}
+
 export function linkTellraw(name: string, portalUrl: string, code: string, siteName?: string): string {
   const url = `${portalUrl}/link/${code}`;
   const host = hostOf(portalUrl);
@@ -414,6 +431,9 @@ export const actions = {
         // 2026-09-30 (planner): the book is the way in that always works, so the first sign points at it
         sign(c.x - 1, ["Right-click", "the book", "to sign in", ""]),
         sign(c.x + 1, ["Sign in at", where[0]!, where[1]!, "code on screen"]),
+        // between them: the server's name and its tagline (Admin → Branding, planner 2026-10-01)
+        // (no ' on a sign: the lines sit inside '…' in the command)
+        sign(c.x, [chatSafe(ctx.siteName, "Deepslate Works").replace(/'/g, "").slice(0, 15), ...signLines(chatSafe(ctx.tagline, "").replace(/'/g, ""), 3)]),
         "gamerule logAdminCommands false",
       ];
     },
@@ -464,6 +484,7 @@ export const actions = {
     build: (_ctx, { minutes }) => [minutes === 0 ? "say Restarting now. Back in a minute or two." : `say Server restarts in ${minutes} minute${minutes === 1 ? "" : "s"}. Get somewhere safe.`],
   }),
   "server.restartCancelled": define({ name: "server.restartCancelled", role: "system", input: z.object({}), build: () => ["say The restart has been called off."] }),
+  "server.welcome": define({ name: "server.welcome", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [welcomeTellraw(name, ctx.siteName, ctx.tagline)] }),
   "server.list": define({ name: "server.list", role: "system", input: z.object({}), build: () => ["list"] }),
   // spark: one player's ping (docs/05 "Connection"). spark has no command for everyone at once.
   "server.pings": define({ name: "server.pings", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`spark ping --player ${name}`] }),

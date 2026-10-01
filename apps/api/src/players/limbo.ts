@@ -85,6 +85,10 @@ export class Limbo {
     this.tail.onResync(() => void this.resync().catch((err) => this.log({ err: String(err) }, "limbo resync failed")));
     this.timers.push(setInterval(() => void this.tick().catch((err) => this.log({ err: String(err) }, "limbo tick failed")), 5000));
     this.timers.push(setInterval(() => void this.promptRound().catch((err) => this.log({ err: String(err) }, "limbo prompt failed")), 1000));
+    // Admin → Branding's name and tagline for the room's sign and the welcome line, kept fresh once a minute
+    const brand = () => void getSection("branding").then((b) => Object.assign(this.ctx, { siteName: b.name, tagline: b.tagline })).catch(() => undefined);
+    brand();
+    this.timers.push(setInterval(brand, 60_000));
     this.timers.push(setInterval(() => void this.refreshGuild().catch((err) => this.log({ err: String(err) }, "guild refresh failed")), GUILD_REFRESH_MS));
   }
 
@@ -133,6 +137,10 @@ export class Limbo {
   }
 
   async onJoin(name: string) {
+    // The first line on joining, for everyone: the server's name and tagline (planner, 2026-10-01)
+    const brand = await getSection("branding").catch(() => null);
+    if (brand) Object.assign(this.ctx, { siteName: brand.name, tagline: brand.tagline });
+    void runAction(this.amp, this.ctx, "server.welcome", { name }, null).catch(() => undefined);
     // The UUID line precedes the login line; give it a moment if it hasn't arrived.
     let uuid = this.tail.uuidByName.get(name);
     for (let i = 0; !uuid && i < 5; i++) {
@@ -230,7 +238,8 @@ export class Limbo {
   }
 
   private async hold(name: string, uuid: string, reason: string) {
-    this.ctx.siteName = (await getSection("branding")).name; // Admin → Branding; read again for every newcomer
+    const brand = await getSection("branding");
+    Object.assign(this.ctx, { siteName: brand.name, tagline: brand.tagline }); // Admin → Branding; read again for every newcomer
     const code = uuid ? await this.codeFor(uuid, name, true) : codeGen(); // a new code for every join
     this.held.set(name, { uuid, code, since: Date.now(), lastReminder: Date.now(), kind: "link" });
     await runAction(this.amp, this.ctx, "limbo.hold", { name, code }, null);

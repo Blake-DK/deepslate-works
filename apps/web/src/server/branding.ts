@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getSection } from "@/server/site-settings";
+import { P } from "@/server/modpack/lock";
 import { imageKind, IMAGE_TYPE, MAX_IMAGE_BYTES, type ImageKind } from "@/lib/image-kind";
 import { sanitizeSvg } from "@/lib/svg-sanitize";
 import type { Section } from "@/shared/settings";
@@ -15,13 +16,40 @@ export const SLOTS = ["logo", "favicon", "banner"] as const;
 export type Slot = (typeof SLOTS)[number];
 export const FILE_NAME = /^(logo|favicon|banner)-[0-9a-f]{12}\.(png|webp|svg)$/;
 
-export type Branding = Section<"branding"> & { logoUrl: string | null; faviconUrl: string | null; bannerUrl: string | null };
+/** The chosen logo's sizes, made at Build (dist/branding, packages/modpack/src/branding.ts). */
+export type Generated = { choice: string; hash: string; pixel: boolean; url: (size: number | "ico") => string };
+export type Branding = Section<"branding"> & { logoUrl: string | null; faviconUrl: string | null; bannerUrl: string | null; generated: Generated | null };
 
 const url = (file: string) => (FILE_NAME.test(file) ? `/branding/${file}` : null);
+export const GENERATED_DIR = path.join(P.dist, "branding");
+
+/** What Build made for the chosen logo, when it is the one chosen now. */
+export async function readGenerated(choice: string): Promise<Generated | null> {
+  if (!choice) return null;
+  try {
+    const info = JSON.parse(await readFile(path.join(GENERATED_DIR, "branding.json"), "utf8")) as { choice?: string; hash?: string; pixel?: boolean };
+    if (info.choice !== choice || typeof info.hash !== "string" || !/^[0-9a-f]{12}$/.test(info.hash)) return null;
+    const hash = info.hash;
+    return { choice, hash, pixel: info.pixel === true, url: (size) => (size === "ico" ? `/brand/logo.ico?v=${hash}` : `/brand/logo-${size}.png?v=${hash}`) };
+  } catch {
+    return null;
+  }
+}
+
+/** One of the made sizes as base64 (the launcher profile's icon), or null. */
+export async function readLogoBase64(size: 128 | 64): Promise<string | null> {
+  try {
+    return (await readFile(path.join(GENERATED_DIR, `logo-${size}.png`))).toString("base64");
+  } catch {
+    return null;
+  }
+}
 
 export async function getBranding(): Promise<Branding> {
   const b = await getSection("branding");
-  return { ...b, logoUrl: url(b.logo), faviconUrl: url(b.favicon), bannerUrl: url(b.banner) };
+  const generated = await readGenerated(b.logoChoice);
+  // a picked logo wins; until one is picked, the look stays as it was (an uploaded logo/favicon, or none)
+  return { ...b, logoUrl: generated ? generated.url(128) : url(b.logo), faviconUrl: generated ? generated.url(32) : url(b.favicon), bannerUrl: url(b.banner), generated };
 }
 
 export type Stored = { ok: true; file: string; kind: ImageKind; bytes: number; dropped: string[] } | { ok: false; reason: string };

@@ -73,6 +73,13 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
   await rm(path.join(out, "config"), { recursive: true, force: true });
   if (await exists(paths.config)) await cp(paths.config, path.join(out, "config"), { recursive: true });
   if (await exists(paths.server)) await cp(paths.server, out, { recursive: true });
+  // the logo next to the server in everyone's server list: server-icon.png, exactly 64×64, in the server's folder
+  await rm(path.join(out, "server-icon.png"), { force: true });
+  const icon = path.join(paths.dist, "branding", "logo-64.png");
+  if (await exists(icon)) {
+    await cp(icon, path.join(out, "server-icon.png"));
+    log("server-icon.png from the chosen logo");
+  }
   // Datapacks are part of the world, not of the server's folder: Sync puts them into <world>/datapacks/.
   await rm(path.join(out, "datapacks"), { recursive: true, force: true });
   if (paths.datapacks && (await exists(paths.datapacks))) {
@@ -88,9 +95,55 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
 export async function buildConfigZip(paths: { dist: string; config: string }, log: (s: string) => void): Promise<string | null> {
   if (!(await exists(paths.config))) return null;
   const out = path.join(paths.dist, "config.zip");
-  await zipDir([{ dir: paths.config, name: "config" }], out);
-  log("config.zip from modpack/config");
+  // The chosen logo becomes the game window's icon (Custom Window Title reads config/customwindowtitle/icon.png;
+  // a power-of-two PNG with transparency). Without a logo the toml keeps icon = '' and Minecraft's own icon shows.
+  const icon = path.join(paths.dist, "branding", "logo-64.png");
+  if (!(await exists(icon))) {
+    await zipDir([{ dir: paths.config, name: "config" }], out);
+    log("config.zip from modpack/config");
+    return out;
+  }
+  const stage = path.join(paths.dist, ".config-stage");
+  await rm(stage, { recursive: true, force: true });
+  await cp(paths.config, stage, { recursive: true });
+  await mkdir(path.join(stage, "customwindowtitle"), { recursive: true });
+  await cp(icon, path.join(stage, "customwindowtitle", "icon.png"));
+  const toml = path.join(stage, "customwindowtitle-client.toml");
+  if (await exists(toml)) await writeFile(toml, windowIcon(await readFile(toml, "utf8"), "customwindowtitle/icon.png"));
+  await zipDir([{ dir: stage, name: "config" }], out);
+  await rm(stage, { recursive: true, force: true });
+  log("config.zip from modpack/config, with the logo as the window icon");
   return out;
+}
+
+/** Pure: Custom Window Title's `icon = '…'` line pointed at `file`. */
+export function windowIcon(toml: string, file: string): string {
+  return /^icon\s*=/m.test(toml) ? toml.replace(/^icon\s*=.*$/m, `icon = '${file}'`) : `${toml.trimEnd()}\nicon = '${file}'\n`;
+}
+
+/** Pure: installer/VERSION's content, checked. */
+export function readVersionFile(text: string): string {
+  const v = text.trim();
+  if (!/^\d{1,4}(\.\d{1,4}){1,3}$/.test(v)) throw new Error(`installer/VERSION: "${v.slice(0, 40)}" is not a version`);
+  return v;
+}
+
+/** Pure: the script with `$InstallerVersion = "<v>"` (the comment after it kept). */
+export function stampInstallerVersion(ps1: string, v: string): string {
+  if (!/^\$InstallerVersion\s*=\s*"[^"]*"/m.test(ps1)) throw new Error("$InstallerVersion not found to stamp");
+  return ps1.replace(/^(\$InstallerVersion\s*=\s*)"[^"]*"/m, `$1"${v}"`);
+}
+
+/** Pure: the PowerShell bridge's version against the app's (installer/VERSION): older, or the bridge never hands over. */
+export function checkBridge(bridge: string | null, app: string): void {
+  if (!bridge) throw new Error("DeepslateWorks.ps1: $InstallerVersion not found");
+  const parse = (v: string) => v.split(".").map(Number);
+  const [a, b] = [parse(bridge), parse(app)];
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] ?? 0, y = b[i] ?? 0;
+    if (x !== y) { if (x < y) return; break; }
+  }
+  throw new Error(`DeepslateWorks.ps1 is ${bridge}, not older than the app's ${app} (installer/VERSION): the bridge would never offer the exe`);
 }
 
 /** The version a script calls itself: `$InstallerVersion = "1.4.0"`. */
@@ -128,6 +181,10 @@ export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist:
   await rm(stage, { recursive: true, force: true });
   await mkdir(stage, { recursive: true });
   const ps1 = await readFile(path.join(paths.installer, INSTALLER_SCRIPT), "utf8");
+  // installer/VERSION is the one place the app's version is written (planner, 2026-10-01). From 3.0 the app is
+  // DeepslateWorks.exe (its csproj and CI read the file); the script is the last PowerShell version, the bridge that
+  // moves a 2.x PC over, and keeps the version written in it. It must stay older than the exe, or it never offers it.
+  checkBridge(installerVersion(ps1), readVersionFile(await readFile(path.join(paths.installer, "VERSION"), "utf8")));
   const stamped = ps1
     .replace(/^\$PortalUrl\s*=.*$/m, `$PortalUrl = "${portalUrl}"`)
     .replace(/^\$PackName\s*=.*$/m, `$PackName = "${m.name}"`)
@@ -146,8 +203,46 @@ export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist:
   const sha256 = await sha256File(out);
   const { size } = await stat(out);
   const scriptInfo = { sha256: await sha256File(script), size: (await stat(script)).size };
-  await writeFile(path.join(paths.dist, "installer.json"), `${JSON.stringify({ version, sha256, size, script: scriptInfo, builtAt: new Date().toISOString() }, null, 2)}\n`);
+  const exe = await takeCiExe(paths.dist, log);
+  await writeFile(path.join(paths.dist, "installer.json"), `${JSON.stringify({ version, sha256, size, script: scriptInfo, exe, builtAt: new Date().toISOString() }, null, 2)}\n`);
   log(`installer.zip stamped with ${portalUrl} and version ${m.version}+${shortHash(lock)}`);
   log(`installer ${version}: zip sha256 ${sha256}, ${INSTALLER_SCRIPT} sha256 ${scriptInfo.sha256}`);
   return out;
+}
+
+/** Where deploy/deploy.sh puts the app CI built (3.0): DeepslateWorks.exe, its .sha256 and VERSION, from the image ghcr.io/<owner>/deepslate-installer. */
+export const CI_EXE_DIR = "ci";
+export const EXE_NAME = "DeepslateWorks.exe";
+
+/**
+ * Deepslate Works 3.0 (docs/07): the exe is built and tested by CI on a windows runner, never here. deploy.sh copies it
+ * out of its image into dist/ci/; this checks it against the checksum CI wrote and its VERSION, and publishes it as
+ * dist/DeepslateWorks.exe, described in installer.json as `exe`. No exe there (or one that does not check out): `exe`
+ * is null, and the site hands out the PowerShell installer as before. The exe is never changed here: no stamping, the
+ * site's address is built in (installer.yml), so the checksum CI made is the one every PC checks.
+ */
+export async function takeCiExe(dist: string, log: (s: string) => void): Promise<{ version: string; sha256: string; size: number } | null> {
+  const dir = path.join(dist, CI_EXE_DIR);
+  const out = path.join(dist, EXE_NAME);
+  const drop = async (why: string) => {
+    log(`DeepslateWorks.exe not published: ${why}`);
+    await rm(out, { force: true });
+    return null;
+  };
+  try {
+    await stat(path.join(dir, EXE_NAME));
+  } catch {
+    return drop("no exe from CI in dist/ci (deploy.sh puts it there)");
+  }
+  const version = (await readFile(path.join(dir, "VERSION"), "utf8").catch(() => "")).trim();
+  if (!/^\d{1,4}(\.\d{1,4}){1,3}$/.test(version)) return drop("dist/ci/VERSION is missing or not a version");
+  const claimed = (await readFile(path.join(dir, `${EXE_NAME}.sha256`), "utf8").catch(() => "")).trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+  const sha256 = await sha256File(path.join(dir, EXE_NAME));
+  if (claimed !== sha256) return drop(`its checksum ${sha256.slice(0, 12)}... is not the one CI wrote (${claimed.slice(0, 12) || "none"})`);
+  const head = (await readFile(path.join(dir, EXE_NAME))).subarray(0, 2).toString("latin1");
+  if (head !== "MZ") return drop("it is not a Windows program");
+  await cp(path.join(dir, EXE_NAME), out);
+  const { size } = await stat(out);
+  log(`DeepslateWorks.exe ${version}: sha256 ${sha256}, ${(size / 1048576).toFixed(2)} MB`);
+  return { version, sha256, size };
 }

@@ -139,7 +139,7 @@ export function DistanceCard({ distance, status, schedule }: { distance: Distanc
           ) : <>the server isn&apos;t running, so there is no TPS to show</>}
         </CardDescription>
         <HowThisWorks>
-          A tick is the server&apos;s heartbeat: 20 a second when all is well (TPS 20), so each may take up to 50 ms. MSPT is how long a tick really takes; under 35 ms there is room to spare, near 50 the server starts to fall behind and everything slows down. The numbers come from NeoForge&apos;s own tick report and are fresh every 15 seconds while this page is open. Neither distance can be changed while the server runs (nothing in the pack can do that on NeoForge 1.21.1), so a change is saved in AMP and the server picks it up when it next starts.
+          A tick is the server&apos;s heartbeat: 20 a second when all is well (TPS 20), so each may take up to 50 ms. MSPT is how long a tick really takes; under 35 ms there is room to spare, near 50 the server starts to fall behind and everything slows down. The numbers come from NeoForge&apos;s own tick report and are fresh every 15 seconds while this page is open. Neither distance can be changed while the server runs (nothing in the pack can do that on this NeoForge), so a change is saved in AMP and the server picks it up when it next starts.
         </HowThisWorks>
       </CardHeader>
       <CardContent className="space-y-4">

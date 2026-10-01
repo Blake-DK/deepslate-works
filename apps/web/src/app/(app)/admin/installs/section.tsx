@@ -32,7 +32,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
     db.installReport.groupBy({ by: ["outcome"], _count: { _all: true } }),
     getInstaller(),
   ]);
-  const current = installer?.version ?? null;
+  const current = installer?.current ?? null;
   const n = (o: string) => counts.find((c) => c.outcome === o)?._count._all ?? 0;
   const total = counts.reduce((a, c) => a + c._count._all, 0);
   const now = new Date();

@@ -26,6 +26,9 @@ import { OnlineWatch } from "./status/online.js";
 import { db } from "./db.js";
 import { prismaSnapshotStore } from "./status/store.js";
 import { RestartSchedule } from "./status/restart.js";
+import { brandingRoutes } from "./routes/branding.js";
+import { ServerVersions } from "./status/versions.js";
+import { versionRoutes } from "./routes/version.js";
 import { Distances } from "./status/distance.js";
 import { distanceRoutes } from "./routes/distance.js";
 import { GroundItems, PLAN_KEY as GROUND_KEY, type GroundPlan } from "./status/ground.js";
@@ -83,6 +86,9 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   wakeRoutes(app, wake, view);
   playerRoutes(app, ampClient, tail, limbo, () => pregen.quiesce());
   serverRoutes(app, ampClient, tail, restarts);
+  brandingRoutes(app, env, ampClient, deps.build);
+  const serverVersions = new ServerVersions(ampClient, tail);
+  versionRoutes(app, serverVersions);
   const distances = new Distances(ampClient, tail, () => limbo.actionCtx, restarts, log);
   distanceRoutes(app, distances);
   const ground = new GroundItems(ampClient, tail, () => limbo.actionCtx, {
@@ -151,6 +157,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     pings.start();
     distances.start();
     ground.start();
+    serverVersions.start();
     online.start();
     pregenWatch.start();
     await pregen.start();

@@ -1,0 +1,194 @@
+{
+  "at": "2026-10-01T19:37:52.901Z",
+  "source": "logs/latest.log",
+  "files": [
+    {
+      "filename": "server-1.21.1-20240808.144430-srg.jar",
+      "nested": false
+    },
+    {
+      "filename": "neoforge-21.1.252-universal.jar",
+      "nested": false
+    },
+    {
+      "filename": "AdditionalEnchantedMiner-1.21.1-neoforge-21.1.164.jar",
+      "nested": false
+    },
+    {
+      "filename": "alternate_current-mc1.21-1.9.0.jar",
+      "nested": false
+    },
+    {
+      "filename": "appleskin-neoforge-mc1.21-3.0.9.jar",
+      "nested": false
+    },
+    {
+      "filename": "async-locator-refined-neoforge-1.21.1-1.6.0.jar",
+      "nested": false
+    },
+    {
+      "filename": "balm-neoforge-1.21.1-21.0.66.jar",
+      "nested": false
+    },
+    {
+      "filename": "bluemap-5.7-neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "Chunky-NeoForge-1.4.23.jar",
+      "nested": false
+    },
+    {
+      "filename": "Clumps-neoforge-1.21.1-19.0.0.1.jar",
+      "nested": false
+    },
+    {
+      "filename": "copycats-3.0.9+mc.1.21.1-neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "corpse-neoforge-1.21.1-1.1.13.jar",
+      "nested": false
+    },
+    {
+      "filename": "create-1.21.1-6.0.10.jar",
+      "nested": false
+    },
+    {
+      "filename": "createaddition-1.6.0.jar",
+      "nested": false
+    },
+    {
+      "filename": "createdeco-2.1.3.jar",
+      "nested": false
+    },
+    {
+      "filename": "FallingTree-1.21.1-1.21.1.11.jar",
+      "nested": false
+    },
+    {
+      "filename": "FarmersDelight-1.21.1-1.3.4.jar",
+      "nested": false
+    },
+    {
+      "filename": "FastFurnace-1.21.1-9.0.1.jar",
+      "nested": false
+    },
+    {
+      "filename": "FastWorkbench-1.21.1-9.1.3.jar",
+      "nested": false
+    },
+    {
+      "filename": "ferritecore-7.0.3-neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "getittogetherdrops-neoforge-1.21.5-1.4.jar",
+      "nested": false
+    },
+    {
+      "filename": "handcrafted-neoforge-1.21.1-4.0.3.jar",
+      "nested": false
+    },
+    {
+      "filename": "Jade-1.21.1-NeoForge-15.10.6.jar",
+      "nested": false
+    },
+    {
+      "filename": "jei-1.21.1-neoforge-19.51.0.418.jar",
+      "nested": false
+    },
+    {
+      "filename": "lithium-neoforge-0.15.4+mc1.21.1.jar",
+      "nested": false
+    },
+    {
+      "filename": "mcw-doors-1.1.5-mc1.21.1neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "mcw-mcwwindows-2.4.2-mc1.21.1neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "mcw-roofs-2.3.2-mc1.21.1neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "modernfix-neoforge-5.27.24+mc1.21.1.jar",
+      "nested": false
+    },
+    {
+      "filename": "noisium-neoforge-2.3.0+mc1.21-1.21.1.jar",
+      "nested": false
+    },
+    {
+      "filename": "open-parties-and-claims-neoforge-1.21.1-0.31.6.jar",
+      "nested": false
+    },
+    {
+      "filename": "pipez-neoforge-1.21.1-1.2.31.jar",
+      "nested": false
+    },
+    {
+      "filename": "Placebo-1.21.1-9.9.2.jar",
+      "nested": false
+    },
+    {
+      "filename": "resourcefullib-neoforge-1.21-3.0.12.jar",
+      "nested": false
+    },
+    {
+      "filename": "servercore-neoforge-1.5.19+1.21.1.jar",
+      "nested": false
+    },
+    {
+      "filename": "sophisticatedbackpacks-1.21.1-3.26.6.2174.jar",
+      "nested": false
+    },
+    {
+      "filename": "sophisticatedcore-1.21.1-1.5.2.2343.jar",
+      "nested": false
+    },
+    {
+      "filename": "spark-1.10.124-neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "tacz-neoforge-1.21.1-1.1.8-hotfix-r7.jar",
+      "nested": false
+    },
+    {
+      "filename": "veinminer-neoforge-2.11.2+1.21.1.jar",
+      "nested": false
+    },
+    {
+      "filename": "voicechat-neoforge-1.21.1-2.6.24.jar",
+      "nested": false
+    },
+    {
+      "filename": "waystones-neoforge-1.21.1-21.1.46.jar",
+      "nested": false
+    },
+    {
+      "filename": "kuma-api-neoforge-21.0.8+1.21.jar",
+      "nested": true
+    },
+    {
+      "filename": "ponder-neoforge-1.0.82+mc1.21.1.jar",
+      "nested": true
+    },
+    {
+      "filename": "flywheel-neoforge-1.21.1-1.0.6.jar",
+      "nested": true
+    },
+    {
+      "filename": "sable-companion-common-1.21.1-1.6.0.jar",
+      "nested": true
+    },
+    {
+      "filename": "simplebedrockmodel-2.2.1-neoforge+mc1.21.1.jar",
+      "nested": true
+    }
+  ]
+}

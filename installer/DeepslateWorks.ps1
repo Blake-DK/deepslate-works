@@ -58,7 +58,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "2.1.0"   # 2.1.0: the game only starts once every mod is checked in place; the game's log checked after. History in docs/07
+$InstallerVersion = "2.1.3"   # 2.1.3: the bridge to Deepslate Works 3.0 (DeepslateWorks.exe), moves this PC over on its next Play; 2.1.2: footer with versions; 2.1.1: the chosen logo; 2.1.0: every mod checked before the game starts. The last PowerShell version: written here, not stamped from installer/VERSION (that is the exe's, 3.0.0). History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -499,6 +499,55 @@ function Update-Script($offer, [string]$scriptPath, [scriptblock]$fetch) {
   return @{ status = "updated"; version = $new; problem = $null }
 }
 
+# ---- the bridge to 3.0 (planner, 2026-10-01) ---------------------------------------------------------------------
+# Deepslate Works 3.0 is one program, DeepslateWorks.exe. This script is the last PowerShell version: on its next Play,
+# when the site offers the exe (manifest installer.exe = {version, sha256, size}), it fetches it from this site's
+# /downloads (never from an address in the mod list), checks size, checksum and that it is a Windows program, and puts
+# it in %LOCALAPPDATA%\DeepslateWorks. The exe, started with -MigratedFrom, switches the Play link, the shortcuts and
+# the Settings -> Apps entry over to itself and then removes this script and its shim. Nothing to download by hand.
+# On any problem nothing is changed and this run carries on as 2.x (the next Play tries again).
+
+# @{ version; sha256; size } of the exe the site offers, or $null.
+function Get-OfferedExe($manifest) {
+  try {
+    if (-not $manifest -or -not $manifest.PSObject.Properties["installer"] -or -not $manifest.installer) { return $null }
+    $e = $manifest.installer.exe
+    if (-not $e -or -not (Test-Newer ([string]$e.version) $InstallerVersion)) { return $null }
+    if ([string]$e.sha256 -notmatch '^[0-9a-fA-F]{64}$') { return $null }
+    return @{ version = [string]$e.version; sha256 = ([string]$e.sha256).ToLower(); size = [long]$e.size }
+  } catch { return $null }
+}
+
+# @{ status = "moved" | "failed"; exe; problem }. $fetch: { param($url, $outFile) } downloads a file.
+function Install-Exe($offer, [string]$dir, [scriptblock]$fetch) {
+  $exe = Join-Path $dir "DeepslateWorks.exe"
+  $tmp = $exe + ".new"
+  $fail = { param($why) Remove-Temp $tmp; return @{ status = "failed"; exe = $exe; problem = $why } }
+  try {
+    [void][IO.Directory]::CreateDirectory($dir)
+    Remove-Temp $tmp
+    try { & $fetch "$PortalUrl/downloads/DeepslateWorks.exe" $tmp } catch { return (& $fail ("it could not be downloaded: {0}" -f $_.Exception.Message)) }
+    if (-not [IO.File]::Exists($tmp)) { return (& $fail "the download is empty") }
+    $len = (Get-Item -LiteralPath $tmp).Length
+    if ($offer.size -gt 0 -and $len -ne $offer.size) { return (& $fail ("the download is {0} bytes, the site said {1}" -f $len, $offer.size)) }
+    $got = (Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLower()
+    if ($got -ne $offer.sha256) { return (& $fail ("the checksum of the download ({0}...) is not the one the site gave ({1}...)" -f $got.Substring(0, 12), $offer.sha256.Substring(0, 12))) }
+    $head = New-Object byte[] 2
+    $fs = [IO.File]::OpenRead($tmp); try { [void]$fs.Read($head, 0, 2) } finally { $fs.Dispose() }
+    if ($head[0] -ne 0x4D -or $head[1] -ne 0x5A) { return (& $fail "the download is not a Windows program") }
+    if ([IO.File]::Exists($exe)) { [IO.File]::Delete($exe) }
+    [IO.File]::Move($tmp, $exe)
+  } catch { return (& $fail ("it could not be written: {0}" -f $_.Exception.Message)) }
+  return @{ status = "moved"; exe = $exe; problem = $null }
+}
+
+# The arguments the exe is started with: where it came from, and from which version (the window waits for this process).
+function Get-ExeHandOver([string]$from, [int]$waitFor) {
+  $a = @("-From", "update", "-MigratedFrom", $from)
+  if ($waitFor -gt 0) { $a += @("-WaitFor", [string]$waitFor) }
+  return $a
+}
+
 # ---- downloads land in a folder of their own first (docs/07 "Downloads") -------------------------------
 # A mod is downloaded into .downloading\ next to mods\, checked, and only then moved into mods\ in one step. A run
 # that is killed half-way leaves a part file in .downloading\ (emptied at the start of the next run), never a
@@ -607,9 +656,54 @@ function Get-LaunchCommand([string]$scriptPath, [string]$tail, [string]$how = ""
 function Get-HandlerCommand([string]$scriptPath, [string]$how = "") { return (Get-LaunchCommand $scriptPath '"%1"' $how) }
 
 function Get-IconPath([string]$scriptPath) {
+  # the chosen logo (2.1.1) wins over the built-in icon; both live next to the installed script
+  $logo = Join-Name (Get-ParentPath $scriptPath) $LogoIconName
+  if ($scriptPath -and [IO.File]::Exists($logo)) { return $logo }
   $ico = Join-Name (Get-ParentPath $scriptPath) $IconName
   if ($scriptPath -and [IO.File]::Exists($ico)) { return $ico }
   return (Get-PowerShellExe)
+}
+
+# ---- the logo (planner, 2026-10-01; 2.1.1) ---------------------------------------------------------------------
+# The mod list's `branding` block names the chosen logo by a hash. Its .ico is fetched from this script's own site
+# (the address is made here from the hash, never taken from the list) into the home folder as logo.ico, which then
+# wins over the built-in icon for the window, the shortcuts and Settings -> Apps; logo.png (128 px, from the list)
+# goes in the window's header. A new hash is a new logo: fetched at the next Play, shortcuts and Apps made again.
+$LogoIconName = "logo.ico"
+function Test-IcoBytes($b) { return ($null -ne $b -and $b.Length -ge 22 -and $b[0] -eq 0 -and $b[1] -eq 0 -and $b[2] -eq 1 -and $b[3] -eq 0 -and ($b[4] + 256 * $b[5]) -ge 1) }
+function Test-PngBase64([string]$s) { return ($s.Length -gt 0 -and $s.Length -lt 400000 -and $s -match '^[A-Za-z0-9+/]+={0,2}$' -and $s.StartsWith("iVBORw0KGgo")) }
+
+# The launcher profile's picture: the logo as a data: PNG when the list has one, else the mod list's block icon.
+function Get-ProfileIcon($branding, [string]$fallback) {
+  if ($branding -and (Test-PngBase64 ([string]$branding.icon128))) { return ("data:image/png;base64," + [string]$branding.icon128) }
+  return $fallback
+}
+
+function Read-BrandMarker([string]$dir) {
+  try { $f = Join-Path $dir "branding.json"; if ([IO.File]::Exists($f)) { return ([IO.File]::ReadAllText($f) | ConvertFrom-Json) } } catch {}
+  return $null
+}
+
+# "none" (no logo picked), "same", "saved" (a new logo is in place) or "failed: <why>". $fetch: { param($url) -> byte[] }
+function Save-Branding($branding, [string]$dir, $fetch) {
+  if (-not $branding -or ([string]$branding.hash) -notmatch '^[0-9a-f]{12}$') { return "none" }
+  $hash = [string]$branding.hash
+  $was = Read-BrandMarker $dir
+  $ico = Join-Path $dir $LogoIconName
+  $marker = [ordered]@{ hash = $hash; name = [string]$branding.name; tagline = [string]$branding.tagline; pixel = [bool]$branding.pixel }
+  try {
+    if ($was -and [string]$was.hash -eq $hash -and [IO.File]::Exists($ico)) {
+      if ([string]$was.tagline -ne $marker.tagline -or [string]$was.name -ne $marker.name) { [IO.File]::WriteAllText((Join-Path $dir "branding.json"), ($marker | ConvertTo-Json)) }
+      return "same"
+    }
+    $bytes = & $fetch ("{0}/brand/logo.ico?v={1}" -f $PortalUrl, $hash)
+    if (-not (Test-IcoBytes $bytes)) { return "failed: what came back is not an icon" }
+    [IO.File]::WriteAllBytes($ico + ".new", [byte[]]$bytes)
+    Move-Item -LiteralPath ($ico + ".new") -Destination $ico -Force
+    if (Test-PngBase64 ([string]$branding.icon128)) { [IO.File]::WriteAllBytes((Join-Path $dir "logo.png"), [Convert]::FromBase64String([string]$branding.icon128)) }
+    [IO.File]::WriteAllText((Join-Path $dir "branding.json"), ($marker | ConvertTo-Json))
+    return "saved"
+  } catch { return ("failed: " + $_.Exception.Message) }
 }
 
 function Get-ShortcutSpec([string]$scriptPath, [string]$where = "desktop", [string]$how = "") {
@@ -1072,7 +1166,8 @@ function Get-WindowsHomeIo([string]$gameDir) {
       param($t)
       $l = $null
       try { $l = Get-ItemProperty -LiteralPath ("HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\" + $UninstallKeyName) -ErrorAction Stop } catch {}
-      return [bool]($l -and [string]$l.UninstallString -eq (Get-UninstallEntry $t $io.gameDir 0).UninstallString -and [string]$l.DisplayVersion -eq $InstallerVersion)
+      $e = Get-UninstallEntry $t $io.gameDir 0
+      return [bool]($l -and [string]$l.UninstallString -eq $e.UninstallString -and [string]$l.DisplayVersion -eq $InstallerVersion -and [string]$l.DisplayIcon -eq $e.DisplayIcon)
     }
     list = { param($t) Register-Uninstall $t $io.gameDir }
   }
@@ -1289,6 +1384,7 @@ $ExtrasStateName = "extras.json"
 $ExtrasManifestName = "extras-manifest.json"
 $ExitAsk = 20        # the engine needs an answer the window has to ask for (status line {t:"ask"})
 $ExitDeclined = 21   # a step needed to play was answered "Not now"
+$ExitMigrated = 30   # 2.1.3: DeepslateWorks.exe (3.0) is in place; the window starts it and closes
 
 function Get-ConsentSteps {
   $site = $PortalUrl
@@ -2056,10 +2152,25 @@ $AppXaml = @'
       <Setter Property="Padding" Value="14,7"/><Setter Property="Margin" Value="0,0,8,0"/><Setter Property="Cursor" Value="Hand"/>
     </Style>
   </Window.Resources>
+  <DockPanel>
+  <StackPanel x:Name="Footer" DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="14,0,14,8">
+    <TextBlock x:Name="FooterApp" Foreground="#666"/>
+    <TextBlock Text="  ·  " Foreground="#999"/>
+    <TextBlock x:Name="FooterPack" Foreground="#666"/>
+    <TextBlock Text="  ·  " Foreground="#999"/>
+    <TextBlock x:Name="FooterServer" Foreground="#666"/>
+  </StackPanel>
   <TabControl x:Name="Tabs" Margin="8" Background="White">
     <TabItem Header="  Play  " x:Name="PlayTab">
       <DockPanel Margin="14">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+          <StackPanel x:Name="BrandBar" Orientation="Horizontal" Margin="0,0,0,8" Visibility="Collapsed">
+            <Image x:Name="BrandLogo" Width="40" Height="40" Margin="0,0,10,0" VerticalAlignment="Center"/>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock x:Name="BrandName" FontWeight="SemiBold" Text="Deepslate Works"/>
+              <TextBlock x:Name="BrandTagline" Foreground="#C0661F"/>
+            </StackPanel>
+          </StackPanel>
           <TextBlock x:Name="PlayTitle" FontSize="20" FontWeight="SemiBold" Text="Deepslate Works"/>
           <TextBlock x:Name="PlayStatus" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#444"/>
           <TextBlock x:Name="PlayChanged" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#2E7D5B" FontWeight="SemiBold" Visibility="Collapsed"/>
@@ -2109,6 +2220,7 @@ $AppXaml = @'
       <ListBox x:Name="LogList" Margin="10" FontFamily="Consolas" FontSize="12" BorderThickness="0"/>
     </TabItem>
   </TabControl>
+  </DockPanel>
 </Window>
 '@
 
@@ -2197,6 +2309,70 @@ function New-ConsentCard($step, [int]$level = 1, [string]$size = "") {
   return $card
 }
 
+# ---- the footer (versions) (planner, 2026-10-01) ----------------------------------------------------------------
+# "App <v> · Pack <v> · Server: <state>". No number is written here (a test on the site's side checks): the app's
+# own version is the engine's (after a self-update, the new script's, without restarting the window), the pack on
+# this PC is installed.json's, the current pack and the server's state come from <site>/api/version and the mod list.
+function Get-FooterParts($v) {
+  $app = if ($v.app) { "App " + [string]$v.app } else { "App" }
+  $pack = "Pack not installed yet"; $tone = "#666"
+  if ($v.local) { $pack = "Pack " + [string]$v.local }
+  if ($v.current -and [string]$v.current -ne [string]$v.local) { $pack = $(if ($v.local) { $pack + "  ·  Pack update available" } else { "Pack update available" }); $tone = "#B26A00" }
+  $server = if ($v.server) { "Server: " + [string]$v.server } else { "Server: ?" }
+  return @{ app = $app; pack = $pack; packTone = $tone; server = $server }
+}
+
+function Update-AppFooter {
+  $A = $script:App
+  if (-not $A.FooterApp) { return }
+  $f = Get-FooterParts $A.Ver
+  $A.FooterApp.Text = $f.app; $A.FooterPack.Text = $f.pack; $A.FooterServer.Text = $f.server
+  $A.FooterPack.Foreground = (New-Object Windows.Media.BrushConverter).ConvertFromString($f.packTone)
+}
+
+function Read-InstalledPack {
+  try { $f = Join-Path (Join-Path $Root ".minecraft-deepslate-works") "installed.json"; if ([IO.File]::Exists($f)) { return [string](([IO.File]::ReadAllText($f) | ConvertFrom-Json).version) } } catch {}
+  return $null
+}
+
+# The current pack and the server's state, from the site (public, a few seconds at most; the footer waits for it).
+function Update-SiteVersions {
+  $A = $script:App
+  try {
+    $r = Invoke-RestMethod -Uri ("{0}/api/version" -f $PortalUrl) -UseBasicParsing -TimeoutSec 4
+    if ($r.pack) { $A.Ver.current = [string]$r.pack }
+    if ($r.status) { $A.Ver.server = [string]$r.status }
+  } catch { Log ("the versions could not be read from the site: " + $_.Exception.Message) }
+  Update-AppFooter
+}
+# ---- end of the footer
+
+# The window's icon (taskbar too) and the header's logo and tagline, from what the last run put in the home folder.
+# Read from bytes, so the files are never held open while the next run replaces them.
+function Update-AppBrand {
+  $dir = Get-HomeDir
+  if (-not $dir -or -not $A.Window) { return }
+  try {
+    $ico = Join-Path $dir $LogoIconName
+    if ([IO.File]::Exists($ico)) {
+      $ms = New-Object IO.MemoryStream(,[IO.File]::ReadAllBytes($ico))
+      $A.Window.Icon = [Windows.Media.Imaging.BitmapFrame]::Create($ms, [Windows.Media.Imaging.BitmapCreateOptions]::None, [Windows.Media.Imaging.BitmapCacheOption]::OnLoad)
+    }
+    $m = Read-BrandMarker $dir
+    $png = Join-Path $dir "logo.png"
+    if ($m -and [IO.File]::Exists($png)) {
+      $bmp = New-Object Windows.Media.Imaging.BitmapImage
+      $bmp.BeginInit(); $bmp.CacheOption = [Windows.Media.Imaging.BitmapCacheOption]::OnLoad; $bmp.StreamSource = (New-Object IO.MemoryStream(,[IO.File]::ReadAllBytes($png))); $bmp.EndInit()
+      $A.BrandLogo.Source = $bmp
+      # pixel art stays crisp: nearest-neighbour, never smoothed
+      [Windows.Media.RenderOptions]::SetBitmapScalingMode($A.BrandLogo, $(if ($m.pixel) { [Windows.Media.BitmapScalingMode]::NearestNeighbor } else { [Windows.Media.BitmapScalingMode]::HighQuality }))
+      if ([string]$m.name) { $A.BrandName.Text = [string]$m.name }
+      $A.BrandTagline.Text = [string]$m.tagline
+      $A.BrandBar.Visibility = "Visible"
+    }
+  } catch { Log ("the logo could not be shown: " + $_.Exception.Message) }
+}
+
 function Show-App([string]$shotsDir = "") {
   Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
   $script:App = @{}
@@ -2223,9 +2399,14 @@ function Show-App([string]$shotsDir = "") {
   $w = [Windows.Markup.XamlReader]::Parse($AppXaml)
   $A.Window = $w
   foreach ($n in @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody",
-                   "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList")) { $A[$n] = $w.FindName($n) }
+                   "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList", "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "FooterApp", "FooterPack", "FooterServer")) { $A[$n] = $w.FindName($n) }
   try { $w.Title = "{0} {1}" -f $PackName, $InstallerVersion } catch {}
   try { $w.Icon = [Windows.Media.Imaging.BitmapFrame]::Create((New-Object IO.MemoryStream(, (Get-IconBytes)))) } catch {}   # 2.0.3: not PowerShell's
+  Update-AppBrand   # 2.1.1: the chosen logo instead, with the header's logo and tagline
+  $A.Ver = @{ app = $InstallerVersion; local = (Read-InstalledPack); current = $null; server = $null }
+  Update-AppFooter
+  $vt = New-Object Windows.Threading.DispatcherTimer; $vt.Interval = [TimeSpan]::FromMilliseconds(400)
+  $vt.Add_Tick({ param($t) $t.Stop(); Update-SiteVersions }.GetNewClosure()); $vt.Start()
 
   $A.PlayButton.Add_Click({ On-PlayButton })
   $A.AllowAllButton.Add_Click({ On-AllowAll })
@@ -2514,6 +2695,8 @@ function Read-StatusLines {
       "used" { $A.Used[[string]$o.step] = [int]$o.level }
       "changed" { $A.Changed = [string]$o.text }
       "launched" { $A.Launched = Get-Date }
+      "versions" { if ($o.app) { $A.Ver.app = [string]$o.app }; if ($o.pack) { $A.Ver.current = [string]$o.pack }; Update-AppFooter }
+      "installed" { if ($o.pack) { $A.Ver.local = [string]$o.pack }; Update-AppFooter }
     }
   }
 }
@@ -2534,12 +2717,28 @@ function On-RunEnded([int]$code) {
     return
   }
   if ($code -eq $ExitDeclined -and $A.LastDeclined) { Show-Stopped (Get-ConsentStep ([string]$A.LastDeclined.step)); return }
+  if ($code -eq $ExitMigrated) {
+    # 2.1.3, the bridge: the exe takes over (it waits for this window to close, then opens its own)
+    $exe = Join-Path (Get-HomeDir) "DeepslateWorks.exe"
+    Log ("window: Deepslate Works 3 is in place; starting " + $exe + " and closing")
+    try {
+      Grant-Foreground
+      Start-Process -FilePath $exe -ArgumentList (Get-ExeHandOver $InstallerVersion $PID)
+      $A.Window.Close()
+    } catch {
+      Log ("window: could not start the exe: " + $_.Exception.Message)
+      $A.PlayTitle.Text = "That didn't work"
+      $A.PlayStatus.Text = "Deepslate Works 3 is downloaded but would not start. Press Play to try again; the Log tab has the details."
+    }
+    return
+  }
   if ($code -eq $ExitAlreadyRunning) { $A.PlayTitle.Text = "Already running"; $A.PlayStatus.Text = "Deepslate Works is busy in another window. Let it finish, then press Play."; return }
   if ($code -ne 0) {
     $A.PlayTitle.Text = "That didn't work"
     $A.PlayStatus.Text = $(if ($A.LastFail) { $A.LastFail } else { "Something went wrong. The Log tab has the details; Alex has them too if reports are on." })
     return
   }
+  Update-AppBrand   # a run may have brought a new logo
   $A.PlayTitle.Text = "Ready"
   $A.PlayStatus.Text = "Every mod is checked and in place. The Minecraft Launcher is opening on Deepslate Works: press Play there. Keep this window open: it checks the game starts with every mod."
   # 2.1.0: watch the game's log for the session this launch starts
@@ -3886,7 +4085,7 @@ if ($SelfTest) {
   $okXaml = $true; $names = @()
   try { $x1 = [xml]$AppXaml; $x2 = [xml]$RestartXaml; $names = @($x1.SelectNodes("//*[@*[local-name()='Name']]") | ForEach-Object { $_.GetAttribute("Name", "http://schemas.microsoft.com/winfx/2006/xaml") }) } catch { $okXaml = $false }
   Check "both windows' XAML is well-formed" $okXaml
-  $want = @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody", "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList")
+  $want = @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody", "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList", "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "FooterApp", "FooterPack", "FooterServer")
   Check ("every name the code looks up is in the XAML") (@($want | Where-Object { $names -notcontains $_ }).Count -eq 0)
   Check "the window is titled Deepslate Works with Play, Extras and Log tabs" (($AppXaml -match 'Title="Deepslate Works"') -and ($AppXaml -match 'Header="  Play  "') -and ($AppXaml -match 'Header="  Extras  "') -and ($AppXaml -match 'Header="  Log  "'))
   Check "the questions (restart, start the game) offer Yes, Later and Allow all" (($AskXaml -match 'Content="Yes"') -and ($AskXaml -match 'Content="Later"') -and ($AskXaml -match 'Content="Allow all"'))
@@ -3964,10 +4163,60 @@ if ($SelfTest) {
   $script:ModsCheck = Test-PackMods $pmods $pmFiles
   Check "the report carries the mod check" (((Get-ReportMods).ok -eq $true) -and ((Get-ReportMods).checked -eq 3) -and ((Get-ReportMods).where -eq "folder"))
   $script:ModsCheck = $null
+  Write-Host "Self test: the footer (planner, 2026-10-01)" -ForegroundColor White
+  $f1 = Get-FooterParts @{ app = "9.9.9"; local = "0.1.0+aaaa1111"; current = "0.1.0+aaaa1111"; server = "Online" }
+  Check "the footer: App, Pack and Server, from what it is given" (($f1.app -eq "App 9.9.9") -and ($f1.pack -eq "Pack 0.1.0+aaaa1111") -and ($f1.server -eq "Server: Online") -and ($f1.packTone -eq "#666"))
+  $f2 = Get-FooterParts @{ app = "9.9.9"; local = "0.1.0+aaaa1111"; current = "0.1.0+bbbb2222"; server = "Asleep" }
+  Check "the pack on this PC differs from the site's: Pack update available, in amber" (($f2.pack -match "Pack update available$") -and ($f2.packTone -eq "#B26A00"))
+  $f3 = Get-FooterParts @{ app = "9.9.9"; local = $null; current = "0.1.0+bbbb2222"; server = $null }
+  Check "never installed, site not reached: said as such" (($f3.pack -eq "Pack update available") -and ($f3.server -eq "Server: ?"))
+  Check "the engine tells the window its own version and the pack (a self-update shows at once)" (([IO.File]::ReadAllText($PSCommandPath) -match 't = "versions"; app = \$InstallerVersion') -and ([IO.File]::ReadAllText($PSCommandPath) -match '"versions" \{ if \(\$o\.app\)'))
+
+  Write-Host "Self test: the logo (planner, 2026-10-01)" -ForegroundColor White
+  $bd = Join-Path $Temp ("dw-brand-" + [guid]::NewGuid().ToString("N").Substring(0, 8)); New-Item -ItemType Directory -Path $bd -Force | Out-Null
+  $icoBytes = [byte[]](@(0,0,1,0,1,0) + @(16,16,0,0,1,0,32,0,4,0,0,0,22,0,0,0) + @(1,2,3,4))
+  $png64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+  $asked = New-Object System.Collections.Generic.List[string]
+  $fetch = { param($u) $asked.Add($u); return ,$icoBytes }
+  $brand = [pscustomobject]@{ hash = "0123456789ab"; name = "Deepslate Works"; tagline = "Modded Minecraft with friends"; pixel = $true; icon128 = $png64 }
+  $scr = Join-Path $bd "DeepslateWorks.ps1"
+  [IO.File]::WriteAllBytes((Join-Path $bd $IconName), (Get-IconBytes))
+  Check "no logo picked: nothing fetched, the built-in icon stays" (((Save-Branding $null $bd $fetch) -eq "none") -and ($asked.Count -eq 0) -and ((Get-IconPath $scr) -eq (Join-Path $bd $IconName)))
+  Check "a new logo: the .ico comes from this site, by its hash, and is kept" (((Save-Branding $brand $bd $fetch) -eq "saved") -and ($asked[0] -eq ("{0}/brand/logo.ico?v=0123456789ab" -f $PortalUrl)) -and [IO.File]::Exists((Join-Path $bd $LogoIconName)) -and [IO.File]::Exists((Join-Path $bd "logo.png")))
+  Check "the shortcuts and Settings -> Apps then use the logo, not the built-in icon" ((Get-IconPath $scr) -eq (Join-Path $bd $LogoIconName))
+  Check "the same logo next time: not fetched again; a new tagline is still kept" (((Save-Branding ([pscustomobject]@{ hash = "0123456789ab"; name = "Deepslate Works"; tagline = "New words"; pixel = $true; icon128 = $png64 }) $bd $fetch) -eq "same") -and ($asked.Count -eq 1) -and ((Read-BrandMarker $bd).tagline -eq "New words"))
+  Check "a hash that is not one, or bytes that are not an icon, change nothing" (((Save-Branding ([pscustomobject]@{ hash = "../../x" }) $bd $fetch) -eq "none") -and ((Save-Branding ([pscustomobject]@{ hash = "ffffffffffff" }) $bd { param($u) return ,([byte[]](60,104,116,109,108)) }).StartsWith("failed")) -and ((Read-BrandMarker $bd).hash -eq "0123456789ab"))
+  Check "the launcher profile gets the logo as a data: PNG, or keeps its block without one" (((Get-ProfileIcon $brand "Furnace") -eq ("data:image/png;base64," + $png64)) -and ((Get-ProfileIcon $null "Furnace") -eq "Furnace") -and ((Get-ProfileIcon ([pscustomobject]@{ icon128 = "not a png" }) "Furnace") -eq "Furnace"))
+  Check "the window shows the logo (nearest-neighbour for pixel art) and the tagline" (($AppXaml -match 'x:Name="BrandLogo"') -and ($AppXaml -match 'x:Name="BrandTagline"') -and ([IO.File]::ReadAllText($PSCommandPath) -match 'BitmapScalingMode\]::NearestNeighbor'))
+  Remove-Item -LiteralPath $bd -Recurse -Force -ErrorAction SilentlyContinue
 
   $own = [IO.File]::ReadAllText($PSCommandPath)
   $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
   Check "no command's stderr is sent through 2>&1 anywhere in this script" ($left -eq 0)
+
+  Write-Host "Self test: the bridge to 3.0 (2.1.3)" -ForegroundColor White
+  $exeBytes = [byte[]](@(0x4D, 0x5A) + @(1..300 | ForEach-Object { 7 }))
+  $exeSum = ([BitConverter]::ToString((New-Object Security.Cryptography.SHA256Managed).ComputeHash($exeBytes)) -replace '-', '').ToLower()
+  $mf = { param($v, $sum, $size) [pscustomobject]@{ installer = [pscustomobject]@{ version = $InstallerVersion; exe = [pscustomobject]@{ version = $v; sha256 = $sum; size = $size } } } }
+  Check "the exe is offered when the site has a newer one with a checksum" ((Get-OfferedExe (& $mf "3.0.0" $exeSum 302)).version -eq "3.0.0")
+  Check "not when it is not newer, has no checksum, or there is no exe" (($null -eq (Get-OfferedExe (& $mf $InstallerVersion $exeSum 302))) -and ($null -eq (Get-OfferedExe (& $mf "3.0.0" "nope" 302))) -and ($null -eq (Get-OfferedExe ([pscustomobject]@{ installer = [pscustomobject]@{ version = "9.9.9" } }))) -and ($null -eq (Get-OfferedExe $null)))
+  $bd = Join-Path $dir "bridge home"
+  $offer = Get-OfferedExe (& $mf "3.0.0" $exeSum 302)
+  $asked = New-Object System.Collections.Generic.List[string]
+  $good = { param($url, $out) $asked.Add($url); [IO.File]::WriteAllBytes($out, $exeBytes) }.GetNewClosure()
+  $mv = Install-Exe $offer $bd $good
+  Check ("fetched from this site's /downloads only, checked, put in the home folder: " + $mv.status) (($mv.status -eq "moved") -and ($asked[0] -eq "$PortalUrl/downloads/DeepslateWorks.exe") -and [IO.File]::Exists((Join-Path $bd "DeepslateWorks.exe")) -and -not [IO.File]::Exists((Join-Path $bd "DeepslateWorks.exe.new")))
+  [IO.File]::Delete((Join-Path $bd "DeepslateWorks.exe"))
+  $mv = Install-Exe $offer $bd { param($url, $out) [IO.File]::WriteAllBytes($out, [byte[]](@(0x4D, 0x5A) + @(1..300 | ForEach-Object { 8 }))) }
+  Check ("another file with the same size: refused, nothing left: " + $mv.problem) (($mv.status -eq "failed") -and ($mv.problem -match 'checksum') -and -not [IO.File]::Exists((Join-Path $bd "DeepslateWorks.exe")) -and -not [IO.File]::Exists((Join-Path $bd "DeepslateWorks.exe.new")))
+  $txt = [Text.Encoding]::ASCII.GetBytes("<html>sign in</html>")
+  $txtSum = ([BitConverter]::ToString((New-Object Security.Cryptography.SHA256Managed).ComputeHash($txt)) -replace '-', '').ToLower()
+  $mv = Install-Exe @{ version = "3.0.0"; sha256 = $txtSum; size = $txt.Length } $bd { param($url, $out) [IO.File]::WriteAllBytes($out, $txt) }.GetNewClosure()
+  Check "a download that is not a Windows program: refused" (($mv.status -eq "failed") -and ($mv.problem -match 'not a Windows program'))
+  $mv = Install-Exe $offer $bd { param($url, $out) throw "The remote name could not be resolved" }
+  Check "offline: refused, the run carries on as 2.x" (($mv.status -eq "failed") -and ($mv.problem -match 'could not be downloaded'))
+  Check "the exe is told where it came from and which window to wait for" (((Get-ExeHandOver "2.1.3" 4242) -join " ") -eq "-From update -MigratedFrom 2.1.3 -WaitFor 4242")
+  Check "the window starts the exe on the bridge's exit code" (([IO.File]::ReadAllText($PSCommandPath)) -match '\$code -eq \$ExitMigrated')
 
   Write-Host "Self test: no console window, the window in front (2.0.3)" -ForegroundColor White
   $lt = Get-LauncherText
@@ -4352,9 +4601,32 @@ try {
   }
   $script:Token = $token
   if ($manifest.version) { $script:PackSeen = [string]$manifest.version }
+  Emit ([ordered]@{ t = "versions"; app = $InstallerVersion; pack = $script:PackSeen })   # the window's footer: this script's version (new after a self-update)
+
+  # 2.1.3, the bridge: the site offers Deepslate Works 3.0 (DeepslateWorks.exe): fetched, checked, put in place; the
+  # window starts it. Only from the installed copy (a copy in a download folder has no home to move).
+  $exeOffer = Get-OfferedExe $manifest
+  if ($exeOffer -and -not $DryRun -and @($PretendRunning).Count -eq 0 -and (Get-HomeDir) -and -not $script:CustomRoot) {
+    Step ("Moving to Deepslate Works {0}" -f $exeOffer.version)
+    $mv = Install-Exe $exeOffer (Get-HomeDir) { param($url, $out) Invoke-WebRequest -Uri $url -Headers $headers -OutFile $out -UseBasicParsing -TimeoutSec 300 }
+    if ($mv.status -eq "moved") {
+      Tick ("Deepslate Works {0} is in place; it takes over from here" -f $exeOffer.version)
+      $script:Reported = $true   # the exe's first run reports, saying it came from this version
+      Exit-Lock
+      Emit ([ordered]@{ t = "migrate"; exe = $mv.exe; version = $exeOffer.version })
+      if (-not $Engine) {
+        # -Console (a PC where the window does not open): start the exe straight from here
+        Start-Process -FilePath $mv.exe -ArgumentList (Get-ExeHandOver $InstallerVersion 0)
+      }
+      exit $ExitMigrated
+    }
+    $script:UpdateProblem = $mv.problem
+    Log ("MOVE TO 3.0 NOT DONE: " + $mv.problem)
+    Note ("Deepslate Works {0} could not be put in place ({1}). Carrying on with {2}." -f $exeOffer.version, $mv.problem, $InstallerVersion)
+  }
 
   # A newer script on the site: fetched, checked, put in place and started with what this one was started with.
-  if (-not $script:UpdatedFrom -and -not $DryRun -and $script:MePath -and @($PretendRunning).Count -eq 0) {
+  if (-not $exeOffer -and -not $script:UpdatedFrom -and -not $DryRun -and $script:MePath -and @($PretendRunning).Count -eq 0) {
     $offer = Get-OfferedScript $manifest
     if ($offer -and (Test-Newer $offer.version $InstallerVersion)) {
       Step ("Updating Deepslate Works {0} {1} {2}" -f $InstallerVersion, [char]0x2192, $offer.version)
@@ -4550,6 +4822,14 @@ try {
     } catch { Note ("The visual extras could not be fetched this time: " + $_.Exception.Message) }
   }
 
+  # ---- the logo: the .ico for the window, shortcuts and Settings -> Apps (planner, 2026-10-01) -----------------
+  $script:BrandChanged = $false
+  if (-not $DryRun -and $OnWindows -and -not $script:CustomRoot -and (Get-HomeDir) -and $manifest.PSObject.Properties["branding"]) {
+    $b = Save-Branding $manifest.branding (Get-HomeDir) { param($u) $wc = New-Object Net.WebClient; try { return ,$wc.DownloadData($u) } finally { $wc.Dispose() } }
+    if ($b -eq "saved") { $script:BrandChanged = $true; Tick "New logo in place" }
+    elseif ($b.StartsWith("failed")) { Note ("The logo could not be updated this time: " + $b.Substring(8)) }
+  }
+
   # ---- the server list (servers.dat: uncompressed NBT, one entry), the first time --------------------------
   $null = Request-Consent "profile"
   $serversDat = Join-Path $GameDir "servers.dat"
@@ -4579,7 +4859,7 @@ try {
   $xmx = [math]::Max($manifest.ram.min_gb, [math]::Min($manifest.ram.max_gb, $xmx))
   $javaArgs = "-Xmx${xmx}G -Xms1G -XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:MaxGCPauseMillis=50 -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20"
   $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-  $entry = [ordered]@{ name = $PackName; type = "custom"; lastVersionId = $versionId; gameDir = $GameDir; javaArgs = $javaArgs; javaDir = $java; icon = $profile.icon; created = $now; lastUsed = $now }
+  $entry = [ordered]@{ name = $PackName; type = "custom"; lastVersionId = $versionId; gameDir = $GameDir; javaArgs = $javaArgs; javaDir = $java; icon = (Get-ProfileIcon $(if ($manifest.PSObject.Properties["branding"]) { $manifest.branding } else { $null }) $profile.icon); created = $now; lastUsed = $now }
   $profileLeft = $false
   if (-not $DryRun -and @(Find-Launcher).Count -gt 0 -and (Test-LauncherProfile $Profiles $profile.id $versionId) -eq "") {
     # Launcher open, profile already there and pointing at the right NeoForge: nothing to write.
@@ -4619,7 +4899,7 @@ try {
   if (-not $DryRun -and -not $script:CustomRoot -and $OnWindows -and (Get-HomeDir)) {
     try {
       $links = Request-Consent "shortcuts"
-      $rh = Repair-Home (Resolve-Path -LiteralPath $script:MePath).Path (Get-HomeDir) (Get-WindowsHomeIo $GameDir) -NoLinks:(-not $links)
+      $rh = Repair-Home (Resolve-Path -LiteralPath $script:MePath).Path (Get-HomeDir) (Get-WindowsHomeIo $GameDir) -NoLinks:(-not $links) -Force:$script:BrandChanged
       Set-SetupState $rh
       if ($rh.fixed) { Tick "Play button set up on this run" }
       foreach ($line in @($rh.said | Where-Object { $_.tone -ne "ok" })) { Note $line.text }
@@ -4637,7 +4917,7 @@ try {
     Tick ("All {0} mods checked" -f $script:ModsCheck.checked)
     try { Save-PackList (Join-Path $AppHome $PackListName) $manifest } catch { Log ("could not keep the mod list for the game check: " + $_.Exception.Message) }
   }
-  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $installedFile }
+  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $installedFile; Emit ([ordered]@{ t = "installed"; pack = $script:PackSeen }) }
 
   # ---- d. the report, e. the game -------------------------------------------------------------------------
   Log "=== done ==="

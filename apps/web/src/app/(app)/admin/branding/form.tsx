@@ -2,11 +2,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
+import { MotdPreview } from "@/components/admin/motd-preview";
+import { visible } from "@/lib/motd";
 
 export type BrandingValues = {
   name: string; tagline: string; accent: string; accentDark: string; defaultTheme: "light" | "dark" | "system";
-  discordInvite: string; footer: string; rules: string; guide: string; guideOwn: boolean; motd: string;
-  logoUrl: string | null; faviconUrl: string | null; bannerUrl: string | null;
+  discordInvite: string; footer: string; rules: string; guide: string; guideOwn: boolean; motd: string; motd2: string;
+  logoUrl: string | null; faviconUrl: string | null; bannerUrl: string | null; logoPixel: boolean; icon64: string | null;
+  /** AMP's own MOTD setting may be changed by the site (permission), and what it holds now */
+  motdAllowed: boolean | null; motdPermission: string;
 };
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -66,10 +70,17 @@ export function BrandingForm({ initial, action }: { initial: BrandingValues; act
         <fieldset className="space-y-3">
           <legend className="text-sm font-semibold">Name and words</legend>
           <div><Label htmlFor="name">Server name</Label><Input id="name" name="name" value={v.name} onChange={set("name")} maxLength={40} required /></div>
-          <div><Label htmlFor="tagline">Tagline</Label><Input id="tagline" name="tagline" value={v.tagline} onChange={set("tagline")} maxLength={120} /><p className="mt-1 text-xs text-muted-foreground">Shown at the foot of every page.</p></div>
+          <div><Label htmlFor="tagline">Tagline</Label><Input id="tagline" name="tagline" value={v.tagline} onChange={set("tagline")} maxLength={120} /><p className="mt-1 text-xs text-muted-foreground">Under the name on the sign-in page and Home, at the foot of every page, in link previews, on the entrance room&apos;s sign and in the first chat line on joining.</p></div>
           <div><Label htmlFor="footer">Footer text</Label><Input id="footer" name="footer" value={v.footer} onChange={set("footer")} maxLength={200} /></div>
           <div><Label htmlFor="discordInvite">Discord invite link</Label><Input id="discordInvite" name="discordInvite" type="url" value={v.discordInvite} onChange={set("discordInvite")} maxLength={200} placeholder="https://discord.gg/…" /></div>
-          <div><Label htmlFor="motd">Message in the server list</Label><Input id="motd" name="motd" value={v.motd} onChange={set("motd")} maxLength={59} /><p className="mt-1 text-xs text-muted-foreground">What Minecraft shows under the server&apos;s name. The site cannot change it on the server: AMP writes that setting itself. Admin → Server → Files shows whether the server matches; change it in AMP.</p></div>
+          <div className="space-y-2">
+            <Label htmlFor="motd">Server description (two lines in the server list)</Label>
+            <Input id="motd" name="motd" value={v.motd} onChange={set("motd")} maxLength={120} className="font-mono" />
+            <Input id="motd2" name="motd2" aria-label="Second line" value={v.motd2} onChange={set("motd2")} maxLength={120} className="font-mono" />
+            <MotdPreview name={v.name} line1={v.motd} line2={v.motd2} icon={v.icon64} pixel={v.logoPixel} />
+            {[v.motd, v.motd2].some((l) => visible(l).length > 45) && <p className="text-xs text-primary">A line longer than about 45 characters is cut off in the game.</p>}
+            <p className="text-xs text-muted-foreground">Colours with Minecraft&apos;s codes: <span className="font-mono">§8</span> dark grey, <span className="font-mono">§7</span> grey, <span className="font-mono">§6</span> orange, <span className="font-mono">§f</span> white, <span className="font-mono">§l</span> bold, <span className="font-mono">§r</span> back to normal. Saving sends it to AMP, which puts it on the server at the <strong>next server start</strong>.{v.motdAllowed === false && <> AMP does not let the site change it yet: give the AMP user <span className="font-mono">webapp</span> the permission <span className="font-mono">{v.motdPermission}</span>.</>}</p>
+          </div>
         </fieldset>
         <fieldset className="space-y-3">
           <legend className="text-sm font-semibold">Colours</legend>
@@ -90,10 +101,9 @@ export function BrandingForm({ initial, action }: { initial: BrandingValues; act
           </div>
         </fieldset>
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold">Pictures</legend>
-          <Picture slot="logo" label="Logo" hint="Shown in the top bar and on the sign-in page." current={v.logoUrl} onPick={(u) => setPics((p) => ({ ...p, logo: u }))} />
+          <legend className="text-sm font-semibold">Sign-in banner</legend>
+          <p className="text-xs text-muted-foreground">The logo is picked in the Logo section above; every size is made from it.</p>
           <Picture slot="banner" label="Sign-in banner" hint="A wide picture above the sign-in box." current={v.bannerUrl} onPick={(u) => setPics((p) => ({ ...p, banner: u }))} />
-          <Picture slot="favicon" label="Browser tab icon" hint="Square works best." current={v.faviconUrl} onPick={() => {}} />
           <p className="text-xs text-muted-foreground">SVGs are rebuilt from a list of plain drawing elements when you save: scripts, styles, links and anything pointing outside the file are removed. If a picture comes out wrong, export it as a plain SVG or use a PNG.</p>
         </fieldset>
         <fieldset className="space-y-2">
@@ -141,7 +151,7 @@ export function BrandingForm({ initial, action }: { initial: BrandingValues; act
         <p className={`text-xs ${ratio < 3 ? "text-danger" : "text-muted-foreground"}`} role={ratio < 3 ? "alert" : undefined}>
           Button text on this colour: contrast {ratio.toFixed(1)} to 1. {ratio < 3 ? "Hard to read. Pick a darker colour for the light theme, or a lighter one for the dark theme." : ratio < 4.5 ? "Fine for buttons; a little low for small text." : "Easy to read."}
         </p>
-        <p className="text-xs text-muted-foreground">In game, a new player&apos;s welcome line will read: <span className="font-mono">Welcome to {v.name || "…"}. Click to link your Discord: …</span></p>
+        <p className="text-xs text-muted-foreground">In game, the first line on joining reads: <span className="font-mono">{v.name || "…"}{v.tagline ? ` · ${v.tagline}` : ""}</span></p>
       </aside>
     </div>
   );

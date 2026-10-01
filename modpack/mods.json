@@ -521,6 +521,23 @@
       ]
     },
     {
+      "slug": "custom-window-title",
+      "name": "Custom Window Title",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "The game window is called Deepslate Works and carries the server's logo in the taskbar.",
+      "wiki": "https://github.com/chylex/Minecraft-Window-Title",
+      "videos": [],
+      "version": "latest",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
       "slug": "appleskin",
       "name": "AppleSkin",
       "category": "base",

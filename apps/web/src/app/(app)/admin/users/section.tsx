@@ -38,7 +38,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     // installer 1.5.6: the latest report that says whether the Play button has a working link on their PC
     db.installReport.findMany({ where: { playLinkMissing: { not: null } }, orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, playLinkMissing: true } }),
   ]);
-  const current = installer?.version ?? null;
+  const current = installer?.current ?? null;
   const noPlayLink = new Set(linkRuns.filter((r) => r.playLinkMissing).map((r) => r.userId));
   const lastInstaller = new Map(lastRuns.map((r) => [r.userId, r.installerVersion]));
   const uninstalled = new Set(lastRuns.filter((r) => !installedNow(r)).map((r) => r.userId));

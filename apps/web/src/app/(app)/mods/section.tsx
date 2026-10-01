@@ -22,7 +22,7 @@ export default async function ModsPage() {
       {all.map(({ category, mods }) => (
         <section key={category.id} id={category.id} className="space-y-3">
           <div>
-            <h2 className="flex items-center gap-2 text-xl font-semibold">{category.title}{!category.votable && <Badge>{category.id === "server" ? "server only" : "everyone gets these"}</Badge>}</h2>
+            <h2 className="flex items-center gap-2 text-xl font-semibold">{category.title}{category.optional ? <Badge>optional: switch on in Me</Badge> : !category.votable && <Badge>{category.id === "server" ? "server only" : "everyone gets these"}</Badge>}</h2>
             {category.blurb && <p className="text-sm text-muted-foreground">{category.blurb}</p>}
           </div>
           <div className="grid gap-3 md:grid-cols-2">

@@ -70,6 +70,8 @@ model User {
   launcherAuth LauncherAuth[]
   installs     InstallReport[]
   earlyAccess  Boolean  @default(false) // docs/13: uses the portal as if it were live while it is not
+  visualExtras Boolean  @default(false) // Me page: the PC also gets the client-only visual mods (mods.json category "visuals")
+  shaders      String   @default("none") // Me page, with visualExtras: "none" | "light" | "full"
 }
 
 model Invite {

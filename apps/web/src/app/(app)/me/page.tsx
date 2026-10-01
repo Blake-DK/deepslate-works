@@ -19,6 +19,8 @@ import { clock } from "@/lib/utils";
 import { getInstaller } from "@/server/modpack/lock";
 import { mustDownloadAgain } from "@/lib/installer-version";
 import { Alert } from "@/components/ui/alert";
+import { VisualsForm } from "./visuals-form";
+import { saveVisuals } from "./actions";
 
 export const metadata: Metadata = { title: "Me" };
 
@@ -123,6 +125,22 @@ export default async function MePage() {
               : <>This is what you picked. The installer measures your PC and sets it for you. <Link href="/onboarding" className="underline">Change</Link>.</>}
           </CardDescription>
         </CardHeader>
+      </Card>
+      <Card data-testid="visuals">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">Making it look nicer {user.visualExtras && <Badge tone="good">on</Badge>}</CardTitle>
+          <CardDescription>
+            Optional, only on your PC. Nobody else has to have them, and you can play together either way. Switch them off again any time; the next Play takes them out.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {user.pcTier === "LOW" && (
+            <Alert tone="info" data-testid="visuals-weak-pc">
+              The installer measured your PC as an older laptop or one without a graphics card. Visual extras will likely make the game stutter; if you try them, leave shaders on None or Light.
+            </Alert>
+          )}
+          <VisualsForm action={saveVisuals} extras={user.visualExtras} shader={(["none", "light", "full"] as const).find((s) => s === user.shaders) ?? "none"} />
+        </CardContent>
       </Card>
     </div>
   );

@@ -121,6 +121,19 @@ export function windowIcon(toml: string, file: string): string {
   return /^icon\s*=/m.test(toml) ? toml.replace(/^icon\s*=.*$/m, `icon = '${file}'`) : `${toml.trimEnd()}\nicon = '${file}'\n`;
 }
 
+/** Pure: installer/VERSION's content, checked. */
+export function readVersionFile(text: string): string {
+  const v = text.trim();
+  if (!/^\d{1,4}(\.\d{1,4}){1,3}$/.test(v)) throw new Error(`installer/VERSION: "${v.slice(0, 40)}" is not a version`);
+  return v;
+}
+
+/** Pure: the script with `$InstallerVersion = "<v>"` (the comment after it kept). */
+export function stampInstallerVersion(ps1: string, v: string): string {
+  if (!/^\$InstallerVersion\s*=\s*"[^"]*"/m.test(ps1)) throw new Error("$InstallerVersion not found to stamp");
+  return ps1.replace(/^(\$InstallerVersion\s*=\s*)"[^"]*"/m, `$1"${v}"`);
+}
+
 /** The version a script calls itself: `$InstallerVersion = "1.4.0"`. */
 export function installerVersion(ps1: string): string | null {
   return /^\$InstallerVersion\s*=\s*"(\d{1,4}(?:\.\d{1,4}){1,3})"/m.exec(ps1)?.[1] ?? null;
@@ -156,7 +169,10 @@ export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist:
   await rm(stage, { recursive: true, force: true });
   await mkdir(stage, { recursive: true });
   const ps1 = await readFile(path.join(paths.installer, INSTALLER_SCRIPT), "utf8");
-  const stamped = ps1
+  // installer/VERSION is the one place the app's version is written (planner, 2026-10-01): the download, the mod
+  // list's `installer` block and the app itself all take it from here. A test keeps the script's own line equal to it.
+  const wanted = readVersionFile(await readFile(path.join(paths.installer, "VERSION"), "utf8"));
+  const stamped = stampInstallerVersion(ps1, wanted)
     .replace(/^\$PortalUrl\s*=.*$/m, `$PortalUrl = "${portalUrl}"`)
     .replace(/^\$PackName\s*=.*$/m, `$PackName = "${m.name}"`)
     .replace(/^\$PackVersion\s*=.*$/m, `$PackVersion = "${m.version}+${shortHash(lock)}"`);

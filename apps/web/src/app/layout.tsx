@@ -3,6 +3,8 @@ import "./globals.css";
 import { AppFrame } from "@/components/nav";
 import { getBranding } from "@/server/branding";
 import { env } from "@/env";
+import { loadCurrentUser } from "@/server/auth/session";
+import { VersionFooter } from "@/components/version-footer";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +37,7 @@ const themeScript = (fallback: "light" | "dark" | "system") =>
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const b = await getBranding();
+  const [b, user] = await Promise.all([getBranding(), loadCurrentUser().catch(() => null)]);
   // docs/16 §5: the accent comes from the branding row at request time, so a change needs no rebuild.
   // The values are checked again here: only a six-digit hex colour ever reaches the style sheet.
   const light = HEX.test(b.accent) ? b.accent : "#b8652c";
@@ -52,6 +54,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           footer={
             <footer className="space-y-1 px-4 py-4 text-center text-xs text-muted-foreground">
               <p>{b.tagline}</p>
+              <VersionFooter admin={user?.role === "ADMIN"} />
               {(b.footer || b.discordInvite) && <p>{b.footer}{b.footer && b.discordInvite ? " · " : ""}{b.discordInvite && <a href={b.discordInvite} className="underline" target="_blank" rel="noreferrer noopener">Discord</a>}</p>}
             </footer>
           }

@@ -58,7 +58,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "2.1.1"   # 2.1.1: the chosen logo on the window, shortcuts, Settings -> Apps and the launcher profile. History in docs/07
+$InstallerVersion = "2.1.2"   # 2.1.2: footer with versions (App, Pack, Server); 2.1.1: the chosen logo; 2.1.0: every mod checked before the game starts. Single source: installer/VERSION (a test keeps this line equal). History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -2102,6 +2102,14 @@ $AppXaml = @'
       <Setter Property="Padding" Value="14,7"/><Setter Property="Margin" Value="0,0,8,0"/><Setter Property="Cursor" Value="Hand"/>
     </Style>
   </Window.Resources>
+  <DockPanel>
+  <StackPanel x:Name="Footer" DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="14,0,14,8">
+    <TextBlock x:Name="FooterApp" Foreground="#666"/>
+    <TextBlock Text="  ·  " Foreground="#999"/>
+    <TextBlock x:Name="FooterPack" Foreground="#666"/>
+    <TextBlock Text="  ·  " Foreground="#999"/>
+    <TextBlock x:Name="FooterServer" Foreground="#666"/>
+  </StackPanel>
   <TabControl x:Name="Tabs" Margin="8" Background="White">
     <TabItem Header="  Play  " x:Name="PlayTab">
       <DockPanel Margin="14">
@@ -2162,6 +2170,7 @@ $AppXaml = @'
       <ListBox x:Name="LogList" Margin="10" FontFamily="Consolas" FontSize="12" BorderThickness="0"/>
     </TabItem>
   </TabControl>
+  </DockPanel>
 </Window>
 '@
 
@@ -2250,6 +2259,44 @@ function New-ConsentCard($step, [int]$level = 1, [string]$size = "") {
   return $card
 }
 
+# ---- the footer (versions) (planner, 2026-10-01) ----------------------------------------------------------------
+# "App <v> · Pack <v> · Server: <state>". No number is written here (a test on the site's side checks): the app's
+# own version is the engine's (after a self-update, the new script's, without restarting the window), the pack on
+# this PC is installed.json's, the current pack and the server's state come from <site>/api/version and the mod list.
+function Get-FooterParts($v) {
+  $app = if ($v.app) { "App " + [string]$v.app } else { "App" }
+  $pack = "Pack not installed yet"; $tone = "#666"
+  if ($v.local) { $pack = "Pack " + [string]$v.local }
+  if ($v.current -and [string]$v.current -ne [string]$v.local) { $pack = $(if ($v.local) { $pack + "  ·  Pack update available" } else { "Pack update available" }); $tone = "#B26A00" }
+  $server = if ($v.server) { "Server: " + [string]$v.server } else { "Server: ?" }
+  return @{ app = $app; pack = $pack; packTone = $tone; server = $server }
+}
+
+function Update-AppFooter {
+  $A = $script:App
+  if (-not $A.FooterApp) { return }
+  $f = Get-FooterParts $A.Ver
+  $A.FooterApp.Text = $f.app; $A.FooterPack.Text = $f.pack; $A.FooterServer.Text = $f.server
+  $A.FooterPack.Foreground = (New-Object Windows.Media.BrushConverter).ConvertFromString($f.packTone)
+}
+
+function Read-InstalledPack {
+  try { $f = Join-Path (Join-Path $Root ".minecraft-deepslate-works") "installed.json"; if ([IO.File]::Exists($f)) { return [string](([IO.File]::ReadAllText($f) | ConvertFrom-Json).version) } } catch {}
+  return $null
+}
+
+# The current pack and the server's state, from the site (public, a few seconds at most; the footer waits for it).
+function Update-SiteVersions {
+  $A = $script:App
+  try {
+    $r = Invoke-RestMethod -Uri ("{0}/api/version" -f $PortalUrl) -UseBasicParsing -TimeoutSec 4
+    if ($r.pack) { $A.Ver.current = [string]$r.pack }
+    if ($r.status) { $A.Ver.server = [string]$r.status }
+  } catch { Log ("the versions could not be read from the site: " + $_.Exception.Message) }
+  Update-AppFooter
+}
+# ---- end of the footer
+
 # The window's icon (taskbar too) and the header's logo and tagline, from what the last run put in the home folder.
 # Read from bytes, so the files are never held open while the next run replaces them.
 function Update-AppBrand {
@@ -2302,10 +2349,14 @@ function Show-App([string]$shotsDir = "") {
   $w = [Windows.Markup.XamlReader]::Parse($AppXaml)
   $A.Window = $w
   foreach ($n in @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody",
-                   "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList", "BrandBar", "BrandLogo", "BrandName", "BrandTagline")) { $A[$n] = $w.FindName($n) }
+                   "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList", "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "FooterApp", "FooterPack", "FooterServer")) { $A[$n] = $w.FindName($n) }
   try { $w.Title = "{0} {1}" -f $PackName, $InstallerVersion } catch {}
   try { $w.Icon = [Windows.Media.Imaging.BitmapFrame]::Create((New-Object IO.MemoryStream(, (Get-IconBytes)))) } catch {}   # 2.0.3: not PowerShell's
   Update-AppBrand   # 2.1.1: the chosen logo instead, with the header's logo and tagline
+  $A.Ver = @{ app = $InstallerVersion; local = (Read-InstalledPack); current = $null; server = $null }
+  Update-AppFooter
+  $vt = New-Object Windows.Threading.DispatcherTimer; $vt.Interval = [TimeSpan]::FromMilliseconds(400)
+  $vt.Add_Tick({ param($t) $t.Stop(); Update-SiteVersions }.GetNewClosure()); $vt.Start()
 
   $A.PlayButton.Add_Click({ On-PlayButton })
   $A.AllowAllButton.Add_Click({ On-AllowAll })
@@ -2594,6 +2645,8 @@ function Read-StatusLines {
       "used" { $A.Used[[string]$o.step] = [int]$o.level }
       "changed" { $A.Changed = [string]$o.text }
       "launched" { $A.Launched = Get-Date }
+      "versions" { if ($o.app) { $A.Ver.app = [string]$o.app }; if ($o.pack) { $A.Ver.current = [string]$o.pack }; Update-AppFooter }
+      "installed" { if ($o.pack) { $A.Ver.local = [string]$o.pack }; Update-AppFooter }
     }
   }
 }
@@ -3967,7 +4020,7 @@ if ($SelfTest) {
   $okXaml = $true; $names = @()
   try { $x1 = [xml]$AppXaml; $x2 = [xml]$RestartXaml; $names = @($x1.SelectNodes("//*[@*[local-name()='Name']]") | ForEach-Object { $_.GetAttribute("Name", "http://schemas.microsoft.com/winfx/2006/xaml") }) } catch { $okXaml = $false }
   Check "both windows' XAML is well-formed" $okXaml
-  $want = @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody", "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList", "BrandBar", "BrandLogo", "BrandName", "BrandTagline")
+  $want = @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody", "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList", "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "FooterApp", "FooterPack", "FooterServer")
   Check ("every name the code looks up is in the XAML") (@($want | Where-Object { $names -notcontains $_ }).Count -eq 0)
   Check "the window is titled Deepslate Works with Play, Extras and Log tabs" (($AppXaml -match 'Title="Deepslate Works"') -and ($AppXaml -match 'Header="  Play  "') -and ($AppXaml -match 'Header="  Extras  "') -and ($AppXaml -match 'Header="  Log  "'))
   Check "the questions (restart, start the game) offer Yes, Later and Allow all" (($AskXaml -match 'Content="Yes"') -and ($AskXaml -match 'Content="Later"') -and ($AskXaml -match 'Content="Allow all"'))
@@ -4045,6 +4098,14 @@ if ($SelfTest) {
   $script:ModsCheck = Test-PackMods $pmods $pmFiles
   Check "the report carries the mod check" (((Get-ReportMods).ok -eq $true) -and ((Get-ReportMods).checked -eq 3) -and ((Get-ReportMods).where -eq "folder"))
   $script:ModsCheck = $null
+  Write-Host "Self test: the footer (planner, 2026-10-01)" -ForegroundColor White
+  $f1 = Get-FooterParts @{ app = "9.9.9"; local = "0.1.0+aaaa1111"; current = "0.1.0+aaaa1111"; server = "Online" }
+  Check "the footer: App, Pack and Server, from what it is given" (($f1.app -eq "App 9.9.9") -and ($f1.pack -eq "Pack 0.1.0+aaaa1111") -and ($f1.server -eq "Server: Online") -and ($f1.packTone -eq "#666"))
+  $f2 = Get-FooterParts @{ app = "9.9.9"; local = "0.1.0+aaaa1111"; current = "0.1.0+bbbb2222"; server = "Asleep" }
+  Check "the pack on this PC differs from the site's: Pack update available, in amber" (($f2.pack -match "Pack update available$") -and ($f2.packTone -eq "#B26A00"))
+  $f3 = Get-FooterParts @{ app = "9.9.9"; local = $null; current = "0.1.0+bbbb2222"; server = $null }
+  Check "never installed, site not reached: said as such" (($f3.pack -eq "Pack update available") -and ($f3.server -eq "Server: ?"))
+  Check "the engine tells the window its own version and the pack (a self-update shows at once)" (([IO.File]::ReadAllText($PSCommandPath) -match 't = "versions"; app = \$InstallerVersion') -and ([IO.File]::ReadAllText($PSCommandPath) -match '"versions" \{ if \(\$o\.app\)'))
 
   Write-Host "Self test: the logo (planner, 2026-10-01)" -ForegroundColor White
   $bd = Join-Path $Temp ("dw-brand-" + [guid]::NewGuid().ToString("N").Substring(0, 8)); New-Item -ItemType Directory -Path $bd -Force | Out-Null
@@ -4451,6 +4512,7 @@ try {
   }
   $script:Token = $token
   if ($manifest.version) { $script:PackSeen = [string]$manifest.version }
+  Emit ([ordered]@{ t = "versions"; app = $InstallerVersion; pack = $script:PackSeen })   # the window's footer: this script's version (new after a self-update)
 
   # A newer script on the site: fetched, checked, put in place and started with what this one was started with.
   if (-not $script:UpdatedFrom -and -not $DryRun -and $script:MePath -and @($PretendRunning).Count -eq 0) {
@@ -4744,7 +4806,7 @@ try {
     Tick ("All {0} mods checked" -f $script:ModsCheck.checked)
     try { Save-PackList (Join-Path $AppHome $PackListName) $manifest } catch { Log ("could not keep the mod list for the game check: " + $_.Exception.Message) }
   }
-  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $installedFile }
+  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $installedFile; Emit ([ordered]@{ t = "installed"; pack = $script:PackSeen }) }
 
   # ---- d. the report, e. the game -------------------------------------------------------------------------
   Log "=== done ==="

@@ -23,4 +23,8 @@ COPY --from=build --chown=node:node /app /app
 USER node
 WORKDIR /app/apps/api
 EXPOSE 4000
+# Stamped by CI (planner, 2026-10-01): the footer shows what is really running, never a typed number.
+ARG GIT_SHA=dev
+ARG BUILT_AT=
+ENV PORTAL_COMMIT=$GIT_SHA PORTAL_BUILT_AT=$BUILT_AT
 CMD ["node", "dist/index.js"]

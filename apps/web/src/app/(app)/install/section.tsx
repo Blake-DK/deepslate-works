@@ -49,7 +49,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
         <Card>
           <CardHeader>
             <CardTitle>Meanwhile</CardTitle>
-            <CardDescription>Have the normal Minecraft Launcher installed and opened once (Java Edition 1.21.1), read the mod list, and cast your vote if one is open.</CardDescription>
+            <CardDescription>Have the normal Minecraft Launcher installed and opened once (Java Edition {m.minecraft}), read the mod list, and cast your vote if one is open.</CardDescription>
           </CardHeader>
         </Card>
       </div>

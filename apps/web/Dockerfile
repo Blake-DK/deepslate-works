@@ -23,4 +23,8 @@ COPY --from=build --chown=app:app /app /app
 USER app
 EXPOSE 3000
 # Migrations run on every start (idempotent), then the app.
+# Stamped by CI (planner, 2026-10-01): the footer shows what is really running, never a typed number.
+ARG GIT_SHA=dev
+ARG BUILT_AT=
+ENV PORTAL_COMMIT=$GIT_SHA PORTAL_BUILT_AT=$BUILT_AT
 CMD ["sh", "-c", "pnpm --filter web exec prisma migrate deploy && pnpm --filter web start"]

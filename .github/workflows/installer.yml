@@ -1,0 +1,32 @@
+name: installer
+# The Windows app, on a real Windows runner (never on the VPS). Runs only when the installer changes: Windows minutes
+# cost double on a private repository.
+on:
+  push:
+    branches: [main]
+    paths: [installer/**, .github/workflows/installer.yml]
+  pull_request:
+    paths: [installer/**, .github/workflows/installer.yml]
+  workflow_dispatch:
+
+jobs:
+  # 2.0.x: the PowerShell app. Its self test under Windows PowerShell 5.1 (the Linux run in a pwsh container cannot
+  # reach the registry, wscript or WPF), then the window on the runner's desktop: Setup.bat's hand-over, no console
+  # window, in front, started again; pictures and the log are kept as the run's artifact.
+  powershell:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Self test (Windows PowerShell 5.1)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/DeepslateWorks.ps1 -SelfTest
+      - name: The window on a Windows desktop
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-smoke.ps1 -Out shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-2-windows
+          path: shots
+          if-no-files-found: ignore

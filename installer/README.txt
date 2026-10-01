@@ -12,6 +12,7 @@ Start Menu. It keeps itself and the mods up to date, then opens the launcher. Yo
 
 What Setup.bat puts on your PC (for your Windows user only, no admin rights):
   %LOCALAPPDATA%\DeepslateWorks\DeepslateWorks.ps1   the one script that does everything
+  %LOCALAPPDATA%\DeepslateWorks\DeepslateWorks.vbs   starts it without a console window (and its icon, .ico)
   "Deepslate Works" shortcuts on the desktop and in the Start Menu
   the deepslate:// link for the Play button (HKEY_CURRENT_USER\Software\Classes\deepslate)
 The game itself goes in %APPDATA%\.minecraft-deepslate-works, with a "Deepslate Works" profile in the launcher.

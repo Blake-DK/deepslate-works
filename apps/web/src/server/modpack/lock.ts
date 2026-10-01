@@ -62,3 +62,13 @@ export async function getInstaller(): Promise<InstallerInfo | null> {
     return null;
   }
 }
+
+/** Extra id → name, from modpack/extras.lock.json (the app's Extras tab), for the one-line extras summary. */
+export async function getExtraNames(): Promise<Record<string, string>> {
+  try {
+    const lock = JSON.parse(await readFile(P.extrasLock, "utf8")) as { extras: Array<{ id: string; name: string }> };
+    return Object.fromEntries(lock.extras.map((x) => [x.id, x.name]));
+  } catch {
+    return {};
+  }
+}

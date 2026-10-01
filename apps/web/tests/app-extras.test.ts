@@ -41,3 +41,28 @@ describe("extras and the join check", () => {
     for (const who of ["with extras", "without"]) expect([who, playGate({ at: new Date("2026-10-01T11:59:00Z"), packVersion: pack, installerVersion: "2.0.0" }, pack, 30, now).ok]).toEqual([who, true]);
   });
 });
+
+// Installer 2.0.1: the extras block of a report, and the line Admin → Installs and the player page show.
+import { extrasLine, extrasReportSchema } from "@/lib/extras-line";
+
+describe("the extras line", () => {
+  const names = { iris: "Iris (shaders)", "falling-leaves": "Falling Leaves", "fresh-animations": "Fresh Animations" };
+  const block = (over: Record<string, unknown> = {}) => extrasReportSchema.parse({ on: ["iris", "shader-light", "falling-leaves"], shader: "light", queued: false, lastApply: { at: "2026-10-01T15:00:00Z", ok: true }, verify: { ok: true, failed: [] }, inGame: { state: "active", active: ["iris", "falling-leaves"], problems: [] }, ...over });
+  it("says what is on, with the shader choice, verified and active in game", () => {
+    expect(extrasLine(block(), names)).toBe("Extras: Iris (Light shaders), Falling Leaves. Verified, active in game.");
+  });
+  it("says when the game has not run since, when checks failed, when changes wait, and when there is nothing", () => {
+    expect(extrasLine(block({ inGame: { state: "waiting" } }), names)).toBe("Extras: Iris (Light shaders), Falling Leaves. Verified, not started in game yet.");
+    expect(extrasLine(block({ verify: { ok: false, failed: ["fl.jar is missing"] } }), names)).toMatch(/1 check failed/);
+    expect(extrasLine(block({ queued: true }), names)).toMatch(/changes wait for the game to close/);
+    expect(extrasLine(block({ inGame: { state: "problems", problems: ["falling-leaves: the game did not load it"] } }), names)).toMatch(/problems in game: falling-leaves: the game did not load it/);
+    expect(extrasLine(block({ on: [] }), names)).toBe("Extras: none.");
+    expect(extrasLine(null)).toBeNull();
+  });
+  it("a report without the block (installers before 2.0.1) is still valid", async () => {
+    const { reportSchema } = await import("@/lib/install-report");
+    const r = reportSchema.parse({ packVersion: "x", installerVersion: "2.0.0", mode: "play", outcome: "ok", durationSec: 1, log: "", system: null });
+    expect(r.extras).toBeNull();
+    expect(reportSchema.parse({ packVersion: "x", installerVersion: "2.0.1", mode: "play", outcome: "ok", durationSec: 1, log: "", system: null, extras: block() }).extras?.on).toContain("iris");
+  });
+});

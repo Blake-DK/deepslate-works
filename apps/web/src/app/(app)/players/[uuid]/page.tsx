@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { getExtraNames } from "@/server/modpack/lock";
+import { extrasLine, extrasReportSchema } from "@/lib/extras-line";
+import { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOnboardedUser } from "@/server/auth/session";
@@ -71,6 +74,9 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   ]);
   // Admins only: what the installer last reported from this member's PC (docs/07 "Install reports").
   const install = admin && member ? await db.installReport.findFirst({ where: { userId: member.id }, orderBy: { at: "desc" }, select: { id: true, at: true, outcome: true, failedStep: true, packVersion: true, system: true } }) : null;
+  // 2.0.1: their Extras tab, from the latest report that says
+  const extrasRun = admin && member ? await db.installReport.findFirst({ where: { userId: member.id, extras: { not: Prisma.DbNull } }, orderBy: { at: "desc" }, select: { extras: true } }) : null;
+  const extrasText = extrasRun ? extrasLine(extrasReportSchema.safeParse(extrasRun.extras).data ?? null, await getExtraNames()) : null;
   const pc = install ? summary(install.system as SystemInfo) : null;
   const guess = install ? suggestTier(install.system as SystemInfo) : null;
   const countries = [...new Set(sessions.map((s) => s.country).filter((c): c is string => Boolean(c)))];
@@ -190,6 +196,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
           <CardContent className="space-y-2 text-sm">
             {!install || !pc ? <p className="text-muted-foreground">No install report from them yet.</p> : (
               <>
+                {extrasText && <p data-testid="player-extras">{extrasText}</p>}
                 <p><Link href={`/admin/installs/${install.id}`} className="underline">{install.outcome === "ok" ? `Installed ${install.packVersion}` : install.outcome === "cancelled" ? "Stopped the installer" : "The installer failed"}{install.failedStep ? ` at "${install.failedStep}"` : ""}</Link> <span className="text-muted-foreground">{timeAgo(install.at, now)}</span></p>
                 <p className="text-muted-foreground">{pc.os} · {pc.cpu} · {pc.ram} · {pc.gpu}</p>
                 {guess ? <p>Tier, measured: <strong>{TIER[guess.tier]}</strong> <span className="text-muted-foreground">({guess.why})</span></p> : <p className="text-muted-foreground">Not enough in the report to work out the tier.</p>}

@@ -19,6 +19,8 @@ export const extraSchema = z.object({
   // a shader pack is one of the choices under Iris ("light" or "full"), not a switch of its own
   shader: z.enum(["light", "full"]).optional(),
   requires: z.array(z.string()).default([]), // other extras that switch on with it (shaders: iris)
+  // the mod ids the game loads for it, which the app looks for in the game's latest.log ("Confirmed in game")
+  modIds: z.array(z.string().regex(/^[a-z0-9_.-]+$/)).default([]),
   projects: z.array(z.object({ slug: z.string().regex(/^[a-z0-9][a-z0-9._-]*$/), version: z.string().default("latest") })).min(1),
 });
 export const extrasSchema = z.object({ extras: z.array(extraSchema).min(1) });
@@ -87,7 +89,7 @@ export async function buildExtrasLock(
         if (ref) queue.push({ ref, version: "latest", by: project.slug });
       }
     }
-    out.push({ id: x.id, name: x.name, description: x.description, fps: x.fps, shader: x.shader, requires: x.requires, files, size: files.reduce((n, f) => n + f.size, 0), picture: icon && opts.picture ? await opts.picture(icon).catch(() => null) : null });
+    out.push({ id: x.id, name: x.name, description: x.description, fps: x.fps, shader: x.shader, requires: x.requires, modIds: x.modIds, files, size: files.reduce((n, f) => n + f.size, 0), picture: icon && opts.picture ? await opts.picture(icon).catch(() => null) : null });
   }
   const { createHash } = await import("node:crypto");
   const hash = createHash("sha256").update(out.flatMap((x) => [x.id, ...x.files.map((f) => `${f.slug}@${f.versionId}`)]).join("\n")).digest("hex");
@@ -100,7 +102,7 @@ export function extrasForApp(lock: ExtrasLock) {
     hash: lock.hash,
     size: lock.extras.reduce((n, x) => n + x.size, 0),
     extras: lock.extras.map((x) => ({
-      id: x.id, name: x.name, description: x.description, fps: x.fps, shader: x.shader ?? null, requires: x.requires, size: x.size, picture: x.picture,
+      id: x.id, name: x.name, description: x.description, fps: x.fps, shader: x.shader ?? null, requires: x.requires, modIds: x.modIds ?? [], size: x.size, picture: x.picture,
       files: x.files.map((f) => ({ slug: f.slug, kind: f.kind, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size })),
     })),
   };

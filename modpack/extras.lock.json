@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-01T11:27:40.107Z",
+  "generatedAt": "2026-10-01T15:26:26.962Z",
   "minecraft": "1.21.1",
   "hash": "20346a635111d3a639b093bc9ecc4bdc86c57b6629347e4ad8959d4218bdbf05",
   "extras": [
@@ -9,6 +9,9 @@
       "description": "Shader support: real shadows, light and water. Pick a shader pack below.",
       "fps": "High",
       "requires": [],
+      "modIds": [
+        "iris"
+      ],
       "files": [
         {
           "slug": "iris",
@@ -35,6 +38,7 @@
       "requires": [
         "iris"
       ],
+      "modIds": [],
       "files": [
         {
           "slug": "makeup-ultra-fast-shaders",
@@ -61,6 +65,7 @@
       "requires": [
         "iris"
       ],
+      "modIds": [],
       "files": [
         {
           "slug": "complementary-reimagined",
@@ -84,6 +89,9 @@
       "description": "Proper third-person animations: eating, climbing ladders, holding maps.",
       "fps": "Low",
       "requires": [],
+      "modIds": [
+        "notenoughanimations"
+      ],
       "files": [
         {
           "slug": "not-enough-animations",
@@ -107,6 +115,9 @@
       "description": "The outer layer of player skins drawn in 3D instead of flat.",
       "fps": "Low",
       "requires": [],
+      "modIds": [
+        "skinlayers3d"
+      ],
       "files": [
         {
           "slug": "3dskinlayers",
@@ -130,6 +141,9 @@
       "description": "Leaves drift down from trees.",
       "fps": "Low",
       "requires": [],
+      "modIds": [
+        "fallingleaves"
+      ],
       "files": [
         {
           "slug": "fallingleavesforge",
@@ -153,6 +167,9 @@
       "description": "Rain and snow as particles, with splashes, mist and fog.",
       "fps": "Medium",
       "requires": [],
+      "modIds": [
+        "particlerain"
+      ],
       "files": [
         {
           "slug": "particle-rain",
@@ -176,6 +193,9 @@
       "description": "Echo in caves, muffled sound through walls, voice chat too.",
       "fps": "Medium",
       "requires": [],
+      "modIds": [
+        "sound_physics_remastered"
+      ],
       "files": [
         {
           "slug": "sound-physics-remastered",
@@ -199,6 +219,10 @@
       "description": "Mobs blink, breathe and move naturally. Brings EMF and ETF with it.",
       "fps": "Medium",
       "requires": [],
+      "modIds": [
+        "entity_model_features",
+        "entity_texture_features"
+      ],
       "files": [
         {
           "slug": "fresh-animations",

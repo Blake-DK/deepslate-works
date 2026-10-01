@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { extrasReportSchema } from "./extras-line";
 import { reportedVersion } from "./installer-version";
 
 // docs/07 "Install reports". The installer redacts before it sends; everything is redacted again here
@@ -65,6 +66,8 @@ export const reportSchema = z
     setupProblems: z.array(setupProblemSchema).max(10).nullish().transform((v) => v ?? null), // since 1.5.6
     // 2.0.0: install reports declined in the app; this is only "pressed Play, pack version" for Play first, no log
     minimal: z.boolean().nullish().transform((v) => v ?? false),
+    // 2.0.1: the Extras tab's state on this PC (lib/extras-line.ts)
+    extras: extrasReportSchema.nullish().transform((v) => v ?? null),
   })
   .strip();
 export type Report = z.infer<typeof reportSchema>;

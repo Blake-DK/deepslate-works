@@ -31,7 +31,8 @@ param(
   [switch]$Console,         # the steps in this console, every permission taken as given (tests; a PC where WPF fails)
   [switch]$AllowAll,        # tests: every permission taken as given
   [string]$Screenshots = "", # draw the window's main states into PNG files in this folder, then exit
-  [switch]$NoLaunch         # the engine: do not open the Minecraft Launcher at the end (the Extras tab's download)
+  [switch]$NoLaunch,        # the engine: do not open the Minecraft Launcher at the end (the Extras tab's download)
+  [switch]$VerifyExtras     # 2.0.1: print the Extras tab's checks; exit code 1 when one fails
 )
 
 # ---- started from a link on a web page ------------------------------------------------------------------
@@ -49,14 +50,14 @@ if ($FromLink) {
     exit 1
   }
   $Setup = $false; $DryRun = $false; $SelfTest = $false; $Root = ""; $PretendRunning = @(); $Uninstall = $false; $Yes = $false; $Play = $false; $NoPrompt = $false
-  $Engine = $false; $StatusFile = ""; $Console = $false; $AllowAll = $false; $Screenshots = ""; $NoLaunch = $false
+  $Engine = $false; $StatusFile = ""; $Console = $false; $AllowAll = $false; $Screenshots = ""; $NoLaunch = $false; $VerifyExtras = $false
 }
 # ---- config block (stamped by `modpack build installer`) ----
 $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "2.0.0"   # 2.0.0: the Deepslate Works app: a window, permission per step, the Extras tab. History in docs/07
+$InstallerVersion = "2.0.1"   # 2.0.1: Allow all on every question; extras logged, checked, confirmed in game, Apply -> restart. History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -273,6 +274,15 @@ function Redact-Tree($v) {
   return $v
 }
 
+# 2.0.1: the Extras tab's state for the report (planner D); $null when this PC has no extras or it cannot be read.
+function Get-ReportExtras {
+  try {
+    if (-not $AppHome -or -not $DataDir) { return $null }
+    $m = Read-JsonFile (Join-Path $AppHome $ExtrasManifestName)
+    if (-not $m) { return $null }
+    return (Get-ExtrasReport (Get-ExtrasPaths $DataDir) $m (Read-ExtrasState (Join-Path $AppHome $ExtrasStateName)))
+  } catch { Log ("extras: not in the report: " + $_.Exception.Message); return $null }
+}
 function New-Report([string]$outcome) {
   $failed = $null
   if ($outcome -ne "ok" -and $script:StepName) { $failed = $script:StepName }
@@ -284,6 +294,7 @@ function New-Report([string]$outcome) {
     updatedFrom      = $script:UpdatedFrom
     updateProblem    = $problem
     setupProblems    = $(if ($script:SetupChecked) { ,@($script:SetupProblems.ToArray()) } else { $null })
+    extras           = (Get-ReportExtras)
     mode             = $Mode
     outcome          = $outcome
     failedStep       = $failed
@@ -321,7 +332,7 @@ function Send-Report([string]$outcome) {
   try {
     $rep = New-Report $outcome
     # Reports declined in the app (2.0.0): only "pressed Play, pack version" goes, for Play first. No log, no PC details.
-    if ($script:ReportsOff) { $rep = [ordered]@{ packVersion = $rep.packVersion; installerVersion = $rep.installerVersion; mode = $rep.mode; outcome = $rep.outcome; durationSec = $rep.durationSec; log = ""; system = $null; minimal = $true } }
+    if ($script:ReportsOff) { $rep = [ordered]@{ packVersion = $rep.packVersion; installerVersion = $rep.installerVersion; mode = $rep.mode; outcome = $rep.outcome; durationSec = $rep.durationSec; log = ""; system = $null; minimal = $true; extras = $rep.extras } }
     $json = $rep | ConvertTo-Json -Depth 8 -Compress
     $answer = Invoke-RestMethod -Uri "$PortalUrl/api/installer/report" -Method Post -Headers @{ Authorization = "Bearer $($script:Token)" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($json)) -UseBasicParsing -TimeoutSec 20
     Write-Host "   Sent." -ForegroundColor Gray
@@ -1103,7 +1114,10 @@ function Get-ConsentSteps {
     [ordered]@{ id = "profile"; title = "Launcher profile and server list"; text = "Adds a 'Deepslate Works' profile and the server address."; required = $true; top = 1 },
     [ordered]@{ id = "shortcuts"; title = "Shortcuts and Play button"; text = "Adds a desktop icon and lets the website's Play button open this app."; required = $false; top = 1 },
     [ordered]@{ id = "reports"; title = "Send install reports"; text = "Sends a log of what happened to the site so Alex can fix problems. Your username and file paths are removed. If you say Not now, only 'pressed Play' and the pack version are sent: the server needs that to let you in."; required = $false; top = 1 },
-    [ordered]@{ id = "extras"; title = "Optional visual extras"; text = "Download the optional visual extras? About {0} MB, nothing is switched on. You choose them in the Extras tab."; required = $false; top = 1 }
+    [ordered]@{ id = "extras"; title = "Optional visual extras"; text = "Download the optional visual extras? About {0} MB, nothing is switched on. You choose them in the Extras tab."; required = $false; top = 1 },
+    # 2.0.1: asked where they happen (the Extras tab), not on the first run; listed in Review permissions
+    [ordered]@{ id = "restart"; title = "Restart the game to apply extras"; text = "When you press Apply while Minecraft is running: close it (like its own X button), install your extras and start it again, without asking first."; required = $false; top = 1; firstRun = $false },
+    [ordered]@{ id = "launch"; title = "Start the game after Apply"; text = "When you press Apply with Minecraft closed: open the Minecraft Launcher on Deepslate Works afterwards, without asking first."; required = $false; top = 1; firstRun = $false }
   )
 }
 function Get-ConsentStep([string]$id) { return @(Get-ConsentSteps | Where-Object { $_.id -eq $id })[0] }
@@ -1150,7 +1164,11 @@ function Get-ConsentDecision($c, [string]$id, [int]$level = 1) {
   return "allow"
 }
 # The steps with no answer yet: all of them on the first run, a new step after an update.
-function Get-UnansweredSteps($c) { return @(Get-ConsentSteps | Where-Object { -not $c.ContainsKey($_.id) }) }
+function Get-UnansweredSteps($c) { return @(Get-ConsentSteps | Where-Object { $_.firstRun -ne $false -and -not $c.ContainsKey($_.id) }) }
+# Allow all (2.0.1): every step shown in that question is answered Allow. $answers: id -> "allow" | "decline".
+function Approve-AllSteps($answers, $steps) { foreach ($s in @($steps)) { $answers[[string]$s.id] = "allow" } }
+# Reset all (Review permissions): every answer forgotten, so everything is asked again.
+function Reset-AllConsent([string]$path) { if ([IO.File]::Exists($path)) { [IO.File]::Delete($path) } }
 # After a run: what was really done becomes the level the answer covers ("bigger than before" is measured against it).
 function Set-ConsentUsed($c, [string]$id, [int]$level) {
   if ($c.ContainsKey($id) -and $c[$id].answer -eq "allow") { $c[$id].level = $level }
@@ -1184,18 +1202,40 @@ function Request-Consent([string]$id, [int]$level = 1) {
 }
 
 # ---- extras -------------------------------------------------------------------------------------------------
+# 2.0.1 (planner): every action logged (Log tab + %LOCALAPPDATA%\DeepslateWorks\logs\extras-<date>.log), checked
+# after every install, confirmed from the game's own latest.log, and shown per extra as one status in words. Changes
+# are installed only while the game is closed (Windows locks the jars of a running game): "Later" queues them.
+
 function Get-ExtrasPaths([string]$gameDir) {
   return @{
     extras = (Join-Path $gameDir "extras"); pictures = (Join-Path (Join-Path $gameDir "extras") "pictures")
     mods = (Join-Path $gameDir "mods"); resourcepacks = (Join-Path $gameDir "resourcepacks"); shaderpacks = (Join-Path $gameDir "shaderpacks")
     options = (Join-Path $gameDir "options.txt"); iris = (Join-Path (Join-Path $gameDir "config") "iris.properties")
-    staging = (Join-Path $gameDir ".downloading")
+    staging = (Join-Path $gameDir ".downloading"); latestLog = (Join-Path (Join-Path $gameDir "logs") "latest.log")
   }
 }
 $ExtraFolders = @{ mod = "mods"; resourcepack = "resourcepacks"; shader = "shaderpacks" }
 function Get-ExtraFolder([string]$kind) { $f = $ExtraFolders[$kind]; if (-not $f) { $f = "mods" }; return $f }
 
-function New-ExtrasState { return @{ choices = @{}; shader = "none"; applied = @{ mods = @(); resourcepacks = @(); shaderpacks = @() }; seen = @(); downloaded = $false } }
+# Extras log: one line per thing done, with the time; errors also marked in the Log tab (red there).
+$script:XLogLines = New-Object System.Collections.Generic.List[string]
+function XLog([string]$msg, [switch]$Err) {
+  $line = "[{0}] {1}{2}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $(if ($Err) { "ERROR " } else { "" }), $msg
+  $script:XLogLines.Add($line)
+  Log ("extras: " + $(if ($Err) { "ERROR " } else { "" }) + $msg)
+  try {
+    $home2 = $(if ($AppHome) { $AppHome } elseif (Get-HomeDir) { Get-HomeDir } else { $null })
+    if ($home2) {
+      $dir = Join-Path $home2 "logs"
+      [void][IO.Directory]::CreateDirectory($dir)
+      [IO.File]::AppendAllText((Join-Path $dir ("extras-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))), $line + "`r`n", (New-Object Text.UTF8Encoding($false)))
+    }
+  } catch {}
+}
+
+# A time read back from JSON: PowerShell 7 turns ISO text into a DateTime by itself, 5.1 does not. Always ISO text.
+function ConvertTo-IsoText($v) { if ($v -is [datetime]) { return $v.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") } elseif ($v) { return [string]$v } else { return $null } }
+function New-ExtrasState { return @{ choices = @{}; shader = "none"; applied = @{ mods = @(); resourcepacks = @(); shaderpacks = @() }; seen = @(); downloaded = $false; queued = $null; lastApply = $null; installedAt = $null } }
 function Read-ExtrasState([string]$path) {
   $s = New-ExtrasState
   $j = Read-JsonFile $path
@@ -1205,10 +1245,25 @@ function Read-ExtrasState([string]$path) {
   if ($j.PSObject.Properties["applied"] -and $j.applied) { foreach ($k in @("mods", "resourcepacks", "shaderpacks")) { if ($j.applied.PSObject.Properties[$k]) { $s.applied[$k] = @($j.applied.$k | Where-Object { $_ } | ForEach-Object { [string]$_ }) } } }
   if ($j.PSObject.Properties["seen"]) { $s.seen = @($j.seen | ForEach-Object { [string]$_ }) }
   if ($j.PSObject.Properties["downloaded"]) { $s.downloaded = [bool]$j.downloaded }
+  if ($j.PSObject.Properties["queued"] -and $j.queued) {
+    $q = @{ choices = @{}; shader = "none"; at = (ConvertTo-IsoText $j.queued.at) }
+    if ($j.queued.choices) { foreach ($p in $j.queued.choices.PSObject.Properties) { $q.choices[$p.Name] = [bool]$p.Value } }
+    if (@("none", "light", "full") -contains [string]$j.queued.shader) { $q.shader = [string]$j.queued.shader }
+    $s.queued = $q
+  }
+  if ($j.PSObject.Properties["lastApply"] -and $j.lastApply) { $s.lastApply = @{ at = (ConvertTo-IsoText $j.lastApply.at); ok = [bool]$j.lastApply.ok; error = [string]$j.lastApply.error; summary = [string]$j.lastApply.summary } }
+  if ($j.PSObject.Properties["installedAt"] -and $j.installedAt) { $s.installedAt = ConvertTo-IsoText $j.installedAt }
   return $s
 }
 function Save-ExtrasState([string]$path, $s) {
-  Write-JsonFile $path ([ordered]@{ version = 1; choices = $s.choices; shader = $s.shader; applied = $s.applied; seen = @($s.seen); downloaded = [bool]$s.downloaded })
+  Write-JsonFile $path ([ordered]@{ version = 2; choices = $s.choices; shader = $s.shader; applied = $s.applied; seen = @($s.seen); downloaded = [bool]$s.downloaded; queued = $s.queued; lastApply = $s.lastApply; installedAt = $s.installedAt })
+}
+function Get-NowIso { return (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") }
+
+# The choices that count now: the queued ones (chosen with Later), else the saved ones.
+function Get-ChosenState($state) {
+  if (-not $state.queued) { return $state }
+  return @{ choices = $state.queued.choices; shader = $state.queued.shader; applied = $state.applied }
 }
 
 # Which extras are on: a switch that is on, the shader pack for the Shaders choice (only with Iris on), and whatever
@@ -1224,13 +1279,14 @@ function Get-ExtrasOn($manifest, $state) {
 }
 # The files that should be in mods\, resourcepacks\, shaderpacks\ for what is on, and the shader pack's file.
 function Get-ExtrasWanted($manifest, $state) {
-  $w = @{ mods = @(); resourcepacks = @(); shaderpacks = @(); shaderFile = ""; known = @{ mods = @(); resourcepacks = @(); shaderpacks = @() }; sha = @{} }
+  $w = @{ mods = @(); resourcepacks = @(); shaderpacks = @(); shaderFile = ""; known = @{ mods = @(); resourcepacks = @(); shaderpacks = @() }; sha = @{}; owner = @{} }
   $on = Get-ExtrasOn $manifest $state
   foreach ($x in @($manifest.extras)) {
     foreach ($f in @($x.files)) {
       $folder = Get-ExtraFolder ([string]$f.kind)
       $w.known[$folder] += [string]$f.filename
       $w.sha[[string]$f.filename] = [string]$f.sha512
+      $w.owner[[string]$f.filename] = $x
       if ($on -contains [string]$x.id) {
         $w[$folder] += [string]$f.filename
         if ([string]$f.kind -eq "shader") { $w.shaderFile = [string]$f.filename }
@@ -1247,10 +1303,26 @@ function Move-ExtraFile([string]$from, [string]$to) {
   if ([IO.File]::Exists($to)) { [IO.File]::Delete($to) }
   [IO.File]::Move($from, $to)
 }
+function Get-ExtraName($x) { if ($x -and $x.name) { return ([string]$x.name -replace '\s*\(shaders\)$', '') } elseif ($x) { return [string]$x.id } else { return "an extra" } }
+# A plain-English reason for what went wrong.
+function Get-PlainReason([string]$message) {
+  if ($message -match 'being used by another process|used by another|locked|sharing violation|in use') { return "file in use" }
+  if ($message -match 'not downloaded') { return "not downloaded yet" }
+  if ($message -match 'damaged|hash') { return "the file is damaged" }
+  if ($message -match 'did not arrive|still in') { return "the file could not be moved" }
+  if ($message -match 'denied') { return "Windows refused access to the file" }
+  return $message
+}
+function Format-Switches($manifest, $state) {
+  $on = Get-ExtrasOn $manifest $state
+  $parts = @(@($manifest.extras | Where-Object { -not $_.shader }) | ForEach-Object { "{0}={1}" -f $_.id, $(if ($on -contains [string]$_.id) { "on" } else { "off" }) })
+  return (($parts -join ", ") + ", shaders=" + $(if ($state.choices["iris"]) { $state.shader } else { "none" }))
+}
 
-# Apply: moves the chosen extras' files from extras\ into the game's folders and the others back, sets options.txt
+# Install: moves the chosen extras' files from extras\ into the game's folders and the others back, sets options.txt
 # (Fresh Animations) and Iris's shader, then checks every file. Any error, or a check that fails: everything is put
-# back as it was, files and settings, and the answer says why. $io.move can be replaced (the self test makes it fail).
+# back as it was, files and settings, and the answer says why in plain English. $io.move can be replaced (self test).
+# $state.choices / $state.shader are what is wanted; $state.applied is what is in place now.
 function Invoke-ExtrasApply($paths, $manifest, $state, $io = $null) {
   $move = { param($a, $b) Move-ExtraFile $a $b }
   if ($io -and $io.move) { $move = $io.move }
@@ -1258,70 +1330,115 @@ function Invoke-ExtrasApply($paths, $manifest, $state, $io = $null) {
   $journal = New-Object System.Collections.Generic.List[object]
   $before = @{}
   foreach ($k in @("options", "iris")) { $before[$k] = $(if ([IO.File]::Exists($paths[$k])) { [IO.File]::ReadAllText($paths[$k]) } else { $null }) }
+  $wasOn = @(); foreach ($k in @("mods", "resourcepacks", "shaderpacks")) { foreach ($f in @($state.applied[$k])) { if ($want.owner[$f]) { $wasOn += [string]$want.owner[$f].id } } }
+  $wasOn = @($wasOn | Select-Object -Unique)
+  $nowOn = Get-ExtrasOn $manifest $state
+  XLog ("apply: before: " + (($wasOn | Sort-Object) -join ", ") + $(if ($wasOn.Count -eq 0) { "(nothing on)" } else { "" }))
+  XLog ("apply: after:  " + (Format-Switches $manifest $state))
+  $current = $null   # the extra being moved, for the plain-English summary
   try {
     [void][IO.Directory]::CreateDirectory($paths.extras)
     foreach ($folder in @("mods", "resourcepacks", "shaderpacks")) {
       $dir = $paths[$folder]
       [void][IO.Directory]::CreateDirectory($dir)
-      # what was put there before (or what the manifest knows about and is lying there) and is no longer wanted: back
+      # what was put there before (or what the list knows about and is lying there) and is no longer wanted: back
       $was = @(@($state.applied[$folder]) + @($want.known[$folder] | Where-Object { [IO.File]::Exists((Join-Path $dir $_)) }) | Where-Object { $_ } | Select-Object -Unique)
       foreach ($f in $was) {
         if ($want[$folder] -contains $f -or ([string]$f) -match '[\\/]') { continue }
         $at = Join-Path $dir $f
         if (-not [IO.File]::Exists($at)) { continue }
+        $current = @{ x = $want.owner[$f]; on = $false }
         $back = Join-Path $paths.extras $f
         & $move $at $back
         $journal.Add(@($at, $back))
+        XLog ("apply: moved {0} -> {1}" -f $at, $back)
       }
       foreach ($f in @($want[$folder])) {
+        $current = @{ x = $want.owner[$f]; on = $true }
         $at = Join-Path $dir $f
         $from = Join-Path $paths.extras $f
         if ([IO.File]::Exists($at) -and -not [IO.File]::Exists($from)) { continue }   # already in place
-        if (-not [IO.File]::Exists($from)) { throw ("{0} is not downloaded yet. Press Play once to fetch the extras." -f $f) }
+        if (-not [IO.File]::Exists($from)) { throw ("{0} is not downloaded yet" -f $f) }
         & $move $from $at
         $journal.Add(@($from, $at))
+        XLog ("apply: moved {0} -> {1}" -f $from, $at)
       }
     }
+    $current = $null
     $r = Set-ResourcePackList $paths.options @($want.resourcepacks) @($want.known.resourcepacks)
-    Log ("extras: " + $r.text)
-    if ($state.choices["iris"]) { Set-IrisShader $paths.iris $want.shaderFile }
+    $rpLine = $(if ([IO.File]::Exists($paths.options)) { [regex]::Match([IO.File]::ReadAllText($paths.options), '(?m)^resourcePacks:.*?(?=\r?$)').Value } else { "" })
+    XLog ("apply: options.txt " + $(if ($r.status -eq "changed") { "written: " + $rpLine } else { "unchanged (" + $r.text + ")" }))
+    if ($state.choices["iris"]) {
+      Set-IrisShader $paths.iris $want.shaderFile
+      XLog ("apply: iris.properties written: enableShaders={0}{1}" -f $(if ($want.shaderFile) { "true" } else { "false" }), $(if ($want.shaderFile) { ", shaderPack=" + $want.shaderFile } else { "" }))
+    }
     # the check: what should be there is there and whole; what should not be is not
     foreach ($folder in @("mods", "resourcepacks", "shaderpacks")) {
       foreach ($f in @($want[$folder])) {
+        $current = @{ x = $want.owner[$f]; on = $true }
         $at = Join-Path $paths[$folder] $f
         if (-not [IO.File]::Exists($at)) { throw ("{0} did not arrive in {1}" -f $f, $folder) }
         if ($want.sha[$f] -and (Get-Sha512 $at) -ne $want.sha[$f]) { throw ("{0} is damaged" -f $f) }
       }
-      foreach ($f in @($want.known[$folder])) { if ($want[$folder] -notcontains $f -and [IO.File]::Exists((Join-Path $paths[$folder] $f))) { throw ("{0} is still in {1}" -f $f, $folder) } }
+      foreach ($f in @($want.known[$folder])) { if ($want[$folder] -notcontains $f -and [IO.File]::Exists((Join-Path $paths[$folder] $f))) { $current = @{ x = $want.owner[$f]; on = $false }; throw ("{0} is still in {1}" -f $f, $folder) } }
     }
     $state.applied = @{ mods = @($want.mods); resourcepacks = @($want.resourcepacks); shaderpacks = @($want.shaderpacks) }
-    Log ("extras applied: " + ((Get-ExtrasOn $manifest $state) -join ", "))
-    return @{ ok = $true; moved = $journal.Count; error = $null }
+    $state.installedAt = Get-NowIso
+    $state.lastApply = @{ at = $state.installedAt; ok = $true; error = ""; summary = "" }
+    XLog ("apply: result OK, {0} file(s) moved; on: {1}" -f $journal.Count, $(if ($nowOn.Count) { ($nowOn -join ", ") } else { "nothing" }))
+    return @{ ok = $true; moved = $journal.Count; error = $null; summary = "" }
   } catch {
     $why = $_.Exception.Message
-    Log ("extras: apply failed, putting everything back: " + $why)
+    $plain = Get-PlainReason $why
+    $summary = $(if ($current -and $current.x) { "Couldn't switch {0} {1}: {2}. Nothing was changed." -f $(if ($current.on) { "on" } else { "off" }), (Get-ExtraName $current.x), $plain } else { "Couldn't apply your extras: {0}. Nothing was changed." -f $plain })
+    XLog ("apply: FAILED: " + $why) -Err
+    XLog ("rollback: putting everything back because: " + $plain) -Err
     for ($i = $journal.Count - 1; $i -ge 0; $i--) {
       $m = $journal[$i]
-      try { if ([IO.File]::Exists($m[1])) { Move-ExtraFile $m[1] $m[0] } } catch { Log ("extras: could not put back " + $m[1] + ": " + $_.Exception.Message) }
+      try { if ([IO.File]::Exists($m[1])) { Move-ExtraFile $m[1] $m[0]; XLog ("rollback: moved {0} -> {1}" -f $m[1], $m[0]) } } catch { XLog ("rollback: could not put back " + $m[1] + ": " + $_.Exception.Message) -Err }
     }
     foreach ($k in @("options", "iris")) {
       try {
-        if ($null -eq $before[$k]) { if ([IO.File]::Exists($paths[$k])) { [IO.File]::Delete($paths[$k]) } }
-        else { [IO.File]::WriteAllText($paths[$k], $before[$k], (New-Object Text.UTF8Encoding($false))) }
-      } catch { Log ("extras: could not put back " + $paths[$k] + ": " + $_.Exception.Message) }
+        $now = $(if ([IO.File]::Exists($paths[$k])) { [IO.File]::ReadAllText($paths[$k]) } else { $null })
+        if ($now -ne $before[$k]) {
+          if ($null -eq $before[$k]) { [IO.File]::Delete($paths[$k]) } else { [IO.File]::WriteAllText($paths[$k], $before[$k], (New-Object Text.UTF8Encoding($false))) }
+          XLog ("rollback: {0} put back as it was" -f [IO.Path]::GetFileName($paths[$k]))
+        }
+      } catch { XLog ("rollback: could not put back " + $paths[$k] + ": " + $_.Exception.Message) -Err }
     }
-    return @{ ok = $false; moved = 0; error = $why }
+    XLog ("rollback: done, {0} move(s) undone; the previous set is in place" -f $journal.Count)
+    $state.lastApply = @{ at = (Get-NowIso); ok = $false; error = $plain; summary = $summary }
+    return @{ ok = $false; moved = 0; error = $why; summary = $summary }
   }
 }
 
-# The engine, on every Play once extras are allowed: every extra's files in extras\ (or already in place), checked;
-# files of extras that are on and changed version are swapped by applying again; leftovers of old versions removed.
+# Installs what was queued with Later (the game is closed now): the queue becomes the choice, then Apply.
+function Invoke-QueuedInstall($paths, $manifest, $state, $io = $null) {
+  if (-not $state.queued) { return $null }
+  $q = $state.queued
+  XLog ("queued install: queued at {0}, the game is closed, installing now" -f $q.at)
+  $prevChoices = $state.choices; $prevShader = $state.shader
+  $state.choices = $q.choices; $state.shader = $q.shader
+  $r = Invoke-ExtrasApply $paths $manifest $state $io
+  if ($r.ok) { $state.queued = $null; XLog ("queued install: installed at " + $state.installedAt) }
+  else { $state.choices = $prevChoices; $state.shader = $prevShader; $state.queued = $null; XLog "queued install: failed, the previous set stays; choose again in the Extras tab" -Err }
+  return $r
+}
+# Apply again while changes are queued: the new choice replaces the queue (planner H3).
+function Set-ExtrasQueue($state, $choices, [string]$shader) {
+  $replaced = [bool]$state.queued
+  $state.queued = @{ choices = $choices; shader = $shader; at = (Get-NowIso) }
+  return $replaced
+}
+
+# The engine, on every Play once extras are allowed: every extra's files in extras\ (or already in place), checked
+# and logged; what was queued is installed; extras that are on and changed version are swapped; old files removed.
 function Sync-ExtrasFiles($paths, $manifest, $state, [scriptblock]$fetch) {
   [void][IO.Directory]::CreateDirectory($paths.extras)
   [void][IO.Directory]::CreateDirectory($paths.pictures)
+  [void][IO.Directory]::CreateDirectory($paths.staging)
   $got = 0
   $names = @{}
-  $placedChanged = $false
   foreach ($x in @($manifest.extras)) {
     if ($x.picture) { try { [IO.File]::WriteAllBytes((Join-Path $paths.pictures ("{0}.png" -f $x.id)), [Convert]::FromBase64String([string]$x.picture)) } catch {} }
     foreach ($f in @($x.files)) {
@@ -1333,28 +1450,222 @@ function Sync-ExtrasFiles($paths, $manifest, $state, [scriptblock]$fetch) {
       if ($state.applied[$folder] -contains $name -and [IO.File]::Exists($placed) -and (Get-Sha512 $placed) -eq [string]$f.sha512) { continue }
       $at = Join-Path $paths.extras $name
       if ([IO.File]::Exists($at) -and (Get-Sha512 $at) -eq [string]$f.sha512) { continue }
-      $r = Save-ModFile ([string]$f.url) $at ([string]$f.sha512) $paths.staging $fetch
-      if ($r -eq "wrong") { throw ("{0} downloaded wrong" -f $name) }
-      if ($r -eq "in use") { throw ("{0} is in use" -f $name) }
+      $part = Join-Path $paths.staging ($name + ".part")
+      Remove-Temp $part
+      & $fetch ([string]$f.url) $part
+      $gotSha = $(if ([IO.File]::Exists($part)) { Get-Sha512 $part } else { "(nothing)" })
+      $size = $(if ([IO.File]::Exists($part)) { (Get-Item -LiteralPath $part).Length } else { 0 })
+      $ok = ($gotSha -eq [string]$f.sha512)
+      XLog ("download: {0} ({1}), {2} bytes, sha512 expected {3}... got {4}... {5}" -f $name, (Get-ExtraName $x), $size, ([string]$f.sha512).Substring(0, [Math]::Min(16, ([string]$f.sha512).Length)), $gotSha.Substring(0, [Math]::Min(16, $gotSha.Length)), $(if ($ok) { "OK" } else { "FAILED" })) -Err:(-not $ok)
+      if (-not $ok) { Remove-Temp $part; throw ("{0} downloaded wrong" -f $name) }
+      Move-ExtraFile $part $at
       $got++
     }
   }
-  # an extra that is on, whose file is a new version now: apply again (the old file goes back to extras\, then away)
-  foreach ($folder in @("mods", "resourcepacks", "shaderpacks")) { foreach ($f in @($state.applied[$folder])) { if (-not $names[$f]) { $placedChanged = $true } } }
-  $want = Get-ExtrasWanted $manifest $state
-  foreach ($folder in @("mods", "resourcepacks", "shaderpacks")) { foreach ($f in @($want[$folder])) { if ($state.applied[$folder] -notcontains $f) { $placedChanged = $true } } }
   $applied = $null
-  if ($placedChanged) { $applied = Invoke-ExtrasApply $paths $manifest $state }
-  # old versions in extras\ and in the game's folders (only names the extras once had)
+  if ($state.queued) { $applied = Invoke-QueuedInstall $paths $manifest $state }
+  else {
+    # an extra that is on, whose file is a new version now: install again (the old file goes back to extras\, then away)
+    $placedChanged = $false
+    foreach ($folder in @("mods", "resourcepacks", "shaderpacks")) { foreach ($f in @($state.applied[$folder])) { if (-not $names[$f]) { $placedChanged = $true } } }
+    $want = Get-ExtrasWanted $manifest $state
+    foreach ($folder in @("mods", "resourcepacks", "shaderpacks")) { foreach ($f in @($want[$folder])) { if ($state.applied[$folder] -notcontains $f) { $placedChanged = $true } } }
+    if ($placedChanged) { XLog "update: a new version of an extra that is on: installing it"; $applied = Invoke-ExtrasApply $paths $manifest $state }
+  }
   $removed = 0
   foreach ($f in @(Get-ChildItem -LiteralPath $paths.extras -File -Force)) {
-    if (-not $names[$f.Name] -and $f.Name -notlike "*.json") { try { [IO.File]::Delete($f.FullName); $removed++ } catch {} }
+    if (-not $names[$f.Name] -and $f.Name -notlike "*.json") { try { [IO.File]::Delete($f.FullName); $removed++; XLog ("removed an old file: " + $f.Name) } catch {} }
   }
   return @{ downloaded = $got; removed = $removed; applied = $applied }
 }
 
 # The jars of the extras that are on: the engine's mod sync leaves them in mods\.
 function Get-AppliedExtraJars($state) { return @($state.applied.mods | Where-Object { $_ }) }
+
+# ---- checks (planner C): files, settings, dependencies, and the game's own log --------------------------------
+# One check: @{ group = "Files" | "Settings" | "Dependencies" | "In game"; id = <extra id or "">; ok = $true/$false/$null (waiting); text }
+function Test-Extras($paths, $manifest, $state) {
+  $checks = New-Object System.Collections.Generic.List[object]
+  $want = Get-ExtrasWanted $manifest $state
+  $on = Get-ExtrasOn $manifest $state
+  foreach ($x in @($manifest.extras)) {
+    $isOn = $on -contains [string]$x.id
+    foreach ($f in @($x.files)) {
+      $folder = Get-ExtraFolder ([string]$f.kind)
+      $at = Join-Path $paths[$folder] ([string]$f.filename)
+      if ($isOn) {
+        if (-not [IO.File]::Exists($at)) { $checks.Add(@{ group = "Files"; id = [string]$x.id; ok = $false; text = ("{0}: {1} is missing from {2}" -f (Get-ExtraName $x), $f.filename, $folder) }) }
+        elseif ((Get-Sha512 $at) -ne [string]$f.sha512) { $checks.Add(@{ group = "Files"; id = [string]$x.id; ok = $false; text = ("{0}: {1} in {2} is not the right file (checksum)" -f (Get-ExtraName $x), $f.filename, $folder) }) }
+        else { $checks.Add(@{ group = "Files"; id = [string]$x.id; ok = $true; text = ("{0}: {1} in {2}" -f (Get-ExtraName $x), $f.filename, $folder) }) }
+      } elseif ([IO.File]::Exists($at)) { $checks.Add(@{ group = "Files"; id = [string]$x.id; ok = $false; text = ("{0} is off but {1} is still in {2}" -f (Get-ExtraName $x), $f.filename, $folder) }) }
+    }
+  }
+  # settings: options.txt lists the enabled resource packs, in the list's order, and no others of ours
+  $text = $(if ([IO.File]::Exists($paths.options)) { [IO.File]::ReadAllText($paths.options) } else { "" })
+  $m = [regex]::Match($text, '(?m)^resourcePacks:(.*?)(?=\r?$)')
+  $list = @(); if ($m.Success) { try { $list = @((ConvertFrom-Json $m.Groups[1].Value) | ForEach-Object { [string]$_ }) } catch {} }
+  $ours = @($list | Where-Object { $want.known.resourcepacks -contains ($_ -replace '^file/', '') } | ForEach-Object { $_ -replace '^file/', '' })
+  $expected = @($want.resourcepacks)
+  if (($ours -join "|") -eq ($expected -join "|")) { $checks.Add(@{ group = "Settings"; id = ""; ok = $true; text = $(if ($expected.Count) { "options.txt switches on " + ($expected -join ", ") } else { "options.txt has none of the extras' resource packs" }) }) }
+  else { $checks.Add(@{ group = "Settings"; id = ""; ok = $false; text = ("options.txt lists [{0}], should be [{1}]" -f ($ours -join ", "), ($expected -join ", ")) }) }
+  if ($state.choices["iris"]) {
+    $it = $(if ([IO.File]::Exists($paths.iris)) { [IO.File]::ReadAllText($paths.iris) } else { "" })
+    $en = [regex]::Match($it, '(?m)^enableShaders\s*[=:]\s*(\S+)').Groups[1].Value
+    $pk = [regex]::Match($it, '(?m)^shaderPack\s*[=:]\s*(.+?)\s*$').Groups[1].Value
+    if ($want.shaderFile) { $good = ($en -eq "true" -and $pk -eq $want.shaderFile); $say = "Iris: shaders on, " + $want.shaderFile }
+    else { $good = ($en -eq "false"); $say = "Iris: shaders off" }
+    $checks.Add(@{ group = "Settings"; id = "iris"; ok = $good; text = $(if ($good) { $say } else { "{0} expected; iris.properties says enableShaders={1}, shaderPack={2}" -f $say, $en, $pk }) })
+  }
+  # dependencies
+  $fa = @($manifest.extras | Where-Object { $_.id -eq "fresh-animations" })[0]
+  if ($fa) {
+    $faOn = $on -contains "fresh-animations"
+    $jars = @(@($fa.files) | Where-Object { [string]$_.kind -eq "mod" } | ForEach-Object { [IO.File]::Exists((Join-Path $paths.mods ([string]$_.filename))) })
+    $all = (@($jars | Where-Object { $_ }).Count -eq $jars.Count); $none = (@($jars | Where-Object { $_ }).Count -eq 0)
+    $good = $(if ($faOn) { $all } else { $none })
+    $checks.Add(@{ group = "Dependencies"; id = "fresh-animations"; ok = $good; text = $(if ($faOn) { $(if ($good) { "EMF and ETF are there for Fresh Animations" } else { "Fresh Animations is on but EMF or ETF is missing" }) } else { $(if ($good) { "EMF and ETF are out with Fresh Animations" } else { "Fresh Animations is off but EMF or ETF is still there" }) }) })
+  }
+  $iris = @($manifest.extras | Where-Object { $_.id -eq "iris" })[0]
+  if ($iris) {
+    $irisThere = (@(@($iris.files) | Where-Object { [IO.File]::Exists((Join-Path $paths.mods ([string]$_.filename))) }).Count -gt 0)
+    $needs = ($state.choices["iris"] -and $state.shader -ne "none")
+    $good = $(if ($needs) { $irisThere } else { $true })
+    $checks.Add(@{ group = "Dependencies"; id = "iris"; ok = $good; text = $(if ($needs) { $(if ($good) { "Iris is there for the shaders" } else { "Shaders are chosen but Iris is missing" }) } else { "Shaders: none chosen" }) })
+  }
+  return @($checks.ToArray())
+}
+
+# The game's last session, from logs\latest.log: when it started, the mod files NeoForge found, the resource packs
+# the game switched on, and whether mod loading failed. $null when there is no log.
+function Read-GameSession([string]$file) {
+  if (-not [IO.File]::Exists($file)) { return $null }
+  $lines = @()
+  try {
+    $fs = [IO.File]::Open($file, "Open", "Read", "ReadWrite")
+    try { $sr = New-Object IO.StreamReader($fs); $lines = @($sr.ReadToEnd() -split "`r?`n") } finally { $fs.Dispose() }
+  } catch { return $null }
+  $s = @{ startedAt = $null; found = @{}; packs = @(); failed = $false; errors = @(); loaded = $false }
+  $first = @($lines | Where-Object { $_ })[0]
+  $m = [regex]::Match([string]$first, '^\[(\d{2}[A-Za-z]{3}\d{4} \d{2}:\d{2}:\d{2}(?:\.\d+)?)\]')
+  if ($m.Success) { try { $s.startedAt = [datetime]::ParseExact(($m.Groups[1].Value -replace '\.\d+$', ''), "ddMMMyyyy HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture).ToUniversalTime() } catch {} }
+  if (-not $s.startedAt) { try { $s.startedAt = (Get-Item -LiteralPath $file).CreationTimeUtc } catch {} }
+  foreach ($l in $lines) {
+    $f = [regex]::Match($l, 'Found mod file "([^"]+)"')
+    if ($f.Success) { $s.found[$f.Groups[1].Value] = $true; continue }
+    if ($l -match 'Reloading ResourceManager: (.*)$') { $s.packs = @($Matches[1] -split ',\s*'); $s.loaded = $true; continue }
+    if ($l -match 'Mod loading has failed|ModLoadingException|LoadingFailedException|Failed to load mod|requires .* but .* is (missing|not installed)|Mod .* (requires|is incompatible)') { $s.failed = $true; $s.errors += $l.Trim() }
+  }
+  return $s
+}
+
+# Per extra: "active" (the game loaded it in a session after the install), "waiting" (no game session since the
+# install), "problem" with a reason, "off" or "off-loaded" (switched off, but the last session still had it).
+function Test-ExtrasInGame($paths, $manifest, $state, $session) {
+  $out = @{}
+  $on = Get-ExtrasOn $manifest $state
+  $since = $null; if ($state.installedAt) { try { $since = [datetime]::Parse($state.installedAt, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::AdjustToUniversal -bor [Globalization.DateTimeStyles]::AssumeUniversal) } catch {} }
+  $fresh = $session -and $session.startedAt -and (-not $since -or $session.startedAt -ge $since.AddSeconds(-2))
+  $irisSettings = $(if ([IO.File]::Exists($paths.iris)) { [IO.File]::ReadAllText($paths.iris) } else { "" })
+  foreach ($x in @($manifest.extras)) {
+    $id = [string]$x.id
+    $isOn = $on -contains $id
+    $files = @($x.files)
+    $jarFound = @($files | Where-Object { [string]$_.kind -eq "mod" -and $session -and $session.found[[string]$_.filename] }).Count
+    $jars = @($files | Where-Object { [string]$_.kind -eq "mod" }).Count
+    if (-not $isOn) { $out[$id] = @{ state = $(if ($fresh -and $jars -gt 0 -and $jarFound -gt 0) { "off-loaded" } else { "off" }); reason = "" }; continue }
+    if (-not $fresh) { $out[$id] = @{ state = "waiting"; reason = "" }; continue }
+    $mention = @($session.errors | Where-Object { $l = $_; @(@($x.modIds) + @($files | ForEach-Object { [string]$_.filename })) | Where-Object { $_ -and $l -match [regex]::Escape([string]$_) } })
+    if ($mention.Count -gt 0) {
+      $why = "the game could not load it: " + ([string]$mention[0] -replace '^\[[^\]]*\]\s*(\[[^\]]*\]\s*)*:?\s*', '')
+      if ($why.Length -gt 160) { $why = $why.Substring(0, 157) + "..." }
+      $out[$id] = @{ state = "problem"; reason = $why }; continue
+    }
+    if ($jars -gt 0 -and $jarFound -lt $jars) { $out[$id] = @{ state = "problem"; reason = "the game did not load it (not in its mod list)" }; continue }
+    $rp = @($files | Where-Object { [string]$_.kind -eq "resourcepack" })
+    if ($rp.Count -gt 0 -and $session.loaded -and @($rp | Where-Object { $session.packs -notcontains ("file/" + [string]$_.filename) }).Count -gt 0) { $out[$id] = @{ state = "problem"; reason = "the game did not switch on its resource pack" }; continue }
+    if ($rp.Count -gt 0 -and -not $session.loaded) { $out[$id] = @{ state = "waiting"; reason = "" }; continue }
+    $sh = @($files | Where-Object { [string]$_.kind -eq "shader" })
+    if ($sh.Count -gt 0 -and $irisSettings -notmatch ('(?m)^shaderPack\s*[=:]\s*' + [regex]::Escape([string]$sh[0].filename) + '\s*$')) { $out[$id] = @{ state = "problem"; reason = "Iris is set to another shader pack (changed in the game?)" }; continue }
+    if ($session.failed -and $jars -gt 0 -and -not $session.loaded) { $out[$id] = @{ state = "problem"; reason = "mod loading failed in the game (see the Log tab)" }; continue }
+    $out[$id] = @{ state = "active"; reason = "" }
+  }
+  return $out
+}
+
+# What is installed, from the files in place (not from what was chosen): every file of the extra is in.
+function Get-ExtrasInstalled($manifest, $state) {
+  return @(@($manifest.extras) | Where-Object { $x = $_; @($x.files).Count -gt 0 -and @(@($x.files) | Where-Object { $state.applied[(Get-ExtraFolder ([string]$_.kind))] -notcontains [string]$_.filename }).Count -eq 0 } | ForEach-Object { [string]$_.id })
+}
+# Planner G: one status per extra, in words and a colour. $verify: Test-Extras' checks; $inGame: Test-ExtrasInGame.
+function Get-ExtraStatus($x, $manifest, $state, $verify, $inGame, [bool]$gameRunning) {
+  $id = [string]$x.id
+  $installed = Get-ExtrasInstalled $manifest $state
+  $chosenOn = (Get-ExtrasOn $manifest (Get-ChosenState $state)) -contains $id
+  $isOn = $installed -contains $id
+  if ($state.queued -and ($chosenOn -ne $isOn)) {
+    if ($chosenOn) { return @{ text = "Waiting for the game to close"; tone = "amber" } }
+    return @{ text = "Off, removed when the game closes"; tone = "amber" }
+  }
+  if (-not $isOn) {
+    if ($inGame[$id] -and $inGame[$id].state -eq "off-loaded") { return @{ text = $(if ($gameRunning) { "Off, removed when the game closes" } else { "Off, takes effect next time you play" }); tone = "grey" } }
+    return @{ text = "Off"; tone = "grey" }
+  }
+  if ($state.lastApply -and -not $state.lastApply.ok -and $state.lastApply.summary -match [regex]::Escape((Get-ExtraName $x))) { return @{ text = ("Problem: " + $state.lastApply.error); tone = "red" } }
+  $bad = @($verify | Where-Object { $_.id -eq $id -and $_.ok -eq $false })
+  if ($bad.Count -gt 0) { return @{ text = ("Problem: " + $bad[0].text); tone = "red" } }
+  $g = $inGame[$id]
+  if ($g -and $g.state -eq "problem") { return @{ text = ("Problem: " + $g.reason); tone = "red" } }
+  if ($g -and $g.state -eq "active") { return @{ text = "Active in game"; tone = "green" } }
+  return @{ text = "Ready, starts next time you play"; tone = "blue" }
+}
+# Planner G: the line at the top of the tab. action: "play" | "restart" | $null
+function Get-ExtrasHeadline($manifest, $state, $statuses, [bool]$gameRunning) {
+  $onIds = Get-ExtrasOn $manifest (Get-ChosenState $state)
+  if ($gameRunning -and $state.queued) { return @{ text = "The game is running. Your changes install when it closes."; action = "restart" } }
+  if ($onIds.Count -eq 0 -and -not $state.queued) { return @{ text = $(if ($gameRunning) { "The game is running. No extras are switched on." } else { "No extras are switched on. Switch some on and press Apply." }); action = $null } }
+  $shown = @($statuses.Keys | Where-Object { $onIds -contains $_ })
+  $notActive = @($shown | Where-Object { $statuses[$_].text -ne "Active in game" })
+  if ($notActive.Count -eq 0 -and $shown.Count -gt 0) { return @{ text = "Everything you've switched on is active in game."; action = $null } }
+  if (@($shown | Where-Object { $statuses[$_].tone -eq "red" }).Count -gt 0) { return @{ text = "Something is wrong with an extra: see the red line below."; action = $null } }
+  if ($gameRunning) { return @{ text = "The game is running. Your extras show as active once it has loaded them."; action = $null } }
+  return @{ text = "The game isn't running. Your extras will be used next time you press Play."; action = "play" }
+}
+
+# Planner D: the extras block of every report.
+function Get-ExtrasReport($paths, $manifest, $state) {
+  if (-not $manifest -or -not $state.downloaded) { return $null }
+  $verify = @(Test-Extras $paths $manifest $state)
+  $inGame = Test-ExtrasInGame $paths $manifest $state (Read-GameSession $paths.latestLog)
+  $on = Get-ExtrasOn $manifest $state
+  $states = @($on | ForEach-Object { $inGame[$_].state })
+  $ig = $(if ($on.Count -eq 0) { "none" } elseif (@($states | Where-Object { $_ -eq "problem" }).Count) { "problems" } elseif (@($states | Where-Object { $_ -eq "waiting" }).Count) { "waiting" } else { "active" })
+  return [ordered]@{
+    on = @($on); shader = $(if ($state.choices["iris"]) { $state.shader } else { "none" }); queued = [bool]$state.queued
+    lastApply = $(if ($state.lastApply) { [ordered]@{ at = $state.lastApply.at; ok = [bool]$state.lastApply.ok; error = $(if ($state.lastApply.error) { $state.lastApply.error } else { $null }) } } else { $null })
+    verify = [ordered]@{ ok = (@($verify | Where-Object { $_.ok -eq $false }).Count -eq 0); failed = @($verify | Where-Object { $_.ok -eq $false } | ForEach-Object { [string]$_.text } | Select-Object -First 20) }
+    inGame = [ordered]@{ state = $ig; active = @($on | Where-Object { $inGame[$_].state -eq "active" }); problems = @($on | Where-Object { $inGame[$_].state -eq "problem" } | ForEach-Object { "{0}: {1}" -f $_, $inGame[$_].reason } | Select-Object -First 20) }
+  }
+}
+
+# ---- planner H: what Apply does ---------------------------------------------------------------------------
+# "nothing"; with the game running "ask_restart" (Yes / Later / Allow all), or "restart" when Allow all was given
+# before; with the game closed "install" (then "ask_start" or "start", see Get-AfterInstall).
+function Get-ApplyRoute([bool]$gameRunning, [bool]$changed, [bool]$autoRestart = $false) {
+  if (-not $changed) { return "nothing" }
+  if ($gameRunning) { if ($autoRestart) { return "restart" }; return "ask_restart" }
+  return "install"
+}
+function Get-AfterInstall([bool]$autoStart = $false) { if ($autoStart) { return "start" }; return "ask_start" }
+# After a Yes whose install failed: the old set is back, and the game is still started (planner H2).
+function Get-AfterRestartInstall($result) { return @{ relaunch = $true; say = $(if ($result.ok) { "Installed and checked." } else { $result.summary + " The game starts with your previous extras." }) } }
+# Has anything been switched compared with what is installed?
+function Test-ExtrasChanged($manifest, $state) {
+  $w = Get-ExtrasWanted $manifest $state
+  foreach ($k in @("mods", "resourcepacks", "shaderpacks")) {
+    if ((@($w[$k] | Sort-Object) -join "|") -ne (@($state.applied[$k] | Sort-Object) -join "|")) { return $true }
+  }
+  return $false
+}
 
 # ---- the game: running? closing it nicely, and starting it again ----------------------------------------------
 # $procs: objects with Id, Name and CommandLine (Win32_Process on Windows; made up in the self test).
@@ -1365,32 +1676,22 @@ function Find-GameProcess([string]$gameDir, $procs) {
 function Get-JavaProcesses {
   try { return @(Get-CimInstance Win32_Process -Filter "Name='javaw.exe' or Name='java.exe'" -ErrorAction Stop | Select-Object @{ n = "Id"; e = { $_.ProcessId } }, Name, CommandLine) } catch { return @() }
 }
-# Closes the game the way its window's X would (WM_CLOSE), gives it 30 seconds to save and stop, then ends it.
+# WM_CLOSE to the game's window, the way its X button closes it (Minecraft saves what it has to).
+function Send-GameClose($ids) {
+  foreach ($id in @($ids)) { try { $ok = (Get-Process -Id $id -ErrorAction Stop).CloseMainWindow(); XLog ("restart: WM_CLOSE sent to the game (process {0}){1}" -f $id, $(if ($ok) { "" } else { ", it has no window to close" })) } catch { XLog ("restart: the game (process {0}) is already gone" -f $id) } }
+}
+function Test-GameGone($ids) { return (@($ids | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue }).Count -eq 0) }
+function Stop-GameForce($ids) { foreach ($id in @($ids)) { try { Stop-Process -Id $id -Force -ErrorAction Stop; XLog ("restart: the game (process {0}) did not close within 30 s: ended" -f $id) } catch {} } }
+# Blocking version for -VerifyExtras and tests: WM_CLOSE, up to $waitSec, then force. Returns "closed" | "forced".
 function Stop-Game($ids, [int]$waitSec = 30) {
-  foreach ($id in @($ids)) { try { $null = (Get-Process -Id $id -ErrorAction Stop).CloseMainWindow() } catch {} }
-  $deadline = (Get-Date).AddSeconds($waitSec)
-  while ((Get-Date) -lt $deadline) {
-    if (@($ids | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue }).Count -eq 0) { return "closed" }
+  Send-GameClose $ids
+  $t0 = Get-Date
+  while (((Get-Date) - $t0).TotalSeconds -lt $waitSec) {
+    if (Test-GameGone $ids) { XLog ("restart: the game closed after {0:0} s" -f ((Get-Date) - $t0).TotalSeconds); return "closed" }
     Start-Sleep -Milliseconds 500
   }
-  foreach ($id in @($ids)) { try { Stop-Process -Id $id -Force -ErrorAction Stop } catch {} }
+  Stop-GameForce $ids
   return "forced"
-}
-# What the Extras tab does with Apply. A running game holds its jars open (Windows will not move them), so with the
-# game running it asks "Restart the game to apply?" first: Restart now closes it, applies, opens the launcher again;
-# Later keeps the choice and the next Play applies it.
-function Get-ApplyRoute([bool]$gameRunning, [bool]$changed) {
-  if (-not $changed) { return "nothing" }
-  if ($gameRunning) { return "ask_restart" }
-  return "apply"
-}
-# Has anything been switched since the last Apply?
-function Test-ExtrasChanged($manifest, $state) {
-  $w = Get-ExtrasWanted $manifest $state
-  foreach ($k in @("mods", "resourcepacks", "shaderpacks")) {
-    if ((@($w[$k] | Sort-Object) -join "|") -ne (@($state.applied[$k] | Sort-Object) -join "|")) { return $true }
-  }
-  return $false
 }
 
 # A weak PC, the way the site measures one (lib/install-report.ts suggestTier: LOW): under 8 GB of memory, or no
@@ -1413,20 +1714,25 @@ function Get-LocalWeakPc {
   return (Test-WeakPc $ram $gpus)
 }
 
-# ==== the window (2.0.0) ===================================================================================
+# ==== the window (2.0.0, 2.0.1) ============================================================================
 # WPF, from this one script. The install steps do not run in here: the window starts this script again, hidden, as
 # -Engine, reads its progress from a status file every quarter of a second, and asks the questions the engine stops
 # for (exit 20). One window per PC user: a second start (the Play button on the site, the shortcut) only brings it
 # to the front and presses Play. It stays open until it is closed; the game closing does not close it.
+# 2.0.1: Allow all on every question; the Extras tab says where each extra stands, checks itself, and installs
+# changes only while the game is closed (Yes: closes and restarts it; Later: installs the moment it closes).
 
 $AppXaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Deepslate Works" Width="580" Height="700" MinWidth="480" MinHeight="520" WindowStartupLocation="CenterScreen"
+        Title="Deepslate Works" Width="600" Height="740" MinWidth="500" MinHeight="560" WindowStartupLocation="CenterScreen"
         FontFamily="Segoe UI" FontSize="13" Background="#F6F7F8">
   <Window.Resources>
     <Style TargetType="Button" x:Key="Primary">
       <Setter Property="Background" Value="#2E7D5B"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Padding" Value="18,8"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style TargetType="Button" x:Key="Plain">
+      <Setter Property="Padding" Value="14,7"/><Setter Property="Margin" Value="0,0,8,0"/><Setter Property="Cursor" Value="Hand"/>
     </Style>
   </Window.Resources>
   <TabControl x:Name="Tabs" Margin="8" Background="White">
@@ -1439,47 +1745,73 @@ $AppXaml = @'
         </StackPanel>
         <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
           <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center"><Hyperlink x:Name="ReviewLink">Review permissions</Hyperlink></TextBlock>
-          <Button x:Name="PlayButton" DockPanel.Dock="Right" HorizontalAlignment="Right" Style="{StaticResource Primary}" Content="Play" MinWidth="150"/>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="ResetButton" Style="{StaticResource Plain}" Content="Reset all" Visibility="Collapsed"/>
+            <Button x:Name="AllowAllButton" Style="{StaticResource Plain}" Content="Allow all" Visibility="Collapsed"/>
+            <Button x:Name="PlayButton" Style="{StaticResource Primary}" Content="Play" MinWidth="150"/>
+          </StackPanel>
         </DockPanel>
         <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="PlayBody"/></ScrollViewer>
       </DockPanel>
     </TabItem>
     <TabItem Header="  Extras  " x:Name="ExtrasTab">
       <DockPanel Margin="14">
-        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <TextBlock FontSize="20" FontWeight="SemiBold" Text="Extras"/>
-          <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#444" Text="Only on this PC, never voted on. Other players don't need them: you can play together either way."/>
+          <TextBlock TextWrapping="Wrap" Margin="0,2,0,8" Foreground="#555" Text="Only on this PC, never voted on. Other players don't need them: you can play together either way."/>
+          <Border x:Name="HeadlineBox" Background="#EEF4F8" CornerRadius="6" Padding="10,8">
+            <DockPanel>
+              <Button x:Name="HeadlineButton" DockPanel.Dock="Right" Style="{StaticResource Primary}" Padding="12,5" Visibility="Collapsed"/>
+              <TextBlock x:Name="HeadlineText" TextWrapping="Wrap" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
+            </DockPanel>
+          </Border>
+          <TextBlock x:Name="ErrorLine" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#B3261E" FontWeight="SemiBold" Visibility="Collapsed">
+            <Run x:Name="ErrorText"/> <Hyperlink x:Name="DetailsLink">Show details</Hyperlink>
+          </TextBlock>
+          <StackPanel x:Name="ProgressBox" Margin="0,8,0,0" Visibility="Collapsed"/>
         </StackPanel>
         <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+          <Button x:Name="CheckButton" DockPanel.Dock="Left" Style="{StaticResource Plain}" Content="Check extras"/>
           <Button x:Name="ApplyButton" DockPanel.Dock="Right" Style="{StaticResource Primary}" Content="Apply" MinWidth="120"/>
-          <TextBlock x:Name="ExtrasStatus" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#444"/>
+          <TextBlock x:Name="ExtrasStatus" TextWrapping="Wrap" VerticalAlignment="Center" Margin="4,0,12,0" Foreground="#444"/>
         </DockPanel>
-        <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="ExtrasBody"/></ScrollViewer>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <StackPanel x:Name="ExtrasBody"/>
+            <TextBlock x:Name="ChecksTitle" Text="Checks" FontSize="15" FontWeight="SemiBold" Margin="0,10,0,4" Visibility="Collapsed"/>
+            <StackPanel x:Name="ChecksBody"/>
+          </StackPanel>
+        </ScrollViewer>
       </DockPanel>
     </TabItem>
     <TabItem Header="  Log  " x:Name="LogTab">
-      <TextBox x:Name="LogBox" Margin="10" IsReadOnly="True" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12"
-               VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+      <ListBox x:Name="LogList" Margin="10" FontFamily="Consolas" FontSize="12" BorderThickness="0"/>
     </TabItem>
   </TabControl>
 </Window>
 '@
 
-$RestartXaml = @'
+# One question with up to three answers (Yes / Later / Allow all). The text says what will happen; Allow all says
+# what it will remember, so nothing is hidden behind it.
+$AskXaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Deepslate Works" Width="420" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner"
+        Title="Deepslate Works" Width="440" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner"
         FontFamily="Segoe UI" FontSize="13" Background="White">
   <StackPanel Margin="18">
-    <TextBlock FontSize="16" FontWeight="SemiBold" Text="Restart the game to apply?"/>
-    <TextBlock x:Name="Why" TextWrapping="Wrap" Margin="0,8,0,16" Foreground="#444"
-               Text="Minecraft is running and has the mods open. Restart now closes it (like its own X button, so the world is saved), switches your extras, and opens the launcher on Deepslate Works again. Later keeps your choice for the next time you press Play."/>
+    <TextBlock x:Name="Q" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
+    <TextBlock x:Name="Why" TextWrapping="Wrap" Margin="0,8,0,6" Foreground="#444"/>
+    <TextBlock x:Name="AllNote" TextWrapping="Wrap" Margin="0,0,0,14" Foreground="#666" FontSize="12"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
       <Button x:Name="Later" Content="Later" Padding="16,6" Margin="0,0,8,0"/>
-      <Button x:Name="Now" Content="Restart now" Padding="16,6" Background="#2E7D5B" Foreground="White" BorderThickness="0" FontWeight="SemiBold"/>
+      <Button x:Name="All" Content="Allow all" Padding="16,6" Margin="0,0,8,0"/>
+      <Button x:Name="Yes" Content="Yes" Padding="16,6" Background="#2E7D5B" Foreground="White" BorderThickness="0" FontWeight="SemiBold"/>
     </StackPanel>
   </StackPanel>
 </Window>
 '@
+$RestartXaml = $AskXaml   # the restart question uses the same window (self test and screenshots refer to it)
+
+$Tones = @{ grey = @("#EEF0F2", "#555555"); blue = @("#E3F0FF", "#1A5FB4"); amber = @("#FFF4E0", "#8A5A00"); green = @("#E8F3EE", "#2E7D5B"); red = @("#FDECEA", "#B3261E") }
 
 function New-Brush([string]$hex) { return (New-Object Windows.Media.BrushConverter).ConvertFromString($hex) }
 function New-Text([string]$text, [double]$size = 13, [string]$weight = "Normal", [string]$color = "#222") {
@@ -1491,8 +1823,7 @@ function New-Text([string]$text, [double]$size = 13, [string]$weight = "Normal",
 function New-Badge([string]$text, [string]$bg, [string]$fg) {
   $b = New-Object Windows.Controls.Border
   $b.Background = New-Brush $bg; $b.CornerRadius = 8; $b.Padding = "6,1"; $b.Margin = "6,0,0,0"; $b.VerticalAlignment = "Center"
-  $t = New-Text $text 11 "SemiBold" $fg
-  $b.Child = $t
+  $b.Child = New-Text $text 11 "SemiBold" $fg
   return $b
 }
 function New-Card {
@@ -1500,9 +1831,16 @@ function New-Card {
   $b.BorderBrush = New-Brush "#D9DDE1"; $b.BorderThickness = 1; $b.CornerRadius = 6; $b.Padding = 12; $b.Margin = "0,0,0,8"; $b.Background = New-Brush "White"
   return $b
 }
+function New-Button([string]$text, [switch]$Primary) {
+  $b = New-Object Windows.Controls.Button
+  $b.Content = $text
+  $b.Style = $script:App.Window.FindResource($(if ($Primary) { "Primary" } else { "Plain" }))
+  return $b
+}
+function Pump { try { $script:App.Window.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Background) } catch {} }
 
 # One permission card: title, "Needed to play" when it is, the plain-English text, Allow / Not now.
-function New-ConsentCard($step, $answers, [int]$level = 1, [string]$size = "") {   # $answers: $script:App.Answers
+function New-ConsentCard($step, [int]$level = 1, [string]$size = "") {
   $card = New-Card
   $sp = New-Object Windows.Controls.StackPanel
   $head = New-Object Windows.Controls.StackPanel; $head.Orientation = "Horizontal"
@@ -1529,7 +1867,8 @@ function New-ConsentCard($step, $answers, [int]$level = 1, [string]$size = "") {
     Update-ContinueButton
   })
   $id = [string]$step.id
-  if ($answers.ContainsKey($id)) { if ($answers[$id] -eq "allow") { $allow.IsChecked = $true } else { $no.IsChecked = $true } }
+  if ($script:App.Answers.ContainsKey($id)) { if ($script:App.Answers[$id] -eq "allow") { $allow.IsChecked = $true } else { $no.IsChecked = $true } }
+  $script:App.AllowRadios += $allow
   $row.Children.Add($allow) | Out-Null; $row.Children.Add($no) | Out-Null
   $sp.Children.Add($row) | Out-Null
   $sp.Children.Add($warn) | Out-Null
@@ -1544,26 +1883,36 @@ function Show-App([string]$shotsDir = "") {
   $A.ConsentPath = Join-Path $AppHome $ConsentFileName
   $A.ExtrasStatePath = Join-Path $AppHome $ExtrasStateName
   $A.ExtrasManifestPath = Join-Path $AppHome $ExtrasManifestName
+  $A.Paths = Get-ExtrasPaths $DataDir
   $A.Consent = Read-Consent $A.ConsentPath
   $A.Answers = @{}
+  $A.AllowRadios = @()
   $A.Mode = "idle"      # idle | asking | running
   $A.Proc = $null
   $A.StatusPath = $null
   $A.StatusPos = 0
-  $A.Ask = $null
   $A.Used = @{}
+  $A.Flow = $null       # the Apply -> restart flow in progress (planner H)
+  $A.GameRunning = $false
+  $A.NextGameCheck = [datetime]::MinValue
   $A.Weak = $false
   try { $A.Weak = Get-LocalWeakPc } catch {}
   $A.ShowSignal = $script:PendingSignal
 
   $w = [Windows.Markup.XamlReader]::Parse($AppXaml)
   $A.Window = $w
-  foreach ($n in @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "PlayButton", "PlayBody", "ApplyButton", "ExtrasStatus", "ExtrasBody", "LogBox")) { $A[$n] = $w.FindName($n) }
+  foreach ($n in @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody",
+                   "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList")) { $A[$n] = $w.FindName($n) }
   try { $w.Title = "{0} {1}" -f $PackName, $InstallerVersion } catch {}
 
   $A.PlayButton.Add_Click({ On-PlayButton })
+  $A.AllowAllButton.Add_Click({ On-AllowAll })
+  $A.ResetButton.Add_Click({ On-ResetAll })
   $A.ReviewLink.Add_Click({ Show-Review })
   $A.ApplyButton.Add_Click({ On-Apply })
+  $A.CheckButton.Add_Click({ On-Check })
+  $A.HeadlineButton.Add_Click({ On-Headline })
+  $A.DetailsLink.Add_Click({ Show-LogDetails })
   $A.Tabs.Add_SelectionChanged({ param($sender, $e) if ($e.OriginalSource -eq $script:App.Tabs) { if ($script:App.Tabs.SelectedItem -eq $script:App.ExtrasTab) { Show-Extras } elseif ($script:App.Tabs.SelectedItem -eq $script:App.LogTab) { Update-LogBox } } })
 
   $timer = New-Object Windows.Threading.DispatcherTimer
@@ -1578,10 +1927,10 @@ function Show-App([string]$shotsDir = "") {
     if (@(Get-UnansweredSteps $script:App.Consent).Count -gt 0) { Show-FirstRun } else { Start-Run }
   })
   $w.Add_Closing({ param($s, $e)
-    if ($script:App.Mode -eq "running") {
-      $r = [Windows.MessageBox]::Show("Deepslate Works is still setting up the game. Close anyway? It carries on next time you press Play.", "Deepslate Works", "YesNo", "Question")
+    if ($script:App.Mode -eq "running" -or $script:App.Flow) {
+      $r = [Windows.MessageBox]::Show("Deepslate Works is still busy. Close anyway? It carries on next time you press Play.", "Deepslate Works", "YesNo", "Question")
       if ($r -ne "Yes") { $e.Cancel = $true; return }
-      try { $script:App.Proc.Kill() } catch {}
+      try { if ($script:App.Proc) { $script:App.Proc.Kill() } } catch {}
     }
   })
   [void]$w.ShowDialog()
@@ -1595,14 +1944,19 @@ function Update-ContinueButton {
   $A.PlayButton.IsEnabled = $all
 }
 
-function Clear-PlayBody { $script:App.PlayBody.Children.Clear(); $script:App.PlayChanged.Visibility = "Collapsed" }
+function Clear-PlayBody { $script:App.PlayBody.Children.Clear(); $script:App.PlayChanged.Visibility = "Collapsed"; $script:App.AllowRadios = @() }
 function Add-PlayLine([string]$text, [string]$color = "#222", [string]$weight = "Normal") {
   $t = New-Text $text 13 $weight $color; $t.Margin = "0,2,0,2"
   $script:App.PlayBody.Children.Add($t) | Out-Null
   return $t
 }
+function Set-PromptButtons([bool]$asking, [bool]$review = $false) {
+  $A = $script:App
+  $A.AllowAllButton.Visibility = $(if ($asking) { "Visible" } else { "Collapsed" })
+  $A.ResetButton.Visibility = $(if ($review) { "Visible" } else { "Collapsed" })
+}
 
-# First run (or new steps after an update): every unanswered step as a card, then Continue.
+# First run, a new step after an update, a bigger step: every question as a card, Continue and Allow all.
 function Show-FirstRun([object[]]$only = $null, [int]$level = 1) {
   $A = $script:App
   $A.Mode = "asking"
@@ -1610,14 +1964,15 @@ function Show-FirstRun([object[]]$only = $null, [int]$level = 1) {
   $steps = $(if ($only) { $only } else { @(Get-UnansweredSteps $A.Consent) })
   $A.Asking = $steps
   $first = (@($A.Consent.Keys).Count -eq 0)
-  $A.PlayTitle.Text = $(if ($first) { "Before we start" } else { "One question" })
-  $A.PlayStatus.Text = $(if ($first) { "Deepslate Works asks once for each thing it does on this PC. Your answers are remembered; Review permissions changes them." } else { "Deepslate Works is about to do something it hasn't asked about yet." })
+  $A.PlayTitle.Text = $(if ($first) { "Before we start" } elseif ($steps.Count -eq 1) { "One question" } else { "A few questions" })
+  $A.PlayStatus.Text = $(if ($first) { "Deepslate Works asks once for each thing it does on this PC. Your answers are remembered; Review permissions changes them. Allow all says yes to every card on this page, with everything they say still shown." } else { "Deepslate Works is about to do something it hasn't asked about yet." })
   $size = ""
   $m = Read-JsonFile $A.ExtrasManifestPath
   if ($m -and $m.size) { $size = "{0:0}" -f ([double]$m.size / 1MB) }
-  foreach ($s in $steps) { $A.PlayBody.Children.Add((New-ConsentCard $s $A.Answers $level $size)) | Out-Null }
+  foreach ($s in $steps) { $A.PlayBody.Children.Add((New-ConsentCard $s $level $size)) | Out-Null }
   $A.PlayButton.Content = "Continue"
   $A.AskLevel = $level
+  Set-PromptButtons $true $false
   Update-ContinueButton
 }
 
@@ -1631,10 +1986,31 @@ function Save-Answers {
   Save-Consent $A.ConsentPath $A.Consent
 }
 
+# Allow all: ticks Allow on every card shown (they stay on screen), then carries on as Continue would.
+function On-AllowAll {
+  $A = $script:App
+  if ($A.Mode -ne "asking") { return }
+  foreach ($r in @($A.AllowRadios)) { $r.IsChecked = $true }
+  Approve-AllSteps $A.Answers @($A.Asking)
+  Log ("permissions: Allow all on " + ((@($A.Asking) | ForEach-Object { $_.id }) -join ", "))
+  Pump
+  On-PlayButton
+}
+# Reset all (Review permissions): every answer forgotten; the first-run questions again.
+function On-ResetAll {
+  $A = $script:App
+  Reset-AllConsent $A.ConsentPath
+  $A.Consent = @{}
+  $A.Answers = @{}
+  Log "permissions: Reset all"
+  Show-FirstRun
+}
+
 function On-PlayButton {
   $A = $script:App
   if ($A.Mode -eq "asking") {
     Save-Answers
+    Set-PromptButtons $false $false
     $no = @($A.Asking | Where-Object { $_.required -and $A.Answers[$_.id] -eq "decline" })
     if ($no.Count -gt 0) { Show-Stopped $no[0]; return }
     Start-Run
@@ -1647,13 +2023,14 @@ function Show-Stopped($step) {
   $A = $script:App
   $A.Mode = "idle"
   Clear-PlayBody
+  Set-PromptButtons $false $false
   $A.PlayTitle.Text = "Stopped"
   $A.PlayStatus.Text = ("You said Not now to '{0}', which is needed to play. Nothing more was done. To carry on, open Review permissions and choose Allow." -f $step.title)
   $A.PlayButton.Content = "Play"
   $A.PlayButton.IsEnabled = $true
 }
 
-# Review permissions: every step with its current answer, changeable.
+# Review permissions: every step with its current answer, changeable; Allow all and Reset all.
 function Show-Review {
   $A = $script:App
   if ($A.Mode -eq "running") { return }
@@ -1661,16 +2038,18 @@ function Show-Review {
   foreach ($k in $A.Consent.Keys) { $A.Answers[$k] = $A.Consent[$k].answer }
   Show-FirstRun @(Get-ConsentSteps)
   $A.PlayTitle.Text = "Permissions"
-  $A.PlayStatus.Text = "What Deepslate Works may do on this PC. Changes count from the next Play."
+  $A.PlayStatus.Text = "What Deepslate Works may do on this PC. Changes count from the next Play. Reset all forgets every answer, so everything is asked again."
   $A.PlayButton.Content = "Save and play"
+  Set-PromptButtons $true $true
 }
 
 function Start-Run([switch]$NoLaunch) {
   $A = $script:App
   $A.Mode = "running"
   Clear-PlayBody
+  Set-PromptButtons $false $false
   $A.PlayTitle.Text = "Getting the game ready"
-  $A.PlayStatus.Text = "Checking for updates, then the Minecraft Launcher opens on Deepslate Works."
+  $A.PlayStatus.Text = $(if ($NoLaunch) { "Fetching the visual extras." } else { "Checking for updates, then the Minecraft Launcher opens on Deepslate Works." })
   $A.PlayButton.Content = "Working..."
   $A.PlayButton.IsEnabled = $false
   $A.Used = @{}
@@ -1681,6 +2060,7 @@ function Start-Run([switch]$NoLaunch) {
   $args2 = @("-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $script:MePath), "-Engine", "-StatusFile", ('"{0}"' -f $A.StatusPath))
   if ($NoLaunch) { $args2 += "-NoLaunch" }
   if (-not [IO.File]::Exists($script:MePath)) { $script:MePath = Join-Path (Get-HomeDir) $ScriptName }   # moved by the 1.5.3 step
+  Log ("window: starting the install steps" + $(if ($NoLaunch) { " (extras only, no launcher)" } else { "" }))
   $A.Proc = Start-Process -FilePath (Get-PowerShellExe) -ArgumentList $args2 -WindowStyle Hidden -PassThru
   $null = $A.Proc.Handle   # Windows PowerShell only keeps the exit code of a process whose handle was read
   if ($env:DEEPSLATE_UPDATED_FROM) { [Environment]::SetEnvironmentVariable("DEEPSLATE_UPDATED_FROM", $null) }   # said once, by the first run
@@ -1690,18 +2070,32 @@ function On-Tick {
   $A = $script:App
   # a second start of the app (the Play button on the site, a shortcut): to the front, and Play when idle
   if ($A.ShowSignal -and $A.ShowSignal.WaitOne(0)) {
+    Log "window: started again (the Play button or a shortcut): brought to the front"
     try { if ($A.Window.WindowState -eq "Minimized") { $A.Window.WindowState = "Normal" }; $A.Window.Activate() | Out-Null; $A.Window.Topmost = $true; $A.Window.Topmost = $false } catch {}
     $A.Tabs.SelectedItem = $A.PlayTab
-    if ($A.Mode -eq "idle") { Start-Run }
+    if ($A.Mode -eq "idle" -and -not $A.Flow) { Start-Run }
+  }
+  if ($A.Flow) { Step-Flow; return }
+  # every 2 s: is the game running? Queued changes install the moment it closes (planner H, Later)
+  if ((Get-Date) -ge $A.NextGameCheck) {
+    $A.NextGameCheck = (Get-Date).AddSeconds(2)
+    $ids = @(Find-GameProcess $DataDir (Get-JavaProcesses) | ForEach-Object { $_.Id })
+    $was = $A.GameRunning
+    $A.GameRunning = ($ids.Count -gt 0)
+    $st = Read-ExtrasState $A.ExtrasStatePath
+    if ($st.queued -and -not $A.GameRunning -and $A.Mode -ne "running") {
+      XLog ("queued install: the game closed at " + (Get-Date -Format "HH:mm:ss"))
+      Install-Now $st "queued"
+    } elseif ($A.Tabs.SelectedItem -eq $A.ExtrasTab -and ($was -ne $A.GameRunning -or ((Get-Date).Second % 6 -lt 2))) { Show-Extras -Quiet }
   }
   if ($A.Mode -ne "running" -or -not $A.StatusPath) { return }
   Read-StatusLines
   if ($A.Proc -and $A.Proc.HasExited) { Read-StatusLines; On-RunEnded ([int]$A.Proc.ExitCode) }
 }
 
+# whole lines only: a line the engine is still writing is read on the next tick
 function Read-StatusLines {
   $A = $script:App
-  # whole lines only: a line the engine is still writing is read on the next tick
   try {
     $fs = [IO.File]::Open($A.StatusPath, "Open", "Read", "ReadWrite")
     try {
@@ -1738,6 +2132,7 @@ function On-RunEnded([int]$code) {
   foreach ($k in $A.Used.Keys) { Set-ConsentUsed $A.Consent $k $A.Used[$k] }
   if ($A.Used.Count) { Save-Consent $A.ConsentPath $A.Consent }
   try { Remove-Item -LiteralPath $A.StatusPath -Force -ErrorAction SilentlyContinue } catch {}
+  Log ("window: the install steps ended, exit code " + $code)
   if ($code -eq $ExitAsk -and $A.LastAsk) {
     $s = Get-ConsentStep ([string]$A.LastAsk.step)
     $A.Answers = @{}
@@ -1754,63 +2149,75 @@ function On-RunEnded([int]$code) {
   $A.PlayTitle.Text = "Ready"
   $A.PlayStatus.Text = "The Minecraft Launcher is opening on Deepslate Works: press Play there. This window can stay open, or be closed."
   if ($A.Changed) { $A.PlayChanged.Text = $A.Changed; $A.PlayChanged.Visibility = "Visible" }
+  if ($A.Tabs.SelectedItem -eq $A.ExtrasTab) { Show-Extras }
   # updated itself on this run: the window starts the new copy and closes
   $now = Get-ScriptVersion $script:MePath
   if ($now -and (Test-Newer $now $InstallerVersion)) {
+    Log ("window: updated to {0}, starting it" -f $now)
     Start-Process -FilePath (Get-PowerShellExe) -ArgumentList @("-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $script:MePath)) -WindowStyle Hidden
     $A.Window.Close()
   }
 }
 
+# The Log tab: this PC's log, errors in red; Show details jumps to the last error.
 function Update-LogBox {
   $A = $script:App
   try {
+    $A.LogList.Items.Clear()
     $lines = @()
-    if ([IO.File]::Exists($LogFile)) { $lines = @([IO.File]::ReadAllLines($LogFile) | Select-Object -Last 500) }
-    $A.LogBox.Text = ($lines -join "`r`n")
-    $A.LogBox.ScrollToEnd()
+    if ([IO.File]::Exists($LogFile)) { $lines = @([IO.File]::ReadAllLines($LogFile) | Select-Object -Last 600) }
+    foreach ($l in $lines) {
+      $t = New-Object Windows.Controls.TextBlock
+      $t.Text = $l; $t.TextWrapping = "NoWrap"
+      if ($l -match 'ERROR|FAIL|refused|could not') { $t.Foreground = New-Brush "#B3261E"; $t.FontWeight = [Windows.FontWeights]::SemiBold } else { $t.Foreground = New-Brush "#222" }
+      [void]$A.LogList.Items.Add($t)
+    }
+    if ($A.LogList.Items.Count) { $A.LogList.ScrollIntoView($A.LogList.Items[$A.LogList.Items.Count - 1]) }
   } catch {}
+}
+function Show-LogDetails {
+  $A = $script:App
+  $A.Tabs.SelectedItem = $A.LogTab
+  Update-LogBox
+  for ($i = $A.LogList.Items.Count - 1; $i -ge 0; $i--) { if ([string]$A.LogList.Items[$i].Text -match 'ERROR') { $A.LogList.SelectedIndex = $i; $A.LogList.ScrollIntoView($A.LogList.Items[$i]); break } }
 }
 
 # ---- the Extras tab ---------------------------------------------------------------------------------------
-function Show-Extras {
+# $sim (screenshots only): @{ running; inGameAll; queued } stand-ins for what the PC would say.
+function Show-Extras([switch]$Quiet, $sim = $null) {
   $A = $script:App
-  $A.ExtrasBody.Children.Clear()
-  $A.ExtrasStatus.Text = ""
   $m = Read-JsonFile $A.ExtrasManifestPath
   $st = Read-ExtrasState $A.ExtrasStatePath
-  $A.XManifest = $m; $A.XState = $st
+  if ($sim -and $sim.state) { $st = $sim.state }
+  $A.XManifest = $m
   $allowed = (Get-ConsentDecision $A.Consent "extras") -eq "allow"
-  if (-not $m -or -not $allowed -or -not $st.downloaded) {
-    $card = New-Card
-    $sp = New-Object Windows.Controls.StackPanel
-    $size = $(if ($m -and $m.size) { "{0:0}" -f ([double]$m.size / 1MB) } else { "10" })
-    $sp.Children.Add((New-Text "Download the optional visual extras?" 14 "SemiBold")) | Out-Null
-    $t = New-Text ("About {0} MB, nothing is switched on. Once they're on this PC, switching one on or off is instant and works offline." -f $size) 13 "Normal" "#444"; $t.Margin = "0,4,0,10"
-    $sp.Children.Add($t) | Out-Null
-    $b = New-Object Windows.Controls.Button; $b.Content = "Download"; $b.Style = $A.Window.FindResource("Primary"); $b.HorizontalAlignment = "Left"
-    $b.Add_Click({
-      Set-ConsentAnswer $script:App.Consent "extras" "allow" 1
-      Save-Consent $script:App.ConsentPath $script:App.Consent
-      $script:App.Tabs.SelectedItem = $script:App.PlayTab
-      Start-Run -NoLaunch
-    })
-    $sp.Children.Add($b) | Out-Null
-    $card.Child = $sp
-    $A.ExtrasBody.Children.Add($card) | Out-Null
-    $A.ApplyButton.IsEnabled = $false
-    return
-  }
+  if (-not $m -or -not $allowed -or -not $st.downloaded) { if (-not $Quiet) { Show-ExtrasDownload $m }; return }
+  $running = $(if ($sim) { [bool]$sim.running } else { $A.GameRunning })
+  $verify = @(Test-Extras $A.Paths $m $st)
+  $inGame = Test-ExtrasInGame $A.Paths $m $st (Read-GameSession $A.Paths.latestLog)
+  if ($sim -and $sim.inGameAll) { foreach ($id in (Get-ExtrasOn $m $st)) { $inGame[$id] = @{ state = "active"; reason = "" } } }
+  $statuses = @{}
+  foreach ($x in @($m.extras | Where-Object { -not $_.shader })) { $statuses[[string]$x.id] = Get-ExtraStatus $x $m $st $verify $inGame $running }
+  # headline
+  $h = Get-ExtrasHeadline $m $st $statuses $running
+  $A.HeadlineText.Text = $h.text
+  $A.HeadlineButton.Visibility = $(if ($h.action) { "Visible" } else { "Collapsed" })
+  $A.HeadlineButton.Content = $(if ($h.action -eq "restart") { "Restart now" } else { "Play now" })
+  $A.HeadlineButton.Tag = $h.action
+  $A.HeadlineBox.Background = New-Brush $(if ($h.text -match "active in game") { "#E8F3EE" } elseif ($h.text -match "wrong") { "#FDECEA" } elseif ($h.action -eq "restart") { "#FFF4E0" } else { "#EEF4F8" })
+  # the last thing that went wrong, in one line
+  if ($st.lastApply -and -not $st.lastApply.ok -and $st.lastApply.summary) { $A.ErrorText.Text = $st.lastApply.summary + " "; $A.ErrorLine.Visibility = "Visible" } else { $A.ErrorLine.Visibility = "Collapsed" }
+  if ($Quiet -and $A.XRendered) { Update-ExtrasRows $m $st $statuses; Show-Checks $verify $inGame $m $st; return }
+  $A.ExtrasBody.Children.Clear()
   $A.ApplyButton.IsEnabled = $true
-  $A.XBoxes = @{}
-  $A.XShader = @{}
-  $pictures = (Get-ExtrasPaths $DataDir).pictures
+  $A.XBoxes = @{}; $A.XShader = @{}; $A.XStatus = @{}
+  $chosen = Get-ChosenState $st
   foreach ($x in @($m.extras | Where-Object { -not $_.shader })) {
     $card = New-Card
     $g = New-Object Windows.Controls.Grid
     foreach ($wd in @((New-Object Windows.GridLength(52)), (New-Object Windows.GridLength(1, [Windows.GridUnitType]::Star)), [Windows.GridLength]::Auto)) { $c = New-Object Windows.Controls.ColumnDefinition; $c.Width = $wd; $g.ColumnDefinitions.Add($c) }
     $img = New-Object Windows.Controls.Image; $img.Width = 40; $img.Height = 40; $img.VerticalAlignment = "Top"
-    $pic = Join-Path $pictures ("{0}.png" -f $x.id)
+    $pic = Join-Path $A.Paths.pictures ("{0}.png" -f $x.id)
     if ([IO.File]::Exists($pic)) { try { $bmp = New-Object Windows.Media.Imaging.BitmapImage; $bmp.BeginInit(); $bmp.CacheOption = "OnLoad"; $bmp.UriSource = New-Object Uri($pic); $bmp.EndInit(); $img.Source = $bmp } catch {} }
     [Windows.Controls.Grid]::SetColumn($img, 0); $g.Children.Add($img) | Out-Null
     $sp = New-Object Windows.Controls.StackPanel; [Windows.Controls.Grid]::SetColumn($sp, 1)
@@ -1822,90 +2229,302 @@ function Show-Extras {
     $sp.Children.Add($head) | Out-Null
     $d = New-Text ([string]$x.description) 12.5 "Normal" "#555"; $d.Margin = "0,2,0,0"; $sp.Children.Add($d) | Out-Null
     if ($A.Weak -and ([string]$x.fps -ne "Low")) { $wn = New-Text "This PC looks like an older laptop or one without a graphics card: this one may make the game stutter." 12 "Normal" "#8A5A00"; $wn.Margin = "0,4,0,0"; $sp.Children.Add($wn) | Out-Null }
+    # the status, in words and a colour (planner G), with Restart now or Show details where they help
+    $row = New-Object Windows.Controls.WrapPanel; $row.Margin = "0,6,0,0"
+    $sb = New-Badge "" "#EEF0F2" "#555"; $sb.Margin = "0,0,8,0"
+    $row.Children.Add($sb) | Out-Null
+    $rb = New-Object Windows.Controls.TextBlock; $rb.VerticalAlignment = "Center"
+    $hl = New-Object Windows.Documents.Hyperlink; $hl.Inlines.Add("Restart now") | Out-Null; $hl.Add_Click({ On-Headline "restart" })
+    $rb.Inlines.Add($hl) | Out-Null
+    $dl = New-Object Windows.Controls.TextBlock; $dl.VerticalAlignment = "Center"
+    $hd = New-Object Windows.Documents.Hyperlink; $hd.Inlines.Add("Show details") | Out-Null; $hd.Add_Click({ Show-LogDetails })
+    $dl.Inlines.Add($hd) | Out-Null
+    $row.Children.Add($rb) | Out-Null; $row.Children.Add($dl) | Out-Null
+    $sp.Children.Add($row) | Out-Null
+    $A.XStatus[[string]$x.id] = @{ badge = $sb; restart = $rb; details = $dl }
     $g.Children.Add($sp) | Out-Null
-    $cb = New-Object Windows.Controls.CheckBox; $cb.Content = "On"; $cb.VerticalAlignment = "Center"; $cb.Margin = "12,0,0,0"
-    $cb.IsChecked = [bool]$st.choices[[string]$x.id]
+    $cb = New-Object Windows.Controls.CheckBox; $cb.Content = "On"; $cb.VerticalAlignment = "Top"; $cb.Margin = "12,2,0,0"
+    $cb.IsChecked = [bool]$chosen.choices[[string]$x.id]
     [Windows.Controls.Grid]::SetColumn($cb, 2); $g.Children.Add($cb) | Out-Null
     $A.XBoxes[[string]$x.id] = $cb
     $outer = New-Object Windows.Controls.StackPanel
     $outer.Children.Add($g) | Out-Null
     if ([string]$x.id -eq "iris") {
       # Shaders: None / Light / Full, only with Iris on
-      $row = New-Object Windows.Controls.WrapPanel; $row.Margin = "52,8,0,0"
-      $row.Children.Add((New-Text "Shaders:  " 13 "SemiBold")) | Out-Null
+      $srow = New-Object Windows.Controls.WrapPanel; $srow.Margin = "52,8,0,0"
+      $srow.Children.Add((New-Text "Shaders:  " 13 "SemiBold")) | Out-Null
       foreach ($opt in @(@("none", "None"), @("light", "Light (MakeUp Ultra Fast)"), @("full", "Full (Complementary Reimagined)"))) {
-        $rb = New-Object Windows.Controls.RadioButton; $rb.Content = $opt[1]; $rb.GroupName = "shaders"; $rb.Margin = "0,0,14,0"
-        $rb.IsChecked = ($st.shader -eq $opt[0])
+        $r = New-Object Windows.Controls.RadioButton; $r.Content = $opt[1]; $r.GroupName = "shaders"; $r.Margin = "0,0,14,0"
+        $r.IsChecked = ($chosen.shader -eq $opt[0])
         $sx = @($m.extras | Where-Object { $_.shader -eq $opt[0] })[0]
-        if ($sx -and $A.Weak -and [string]$sx.fps -ne "Low") { $rb.ToolTip = "This PC may stutter with these." }
-        $row.Children.Add($rb) | Out-Null
-        $A.XShader[$opt[0]] = $rb
+        if ($sx -and $A.Weak -and [string]$sx.fps -ne "Low") { $r.ToolTip = "This PC may stutter with these." }
+        $srow.Children.Add($r) | Out-Null
+        $A.XShader[$opt[0]] = $r
       }
-      $row.IsEnabled = [bool]$cb.IsChecked
-      $cb.Tag = $row
+      $srow.IsEnabled = [bool]$cb.IsChecked
+      $cb.Tag = $srow
       $cb.Add_Checked({ param($sender, $e) $sender.Tag.IsEnabled = $true })
       $cb.Add_Unchecked({ param($sender, $e) $sender.Tag.IsEnabled = $false })
-      $outer.Children.Add($row) | Out-Null
+      $outer.Children.Add($srow) | Out-Null
     }
     $card.Child = $outer
     $A.ExtrasBody.Children.Add($card) | Out-Null
   }
+  $A.XRendered = $true
+  Update-ExtrasRows $m $st $statuses
+  Show-Checks $verify $inGame $m $st
   # what has been shown counts as seen: "New" once
-  $st.seen = @($m.extras | ForEach-Object { [string]$_.id })
-  Save-ExtrasState $A.ExtrasStatePath $st
-  $A.XState = $st
+  if (-not $sim) {
+    $st.seen = @($m.extras | ForEach-Object { [string]$_.id })
+    Save-ExtrasState $A.ExtrasStatePath $st
+  }
+}
+function Update-ExtrasRows($m, $st, $statuses) {
+  $A = $script:App
+  foreach ($id in $statuses.Keys) {
+    $u = $A.XStatus[$id]; if (-not $u) { continue }
+    $s = $statuses[$id]
+    $u.badge.Background = New-Brush $Tones[$s.tone][0]
+    $u.badge.Child.Foreground = New-Brush $Tones[$s.tone][1]
+    $u.badge.Child.Text = $s.text
+    $u.restart.Visibility = $(if ($s.text -eq "Waiting for the game to close" -or $s.text -eq "Off, removed when the game closes") { "Visible" } else { "Collapsed" })
+    $u.details.Visibility = $(if ($s.tone -eq "red") { "Visible" } else { "Collapsed" })
+  }
+}
+# The tick list (planner C): Files, Settings, Dependencies, In game.
+function Show-Checks($verify, $inGame, $m, $st) {
+  $A = $script:App
+  $A.ChecksBody.Children.Clear()
+  $A.ChecksTitle.Visibility = "Visible"
+  $rows = @($verify)
+  foreach ($id in (Get-ExtrasOn $m $st)) {
+    $x = @($m.extras | Where-Object { $_.id -eq $id })[0]
+    if (-not $x -or $x.shader) { continue }
+    $g = $inGame[$id]
+    $rows += @{ group = "In game"; id = $id; ok = $(if ($g.state -eq "active") { $true } elseif ($g.state -eq "waiting") { $null } else { $false }); text = $(if ($g.state -eq "active") { "{0}: confirmed in game" -f (Get-ExtraName $x) } elseif ($g.state -eq "waiting") { "{0}: waiting for the game to start" -f (Get-ExtraName $x) } else { "{0}: {1}" -f (Get-ExtraName $x), $g.reason }) }
+  }
+  foreach ($x in @($m.extras | Where-Object { -not $_.shader })) { if ($inGame[[string]$x.id].state -eq "off-loaded") { $rows += @{ group = "In game"; id = [string]$x.id; ok = $null; text = ("{0}: off; the last game session still had it, gone next time" -f (Get-ExtraName $x)) } } }
+  foreach ($grp in @("Files", "Settings", "Dependencies", "In game")) {
+    $these = @($rows | Where-Object { $_.group -eq $grp })
+    if ($these.Count -eq 0) { continue }
+    $A.ChecksBody.Children.Add((New-Text $grp 13 "SemiBold" "#333")) | Out-Null
+    foreach ($r in $these) {
+      $mark = $(if ($r.ok -eq $true) { [string][char]0x2713 } elseif ($null -eq $r.ok) { [string][char]0x2026 } else { [string][char]0x2717 })
+      $col = $(if ($r.ok -eq $true) { "#2E7D5B" } elseif ($null -eq $r.ok) { "#1A5FB4" } else { "#B3261E" })
+      $t = New-Text ("  {0}  {1}" -f $mark, $r.text) 12.5 "Normal" $col
+      $A.ChecksBody.Children.Add($t) | Out-Null
+    }
+  }
+}
+
+# Extras not downloaded yet: the question, with Download and Allow all.
+function Show-ExtrasDownload($m) {
+  $A = $script:App
+  $A.ExtrasBody.Children.Clear(); $A.ChecksBody.Children.Clear(); $A.ChecksTitle.Visibility = "Collapsed"; $A.XRendered = $false
+  $A.HeadlineText.Text = "No extras on this PC yet."
+  $A.HeadlineButton.Visibility = "Collapsed"
+  $card = New-Card
+  $sp = New-Object Windows.Controls.StackPanel
+  $size = $(if ($m -and $m.size) { "{0:0}" -f ([double]$m.size / 1MB) } else { "10" })
+  $sp.Children.Add((New-Text "Download the optional visual extras?" 14 "SemiBold")) | Out-Null
+  $t = New-Text ("About {0} MB, nothing is switched on. Once they're on this PC, switching one on or off needs no download and works offline. Allow all says yes to this and carries on." -f $size) 13 "Normal" "#444"; $t.Margin = "0,4,0,10"
+  $sp.Children.Add($t) | Out-Null
+  $row = New-Object Windows.Controls.StackPanel; $row.Orientation = "Horizontal"
+  $b = New-Button "Download" -Primary; $b.Margin = "0,0,8,0"
+  $all = New-Button "Allow all"
+  foreach ($btn in @($b, $all)) {
+    $btn.Add_Click({
+      Set-ConsentAnswer $script:App.Consent "extras" "allow" 1
+      Save-Consent $script:App.ConsentPath $script:App.Consent
+      XLog "download: the extras were allowed; fetching them"
+      $script:App.Tabs.SelectedItem = $script:App.PlayTab
+      Start-Run -NoLaunch
+    })
+  }
+  $row.Children.Add($b) | Out-Null; $row.Children.Add($all) | Out-Null
+  $sp.Children.Add($row) | Out-Null
+  $card.Child = $sp
+  $A.ExtrasBody.Children.Add($card) | Out-Null
+  $A.ApplyButton.IsEnabled = $false
 }
 
 function Read-ExtrasChoices {
   $A = $script:App
-  $st = Read-ExtrasState $A.ExtrasStatePath
-  foreach ($k in $A.XBoxes.Keys) { $st.choices[$k] = [bool]$A.XBoxes[$k].IsChecked }
-  foreach ($k in $A.XShader.Keys) { if ($A.XShader[$k].IsChecked) { $st.shader = $k } }
-  return $st
+  $c = @{}
+  foreach ($k in $A.XBoxes.Keys) { $c[$k] = [bool]$A.XBoxes[$k].IsChecked }
+  $sh = "none"
+  foreach ($k in $A.XShader.Keys) { if ($A.XShader[$k].IsChecked) { $sh = $k } }
+  return @{ choices = $c; shader = $sh }
 }
 
+function On-Check {
+  $A = $script:App
+  $m = $A.XManifest; if (-not $m) { return }
+  $st = Read-ExtrasState $A.ExtrasStatePath
+  $verify = @(Test-Extras $A.Paths $m $st)
+  $bad = @($verify | Where-Object { $_.ok -eq $false })
+  XLog ("check: {0} check(s), {1} failed{2}" -f $verify.Count, $bad.Count, $(if ($bad.Count) { ": " + (($bad | ForEach-Object { $_.text }) -join "; ") } else { "" })) -Err:($bad.Count -gt 0)
+  Show-Extras
+  $A.ExtrasStatus.Text = $(if ($bad.Count) { "{0} check(s) failed: see the list below." -f $bad.Count } else { "Checked: everything is where it should be." })
+}
+
+# Apply (planner H): asks first, touches files only while the game is closed.
 function On-Apply {
   $A = $script:App
-  if ($A.Mode -eq "running") { $A.ExtrasStatus.Text = "Wait until the Play tab is done."; return }
+  if ($A.Mode -eq "running" -or $A.Flow) { $A.ExtrasStatus.Text = "Wait until the current step is done."; return }
   $m = $A.XManifest
-  $st = Read-ExtrasChoices
-  $running = @(Find-GameProcess $DataDir (Get-JavaProcesses))
-  $route = Get-ApplyRoute ($running.Count -gt 0) (Test-ExtrasChanged $m $st)
-  if ($route -eq "nothing") { Save-ExtrasState $A.ExtrasStatePath $st; $A.ExtrasStatus.Text = "Nothing to change."; return }
+  $st = Read-ExtrasState $A.ExtrasStatePath
+  $pick = Read-ExtrasChoices
+  $want = @{ choices = $pick.choices; shader = $pick.shader; applied = $st.applied }
+  $before = Format-Switches $m (Get-ChosenState $st)
+  $changed = Test-ExtrasChanged $m $want
+  $A.GameRunning = (@(Find-GameProcess $DataDir (Get-JavaProcesses)).Count -gt 0)
+  $auto = (Get-ConsentDecision $A.Consent "restart") -eq "allow"
+  $route = Get-ApplyRoute $A.GameRunning $changed $auto
+  XLog ("apply pressed: switches before: {0}; after: {1}; the game is {2}" -f $before, (Format-Switches $m $want), $(if ($A.GameRunning) { "running" } else { "not running" }))
+  if ($route -eq "nothing") {
+    if ($st.queued) { $st.queued = $null; Save-ExtrasState $A.ExtrasStatePath $st; XLog "apply: back to what is installed: the queued changes were dropped" }
+    $A.ExtrasStatus.Text = "Nothing to change."; Show-Extras; return
+  }
   if ($route -eq "ask_restart") {
-    $answer = Show-RestartPrompt
-    if ($answer -ne "now") {
+    $ans = Show-Ask "Restart the game now to use your extras?" "Minecraft is running and has its mods open, so they can only change while it's closed. Yes closes it (like its own X button), installs your changes, checks them and starts the game again. Later installs them the moment you close the game." "Allow all: Yes now, and from now on restart without asking (Review permissions changes that)."
+    XLog ("apply: restart choice: " + $ans)
+    if ($ans -eq "all") { Set-ConsentAnswer $A.Consent "restart" "allow" 1; Save-Consent $A.ConsentPath $A.Consent; $ans = "yes" }
+    if ($ans -ne "yes") {
+      $replaced = Set-ExtrasQueue $st $pick.choices $pick.shader
       Save-ExtrasState $A.ExtrasStatePath $st
-      $A.ExtrasStatus.Text = "Saved. Your extras switch the next time you press Play."
+      XLog ("queued install: queued at {0}{1}; installs when the game closes" -f $st.queued.at, $(if ($replaced) { " (replaces the changes queued before)" } else { "" }))
+      $A.ExtrasStatus.Text = "Waiting for the game to close. Your changes install by themselves then."
+      Show-Extras
       return
     }
-    $A.ExtrasStatus.Text = "Closing Minecraft..."
-    $A.Window.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Background)
-    $how = Stop-Game @($running | ForEach-Object { $_.Id })
-    Log ("extras: the game was " + $how + " to apply")
+    $route = "restart"
   }
-  $r = Invoke-ExtrasApply (Get-ExtrasPaths $DataDir) $m $st
-  if ($r.ok) {
-    Save-ExtrasState $A.ExtrasStatePath $st
-    $A.ExtrasStatus.Text = $(if ($route -eq "ask_restart") { "Done. The Minecraft Launcher is opening again: press Play there." } else { "Done. They're on the next time the game starts." })
-    if ($route -eq "ask_restart") { $null = Open-Launcher }
-  } else {
-    $A.ExtrasStatus.Text = ("Nothing changed: {0}. Everything is as it was." -f $r.error)
+  if ($route -eq "restart") {
+    $st.queued = $null
+    Start-Flow $st $pick $true
+    return
+  }
+  # the game is closed: install now, check, then ask to start it
+  Install-Now @{ choices = $pick.choices; shader = $pick.shader; st = $st } "now"
+}
+
+# Install with the game closed (Apply with the game closed, or a queued install the moment it closed).
+function Install-Now($what, [string]$why) {
+  $A = $script:App
+  $m = $A.XManifest; if (-not $m) { $m = Read-JsonFile $A.ExtrasManifestPath }
+  if ($why -eq "queued") { $st = $what; $r = Invoke-QueuedInstall $A.Paths $m $st }
+  else {
+    $st = $what.st; $st.queued = $null
+    $prevC = $st.choices; $prevS = $st.shader
+    $st.choices = $what.choices; $st.shader = $what.shader
+    $r = Invoke-ExtrasApply $A.Paths $m $st
+    if (-not $r.ok) { $st.choices = $prevC; $st.shader = $prevS }   # what is chosen goes back with the files
+  }
+  Save-ExtrasState $A.ExtrasStatePath $st
+  $verify = @(Test-Extras $A.Paths $m $st)
+  $bad = @($verify | Where-Object { $_.ok -eq $false })
+  XLog ("check after install: {0} check(s), {1} failed" -f $verify.Count, $bad.Count) -Err:($bad.Count -gt 0)
+  if ($A.Tabs.SelectedItem -eq $A.ExtrasTab) { Show-Extras }
+  if (-not $r.ok) { $A.ExtrasStatus.Text = $r.summary; return }
+  if ($why -eq "queued") { $A.ExtrasStatus.Text = "Installed. Active next time you play."; return }
+  # planner H: Start the game now? Yes / Later / Allow all
+  $auto = (Get-ConsentDecision $A.Consent "launch") -eq "allow"
+  $next = Get-AfterInstall $auto
+  if ($next -eq "ask_start") {
+    $ans = Show-Ask "Start the game now?" "Your extras are installed and checked. Yes opens the Minecraft Launcher on Deepslate Works; press Play there. Later leaves everything ready for the next time you play." "Allow all: Yes now, and from now on start the game after Apply without asking."
+    XLog ("apply: start the game? " + $ans)
+    if ($ans -eq "all") { Set-ConsentAnswer $A.Consent "launch" "allow" 1; Save-Consent $A.ConsentPath $A.Consent; $ans = "yes" }
+    if ($ans -ne "yes") { $A.ExtrasStatus.Text = "Installed. Ready, starts next time you play."; return }
+  }
+  $ok = Open-Launcher
+  XLog ("relaunch: " + $(if ($ok) { "started (the Minecraft Launcher on Deepslate Works)" } else { "the Minecraft Launcher was not found" })) -Err:(-not $ok)
+  $A.ExtrasStatus.Text = "Installed. The Minecraft Launcher is opening: press Play there."
+}
+
+# Yes with the game running: close it, install, check, start it again. One stage per tick of the timer, so the
+# window never freezes while the game takes its time to close.
+function Start-Flow($st, $pick, [bool]$relaunch) {
+  $A = $script:App
+  $ids = @(Find-GameProcess $DataDir (Get-JavaProcesses) | ForEach-Object { $_.Id })
+  XLog ("restart: game {0}" -f $(if ($ids.Count) { "found (process " + ($ids -join ", ") + ")" } else { "not found: nothing to close" }))
+  $A.Flow = @{ stage = "closing"; ids = $ids; t0 = (Get-Date); st = $st; pick = $pick; relaunch = $relaunch; result = $null }
+  $A.ProgressBox.Children.Clear(); $A.ProgressBox.Visibility = "Visible"
+  $A.ApplyButton.IsEnabled = $false
+  Add-Progress "Closing the game..."
+  if ($ids.Count) { Send-GameClose $ids }
+}
+function Add-Progress([string]$text) { $script:App.ProgressBox.Children.Add((New-Text $text 13 "SemiBold" "#1A5FB4")) | Out-Null }
+function Step-Flow {
+  $A = $script:App
+  $f = $A.Flow
+  switch ($f.stage) {
+    "closing" {
+      if (Test-GameGone $f.ids) { XLog ("restart: the game closed after {0:0} s" -f ((Get-Date) - $f.t0).TotalSeconds); $f.stage = "installing"; Add-Progress "Installing..."; return }
+      if (((Get-Date) - $f.t0).TotalSeconds -ge 30) { Stop-GameForce $f.ids; $f.stage = "installing"; Add-Progress "Installing..."; return }
+    }
+    "installing" {
+      $m = $A.XManifest
+      $prevC = $f.st.choices; $prevS = $f.st.shader
+      $f.st.choices = $f.pick.choices; $f.st.shader = $f.pick.shader
+      $f.result = Invoke-ExtrasApply $A.Paths $m $f.st
+      if (-not $f.result.ok) { $f.st.choices = $prevC; $f.st.shader = $prevS }
+      Save-ExtrasState $A.ExtrasStatePath $f.st
+      XLog ("restart: install done: " + $(if ($f.result.ok) { "OK" } else { "failed, the previous set is back" })) -Err:(-not $f.result.ok)
+      $f.stage = "checking"; Add-Progress "Checking..."
+    }
+    "checking" {
+      $verify = @(Test-Extras $A.Paths $A.XManifest $f.st)
+      $bad = @($verify | Where-Object { $_.ok -eq $false })
+      XLog ("check after install: {0} check(s), {1} failed" -f $verify.Count, $bad.Count) -Err:($bad.Count -gt 0)
+      $after = Get-AfterRestartInstall $f.result
+      $A.ExtrasStatus.Text = $after.say
+      if ($f.relaunch) { $f.stage = "starting"; Add-Progress "Starting the game..." } else { $f.stage = "done" }
+    }
+    "starting" {
+      $ok = Open-Launcher
+      XLog ("restart: relaunch " + $(if ($ok) { "started (the Minecraft Launcher on Deepslate Works)" } else { "failed: the Minecraft Launcher was not found" })) -Err:(-not $ok)
+      $f.stage = "done"
+    }
+    "done" {
+      $A.Flow = $null
+      $A.ApplyButton.IsEnabled = $true
+      Show-Extras
+    }
+  }
+}
+function On-Headline([string]$action = "") {
+  $A = $script:App
+  if (-not $action) { $action = [string]$A.HeadlineButton.Tag }
+  if ($action -eq "play") { $A.Tabs.SelectedItem = $A.PlayTab; if ($A.Mode -eq "idle") { Start-Run }; return }
+  if ($action -eq "restart") {
+    $st = Read-ExtrasState $A.ExtrasStatePath
+    if (-not $st.queued) { return }
+    XLog "restart: Restart now pressed for the queued changes"
+    $pick = @{ choices = $st.queued.choices; shader = $st.queued.shader }
+    $st.queued = $null
+    Start-Flow $st $pick $true
   }
 }
 
-function Show-RestartPrompt([switch]$NoWait) {
-  $d = [Windows.Markup.XamlReader]::Parse($RestartXaml)
-  $d.Owner = $script:App.Window
-  $script:App.RestartAnswer = "later"
-  ($d.FindName("Now")).Add_Click({ param($sender, $e) $script:App.RestartAnswer = "now"; [Windows.Window]::GetWindow($sender).Close() })
-  ($d.FindName("Later")).Add_Click({ param($sender, $e) $script:App.RestartAnswer = "later"; [Windows.Window]::GetWindow($sender).Close() })
+# A question with Yes / Later / Allow all. Returns "yes", "later" or "all".
+function Show-Ask([string]$question, [string]$why, [string]$allNote, [switch]$NoWait) {
+  $d = [Windows.Markup.XamlReader]::Parse($AskXaml)
+  try { $d.Owner = $script:App.Window } catch {}
+  ($d.FindName("Q")).Text = $question
+  ($d.FindName("Why")).Text = $why
+  ($d.FindName("AllNote")).Text = $allNote
+  $script:App.AskAnswer = "later"
+  ($d.FindName("Yes")).Add_Click({ param($sender, $e) $script:App.AskAnswer = "yes"; [Windows.Window]::GetWindow($sender).Close() })
+  ($d.FindName("Later")).Add_Click({ param($sender, $e) $script:App.AskAnswer = "later"; [Windows.Window]::GetWindow($sender).Close() })
+  ($d.FindName("All")).Add_Click({ param($sender, $e) $script:App.AskAnswer = "all"; [Windows.Window]::GetWindow($sender).Close() })
   if ($NoWait) { return $d }
   [void]$d.ShowDialog()
-  return $script:App.RestartAnswer
+  return $script:App.AskAnswer
 }
 
-# -Screenshots <folder>: the first-run Play tab, the Extras tab and the restart prompt, as PNG files. Drawn off screen.
+# -Screenshots <folder>: drawn off screen. The questions with Allow all, the restart question, the extras waiting for
+# the game to close, everything active in game (with the checks).
 function Save-Png($visual, [string]$file) {
   $visual.UpdateLayout()
   $w = [int][Math]::Ceiling($visual.ActualWidth); $h = [int][Math]::Ceiling($visual.ActualHeight)
@@ -1918,24 +2537,35 @@ function Save-Png($visual, [string]$file) {
 function Save-Screenshots([string]$dir) {
   $A = $script:App
   [void][IO.Directory]::CreateDirectory($dir)
-  $pump = { $A.Window.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Background) }
   $A.Window.WindowStartupLocation = "Manual"; $A.Window.Left = -20000; $A.Window.Top = 0; $A.Window.ShowInTaskbar = $false
-  $A.Window.Show(); & $pump
-  # 1. first run: every step unanswered
+  $A.Window.Show(); Pump
+  # 1. a question with Allow all (the first-run cards)
+  $real = $A.Consent
   $A.Consent = @{}
   Show-FirstRun
-  & $pump; Save-Png $A.Window.Content (Join-Path $dir "1-play-first-run.png")
-  # 2. Extras: what this PC has (it needs one Play with extras downloaded)
-  $A.Consent = Read-Consent $A.ConsentPath
-  $A.Tabs.SelectedItem = $A.ExtrasTab
-  Show-Extras
-  & $pump; Save-Png $A.Window.Content (Join-Path $dir "2-extras.png")
-  # 3. the restart prompt
-  $d = Show-RestartPrompt -NoWait
+  Pump; Save-Png $A.Window.Content (Join-Path $dir "1-permissions-allow-all.png")
+  $A.Consent = $real
+  # 2. the restart question
+  $d = Show-Ask "Restart the game now to use your extras?" "Minecraft is running and has its mods open, so they can only change while it's closed. Yes closes it (like its own X button), installs your changes, checks them and starts the game again. Later installs them the moment you close the game." "Allow all: Yes now, and from now on restart without asking (Review permissions changes that)." -NoWait
   $d.WindowStartupLocation = "Manual"; $d.Left = -20000; $d.Top = 0; $d.ShowInTaskbar = $false
   $d.Show(); $d.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Background)
-  Save-Png $d.Content (Join-Path $dir "3-restart-prompt.png")
+  Save-Png $d.Content (Join-Path $dir "2-restart-question.png")
   $d.Close()
+  # 3. waiting for the game to close: Iris + Light shaders and Falling Leaves chosen with Later, game running
+  $A.Tabs.SelectedItem = $A.ExtrasTab; Pump
+  $m = Read-JsonFile $A.ExtrasManifestPath
+  if ($m) {
+    $s3 = Read-ExtrasState $A.ExtrasStatePath; $s3.downloaded = $true
+    $s3.queued = @{ choices = @{ iris = $true; "falling-leaves" = $true }; shader = "light"; at = (Get-NowIso) }
+    $A.XRendered = $false
+    Show-Extras -sim @{ running = $true; state = $s3 }
+    Pump; Save-Png $A.Window.Content (Join-Path $dir "3-waiting-for-the-game.png")
+    # 4. everything active in game, with the checks
+    $s4 = Read-ExtrasState $A.ExtrasStatePath; $s4.downloaded = $true; $s4.queued = $null
+    $A.XRendered = $false
+    Show-Extras -sim @{ running = $false; state = $s4; inGameAll = $true }
+    Pump; Save-Png $A.Window.Content (Join-Path $dir "4-all-active.png")
+  } else { Write-Host "No extras on this PC yet: press Play once with extras allowed, then take the Extras screenshots." -ForegroundColor Yellow }
   $A.Window.Close()
   Write-Host ("Screenshots in {0}" -f $dir)
   try { Start-Process $dir } catch {}
@@ -1962,6 +2592,29 @@ function Start-AppWindow {
     try { $mutex.ReleaseMutex() } catch {}
     $mutex.Dispose(); $signal.Dispose()
   }
+}
+
+# -VerifyExtras: the same checks as the Extras tab, printed; exit code 1 when one fails.
+function Invoke-VerifyExtras {
+  $paths = Get-ExtrasPaths $DataDir
+  $m = Read-JsonFile (Join-Path $AppHome $ExtrasManifestName)
+  $st = Read-ExtrasState (Join-Path $AppHome $ExtrasStateName)
+  if (-not $m) { Write-Host "No extras on this PC (no extras list yet)." -ForegroundColor Yellow; return 0 }
+  $verify = @(Test-Extras $paths $m $st)
+  $inGame = Test-ExtrasInGame $paths $m $st (Read-GameSession $paths.latestLog)
+  $fail = 0
+  Write-Host ("Extras on: {0}{1}" -f $(if ((Get-ExtrasOn $m $st).Count) { (Get-ExtrasOn $m $st) -join ", " } else { "none" }), $(if ($st.queued) { " (changes queued for when the game closes)" } else { "" }))
+  foreach ($c in $verify) { Write-Host ("  [{0}] {1}: {2}" -f $(if ($c.ok) { "OK" } else { "FAIL" }), $c.group, $c.text) -ForegroundColor $(if ($c.ok) { "Green" } else { "Red" }); if (-not $c.ok) { $fail++ } }
+  foreach ($id in (Get-ExtrasOn $m $st)) {
+    $g = $inGame[$id]; $x = @($m.extras | Where-Object { $_.id -eq $id })[0]
+    if ($x.shader) { continue }
+    $tag = $(if ($g.state -eq "active") { "OK" } elseif ($g.state -eq "waiting") { "WAIT" } else { "FAIL" })
+    if ($tag -eq "FAIL") { $fail++ }
+    Write-Host ("  [{0}] In game: {1}: {2}" -f $tag, (Get-ExtraName $x), $(if ($g.state -eq "active") { "confirmed in game" } elseif ($g.state -eq "waiting") { "waiting for the game to start" } else { $g.reason })) -ForegroundColor $(if ($tag -eq "OK") { "Green" } elseif ($tag -eq "WAIT") { "Cyan" } else { "Red" })
+  }
+  foreach ($x in @($m.extras | Where-Object { -not $_.shader })) { if ($inGame[[string]$x.id].state -eq "off-loaded") { Write-Host ("  [INFO] In game: {0} is off; the last session still had it" -f (Get-ExtraName $x)) } }
+  XLog ("verify (-VerifyExtras): {0} failed" -f $fail) -Err:($fail -gt 0)
+  return $(if ($fail) { 1 } else { 0 })
 }
 
 if ($SelfTest) {
@@ -2562,8 +3215,8 @@ if ($SelfTest) {
   $cp = Join-Path $dir "app [x]\consent.json"
   $c = Read-Consent $cp
   $ids = @(Get-ConsentSteps | ForEach-Object { $_.id })
-  Check ("the planner's steps, in order: " + ($ids -join ", ")) (($ids -join ",") -eq "signin,launcher,java,neoforge,mods,profile,shortcuts,reports,extras")
-  Check "needed to play: all but shortcuts, reports and extras" ((@(Get-ConsentSteps | Where-Object { -not $_.required } | ForEach-Object { $_.id }) -join ",") -eq "shortcuts,reports,extras")
+  Check ("the planner's steps, in order: " + ($ids -join ", ")) (($ids -join ",") -eq "signin,launcher,java,neoforge,mods,profile,shortcuts,reports,extras,restart,launch")
+  Check "needed to play: all but shortcuts, reports and extras" ((@(Get-ConsentSteps | Where-Object { -not $_.required } | ForEach-Object { $_.id }) -join ",") -eq "shortcuts,reports,extras,restart,launch")
   Check "first run: every step is asked" (@(Get-UnansweredSteps $c).Count -eq 9)
   foreach ($s0 in Get-ConsentSteps) { Set-ConsentAnswer $c $s0.id $(if ($s0.id -eq "reports") { "decline" } else { "allow" }) $s0.top }
   Save-Consent $cp $c
@@ -2608,7 +3261,7 @@ if ($SelfTest) {
   Check "nothing switched: Apply has nothing to do" ((Get-ApplyRoute $false (Test-ExtrasChanged $xm $st)) -eq "nothing")
   $st.choices["iris"] = $true; $st.choices["fresh-animations"] = $true; $st.shader = "full"
   Check "the game running: Restart the game to apply? is asked" ((Get-ApplyRoute $true (Test-ExtrasChanged $xm $st)) -eq "ask_restart")
-  Check "the game not running: applied straight away" ((Get-ApplyRoute $false (Test-ExtrasChanged $xm $st)) -eq "apply")
+  Check "the game not running: installed straight away" ((Get-ApplyRoute $false (Test-ExtrasChanged $xm $st)) -eq "install")
   $r = Invoke-ExtrasApply $xp $xm $st
   Check ("on: Iris, Fresh Animations with EMF and ETF, the Full shader pack in place: " + $r.error) ($r.ok -and [IO.File]::Exists((Join-Path $xp.mods "iris.jar")) -and [IO.File]::Exists((Join-Path $xp.mods "emf.jar")) -and [IO.File]::Exists((Join-Path $xp.mods "etf.jar")) -and [IO.File]::Exists((Join-Path $xp.resourcepacks "fa.zip")) -and [IO.File]::Exists((Join-Path $xp.shaderpacks "comp.zip")) -and -not [IO.File]::Exists((Join-Path $xp.shaderpacks "makeup.zip")) -and -not [IO.File]::Exists((Join-Path $xp.mods "nea.jar")))
   Check "Fresh Animations switched on in options.txt, the player's own pack kept" ([IO.File]::ReadAllText($xp.options) -match 'resourcePacks:\["vanilla","file/Mine.zip","file/fa.zip"\]')
@@ -2645,6 +3298,8 @@ if ($SelfTest) {
   Save-ExtrasState $sp0 $st
   $st2 = Read-ExtrasState $sp0
   Check "extras.json remembers the choices and where the files are" ($st2.choices["nea"] -and $st2.shader -eq "full" -and (@($st2.applied.mods) -contains "nea.jar"))
+  $st2.installedAt = "2026-10-01T15:30:11.123Z"; Save-ExtrasState $sp0 $st2
+  Check "times come back as ISO text whatever PowerShell does with JSON dates" ((Read-ExtrasState $sp0).installedAt -eq "2026-10-01T15:30:11.123Z")
 
   Write-Host "Self test: the app, the game and the PC (2.0.0)" -ForegroundColor White
   $procs = @(
@@ -2653,21 +3308,178 @@ if ($SelfTest) {
     [pscustomobject]@{ Id = 13; Name = "chrome.exe"; CommandLine = 'chrome.exe .minecraft-deepslate-works' }
   )
   Check "finds the Deepslate game, not another Minecraft and not a browser" ((@(Find-GameProcess "C:\Users\x\AppData\Roaming\.minecraft-deepslate-works" $procs) | ForEach-Object { $_.Id }) -join "," -eq "11")
-  Check "no game running: no restart question" ((Get-ApplyRoute ((@(Find-GameProcess "C:\none" $procs)).Count -gt 0) $true) -eq "apply")
+  Check "no game running: no restart question" ((Get-ApplyRoute ((@(Find-GameProcess "C:\none" $procs)).Count -gt 0) $true) -eq "install")
   Check "weak: 4 GB with a real card" (Test-WeakPc 4 @("NVIDIA GeForce RTX 3060"))
   Check "weak: 16 GB with built-in Intel graphics" (Test-WeakPc 16 @("Intel(R) UHD Graphics 620"))
   Check "not weak: 16 GB and an RTX 3060" (-not (Test-WeakPc 16 @("Intel(R) UHD Graphics 770", "NVIDIA GeForce RTX 3060")))
   Check "not weak: 16 GB and a Radeon RX 6600" (-not (Test-WeakPc 16 @("AMD Radeon RX 6600")))
   Check "weak: memory known, no graphics card seen" (Test-WeakPc 16 @())
 
+  Write-Host "Self test: extras logged, checked, confirmed in game (2.0.1)" -ForegroundColor White
+  $AppHome = Join-Path $dir "apphome [x]"
+  $script:XLogLines.Clear()
+  $gd2 = Join-Path $dir "game2 [x]"
+  $xq = Get-ExtrasPaths $gd2
+  foreach ($d0 in @($xq.extras, $xq.mods, $xq.resourcepacks, $xq.shaderpacks, (Split-Path $xq.latestLog))) { [void][IO.Directory]::CreateDirectory($d0) }
+  $b2 = @{ "iris.jar" = "iris"; "makeup.zip" = "makeup"; "comp.zip" = "comp"; "fa.zip" = "fa"; "emf.jar" = "emf"; "etf.jar" = "etf"; "fl.jar" = "fl" }
+  $sh2 = @{}; foreach ($k in $b2.Keys) { $f0 = Join-Path $dir "b2.tmp"; [IO.File]::WriteAllText($f0, $b2[$k] * 40); $sh2[$k] = Get-Sha512 $f0; Remove-Item -LiteralPath $f0 }
+  $f2 = { param($n, $kind) [pscustomobject]@{ filename = $n; kind = $kind; url = ("https://example.invalid/" + $n); sha512 = $sh2[$n]; size = 160 } }
+  $xm2 = [pscustomobject]@{ extras = @(
+    [pscustomobject]@{ id = "iris"; name = "Iris (shaders)"; fps = "High"; shader = $null; requires = @(); modIds = @("iris"); files = @((& $f2 "iris.jar" "mod")) },
+    [pscustomobject]@{ id = "shader-light"; name = "Light"; fps = "Medium"; shader = "light"; requires = @("iris"); modIds = @(); files = @((& $f2 "makeup.zip" "shader")) },
+    [pscustomobject]@{ id = "shader-full"; name = "Full"; fps = "High"; shader = "full"; requires = @("iris"); modIds = @(); files = @((& $f2 "comp.zip" "shader")) },
+    [pscustomobject]@{ id = "fresh-animations"; name = "Fresh Animations"; fps = "Medium"; shader = $null; requires = @(); modIds = @("entity_model_features", "entity_texture_features"); files = @((& $f2 "fa.zip" "resourcepack"), (& $f2 "emf.jar" "mod"), (& $f2 "etf.jar" "mod")) },
+    [pscustomobject]@{ id = "falling-leaves"; name = "Falling Leaves"; fps = "Low"; shader = $null; requires = @(); modIds = @("fallingleaves"); files = @((& $f2 "fl.jar" "mod")) }
+  ) }
+  $fetch2 = { param($url, $out) $n = Split-Path -Leaf ([uri]$url).AbsolutePath; [IO.File]::WriteAllText($out, $b2[$n] * 40) }
+  $badFetch = { param($url, $out) [IO.File]::WriteAllText($out, "not it") }
+  $s2 = New-ExtrasState
+  $threw = $false; try { $null = Sync-ExtrasFiles $xq $xm2 $s2 $badFetch } catch { $threw = $true }
+  Check "a download with the wrong checksum: refused, logged with expected and got, FAILED" ($threw -and (@($script:XLogLines | Where-Object { $_ -match 'ERROR download: iris\.jar .*sha512 expected [0-9a-f]{16}\.\.\. got [0-9a-f]{16}\.\.\. FAILED' }).Count -eq 1))
+  $null = Sync-ExtrasFiles $xq $xm2 $s2 $fetch2
+  $s2.downloaded = $true
+  Check "each download logged: name, extra, size, checksums, OK" (@($script:XLogLines | Where-Object { $_ -match 'download: fl\.jar \(Falling Leaves\), 80 bytes, sha512 expected .* OK$' }).Count -eq 1)
+  $logFile = Join-Path (Join-Path $AppHome "logs") ("extras-{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))
+  Check "and in logs\extras-<date>.log, with the time" ([IO.File]::Exists($logFile) -and ([IO.File]::ReadAllText($logFile) -match '(?m)^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] download: fl\.jar'))
+  [IO.File]::WriteAllText($xq.options, "renderDistance:10`r`nresourcePacks:[`"vanilla`",`"file/Mine.zip`"]`r`n")
+  $script:XLogLines.Clear()
+  $s2.choices = @{ iris = $true; "fresh-animations" = $true; "falling-leaves" = $true }; $s2.shader = "light"
+  $r = Invoke-ExtrasApply $xq $xm2 $s2
+  $sample = @($script:XLogLines)
+  if (-not $r.ok -or $env:DEEPSLATE_SHOW_EXTRAS_LOG) { $sample | ForEach-Object { Write-Host ("      | " + $_) } }
+  Check "Apply logged: switches before and after, each move from -> to, options.txt and Iris written, the result" ($r.ok -and (@($sample | Where-Object { $_ -match 'apply: before: \(nothing on\)' }).Count -eq 1) -and (@($sample | Where-Object { $_ -match 'apply: after:  iris=on, fresh-animations=on, falling-leaves=on, shaders=light' }).Count -eq 1) -and (@($sample | Where-Object { $_ -match 'apply: moved .*extras.fl\.jar -> .*mods.fl\.jar' }).Count -eq 1) -and (@($sample | Where-Object { $_ -match 'apply: options.txt written: resourcePacks:\["vanilla","file/Mine.zip","file/fa.zip"\]' }).Count -eq 1) -and (@($sample | Where-Object { $_ -match 'iris.properties written: enableShaders=true, shaderPack=makeup\.zip' }).Count -eq 1) -and (@($sample | Where-Object { $_ -match 'apply: result OK, 6 file\(s\) moved' }).Count -eq 1))
+  $v = @(Test-Extras $xq $xm2 $s2)
+  Check ("checks after Apply: all good (" + $v.Count + " checks)") ((@($v | Where-Object { $_.ok -eq $false }).Count -eq 0) -and (@($v | Where-Object { $_.group -eq "Files" }).Count -eq 6) -and (@($v | Where-Object { $_.group -eq "Dependencies" }).Count -eq 2))
+  # each check failing
+  $flPath = Join-Path $xq.mods "fl.jar"; $flBody = [IO.File]::ReadAllText($flPath)
+  Remove-Item -LiteralPath $flPath
+  Check "check fails: a switched-on file is missing" (@(Test-Extras $xq $xm2 $s2 | Where-Object { $_.ok -eq $false -and $_.text -match "fl\.jar is missing" }).Count -eq 1)
+  [IO.File]::WriteAllText($flPath, "tampered")
+  Check "check fails: a file with the wrong checksum" (@(Test-Extras $xq $xm2 $s2 | Where-Object { $_.ok -eq $false -and $_.text -match "not the right file" }).Count -eq 1)
+  [IO.File]::WriteAllText($flPath, $flBody)
+  $optGood = [IO.File]::ReadAllText($xq.options)
+  [IO.File]::WriteAllText($xq.options, "resourcePacks:[`"vanilla`"]`r`n")
+  Check "check fails: options.txt not updated" (@(Test-Extras $xq $xm2 $s2 | Where-Object { $_.ok -eq $false -and $_.group -eq "Settings" -and $_.text -match "should be \[fa\.zip\]" }).Count -eq 1)
+  [IO.File]::WriteAllText($xq.options, $optGood)
+  $irisGood = [IO.File]::ReadAllText($xq.iris)
+  [IO.File]::WriteAllText($xq.iris, "enableShaders=true`nshaderPack=Other.zip`n")
+  Check "check fails: Iris set to another shader pack" (@(Test-Extras $xq $xm2 $s2 | Where-Object { $_.ok -eq $false -and $_.id -eq "iris" }).Count -eq 1)
+  [IO.File]::WriteAllText($xq.iris, $irisGood)
+  Move-Item -LiteralPath (Join-Path $xq.mods "emf.jar") -Destination (Join-Path $xq.extras "emf.jar")
+  Check "check fails: Fresh Animations on without EMF" (@(Test-Extras $xq $xm2 $s2 | Where-Object { $_.ok -eq $false -and $_.group -eq "Dependencies" -and $_.text -match "EMF or ETF is missing" }).Count -eq 1)
+  Move-Item -LiteralPath (Join-Path $xq.extras "emf.jar") -Destination (Join-Path $xq.mods "emf.jar")
+  Check "and all good again" (@(Test-Extras $xq $xm2 $s2 | Where-Object { $_.ok -eq $false }).Count -eq 0)
+  # in game, from the game's latest.log
+  $t0 = [datetime]::Parse($s2.installedAt, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::AdjustToUniversal -bor [Globalization.DateTimeStyles]::AssumeUniversal)
+  $stamp = { param($dt) $dt.ToLocalTime().ToString("ddMMMyyyy HH:mm:ss.fff", [Globalization.CultureInfo]::InvariantCulture) }
+  $found = { param($n) "[{0}] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found mod file `"{1}`" [locator: mods folder]" -f (& $stamp $t0.AddMinutes(1)), $n }
+  $reload = "[{0}] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources, file/Mine.zip, file/fa.zip" -f (& $stamp $t0.AddMinutes(1))
+  Check "no game since the install: waiting for the game to start" (((Test-ExtrasInGame $xq $xm2 $s2 $null)["falling-leaves"]).state -eq "waiting")
+  [IO.File]::WriteAllText($xq.latestLog, (@((& $found "sodium.jar"), (& $found "iris.jar"), (& $found "fl.jar"), (& $found "emf.jar"), (& $found "etf.jar"), $reload) -join "`n"))
+  $ig = Test-ExtrasInGame $xq $xm2 $s2 (Read-GameSession $xq.latestLog)
+  Check "the game's log shows them loaded: active in game" (($ig["iris"].state -eq "active") -and ($ig["fresh-animations"].state -eq "active") -and ($ig["falling-leaves"].state -eq "active") -and ($ig["shader-light"].state -eq "active"))
+  [IO.File]::WriteAllText($xq.latestLog, (@((& $found "sodium.jar"), (& $found "iris.jar"), (& $found "emf.jar"), (& $found "etf.jar"), $reload) -join "`n"))
+  $ig = Test-ExtrasInGame $xq $xm2 $s2 (Read-GameSession $xq.latestLog)
+  Check ("check fails: a mod that did not load in latest.log: " + $ig["falling-leaves"].reason) (($ig["falling-leaves"].state -eq "problem") -and ($ig["iris"].state -eq "active"))
+  $err = "[{0}] [main/ERROR] [net.neoforged.fml.ModLoader/LOADING]: Mod loading has failed: fallingleaves requires minecraft 1.21.2" -f (& $stamp $t0.AddMinutes(1))
+  [IO.File]::WriteAllText($xq.latestLog, (@((& $found "iris.jar"), (& $found "fl.jar"), (& $found "emf.jar"), (& $found "etf.jar"), $err, $reload) -join "`n"))
+  $ig = Test-ExtrasInGame $xq $xm2 $s2 (Read-GameSession $xq.latestLog)
+  Check ("a loading error naming the mod: the reason is shown: " + $ig["falling-leaves"].reason) (($ig["falling-leaves"].state -eq "problem") -and ($ig["falling-leaves"].reason -match "requires minecraft 1\.21\.2"))
+  $old = "[{0}] [main/INFO] x: Found mod file `"fl.jar`" [x]" -f (& $stamp $t0.AddHours(-2))
+  [IO.File]::WriteAllText($xq.latestLog, $old)
+  Check "a game session from before the install does not count: waiting" (((Test-ExtrasInGame $xq $xm2 $s2 (Read-GameSession $xq.latestLog))["falling-leaves"]).state -eq "waiting")
+  # planner G: the status words
+  $none = @{}
+  $stOf = { param($id, $vf, $ign, $run) (Get-ExtraStatus @($xm2.extras | Where-Object { $_.id -eq $id })[0] $xm2 $s2 $vf $ign $run) }
+  $okv = @(Test-Extras $xq $xm2 $s2)
+  Check "installed, no game since: Ready, starts next time you play (blue)" ((& $stOf "falling-leaves" $okv @{ "falling-leaves" = @{ state = "waiting" } } $false).tone -eq "blue")
+  Check "confirmed in latest.log: Active in game (green)" ((& $stOf "falling-leaves" $okv @{ "falling-leaves" = @{ state = "active" } } $true).text -eq "Active in game")
+  Check "a failed check: Problem: <reason> (red)" ((& $stOf "falling-leaves" @(@{ group = "Files"; id = "falling-leaves"; ok = $false; text = "fl.jar is missing" }) @{} $false).text -eq "Problem: fl.jar is missing")
+  $null = Set-ExtrasQueue $s2 @{ iris = $true; "fresh-animations" = $true; "falling-leaves" = $false; "particle-rain" = $true } "light"
+  Check "Later while the game runs: switched off shows Off, removed when the game closes (amber)" ((& $stOf "falling-leaves" $okv @{} $true).text -eq "Off, removed when the game closes")
+  $s2.queued.choices["falling-leaves"] = $true; $s2.applied.mods = @($s2.applied.mods | Where-Object { $_ -ne "fl.jar" })
+  Check "Later while the game runs: switched on shows Waiting for the game to close (amber)" ((& $stOf "falling-leaves" $okv @{} $true).text -eq "Waiting for the game to close")
+  $s2.applied.mods += "fl.jar"; $s2.queued = $null
+  $s2.choices["falling-leaves"] = $false; $keepMods = $s2.applied.mods; $s2.applied.mods = @($keepMods | Where-Object { $_ -ne "fl.jar" })
+  Check "switched off, last session still had it: Off, takes effect next time you play" ((& $stOf "falling-leaves" $okv @{ "falling-leaves" = @{ state = "off-loaded" } } $false).text -eq "Off, takes effect next time you play")
+  Check "switched off and gone from the game too: Off (grey)" ((& $stOf "falling-leaves" $okv @{ "falling-leaves" = @{ state = "off" } } $false).tone -eq "grey")
+  $s2.choices["falling-leaves"] = $true; $s2.applied.mods = $keepMods
+  $stats = @{ iris = @{ text = "Active in game"; tone = "green" }; "fresh-animations" = @{ text = "Active in game"; tone = "green" }; "falling-leaves" = @{ text = "Active in game"; tone = "green" } }
+  Check "the top line: everything active" ((Get-ExtrasHeadline $xm2 $s2 $stats $true).text -eq "Everything you've switched on is active in game.")
+  $stats["falling-leaves"] = @{ text = "Ready, starts next time you play"; tone = "blue" }
+  $h0 = Get-ExtrasHeadline $xm2 $s2 $stats $false
+  Check "the top line: the game isn't running, with Play now" (($h0.text -match "^The game isn't running") -and ($h0.action -eq "play"))
+  $null = Set-ExtrasQueue $s2 @{ iris = $true } "none"
+  $h1 = Get-ExtrasHeadline $xm2 $s2 $stats $true
+  Check "the top line: the game is running, changes queued, with Restart now" (($h1.text -match "install when it closes") -and ($h1.action -eq "restart"))
+  $s2.queued = $null
+
+  Write-Host "Self test: Apply -> restart, the queue, rollback (2.0.1)" -ForegroundColor White
+  Check "game running, not allowed before: the restart question" ((Get-ApplyRoute $true $true $false) -eq "ask_restart")
+  Check "game running, Allow all given before: restart without asking" ((Get-ApplyRoute $true $true $true) -eq "restart")
+  Check "game closed: install now, then Start the game now? is asked" (((Get-ApplyRoute $false $true $false) -eq "install") -and ((Get-AfterInstall $false) -eq "ask_start"))
+  Check "game closed, Allow all given before: install and start without asking" ((Get-AfterInstall $true) -eq "start")
+  Check "Apply again while queued: the queue is replaced, not stacked" ((-not (Set-ExtrasQueue $s2 @{ iris = $true } "full")) -and (Set-ExtrasQueue $s2 @{ "falling-leaves" = $false; iris = $true; "fresh-animations" = $true } "light") -and ($s2.queued.shader -eq "light") -and (-not $s2.queued.choices["falling-leaves"]))
+  $script:XLogLines.Clear()
+  $rq = Invoke-QueuedInstall $xq $xm2 $s2
+  Check "the game closed: the queue installs by itself, logged with queued at and installed at" ($rq.ok -and ($null -eq $s2.queued) -and -not [IO.File]::Exists((Join-Path $xq.mods "fl.jar")) -and (@($script:XLogLines | Where-Object { $_ -match 'queued install: queued at .* installing now' }).Count -eq 1) -and (@($script:XLogLines | Where-Object { $_ -match 'queued install: installed at' }).Count -eq 1))
+  $sampleLater = @($script:XLogLines)
+  $null = Set-ExtrasQueue $s2 @{ iris = $true; "fresh-animations" = $true; "falling-leaves" = $true } "light"
+  Save-ExtrasState (Join-Path $AppHome "extras.json") $s2
+  $s3 = Read-ExtrasState (Join-Path $AppHome "extras.json")
+  $r3 = Sync-ExtrasFiles $xq $xm2 $s3 $fetch2
+  Check "the app closed before the game: the next Play installs the queue" ($r3.applied.ok -and ($null -eq $s3.queued) -and [IO.File]::Exists((Join-Path $xq.mods "fl.jar")))
+  $modsBefore2 = & $snap $xq.mods
+  $script:XLogLines.Clear()
+  $s3.choices["falling-leaves"] = $false
+  $script:MoveCount = 0
+  $failMove = @{ move = { param($a, $b) $script:MoveCount++; throw "The process cannot access the file because it is being used by another process." } }
+  $rf = Invoke-ExtrasApply $xq $xm2 $s3 $failMove
+  Check ("a file in use: rolled back, said in plain English: " + $rf.summary) ((-not $rf.ok) -and ($rf.summary -eq "Couldn't switch off Falling Leaves: file in use. Nothing was changed.") -and ((& $snap $xq.mods) -eq $modsBefore2))
+  Check "and the rollback is logged, as errors" ((@($script:XLogLines | Where-Object { $_ -match 'ERROR rollback: putting everything back because: file in use' }).Count -eq 1) -and (@($script:XLogLines | Where-Object { $_ -match 'rollback: done' }).Count -eq 1))
+  $after = Get-AfterRestartInstall $rf
+  Check "Yes with a failed install: the game still starts, on the previous set" ($after.relaunch -and ($after.say -match "previous extras"))
+  $s3.choices["falling-leaves"] = $true
+  $rep = Get-ExtrasReport $xq $xm2 $s3
+  Check ("the report's extras block: on, last Apply, checks, in game: " + (ConvertTo-Json $rep -Compress -Depth 5)) ((@($rep.on) -contains "falling-leaves") -and ($rep.shader -eq "light") -and ($rep.lastApply.ok -eq $false) -and ($rep.verify.ok -eq $true) -and (@("waiting", "active", "problems") -contains $rep.inGame.state))
+  $DataDirKeep = $DataDir; $DataDir = $gd2
+  Save-ExtrasState (Join-Path $AppHome "extras.json") $s3
+  Write-JsonFile (Join-Path $AppHome "extras-manifest.json") $xm2
+  $vOk = Invoke-VerifyExtras
+  Remove-Item -LiteralPath (Join-Path $xq.mods "fl.jar")
+  $vBad = Invoke-VerifyExtras
+  $DataDir = $DataDirKeep
+  Check "-VerifyExtras: exit code 0 when all is well, 1 when a check fails" (($vOk -eq 0) -and ($vBad -eq 1))
+
+  Write-Host "Self test: Allow all and Reset all (2.0.1)" -ForegroundColor White
+  $c2 = @{}; $ans = @{}
+  Approve-AllSteps $ans @(Get-UnansweredSteps $c2)
+  Check "first run: Allow all answers every card on the page" (@($ans.Keys).Count -eq 9 -and @($ans.Values | Where-Object { $_ -ne "allow" }).Count -eq 0)
+  $ans = @{}; Approve-AllSteps $ans @(Get-ConsentStep "java")
+  Check "a later question (a bigger step): Allow all answers it" ($ans["java"] -eq "allow")
+  $ans = @{}; Approve-AllSteps $ans @(Get-ConsentSteps)
+  Check "Review permissions: Allow all covers every step, the restart and start-the-game ones too" (($ans["restart"] -eq "allow") -and ($ans["launch"] -eq "allow") -and (@($ans.Keys).Count -eq 11))
+  Check "the restart and start-the-game questions are not on the first-run list" ((@(Get-UnansweredSteps @{}) | Where-Object { $_.id -eq "restart" -or $_.id -eq "launch" }).Count -eq 0)
+  $c2 = @{}; Set-ConsentAnswer $c2 "restart" "allow" 1
+  Check "the restart question's Allow all is remembered: no question next time" ((Get-ApplyRoute $true $true ((Get-ConsentDecision $c2 "restart") -eq "allow")) -eq "restart")
+  Set-ConsentAnswer $c2 "launch" "allow" 1
+  Check "the start-the-game question's Allow all is remembered" ((Get-AfterInstall ((Get-ConsentDecision $c2 "launch") -eq "allow")) -eq "start")
+  $cp2 = Join-Path $AppHome "consent.json"; Save-Consent $cp2 $c2
+  Reset-AllConsent $cp2
+  Check "Reset all: every question is asked again" ((@(Get-UnansweredSteps (Read-Consent $cp2)).Count -eq 9) -and ((Get-ConsentDecision (Read-Consent $cp2) "restart") -eq "ask"))
+  if ($env:DEEPSLATE_SHOW_EXTRAS_LOG) { Write-Host "---- sample: Apply (game closed)"; $sample | ForEach-Object { Write-Host $_ }; Write-Host "---- sample: Later, the game closed, installed"; $sampleLater | ForEach-Object { Write-Host $_ } }
+  $AppHome = $null
+
   Write-Host "Self test: the window's layout (2.0.0)" -ForegroundColor White
   $okXaml = $true; $names = @()
   try { $x1 = [xml]$AppXaml; $x2 = [xml]$RestartXaml; $names = @($x1.SelectNodes("//*[@*[local-name()='Name']]") | ForEach-Object { $_.GetAttribute("Name", "http://schemas.microsoft.com/winfx/2006/xaml") }) } catch { $okXaml = $false }
   Check "both windows' XAML is well-formed" $okXaml
-  $want = @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "PlayButton", "PlayBody", "ApplyButton", "ExtrasStatus", "ExtrasBody", "LogBox")
+  $want = @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody", "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList")
   Check ("every name the code looks up is in the XAML") (@($want | Where-Object { $names -notcontains $_ }).Count -eq 0)
   Check "the window is titled Deepslate Works with Play, Extras and Log tabs" (($AppXaml -match 'Title="Deepslate Works"') -and ($AppXaml -match 'Header="  Play  "') -and ($AppXaml -match 'Header="  Extras  "') -and ($AppXaml -match 'Header="  Log  "'))
-  Check "the restart prompt offers Restart now and Later" (($RestartXaml -match 'Content="Restart now"') -and ($RestartXaml -match 'Content="Later"'))
+  Check "the questions (restart, start the game) offer Yes, Later and Allow all" (($AskXaml -match 'Content="Yes"') -and ($AskXaml -match 'Content="Later"') -and ($AskXaml -match 'Content="Allow all"'))
+  Check "the Play tab's questions have Allow all next to Continue, Review permissions has Reset all" (($AppXaml -match 'x:Name="AllowAllButton"[^>]*Content="Allow all"') -and ($AppXaml -match 'x:Name="ResetButton"[^>]*Content="Reset all"'))
+  Check "the Extras tab's download question has Allow all" ([IO.File]::ReadAllText($PSCommandPath) -match 'New-Button "Allow all"')
 
   $own = [IO.File]::ReadAllText($PSCommandPath)
   $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
@@ -2799,6 +3611,9 @@ function Read-Token {
 # script again as -Engine for the install steps. Tests, -Console and a PC where WPF will not start run the steps here.
 $AppHome = $(if ($script:CustomRoot -or -not (Get-HomeDir)) { Join-Path $Root "LocalAppData\DeepslateWorks" } else { Get-HomeDir })
 $script:MePath = $PSCommandPath
+# who started this run (2.0.1): several runs within seconds were seen on 2026-10-01; this says where they came from
+if ($OnWindows) { try { $pp = Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $PID) -ErrorAction Stop; $par = Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $pp.ParentProcessId) -ErrorAction SilentlyContinue; Log ("started: {0} {1}, process {2}, by {3} ({4}), {5}" -f $PackName, $InstallerVersion, $PID, $(if ($par) { $par.Name } else { "?" }), $pp.ParentProcessId, $(if ($Engine) { "engine" } elseif ($FromLink) { "from the Play link" } elseif ($Setup) { "Setup" } else { "window" })) } catch {} }
+if ($VerifyExtras) { exit (Invoke-VerifyExtras) }
 if ($OnWindows -and -not $Engine -and -not $Console -and -not $DryRun -and -not $script:CustomRoot -and @($PretendRunning).Count -eq 0) {
   if ([Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
     # WPF needs a single-threaded apartment: Windows PowerShell gives one, pwsh does not

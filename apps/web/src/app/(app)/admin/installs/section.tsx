@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { getExtraNames } from "@/server/modpack/lock";
+import { extrasLine, extrasReportSchema } from "@/lib/extras-line";
+import { Prisma } from "@prisma/client";
 import { formatDate } from "@/lib/utils";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { MODE_LABEL, OUTCOMES, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
 import { timeAgo } from "@/lib/series";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cell, Clip, Field, FixedTable } from "@/components/admin/parts";
 import { getInstaller } from "@/server/modpack/lock";
@@ -34,7 +37,12 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   const total = counts.reduce((a, c) => a + c._count._all, 0);
   const now = new Date();
   // The group's PCs: each member's latest report, whatever the filter above says.
-  const latest = await db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, at: true, system: true, tierMeasured: true, mode: true, outcome: true, user: { select: { displayName: true, mcUuid: true } } } });
+  const latest = await db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, at: true, system: true, tierMeasured: true, mode: true, outcome: true, extras: true, user: { select: { displayName: true, mcUuid: true } } } });
+  // 2.0.1: the Extras tab on each member's PC, from their latest report that says (older installers do not)
+  const extraNames = await getExtraNames();
+  const extrasRows = (await db.installReport.findMany({ where: { extras: { not: Prisma.DbNull } }, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, at: true, extras: true, user: { select: { displayName: true } } } }))
+    .map((r) => ({ ...r, line: extrasLine(extrasReportSchema.safeParse(r.extras).data ?? null, extraNames) }))
+    .filter((r) => r.line);
   const members = await db.user.count();
   const tiers = { HIGH: 0, MID: 0, LOW: 0 } as Record<string, number>;
   for (const l of latest) if (l.tierMeasured) tiers[l.tierMeasured] = (tiers[l.tierMeasured] ?? 0) + 1;
@@ -114,6 +122,14 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
           )}
         </CardContent>
       </Card>
+      {extrasRows.length > 0 && (
+        <Card data-testid="extras-summary">
+          <CardHeader><CardTitle>Extras on members&apos; PCs</CardTitle></CardHeader>
+          <CardContent>
+            <ul className="space-y-1 text-sm">{extrasRows.map((r) => <li key={r.id}><Link href={`/admin/installs/${r.id}`} className="font-medium hover:underline">{r.user.displayName}</Link>: {r.line} <span className="text-muted-foreground">{timeAgo(r.at, now)}</span></li>)}</ul>
+          </CardContent>
+        </Card>
+      )}
       <h2 className="pt-2 text-lg font-semibold">Every run</h2>
       <nav className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-sm" aria-label="Filter by outcome">
         <Link href="/admin/people?tab=installs" aria-current={!only ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${!only ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>All ({total})</Link>

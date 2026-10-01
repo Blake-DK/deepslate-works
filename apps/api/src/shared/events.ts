@@ -68,6 +68,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "auth.adminReset": "had their password reset from the command line",
   "profile.onboard": "answered the PC question",
   "profile.tier.measured": (p) => (p.from && p.from !== p.to ? `their PC was measured by the installer: ${s(p.to)} (they had chosen ${s(p.from)})` : `their PC was measured by the installer: ${s(p.to)}`),
+  "profile.visuals": (p) => (p.extras ? `switched visual extras on${p.shader && p.shader !== "none" ? ` with ${p.shader === "full" ? "full" : "light"} shaders` : ", no shaders"}` : "switched visual extras off"),
   "ballot.save": "saved their vote",
   "vote.create": (p) => `created the vote "${s(p.title)}"`,
   "vote.open": "opened the vote",

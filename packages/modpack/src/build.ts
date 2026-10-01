@@ -10,7 +10,8 @@ import { shortHash } from "./lock";
 
 // docs/06 + docs/07: dist/server/, dist/config.zip, dist/installer.zip
 
-const forServer = (e: LockEntry) => e.side !== "client";
+// Optional extras, resource packs and shader packs are for PCs only, whatever Modrinth says about their sides.
+const forServer = (e: LockEntry) => e.side !== "client" && !e.optional && (e.kind ?? "mod") === "mod";
 
 async function exists(p: string) {
   try {

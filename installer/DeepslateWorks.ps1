@@ -48,7 +48,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.5.6"   # 1.5.6: Setup sets up each part on its own and says why one failed. History in docs/07
+$InstallerVersion = "1.6.0"   # 1.6.0: visual extras (resource packs, shader packs) chosen on the Me page. History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -923,6 +923,89 @@ function Set-RenderDistance([string]$path, $ours, [int]$render, [int]$sim) {
   return @{ status = "changed"; ours = $render; text = ("Render distance {0} {1} {2}" -f $now, [char]0x2192, $render) }
 }
 
+# ---- visual extras (1.6.0, planner 2026-10-01) -------------------------------------------------------------
+# The member chooses on the Me page; the mod list says what that means for this PC (`visuals`). The optional mods come
+# in `files` like any other; resource packs and shader packs come apart and live in resourcepacks\ and shaderpacks\.
+# Only files the pack itself put there are ever taken out; a player's own packs are never touched.
+
+# options.txt "resourcePacks": ours that are wanted are added at the end (on top), ours that are not are taken out.
+# Everything else in the list, and its order, stays. $want and $ours are file names. Returns @{ status; text }.
+function Set-ResourcePackList([string]$path, [string[]]$want, [string[]]$ours) {
+  $want = @($want | Where-Object { $_ })
+  $wantIds = @($want | ForEach-Object { "file/" + $_ })
+  $oursIds = @(@($ours) + @($want) | Where-Object { $_ } | ForEach-Object { "file/" + $_ })
+  $text = ""
+  if ([IO.File]::Exists($path)) { $text = [IO.File]::ReadAllText($path) }
+  $nl = "`r`n"
+  if ($text -and -not $text.Contains("`r`n") -and $text.Contains("`n")) { $nl = "`n" }
+  $m = [regex]::Match($text, '(?m)^resourcePacks:(.*?)(?=\r?$)')
+  $list = @("vanilla")
+  if ($m.Success) {
+    try { $list = @((ConvertFrom-Json $m.Groups[1].Value) | ForEach-Object { [string]$_ }) }
+    catch { return @{ status = "left"; text = "Resource packs left as they are (options.txt has a list this cannot read)" } }
+  } elseif ($wantIds.Count -eq 0) { return @{ status = "same"; text = "No resource packs to switch on" } }
+  $new = New-Object Collections.Generic.List[string]
+  foreach ($x in $list) { if (($oursIds -notcontains $x) -or ($wantIds -contains $x)) { if (-not $new.Contains($x)) { $new.Add($x) } } }
+  foreach ($x in $wantIds) { if (-not $new.Contains($x)) { $new.Add($x) } }
+  if ($m.Success -and ((@($new) -join "`n") -eq ($list -join "`n"))) { return @{ status = "same"; text = "Resource packs already as chosen" } }
+  $line = "resourcePacks:[" + ((@($new) | ForEach-Object { '"' + $_.Replace('\', '\\').Replace('"', '\"') + '"' }) -join ",") + "]"
+  if ($m.Success) { $out = $text.Substring(0, $m.Index) + $line + $text.Substring($m.Index + $m.Length) }
+  else { $out = $text; if ($out -and -not $out.EndsWith("`n")) { $out += $nl }; $out += $line + $nl }
+  $tmp = $path + ".new"
+  [IO.File]::WriteAllText($tmp, $out, (New-Object Text.UTF8Encoding($false)))
+  Move-Item -LiteralPath $tmp -Destination $path -Force
+  if ($wantIds.Count) { return @{ status = "changed"; text = ("Resource pack switched on: " + ($want -join ", ")) } }
+  return @{ status = "changed"; text = "Visual extras' resource pack switched off" }
+}
+
+# config\iris.properties: the shader pack chosen on the Me page, or shaders off ("" = None). Other settings stay.
+function Set-IrisShader([string]$path, [string]$pack) {
+  $text = ""
+  if ([IO.File]::Exists($path)) { $text = [IO.File]::ReadAllText($path) }
+  $nl = "`r`n"
+  if ($text -and -not $text.Contains("`r`n") -and $text.Contains("`n")) { $nl = "`n" }
+  $set = [ordered]@{ enableShaders = $(if ($pack) { "true" } else { "false" }) }
+  if ($pack) { $set.shaderPack = $pack }
+  foreach ($k in @($set.Keys)) {
+    $v = $set[$k]
+    $re = '(?m)^' + [regex]::Escape($k) + '\s*[=:].*?(?=\r?$)'
+    if ([regex]::IsMatch($text, $re)) { $text = [regex]::Replace($text, $re, ($k + "=" + $v).Replace('$', '$$')) }
+    else { if ($text -and -not $text.EndsWith("`n")) { $text += $nl }; $text += $k + "=" + $v + $nl }
+  }
+  [void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($path))
+  $tmp = $path + ".new"
+  [IO.File]::WriteAllText($tmp, $text, (New-Object Text.UTF8Encoding($false)))
+  Move-Item -LiteralPath $tmp -Destination $path -Force
+}
+
+# The pack's files in one folder: the wanted ones downloaded (or kept when they are already right), the pack's
+# others taken out. $ours: every name the pack has put there or could have. Returns @{ fetched; removed; busy }.
+function Sync-PackFolder([string]$dir, $wanted, [string[]]$ours, [string]$staging, [scriptblock]$fetch) {
+  [void][IO.Directory]::CreateDirectory($dir)
+  $sha = [System.Security.Cryptography.SHA512]::Create()
+  $r = @{ fetched = 0; removed = 0; busy = @() }
+  $names = @($wanted | ForEach-Object { [string]$_.filename })
+  foreach ($f in @($wanted)) {
+    if (([string]$f.filename) -match '[\\/]|^\.\.?$') { continue }
+    $dest = Join-Path $dir $f.filename
+    if ([IO.File]::Exists($dest)) {
+      $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($dest))).Replace("-", "").ToLower()
+      if ($hash -eq $f.sha512) { continue }
+    }
+    $got = Save-ModFile $f.url $dest $f.sha512 $staging $fetch
+    if ($got -eq "wrong") { throw ("{0} downloaded wrong" -f $f.filename) }
+    if ($got -eq "in use") { $r.busy += [string]$f.filename; continue }
+    $r.fetched++
+  }
+  foreach ($n in @($ours | Where-Object { $_ } | Select-Object -Unique)) {
+    if ($names -contains $n -or $n -match '[\\/]|^\.\.?$') { continue }
+    $p = Join-Path $dir $n
+    if (-not [IO.File]::Exists($p)) { continue }
+    try { [IO.File]::Delete($p); $r.removed++ } catch { $r.busy += $n }
+  }
+  return $r
+}
+
 # Chat links (1.5.5, planner): with chatLinks off, the sign-in link in the white room's chat line cannot be clicked. It
 # cannot mend a Microsoft account that has chat switched off (the book in the room is for that), but it rules out the
 # other reason. Only a "chatLinks:false" line is changed, and only that line. $null when nothing was changed.
@@ -1260,6 +1343,54 @@ if ($SelfTest) {
   [IO.File]::WriteAllText($of, $game)
   $r = Set-RenderDistance $of "banana" 12 8
   Check "nonsense in installed.json counts as 8" ($r.status -eq "changed")
+
+  Write-Host "Self test: visual extras (1.6.0)" -ForegroundColor White
+  [IO.File]::WriteAllText($of, $game)
+  $r = Set-ResourcePackList $of @("FreshAnimations_v1.10.4.zip") @()
+  Check ("no resourcePacks line yet: one is added with vanilla and ours: " + $r.text) (($r.status -eq "changed") -and ([IO.File]::ReadAllText($of) -eq ($game + "resourcePacks:[`"vanilla`",`"file/FreshAnimations_v1.10.4.zip`"]`r`n")))
+  $r = Set-ResourcePackList $of @("FreshAnimations_v1.10.4.zip") @("FreshAnimations_v1.10.4.zip")
+  Check "already on: nothing written" ($r.status -eq "same")
+  $rpMine = $game.Replace("lang:en_gb", "resourcePacks:[`"vanilla`",`"mod_resources`",`"file/My Pack.zip`",`"file/FreshAnimations_v1.10.3.zip`"]`r`nlang:en_gb")
+  [IO.File]::WriteAllText($of, $rpMine)
+  $r = Set-ResourcePackList $of @("FreshAnimations_v1.10.4.zip") @("FreshAnimations_v1.10.3.zip")
+  Check "a new version: the old one out, the new one on top, the player's own pack and the order kept" ([IO.File]::ReadAllText($of) -eq $rpMine.Replace(",`"file/FreshAnimations_v1.10.3.zip`"]", ",`"file/FreshAnimations_v1.10.4.zip`"]"))
+  $r = Set-ResourcePackList $of @() @("FreshAnimations_v1.10.4.zip")
+  Check ("extras off: ours out, the player's own stays: " + $r.text) (($r.status -eq "changed") -and ([IO.File]::ReadAllText($of) -eq $rpMine.Replace(",`"file/FreshAnimations_v1.10.3.zip`"", "")))
+  [IO.File]::WriteAllText($of, $game)
+  $r = Set-ResourcePackList $of @() @("FreshAnimations_v1.10.4.zip")
+  Check "extras off and no list at all: the file is left as it is" (($r.status -eq "same") -and ([IO.File]::ReadAllText($of) -eq $game))
+  [IO.File]::WriteAllText($of, "resourcePacks:not json`n")
+  $r = Set-ResourcePackList $of @("FreshAnimations_v1.10.4.zip") @()
+  Check "a list it cannot read: left alone" (($r.status -eq "left") -and ([IO.File]::ReadAllText($of) -eq "resourcePacks:not json`n"))
+  [IO.File]::WriteAllText($of, "renderDistance:8`nresourcePacks:[]`n")
+  $r = Set-ResourcePackList $of @("FA.zip") @()
+  Check "an empty list and Unix line endings: ours added, endings kept" ([IO.File]::ReadAllText($of) -eq "renderDistance:8`nresourcePacks:[`"file/FA.zip`"]`n")
+  $ip = Join-Path (Join-Path $od "config") "iris.properties"
+  Set-IrisShader $ip "ComplementaryReimagined_r5.9.3.zip"
+  Check "no iris.properties yet: written with the pack and shaders on" ([IO.File]::ReadAllText($ip) -eq "enableShaders=true`r`nshaderPack=ComplementaryReimagined_r5.9.3.zip`r`n")
+  [IO.File]::WriteAllText($ip, "#Iris settings`ncolorSpace=SRGB`nenableShaders=false`nmaxShadowRenderDistance=32`nshaderPack=Mine.zip`n")
+  Set-IrisShader $ip "MakeUp-UltraFast-9.5f.zip"
+  Check "Iris's own file: the two lines changed, the rest as it was" ([IO.File]::ReadAllText($ip) -eq "#Iris settings`ncolorSpace=SRGB`nenableShaders=true`nmaxShadowRenderDistance=32`nshaderPack=MakeUp-UltraFast-9.5f.zip`n")
+  Set-IrisShader $ip ""
+  Check "None: shaders off, the pack name left" ([IO.File]::ReadAllText($ip) -eq "#Iris settings`ncolorSpace=SRGB`nenableShaders=false`nmaxShadowRenderDistance=32`nshaderPack=MakeUp-UltraFast-9.5f.zip`n")
+  $sp = Join-Path $od "shaderpacks"
+  [void][IO.Directory]::CreateDirectory($sp)
+  [IO.File]::WriteAllText((Join-Path $sp "Players Own.zip"), "theirs")
+  [IO.File]::WriteAllText((Join-Path $sp "Old_r5.9.2.zip"), "old")
+  $body = [Text.Encoding]::UTF8.GetBytes("shader bytes")
+  $bodySha = [BitConverter]::ToString([System.Security.Cryptography.SHA512]::Create().ComputeHash($body)).Replace("-", "").ToLower()
+  $fake = { param($url, $out) [IO.File]::WriteAllBytes($out, [Text.Encoding]::UTF8.GetBytes("shader bytes")) }
+  $want = @([pscustomobject]@{ filename = "New_r5.9.3.zip"; url = "https://example.invalid/x"; sha512 = $bodySha })
+  $r = Sync-PackFolder $sp $want @("Old_r5.9.2.zip", "New_r5.9.3.zip") (Join-Path $od ".downloading") $fake
+  Check "shader packs: the chosen one in, our old one out, the player's own one kept" (($r.fetched -eq 1) -and ($r.removed -eq 1) -and [IO.File]::Exists((Join-Path $sp "New_r5.9.3.zip")) -and -not [IO.File]::Exists((Join-Path $sp "Old_r5.9.2.zip")) -and [IO.File]::Exists((Join-Path $sp "Players Own.zip")))
+  $r = Sync-PackFolder $sp $want @("New_r5.9.3.zip") (Join-Path $od ".downloading") { param($url, $out) throw "should not download" }
+  Check "already there and right: not downloaded again" (($r.fetched -eq 0) -and ($r.removed -eq 0))
+  $r = Sync-PackFolder $sp @() @("New_r5.9.3.zip", "..", "..\x.zip") (Join-Path $od ".downloading") $fake
+  Check "extras off: ours out; names with a path in them are never followed" (($r.removed -eq 1) -and -not [IO.File]::Exists((Join-Path $sp "New_r5.9.3.zip")) -and [IO.File]::Exists((Join-Path $sp "Players Own.zip")))
+  $bad = @([pscustomobject]@{ filename = "Bad.zip"; url = "https://example.invalid/x"; sha512 = ("0" * 128) })
+  $threw = $false
+  try { $null = Sync-PackFolder $sp $bad @() (Join-Path $od ".downloading") $fake } catch { $threw = $true }
+  Check "a download with the wrong checksum is not kept" ($threw -and -not [IO.File]::Exists((Join-Path $sp "Bad.zip")))
 
   Write-Host "Self test: chat links (1.5.5)" -ForegroundColor White
   Remove-Temp $of
@@ -1973,6 +2104,48 @@ try {
     } catch { Note ("The render distance was left as it is: " + $_.Exception.Message) }
   }
 
+  # ---- visual extras (1.6.0): resource packs and shader packs, as chosen on the Me page ----------------------
+  $vis = $null
+  if ($manifest.PSObject.Properties["visuals"] -and $manifest.visuals) { $vis = $manifest.visuals }
+  $prevVis = $null
+  if ($prev -and $prev.PSObject.Properties["visuals"]) { $prevVis = $prev.visuals }
+  $script:VisualsDone = $prevVis
+  if ($vis) {
+    $wantRp = @($vis.resourcepacks | Where-Object { $_ })
+    $wantSp = @(@($vis.shaderpack) | Where-Object { $_ })
+    $shaderFile = $(if ($wantSp.Count) { [string]$wantSp[0].filename } else { "" })
+    $oursRp = @(@($vis.known.resourcepacks) + @($(if ($prevVis) { $prevVis.resourcepacks } else { @() })) | Where-Object { $_ } | ForEach-Object { [string]$_ })
+    $oursSp = @(@($vis.known.shaderpacks) + @($(if ($prevVis) { $prevVis.shaderpacks } else { @() })) | Where-Object { $_ } | ForEach-Object { [string]$_ })
+    $hadAny = @($oursRp | Where-Object { Test-Path -LiteralPath (Join-Path (Join-Path $GameDir "resourcepacks") $_) }).Count + @($oursSp | Where-Object { Test-Path -LiteralPath (Join-Path (Join-Path $GameDir "shaderpacks") $_) }).Count
+    Log ("visual extras: {0}, shaders {1}" -f $(if ($vis.extras) { "on" } else { "off" }), $vis.shader)
+    if ($vis.extras -or $hadAny -or ($prevVis -and $prevVis.extras)) {
+      Step "Visual extras"
+      if ($DryRun) { Note ("(dry run) visual extras {0}, shaders {1}" -f $(if ($vis.extras) { "on" } else { "off" }), $vis.shader) }
+      else {
+        try {
+          $web = { param($url, $out) Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing }
+          $a = Sync-PackFolder (Join-Path $GameDir "resourcepacks") $wantRp $oursRp $staging $web
+          $b = Sync-PackFolder (Join-Path $GameDir "shaderpacks") $wantSp $oursSp $staging $web
+          foreach ($busy in @($a.busy + $b.busy)) { Note ("{0} is in use; close Minecraft and press Play again to finish." -f $busy) }
+          $rp = Set-ResourcePackList (Join-Path $GameDir "options.txt") @($wantRp | ForEach-Object { [string]$_.filename }) $oursRp
+          Log $rp.text
+          # Iris's setting is written when the choice (or the shader's file, after an update) is new, so a pack picked
+          # in the game stays picked until the Me page choice changes.
+          $was = $(if ($prevVis -and $prevVis.extras) { [string]$prevVis.shader + "|" + [string]$prevVis.shaderFile } else { "" })
+          if ($vis.extras -and $was -ne ([string]$vis.shader + "|" + $shaderFile)) {
+            Set-IrisShader (Join-Path $GameDir "config\iris.properties") $shaderFile
+            Log ("iris.properties: " + $(if ($shaderFile) { "shaderPack=" + $shaderFile } else { "shaders off" }))
+          }
+          $script:VisualsDone = @{ extras = [bool]$vis.extras; shader = [string]$vis.shader; shaderFile = $shaderFile; resourcepacks = @($wantRp | ForEach-Object { [string]$_.filename }); shaderpacks = @($wantSp | ForEach-Object { [string]$_.filename }) }
+          if ($vis.extras) {
+            $say = @{ none = "no shaders"; light = "Light shaders (MakeUp Ultra Fast)"; full = "Full shaders (Complementary Reimagined)" }[[string]$vis.shader]
+            Tick ("Visual extras on, {0}" -f $(if ($say) { $say } else { [string]$vis.shader }))
+          } else { Tick "Visual extras off: taken out" }
+        } catch { Note ("Visual extras could not be set up this time: " + $_.Exception.Message) }
+      }
+    }
+  }
+
   # ---- the server list (servers.dat: uncompressed NBT, one entry), the first time --------------------------
   $serversDat = Join-Path $GameDir "servers.dat"
   if (-not (Test-Path -LiteralPath $serversDat) -and -not $DryRun) {
@@ -2047,7 +2220,7 @@ try {
     } catch { Log ("could not check the Play link and the shortcuts: " + $_.Exception.Message) }
   }
 
-  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender } | ConvertTo-Json | Set-Content -LiteralPath $installedFile }
+  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender; visuals = $script:VisualsDone } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $installedFile }
 
   # ---- d. the report, e. the game -------------------------------------------------------------------------
   Log "=== done ==="

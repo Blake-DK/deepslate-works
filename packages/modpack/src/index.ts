@@ -7,3 +7,4 @@ export * from "./paths";
 export type { ModrinthProject, ModrinthVersion } from "./modrinth";
 export * from "./build";
 export * from "./download";
+export * from "./visuals";

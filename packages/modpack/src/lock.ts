@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import type { Manifest, Mod } from "./schema";
+import type { Kind, Manifest, Mod } from "./schema";
 import { getProject, getVersion, getVersions, NotFound, type ModrinthProject, type ModrinthVersion } from "./modrinth";
 
 // docs/06: mods.lock.json — exact Modrinth versions, file URLs and hashes for every enabled mod plus required deps.
@@ -29,6 +29,12 @@ export type LockEntry = {
   size: number;
   side: "both" | "client" | "server";
   requiredBy: string[];
+  /** Missing in locks from before 2026-10-01: "mod". */
+  kind?: Kind;
+  /** The optional category it belongs to ("visuals"), or missing/null: everyone gets it. */
+  optional?: string | null;
+  /** A shader pack: the Me page choice that installs it. */
+  shader?: "light" | "full";
 };
 
 export type LockWarning = string;
@@ -88,13 +94,44 @@ async function hashConfigs(configDir: string): Promise<LockFile["configs"]> {
   return out;
 }
 
+/** Where Modrinth files each kind: mods under the pack's loader, resource packs under "minecraft", shader packs under "iris". */
+export const loaderFor = (kind: Kind | undefined, modLoader: string) => (kind === "resourcepack" ? "minecraft" : kind === "shader" ? "iris" : modLoader);
+
+/**
+ * Optional entries pulled in as dependencies take the group of whatever needs them, unless something everyone gets
+ * needs them too: then everyone gets them. Worked out once all entries are known, so the order of the queue does not matter.
+ */
+export function settleOptional(entries: LockEntry[], direct: Set<string>): void {
+  const bySlug = new Map(entries.map((e) => [e.slug, e]));
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const e of entries) {
+      if (direct.has(e.slug) || e.requiredBy.length === 0) continue;
+      const groups = e.requiredBy.map((r) => bySlug.get(r)?.optional ?? null);
+      const next = groups.includes(null) ? null : groups[0]!;
+      if ((e.optional ?? null) !== next) {
+        if (next) e.optional = next;
+        else delete e.optional;
+        changed = true;
+      }
+    }
+  }
+  // Optional things are for the PC only: never on the server.
+  for (const e of entries) if (e.optional) e.side = "client";
+}
+
 export async function buildLock(m: Manifest, opts: { configDir: string; onProgress?: (msg: string) => void }): Promise<{ lock: LockFile; warnings: LockWarning[] }> {
   const warnings: LockWarning[] = [];
   const warn = (w: string) => warnings.push(w);
   const log = opts.onProgress ?? (() => {});
   const bySlug = new Map(m.mods.map((mod) => [mod.slug, mod]));
   const entries = new Map<string, LockEntry>(); // by project id
-  const queue: Array<{ ref: string; requiredBy: string | null; mod?: Mod }> = m.mods.filter((mod) => mod.enabled).map((mod) => ({ ref: mod.slug, requiredBy: null, mod }));
+  const optionalCats = new Set(m.categories.filter((c) => c.optional).map((c) => c.id));
+  const groupOf = (mod: Mod | undefined) => (mod && optionalCats.has(mod.category) ? mod.category : null);
+  // Everyone's mods first, the optional ones after.
+  const enabled = m.mods.filter((mod) => mod.enabled).sort((a, b) => Number(Boolean(groupOf(a))) - Number(Boolean(groupOf(b))));
+  const queue: Array<{ ref: string; requiredBy: string | null; mod?: Mod; group: string | null }> = enabled.map((mod) => ({ ref: mod.slug, requiredBy: null, mod, group: groupOf(mod) }));
+  const direct = new Set<string>();
 
   while (queue.length) {
     const item = queue.shift()!;
@@ -108,18 +145,22 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
       continue;
     }
     const mod = item.mod ?? bySlug.get(project.slug);
-    if (!project.loaders.includes(m.loader) || !project.game_versions.includes(m.minecraft)) {
-      throw new Error(`${project.slug}: no ${m.loader} ${m.minecraft} build on Modrinth${item.requiredBy ? ` (required by ${item.requiredBy})` : ""}`);
+    const kind: Kind = mod?.kind ?? "mod";
+    const loader = loaderFor(kind, m.loader);
+    if (!project.loaders.includes(loader) || !project.game_versions.includes(m.minecraft)) {
+      throw new Error(`${project.slug}: no ${loader} ${m.minecraft} build on Modrinth${item.requiredBy ? ` (required by ${item.requiredBy})` : ""}`);
     }
-    const versions = await getVersions(project.id, m.loader, m.minecraft);
+    const versions = await getVersions(project.id, loader, m.minecraft);
     const version = pickVersion(versions, mod?.version, project.slug, warn);
     const file = version.files.find((f) => f.primary) ?? version.files[0];
     if (!file) throw new Error(`${project.slug}: version ${version.version_number} has no files`);
     const side: LockEntry["side"] = mod && mod.side !== "both" ? mod.side : sideFromProject(project);
+    if (!item.requiredBy) direct.add(project.slug);
     entries.set(project.id, {
       slug: project.slug, name: mod?.name ?? project.title, projectId: project.id, versionId: version.id, versionNumber: version.version_number,
       versionType: version.version_type, filename: file.filename, url: file.url, sha512: file.hashes.sha512, sha1: file.hashes.sha1, size: file.size,
       side, requiredBy: item.requiredBy ? [item.requiredBy] : [],
+      ...(kind !== "mod" ? { kind } : {}), ...(item.group ? { optional: item.group } : {}), ...(mod?.shader ? { shader: mod.shader } : {}),
     });
     log(`${project.slug} ${version.version_number} (${(file.size / 1048576).toFixed(1)} MB)${item.requiredBy ? ` <- ${item.requiredBy}` : ""}`);
     for (const dep of version.dependencies) {
@@ -127,10 +168,11 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
       let depRef = dep.project_id;
       if (!depRef && dep.version_id) depRef = (await getVersion(dep.version_id)).project_id;
       if (!depRef) continue;
-      queue.push({ ref: depRef, requiredBy: project.slug });
+      queue.push({ ref: depRef, requiredBy: project.slug, group: item.group });
     }
   }
 
+  settleOptional([...entries.values()], direct);
   const files = [...entries.values()].sort((a, b) => a.slug.localeCompare(b.slug));
   const neoforge = await resolveNeoForge(m.neoforge);
   const configs = await hashConfigs(opts.configDir);

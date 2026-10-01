@@ -107,6 +107,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "limbo.kickIdlePlay": (p) => `${s(p.name)} waited too long in the entrance room without pressing Play and was disconnected`,
   "limbo.kickIdle": (p) => `${s(p.name)} waited too long in the entrance room and was disconnected`,
   "limbo.build": "built the entrance room",
+  "opac.serverClaims": "made the spawn area and the entrance room server claims",
   "player.revoke": (p) => `kicked ${s(p.name)} and took them off the whitelist`,
   "site.settings": "changed the launch settings",
   "settings.save": (p) => `changed the ${s(p.section, "site")} settings`,

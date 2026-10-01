@@ -29,6 +29,10 @@ import { MemberMenu } from "../../admin/users/member-menu";
 import { setEarlyAccessAction } from "../../admin/users/actions";
 import { Switch } from "@/components/admin/parts";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/server/api-client";
+
+type PartyView = { id: string; name: string | null; members: Array<{ uuid: string; name: string; rank: string; owner: boolean }>; allies: Array<{ id: string; name: string | null; owner: string | null }> };
+const RANK: Record<string, string> = { ADMIN: "admin", MODERATOR: "moderator" };
 
 export const metadata: Metadata = { title: "Player" };
 
@@ -90,6 +94,10 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   ];
   const q = await searchParams;
   const tab = pickTab(q.tab, tabs);
+  // Open Parties and Claims, read from its files on the server (undefined: the server could not be asked)
+  const party = tab === "overview" && !id.startsWith("name:")
+    ? await apiFetch<{ party: PartyView | null }>(`/players/${encodeURIComponent(id)}/party`, { timeoutMs: 8000 }).then((r) => r.party).catch(() => undefined)
+    : undefined;
   const base = `/players/${encodeURIComponent(id)}`;
   return (
     <div className="space-y-6">
@@ -140,6 +148,34 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
           </CardHeader>
           <CardContent>
             {readings.length < 2 ? <p className="text-sm text-muted-foreground">Not measured yet. The line appears after a few minutes on the server.</p> : <Sparkline values={pingLine} label="Ping, this session" unit={["ms", "ms"]} />}
+          </CardContent>
+        </Card>
+      )}
+
+      {tab === "overview" && !id.startsWith("name:") && (
+        <Card data-testid="party">
+          <CardHeader>
+            <CardTitle>Party</CardTitle>
+            <CardDescription>Party members see each other on the minimap and world map. Parties are made in the game: press &apos; (apostrophe).</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm">
+            {party === undefined ? <p className="text-muted-foreground">Can&apos;t read the parties from the server right now.</p> : party === null ? <p className="text-muted-foreground">Not in a party.</p> : (
+              <div className="space-y-2">
+                {party.name && <p className="font-medium" data-testid="party-name">{party.name}</p>}
+                <ul className="flex flex-wrap gap-2" aria-label="Party members">
+                  {party.members.map((m) => (
+                    <li key={m.uuid}>
+                      <Link href={`/players/${m.uuid}`} className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 hover:bg-muted">
+                        <PlayerHead uuid={m.uuid} name={m.name} size={16} />
+                        <span className="font-mono">{m.name || m.uuid.slice(0, 8)}</span>
+                        {m.owner ? <Badge>leader</Badge> : RANK[m.rank] ? <span className="text-xs text-muted-foreground">{RANK[m.rank]}</span> : null}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                {party.allies.length > 0 && <p className="text-muted-foreground">Allied with {party.allies.map((a) => a.name ?? (a.owner ? `${a.owner}'s party` : "a party")).join(", ")}.</p>}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

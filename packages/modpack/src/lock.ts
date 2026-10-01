@@ -88,7 +88,7 @@ async function hashConfigs(configDir: string): Promise<LockFile["configs"]> {
   return out;
 }
 
-export async function buildLock(m: Manifest, opts: { configDir: string; onProgress?: (msg: string) => void }): Promise<{ lock: LockFile; warnings: LockWarning[] }> {
+export async function buildLock(m: Manifest, opts: { configDir: string; onProgress?: (msg: string) => void; /** The NeoForge of the lock in hand: kept when the maven cannot be read. */ previousNeoForge?: string }): Promise<{ lock: LockFile; warnings: LockWarning[] }> {
   const warnings: LockWarning[] = [];
   const warn = (w: string) => warnings.push(w);
   const log = opts.onProgress ?? (() => {});
@@ -132,7 +132,13 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
   }
 
   const files = [...entries.values()].sort((a, b) => a.slug.localeCompare(b.slug));
-  const neoforge = await resolveNeoForge(m.neoforge);
+  // The NeoForged maven's CDN answered 404 to every request for a while on 2026-10-01: the mods are not held up
+  // for it, NeoForge stays where it was and the lock says so.
+  const neoforge = await resolveNeoForge(m.neoforge).catch((e: unknown) => {
+    if (!opts.previousNeoForge) throw e;
+    warn(`NeoForge kept at ${opts.previousNeoForge}: ${e instanceof Error ? e.message : String(e)}`);
+    return opts.previousNeoForge;
+  });
   const configs = await hashConfigs(opts.configDir);
   const lock: LockFile = { generatedAt: new Date().toISOString(), minecraft: m.minecraft, neoforge, hash: packHash(neoforge, files, configs), files, configs };
   return { lock, warnings };

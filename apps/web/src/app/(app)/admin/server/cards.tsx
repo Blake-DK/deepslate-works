@@ -313,12 +313,13 @@ export function RoomCard({ players, running }: { players: Players | null; runnin
       </CardHeader>
       <CardContent className="space-y-3">
         <form action={runActionAction}><input type="hidden" name="action" value="limbo.build" /><Button type="submit" size="sm" variant="secondary" disabled={!running}>Build the room</Button></form>
+        <form action={runActionAction}><input type="hidden" name="action" value="opac.serverClaims" /><Button type="submit" size="sm" variant="secondary" disabled={!running}>Server-claim spawn and the room</Button></form>
         <form action={runActionAction} className="flex items-end gap-2">
           <input type="hidden" name="action" value="player.revoke" />
           <div><Label htmlFor="rvname">Kick + unwhitelist</Label><Input id="rvname" name="name" placeholder="Minecraft name" pattern="[A-Za-z0-9_]{3,16}" className="h-8 w-40 text-sm" required /></div>
           <Button type="submit" size="sm" variant="danger" disabled={!running}>Revoke</Button>
         </form>
-        <HowThisWorks>Players who have not linked their account, or who have not pressed Play when Play first is on, or who the server is not open for yet, are held in a glass room in a dimension of its own (LIMBO_POS) with a line in chat telling them what to do (docs/14). Build it once per world, and again after a change to the room. Who is let in is set in Site settings → Joining and Launch.</HowThisWorks>
+        <HowThisWorks>Players who have not linked their account, or who have not pressed Play when Play first is on, or who the server is not open for yet, are held in a glass room in a dimension of its own (LIMBO_POS) with a line in chat telling them what to do (docs/14). Build it once per world, and again after a change to the room. &quot;Server-claim&quot; makes the spawn area (8×8 chunks around 0,0) and the room Open Parties and Claims server claims, so no player can claim them; once per world is enough. Who is let in is set in Site settings → Joining and Launch.</HowThisWorks>
       </CardContent>
     </Card>
   );

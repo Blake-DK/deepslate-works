@@ -97,6 +97,13 @@ describe("the guide as it ships", () => {
     expect(filterGuide(DEFAULT_GUIDE, { mods: new Set([...on, ...building].filter((s) => s !== "handcrafted")) })).not.toContain("## Building");
     expect(filterGuide(DEFAULT_GUIDE, { mods: on })).toContain("can be lower than the server's but not higher");
   });
+  it("has Playing with friends while Open Parties and Claims is in the pack (planner, 2026-10-01)", () => {
+    expect(slugs.has("open-parties-and-claims")).toBe(true);
+    const out = filterGuide(DEFAULT_GUIDE, { mods: on });
+    expect(out).toContain("## Playing with friends");
+    expect(out).toContain("Press **'** (apostrophe");
+    expect(filterGuide(DEFAULT_GUIDE, { mods: new Set([...on].filter((s) => s !== "open-parties-and-claims")) })).not.toContain("Playing with friends");
+  });
   it("brings the votable mods' lines back the moment Apply results switches them on", () => {
     // Apply results writes `enabled: true` into mods.json; the guide reads mods.json again whenever the file changes.
     const before = filterGuide(DEFAULT_GUIDE, { mods: on });

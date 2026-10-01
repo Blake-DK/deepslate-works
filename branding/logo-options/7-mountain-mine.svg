@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512"><rect x="4" y="4" width="56" height="56" rx="12" fill="#1c1f24"></rect>
+<polygon points="6,54 24,18 33,31 42,21 58,54" fill="#3a3f47"></polygon>
+<polygon points="24,18 29,28 25,26 20,30" fill="#565c66"></polygon>
+<polygon points="42,21 46,30 41,28 38,31" fill="#565c66"></polygon>
+<path d="M23 54 V45 a9 9 0 0 1 18 0 V54 Z" fill="#ff8a3d"></path>
+<path d="M27 54 V47 a5 5 0 0 1 10 0 V54 Z" fill="#ffc285"></path>
+<rect x="6" y="53" width="52" height="3" fill="#2b2f36"></rect></svg>

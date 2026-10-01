@@ -128,6 +128,13 @@ describe("setting the distances", () => {
     expect(await t.d.measure()).toMatchObject({ mspt: 9.25 }); // fresh: not asked again
     expect(t.sent).toHaveLength(1);
   });
+  it("adds the dimensions up when there is no Overall line (this server, 2026-10-01)", async () => {
+    const t = setUp();
+    setTimeout(() => {
+      for (const l of ["Overworld: 20.000 TPS (43.720 ms/tick)", "The Nether: 20.000 TPS (0.022 ms/tick)", "deepslate:limbo: 19.500 TPS (0.072 ms/tick)", "The End: 20.000 TPS (0.006 ms/tick)"]) t.tail.ingest(l);
+    }, 20);
+    expect(await t.d.measure()).toMatchObject({ tps: 19.5, mspt: 43.82 });
+  });
   it("never asks a server that is not up", async () => {
     const t = setUp({ state: 50 });
     expect(await t.d.measure()).toBeNull();

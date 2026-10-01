@@ -81,10 +81,11 @@ describe("the download", () => {
       await rm(dist, { recursive: true, force: true });
     }
   });
-  it("Setup.bat runs the one script with -Setup and nothing else", async () => {
+  it("Setup.bat runs the one script with -Setup and nothing else, and waits only when it failed (2.0.0: the app's window takes over)", async () => {
     const bat = await readFile(path.join(__dirname, "../../../installer/Setup.bat"), "utf8");
-    const commands = bat.split(/\r?\n/).filter((l) => l.trim() && !/^\s*(rem|@echo|echo|title|pause)\b/i.test(l.trim()));
+    const commands = bat.split(/\r?\n/).filter((l) => l.trim() && !/^(@echo off|echo\.?|pause|\)|if errorlevel 1 \()$/i.test(l.trim()) && !/^(rem|title)\b/i.test(l.trim()));
     expect(commands).toEqual(['powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0DeepslateWorks.ps1" -Setup']);
+    expect(bat).toMatch(/if errorlevel 1 \(\r?\n\s*echo\.\r?\n\s*pause\r?\n\)/);
   });
 });
 

@@ -25,7 +25,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   const { outcome } = await searchParams;
   const only = (OUTCOMES as readonly string[]).includes(outcome ?? "") ? outcome : undefined;
   const [rows, counts, installer] = await Promise.all([
-    db.installReport.findMany({ where: only ? { outcome: only } : undefined, orderBy: { at: "desc" }, take: 200, select: { id: true, userId: true, at: true, mode: true, playLinkMissing: true, updatedFrom: true, updateProblem: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } }),
+    db.installReport.findMany({ where: only ? { outcome: only } : undefined, orderBy: { at: "desc" }, take: 200, select: { id: true, userId: true, at: true, mode: true, minimal: true, playLinkMissing: true, updatedFrom: true, updateProblem: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } }),
     db.installReport.groupBy({ by: ["outcome"], _count: { _all: true } }),
     getInstaller(),
   ]);
@@ -59,7 +59,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
       gpu: <Short full={summary(r.system as SystemInfo).gpu} short={shortGpu(summary(r.system as SystemInfo).gpu)} />,
       when: <span title={r.at.toISOString()}>{timeAgo(r.at, now)}</span>,
       installer: <InstallerVersion version={r.installerVersion} current={current} outdated={isOutdated(r.installerVersion, current)} />,
-      from: <span title={r.updatedFrom ? `updated itself, ${r.updatedFrom} to ${r.installerVersion}` : `installer ${r.installerVersion}`}>{MODE_LABEL[r.mode] ?? r.mode}{r.updateProblem ? <span className="text-danger" title="The installer could not update itself"> !</span> : null}</span>,
+      from: <span title={r.updatedFrom ? `updated itself, ${r.updatedFrom} to ${r.installerVersion}` : `installer ${r.installerVersion}`}>{MODE_LABEL[r.mode] ?? r.mode}{r.minimal ? <span className="text-muted-foreground" title="Install reports are switched off in their app: only &quot;pressed Play, pack version&quot; arrives, no log"> (ping only)</span> : null}{r.updateProblem ? <span className="text-danger" title="The installer could not update itself"> !</span> : null}</span>,
       outcome: <span className="flex min-w-0 flex-wrap items-center gap-1"><Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"} className="whitespace-nowrap" title={about || undefined}>{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}{r.failedStep ? " …" : ""}</Badge>{r.playLinkMissing ? <Badge tone="warn" className="ml-1 whitespace-nowrap" title="Setup could not set up the Play button on this PC (installer 1.5.6 and later say why)">Play button not set up</Badge> : null}</span>,
     };
   };

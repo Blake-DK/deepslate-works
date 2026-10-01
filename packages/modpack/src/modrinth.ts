@@ -12,6 +12,8 @@ export type ModrinthProject = {
   server_side: "required" | "optional" | "unsupported" | "unknown";
   loaders: string[];
   game_versions: string[];
+  project_type?: "mod" | "resourcepack" | "shader" | "modpack" | "datapack" | "plugin";
+  icon_url?: string | null;
 };
 
 export type ModrinthVersion = {

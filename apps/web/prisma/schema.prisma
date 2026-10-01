@@ -70,8 +70,6 @@ model User {
   launcherAuth LauncherAuth[]
   installs     InstallReport[]
   earlyAccess  Boolean  @default(false) // docs/13: uses the portal as if it were live while it is not
-  visualExtras Boolean  @default(false) // Me page: the PC also gets the client-only visual mods (mods.json category "visuals")
-  shaders      String   @default("none") // Me page, with visualExtras: "none" | "light" | "full"
   sessionVersion Int    @default(0) // raised to end every session the member has (made a player, password sign-in turned off)
   adminLogin   AdminLogin?
   oneTimeLogins OneTimeLogin[]
@@ -241,6 +239,8 @@ model InstallReport {
   tierMeasured     String?  // the tier worked out from this report's hardware
   setupProblems    Json?    // 1.5.6: [{part, code, message}] what could not be set up on the PC; null when the installer does not say
   playLinkMissing  Boolean? // 1.5.6: the Play button has no working link on that PC after this run (lib/install-report.ts)
+
+  minimal         Boolean  @default(false) // 2.0.0: reports declined in the app: "pressed Play, pack version" only, no log, no PC details
 
   @@index([at])
   @@index([userId, at])

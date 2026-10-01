@@ -4,7 +4,7 @@ import { decide, parseQuestions, tally, type BallotRow } from "@/server/vote/tal
 
 const mod = (slug: string, extra: Partial<Mod> = {}): Mod => ({
   slug, name: slug, category: "factories", side: "both", enabled: false, load: "M", recommended: false, hidden: false,
-  exclusiveGroup: null, description: "x", wiki: "https://modrinth.com/mod/" + slug, videos: [], version: "latest", requires: [], kind: "mod", ...extra,
+  exclusiveGroup: null, description: "x", wiki: "https://modrinth.com/mod/" + slug, videos: [], version: "latest", requires: [], ...extra,
 });
 const mods: Mod[] = [mod("create", { recommended: true }), mod("mekanism", { load: "H" }), mod("tacz", { exclusiveGroup: "guns" }), mod("pointblank", { exclusiveGroup: "guns" })];
 const questions = [{ id: "pvp", text: "PvP", options: ["Off", "On"] }];

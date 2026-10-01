@@ -9,6 +9,8 @@ export function modpackPaths(modpackDir = process.env.MODPACK_DIR ?? path.join(p
     repo,
     manifest: path.join(root, "mods.json"),
     lock: path.join(root, "mods.lock.json"),
+    extras: path.join(root, "extras.json"), // the app's Extras tab: personal, never voted on, not part of the pack
+    extrasLock: path.join(root, "extras.lock.json"),
     config: path.join(root, "config"),
     server: path.join(root, "server"),
     items: path.join(root, "items", "vanilla-1.21.1.json"), // docs/13 §13: every vanilla item, from the game's own report

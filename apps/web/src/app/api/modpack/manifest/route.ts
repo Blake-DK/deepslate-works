@@ -1,6 +1,5 @@
 import { getManifest } from "@/server/modpack/manifest";
 import { distancesFor } from "modpack/schema";
-import { NO_EXTRAS, packFor, visualChoice } from "modpack/visuals";
 import { getInstaller, getLock } from "@/server/modpack/lock";
 import { loadCurrentUser } from "@/server/auth/session";
 import { canDownload, manifestKeyOk } from "@/server/modpack/gate";
@@ -15,7 +14,6 @@ export async function GET(req: Request) {
   const key = new URL(req.url).searchParams.get("key");
   let who: string | null = null;
   let tier: string | null = null;
-  let choice = NO_EXTRAS;
   let via = viaOf(false, manifestKeyOk(key));
   if (!manifestKeyOk(key)) {
     // The installer/updater authenticates with its launcher token (approved in the browser after a Discord login).
@@ -23,7 +21,6 @@ export async function GET(req: Request) {
     const user = fromToken ?? (await loadCurrentUser());
     who = user?.id ?? null;
     tier = user?.pcTier ?? null;
-    choice = visualChoice(user);
     via = viaOf(Boolean(fromToken), false);
     const gate = await canDownload(user);
     if (!gate.ok && gate.reason !== "anonymous") await logDownload({ userId: who, what: "modlist", via, file: "mod list", refused: gate.reason === "not_live" ? "not_live" : "server_offline" });
@@ -39,10 +36,6 @@ export async function GET(req: Request) {
   // installer reads. Only a first install and a value the installer set itself are changed (docs/07).
   const dist = distancesFor(m, tier);
   const k = key && manifestKeyOk(key) ? `?key=${encodeURIComponent(key)}` : "";
-  // The member's own choice of visual extras (Me page): optional mods only for them, resource and shader packs apart
-  // from `files`, so that an installer from before 1.6.0 never puts a .zip among the mods.
-  const pack = packFor(lock, choice);
-  const info = (f: (typeof lock.files)[number]) => ({ slug: f.slug, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size });
   const body = {
     name: m.name,
     version: `${m.version}+${lock.hash.slice(0, 8)}`,
@@ -57,14 +50,7 @@ export async function GET(req: Request) {
     simulation_distance: dist.simulation,
     tier: tier ?? null,
     config_url: lock.configs.length ? `${env.AUTH_URL}/downloads/config.zip${k}` : null,
-    files: pack.mods.map((f) => ({ ...info(f), side: f.side })),
-    visuals: {
-      extras: choice.extras,
-      shader: choice.shader,
-      resourcepacks: pack.resourcepacks.map(info),
-      shaderpack: pack.shaderpack ? info(pack.shaderpack) : null,
-      known: pack.known,
-    },
+    files: lock.files.map((f) => ({ slug: f.slug, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size, side: f.side })),
     configs: lock.configs,
     // docs/07 "The installer updates itself": which installer is current, and the checksum of its zip. No address:
     // the installer fetches it from /downloads on the site it was built for, and from nowhere else.

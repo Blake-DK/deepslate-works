@@ -15,6 +15,8 @@ describe("modpack/extras.json", () => {
     expect(ids).toEqual(["iris", "shader-light", "shader-full", "not-enough-animations", "skin-layers", "falling-leaves", "particle-rain", "sound-physics", "fresh-animations"]);
     expect(extras!.extras.filter((x) => x.shader).map((x) => [x.shader, x.requires])).toEqual([["light", ["iris"]], ["full", ["iris"]]]);
     expect(extras!.extras.find((x) => x.id === "fresh-animations")!.projects.map((p) => p.slug)).toEqual(["fresh-animations", "entity-model-features", "entitytexturefeatures"]);
+    // 2.0.1: the mod ids the app looks for in the game's latest.log
+    expect(Object.fromEntries(extras!.extras.map((x) => [x.id, x.modIds]))).toEqual({ iris: ["iris"], "shader-light": [], "shader-full": [], "not-enough-animations": ["notenoughanimations"], "skin-layers": ["skinlayers3d"], "falling-leaves": ["fallingleaves"], "particle-rain": ["particlerain"], "sound-physics": ["sound_physics_remastered"], "fresh-animations": ["entity_model_features", "entity_texture_features"] });
   });
   it("catches a duplicate, an unknown requirement and two shaders for one choice", () => {
     const x = { id: "aa", name: "A", description: "a", fps: "Low", projects: [{ slug: "aa" }] };

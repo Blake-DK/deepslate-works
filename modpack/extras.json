@@ -5,7 +5,15 @@
       "name": "Iris (shaders)",
       "description": "Shader support: real shadows, light and water. Pick a shader pack below.",
       "fps": "High",
-      "projects": [{ "slug": "iris", "version": "KduFYu4t" }]
+      "projects": [
+        {
+          "slug": "iris",
+          "version": "KduFYu4t"
+        }
+      ],
+      "modIds": [
+        "iris"
+      ]
     },
     {
       "id": "shader-light",
@@ -13,8 +21,15 @@
       "description": "Soft shadows and nicer water, made for slower PCs.",
       "fps": "Medium",
       "shader": "light",
-      "requires": ["iris"],
-      "projects": [{ "slug": "makeup-ultra-fast-shaders" }]
+      "requires": [
+        "iris"
+      ],
+      "projects": [
+        {
+          "slug": "makeup-ultra-fast-shaders"
+        }
+      ],
+      "modIds": []
     },
     {
       "id": "shader-full",
@@ -22,50 +37,106 @@
       "description": "The full look. Needs a proper graphics card.",
       "fps": "High",
       "shader": "full",
-      "requires": ["iris"],
-      "projects": [{ "slug": "complementary-reimagined" }]
+      "requires": [
+        "iris"
+      ],
+      "projects": [
+        {
+          "slug": "complementary-reimagined"
+        }
+      ],
+      "modIds": []
     },
     {
       "id": "not-enough-animations",
       "name": "Not Enough Animations",
       "description": "Proper third-person animations: eating, climbing ladders, holding maps.",
       "fps": "Low",
-      "projects": [{ "slug": "not-enough-animations" }]
+      "projects": [
+        {
+          "slug": "not-enough-animations"
+        }
+      ],
+      "modIds": [
+        "notenoughanimations"
+      ]
     },
     {
       "id": "skin-layers",
       "name": "3D Skin Layers",
       "description": "The outer layer of player skins drawn in 3D instead of flat.",
       "fps": "Low",
-      "projects": [{ "slug": "3dskinlayers" }]
+      "projects": [
+        {
+          "slug": "3dskinlayers"
+        }
+      ],
+      "modIds": [
+        "skinlayers3d"
+      ]
     },
     {
       "id": "falling-leaves",
       "name": "Falling Leaves",
       "description": "Leaves drift down from trees.",
       "fps": "Low",
-      "projects": [{ "slug": "fallingleavesforge" }]
+      "projects": [
+        {
+          "slug": "fallingleavesforge"
+        }
+      ],
+      "modIds": [
+        "fallingleaves"
+      ]
     },
     {
       "id": "particle-rain",
       "name": "Particle Rain",
       "description": "Rain and snow as particles, with splashes, mist and fog.",
       "fps": "Medium",
-      "projects": [{ "slug": "particle-rain" }]
+      "projects": [
+        {
+          "slug": "particle-rain"
+        }
+      ],
+      "modIds": [
+        "particlerain"
+      ]
     },
     {
       "id": "sound-physics",
       "name": "Sound Physics Remastered",
       "description": "Echo in caves, muffled sound through walls, voice chat too.",
       "fps": "Medium",
-      "projects": [{ "slug": "sound-physics-remastered" }]
+      "projects": [
+        {
+          "slug": "sound-physics-remastered"
+        }
+      ],
+      "modIds": [
+        "sound_physics_remastered"
+      ]
     },
     {
       "id": "fresh-animations",
       "name": "Fresh Animations",
       "description": "Mobs blink, breathe and move naturally. Brings EMF and ETF with it.",
       "fps": "Medium",
-      "projects": [{ "slug": "fresh-animations" }, { "slug": "entity-model-features" }, { "slug": "entitytexturefeatures" }]
+      "projects": [
+        {
+          "slug": "fresh-animations"
+        },
+        {
+          "slug": "entity-model-features"
+        },
+        {
+          "slug": "entitytexturefeatures"
+        }
+      ],
+      "modIds": [
+        "entity_model_features",
+        "entity_texture_features"
+      ]
     }
   ]
 }

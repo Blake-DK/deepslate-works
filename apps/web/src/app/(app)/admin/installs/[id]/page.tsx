@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getExtraNames } from "@/server/modpack/lock";
+import { extrasLine, extrasReportSchema } from "@/lib/extras-line";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/server/auth/session";
@@ -59,6 +61,7 @@ export default async function InstallReportPage({ params }: { params: Promise<{ 
         <Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"} className="mr-2">{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}</Badge>
         {r.outcome === "ok" ? "The installer ran through." : r.outcome === "skipped" ? "Another copy was already running on this PC, so this one did nothing." : r.failedStep ? <>Stopped at the step &quot;{r.failedStep}&quot;. It is marked in the log below.</> : "Stopped before the first step."}
       </Alert>
+      {r.extras ? <p className="text-sm" data-testid="report-extras">{extrasLine(extrasReportSchema.safeParse(r.extras).data ?? null, await getExtraNames())}</p> : null}
       <Card>
         <CardHeader>
           <CardTitle>The PC</CardTitle>

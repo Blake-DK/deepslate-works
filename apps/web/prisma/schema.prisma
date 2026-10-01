@@ -241,6 +241,7 @@ model InstallReport {
   playLinkMissing  Boolean? // 1.5.6: the Play button has no working link on that PC after this run (lib/install-report.ts)
 
   minimal         Boolean  @default(false) // 2.0.0: reports declined in the app: "pressed Play, pack version" only, no log, no PC details
+  extras          Json?    // 2.0.1: the Extras tab on that PC: switched on, last Apply, checks, in game (lib/extras-line.ts)
 
   @@index([at])
   @@index([userId, at])

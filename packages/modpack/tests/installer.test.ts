@@ -49,8 +49,10 @@ describe("the download", () => {
     expect(INSTALLER_SCRIPT).toBe("DeepslateWorks.ps1");
     expect(INSTALLER_BRIDGE).toBe("install.ps1");
     const { readdir } = await import("node:fs/promises");
-    // install.ps1 is made by the build from DeepslateWorks.ps1; it is not a file of its own in the repo
-    expect((await readdir(path.join(__dirname, "../../../installer"))).sort()).toEqual(["DeepslateWorks.ps1", "README.txt", "Setup.bat"]);
+    // install.ps1 is made by the build from DeepslateWorks.ps1; it is not a file of its own in the repo. Folders (tests/,
+    // tools/) are not part of the download; the icon is carried inside the script (2.0.3, $IconBase64).
+    const entries = await readdir(path.join(__dirname, "../../../installer"), { withFileTypes: true });
+    expect(entries.filter((e) => e.isFile()).map((e) => e.name).sort()).toEqual(["DeepslateWorks.ico", "DeepslateWorks.ps1", "README.txt", "Setup.bat"]);
   });
   // Installer 1.5.3: 1.4.x's update step takes "Setup.bat" and "install.ps1" out of the zip by those names, top level,
   // under 2 MB each, and checks the script's version line. Without install.ps1 no 1.4.x copy can update itself.

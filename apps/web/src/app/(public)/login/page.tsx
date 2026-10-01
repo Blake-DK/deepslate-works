@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { loadCurrentUser } from "@/server/auth/session";
 import { env } from "@/env";
 import { getBranding } from "@/server/branding";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,8 +25,7 @@ const ERRORS: Record<string, string> = {
 };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
-  const session = await auth();
-  if (session?.user) redirect("/");
+  if (await loadCurrentUser()) redirect("/");
   const { error, next } = await searchParams;
   const message = error ? (ERRORS[error] ?? "Sign-in failed. Try again.") : null;
   const [brand, steps] = await Promise.all([getBranding(), getGettingIn()]);
@@ -77,6 +77,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </Card>
       )}
       <p className="text-center text-xs text-muted-foreground">New here? Ask Alex for an invite link.</p>
+      <p className="text-center text-xs"><Link href={next ? `/login/admin?next=${encodeURIComponent(next)}` : "/login/admin"} className="text-muted-foreground underline" data-testid="admin-signin-link">Admin sign-in</Link></p>
     </div>
   );
 }

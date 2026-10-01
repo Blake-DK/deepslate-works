@@ -1,5 +1,4 @@
-import { auth } from "@/auth";
-import { db } from "@/server/db";
+import { loadCurrentUser } from "@/server/auth/session";
 import { apiFetch, ApiError } from "@/server/api-client";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +7,7 @@ export const dynamic = "force-dynamic";
 // action `console.send`, writes it into the event log and limits it to 5 a second. JSON only and same origin, so a
 // form on another site cannot post here with an admin's cookie.
 export async function POST(req: Request) {
-  const session = await auth();
-  const user = session?.user?.id ? await db.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } }) : null;
+  const user = await loadCurrentUser(); // checks the session is still good (docs/04 "Ending sessions")
   if (!user || user.role !== "ADMIN") return Response.json({ error: { code: "forbidden", message: "admin only" } }, { status: 403 });
   const origin = req.headers.get("origin");
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");

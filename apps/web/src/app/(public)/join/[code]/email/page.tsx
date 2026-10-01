@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { loadCurrentUser } from "@/server/auth/session";
 import { findValidInvite } from "@/server/auth/invites";
 import { MIN_PASSWORD_LENGTH } from "@/server/auth/constants";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,8 +24,7 @@ const ERRORS: Record<string, string> = {
 };
 
 export default async function JoinEmailPage({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ error?: string }> }) {
-  const session = await auth();
-  if (session?.user) redirect("/");
+  if (await loadCurrentUser()) redirect("/");
   const { code } = await params;
   const { error } = await searchParams;
   const invite = await findValidInvite(code);

@@ -240,3 +240,7 @@ Print both in `11-status.md` so Alex can copy them:
 - Offline: read only, from the save file, with "Player is offline. Changes can be made when they're next on." Save files are never written.
 - `POST /players/:name/inventory` (api), `/api/admin/inventory/<name>` (web): admins only, early access and players get 403, 5 changes a second.
 
+## 14. Admin password sign-in (planner, 2026-10-01; entry written by the VPS session)
+
+Admins get a way in that does not need Discord: username + password + authenticator code (or a recovery code), all three always, admins only. It sits under the Discord button as a small "Admin sign-in" link. Set up by each admin for themselves on `/me/sign-in`; another admin can only turn it off. 5 failures per username / 20 per address in 15 minutes lock for 15 minutes; one message for every failure but a lock. Sessions from it last 12 hours. Every attempt in the event log with address and country; every success shown to all admins for 24 hours (a banner; no Discord message without a bot token). Made a player = password sign-in deleted and every session ended (`User.sessionVersion`). Break-glass: `pnpm admin:reset-auth <username>` in the api container, a one-time link valid 15 minutes (docs/09). The members' invite-only email login is unchanged and separate. Details: docs/04 "Admin password sign-in".
+

@@ -35,8 +35,26 @@ Signing in is one thing, using the site another. Until "We're live" is switched 
 - Auth.js JWT sessions in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie scoped to `Domain=.deepslate.dsw.test` so `map.deepslate.dsw.test` shares it and nothing else on dsw.test sees it.
 - `web` → `api` calls carry `Authorization: Bearer <API_SERVICE_TOKEN>` plus who is asking, from the verified session (`X-User-Id`, `X-User-Role` and, where there is one, `X-Mc-Username`); `api` rejects anything without the token and checks the role for every route. `src/server/api-client.ts` is the only place that makes such a call.
 - Leaving the Discord server: `guildMember` is looked at again at every Discord sign-in, and, if `DISCORD_BOT_TOKEN` is set (it is not, 2026-09-29), by `api` every five minutes for whoever is on the server. Somebody who has left is sent back to the entrance room at their next join.
-- Session lifetime 30 days, refreshed on activity.
+- Session lifetime 30 days, refreshed on activity; 12 hours for admin password and break-glass sessions (below).
 - `GET /api/auth/verify` returns 200 if the request carries a valid session, 401 otherwise. Caddy's `forward_auth` uses it for BlueMap.
+
+## Admin password sign-in (planner, 2026-10-01)
+
+For admins only, for the day Discord is down or an admin's Discord account is gone. Discord stays the way in for everyone; the sign-in page has a small "Admin sign-in" link under the Discord button, not a second button.
+
+- **What it takes**: username + password + a 6-digit code from an authenticator app (TOTP, RFC 6238, SHA-1, 30 s, one step of drift either way), or one unused recovery code in place of the code. All three every time; there is no password-only path. A code is accepted once (`AdminLogin.lastStep`).
+- **Setting it up** (`/me/sign-in`; from the Me page, or a member's own row on Admin → People): username (3 to 32, `a-z0-9._-`), password (at least 12 characters, not among the common ones in `src/server/auth/common-passwords.ts`, not the username, not one character repeated), then the authenticator: QR code and the key to type by hand. It is switched on only when a code from the app has been confirmed. Then 10 recovery codes are shown, once.
+- **Storage** (`AdminLogin`, migration 0017): password argon2id (19 MiB, 2 passes, 1 lane; `@node-rs/argon2`); the authenticator secret AES-256-GCM with a key made from `AUTH_SECRET`, so a copy of the database alone cannot make codes; recovery codes only as an HMAC. Nothing new in `.env`: a new `AUTH_SECRET` makes every authenticator unreadable (everyone sets theirs up again) as well as ending every session.
+- **Managing it** (same page): change password (current password + code; sessions that came in with the old one end), new authenticator (needs a code from the current one; the old one works until the new one is confirmed), new recovery codes (needs a code; the old ones stop working), turn it off (needs a code). Another admin can only turn it off for you (Admin → People → row menu), never see or set your password.
+- **Only admins.** A member made a player loses it at once: the row is deleted and `User.sessionVersion` is raised, which ends every session they have, Discord ones too. The members' email login (invite-only) is a separate thing and is unchanged.
+- **Limits** (`src/server/auth/lockout.ts`, in memory): 5 failures for one username within 15 minutes lock that username for 15 minutes; 20 failures from one address within 15 minutes lock that address for 15 minutes. Only failures count; a success clears the username's count. Locked means refused even with everything right. Unknown usernames count like known ones and spend the same time (a dummy argon2 check). The form says the same for a wrong username, password or code ("That didn't work. Check the username, the password and the code…"); only a lock says so ("Too many attempts. Wait 15 minutes").
+- **Sessions from it last 12 hours** (the token carries `until`; checked in the middleware too). Every request that reads the member also checks that a password session's password is still the one it was made with and still switched on.
+- **Seen by everyone**: every attempt is in the event log with the address and its country (looked up by `api`, `GET /geo`): "Alex signed in with password + code from 1.2.3.4 (DE)", "Failed admin sign-in for 'alex' from 1.2.3.4 (DE)". Every successful one is shown to every admin at the top of every page for 24 hours (`components/admin-signin-notice.tsx`). No Discord message: there is no bot token (`DISCORD_BOT_TOKEN` unset).
+- **Break-glass** when no admin can get in: docs/09 Runbook, `pnpm admin:reset-auth <username>` in the api container.
+
+## Ending sessions
+
+Sessions are signed cookies, so ending one means refusing it: `loadCurrentUser()` (`src/server/auth/session.ts`) checks every session against the database with `sessionProblem()` (`session-check.ts`). Pages, server actions and the admin API routes all go through it. `GET /api/auth/verify` (BlueMap's `forward_auth`) reads the cookie only, for speed: an ended session can still see the map until its cookie runs out.
 
 ## Admin bootstrap
 

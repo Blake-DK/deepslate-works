@@ -10,7 +10,8 @@
     "lint": "eslint src tests",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "admin:reset-auth": "node scripts/reset-auth.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6",

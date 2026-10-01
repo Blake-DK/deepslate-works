@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { loadCurrentUser } from "@/server/auth/session";
 import { env } from "@/env";
 import { db } from "@/server/db";
 import { inviteState, normaliseInviteCode } from "@/server/auth/invite-codes";
@@ -25,8 +25,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
   const code = normaliseInviteCode(raw);
   // A join code from the white room (6 characters) typed after /join/ instead of into the box on /join.
   if (CODE_RE.test(code)) redirect(`/join?code=${code}`);
-  const session = await auth();
-  if (session?.user) redirect("/");
+  if (await loadCurrentUser()) redirect("/");
   const invite = code ? await db.invite.findUnique({ where: { code } }) : null;
   const state = inviteState(invite);
 

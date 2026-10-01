@@ -9,12 +9,15 @@ import { MC_USERNAME_RE } from "@/server/auth/constants";
 import { revokeLauncherTokens } from "@/server/launcher";
 import { apiFetch } from "@/server/api-client";
 import { audit } from "@/server/events";
+import { onDemoted, removeAdminLogin } from "@/server/auth/admin-login";
 
 export async function setRoleAction(formData: FormData) {
   const admin = await requireAdmin();
   const parsed = z.object({ id: z.string().min(1), role: z.enum(["ADMIN", "PLAYER"]) }).safeParse(Object.fromEntries(formData));
   if (!parsed.success || parsed.data.id === admin.id) return;
   await db.user.update({ where: { id: parsed.data.id }, data: { role: parsed.data.role } });
+  // Made a player (planner, 2026-10-01): password sign-in off and every session they have ended, at once.
+  if (parsed.data.role === "PLAYER") await onDemoted(parsed.data.id);
   await audit({ userId: admin.id, action: "user.setRole", params: parsed.data, result: "OK" });
   revalidatePath("/admin/people");
   revalidatePath("/players/[uuid]", "page");
@@ -83,4 +86,14 @@ export async function revokeLauncherAction(formData: FormData) {
   revalidatePath("/admin/people");
   revalidatePath("/players/[uuid]", "page");
   redirect("/admin/people");
+}
+
+/** Another admin's password sign-in off (planner, 2026-10-01). Never their password: only off. */
+export async function turnOffPasswordSignInAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id || id === admin.id) return;
+  const who = await db.user.findUnique({ where: { id }, select: { displayName: true } });
+  if (who && (await removeAdminLogin(id))) await audit({ userId: admin.id, action: "auth.adminOff", params: { forId: id, forName: who.displayName }, result: "OK" });
+  revalidatePath("/admin/people");
 }

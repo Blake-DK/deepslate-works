@@ -120,6 +120,10 @@ See `deploy/.env.example` (kept current; every variable commented). Notables: `A
 
 ## Runbook
 
+- **No admin can sign in** (Discord down or gone, password sign-in lost or never set up). On the VPS:
+  `docker exec -it deepslate-api pnpm admin:reset-auth <username>`
+  `<username>` is the admin's password sign-in username, or their display name if they never set one up. It switches that admin's authenticator off (password sign-in stays off until it is set up again; the password is not touched) and prints a link, `https://…/login/once/<token>`, that works **once, within 15 minutes**. Open it, press Sign in (a session of 12 hours), and `/me/sign-in` asks for everything again: username, password, authenticator, new recovery codes. Both the reset and the use of the link are in the event log ("One-time sign-in link made from the command line for …"), and the sign-in shows on every admin's pages for 24 hours. Only the token's SHA-256 is stored (`OneTimeLogin`). An admin who still gets in can do the same for another admin more simply: Admin → People → row menu → Turn password sign-in off, then they set it up again.
+
 - **Server won't start after a mod change** → the console on Admin → Server, or `logs/latest.log` in Admin → Files, names the mod. Switch it off in `mods.json` (Admin → Modpack), Lock, Build, Sync, and **Start**: a sync's restart does not start a server that has failed. There is no rollback command; git has every state of `mods.json` and the lock. (2026-09-29, TabTPS: twelve minutes from the failed start to a running server.) **Start the server once with any new server-side mod before building on it.**
 - **A player can't connect ("mod mismatch")** → Admin → Installs has their last run and the pack it installed; the pack the server runs is on Admin → Modpack. They press Play on the site, which brings their PC up to date.
 - **A player's install fails** → Admin → Installs, the run, its log. Every failure so far was in there in full.

@@ -1,5 +1,4 @@
-import { auth } from "@/auth";
-import { db } from "@/server/db";
+import { loadCurrentUser } from "@/server/auth/session";
 import { CMDS, runModpack, type Cmd } from "@/server/modpack/run";
 import { audit } from "@/server/events";
 
@@ -8,8 +7,7 @@ export const maxDuration = 600;
 // Admin only. Streams log lines as text/event-stream (docs/08).
 export async function POST(_req: Request, { params }: { params: Promise<{ cmd: string }> }) {
   const { cmd } = await params;
-  const session = await auth();
-  const user = session?.user?.id ? await db.user.findUnique({ where: { id: session.user.id } }) : null;
+  const user = await loadCurrentUser(); // checks the session is still good (docs/04 "Ending sessions")
   if (!user || user.role !== "ADMIN") return Response.json({ error: { code: "forbidden", message: "admin only" } }, { status: 403 });
   if (!CMDS.includes(cmd as Cmd)) return Response.json({ error: { code: "validation", message: "unknown command" } }, { status: 400 });
   const enc = new TextEncoder();

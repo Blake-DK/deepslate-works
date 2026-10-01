@@ -3917,7 +3917,7 @@ function Read-Token {
 $AppHome = $(if ($script:CustomRoot -or -not (Get-HomeDir)) { Join-Path $Root "LocalAppData\DeepslateWorks" } else { Get-HomeDir })
 $script:MePath = $PSCommandPath
 if ($VerifyExtras) { exit (Invoke-VerifyExtras) }
-if ($OnWindows -and -not $Engine -and -not $Console -and -not $DryRun -and -not $script:CustomRoot -and @($PretendRunning).Count -eq 0) {
+if ($OnWindows -and -not $Engine -and -not $Console -and -not $DryRun -and -not $script:CustomRoot -and @($PretendRunning).Count -eq 0 -and -not $env:DEEPSLATE_SELFTEST_HOME) {   # the self test's 1.4.x run (a link) never opens the window
   if ([Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
     # WPF needs a single-threaded apartment: Windows PowerShell gives one, pwsh does not
     [void](Start-Hidden (@("-Sta") + (Get-HiddenArgs $PSCommandPath @("-From", $(if ($From) { $From } else { "sta" })))))

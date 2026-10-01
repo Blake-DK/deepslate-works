@@ -19,9 +19,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Self test (Windows PowerShell 5.1)
+        timeout-minutes: 8
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/DeepslateWorks.ps1 -SelfTest
       - name: The window on a Windows desktop
+        if: success() || failure()
+        timeout-minutes: 8
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-smoke.ps1 -Out shots
       - uses: actions/upload-artifact@v4

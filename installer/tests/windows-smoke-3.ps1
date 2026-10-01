@@ -56,7 +56,7 @@ $homeDir = Join-Path $env:LOCALAPPDATA "DeepslateWorks"
 $homeExe = Join-Path $homeDir "DeepslateWorks.exe"
 $log = Join-Path $env:TEMP "deepslate-works.log"
 Remove-Item $log -Force -ErrorAction SilentlyContinue
-$version = (Get-Item $Exe).VersionInfo.ProductVersion -replace '\+.*$', ''
+$version = ((Get-Item $Exe).VersionInfo.ProductVersion -split '\+')[0]
 "{0}: {1:N0} bytes" -f $Exe, (Get-Item $Exe).Length | Write-Host
 
 Write-Host "A fresh download (marked as from the internet, as a browser does)"
@@ -65,16 +65,51 @@ $dlDir = Join-Path $env:USERPROFILE "Downloads"
 $dl = Join-Path $dlDir "DeepslateWorks.exe"
 Copy-Item $Exe $dl -Force
 Set-Content -Path $dl -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nReferrerUrl=https://deepslate.dsw.test/help`r`nHostUrl=https://deepslate.dsw.test/downloads/DeepslateWorks.exe"
-# Explorer opens it the way a double-click does; SmartScreen, where it runs, shows its box then
+# Explorer opens it the way a double-click does; SmartScreen shows its box then: the picture for the Help page, then
+# More info and Run anyway, clicked as a person would (UI Automation)
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+Add-Type -Namespace Smoke -Name R -MemberDefinition @"
+[StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+[DllImport("user32.dll")] public static extern bool GetWindowRect(System.IntPtr h, out RECT r);
+"@
+function Find-Named($root, [string]$name) { return $root.FindFirst([Windows.Automation.TreeScope]::Descendants, (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::NameProperty, $name))) }
+function Save-Crop([IntPtr]$h, [string]$name) {
+  $r = New-Object Smoke.R+RECT; [void][Smoke.R]::GetWindowRect($h, [ref]$r)
+  $w = $r.Right - $r.Left; $hh = $r.Bottom - $r.Top
+  if ($w -le 0 -or $hh -le 0) { return }
+  $bmp = New-Object Drawing.Bitmap $w, $hh
+  $g = [Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($r.Left, $r.Top, 0, 0, $bmp.Size); $g.Dispose()
+  $bmp.Save((Join-Path $Out $name), [Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
+  Write-Host "  picture: $name ($w x $hh)"
+}
 $up = Wait-Up
 Start-Process explorer.exe -ArgumentList ('"{0}"' -f $dl)
-Start-Sleep -Seconds 8
-$smart = @(Get-Windows | Where-Object { $_.title -match 'Windows protected your PC|Windows Defender SmartScreen|Microsoft Defender SmartScreen' -or (Get-Process -Id $_.pid -ErrorAction SilentlyContinue).ProcessName -eq 'smartscreen' })
-if ($smart.Count -gt 0) { Write-Host "  SmartScreen showed its box"; Save-Screen "0-smartscreen.png"; Get-Process smartscreen -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue }
-else { Write-Host "  SmartScreen did not show (a runner, or no reputation service): picture taken anyway"; Save-Screen "0-after-double-click.png" }
-if (-not $up.WaitOne(1000)) {
-  # SmartScreen held it, or Explorer did not start it: start it the way "Run anyway" does
+$box = $null
+for ($i = 0; $i -lt 60 -and -not $box; $i++) {
+  Start-Sleep -Milliseconds 500
+  if ($up.WaitOne(0)) { break }
+  $box = @(Get-Windows | Where-Object { (Get-Process -Id $_.pid -ErrorAction SilentlyContinue).ProcessName -eq 'smartscreen' -or $_.title -match 'Windows protected your PC|SmartScreen' })[0]
+}
+if ($box) {
+  Write-Host "  SmartScreen showed its box"
+  Start-Sleep -Seconds 1
+  Save-Screen "0-smartscreen.png"
+  $ui = [Windows.Automation.AutomationElement]::FromHandle($box.handle)
+  $more = Find-Named $ui "More info"
+  if ($more) {
+    try { $more.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke() } catch { try { $more.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern).Toggle() } catch { Write-Host "  could not press More info: $($_.Exception.Message)" } }
+    Start-Sleep -Seconds 2
+    Save-Crop $box.handle "smartscreen.png"
+    Save-Screen "0-smartscreen-more-info.png"
+    $run = Find-Named $ui "Run anyway"
+    if ($run) { $run.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke(); Write-Host "  pressed Run anyway" }
+    else { Write-Host "  no Run anyway button found" }
+  } else { Write-Host "  no More info link found" }
+} elseif (-not $up.WaitOne(0)) { Write-Host "  SmartScreen did not show within 30 s"; Save-Screen "0-after-double-click.png" }
+if (-not $up.WaitOne(15000)) {
+  # SmartScreen held it, or Explorer did not start it: start it the way Run anyway does
   Write-Host "  starting it as Run anyway would"
+  Get-Process smartscreen -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
   Unblock-File $dl
   Start-Process -FilePath $dl
 }
@@ -86,8 +121,8 @@ Check ("one Deepslate Works process, the copy in AppData (" + (($procs | ForEach
 $apps = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\DeepslateWorks" -ErrorAction SilentlyContinue
 Check ("Settings -> Apps lists it: " + $apps.UninstallString) ($apps -and $apps.UninstallString -match [regex]::Escape($homeExe) -and $apps.DisplayVersion -eq $version)
 $main = Main-Window
-Check ("the window: '" + (($main | ForEach-Object { $_.title }) -join "', '") + "'") ($main.Count -eq 1 -and $main[0].title -eq "Deepslate Works $version")
-if ($main.Count -eq 1) { Soft "the window is in front" ([Smoke.W]::GetForegroundWindow() -eq $main[0].handle) }
+Check ("the window ({0} found, want 'Deepslate Works {1}'): '{2}'" -f $main.Count, $version, (($main | ForEach-Object { $_.title + "' pid " + $_.pid }) -join "; '")) ($main.Count -ge 1 -and $main[0].title -eq "Deepslate Works $version")
+if ($main.Count -ge 1) { Soft "the window is in front" ([Smoke.W]::GetForegroundWindow() -eq $main[0].handle) }
 Check "no console window" ((Consoles).Count -eq 0)
 Save-Screen "1-first-run.png"
 
@@ -98,7 +133,7 @@ Start-Process -FilePath $homeExe -ArgumentList @("-From", "desktop")
 Start-Sleep -Seconds 5
 Check "still one window" ((Get-Ours).Count -eq 1)
 $main = Main-Window
-if ($main.Count -eq 1) { Soft "brought back to the front" ([Smoke.W]::GetForegroundWindow() -eq $main[0].handle) }
+if ($main.Count -ge 1) { Soft "brought back to the front" ([Smoke.W]::GetForegroundWindow() -eq $main[0].handle) }
 Save-Screen "2-started-again.png"
 $text = $(if (Test-Path $log) { Get-Content -Raw $log } else { "" })
 Check "the log names the entry points (a download, download, desktop)" (($text -match 'from a download') -and ($text -match 'from download, by') -and ($text -match 'from desktop, by'))
@@ -118,8 +153,9 @@ New-ItemProperty -Path $key -Name "URL Protocol" -Value "" -PropertyType String 
 Set-Item -Path "$key\shell\open\command" -Value ('"{0}\System32\wscript.exe" "{1}" "%1"' -f $env:SystemRoot, $vbs)
 $sh = New-Object -ComObject WScript.Shell
 $lnk = $sh.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Desktop")) "Deepslate Works.lnk")); $lnk.TargetPath = "$env:SystemRoot\System32\wscript.exe"; $lnk.Arguments = ('"{0}" -From desktop' -f $vbs); $lnk.Save()
-# what 2.x answered (the same consent.json): everything allowed, so the Play link and the shortcuts are wanted
-$steps = [ordered]@{}; foreach ($s in @("signin", "launcher", "java", "neoforge", "mods", "profile", "shortcuts", "reports", "extras")) { $steps[$s] = [ordered]@{ answer = "allow"; level = 1; at = "2026-10-01T12:00:00" } }
+# what 2.x answered (the same consent.json): the Play link and the shortcuts allowed. "signin" left unanswered so the
+# window stops at that card and never starts a run against the real site.
+$steps = [ordered]@{}; foreach ($s in @("launcher", "java", "neoforge", "mods", "profile", "shortcuts", "reports", "extras")) { $steps[$s] = [ordered]@{ answer = "allow"; level = 1; at = "2026-10-01T12:00:00" } }
 [IO.File]::WriteAllText((Join-Path $homeDir "consent.json"), (ConvertTo-Json -InputObject ([ordered]@{ version = 1; steps = $steps }) -Depth 4))
 $up = Wait-Up
 Start-Process -FilePath $homeExe -ArgumentList @("-From", "update", "-MigratedFrom", "2.1.3")

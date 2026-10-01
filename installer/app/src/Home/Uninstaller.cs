@@ -274,6 +274,13 @@ namespace DeepslateWorks
         }
 
         // ---- -Uninstall ----------------------------------------------------------------------------------------
+        /// <summary>A message box, or with -Yes (2.x's -Quiet: tests, scripts) only the log: nothing may wait for a click then.</summary>
+        static void Say(bool yes, string text, bool warn)
+        {
+            if (yes) { Log.Line("uninstall: " + text.Replace("\r\n", " / ").Replace("\n", " / ")); return; }
+            Native.Box(text, false, warn);
+        }
+
         public static int Run(bool yes)
         {
             var run = new global::DeepslateWorks.Run { Mode = "uninstall", Quiet = false };
@@ -298,7 +305,7 @@ namespace DeepslateWorks
             var lk = TakeLock(Env.LockName);
             if (lk == null)
             {
-                Native.Box("Deepslate Works is already running in another window. Let it finish, then run the uninstall again.", false, true);
+                Say(yes, "Deepslate Works is already running in another window. Let it finish, then run the uninstall again.", true);
                 return Env.ExitAlreadyRunning;
             }
             Result res;
@@ -306,15 +313,15 @@ namespace DeepslateWorks
             {
                 if (WindowOpen(5000))
                 {
-                    Native.Box("Close the Deepslate Works window first, then run the uninstall again.", false, true);
+                    Say(yes, "Close the Deepslate Works window first, then run the uninstall again.", true);
                     Log.Line("uninstall refused: the window is open");
                     return 1;
                 }
                 var no = GetRefusal(PretendRunning);
-                if (no != null) { Native.Box(no, false, true); Log.Line("uninstall refused: the launcher is open"); return 1; }
+                if (no != null) { Say(yes, no, true); Log.Line("uninstall refused: the launcher is open"); return 1; }
                 if (!TestFootprint(t))
                 {
-                    Native.Box("Deepslate Works isn't on this PC. There is nothing to remove.");
+                    Say(yes, "Deepslate Works isn't on this PC. There is nothing to remove.", false);
                     return 0;
                 }
                 if (!yes)
@@ -329,7 +336,7 @@ namespace DeepslateWorks
                     token => { Http.Token = token; Http.Call("POST", Env.PortalUrl + "/api/launcher/revoke", 15); },
                     me);
                 run.Reported = true;
-                Native.Box(Summary(res), false, res.Problems.Count > 0);
+                Say(yes, Summary(res), res.Problems.Count > 0);
                 Log.Line(string.Format("uninstall done: {0} removed, {1} problems", res.Removed.Count, res.Problems.Count));
             }
             finally { ReleaseLock(lk); }

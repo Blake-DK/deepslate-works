@@ -12,7 +12,9 @@ import { HowThisWorks } from "@/components/tabs";
 import { ConfirmSubmit } from "@/components/server/confirm-submit";
 import { mapProgress, modeText, pregenCost, progress, sleepText, type Pregen } from "@/lib/pregen";
 import type { getAnnouncements } from "@/server/announcements";
-import { announceAction, announcementChangeAction, announcementDatesAction, backupAction, cancelRestartAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
+import { DistanceForm } from "@/components/server/distance-form";
+import { msptTone, waiting, type Distance } from "@/lib/distance";
+import { announceAction, announcementChangeAction, announcementDatesAction, backupAction, cancelRestartAction, distanceAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
 
 // The cards of Admin → Server and Admin → News, and the ones the Control Room shares. Everything that was on the one
 // long Server page before docs/13 §11, word for word where it was a control; long explanations fold into
@@ -28,12 +30,14 @@ export const loadPlayers = (caller: Caller) => apiFetch<Players>("/players", { c
 export const loadTail = (caller: Caller) => apiFetch<Tail>("/console/tail?lines=200", { caller }).catch(() => null);
 export const loadSchedule = (caller: Caller) => apiFetch<Schedule>("/server/schedule", { caller }).catch(() => null);
 export const loadBackup = (caller: Caller) => apiFetch<Backup>("/server/backup", { caller }).catch(() => null);
+export const loadDistance = (caller: Caller) => apiFetch<Distance>("/server/distance", { caller, timeoutMs: 15_000 }).catch(() => null);
 export const loadPregen = (caller: Caller) => apiFetch<Pregen>("/pregen", { caller }).catch(() => null);
 export const consoleLines = (tail: Tail | null) => tail?.entries ?? (tail?.lines ?? []).map((text, i) => ({ seq: i - (tail?.lines.length ?? 0), text }));
 
 const MSG: Record<string, string> = {
   pregenOn: "Pre-generation is on.", pregenPaused: "Pre-generation stopped; where it got to is kept.", pregenOff: "The area is called off.", killed: "The server's process has been ended.", mapReloaded: "BlueMap read its settings again; a render in hand is asked for again.",
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
+  distanceNow: "Saved. The server restarts in 1 minute; players have been warned.", distanceNext: "Saved. It takes effect at the next restart.",
   error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup started in AMP.", announced: "Announcement posted",
 };
 
@@ -103,6 +107,67 @@ export function RestartCard({ schedule, running, back }: { schedule: Schedule | 
             <label className="flex items-center gap-2 pb-1.5 text-sm"><input type="checkbox" name="sure" className="h-4 w-4" /> I&apos;m sure</label>
             <Button type="submit" size="sm" disabled={!running}>Plan restart</Button>
           </form>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Admin → Server → Settings (planner 2026-10-01): view and simulation distance, with the load next to them. */
+export function DistanceCard({ distance, status, schedule }: { distance: Distance | null; status: LiveStatus; schedule: Schedule | null }) {
+  const running = status.server === "online";
+  const view = distance?.amp?.view ?? distance?.running?.view;
+  const sim = distance?.amp?.sim ?? distance?.running?.sim;
+  const allowed = distance?.allowed.view === true && distance.allowed.sim === true;
+  const pending = distance ? waiting(distance) : [];
+  const tick = distance?.tick ?? null;
+  const planned = schedule?.restart ?? null;
+  return (
+    <Card data-testid="distance">
+      <CardHeader>
+        <CardTitle>View and simulation distance</CardTitle>
+        <CardDescription>
+          Now: view <strong data-testid="distance-running-view">{distance?.running?.view ?? "?"}</strong>, simulation <strong data-testid="distance-running-sim">{distance?.running?.sim ?? "?"}</strong> chunks
+          {" · "}
+          {running ? (
+            tick ? (
+              <span data-testid="distance-tick">TPS {tick.tps.toFixed(1)} · <Badge tone={msptTone(tick.mspt)}>MSPT {tick.mspt.toFixed(1)} ms</Badge> <span className="text-xs">({timeAgo(new Date(tick.at))})</span></span>
+            ) : <>TPS {status.tps?.toFixed(1) ?? "no reading"}</>
+          ) : <>the server isn&apos;t running, so there is no TPS to show</>}
+        </CardDescription>
+        <HowThisWorks>
+          A tick is the server&apos;s heartbeat: 20 a second when all is well (TPS 20), so each may take up to 50 ms. MSPT is how long a tick really takes; under 35 ms there is room to spare, near 50 the server starts to fall behind and everything slows down. The numbers come from NeoForge&apos;s own tick report and are fresh every 15 seconds while this page is open. Neither distance can be changed while the server runs (nothing in the pack can do that on NeoForge 1.21.1), so a change is saved in AMP and the server picks it up when it next starts.
+        </HowThisWorks>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {distance === null || view === undefined || sim === undefined ? (
+          <Alert tone="error">Can&apos;t ask AMP for these settings right now.{distance?.problem ? <> <span className="font-mono">{distance.problem}</span></> : null}</Alert>
+        ) : (
+          <>
+            {!allowed && (
+              <Alert tone="error" data-testid="distance-permission">
+                AMP doesn&apos;t let the site change these yet. In the instance&apos;s own panel, give the role of the user <span className="font-mono">webapp</span> the permissions{" "}
+                <span className="font-mono">{distance.permissions.view}</span> and <span className="font-mono">{distance.permissions.sim}</span>.
+              </Alert>
+            )}
+            {pending.length > 0 && (
+              <div className="space-y-2 rounded-lg border p-3 text-sm" data-testid="distance-pending">
+                <p>
+                  <Badge tone="warn">Waiting for a restart</Badge>{" "}
+                  {pending.map((p) => `${p.what} ${p.now ?? "?"} → ${p.next}`).join(", ")}
+                  {planned && <> · restart planned at {new Date(planned.at).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })} UK time</>}
+                </p>
+                {!planned && running && (
+                  <form action={distanceAction.bind(null, "now")}>
+                    <input type="hidden" name="view" value={view} />
+                    <input type="hidden" name="sim" value={sim} />
+                    <ConfirmSubmit variant="secondary" question="Restart the server in 1 minute? Players get a warning in chat.">Apply now (restart with 1 minute warning)</ConfirmSubmit>
+                  </form>
+                )}
+              </div>
+            )}
+            <DistanceForm key={`${view}-${sim}`} view={view} sim={sim} limits={distance.limits} running={running} allowed={allowed} applyNow={distanceAction.bind(null, "now")} applyNext={distanceAction.bind(null, "next")} />
+          </>
         )}
       </CardContent>
     </Card>

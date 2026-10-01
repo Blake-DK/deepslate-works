@@ -12,7 +12,7 @@ import { removePhoto, storePhoto } from "@/server/news-images";
 const ops = z.enum(["start", "stop", "restart"]);
 // Where to go after an action: the tab it belongs to, or the Control Room when its form says so. The form only
 // picks from this list; an address it sends is never used as such.
-const TABS = { power: "/admin/server", backups: "/admin/server?tab=backups", pregen: "/admin/server?tab=pregen", room: "/admin/server?tab=room", news: "/admin/news" } as const;
+const TABS = { power: "/admin/server", settings: "/admin/server?tab=settings", backups: "/admin/server?tab=backups", pregen: "/admin/server?tab=pregen", room: "/admin/server?tab=room", news: "/admin/news" } as const;
 function place(formData: FormData | undefined, tab: keyof typeof TABS) {
   const back = formData?.get("back");
   const base = back === "/admin" || back === "/" ? back : TABS[tab];
@@ -94,6 +94,25 @@ export async function pregenAction(formData: FormData) {
   }
   revalidatePath("/admin/server");
   redirect(to(op === "on" ? "pregenOn" : op === "off" ? "pregenPaused" : op === "map-reload" ? "mapReloaded" : "pregenOff"));
+}
+
+/** Admin → Server → Settings: view and simulation distance, written to AMP; "now" restarts in one minute with a warning. */
+export async function distanceAction(apply: string, formData: FormData) {
+  const to = place(formData, "settings");
+  const admin = await requireAdmin();
+  const when = z.enum(["now", "next"]).safeParse(apply);
+  const view = z.coerce.number().int().min(4).max(16).safeParse(formData.get("view"));
+  const sim = z.coerce.number().int().min(4).max(12).safeParse(formData.get("sim"));
+  if (!when.success || !view.success || !sim.success) redirect(to("error", "View distance is 4 to 16, simulation distance 4 to 12."));
+  let restart: { at: string } | null = null;
+  try {
+    ({ restart } = await apiFetch<{ restart: { at: string } | null }>("/server/distance", { method: "POST", body: { view: view.data, sim: sim.data, apply: when.data }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 }));
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/server");
+  redirect(to(restart ? "distanceNow" : "distanceNext"));
 }
 
 /** Ends the server's process. Only offered, and only accepted by api, while the server is stuck in "Stopping". */

@@ -154,6 +154,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.restart.scheduled": (p) => `planned a restart in ${s(p.minutes)} minutes`,
   "server.restart.cancelled": "called off the planned restart",
   "server.backup": "started a backup",
+  // Admin → Server → Settings: "Alex set view distance 10 → 12 (restart in 1 minute)"
+  "server.distance": (p) => `${p.refused ? "tried to set" : "set"} ${p.what === "simulation" ? "simulation" : "view"} distance ${p.from === null || p.from === undefined ? "" : `${s(p.from)} → `}${s(p.to)}${p.refused ? ": AMP does not let the portal change it" : p.apply === "now" ? " (restart in 1 minute)" : " (from the next restart)"}`,
   "server.wake": (p) => (p.failed ? "tried to wake the server (Play); it didn't wake up" : "woke the server (Play)"),
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
   "console.send": (p) => `ran: ${s(p.command, "")}`,

@@ -95,7 +95,7 @@ describe("the guide as it ships", () => {
     for (const s of building) expect([s, slugs.has(s)]).toEqual([s, true]);
     expect(filterGuide(DEFAULT_GUIDE, { mods: new Set([...on, ...building]) })).toContain("## Building");
     expect(filterGuide(DEFAULT_GUIDE, { mods: new Set([...on, ...building].filter((s) => s !== "handcrafted")) })).not.toContain("## Building");
-    expect(filterGuide(DEFAULT_GUIDE, { mods: on })).toContain("you can see 12 chunks on this server");
+    expect(filterGuide(DEFAULT_GUIDE, { mods: on })).toContain("can be lower than the server's but not higher");
   });
   it("brings the votable mods' lines back the moment Apply results switches them on", () => {
     // Apply results writes `enabled: true` into mods.json; the guide reads mods.json again whenever the file changes.

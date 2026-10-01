@@ -34,7 +34,7 @@ export const DEFAULT_GUIDE = [
   "- **Waystones**: find or build one, click it, and you can teleport between any you've discovered. <!-- mod: waystones -->",
   "- **VeinMiner**: hold the grave key (` under Esc) while breaking ore or a log and the whole vein or tree comes out. Costs hunger, so bring food. <!-- mod: veinminer -->",
   "- **FallingTree**: break the bottom log and the tree falls, with an axe or by hand. Sneak to take one log. <!-- mod: fallingtree -->",
-  "- **Render distance**: you can see 12 chunks on this server. On a slower PC turn it down in Options → Video Settings → Render Distance; 8 is plenty.",
+  "- **Render distance**: yours (Options → Video Settings → Render Distance) can be lower than the server's but not higher: past the server's distance there is nothing to show. On a slower PC turn it down; 8 is plenty.",
   "",
   "## Your first hour",
   "",

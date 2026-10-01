@@ -1,5 +1,5 @@
 import type { Amp } from "./client.js";
-import { isEntityDump, isMapChatter, isPingChatter, parse, type GameEvent, type Meta } from "../events/parse.js";
+import { isEntityDump, isMapChatter, isPingChatter, isTpsLine, parse, type GameEvent, type Meta } from "../events/parse.js";
 
 // Tails the instance console through Core.GetUpdates (AMP returns only new entries per session) and
 // turns the lines into events. The patterns are in src/events/parse.ts.
@@ -44,6 +44,7 @@ export class ConsoleTail {
   private timer: NodeJS.Timeout | null = null;
   private busy = false;
   private hushMapUntil = 0;
+  private hushTpsUntil = 0;
 
   constructor(private readonly amp: Amp, private readonly log: (o: unknown, msg: string) => void) {}
 
@@ -65,6 +66,11 @@ export class ConsoleTail {
     this.hushMapUntil = Date.now() + ms;
   }
 
+  /** Likewise for the answer to `neoforge tps` that the Settings card asks for while it is open. */
+  hushTps(ms: number) {
+    this.hushTpsUntil = Date.now() + ms;
+  }
+
   off(handler: ConsoleHandler) {
     this.handlers = this.handlers.filter((h) => h !== handler);
   }
@@ -78,7 +84,7 @@ export class ConsoleTail {
   /** Adds one console line and notifies the handlers; `poll` calls it for every new AMP entry. */
   ingest(text: string, at: Date = new Date(), meta: Meta = {}, replay = false) {
     // The answers to the ping rounds are read below like any line, but not kept for the console page.
-    if (!isPingChatter(text) && !isEntityDump(text) && !(Date.now() < this.hushMapUntil && isMapChatter(text))) this.entries.push({ seq: ++this.seq, at: at.toISOString(), text, source: meta.source ?? null, kind: meta.type ?? null });
+    if (!isPingChatter(text) && !isEntityDump(text) && !(Date.now() < this.hushMapUntil && isMapChatter(text)) && !(Date.now() < this.hushTpsUntil && isTpsLine(text))) this.entries.push({ seq: ++this.seq, at: at.toISOString(), text, source: meta.source ?? null, kind: meta.type ?? null });
     if (this.entries.length > KEEP) this.entries.splice(0, this.entries.length - KEEP);
     const known = (name: string) => this.online.has(name) || this.uuidByName.has(name);
     for (const e of parseConsoleLine(text, meta, known)) {

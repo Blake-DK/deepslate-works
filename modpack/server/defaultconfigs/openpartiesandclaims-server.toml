@@ -1,0 +1,29 @@
+# Open Parties and Claims 0.31.6, settings shipped with the pack (planner, 2026-10-01). Only what differs from
+# OPAC's defaults is here; OPAC fills in the rest. NeoForge copies this file into <world>/serverconfig/ the first
+# time the server starts with OPAC. After that the world's copy counts: change it there, with the server stopped.
+
+[serverConfig]
+
+	[serverConfig.parties]
+		enabled = true
+		# hours of complete inactivity before a party is removed (90 days)
+		partyExpirationTime = 2160
+
+	[serverConfig.claims]
+		enabled = true
+		# chunks per player; claiming is optional
+		maxPlayerClaims = 200
+		# no forceloaded chunks: the server does not keep anybody's base running while they are away
+		maxPlayerClaimForceloads = 0
+		# hours a player can be away before their claims are freed (90 days)
+		playerClaimsExpirationTime = 2160
+		playerClaimsConvertExpiredClaims = false
+		# nobody claims in the entrance room's dimension (the server claims the room itself)
+		claimableDimensionsListType = "ALL_BUT"
+		claimableDimensionsList = ["deepslate:limbo"]
+
+		[serverConfig.claims.protection]
+			# usable in every claim, including the spawn area: waystones and sharestones
+			forcedBlockProtectionExceptionList = ["minecraft:crafting_table", "#waystones:waystones", "#waystones:sharestones"]
+			# a backpack in your hand opens anywhere
+			itemUseProtectionExceptionList = ["minecraft:firework_rocket", "sophisticatedbackpacks:backpack", "sophisticatedbackpacks:copper_backpack", "sophisticatedbackpacks:iron_backpack", "sophisticatedbackpacks:gold_backpack", "sophisticatedbackpacks:diamond_backpack", "sophisticatedbackpacks:netherite_backpack"]

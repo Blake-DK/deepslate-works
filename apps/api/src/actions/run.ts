@@ -7,7 +7,7 @@ export type RunResult = { ok: boolean; commands: number; detail?: string };
 /** Validates, builds, sends and audits one action. The only place console commands leave the api. */
 // Not written into the event log: questions that change nothing and come round every few seconds, and what the
 // portal says to somebody at the door, which has a line of its own there ("… is waiting in the entrance room").
-const QUIET = new Set<string>(["limbo.keep", "limbo.bar", "limbo.bookCheck", "limbo.giveBook", "server.list", "server.pings", "player.where", "limbo.remindPlay", "limbo.remindClosed", "limbo.remindOld", "map.status", "map.list", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify"]); // the inventory editor writes its own row, after the server answered
+const QUIET = new Set<string>(["limbo.keep", "limbo.bar", "limbo.bookCheck", "limbo.giveBook", "server.list", "server.pings", "server.tps", "player.where", "limbo.remindPlay", "limbo.remindClosed", "limbo.remindOld", "map.status", "map.list", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify"]); // the inventory editor writes its own row, after the server answered
 const QUIET_FROM_THE_PORTAL = new Set<string>(["limbo.hold", "limbo.remind"]);
 
 export async function runAction(amp: Amp, ctx: ActionCtx, name: ActionName, rawInput: unknown, callerId: string | null): Promise<RunResult> {

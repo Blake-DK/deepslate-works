@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-01T11:27:15.930Z",
+  "generatedAt": "2026-10-01T17:03:31.483Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "02e482650f48d61f64e2bdb40e65f24a7c6b3f445796b660ad69ac4c19e508d8",
+  "hash": "af76cd89ff99ab1a2100b6992e02f17cd572e965c46be89bdf2c1a5f84eaba86",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -553,6 +553,21 @@
       "requiredBy": []
     },
     {
+      "slug": "open-parties-and-claims",
+      "name": "Open Parties and Claims",
+      "projectId": "gF3BGWvG",
+      "versionId": "3i48dTzz",
+      "versionNumber": "neoforge-1.21.1-0.31.6",
+      "versionType": "beta",
+      "filename": "open-parties-and-claims-neoforge-1.21.1-0.31.6.jar",
+      "url": "https://cdn.modrinth.com/data/gF3BGWvG/versions/3i48dTzz/open-parties-and-claims-neoforge-1.21.1-0.31.6.jar",
+      "sha512": "6f8f2d570b6f674a9180576524b3ba507a3ad046ff319353cee50738644bf46c03ca460fb7c6880eed76f07eb2a26a983166d2510951202af86b3e120b743181",
+      "sha1": "6d0ebc84bbb75322cb0ab45ffef6a54d3bc6adef",
+      "size": 1826827,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
       "slug": "pipez",
       "name": "Pipez",
       "projectId": "iRmWy6ga",
@@ -700,14 +715,14 @@
       "slug": "tacz-1.21.1",
       "name": "TaCZ (Timeless and Classics Zero)",
       "projectId": "OypNE65K",
-      "versionId": "wPvGWIj9",
-      "versionNumber": "1.1.8-hotfix-r6",
+      "versionId": "62q6mB5Q",
+      "versionNumber": "1.1.8-hotfix-r7",
       "versionType": "release",
-      "filename": "tacz-neoforge-1.21.1-1.1.8-hotfix-r6.jar",
-      "url": "https://cdn.modrinth.com/data/OypNE65K/versions/wPvGWIj9/tacz-neoforge-1.21.1-1.1.8-hotfix-r6.jar",
-      "sha512": "ce14e985ce16d0517e7b1d41969a244818f46c1e4ae93842c3149963990aa488692c5372ecc4b71fe560a99794a3f865244dbef5b182beec4411148b4f83c53c",
-      "sha1": "c70e8f638bede79ab8a85c891c464097b3100055",
-      "size": 57242132,
+      "filename": "tacz-neoforge-1.21.1-1.1.8-hotfix-r7.jar",
+      "url": "https://cdn.modrinth.com/data/OypNE65K/versions/62q6mB5Q/tacz-neoforge-1.21.1-1.1.8-hotfix-r7.jar",
+      "sha512": "7700ed99a080729c3aa21f9619e018fbe9e2303cfbcaa463175ee5170553a000b692bc4cfa2e8ce0778747eed34dcc0197fb5e4344bb258cff1ba90adc842642",
+      "sha1": "c6ef4976de69a46c4e267bd7f91c730d2dc43a4e",
+      "size": 57247579,
       "side": "both",
       "requiredBy": []
     },

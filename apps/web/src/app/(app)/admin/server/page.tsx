@@ -6,12 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { asSectionQuery, pickTab, TabbedPage, type PageQuery } from "@/components/tabs";
 import { LiveConsole } from "@/components/server/live-console";
 import FilesSection from "../files/section";
-import { BackupCard, consoleLines, Flash, loadBackup, loadPlayers, loadPregen, loadSchedule, loadTail, PowerCard, PregenCard, RestartCard, RoomCard } from "./cards";
+import { BackupCard, consoleLines, DistanceCard, Flash, loadBackup, loadDistance, loadPlayers, loadPregen, loadSchedule, loadTail, PowerCard, PregenCard, RestartCard, RoomCard } from "./cards";
 
 export const metadata: Metadata = { title: "Server" };
 
 const TABS = [
   { key: "power", label: "Power & restarts" },
+  { key: "settings", label: "Settings" },
   { key: "backups", label: "Backups" },
   { key: "pregen", label: "Pre-generation" },
   { key: "room", label: "Entrance room" },
@@ -19,7 +20,7 @@ const TABS = [
   { key: "files", label: "Files" },
 ] as const;
 
-// docs/13 §11 layout: what was one long page is six tabs; each loads only what it shows. News has its own page.
+// docs/13 §11 layout: what was one long page is tabs (Settings added 2026-10-01); each loads only what it shows. News has its own page.
 export default async function ServerAdminPage({ searchParams }: { searchParams: PageQuery }) {
   const admin = await requireAdmin();
   const q = await searchParams;
@@ -34,6 +35,9 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
   if (tab === "power") {
     const [players, schedule] = await Promise.all([loadPlayers(caller), loadSchedule(caller)]);
     body = <div className="grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><PowerCard status={status} players={players} /></div><RestartCard schedule={schedule} running={running} /></div>;
+  } else if (tab === "settings") {
+    const [distance, schedule] = await Promise.all([loadDistance(caller), loadSchedule(caller)]);
+    body = <DistanceCard distance={distance} status={status} schedule={schedule} />;
   } else if (tab === "backups") {
     body = <BackupCard backup={await loadBackup(caller)} />;
   } else if (tab === "pregen") {

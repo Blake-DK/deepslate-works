@@ -24,6 +24,8 @@ export type GameEvent =
   | { type: "started"; seconds: number }
   | { type: "stopping" }
   | { type: "ping"; name: string; ms: number }
+  // `neoforge tps`: one line per dimension, then "Overall" (the Admin → Server → Settings card's TPS and MSPT)
+  | { type: "tps"; scope: string; tps: number; mspt: number }
   | { type: "pregen"; what: "running"; world: string; chunks: number; percent: number; eta: string | null; rate: number | null }
   | { type: "pregen"; what: "started" | "continued" | "paused" | "stopped" | "cancelled"; world: string | null }
   | { type: "pregen"; what: "finished"; world: string; chunks: number | null }
@@ -107,6 +109,9 @@ const RE = {
   // spark, `spark ping --player Bramble09`. Its source has "[⚡] Player Bramble09 has 23 ms ping."; the console of
   // this server writes "[⚡]: Player bramble09 has 116 ms ping." (2026-09-29, the first player on with spark asked).
   sparkPing: new RegExp(`^(?:\\[\u26a1\\]:?\\s*)?Player (${NAME}) has (\\d{1,6}) ms ping\\.$`),
+  // NeoForge 1.21.1, `neoforge tps` (lang key commands.neoforge.tps.overall / .dimension): "Overall: 20.000 TPS
+  // (1.234 ms/tick)", "minecraft:overworld: 20.000 TPS (0.812 ms/tick)". DecimalFormat may write a comma.
+  tps: /^(Overall|[a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64}|[A-Za-z][\w ]{0,40}): (\d{1,3}[.,]\d{1,3}) TPS \((\d{1,6}[.,]\d{1,3}) ms\/tick\)$/,
   // TabTPS, `pingall`: " - Bramble09: 23ms", one line for each player, then "Average ping: 23ms (1 player)"
   ping: new RegExp(`^-\\s+(${NAME}):\\s+(\\d{1,6})\\s?ms$`),
   death: new RegExp(
@@ -213,6 +218,11 @@ export function invReply(message: string, name: string): InvReply | null {
   return null;
 }
 
+/** An answer to `neoforge tps`. Kept off the console page only while the portal itself has just asked. */
+export function isTpsLine(text: string): boolean {
+  return RE.tps.test(reduce(text).message.trim());
+}
+
 export function isPingChatter(text: string): boolean {
   const { message } = reduce(text);
   const t = message.trim();
@@ -291,6 +301,10 @@ export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) =
     }
   }
   if ((m = RE.sparkPing.exec(message.trim()) ?? RE.ping.exec(message.trim()))) return [{ type: "ping", name: m[1]!, ms: Number(m[2]) }];
+  if ((m = RE.tps.exec(message.trim()))) {
+    const [tps, mspt] = [Number(m[2]!.replace(",", ".")), Number(m[3]!.replace(",", "."))];
+    return Number.isFinite(tps) && Number.isFinite(mspt) ? [{ type: "tps", scope: m[1] === "Overall" ? "overall" : m[1]!, tps, mspt }] : [];
+  }
   if ((m = RE.started.exec(message))) return [{ type: "started", seconds: Number(m[1]) }];
   if (RE.stopping.test(message)) return [{ type: "stopping" }];
   if ((m = RE.death.exec(message)) && (!isPlayer || isPlayer(m[1]!))) return [{ type: "death", name: m[1]!, text: m[2]! }];

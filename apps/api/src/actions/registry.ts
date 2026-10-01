@@ -426,6 +426,17 @@ export const actions = {
   "server.list": define({ name: "server.list", role: "system", input: z.object({}), build: () => ["list"] }),
   // spark: one player's ping (docs/05 "Connection"). spark has no command for everyone at once.
   "server.pings": define({ name: "server.pings", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`spark ping --player ${name}`] }),
+  // NeoForge's own tick report: TPS and milliseconds per tick, overall and per dimension (Admin → Server → Settings)
+  "server.tps": define({ name: "server.tps", role: "system", input: z.object({}), build: () => ["neoforge tps"] }),
+  // Open Parties and Claims (planner, 2026-10-01): the spawn area (blocks -64..63 around 0,0, 8×8 chunks) and the
+  // entrance room's dimension are server claims, so no player can claim them. `anyway` lifts the size limit; claiming
+  // what is already a server claim again changes nothing. Run once after OPAC's first start (Admin → Entrance room).
+  "opac.serverClaims": define({
+    name: "opac.serverClaims",
+    role: "ADMIN",
+    input: z.object({}),
+    build: () => ["oclaims server claim in minecraft:overworld -64 -64 63 63 anyway", "oclaims server claim in deepslate:limbo -16 -16 15 15 anyway"],
+  }),
   // ---- the world (docs/09 "A new world")
   "world.seed": define({ name: "world.seed", role: "ADMIN", input: z.object({}), build: () => ["seed"] }),
   "world.save": define({ name: "world.save", role: "ADMIN", input: z.object({}), build: () => ["save-all"] }),

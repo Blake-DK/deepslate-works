@@ -38,7 +38,7 @@ export default async function SettingsPage({ searchParams, tab }: { searchParams
         <CardHeader>
           <CardTitle className="flex items-center gap-2">Launch {settings.live ? <Badge tone="good">live</Badge> : <Badge tone="warn">not live</Badge>}</CardTitle>
           <CardDescription>
-            Until you flip this, players never see the server address (<span className="font-mono">{manifest.server_address}</span>) or the installer and pack downloads; Home and Help show the launch date instead. Once live, downloads open whenever the server is running. Admins always see everything.
+            Until you flip this, players never see the server address (<span className="font-mono">{manifest.server_address}</span>) or the installer and pack downloads; Home and Getting started show the launch date instead. Once live, downloads open whenever the server is running. Admins always see everything.
           </CardDescription>
         </CardHeader>
         <CardContent>

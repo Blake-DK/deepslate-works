@@ -405,6 +405,31 @@
       "requires": []
     },
     {
+      "slug": "open-parties-and-claims",
+      "name": "Open Parties and Claims",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Make a party with your friends and you show on each other's minimap and world map. Optionally claim your base so only your party can break or open things there.",
+      "wiki": "https://github.com/thexaero/open-parties-and-claims",
+      "videos": [
+        {
+          "title": "How to use the Open Parties and Claims Mod",
+          "url": "https://www.youtube.com/watch?v=fEqWk7IaeEk"
+        },
+        {
+          "title": "Open Parties and Claims & Xaeros World Map - Faction Minecraft mod tutorial",
+          "url": "https://www.youtube.com/watch?v=1OIbfXo3sJU"
+        }
+      ],
+      "version": "3i48dTzz",
+      "requires": []
+    },
+    {
       "slug": "appleskin",
       "name": "AppleSkin",
       "category": "base",

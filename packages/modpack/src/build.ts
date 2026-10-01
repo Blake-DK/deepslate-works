@@ -142,8 +142,46 @@ export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist:
   const sha256 = await sha256File(out);
   const { size } = await stat(out);
   const scriptInfo = { sha256: await sha256File(script), size: (await stat(script)).size };
-  await writeFile(path.join(paths.dist, "installer.json"), `${JSON.stringify({ version, sha256, size, script: scriptInfo, builtAt: new Date().toISOString() }, null, 2)}\n`);
+  const exe = await takeCiExe(paths.dist, log);
+  await writeFile(path.join(paths.dist, "installer.json"), `${JSON.stringify({ version, sha256, size, script: scriptInfo, exe, builtAt: new Date().toISOString() }, null, 2)}\n`);
   log(`installer.zip stamped with ${portalUrl} and version ${m.version}+${shortHash(lock)}`);
   log(`installer ${version}: zip sha256 ${sha256}, ${INSTALLER_SCRIPT} sha256 ${scriptInfo.sha256}`);
   return out;
+}
+
+/** Where deploy/deploy.sh puts the app CI built (3.0): DeepslateWorks.exe, its .sha256 and VERSION, from the image ghcr.io/<owner>/deepslate-installer. */
+export const CI_EXE_DIR = "ci";
+export const EXE_NAME = "DeepslateWorks.exe";
+
+/**
+ * Deepslate Works 3.0 (docs/07): the exe is built and tested by CI on a windows runner, never here. deploy.sh copies it
+ * out of its image into dist/ci/; this checks it against the checksum CI wrote and its VERSION, and publishes it as
+ * dist/DeepslateWorks.exe, described in installer.json as `exe`. No exe there (or one that does not check out): `exe`
+ * is null, and the site hands out the PowerShell installer as before. The exe is never changed here: no stamping, the
+ * site's address is built in (installer.yml), so the checksum CI made is the one every PC checks.
+ */
+export async function takeCiExe(dist: string, log: (s: string) => void): Promise<{ version: string; sha256: string; size: number } | null> {
+  const dir = path.join(dist, CI_EXE_DIR);
+  const out = path.join(dist, EXE_NAME);
+  const drop = async (why: string) => {
+    log(`DeepslateWorks.exe not published: ${why}`);
+    await rm(out, { force: true });
+    return null;
+  };
+  try {
+    await stat(path.join(dir, EXE_NAME));
+  } catch {
+    return drop("no exe from CI in dist/ci (deploy.sh puts it there)");
+  }
+  const version = (await readFile(path.join(dir, "VERSION"), "utf8").catch(() => "")).trim();
+  if (!/^\d{1,4}(\.\d{1,4}){1,3}$/.test(version)) return drop("dist/ci/VERSION is missing or not a version");
+  const claimed = (await readFile(path.join(dir, `${EXE_NAME}.sha256`), "utf8").catch(() => "")).trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+  const sha256 = await sha256File(path.join(dir, EXE_NAME));
+  if (claimed !== sha256) return drop(`its checksum ${sha256.slice(0, 12)}... is not the one CI wrote (${claimed.slice(0, 12) || "none"})`);
+  const head = (await readFile(path.join(dir, EXE_NAME))).subarray(0, 2).toString("latin1");
+  if (head !== "MZ") return drop("it is not a Windows program");
+  await cp(path.join(dir, EXE_NAME), out);
+  const { size } = await stat(out);
+  log(`DeepslateWorks.exe ${version}: sha256 ${sha256}, ${(size / 1048576).toFixed(2)} MB`);
+  return { version, sha256, size };
 }

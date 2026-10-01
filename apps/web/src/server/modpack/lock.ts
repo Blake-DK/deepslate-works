@@ -51,13 +51,13 @@ async function distSum(name: string): Promise<{ sha256: string; size: number } |
   return { sha256: c.sha256, size: f.size };
 }
 
-/** The installer the site hands out: its version and the checksums of `installer.zip` and `DeepslateWorks.ps1` as they are on disk now. */
+/** The installer the site hands out: its version and the checksums of `installer.zip`, `DeepslateWorks.ps1` and (3.0) `DeepslateWorks.exe` as they are on disk now. */
 export async function getInstaller(): Promise<InstallerInfo | null> {
   try {
-    const [zip, script] = await Promise.all([distSum("installer.zip"), distSum("DeepslateWorks.ps1")]);
+    const [zip, script, exe] = await Promise.all([distSum("installer.zip"), distSum("DeepslateWorks.ps1"), distSum("DeepslateWorks.exe")]);
     if (!zip) return null;
     const sidecar: unknown = JSON.parse(await readFile(path.join(P.dist, "installer.json"), "utf8"));
-    return installerInfo(sidecar, zip, script);
+    return installerInfo(sidecar, zip, script, exe);
   } catch {
     return null;
   }

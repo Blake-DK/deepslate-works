@@ -48,6 +48,25 @@ if [ "$(stat -c %u dist 2>/dev/null || echo none)" != 1000 ]; then
   echo "dist/ now belongs to uid 1000"
 fi
 
+# Deepslate Works 3.0: the Windows app is built and tested by CI on a windows runner (.github/workflows/installer.yml)
+# and published as a tiny image holding only DeepslateWorks.exe, its .sha256 and VERSION. Copied out into dist/ci/;
+# Admin -> Build (installer) checks it and hands it out. Never fatal: without it the site keeps the PowerShell one.
+step "installer exe"
+INSTALLER_IMAGE="ghcr.io/$(sed -n 's/^GHCR_OWNER=//p' deploy/.env)/deepslate-installer:${INSTALLER_TAG:-latest}"
+if docker pull -q "$INSTALLER_IMAGE" >/dev/null 2>&1; then
+  cid=$(docker create "$INSTALLER_IMAGE" none)
+  rm -rf dist/ci.new && mkdir -p dist/ci.new
+  if docker cp "$cid:/DeepslateWorks.exe" dist/ci.new/ && docker cp "$cid:/DeepslateWorks.exe.sha256" dist/ci.new/ && docker cp "$cid:/VERSION" dist/ci.new/; then
+    rm -rf dist/ci && mv dist/ci.new dist/ci && chown -R 1000:1000 dist/ci
+    echo "DeepslateWorks.exe $(cat dist/ci/VERSION) in dist/ci (run Build -> installer to publish it)"
+  else
+    rm -rf dist/ci.new; echo "the installer image has no exe; dist/ci left as it was"
+  fi
+  docker rm "$cid" >/dev/null
+else
+  echo "no installer image ($INSTALLER_IMAGE) yet; the site keeps what it hands out now"
+fi
+
 # The deploy key is read by api and the WireGuard config by its container, both as uid 1000. A careless
 # `chown -R` over deploy/ takes them away from both (it happened on 2026-09-29: api lost rsync).
 for p in deploy/keys/deploy.key deploy/wireguard; do

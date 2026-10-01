@@ -36,3 +36,76 @@ jobs:
           name: installer-2-windows
           path: shots
           if-no-files-found: ignore
+
+  # 3.0: Deepslate Works as a Windows app, DeepslateWorks.exe (.NET Framework 4.8, WPF, one file). Built and tested
+  # here only, never on the VPS; the version is installer/VERSION, the site's address is built in. Then the first run
+  # from a fresh download on the runner's desktop, with pictures.
+  app:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        id: v
+        shell: pwsh
+        run: |
+          $v = (Get-Content installer/VERSION -Raw).Trim()
+          if ($v -notmatch '^\d{1,4}(\.\d{1,4}){1,3}$') { throw "installer/VERSION is not a version: $v" }
+          "version=$v" >> $env:GITHUB_OUTPUT
+      - name: Build DeepslateWorks.exe
+        shell: pwsh
+        run: dotnet build installer/app/DeepslateWorks.csproj -c Release -o out -p:PortalUrl=https://deepslate.dsw.test
+      - name: Tests (the self test, ported)
+        timeout-minutes: 10
+        shell: pwsh
+        run: dotnet test installer/tests/DeepslateWorks.Tests/DeepslateWorks.Tests.csproj -c Release --logger "trx;LogFileName=tests.trx" --logger "console;verbosity=normal" --results-directory shots/tests
+      - name: The exe, its checksum and version
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force publish | Out-Null
+          Copy-Item out/DeepslateWorks.exe publish/
+          $f = Get-Item publish/DeepslateWorks.exe
+          $v = $f.VersionInfo.ProductVersion
+          if (-not $v.StartsWith("${{ steps.v.outputs.version }}")) { throw "the exe says $v, installer/VERSION says ${{ steps.v.outputs.version }}" }
+          $sum = (Get-FileHash publish/DeepslateWorks.exe -Algorithm SHA256).Hash.ToLower()
+          "$sum  DeepslateWorks.exe" | Set-Content -NoNewline publish/DeepslateWorks.exe.sha256
+          "${{ steps.v.outputs.version }}" | Set-Content -NoNewline publish/VERSION
+          "DeepslateWorks.exe ${{ steps.v.outputs.version }}: {0:N0} bytes ({1:N2} MB), sha256 {2}" -f $f.Length, ($f.Length / 1MB), $sum | Tee-Object -FilePath publish/SUMMARY.txt
+          Get-Content publish/SUMMARY.txt >> $env:GITHUB_STEP_SUMMARY
+      - name: First run from a fresh download, on a Windows desktop
+        if: success() || failure()
+        timeout-minutes: 10
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-smoke-3.ps1 -Exe publish/DeepslateWorks.exe -Out shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deepslate-works-${{ steps.v.outputs.version }}
+          path: |
+            publish
+            shots
+          if-no-files-found: ignore
+
+  # main only: the exe as a tiny image (FROM scratch: the exe, its .sha256, VERSION) that deploy/deploy.sh copies into
+  # dist/ci; Admin -> Build (installer) then hands it out. Tagged with the version, the commit and latest.
+  publish:
+    needs: app
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: deepslate-works-*
+          merge-multiple: true
+      - name: Image
+        run: |
+          set -eu
+          v=$(cat publish/VERSION)
+          img="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/deepslate-installer"
+          printf 'FROM scratch\nCOPY DeepslateWorks.exe DeepslateWorks.exe.sha256 VERSION /\n' > publish/Dockerfile
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker build --label org.opencontainers.image.source=https://github.com/${{ github.repository }} --label org.opencontainers.image.revision=${{ github.sha }} -t "$img:$v" -t "$img:${{ github.sha }}" -t "$img:latest" publish
+          docker push --all-tags "$img"

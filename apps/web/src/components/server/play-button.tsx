@@ -24,6 +24,8 @@ type Props = {
   wake: WakeView;
   /** False after an uninstall (1.5.2): the download is offered straight away, as the first time. */
   installed?: boolean;
+  /** The file the download buttons give (3.0: DeepslateWorks.exe). */
+  download?: string;
   /** Their copy is older than 1.4.0 and cannot update itself (1.5.3): the button is the new download instead. */
   tooOld?: boolean;
 };
@@ -34,7 +36,7 @@ const POLL_MS = 3000;
  * docs/05 "Play from the site". A plain link to deepslate://play. After the click the page waits 2.5 s: if it is
  * still in front and never lost focus, nothing on this PC took the link, and the installer download is offered.
  */
-export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false, server, wake: initialWake, installed = true, tooOld = false }: Props) {
+export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false, server, wake: initialWake, installed = true, tooOld = false, download = "installer.zip" }: Props) {
   const [wake, setWake] = useState<WakeView>(initialWake);
   const poller = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -118,7 +120,7 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
     <div className="space-y-3" data-testid="play">
       <div className="flex flex-wrap items-center gap-3">
         {tooOld
-          ? <a href="/downloads/installer.zip" onClick={(e) => { if (!ready) e.preventDefault(); }} aria-disabled={!ready} data-testid="play-download" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")}>Download the new installer</a>
+          ? <a href={`/downloads/${download ?? "installer.zip"}`} onClick={(e) => { if (!ready) e.preventDefault(); }} aria-disabled={!ready} data-testid="play-download" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")}>Download the new installer</a>
           : <a href={PLAY_LINK} onClick={clicked} aria-disabled={!ready} className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")}>
               {state === "waiting" ? "Starting…" : "Play"}
             </a>}
@@ -131,7 +133,7 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
           <p data-testid="last-launch">{last ? <>Your last launch: <span className="font-mono">{last.version}</span> on {last.on}</> : <>You haven&apos;t launched from this account yet</>}</p>
         </div>
       </div>
-      {tooOld && <p className="text-sm font-medium text-foreground" data-testid="play-too-old">Your copy is too old to update itself. Run Setup.bat from this download once; after that Play keeps it up to date.</p>}
+      {tooOld && <p className="text-sm font-medium text-foreground" data-testid="play-too-old">Your copy is too old to update itself. Run {download === "DeepslateWorks.exe" ? "DeepslateWorks.exe" : "Setup.bat"} from this download once; after that Play keeps it up to date.</p>}
       {(() => {
         const line = wakeLine(wake);
         if (!line) return null;
@@ -148,7 +150,7 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
           {!installed && <p className="mt-1">It was taken off your PC. To play again, set it up once more:</p>}
           <p className="mt-1">Download, unzip and double-click <span className="font-mono">Setup.bat</span> once. After that, Play works from here and it keeps itself up to date.{!stepsHere && <> The steps are under <Link href="/help" className="underline">Getting started → Getting in</Link>.</>}</p>
           <p className="mt-2 flex flex-wrap items-center gap-3">
-            <a href="/downloads/installer.zip" className={buttonClasses("secondary", "sm")}>Download installer</a>
+            <a href={`/downloads/${download ?? "installer.zip"}`} className={buttonClasses("secondary", "sm")}>Download installer</a>
             <span className="text-xs text-muted-foreground">Already installed? If your browser asked whether to open Windows PowerShell, answer yes.</span>
           </p>
         </Alert>

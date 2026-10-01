@@ -34,6 +34,7 @@ export function kindOf(action: string, role: Actor["role"]): EventKind {
   if (action === "server.backup") return "BACKUP";
   if (action === "installer.report") return "INSTALL";
   if (action === "join.blocked") return "JOIN_BLOCKED";
+  if (action.startsWith("auth.admin")) return "ADMIN_ACTION";
   if (action.startsWith("download.") || action === "files.download") return "DOWNLOAD";
   return role === "ADMIN" || role === "system" ? "ADMIN_ACTION" : "PLAYER_ACTION";
 }
@@ -41,6 +42,7 @@ export function kindOf(action: string, role: Actor["role"]): EventKind {
 type P = Record<string, unknown>;
 const s = (v: unknown, fallback = "?") => (typeof v === "string" && v ? v : typeof v === "number" ? String(v) : fallback);
 
+const from = (p: P) => (typeof p.ip === "string" && p.ip ? ` from ${p.ip}${typeof p.country === "string" && p.country ? ` (${p.country})` : ""}` : "");
 const size = (v: unknown) => (typeof v === "number" && v > 0 ? (v < 1_048_576 ? `${Math.max(1, Math.round(v / 1024))} KB` : `${(v / 1_048_576).toFixed(1)} MB`) : "");
 const WHY_NOT: Record<string, string> = { not_live: "the site is not open yet and they have no early access", server_offline: "downloads are open while the server is up" };
 const WHAT: Record<string, string> = { "installer.zip": "the installer", "config.zip": "the pack's settings", "DeepslateWorks.ps1": "the new Deepslate Works script" };
@@ -66,6 +68,16 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "auth.login": "tried to sign in",
   "auth.register": "joined the group",
   "auth.adminReset": "had their password reset from the command line",
+  "auth.adminPassword": (p) => `signed in with password + ${p.via === "recovery" ? `a recovery code (${s(p.recoveryLeft, "?")} left)` : "code"}${from(p)}`,
+  "auth.adminPasswordFailed": (p) => `${p.locked ? "Refused admin sign-in (locked)" : "Failed admin sign-in"} for '${s(p.username, "")}'${from(p)}${p.lockedNow ? "; locked for 15 minutes" : ""}`,
+  "auth.adminLink": (p) => `signed in with a one-time link${from(p)}`,
+  "auth.adminLinkFailed": (p) => `A one-time sign-in link was refused${from(p)}`,
+  "auth.adminBreakGlass": (p) => `One-time sign-in link made from the command line for ${s(p.displayName)}${p.totpReset ? " (authenticator switched off)" : ""}, valid 15 minutes`,
+  "auth.adminSetup": "set up password sign-in",
+  "auth.adminOff": (p) => (p.forName ? `turned password sign-in off for ${s(p.forName)}` : "turned their password sign-in off"),
+  "auth.adminPasswordChange": "changed their sign-in password",
+  "auth.adminTotpReset": "set up a new authenticator app",
+  "auth.adminRecovery": "made new recovery codes",
   "profile.onboard": "answered the PC question",
   "profile.tier.measured": (p) => (p.from && p.from !== p.to ? `their PC was measured by the installer: ${s(p.to)} (they had chosen ${s(p.from)})` : `their PC was measured by the installer: ${s(p.to)}`),
   "profile.visuals": (p) => (p.extras ? `switched visual extras on${p.shader && p.shader !== "none" ? ` with ${p.shader === "full" ? "full" : "light"} shaders` : ", no shaders"}` : "switched visual extras off"),
@@ -164,10 +176,10 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
 };
 
 // Phrases that already say who (or have no who).
-const SELF_CONTAINED = new Set(["download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "world.pregenAutoPause"]);
+const SELF_CONTAINED = new Set(["auth.adminPasswordFailed", "auth.adminLinkFailed", "auth.adminBreakGlass", "download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "world.pregenAutoPause"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
-const OUTCOME_IN_PHRASE = new Set(["server.wake", "installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);
+const OUTCOME_IN_PHRASE = new Set(["auth.adminPasswordFailed", "auth.adminLinkFailed", "server.wake", "installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);
 
 export function describeAction(action: string, actor: Actor, params: unknown, result: AuditResult = "OK"): string {
   const p = (params && typeof params === "object" ? params : {}) as P;

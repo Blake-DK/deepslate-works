@@ -2,19 +2,23 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/server/db";
+import { sessionProblem } from "@/server/auth/session-check";
 
 export type CurrentUser = NonNullable<Awaited<ReturnType<typeof loadCurrentUser>>>;
 
 export async function loadCurrentUser() {
   const session = await auth();
   if (!session?.user?.id) return null;
-  return db.user.findUnique({
+  const user = await db.user.findUnique({
     where: { id: session.user.id },
     select: {
       id: true, displayName: true, role: true, discordId: true, email: true,
       mcUsername: true, mcUuid: true, pcTier: true, pcTierSource: true, pcTierWhy: true, pcTierAt: true, verifiedAt: true, guildMember: true, createdAt: true, lastSeenAt: true, earlyAccess: true, visualExtras: true, shaders: true,
+      sessionVersion: true, adminLogin: { select: { enabled: true, passwordAt: true } },
     },
   });
+  if (!user || sessionProblem(session.user, user)) return null;
+  return { ...user, via: session.user.via ?? null, hasPasswordSignIn: Boolean(user.adminLogin?.enabled) };
 }
 
 /** Logged-in user or redirect to /login. Role is read from the database, so promotions apply immediately. */

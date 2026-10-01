@@ -2,7 +2,8 @@ import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { authConfig, type AppToken } from "@/auth.config";
+import { createHash } from "node:crypto";
+import { authConfig, SHORT_SESSION_MS, tokenExpired, type AppToken } from "@/auth.config";
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { verifyPassword } from "@/server/auth/password";
@@ -12,10 +13,21 @@ import { loginLimiter } from "@/server/auth/rate-limit";
 import { clientIp } from "@/server/auth/request";
 import { INVITE_COOKIE } from "@/server/auth/constants";
 import { audit } from "@/server/events";
+import { checkAdminSignIn } from "@/server/auth/admin-core";
+import { auditSignIn, countryOf, signInDeps } from "@/server/auth/admin-login";
+import { adminLockouts } from "@/server/auth/lockout";
 
 class RateLimited extends CredentialsSignin {
   code = "rate_limited";
 }
+class AdminLocked extends CredentialsSignin {
+  code = "admin_locked";
+}
+class AdminFailed extends CredentialsSignin {
+  code = "admin_failed";
+}
+
+const VIA: Record<string, NonNullable<AppToken["via"]>> = { discord: "discord", credentials: "email", "admin-password": "password", "one-time-link": "link" };
 
 /** Discord `guilds` scope: list the user's servers and look for ours. Fails closed. */
 async function isGuildMember(accessToken: string | undefined, guildId: string): Promise<boolean> {
@@ -59,6 +71,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         await touchLastSeen(user.id);
         return { id: user.id, name: user.displayName };
+      },
+    }),
+    // Admins only (planner, 2026-10-01): username + password + authenticator code (or a recovery code), all three.
+    Credentials({
+      id: "admin-password",
+      name: "Admin password",
+      credentials: { username: {}, password: {}, code: {} },
+      async authorize(raw) {
+        const ip = await clientIp();
+        const out = await checkAdminSignIn({ username: raw?.username, password: raw?.password, code: raw?.code, ip }, signInDeps, adminLockouts);
+        await auditSignIn(out, ip);
+        if (!out.ok) throw out.why === "locked" ? new AdminLocked() : new AdminFailed();
+        await touchLastSeen(out.userId);
+        return { id: out.userId, name: out.displayName };
+      },
+    }),
+    // Break-glass (docs/09): a link made by `pnpm admin:reset-auth` in the api container. Once, within 15 minutes.
+    Credentials({
+      id: "one-time-link",
+      name: "One-time link",
+      credentials: { token: {} },
+      async authorize(raw) {
+        const token = String(raw?.token ?? "");
+        const ip = await clientIp();
+        if (!/^[A-Za-z0-9_-]{32,64}$/.test(token)) throw new AdminFailed();
+        const tokenHash = createHash("sha256").update(token).digest("hex");
+        const used = await db.oneTimeLogin.updateMany({ where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } }, data: { usedAt: new Date() } });
+        const row = used.count === 1 ? await db.oneTimeLogin.findUnique({ where: { tokenHash }, include: { user: { select: { id: true, displayName: true, role: true } } } }) : null;
+        if (!row || row.user.role !== "ADMIN") {
+          await audit({ action: "auth.adminLinkFailed", params: { ip, country: await countryOf(ip) }, result: "DENIED", detail: row ? "not an admin" : "unknown, used or expired" });
+          throw new AdminFailed();
+        }
+        await audit({ userId: row.user.id, action: "auth.adminLink", params: { ip, country: await countryOf(ip) }, result: "OK" });
+        await touchLastSeen(row.user.id);
+        return { id: row.user.id, name: row.user.displayName };
       },
     }),
   ],
@@ -107,15 +154,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true;
     },
     async jwt({ token, user, account }) {
+      if (tokenExpired(token as AppToken)) return null;
       if (user) {
+        const include = { adminLogin: { select: { passwordAt: true } } } as const;
         const dbUser =
           account?.provider === "discord"
-            ? await db.user.findUnique({ where: { discordId: account.providerAccountId } })
-            : await db.user.findUnique({ where: { id: user.id! } });
+            ? await db.user.findUnique({ where: { discordId: account.providerAccountId }, include })
+            : await db.user.findUnique({ where: { id: user.id! }, include });
         if (!dbUser) return null;
         const t = token as AppToken;
         t.uid = dbUser.id;
         t.role = dbUser.role;
+        t.sv = dbUser.sessionVersion;
+        t.via = VIA[account?.provider ?? ""] ?? "email";
+        if (t.via === "password" || t.via === "link") t.until = Date.now() + SHORT_SESSION_MS;
+        if (t.via === "password") t.pa = dbUser.adminLogin?.passwordAt.getTime();
       }
       return token;
     },

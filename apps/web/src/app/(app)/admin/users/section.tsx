@@ -30,7 +30,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const me = await requireAdmin();
   const { error, show, q } = await searchParams;
   const [users, settings, lastRuns, installer, linkRuns] = await Promise.all([
-    db.user.findMany({ orderBy: [{ role: "asc" }, { createdAt: "asc" }] }),
+    db.user.findMany({ orderBy: [{ role: "asc" }, { createdAt: "asc" }], include: { adminLogin: { select: { enabled: true } } } }),
     getSettings(),
     // the installer each member used last: their latest report
     db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, installerVersion: true, mode: true, outcome: true } }),
@@ -44,7 +44,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const uninstalled = new Set(lastRuns.filter((r) => !installedNow(r)).map((r) => r.userId));
   const all = users.map((u) => {
     const installerVersion = lastInstaller.get(u.id) ?? null;
-    return { ...u, installerVersion, installerOutdated: installerVersion !== null && isOutdated(installerVersion, current) };
+    return { ...u, passwordSignIn: Boolean(u.adminLogin?.enabled), installerVersion, installerOutdated: installerVersion !== null && isOutdated(installerVersion, current) };
   });
   const { rows, only, query, count } = memberRows(all, show, q);
   const early = `While "We're live" is off, a member with early access can download, press Play and join like any player once it is on. Nothing of an admin's.${settings.live ? " The site is live, so it changes nothing right now." : ""}`;
@@ -59,7 +59,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const parts = (u: (typeof rows)[number]) => {
     const admin = u.role === "ADMIN";
     return {
-      role: <Badge tone={admin ? "warn" : "neutral"} className="shrink-0">{u.role.toLowerCase()}</Badge>,
+      role: <span className="flex min-w-0 items-center gap-1"><Badge tone={admin ? "warn" : "neutral"} className="shrink-0">{u.role.toLowerCase()}</Badge>{u.passwordSignIn && <Badge tone="neutral" className="shrink-0" title="Can also sign in with username, password and an authenticator code">pw</Badge>}</span>,
       minecraft: u.mcUsername ? (
         <span className="flex min-w-0 items-center gap-2"><Clip text={u.mcUsername} mono />{u.verifiedAt && <Badge tone="good" className="shrink-0">verified</Badge>}</span>
       ) : <Badge className="shrink-0">Unlinked</Badge>,

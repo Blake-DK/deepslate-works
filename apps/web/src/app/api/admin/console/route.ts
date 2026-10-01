@@ -1,5 +1,4 @@
-import { auth } from "@/auth";
-import { db } from "@/server/db";
+import { loadCurrentUser } from "@/server/auth/session";
 import { apiStream } from "@/server/api-client";
 
 export const dynamic = "force-dynamic";
@@ -10,8 +9,7 @@ type StreamEvent = { seq: number; at: string; text: string } | { hb: 1; state: n
 // Admin only. Live console as text/event-stream; each event carries its sequence number as the id, so a
 // browser that reconnects sends Last-Event-ID and gets only what it missed. Players never reach this.
 export async function GET(req: Request) {
-  const session = await auth();
-  const user = session?.user?.id ? await db.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } }) : null;
+  const user = await loadCurrentUser(); // checks the session is still good (docs/04 "Ending sessions")
   if (!user || user.role !== "ADMIN") return Response.json({ error: { code: "forbidden", message: "admin only" } }, { status: 403 });
   const url = new URL(req.url);
   const since = Math.max(0, Number(req.headers.get("last-event-id") ?? url.searchParams.get("since") ?? 0) || 0);

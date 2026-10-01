@@ -71,6 +71,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   consoleRoutes(app, ampClient, tail, () => limbo.actionCtx);
   const editor = new InventoryEditor(ampClient, tail, () => limbo.actionCtx, new Catalogue(`${env.REPO_DIR}/dist/items/catalogue.json`), (a) => audit(a as Parameters<typeof audit>[0]));
   inventoryRoutes(app, ampClient, tail, () => limbo.actionCtx, pregenWatch, undefined, editor);
+  // The country of an address, for the web's admin sign-in log lines (web has no GeoLite file of its own).
+  app.get("/geo", async (req) => ({ country: await countryOf(String((req.query as { ip?: unknown }).ip ?? ""), env.GEOIP_DB) }));
 
   // docs/16: sessions and the event log, fed by the console tail and the status poller.
   const recorder = new Recorder({

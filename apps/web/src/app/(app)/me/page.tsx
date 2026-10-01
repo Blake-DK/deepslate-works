@@ -126,6 +126,15 @@ export default async function MePage() {
           </CardDescription>
         </CardHeader>
       </Card>
+      {user.role === "ADMIN" && (
+        <Card data-testid="password-signin">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">Password sign-in {user.hasPasswordSignIn ? <Badge tone="good">on</Badge> : <Badge>off</Badge>}</CardTitle>
+            <CardDescription>Admins only: username, password and an authenticator code, for when Discord is down or your Discord account is gone.</CardDescription>
+          </CardHeader>
+          <CardContent><Link href="/me/sign-in" className={buttonClasses("secondary", "sm")}>{user.hasPasswordSignIn ? "Manage" : "Set up password sign-in"}</Link></CardContent>
+        </Card>
+      )}
       <Card data-testid="visuals">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">Making it look nicer {user.visualExtras && <Badge tone="good">on</Badge>}</CardTitle>

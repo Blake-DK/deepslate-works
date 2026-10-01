@@ -72,6 +72,37 @@ model User {
   earlyAccess  Boolean  @default(false) // docs/13: uses the portal as if it were live while it is not
   visualExtras Boolean  @default(false) // Me page: the PC also gets the client-only visual mods (mods.json category "visuals")
   shaders      String   @default("none") // Me page, with visualExtras: "none" | "light" | "full"
+  sessionVersion Int    @default(0) // raised to end every session the member has (made a player, password sign-in turned off)
+  adminLogin   AdminLogin?
+  oneTimeLogins OneTimeLogin[]
+}
+
+/// Admin password sign-in (planner, 2026-10-01): username + password (argon2id) + authenticator code. Admins only.
+model AdminLogin {
+  userId        String    @id
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username      String    @unique // lower case
+  passwordHash  String    // argon2id
+  totpSecret    String?   // encrypted with a key from AUTH_SECRET; null after a break-glass reset
+  pendingSecret String?   // a new authenticator being set up, not confirmed yet (encrypted)
+  enabled       Boolean   @default(false) // only once an authenticator code has been confirmed
+  lastStep      Int?      // the 30-second step of the last code accepted: a code works once
+  recovery      Json      @default("[]") // [{ h: HMAC of the code, usedAt: ISO | null }], 10 at a time
+  createdAt     DateTime  @default(now())
+  enabledAt     DateTime?
+  passwordAt    DateTime  @default(now())
+}
+
+/// Break-glass (docs/09): a one-time sign-in link made by the CLI in the api container. Valid 15 minutes, once.
+model OneTimeLogin {
+  tokenHash String    @id // sha256 of the token in the link
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Invite {

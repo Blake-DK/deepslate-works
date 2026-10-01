@@ -1,9 +1,25 @@
 {
-  "generatedAt": "2026-09-30T19:03:02.210Z",
+  "generatedAt": "2026-10-01T08:48:35.340Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "7df6ae2c4cc9875ea3ba1f210899301c66ca82fdaad88c01e9dd228ac55cdfb8",
+  "hash": "2872b0165f8fde5828e504f878a3973858391c0781a2ef32135b322b0b799568",
   "files": [
+    {
+      "slug": "3dskinlayers",
+      "name": "3D Skin Layers",
+      "projectId": "zV5r3pPn",
+      "versionId": "5s6lxsQW",
+      "versionNumber": "1.11.3",
+      "versionType": "release",
+      "filename": "skinlayers3d-neoforge-1.11.3-mc1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/zV5r3pPn/versions/5s6lxsQW/skinlayers3d-neoforge-1.11.3-mc1.21.1.jar",
+      "sha512": "7bf3064d6cd43b2991d7e51d9dd2a3f27c74cab6bbde80c7aa1fffe06a7935ef0b407b0514d789519f64e825ded71953e08c14f0b6aa530c5223d126d9b03912",
+      "sha1": "c3ca1000cf0e82608bc4a96067e15a20ecdbec1b",
+      "size": 1903528,
+      "side": "client",
+      "requiredBy": [],
+      "optional": "visuals"
+    },
     {
       "slug": "additional-enchanted-miner",
       "name": "Quarry (Additional Enchanted Miner)",
@@ -20,6 +36,21 @@
       "requiredBy": []
     },
     {
+      "slug": "alternate-current",
+      "name": "Alternate Current",
+      "projectId": "r0v8vy1s",
+      "versionId": "PCNyL6v4",
+      "versionNumber": "neoforge-mc1.21-1.9.0",
+      "versionType": "release",
+      "filename": "alternate_current-mc1.21-1.9.0.jar",
+      "url": "https://cdn.modrinth.com/data/r0v8vy1s/versions/PCNyL6v4/alternate_current-mc1.21-1.9.0.jar",
+      "sha512": "e7715d92987ad902f316ae657558a58e647b4f076d6962e6ac5b6bdb802755f1a37c2380b69002ce930b29dc02fe96989d41818462f7bc236c4ad709b0842480",
+      "sha1": "1201c14362f2bad7062d315f8a9b26afbabd2c9c",
+      "size": 50425,
+      "side": "server",
+      "requiredBy": []
+    },
+    {
       "slug": "appleskin",
       "name": "AppleSkin",
       "projectId": "EsAfCjCV",
@@ -32,6 +63,21 @@
       "sha1": "81cf0e668f991f83ac8820c386fbd6c9c3602246",
       "size": 75804,
       "side": "both",
+      "requiredBy": []
+    },
+    {
+      "slug": "badoptimizations",
+      "name": "BadOptimizations",
+      "projectId": "g96Z4WVZ",
+      "versionId": "S2qthD5S",
+      "versionNumber": "2.4.1",
+      "versionType": "release",
+      "filename": "BadOptimizations-2.4.1-1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/g96Z4WVZ/versions/S2qthD5S/BadOptimizations-2.4.1-1.21.1.jar",
+      "sha512": "2b66428bd98bd5ec0e09f2ec6af801cefb7b9b99cc4f0993daeaffe8d0ccc5ee0c2a73e9f38d4f92540ead0181704d2c9e946837ec05cf710fc3b20fce3b0cac",
+      "sha1": "1461d8e46391efd32a3085150e86094c9f6f5c9d",
+      "size": 283566,
+      "side": "client",
       "requiredBy": []
     },
     {
@@ -95,6 +141,39 @@
       "size": 340572,
       "side": "server",
       "requiredBy": []
+    },
+    {
+      "slug": "clumps",
+      "name": "Clumps",
+      "projectId": "Wnxd13zP",
+      "versionId": "jo7lDoK4",
+      "versionNumber": "19.0.0.1",
+      "versionType": "release",
+      "filename": "Clumps-neoforge-1.21.1-19.0.0.1.jar",
+      "url": "https://cdn.modrinth.com/data/Wnxd13zP/versions/jo7lDoK4/Clumps-neoforge-1.21.1-19.0.0.1.jar",
+      "sha512": "314d8d8e640d73041f27e0f3f2cad7aad8b4c77dbd7fb31700ef7760362261f77085eed5289555c725d99c3f47a114e7290cd608f39c9f0f12ef74958463bdcc",
+      "sha1": "fa2576297c7bd12b28aa7070e8141792bd66da4c",
+      "size": 18382,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
+      "slug": "complementary-reimagined",
+      "name": "Complementary Reimagined",
+      "projectId": "HVnmMxH1",
+      "versionId": "Bqen1mJX",
+      "versionNumber": "r5.9.3",
+      "versionType": "release",
+      "filename": "ComplementaryReimagined_r5.9.3.zip",
+      "url": "https://cdn.modrinth.com/data/HVnmMxH1/versions/Bqen1mJX/ComplementaryReimagined_r5.9.3.zip",
+      "sha512": "45304b1d7862afdb2177b7e6226fc9c6737911d17a4ad46cc9c519ca4deb935f05072cd337cd8b19a15bb8062b57b54eceec7bdee4cd572d94858e2946d37d85",
+      "sha1": "838139b54cddb56b2e83cd260d8efd960ac536d6",
+      "size": 553397,
+      "side": "client",
+      "requiredBy": [],
+      "kind": "shader",
+      "optional": "visuals",
+      "shader": "full"
     },
     {
       "slug": "copycats",
@@ -206,6 +285,22 @@
       "requiredBy": []
     },
     {
+      "slug": "entity-model-features",
+      "name": "Entity Model Features",
+      "projectId": "4I1XuqiY",
+      "versionId": "gEOHNhtN",
+      "versionNumber": "3.3.9-neoforge-1.21",
+      "versionType": "release",
+      "filename": "entity_model_features-3.3.9-1.21-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/4I1XuqiY/versions/gEOHNhtN/entity_model_features-3.3.9-1.21-neoforge.jar",
+      "sha512": "566abfd11f6281bb0817e253624e9c7c2aa028f85ac93a24c276a0561fbc5c19a527f8f2ca200477d16cdb362ced9ca6b740b81ad926133188706c6ada0048cc",
+      "sha1": "022780fc9f221fc87ba507c6542d47c8e1e4889a",
+      "size": 641785,
+      "side": "client",
+      "requiredBy": [],
+      "optional": "visuals"
+    },
+    {
       "slug": "entityculling",
       "name": "Entity Culling",
       "projectId": "NNAgCjsB",
@@ -219,6 +314,40 @@
       "size": 1510018,
       "side": "client",
       "requiredBy": []
+    },
+    {
+      "slug": "entitytexturefeatures",
+      "name": "Entity Texture Features",
+      "projectId": "BVzZfTc1",
+      "versionId": "HOizEpC7",
+      "versionNumber": "7.2.4-neoforge-1.21",
+      "versionType": "release",
+      "filename": "entity_texture_features-7.2.4-1.21-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/BVzZfTc1/versions/HOizEpC7/entity_texture_features-7.2.4-1.21-neoforge.jar",
+      "sha512": "ab24eae8a255c74157f6599bcc603ef5ce03f259b0b1db43deb78896d6274512ffa2c783a925396c83d606c50fd87b12099160bd20f8986672b24641e7e47c16",
+      "sha1": "2551bb98d82d4d4064acecd8b513f1db469c635e",
+      "size": 790080,
+      "side": "client",
+      "requiredBy": [
+        "entity-model-features"
+      ],
+      "optional": "visuals"
+    },
+    {
+      "slug": "fallingleavesforge",
+      "name": "Falling Leaves",
+      "projectId": "2JAUNCL4",
+      "versionId": "PVzaPLSv",
+      "versionNumber": "1.21.1-2.5.1",
+      "versionType": "release",
+      "filename": "fallingleaves-1.21.1-2.5.1.jar",
+      "url": "https://cdn.modrinth.com/data/2JAUNCL4/versions/PVzaPLSv/fallingleaves-1.21.1-2.5.1.jar",
+      "sha512": "9cc6ec387bce1a68f07b08bf1a2a65dc49ad409070f8cf58147d3cdbb9b82300d4a7184e01cf58a82886fb57156e6875b2cf7c4abb15335f8fd15be1de58400f",
+      "sha1": "93f479691d5a88775d90e9fa19e814b7301a363b",
+      "size": 153343,
+      "side": "client",
+      "requiredBy": [],
+      "optional": "visuals"
     },
     {
       "slug": "fallingtree",
@@ -251,6 +380,36 @@
       "requiredBy": []
     },
     {
+      "slug": "fastfurnace",
+      "name": "FastFurnace",
+      "projectId": "9X0318ev",
+      "versionId": "pqj92Yco",
+      "versionNumber": "1.21.1-9.0.1",
+      "versionType": "beta",
+      "filename": "FastFurnace-1.21.1-9.0.1.jar",
+      "url": "https://cdn.modrinth.com/data/9X0318ev/versions/pqj92Yco/FastFurnace-1.21.1-9.0.1.jar",
+      "sha512": "f140b7c12528aed92ac1646737c745ffd5e89e91551b6e174d9e999f9f5e8f95225d993fdb862486e79d6577da8571dabffc58085fbfd86cb74c0fa30abd9f00",
+      "sha1": "cb77b3bc40bb598cfc50773d491c9e1af06d3833",
+      "size": 4622,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
+      "slug": "fastworkbench",
+      "name": "FastWorkbench",
+      "projectId": "5NYPwQRn",
+      "versionId": "IwciHwPN",
+      "versionNumber": "1.21.1-9.1.3",
+      "versionType": "release",
+      "filename": "FastWorkbench-1.21.1-9.1.3.jar",
+      "url": "https://cdn.modrinth.com/data/5NYPwQRn/versions/IwciHwPN/FastWorkbench-1.21.1-9.1.3.jar",
+      "sha512": "73f7cfb713e0d71f9e4f302f4f97d2a62d034a2796428aa59174c58436b015e85e9438a8f7739b113c9ab6e3d160b2cd16e640f6153abe105622f33efc76d22d",
+      "sha1": "cfe55dc815979028d2a2211e26115dbd02273f87",
+      "size": 28636,
+      "side": "both",
+      "requiredBy": []
+    },
+    {
       "slug": "ferrite-core",
       "name": "FerriteCore",
       "projectId": "uXXizFIs",
@@ -263,6 +422,53 @@
       "sha1": "9563692efb708b6b568df27a01ec52f6311928ef",
       "size": 121559,
       "side": "both",
+      "requiredBy": []
+    },
+    {
+      "slug": "flw-vanillin",
+      "name": "Vanillin",
+      "projectId": "6qTrsXCy",
+      "versionId": "Qn76dRvj",
+      "versionNumber": "1.1.3",
+      "versionType": "release",
+      "filename": "vanillin-neoforge-1.21.1-1.1.3.jar",
+      "url": "https://cdn.modrinth.com/data/6qTrsXCy/versions/Qn76dRvj/vanillin-neoforge-1.21.1-1.1.3.jar",
+      "sha512": "b4c42bd310e66f20f679ff091192bb01739670f21162344bd177c812da20e873704ecb6ea5f6fd4d87661aee7be59a160808391582dfb97753833bfbb9fde236",
+      "sha1": "fae8bb9f13cd9d086949b9aca85956bb6fa47f56",
+      "size": 870344,
+      "side": "client",
+      "requiredBy": []
+    },
+    {
+      "slug": "fresh-animations",
+      "name": "Fresh Animations",
+      "projectId": "50dA9Sha",
+      "versionId": "xN57JJts",
+      "versionNumber": "1.10.4",
+      "versionType": "beta",
+      "filename": "FreshAnimations_v1.10.4.zip",
+      "url": "https://cdn.modrinth.com/data/50dA9Sha/versions/xN57JJts/FreshAnimations_v1.10.4.zip",
+      "sha512": "41258f9bea1a773d823f9a014d0c08206e9e7b339bc538e1538211fff28fadd06878a836d292cbb636ed6829cd2801a509368ae3eb3ad4bedf42190a0d5f7a90",
+      "sha1": "73db740a6868e043c5e615c036fca2c912615b6e",
+      "size": 850941,
+      "side": "client",
+      "requiredBy": [],
+      "kind": "resourcepack",
+      "optional": "visuals"
+    },
+    {
+      "slug": "get-it-together-drops",
+      "name": "Get It Together, Drops!",
+      "projectId": "T0OUgf8P",
+      "versionId": "K4TUzlwa",
+      "versionNumber": "v1.4",
+      "versionType": "release",
+      "filename": "getittogetherdrops-neoforge-1.21.5-1.4.jar",
+      "url": "https://cdn.modrinth.com/data/T0OUgf8P/versions/K4TUzlwa/getittogetherdrops-neoforge-1.21.5-1.4.jar",
+      "sha512": "fc0f01061d2785d205d5e1e0d49b40408d3fa597b65b7b74036beefc47f4d3577f4a8ec7ad6c26cae3a70e36f1205afb1e9a0afa77cfece49f69344ed69fc9fa",
+      "sha1": "ead940a50f69313802960c497e252acd3956334f",
+      "size": 8825,
+      "side": "server",
       "requiredBy": []
     },
     {
@@ -294,6 +500,22 @@
       "size": 365195,
       "side": "client",
       "requiredBy": []
+    },
+    {
+      "slug": "iris",
+      "name": "Iris",
+      "projectId": "YL57xq9U",
+      "versionId": "KduFYu4t",
+      "versionNumber": "1.8.14-beta.1+1.21.1-neoforge",
+      "versionType": "beta",
+      "filename": "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/KduFYu4t/iris-neoforge-1.8.14-beta.1%2Bmc1.21.1.jar",
+      "sha512": "33fddb430e16222902eac75b8b3d57c381b0f3cc729f3b56c4628df12ca108f23a0b11e2feb167923d6d14d1fc7e8ee1a977ec421b19d1951bdca74c4092b9c5",
+      "sha1": "1bd129cf7bce65d6b1c0543045f0620c98a0f885",
+      "size": 2540723,
+      "side": "client",
+      "requiredBy": [],
+      "optional": "visuals"
     },
     {
       "slug": "jade",
@@ -403,6 +625,24 @@
       "requiredBy": []
     },
     {
+      "slug": "makeup-ultra-fast-shaders",
+      "name": "MakeUp Ultra Fast",
+      "projectId": "izsIPI7a",
+      "versionId": "IUFkxmHz",
+      "versionNumber": "9.5f",
+      "versionType": "release",
+      "filename": "MakeUp-UltraFast-9.5f.zip",
+      "url": "https://cdn.modrinth.com/data/izsIPI7a/versions/IUFkxmHz/MakeUp-UltraFast-9.5f.zip",
+      "sha512": "86d7d21eea4eaa257a43896d639d8f8ea1709f721ea70092504d273c7c9b47a16ede605be99548dbebf8ead8749c1effe44e6f1724ecba884d67ef185fff51e4",
+      "sha1": "b3873dcc6b39093a6c13c2ec9c5d5eee90c06827",
+      "size": 403666,
+      "side": "client",
+      "requiredBy": [],
+      "kind": "shader",
+      "optional": "visuals",
+      "shader": "light"
+    },
+    {
       "slug": "modernfix",
       "name": "ModernFix",
       "projectId": "nmDcB62a",
@@ -433,6 +673,53 @@
       "requiredBy": []
     },
     {
+      "slug": "noisium",
+      "name": "Noisium",
+      "projectId": "KuNKN7d2",
+      "versionId": "nJBE6tif",
+      "versionNumber": "2.3.0+mc1.21-1.21.1",
+      "versionType": "release",
+      "filename": "noisium-neoforge-2.3.0+mc1.21-1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/KuNKN7d2/versions/nJBE6tif/noisium-neoforge-2.3.0%2Bmc1.21-1.21.1.jar",
+      "sha512": "b50c37d2f69d51742d4407d272cea525b428784d2a39338d34b692937320495cd77d47b2d2321b3976713447028f50823e9ba44ca618900eba4ced907985ec84",
+      "sha1": "1bea6b61378ba80f038256c4345d9ff3b67928c4",
+      "size": 60296,
+      "side": "server",
+      "requiredBy": []
+    },
+    {
+      "slug": "not-enough-animations",
+      "name": "Not Enough Animations",
+      "projectId": "MPCX6s5C",
+      "versionId": "VCuMsK45",
+      "versionNumber": "1.12.6",
+      "versionType": "release",
+      "filename": "notenoughanimations-neoforge-1.12.6-mc1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/MPCX6s5C/versions/VCuMsK45/notenoughanimations-neoforge-1.12.6-mc1.21.1.jar",
+      "sha512": "2b392f770cac669abcc796e836fc86579e29c1c70174f773fadbb747d8a49763fefd938835aeef8681a384aee9a7b6a8fa4684aaa1961159ccddea680e936acd",
+      "sha1": "2098ae4965ebefb2dc8d5aec42a7d5282414fddc",
+      "size": 1866035,
+      "side": "client",
+      "requiredBy": [],
+      "optional": "visuals"
+    },
+    {
+      "slug": "particle-rain",
+      "name": "Particle Rain",
+      "projectId": "nrikgvxm",
+      "versionId": "k32OBTlL",
+      "versionNumber": "v4-beta.11+1.21.1-neoforge",
+      "versionType": "beta",
+      "filename": "particlerain-4.0.0-beta.11+1.21.1-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/nrikgvxm/versions/k32OBTlL/particlerain-4.0.0-beta.11%2B1.21.1-neoforge.jar",
+      "sha512": "a99355c57bc8d4e04dc42b2caa5981c0c8bb0408e5dff6789149894ebeb0f0b23c95325b5f4bc62d3f8f57890feb3dc8e888da8f155db0ccc39bdebfd7f63cc2",
+      "sha1": "1eb1ee4b949ad8ef25b01fcd5fb0ad5cc59ec92f",
+      "size": 618131,
+      "side": "client",
+      "requiredBy": [],
+      "optional": "visuals"
+    },
+    {
       "slug": "pipez",
       "name": "Pipez",
       "projectId": "iRmWy6ga",
@@ -446,6 +733,24 @@
       "size": 456599,
       "side": "both",
       "requiredBy": []
+    },
+    {
+      "slug": "placebo",
+      "name": "Placebo",
+      "projectId": "tCkE8p2N",
+      "versionId": "1Ypo4tf4",
+      "versionNumber": "1.21.1-9.9.2",
+      "versionType": "release",
+      "filename": "Placebo-1.21.1-9.9.2.jar",
+      "url": "https://cdn.modrinth.com/data/tCkE8p2N/versions/1Ypo4tf4/Placebo-1.21.1-9.9.2.jar",
+      "sha512": "e8b4ba06fdbcdef8f936c39e7ba18bbfd326fad8d2512fd6cec80c899001b506a501b1aeac5eef2a1c2d7dd98f89ae3d94fac357c243027d623e59622bd295b5",
+      "sha1": "d44335094cf2db64998cb3ee31e58d8c01e80b4a",
+      "size": 324058,
+      "side": "both",
+      "requiredBy": [
+        "fastfurnace",
+        "fastworkbench"
+      ]
     },
     {
       "slug": "resourceful-lib",
@@ -485,14 +790,14 @@
       "slug": "simple-voice-chat",
       "name": "Simple Voice Chat",
       "projectId": "9eGKb6K1",
-      "versionId": "2s7zUspF",
-      "versionNumber": "neoforge-1.21.1-2.6.22",
-      "versionType": "release",
-      "filename": "voicechat-neoforge-1.21.1-2.6.22.jar",
-      "url": "https://cdn.modrinth.com/data/9eGKb6K1/versions/2s7zUspF/voicechat-neoforge-1.21.1-2.6.22.jar",
-      "sha512": "309e3b18e299b2bccf9128dbb05c2603a9860f7cd68858d23f8fdb8265ea85ec7fb1655c95b87c0a9522ae1fd6380b26e4a4c31207f9c7af80870fcc6207abad",
-      "sha1": "3b2001d8df61fe6dc03dcd5f5cd4a8f49821feb0",
-      "size": 4918442,
+      "versionId": "qqNx1Yjm",
+      "versionNumber": "neoforge-1.21.1-2.6.24",
+      "versionType": "beta",
+      "filename": "voicechat-neoforge-1.21.1-2.6.24.jar",
+      "url": "https://cdn.modrinth.com/data/9eGKb6K1/versions/qqNx1Yjm/voicechat-neoforge-1.21.1-2.6.24.jar",
+      "sha512": "730d2b2acc39afbac16cd3e4312d411e6f226f71aa58e26ff9c772110f962b2e2c7810baa3cd19cd82d28aed85c58d0c0df1ed5fc97dad8a89655008f3461a31",
+      "sha1": "436ee200d5192ffda65fcf70c42c086fcdc00826",
+      "size": 4934688,
       "side": "both",
       "requiredBy": []
     },
@@ -542,6 +847,22 @@
       "requiredBy": [
         "sophisticated-backpacks"
       ]
+    },
+    {
+      "slug": "sound-physics-remastered",
+      "name": "Sound Physics Remastered",
+      "projectId": "qyVF9oeo",
+      "versionId": "cTTunNxQ",
+      "versionNumber": "neoforge-1.21.1-1.4.10",
+      "versionType": "beta",
+      "filename": "sound-physics-remastered-neoforge-1.21.1-1.4.10.jar",
+      "url": "https://cdn.modrinth.com/data/qyVF9oeo/versions/cTTunNxQ/sound-physics-remastered-neoforge-1.21.1-1.4.10.jar",
+      "sha512": "ebe5307c84571f5133251bb3e5ca01293dad94821f396cedb4084b46267396b4c36d7f956887ce883e40630b9f4ce4e4cedd20e3764eedbda6c2b635bdaa21a5",
+      "sha1": "48d0817ba80d733afc654d55a2d0cbba0815dbe8",
+      "size": 199310,
+      "side": "client",
+      "requiredBy": [],
+      "optional": "visuals"
     },
     {
       "slug": "spark",

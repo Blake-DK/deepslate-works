@@ -5,6 +5,7 @@ import { buildLock, diffLocks, type LockFile } from "./lock";
 import { buildConfigZip, buildInstaller, buildServer, removeClientPack } from "./build";
 import { modpackPaths } from "./paths";
 import { buildItems } from "./items";
+import { lockExtras } from "./extras";
 import type { Manifest } from "./schema";
 
 const [cmd = "help", ...rest] = process.argv.slice(2);
@@ -70,12 +71,14 @@ async function main() {
       if (d.neoforge) log(`~ neoforge ${d.neoforge.from} -> ${d.neoforge.to}`);
       if (prev && changed === 0 && !rest.includes("--force")) {
         log(`mods.lock.json unchanged (${lock.files.length} files, NeoForge ${lock.neoforge}, hash ${lock.hash.slice(0, 8)})`);
+        await lockExtras(P, lock, manifest.loader, log);
         process.exit(0);
       }
       const tmp = `${P.lock}.tmp`;
       await writeFile(tmp, JSON.stringify(lock, null, 2) + "\n");
       await rename(tmp, P.lock);
       log(`wrote ${P.lock}: ${lock.files.length} files, NeoForge ${lock.neoforge}, hash ${lock.hash.slice(0, 8)}`);
+      await lockExtras(P, lock, manifest.loader, log);
       process.exit(0);
     }
     // falls through never

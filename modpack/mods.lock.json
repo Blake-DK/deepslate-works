@@ -1,25 +1,9 @@
 {
-  "generatedAt": "2026-10-01T08:48:35.340Z",
+  "generatedAt": "2026-10-01T11:27:15.930Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "2872b0165f8fde5828e504f878a3973858391c0781a2ef32135b322b0b799568",
+  "hash": "02e482650f48d61f64e2bdb40e65f24a7c6b3f445796b660ad69ac4c19e508d8",
   "files": [
-    {
-      "slug": "3dskinlayers",
-      "name": "3D Skin Layers",
-      "projectId": "zV5r3pPn",
-      "versionId": "5s6lxsQW",
-      "versionNumber": "1.11.3",
-      "versionType": "release",
-      "filename": "skinlayers3d-neoforge-1.11.3-mc1.21.1.jar",
-      "url": "https://cdn.modrinth.com/data/zV5r3pPn/versions/5s6lxsQW/skinlayers3d-neoforge-1.11.3-mc1.21.1.jar",
-      "sha512": "7bf3064d6cd43b2991d7e51d9dd2a3f27c74cab6bbde80c7aa1fffe06a7935ef0b407b0514d789519f64e825ded71953e08c14f0b6aa530c5223d126d9b03912",
-      "sha1": "c3ca1000cf0e82608bc4a96067e15a20ecdbec1b",
-      "size": 1903528,
-      "side": "client",
-      "requiredBy": [],
-      "optional": "visuals"
-    },
     {
       "slug": "additional-enchanted-miner",
       "name": "Quarry (Additional Enchanted Miner)",
@@ -158,24 +142,6 @@
       "requiredBy": []
     },
     {
-      "slug": "complementary-reimagined",
-      "name": "Complementary Reimagined",
-      "projectId": "HVnmMxH1",
-      "versionId": "Bqen1mJX",
-      "versionNumber": "r5.9.3",
-      "versionType": "release",
-      "filename": "ComplementaryReimagined_r5.9.3.zip",
-      "url": "https://cdn.modrinth.com/data/HVnmMxH1/versions/Bqen1mJX/ComplementaryReimagined_r5.9.3.zip",
-      "sha512": "45304b1d7862afdb2177b7e6226fc9c6737911d17a4ad46cc9c519ca4deb935f05072cd337cd8b19a15bb8062b57b54eceec7bdee4cd572d94858e2946d37d85",
-      "sha1": "838139b54cddb56b2e83cd260d8efd960ac536d6",
-      "size": 553397,
-      "side": "client",
-      "requiredBy": [],
-      "kind": "shader",
-      "optional": "visuals",
-      "shader": "full"
-    },
-    {
       "slug": "copycats",
       "name": "Create: Copycats+",
       "projectId": "UT2M39wf",
@@ -285,22 +251,6 @@
       "requiredBy": []
     },
     {
-      "slug": "entity-model-features",
-      "name": "Entity Model Features",
-      "projectId": "4I1XuqiY",
-      "versionId": "gEOHNhtN",
-      "versionNumber": "3.3.9-neoforge-1.21",
-      "versionType": "release",
-      "filename": "entity_model_features-3.3.9-1.21-neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/4I1XuqiY/versions/gEOHNhtN/entity_model_features-3.3.9-1.21-neoforge.jar",
-      "sha512": "566abfd11f6281bb0817e253624e9c7c2aa028f85ac93a24c276a0561fbc5c19a527f8f2ca200477d16cdb362ced9ca6b740b81ad926133188706c6ada0048cc",
-      "sha1": "022780fc9f221fc87ba507c6542d47c8e1e4889a",
-      "size": 641785,
-      "side": "client",
-      "requiredBy": [],
-      "optional": "visuals"
-    },
-    {
       "slug": "entityculling",
       "name": "Entity Culling",
       "projectId": "NNAgCjsB",
@@ -314,40 +264,6 @@
       "size": 1510018,
       "side": "client",
       "requiredBy": []
-    },
-    {
-      "slug": "entitytexturefeatures",
-      "name": "Entity Texture Features",
-      "projectId": "BVzZfTc1",
-      "versionId": "HOizEpC7",
-      "versionNumber": "7.2.4-neoforge-1.21",
-      "versionType": "release",
-      "filename": "entity_texture_features-7.2.4-1.21-neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/BVzZfTc1/versions/HOizEpC7/entity_texture_features-7.2.4-1.21-neoforge.jar",
-      "sha512": "ab24eae8a255c74157f6599bcc603ef5ce03f259b0b1db43deb78896d6274512ffa2c783a925396c83d606c50fd87b12099160bd20f8986672b24641e7e47c16",
-      "sha1": "2551bb98d82d4d4064acecd8b513f1db469c635e",
-      "size": 790080,
-      "side": "client",
-      "requiredBy": [
-        "entity-model-features"
-      ],
-      "optional": "visuals"
-    },
-    {
-      "slug": "fallingleavesforge",
-      "name": "Falling Leaves",
-      "projectId": "2JAUNCL4",
-      "versionId": "PVzaPLSv",
-      "versionNumber": "1.21.1-2.5.1",
-      "versionType": "release",
-      "filename": "fallingleaves-1.21.1-2.5.1.jar",
-      "url": "https://cdn.modrinth.com/data/2JAUNCL4/versions/PVzaPLSv/fallingleaves-1.21.1-2.5.1.jar",
-      "sha512": "9cc6ec387bce1a68f07b08bf1a2a65dc49ad409070f8cf58147d3cdbb9b82300d4a7184e01cf58a82886fb57156e6875b2cf7c4abb15335f8fd15be1de58400f",
-      "sha1": "93f479691d5a88775d90e9fa19e814b7301a363b",
-      "size": 153343,
-      "side": "client",
-      "requiredBy": [],
-      "optional": "visuals"
     },
     {
       "slug": "fallingtree",
@@ -440,23 +356,6 @@
       "requiredBy": []
     },
     {
-      "slug": "fresh-animations",
-      "name": "Fresh Animations",
-      "projectId": "50dA9Sha",
-      "versionId": "xN57JJts",
-      "versionNumber": "1.10.4",
-      "versionType": "beta",
-      "filename": "FreshAnimations_v1.10.4.zip",
-      "url": "https://cdn.modrinth.com/data/50dA9Sha/versions/xN57JJts/FreshAnimations_v1.10.4.zip",
-      "sha512": "41258f9bea1a773d823f9a014d0c08206e9e7b339bc538e1538211fff28fadd06878a836d292cbb636ed6829cd2801a509368ae3eb3ad4bedf42190a0d5f7a90",
-      "sha1": "73db740a6868e043c5e615c036fca2c912615b6e",
-      "size": 850941,
-      "side": "client",
-      "requiredBy": [],
-      "kind": "resourcepack",
-      "optional": "visuals"
-    },
-    {
       "slug": "get-it-together-drops",
       "name": "Get It Together, Drops!",
       "projectId": "T0OUgf8P",
@@ -500,22 +399,6 @@
       "size": 365195,
       "side": "client",
       "requiredBy": []
-    },
-    {
-      "slug": "iris",
-      "name": "Iris",
-      "projectId": "YL57xq9U",
-      "versionId": "KduFYu4t",
-      "versionNumber": "1.8.14-beta.1+1.21.1-neoforge",
-      "versionType": "beta",
-      "filename": "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar",
-      "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/KduFYu4t/iris-neoforge-1.8.14-beta.1%2Bmc1.21.1.jar",
-      "sha512": "33fddb430e16222902eac75b8b3d57c381b0f3cc729f3b56c4628df12ca108f23a0b11e2feb167923d6d14d1fc7e8ee1a977ec421b19d1951bdca74c4092b9c5",
-      "sha1": "1bd129cf7bce65d6b1c0543045f0620c98a0f885",
-      "size": 2540723,
-      "side": "client",
-      "requiredBy": [],
-      "optional": "visuals"
     },
     {
       "slug": "jade",
@@ -625,24 +508,6 @@
       "requiredBy": []
     },
     {
-      "slug": "makeup-ultra-fast-shaders",
-      "name": "MakeUp Ultra Fast",
-      "projectId": "izsIPI7a",
-      "versionId": "IUFkxmHz",
-      "versionNumber": "9.5f",
-      "versionType": "release",
-      "filename": "MakeUp-UltraFast-9.5f.zip",
-      "url": "https://cdn.modrinth.com/data/izsIPI7a/versions/IUFkxmHz/MakeUp-UltraFast-9.5f.zip",
-      "sha512": "86d7d21eea4eaa257a43896d639d8f8ea1709f721ea70092504d273c7c9b47a16ede605be99548dbebf8ead8749c1effe44e6f1724ecba884d67ef185fff51e4",
-      "sha1": "b3873dcc6b39093a6c13c2ec9c5d5eee90c06827",
-      "size": 403666,
-      "side": "client",
-      "requiredBy": [],
-      "kind": "shader",
-      "optional": "visuals",
-      "shader": "light"
-    },
-    {
       "slug": "modernfix",
       "name": "ModernFix",
       "projectId": "nmDcB62a",
@@ -686,38 +551,6 @@
       "size": 60296,
       "side": "server",
       "requiredBy": []
-    },
-    {
-      "slug": "not-enough-animations",
-      "name": "Not Enough Animations",
-      "projectId": "MPCX6s5C",
-      "versionId": "VCuMsK45",
-      "versionNumber": "1.12.6",
-      "versionType": "release",
-      "filename": "notenoughanimations-neoforge-1.12.6-mc1.21.1.jar",
-      "url": "https://cdn.modrinth.com/data/MPCX6s5C/versions/VCuMsK45/notenoughanimations-neoforge-1.12.6-mc1.21.1.jar",
-      "sha512": "2b392f770cac669abcc796e836fc86579e29c1c70174f773fadbb747d8a49763fefd938835aeef8681a384aee9a7b6a8fa4684aaa1961159ccddea680e936acd",
-      "sha1": "2098ae4965ebefb2dc8d5aec42a7d5282414fddc",
-      "size": 1866035,
-      "side": "client",
-      "requiredBy": [],
-      "optional": "visuals"
-    },
-    {
-      "slug": "particle-rain",
-      "name": "Particle Rain",
-      "projectId": "nrikgvxm",
-      "versionId": "k32OBTlL",
-      "versionNumber": "v4-beta.11+1.21.1-neoforge",
-      "versionType": "beta",
-      "filename": "particlerain-4.0.0-beta.11+1.21.1-neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/nrikgvxm/versions/k32OBTlL/particlerain-4.0.0-beta.11%2B1.21.1-neoforge.jar",
-      "sha512": "a99355c57bc8d4e04dc42b2caa5981c0c8bb0408e5dff6789149894ebeb0f0b23c95325b5f4bc62d3f8f57890feb3dc8e888da8f155db0ccc39bdebfd7f63cc2",
-      "sha1": "1eb1ee4b949ad8ef25b01fcd5fb0ad5cc59ec92f",
-      "size": 618131,
-      "side": "client",
-      "requiredBy": [],
-      "optional": "visuals"
     },
     {
       "slug": "pipez",
@@ -847,22 +680,6 @@
       "requiredBy": [
         "sophisticated-backpacks"
       ]
-    },
-    {
-      "slug": "sound-physics-remastered",
-      "name": "Sound Physics Remastered",
-      "projectId": "qyVF9oeo",
-      "versionId": "cTTunNxQ",
-      "versionNumber": "neoforge-1.21.1-1.4.10",
-      "versionType": "beta",
-      "filename": "sound-physics-remastered-neoforge-1.21.1-1.4.10.jar",
-      "url": "https://cdn.modrinth.com/data/qyVF9oeo/versions/cTTunNxQ/sound-physics-remastered-neoforge-1.21.1-1.4.10.jar",
-      "sha512": "ebe5307c84571f5133251bb3e5ca01293dad94821f396cedb4084b46267396b4c36d7f956887ce883e40630b9f4ce4e4cedd20e3764eedbda6c2b635bdaa21a5",
-      "sha1": "48d0817ba80d733afc654d55a2d0cbba0815dbe8",
-      "size": 199310,
-      "side": "client",
-      "requiredBy": [],
-      "optional": "visuals"
     },
     {
       "slug": "spark",

@@ -24,7 +24,14 @@ param(
   # What a 1.4.x copy passes when its update step starts this script in its place (install.ps1 -Play "deepslate://play",
   # or -Play -Root / -NoPrompt). Taken so that start does not fail, written to the log, and otherwise ignored (1.5.3).
   [switch]$Play,
-  [switch]$NoPrompt
+  [switch]$NoPrompt,
+  # 2.0.0, the app (planner 2026-10-01). With none of these, a run on Windows opens the Deepslate Works window.
+  [switch]$Engine,          # the install steps, started hidden by the window; progress as JSON lines in -StatusFile
+  [string]$StatusFile = "",
+  [switch]$Console,         # the steps in this console, every permission taken as given (tests; a PC where WPF fails)
+  [switch]$AllowAll,        # tests: every permission taken as given
+  [string]$Screenshots = "", # draw the window's main states into PNG files in this folder, then exit
+  [switch]$NoLaunch         # the engine: do not open the Minecraft Launcher at the end (the Extras tab's download)
 )
 
 # ---- started from a link on a web page ------------------------------------------------------------------
@@ -42,13 +49,14 @@ if ($FromLink) {
     exit 1
   }
   $Setup = $false; $DryRun = $false; $SelfTest = $false; $Root = ""; $PretendRunning = @(); $Uninstall = $false; $Yes = $false; $Play = $false; $NoPrompt = $false
+  $Engine = $false; $StatusFile = ""; $Console = $false; $AllowAll = $false; $Screenshots = ""; $NoLaunch = $false
 }
 # ---- config block (stamped by `modpack build installer`) ----
 $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "1.6.0"   # 1.6.0: visual extras (resource packs, shader packs) chosen on the Me page. History in docs/07
+$InstallerVersion = "2.0.0"   # 2.0.0: the Deepslate Works app: a window, permission per step, the Extras tab. History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -95,18 +103,19 @@ function Step($msg) {
   $script:Step++; $script:StepName = [string]$msg
   if ($Quiet) { Write-Host ("  {0} ..." -f $msg) -ForegroundColor DarkGray } else { Write-Host ("`n{0}. {1}" -f $script:Step, $msg) -ForegroundColor Cyan }
   Log "STEP $msg"
+  Emit ([ordered]@{ t = "step"; text = [string]$msg })
 }
-function Tick($msg) { if (-not $Quiet) { Write-Host ("   [OK] {0}" -f $msg) -ForegroundColor Green }; Log "OK $msg" }
+function Tick($msg) { if (-not $Quiet) { Write-Host ("   [OK] {0}" -f $msg) -ForegroundColor Green }; Log "OK $msg"; Emit ([ordered]@{ t = "tick"; text = [string]$msg }) }
 # Every file operation takes its path literally (-LiteralPath): with -Path PowerShell reads [ ] in a path as a pattern
 # and can fail to resolve a user folder at all (Pabulum's PC, 2026-09-29, installer 1.4.1).
 function Remove-Temp($path) {
   # A leftover temporary file is never a reason to stop.
   try { if ($path -and [IO.File]::Exists($path)) { [IO.File]::Delete($path) } } catch { Log ("could not remove " + $path + ": " + $_.Exception.Message) }
 }
-function Note($msg) { if (-not $Quiet) { Write-Host ("   {0}" -f $msg) -ForegroundColor Gray }; Log $msg }
+function Note($msg) { if (-not $Quiet) { Write-Host ("   {0}" -f $msg) -ForegroundColor Gray }; Log $msg; Emit ([ordered]@{ t = "note"; text = [string]$msg }) }
 function Hold-Window {
   # Started from the Play button or a shortcut there is no .bat to keep the window open: wait, so the message can be read.
-  if (-not $FromSetup -and -not $SelfTest -and -not $DryRun -and -not $script:Held) { $script:Held = $true; try { [void](Read-Host "Press Enter to close this window") } catch {} }
+  if (-not $FromSetup -and -not $SelfTest -and -not $DryRun -and -not $Engine -and -not $script:Held) { $script:Held = $true; try { [void](Read-Host "Press Enter to close this window") } catch {} }
 }
 # What the site answered when it said no: the response body (Windows PowerShell), ErrorDetails (pwsh), or the message
 # itself when it is the JSON (the self test's stand-ins throw that).
@@ -189,6 +198,7 @@ function Fail($msg) {
   Write-Host ("   {0}" -f $msg) -ForegroundColor Red
   Write-Host ("   Details are in {0}" -f $LogFile) -ForegroundColor DarkGray
   Log "FAIL $msg"
+  Emit ([ordered]@{ t = "fail"; text = [string]$msg })
   Send-Report "failed"
   Exit-Lock
   Hold-Window
@@ -309,7 +319,10 @@ function Send-Report([string]$outcome) {
   if ($Mode -eq "uninstall") { Write-Host ("Telling {0} that Deepslate Works is being taken off this PC." -f $site) -ForegroundColor Gray }
   else { Write-Host ("Sending the install log to {0} so Alex can help if something went wrong." -f $site) -ForegroundColor Gray }
   try {
-    $json = (New-Report $outcome) | ConvertTo-Json -Depth 8 -Compress
+    $rep = New-Report $outcome
+    # Reports declined in the app (2.0.0): only "pressed Play, pack version" goes, for Play first. No log, no PC details.
+    if ($script:ReportsOff) { $rep = [ordered]@{ packVersion = $rep.packVersion; installerVersion = $rep.installerVersion; mode = $rep.mode; outcome = $rep.outcome; durationSec = $rep.durationSec; log = ""; system = $null; minimal = $true } }
+    $json = $rep | ConvertTo-Json -Depth 8 -Compress
     $answer = Invoke-RestMethod -Uri "$PortalUrl/api/installer/report" -Method Post -Headers @{ Authorization = "Bearer $($script:Token)" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($json)) -UseBasicParsing -TimeoutSec 20
     Write-Host "   Sent." -ForegroundColor Gray
     Log "install report sent"
@@ -493,15 +506,15 @@ function Get-HomeDir { if ($env:LOCALAPPDATA) { return (Join-Path $env:LOCALAPPD
 function Get-PowerShellExe { return (([string]$env:SystemRoot).TrimEnd("\") + "\System32\WindowsPowerShell\v1.0\powershell.exe") }   # the full path: never whatever "powershell" is found first
 
 function Get-HandlerCommand([string]$scriptPath) {
-  return ('"{0}" -NoProfile -ExecutionPolicy Bypass -File "{1}" "%1"' -f (Get-PowerShellExe), $scriptPath)
+  return ('"{0}" -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{1}" "%1"' -f (Get-PowerShellExe), $scriptPath)
 }
 
 function Get-ShortcutSpec([string]$scriptPath) {
   return [ordered]@{
     target = Get-PowerShellExe
-    arguments = ('-NoProfile -ExecutionPolicy Bypass -File "{0}"' -f $scriptPath)
+    arguments = ('-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}"' -f $scriptPath)
     workingDirectory = (Split-Path -Parent $scriptPath)
-    description = "Updates Deepslate Works and opens the Minecraft Launcher on it"
+    description = "Opens Deepslate Works: updates the game and starts the Minecraft Launcher on it"
   }
 }
 
@@ -683,8 +696,8 @@ function Invoke-Uninstall($t, [string]$token, $portal) {
     if ($out) { $removed.Add("this PC's sign-in, also signed out on the site") } else { $removed.Add("this PC's sign-in (the site could not be reached; it expires by itself within 7 days)") }
   }
   $folders = @(
-    @($t.gameDir, "the game folder (mods, settings, the Java it downloaded, logs, the server list)"),
-    @($t.homeDir, "Deepslate Works itself, in your AppData")
+    @($t.gameDir, "the game folder (mods, the extras downloaded for the Extras tab, settings, the Java it downloaded, logs, the server list)"),
+    @($t.homeDir, "Deepslate Works itself, in your AppData, with your answers to its questions and your extras choices")
   )
   foreach ($f in $folders) {
     if (-not $f[0] -or -not (Test-Path -LiteralPath $f[0])) { continue }
@@ -793,7 +806,7 @@ function Copy-Home([string]$me, [string]$dir, $copier = $null, $sleep = $null) {
 # its blocks run inside this function, so they read $io. Returns the script to run, whether the Play link points at
 # it, what could not be done (`problems`, reason codes), the lines to show (`said`), and `fixed` when the link was not
 # right before and is now.
-function Repair-Home([string]$me, [string]$dir, $io, [switch]$Force) {
+function Repair-Home([string]$me, [string]$dir, $io, [switch]$Force, [switch]$NoLinks) {
   $problems = New-Object System.Collections.Generic.List[object]
   $said = New-Object System.Collections.Generic.List[object]
 
@@ -805,7 +818,8 @@ function Repair-Home([string]$me, [string]$dir, $io, [switch]$Force) {
 
   # 2. the Play link: to the home copy, or to the script where it ran, never to a temporary folder
   $linked = $false; $wasLinked = $false
-  if (-not $copy.ok -and (Test-UnderTemp $me $io.temp)) {
+  if ($NoLinks) { $said.Add(@{ tone = "note"; text = "No Play button link or shortcuts: you said Not now (Review permissions changes that)" }) }
+  elseif (-not $copy.ok -and (Test-UnderTemp $me $io.temp)) {
     $why = "Could not set up the Play button: the installer ran from a temporary folder and could not copy itself anywhere lasting"
     Add-SetupProblem $problems "link" "link_failed" $why; $said.Add(@{ tone = "problem"; text = $why })
   } else {
@@ -820,7 +834,7 @@ function Repair-Home([string]$me, [string]$dir, $io, [switch]$Force) {
   }
 
   # 3. the shortcuts: not to a temporary folder either
-  if (-not $copy.ok -and (Test-UnderTemp $me $io.temp)) { }
+  if ($NoLinks -or (-not $copy.ok -and (Test-UnderTemp $me $io.temp))) { }
   else {
     try {
       if ($Force -or -not (& $io.shortcutsThere)) {
@@ -978,34 +992,6 @@ function Set-IrisShader([string]$path, [string]$pack) {
   Move-Item -LiteralPath $tmp -Destination $path -Force
 }
 
-# The pack's files in one folder: the wanted ones downloaded (or kept when they are already right), the pack's
-# others taken out. $ours: every name the pack has put there or could have. Returns @{ fetched; removed; busy }.
-function Sync-PackFolder([string]$dir, $wanted, [string[]]$ours, [string]$staging, [scriptblock]$fetch) {
-  [void][IO.Directory]::CreateDirectory($dir)
-  $sha = [System.Security.Cryptography.SHA512]::Create()
-  $r = @{ fetched = 0; removed = 0; busy = @() }
-  $names = @($wanted | ForEach-Object { [string]$_.filename })
-  foreach ($f in @($wanted)) {
-    if (([string]$f.filename) -match '[\\/]|^\.\.?$') { continue }
-    $dest = Join-Path $dir $f.filename
-    if ([IO.File]::Exists($dest)) {
-      $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($dest))).Replace("-", "").ToLower()
-      if ($hash -eq $f.sha512) { continue }
-    }
-    $got = Save-ModFile $f.url $dest $f.sha512 $staging $fetch
-    if ($got -eq "wrong") { throw ("{0} downloaded wrong" -f $f.filename) }
-    if ($got -eq "in use") { $r.busy += [string]$f.filename; continue }
-    $r.fetched++
-  }
-  foreach ($n in @($ours | Where-Object { $_ } | Select-Object -Unique)) {
-    if ($names -contains $n -or $n -match '[\\/]|^\.\.?$') { continue }
-    $p = Join-Path $dir $n
-    if (-not [IO.File]::Exists($p)) { continue }
-    try { [IO.File]::Delete($p); $r.removed++ } catch { $r.busy += $n }
-  }
-  return $r
-}
-
 # Chat links (1.5.5, planner): with chatLinks off, the sign-in link in the white room's chat line cannot be clicked. It
 # cannot mend a Microsoft account that has chat switched off (the book in the room is for that), but it rules out the
 # other reason. Only a "chatLinks:false" line is changed, and only that line. $null when nothing was changed.
@@ -1090,6 +1076,892 @@ function Open-Launcher {
   try { Start-Process "shell:AppsFolder\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft"; return $true } catch {}   # Microsoft Store launcher
   try { Start-Process "minecraft://"; return $true } catch {}
   return $false
+}
+
+# ==== the app (2.0.0, planner 2026-10-01): permission per step, and personal extras =========================
+# Nothing in this part draws anything: the window (Show-App, further down) and the install steps (the engine) both
+# use it, and the self test checks it on Linux. Files, in %LOCALAPPDATA%\DeepslateWorks: consent.json (the answers),
+# extras.json (the extras switched on, and which files are where), extras-manifest.json (the site's list of extras,
+# kept so the Extras tab works offline). The extras' files live in <game folder>\extras\ until they are switched on.
+
+$ConsentFileName = "consent.json"
+$ExtrasStateName = "extras.json"
+$ExtrasManifestName = "extras-manifest.json"
+$ExitAsk = 20        # the engine needs an answer the window has to ask for (status line {t:"ask"})
+$ExitDeclined = 21   # a step needed to play was answered "Not now"
+
+function Get-ConsentSteps {
+  $site = $PortalUrl
+  try { $site = ([uri]$PortalUrl).Host } catch {}
+  return @(
+    [ordered]@{ id = "signin"; title = "Sign in with Discord"; text = ("Links this PC to your account on {0} so the server knows it's you." -f $site); required = $true; top = 1 },
+    [ordered]@{ id = "launcher"; title = "Check the Minecraft Launcher is closed"; text = "The launcher overwrites settings if it's open."; required = $true; top = 1 },
+    [ordered]@{ id = "java"; title = "Java 21"; text = "Minecraft 1.21 needs Java 21. Uses the launcher's own copy if you have it, otherwise downloads one into the Deepslate folder only."; required = $true; top = 2
+      bigger = "This PC needs its own Java 21 now: about 45 MB, downloaded into the Deepslate folder only. Nothing else on the PC changes." },
+    [ordered]@{ id = "neoforge"; title = "NeoForge"; text = "The mod loader. Installed into its own profile; your normal Minecraft isn't touched."; required = $true; top = 1 },
+    [ordered]@{ id = "mods"; title = "Mods and settings"; text = "Downloads the mods the server uses, from Modrinth. Updates after this happen by themselves."; required = $true; top = 1 },
+    [ordered]@{ id = "profile"; title = "Launcher profile and server list"; text = "Adds a 'Deepslate Works' profile and the server address."; required = $true; top = 1 },
+    [ordered]@{ id = "shortcuts"; title = "Shortcuts and Play button"; text = "Adds a desktop icon and lets the website's Play button open this app."; required = $false; top = 1 },
+    [ordered]@{ id = "reports"; title = "Send install reports"; text = "Sends a log of what happened to the site so Alex can fix problems. Your username and file paths are removed. If you say Not now, only 'pressed Play' and the pack version are sent: the server needs that to let you in."; required = $false; top = 1 },
+    [ordered]@{ id = "extras"; title = "Optional visual extras"; text = "Download the optional visual extras? About {0} MB, nothing is switched on. You choose them in the Extras tab."; required = $false; top = 1 }
+  )
+}
+function Get-ConsentStep([string]$id) { return @(Get-ConsentSteps | Where-Object { $_.id -eq $id })[0] }
+
+function Read-JsonFile([string]$path) {
+  if (-not $path -or -not [IO.File]::Exists($path)) { return $null }
+  try { return ([IO.File]::ReadAllText($path) | ConvertFrom-Json) } catch { Log ("could not read " + $path + ": " + $_.Exception.Message); return $null }
+}
+function Write-JsonFile([string]$path, $obj) {
+  [void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($path))
+  $tmp = $path + ".new"
+  [IO.File]::WriteAllText($tmp, (ConvertTo-Json -InputObject $obj -Depth 8), (New-Object Text.UTF8Encoding($false)))
+  Move-Item -LiteralPath $tmp -Destination $path -Force
+}
+
+# The answers: @{ <step id> = @{ answer = "allow" | "decline"; level = <what was allowed, or done>; at = <when> } }
+function Read-Consent([string]$path) {
+  $c = @{}
+  $j = Read-JsonFile $path
+  if ($j -and $j.PSObject.Properties["steps"]) {
+    foreach ($p in $j.steps.PSObject.Properties) {
+      $a = [string]$p.Value.answer
+      if ($a -ne "allow" -and $a -ne "decline") { continue }
+      $lv = 1; try { $lv = [int]$p.Value.level } catch {}
+      $c[$p.Name] = @{ answer = $a; level = $lv; at = [string]$p.Value.at }
+    }
+  }
+  return $c
+}
+function Save-Consent([string]$path, $c) {
+  $steps = [ordered]@{}
+  foreach ($k in @($c.Keys | Sort-Object)) { $steps[$k] = [ordered]@{ answer = $c[$k].answer; level = $c[$k].level; at = $c[$k].at } }
+  Write-JsonFile $path ([ordered]@{ version = 1; steps = $steps })
+}
+function Set-ConsentAnswer($c, [string]$id, [string]$answer, [int]$level) {
+  $c[$id] = @{ answer = $answer; level = $level; at = (Get-Date).ToUniversalTime().ToString("s") }
+}
+# "allow", "decline", or "ask": asked when the step is new, or when it is about to do something bigger than the
+# answer covers (a Java download after a run that used the launcher's own Java).
+function Get-ConsentDecision($c, [string]$id, [int]$level = 1) {
+  if (-not $c.ContainsKey($id)) { return "ask" }
+  if ($c[$id].answer -eq "decline") { return "decline" }
+  if ([int]$c[$id].level -lt $level) { return "ask" }
+  return "allow"
+}
+# The steps with no answer yet: all of them on the first run, a new step after an update.
+function Get-UnansweredSteps($c) { return @(Get-ConsentSteps | Where-Object { -not $c.ContainsKey($_.id) }) }
+# After a run: what was really done becomes the level the answer covers ("bigger than before" is measured against it).
+function Set-ConsentUsed($c, [string]$id, [int]$level) {
+  if ($c.ContainsKey($id) -and $c[$id].answer -eq "allow") { $c[$id].level = $level }
+}
+
+# ---- the engine's side: progress lines for the window, and the questions it cannot answer itself -------------
+function Emit($o) {
+  if (-not $StatusFile) { return }
+  try { [IO.File]::AppendAllText($StatusFile, (ConvertTo-Json -InputObject $o -Compress -Depth 5) + "`n", (New-Object Text.UTF8Encoding($false))) } catch {}
+}
+# $true: go ahead. $false: an optional step that was declined. A step that needs asking, or a needed step that was
+# declined, ends the run here: the window asks (or says why it stopped) and starts it again.
+function Request-Consent([string]$id, [int]$level = 1) {
+  if ($AllowAll -or $Console) { return $true }
+  $d = Get-ConsentDecision $script:Consent $id $level
+  $s = Get-ConsentStep $id
+  if ($d -eq "allow") { return $true }
+  if ($d -eq "decline" -and -not $s.required) { Log ("permission: '{0}' declined, skipped" -f $s.title); return $false }
+  if ($d -eq "ask") {
+    Log ("permission: '{0}' needs an answer (level {1})" -f $s.title, $level)
+    Emit ([ordered]@{ t = "ask"; step = $id; level = $level })
+    $script:Reported = $true
+    Exit-Lock
+    exit $ExitAsk
+  }
+  Log ("permission: '{0}' is needed to play and was declined: stopped" -f $s.title)
+  Emit ([ordered]@{ t = "declined"; step = $id })
+  $script:Reported = $true
+  Exit-Lock
+  exit $ExitDeclined
+}
+
+# ---- extras -------------------------------------------------------------------------------------------------
+function Get-ExtrasPaths([string]$gameDir) {
+  return @{
+    extras = (Join-Path $gameDir "extras"); pictures = (Join-Path (Join-Path $gameDir "extras") "pictures")
+    mods = (Join-Path $gameDir "mods"); resourcepacks = (Join-Path $gameDir "resourcepacks"); shaderpacks = (Join-Path $gameDir "shaderpacks")
+    options = (Join-Path $gameDir "options.txt"); iris = (Join-Path (Join-Path $gameDir "config") "iris.properties")
+    staging = (Join-Path $gameDir ".downloading")
+  }
+}
+$ExtraFolders = @{ mod = "mods"; resourcepack = "resourcepacks"; shader = "shaderpacks" }
+function Get-ExtraFolder([string]$kind) { $f = $ExtraFolders[$kind]; if (-not $f) { $f = "mods" }; return $f }
+
+function New-ExtrasState { return @{ choices = @{}; shader = "none"; applied = @{ mods = @(); resourcepacks = @(); shaderpacks = @() }; seen = @(); downloaded = $false } }
+function Read-ExtrasState([string]$path) {
+  $s = New-ExtrasState
+  $j = Read-JsonFile $path
+  if (-not $j) { return $s }
+  if ($j.PSObject.Properties["choices"] -and $j.choices) { foreach ($p in $j.choices.PSObject.Properties) { $s.choices[$p.Name] = [bool]$p.Value } }
+  if ($j.PSObject.Properties["shader"] -and @("none", "light", "full") -contains [string]$j.shader) { $s.shader = [string]$j.shader }
+  if ($j.PSObject.Properties["applied"] -and $j.applied) { foreach ($k in @("mods", "resourcepacks", "shaderpacks")) { if ($j.applied.PSObject.Properties[$k]) { $s.applied[$k] = @($j.applied.$k | Where-Object { $_ } | ForEach-Object { [string]$_ }) } } }
+  if ($j.PSObject.Properties["seen"]) { $s.seen = @($j.seen | ForEach-Object { [string]$_ }) }
+  if ($j.PSObject.Properties["downloaded"]) { $s.downloaded = [bool]$j.downloaded }
+  return $s
+}
+function Save-ExtrasState([string]$path, $s) {
+  Write-JsonFile $path ([ordered]@{ version = 1; choices = $s.choices; shader = $s.shader; applied = $s.applied; seen = @($s.seen); downloaded = [bool]$s.downloaded })
+}
+
+# Which extras are on: a switch that is on, the shader pack for the Shaders choice (only with Iris on), and whatever
+# an extra that is on requires. Returns the ids.
+function Get-ExtrasOn($manifest, $state) {
+  $on = @{}
+  foreach ($x in @($manifest.extras)) {
+    if ($x.shader) { if ($state.choices["iris"] -and $state.shader -eq [string]$x.shader) { $on[[string]$x.id] = $true } }
+    elseif ($state.choices[[string]$x.id]) { $on[[string]$x.id] = $true }
+  }
+  foreach ($x in @($manifest.extras)) { if ($on[[string]$x.id]) { foreach ($r in @($x.requires)) { if ($r) { $on[[string]$r] = $true } } } }
+  return @($on.Keys | Sort-Object)
+}
+# The files that should be in mods\, resourcepacks\, shaderpacks\ for what is on, and the shader pack's file.
+function Get-ExtrasWanted($manifest, $state) {
+  $w = @{ mods = @(); resourcepacks = @(); shaderpacks = @(); shaderFile = ""; known = @{ mods = @(); resourcepacks = @(); shaderpacks = @() }; sha = @{} }
+  $on = Get-ExtrasOn $manifest $state
+  foreach ($x in @($manifest.extras)) {
+    foreach ($f in @($x.files)) {
+      $folder = Get-ExtraFolder ([string]$f.kind)
+      $w.known[$folder] += [string]$f.filename
+      $w.sha[[string]$f.filename] = [string]$f.sha512
+      if ($on -contains [string]$x.id) {
+        $w[$folder] += [string]$f.filename
+        if ([string]$f.kind -eq "shader") { $w.shaderFile = [string]$f.filename }
+      }
+    }
+  }
+  return $w
+}
+function Get-Sha512([string]$file) {
+  $sha = [System.Security.Cryptography.SHA512]::Create()
+  return [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($file))).Replace("-", "").ToLower()
+}
+function Move-ExtraFile([string]$from, [string]$to) {
+  if ([IO.File]::Exists($to)) { [IO.File]::Delete($to) }
+  [IO.File]::Move($from, $to)
+}
+
+# Apply: moves the chosen extras' files from extras\ into the game's folders and the others back, sets options.txt
+# (Fresh Animations) and Iris's shader, then checks every file. Any error, or a check that fails: everything is put
+# back as it was, files and settings, and the answer says why. $io.move can be replaced (the self test makes it fail).
+function Invoke-ExtrasApply($paths, $manifest, $state, $io = $null) {
+  $move = { param($a, $b) Move-ExtraFile $a $b }
+  if ($io -and $io.move) { $move = $io.move }
+  $want = Get-ExtrasWanted $manifest $state
+  $journal = New-Object System.Collections.Generic.List[object]
+  $before = @{}
+  foreach ($k in @("options", "iris")) { $before[$k] = $(if ([IO.File]::Exists($paths[$k])) { [IO.File]::ReadAllText($paths[$k]) } else { $null }) }
+  try {
+    [void][IO.Directory]::CreateDirectory($paths.extras)
+    foreach ($folder in @("mods", "resourcepacks", "shaderpacks")) {
+      $dir = $paths[$folder]
+      [void][IO.Directory]::CreateDirectory($dir)
+      # what was put there before (or what the manifest knows about and is lying there) and is no longer wanted: back
+      $was = @(@($state.applied[$folder]) + @($want.known[$folder] | Where-Object { [IO.File]::Exists((Join-Path $dir $_)) }) | Where-Object { $_ } | Select-Object -Unique)
+      foreach ($f in $was) {
+        if ($want[$folder] -contains $f -or ([string]$f) -match '[\\/]') { continue }
+        $at = Join-Path $dir $f
+        if (-not [IO.File]::Exists($at)) { continue }
+        $back = Join-Path $paths.extras $f
+        & $move $at $back
+        $journal.Add(@($at, $back))
+      }
+      foreach ($f in @($want[$folder])) {
+        $at = Join-Path $dir $f
+        $from = Join-Path $paths.extras $f
+        if ([IO.File]::Exists($at) -and -not [IO.File]::Exists($from)) { continue }   # already in place
+        if (-not [IO.File]::Exists($from)) { throw ("{0} is not downloaded yet. Press Play once to fetch the extras." -f $f) }
+        & $move $from $at
+        $journal.Add(@($from, $at))
+      }
+    }
+    $r = Set-ResourcePackList $paths.options @($want.resourcepacks) @($want.known.resourcepacks)
+    Log ("extras: " + $r.text)
+    if ($state.choices["iris"]) { Set-IrisShader $paths.iris $want.shaderFile }
+    # the check: what should be there is there and whole; what should not be is not
+    foreach ($folder in @("mods", "resourcepacks", "shaderpacks")) {
+      foreach ($f in @($want[$folder])) {
+        $at = Join-Path $paths[$folder] $f
+        if (-not [IO.File]::Exists($at)) { throw ("{0} did not arrive in {1}" -f $f, $folder) }
+        if ($want.sha[$f] -and (Get-Sha512 $at) -ne $want.sha[$f]) { throw ("{0} is damaged" -f $f) }
+      }
+      foreach ($f in @($want.known[$folder])) { if ($want[$folder] -notcontains $f -and [IO.File]::Exists((Join-Path $paths[$folder] $f))) { throw ("{0} is still in {1}" -f $f, $folder) } }
+    }
+    $state.applied = @{ mods = @($want.mods); resourcepacks = @($want.resourcepacks); shaderpacks = @($want.shaderpacks) }
+    Log ("extras applied: " + ((Get-ExtrasOn $manifest $state) -join ", "))
+    return @{ ok = $true; moved = $journal.Count; error = $null }
+  } catch {
+    $why = $_.Exception.Message
+    Log ("extras: apply failed, putting everything back: " + $why)
+    for ($i = $journal.Count - 1; $i -ge 0; $i--) {
+      $m = $journal[$i]
+      try { if ([IO.File]::Exists($m[1])) { Move-ExtraFile $m[1] $m[0] } } catch { Log ("extras: could not put back " + $m[1] + ": " + $_.Exception.Message) }
+    }
+    foreach ($k in @("options", "iris")) {
+      try {
+        if ($null -eq $before[$k]) { if ([IO.File]::Exists($paths[$k])) { [IO.File]::Delete($paths[$k]) } }
+        else { [IO.File]::WriteAllText($paths[$k], $before[$k], (New-Object Text.UTF8Encoding($false))) }
+      } catch { Log ("extras: could not put back " + $paths[$k] + ": " + $_.Exception.Message) }
+    }
+    return @{ ok = $false; moved = 0; error = $why }
+  }
+}
+
+# The engine, on every Play once extras are allowed: every extra's files in extras\ (or already in place), checked;
+# files of extras that are on and changed version are swapped by applying again; leftovers of old versions removed.
+function Sync-ExtrasFiles($paths, $manifest, $state, [scriptblock]$fetch) {
+  [void][IO.Directory]::CreateDirectory($paths.extras)
+  [void][IO.Directory]::CreateDirectory($paths.pictures)
+  $got = 0
+  $names = @{}
+  $placedChanged = $false
+  foreach ($x in @($manifest.extras)) {
+    if ($x.picture) { try { [IO.File]::WriteAllBytes((Join-Path $paths.pictures ("{0}.png" -f $x.id)), [Convert]::FromBase64String([string]$x.picture)) } catch {} }
+    foreach ($f in @($x.files)) {
+      $name = [string]$f.filename
+      if ($name -match '[\\/]|^\.\.?$') { continue }
+      $names[$name] = $true
+      $folder = Get-ExtraFolder ([string]$f.kind)
+      $placed = Join-Path $paths[$folder] $name
+      if ($state.applied[$folder] -contains $name -and [IO.File]::Exists($placed) -and (Get-Sha512 $placed) -eq [string]$f.sha512) { continue }
+      $at = Join-Path $paths.extras $name
+      if ([IO.File]::Exists($at) -and (Get-Sha512 $at) -eq [string]$f.sha512) { continue }
+      $r = Save-ModFile ([string]$f.url) $at ([string]$f.sha512) $paths.staging $fetch
+      if ($r -eq "wrong") { throw ("{0} downloaded wrong" -f $name) }
+      if ($r -eq "in use") { throw ("{0} is in use" -f $name) }
+      $got++
+    }
+  }
+  # an extra that is on, whose file is a new version now: apply again (the old file goes back to extras\, then away)
+  foreach ($folder in @("mods", "resourcepacks", "shaderpacks")) { foreach ($f in @($state.applied[$folder])) { if (-not $names[$f]) { $placedChanged = $true } } }
+  $want = Get-ExtrasWanted $manifest $state
+  foreach ($folder in @("mods", "resourcepacks", "shaderpacks")) { foreach ($f in @($want[$folder])) { if ($state.applied[$folder] -notcontains $f) { $placedChanged = $true } } }
+  $applied = $null
+  if ($placedChanged) { $applied = Invoke-ExtrasApply $paths $manifest $state }
+  # old versions in extras\ and in the game's folders (only names the extras once had)
+  $removed = 0
+  foreach ($f in @(Get-ChildItem -LiteralPath $paths.extras -File -Force)) {
+    if (-not $names[$f.Name] -and $f.Name -notlike "*.json") { try { [IO.File]::Delete($f.FullName); $removed++ } catch {} }
+  }
+  return @{ downloaded = $got; removed = $removed; applied = $applied }
+}
+
+# The jars of the extras that are on: the engine's mod sync leaves them in mods\.
+function Get-AppliedExtraJars($state) { return @($state.applied.mods | Where-Object { $_ }) }
+
+# ---- the game: running? closing it nicely, and starting it again ----------------------------------------------
+# $procs: objects with Id, Name and CommandLine (Win32_Process on Windows; made up in the self test).
+function Find-GameProcess([string]$gameDir, $procs) {
+  $needle = $gameDir.TrimEnd('\', '/').ToLower()
+  return @($procs | Where-Object { ([string]$_.Name) -match '^javaw?(\.exe)?$' -and ([string]$_.CommandLine).ToLower().Contains($needle) })
+}
+function Get-JavaProcesses {
+  try { return @(Get-CimInstance Win32_Process -Filter "Name='javaw.exe' or Name='java.exe'" -ErrorAction Stop | Select-Object @{ n = "Id"; e = { $_.ProcessId } }, Name, CommandLine) } catch { return @() }
+}
+# Closes the game the way its window's X would (WM_CLOSE), gives it 30 seconds to save and stop, then ends it.
+function Stop-Game($ids, [int]$waitSec = 30) {
+  foreach ($id in @($ids)) { try { $null = (Get-Process -Id $id -ErrorAction Stop).CloseMainWindow() } catch {} }
+  $deadline = (Get-Date).AddSeconds($waitSec)
+  while ((Get-Date) -lt $deadline) {
+    if (@($ids | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue }).Count -eq 0) { return "closed" }
+    Start-Sleep -Milliseconds 500
+  }
+  foreach ($id in @($ids)) { try { Stop-Process -Id $id -Force -ErrorAction Stop } catch {} }
+  return "forced"
+}
+# What the Extras tab does with Apply. A running game holds its jars open (Windows will not move them), so with the
+# game running it asks "Restart the game to apply?" first: Restart now closes it, applies, opens the launcher again;
+# Later keeps the choice and the next Play applies it.
+function Get-ApplyRoute([bool]$gameRunning, [bool]$changed) {
+  if (-not $changed) { return "nothing" }
+  if ($gameRunning) { return "ask_restart" }
+  return "apply"
+}
+# Has anything been switched since the last Apply?
+function Test-ExtrasChanged($manifest, $state) {
+  $w = Get-ExtrasWanted $manifest $state
+  foreach ($k in @("mods", "resourcepacks", "shaderpacks")) {
+    if ((@($w[$k] | Sort-Object) -join "|") -ne (@($state.applied[$k] | Sort-Object) -join "|")) { return $true }
+  }
+  return $false
+}
+
+# A weak PC, the way the site measures one (lib/install-report.ts suggestTier: LOW): under 8 GB of memory, or no
+# graphics card of its own. Only a warning next to the heavier extras; nothing is blocked.
+function Test-WeakPc($ramGb, $gpuNames) {
+  $real = @($gpuNames | Where-Object { $_ -and $_ -notmatch 'microsoft basic|parsec|virtual|remote|hyper-v|citrix|displaylink' })
+  if ($null -ne $ramGb -and [double]$ramGb -lt 7.5) { return $true }
+  if ($real.Count -eq 0) { return $true }   # memory known, no graphics card seen: built-in graphics
+  $strong = 'rtx\s*\d{4}|gtx\s*(10[678]0|1660|9[78]0)|rx\s*(5[5-9]00|[6-9]\d00)|arc\s*\(?(tm)?\)?\s*[ab]\d{3}'
+  $dedicated = 'geforce|rtx|gtx|quadro|radeon\s+(rx|pro|hd)|\brx\s*\d{3,4}|arc\s*\(?(tm)?\)?\s*[ab]\d{3}'
+  $integrated = 'intel\b.*\b(u?hd|iris|graphics)\b|radeon(\(tm\))?\s+(r[2-7]\s)?graphics|vega\s*\d|microsoft basic'
+  $card = @($real | Where-Object { ($_ -match $dedicated) -and (($_ -notmatch $integrated) -or ($_ -match $strong)) })
+  return ($card.Count -eq 0)
+}
+function Get-LocalWeakPc {
+  $ram = $null; $gpus = @()
+  try { $ram = [math]::Round((Get-CimInstance Win32_ComputerSystem -ErrorAction Stop).TotalPhysicalMemory / 1GB, 1) } catch {}
+  try { $gpus = @(Get-CimInstance Win32_VideoController -ErrorAction Stop | ForEach-Object { [string]$_.Name }) } catch {}
+  if ($null -eq $ram -and $gpus.Count -eq 0) { return $false }
+  return (Test-WeakPc $ram $gpus)
+}
+
+# ==== the window (2.0.0) ===================================================================================
+# WPF, from this one script. The install steps do not run in here: the window starts this script again, hidden, as
+# -Engine, reads its progress from a status file every quarter of a second, and asks the questions the engine stops
+# for (exit 20). One window per PC user: a second start (the Play button on the site, the shortcut) only brings it
+# to the front and presses Play. It stays open until it is closed; the game closing does not close it.
+
+$AppXaml = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Deepslate Works" Width="580" Height="700" MinWidth="480" MinHeight="520" WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI" FontSize="13" Background="#F6F7F8">
+  <Window.Resources>
+    <Style TargetType="Button" x:Key="Primary">
+      <Setter Property="Background" Value="#2E7D5B"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="18,8"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Cursor" Value="Hand"/>
+    </Style>
+  </Window.Resources>
+  <TabControl x:Name="Tabs" Margin="8" Background="White">
+    <TabItem Header="  Play  " x:Name="PlayTab">
+      <DockPanel Margin="14">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+          <TextBlock x:Name="PlayTitle" FontSize="20" FontWeight="SemiBold" Text="Deepslate Works"/>
+          <TextBlock x:Name="PlayStatus" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#444"/>
+          <TextBlock x:Name="PlayChanged" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#2E7D5B" FontWeight="SemiBold" Visibility="Collapsed"/>
+        </StackPanel>
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+          <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center"><Hyperlink x:Name="ReviewLink">Review permissions</Hyperlink></TextBlock>
+          <Button x:Name="PlayButton" DockPanel.Dock="Right" HorizontalAlignment="Right" Style="{StaticResource Primary}" Content="Play" MinWidth="150"/>
+        </DockPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="PlayBody"/></ScrollViewer>
+      </DockPanel>
+    </TabItem>
+    <TabItem Header="  Extras  " x:Name="ExtrasTab">
+      <DockPanel Margin="14">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+          <TextBlock FontSize="20" FontWeight="SemiBold" Text="Extras"/>
+          <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#444" Text="Only on this PC, never voted on. Other players don't need them: you can play together either way."/>
+        </StackPanel>
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+          <Button x:Name="ApplyButton" DockPanel.Dock="Right" Style="{StaticResource Primary}" Content="Apply" MinWidth="120"/>
+          <TextBlock x:Name="ExtrasStatus" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#444"/>
+        </DockPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="ExtrasBody"/></ScrollViewer>
+      </DockPanel>
+    </TabItem>
+    <TabItem Header="  Log  " x:Name="LogTab">
+      <TextBox x:Name="LogBox" Margin="10" IsReadOnly="True" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12"
+               VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+    </TabItem>
+  </TabControl>
+</Window>
+'@
+
+$RestartXaml = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Deepslate Works" Width="420" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner"
+        FontFamily="Segoe UI" FontSize="13" Background="White">
+  <StackPanel Margin="18">
+    <TextBlock FontSize="16" FontWeight="SemiBold" Text="Restart the game to apply?"/>
+    <TextBlock x:Name="Why" TextWrapping="Wrap" Margin="0,8,0,16" Foreground="#444"
+               Text="Minecraft is running and has the mods open. Restart now closes it (like its own X button, so the world is saved), switches your extras, and opens the launcher on Deepslate Works again. Later keeps your choice for the next time you press Play."/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button x:Name="Later" Content="Later" Padding="16,6" Margin="0,0,8,0"/>
+      <Button x:Name="Now" Content="Restart now" Padding="16,6" Background="#2E7D5B" Foreground="White" BorderThickness="0" FontWeight="SemiBold"/>
+    </StackPanel>
+  </StackPanel>
+</Window>
+'@
+
+function New-Brush([string]$hex) { return (New-Object Windows.Media.BrushConverter).ConvertFromString($hex) }
+function New-Text([string]$text, [double]$size = 13, [string]$weight = "Normal", [string]$color = "#222") {
+  $t = New-Object Windows.Controls.TextBlock
+  $t.Text = $text; $t.FontSize = $size; $t.TextWrapping = "Wrap"; $t.Foreground = New-Brush $color
+  $t.FontWeight = [Windows.FontWeights]::$weight
+  return $t
+}
+function New-Badge([string]$text, [string]$bg, [string]$fg) {
+  $b = New-Object Windows.Controls.Border
+  $b.Background = New-Brush $bg; $b.CornerRadius = 8; $b.Padding = "6,1"; $b.Margin = "6,0,0,0"; $b.VerticalAlignment = "Center"
+  $t = New-Text $text 11 "SemiBold" $fg
+  $b.Child = $t
+  return $b
+}
+function New-Card {
+  $b = New-Object Windows.Controls.Border
+  $b.BorderBrush = New-Brush "#D9DDE1"; $b.BorderThickness = 1; $b.CornerRadius = 6; $b.Padding = 12; $b.Margin = "0,0,0,8"; $b.Background = New-Brush "White"
+  return $b
+}
+
+# One permission card: title, "Needed to play" when it is, the plain-English text, Allow / Not now.
+function New-ConsentCard($step, $answers, [int]$level = 1, [string]$size = "") {   # $answers: $script:App.Answers
+  $card = New-Card
+  $sp = New-Object Windows.Controls.StackPanel
+  $head = New-Object Windows.Controls.StackPanel; $head.Orientation = "Horizontal"
+  $head.Children.Add((New-Text $step.title 14 "SemiBold")) | Out-Null
+  if ($step.required) { $head.Children.Add((New-Badge "Needed to play" "#E8F3EE" "#2E7D5B")) | Out-Null } else { $head.Children.Add((New-Badge "Optional" "#EEF0F2" "#555")) | Out-Null }
+  $sp.Children.Add($head) | Out-Null
+  $text = [string]$step.text
+  if ($level -gt 1 -and $step.bigger) { $text = [string]$step.bigger }
+  if ($text.Contains("{0}")) { $text = $text -f $(if ($size) { $size } else { "10" }) }
+  $body = New-Text $text 13 "Normal" "#444"; $body.Margin = "0,4,0,8"
+  $sp.Children.Add($body) | Out-Null
+  $row = New-Object Windows.Controls.StackPanel; $row.Orientation = "Horizontal"
+  $group = "consent-" + $step.id
+  $allow = New-Object Windows.Controls.RadioButton; $allow.Content = "Allow"; $allow.GroupName = $group; $allow.Margin = "0,0,18,0"
+  $no = New-Object Windows.Controls.RadioButton; $no.Content = "Not now"; $no.GroupName = $group
+  $warn = New-Text "" 12 "Normal" "#B3261E"; $warn.Margin = "0,6,0,0"; $warn.Visibility = "Collapsed"
+  # handlers get what they need from Tag (closures made with GetNewClosure cannot see this script's functions)
+  $allow.Tag = @{ id = [string]$step.id; warn = $warn }
+  $no.Tag = @{ id = [string]$step.id; warn = $warn; required = [bool]$step.required }
+  $allow.Add_Checked({ param($sender, $e) $script:App.Answers[$sender.Tag.id] = "allow"; $sender.Tag.warn.Visibility = "Collapsed"; Update-ContinueButton })
+  $no.Add_Checked({ param($sender, $e)
+    $script:App.Answers[$sender.Tag.id] = "decline"
+    if ($sender.Tag.required) { $sender.Tag.warn.Text = "Deepslate Works can't set up the game without this. You can play only once it's allowed."; $sender.Tag.warn.Visibility = "Visible" }
+    Update-ContinueButton
+  })
+  $id = [string]$step.id
+  if ($answers.ContainsKey($id)) { if ($answers[$id] -eq "allow") { $allow.IsChecked = $true } else { $no.IsChecked = $true } }
+  $row.Children.Add($allow) | Out-Null; $row.Children.Add($no) | Out-Null
+  $sp.Children.Add($row) | Out-Null
+  $sp.Children.Add($warn) | Out-Null
+  $card.Child = $sp
+  return $card
+}
+
+function Show-App([string]$shotsDir = "") {
+  Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
+  $script:App = @{}
+  $A = $script:App
+  $A.ConsentPath = Join-Path $AppHome $ConsentFileName
+  $A.ExtrasStatePath = Join-Path $AppHome $ExtrasStateName
+  $A.ExtrasManifestPath = Join-Path $AppHome $ExtrasManifestName
+  $A.Consent = Read-Consent $A.ConsentPath
+  $A.Answers = @{}
+  $A.Mode = "idle"      # idle | asking | running
+  $A.Proc = $null
+  $A.StatusPath = $null
+  $A.StatusPos = 0
+  $A.Ask = $null
+  $A.Used = @{}
+  $A.Weak = $false
+  try { $A.Weak = Get-LocalWeakPc } catch {}
+  $A.ShowSignal = $script:PendingSignal
+
+  $w = [Windows.Markup.XamlReader]::Parse($AppXaml)
+  $A.Window = $w
+  foreach ($n in @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "PlayButton", "PlayBody", "ApplyButton", "ExtrasStatus", "ExtrasBody", "LogBox")) { $A[$n] = $w.FindName($n) }
+  try { $w.Title = "{0} {1}" -f $PackName, $InstallerVersion } catch {}
+
+  $A.PlayButton.Add_Click({ On-PlayButton })
+  $A.ReviewLink.Add_Click({ Show-Review })
+  $A.ApplyButton.Add_Click({ On-Apply })
+  $A.Tabs.Add_SelectionChanged({ param($sender, $e) if ($e.OriginalSource -eq $script:App.Tabs) { if ($script:App.Tabs.SelectedItem -eq $script:App.ExtrasTab) { Show-Extras } elseif ($script:App.Tabs.SelectedItem -eq $script:App.LogTab) { Update-LogBox } } })
+
+  $timer = New-Object Windows.Threading.DispatcherTimer
+  $timer.Interval = [TimeSpan]::FromMilliseconds(250)
+  $timer.Add_Tick({ On-Tick })
+  $A.Timer = $timer
+
+  if ($shotsDir) { Save-Screenshots $shotsDir; return }
+
+  $timer.Start()
+  $w.Add_ContentRendered({
+    if (@(Get-UnansweredSteps $script:App.Consent).Count -gt 0) { Show-FirstRun } else { Start-Run }
+  })
+  $w.Add_Closing({ param($s, $e)
+    if ($script:App.Mode -eq "running") {
+      $r = [Windows.MessageBox]::Show("Deepslate Works is still setting up the game. Close anyway? It carries on next time you press Play.", "Deepslate Works", "YesNo", "Question")
+      if ($r -ne "Yes") { $e.Cancel = $true; return }
+      try { $script:App.Proc.Kill() } catch {}
+    }
+  })
+  [void]$w.ShowDialog()
+}
+
+function Update-ContinueButton {
+  $A = $script:App
+  if ($A.Mode -ne "asking") { return }
+  $all = $true
+  foreach ($s in @($A.Asking)) { if (-not $A.Answers.ContainsKey($s.id)) { $all = $false } }
+  $A.PlayButton.IsEnabled = $all
+}
+
+function Clear-PlayBody { $script:App.PlayBody.Children.Clear(); $script:App.PlayChanged.Visibility = "Collapsed" }
+function Add-PlayLine([string]$text, [string]$color = "#222", [string]$weight = "Normal") {
+  $t = New-Text $text 13 $weight $color; $t.Margin = "0,2,0,2"
+  $script:App.PlayBody.Children.Add($t) | Out-Null
+  return $t
+}
+
+# First run (or new steps after an update): every unanswered step as a card, then Continue.
+function Show-FirstRun([object[]]$only = $null, [int]$level = 1) {
+  $A = $script:App
+  $A.Mode = "asking"
+  Clear-PlayBody
+  $steps = $(if ($only) { $only } else { @(Get-UnansweredSteps $A.Consent) })
+  $A.Asking = $steps
+  $first = (@($A.Consent.Keys).Count -eq 0)
+  $A.PlayTitle.Text = $(if ($first) { "Before we start" } else { "One question" })
+  $A.PlayStatus.Text = $(if ($first) { "Deepslate Works asks once for each thing it does on this PC. Your answers are remembered; Review permissions changes them." } else { "Deepslate Works is about to do something it hasn't asked about yet." })
+  $size = ""
+  $m = Read-JsonFile $A.ExtrasManifestPath
+  if ($m -and $m.size) { $size = "{0:0}" -f ([double]$m.size / 1MB) }
+  foreach ($s in $steps) { $A.PlayBody.Children.Add((New-ConsentCard $s $A.Answers $level $size)) | Out-Null }
+  $A.PlayButton.Content = "Continue"
+  $A.AskLevel = $level
+  Update-ContinueButton
+}
+
+function Save-Answers {
+  $A = $script:App
+  foreach ($s in @($A.Asking)) {
+    if (-not $A.Answers.ContainsKey($s.id)) { continue }
+    $lv = $(if ($A.Answers[$s.id] -eq "allow") { [Math]::Max([int]$A.AskLevel, [int]$s.top) } else { 1 })
+    Set-ConsentAnswer $A.Consent $s.id $A.Answers[$s.id] $lv
+  }
+  Save-Consent $A.ConsentPath $A.Consent
+}
+
+function On-PlayButton {
+  $A = $script:App
+  if ($A.Mode -eq "asking") {
+    Save-Answers
+    $no = @($A.Asking | Where-Object { $_.required -and $A.Answers[$_.id] -eq "decline" })
+    if ($no.Count -gt 0) { Show-Stopped $no[0]; return }
+    Start-Run
+    return
+  }
+  if ($A.Mode -eq "idle") { Start-Run }
+}
+
+function Show-Stopped($step) {
+  $A = $script:App
+  $A.Mode = "idle"
+  Clear-PlayBody
+  $A.PlayTitle.Text = "Stopped"
+  $A.PlayStatus.Text = ("You said Not now to '{0}', which is needed to play. Nothing more was done. To carry on, open Review permissions and choose Allow." -f $step.title)
+  $A.PlayButton.Content = "Play"
+  $A.PlayButton.IsEnabled = $true
+}
+
+# Review permissions: every step with its current answer, changeable.
+function Show-Review {
+  $A = $script:App
+  if ($A.Mode -eq "running") { return }
+  $A.Answers = @{}
+  foreach ($k in $A.Consent.Keys) { $A.Answers[$k] = $A.Consent[$k].answer }
+  Show-FirstRun @(Get-ConsentSteps)
+  $A.PlayTitle.Text = "Permissions"
+  $A.PlayStatus.Text = "What Deepslate Works may do on this PC. Changes count from the next Play."
+  $A.PlayButton.Content = "Save and play"
+}
+
+function Start-Run([switch]$NoLaunch) {
+  $A = $script:App
+  $A.Mode = "running"
+  Clear-PlayBody
+  $A.PlayTitle.Text = "Getting the game ready"
+  $A.PlayStatus.Text = "Checking for updates, then the Minecraft Launcher opens on Deepslate Works."
+  $A.PlayButton.Content = "Working..."
+  $A.PlayButton.IsEnabled = $false
+  $A.Used = @{}
+  $A.StatusPath = Join-Path $Temp ("deepslate-status-{0}.jsonl" -f ([guid]::NewGuid().ToString("N").Substring(0, 8)))
+  [IO.File]::WriteAllText($A.StatusPath, "")
+  $A.StatusPos = 0
+  $A.LastAsk = $null; $A.LastDeclined = $null; $A.LastFail = $null; $A.Changed = $null
+  $args2 = @("-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $script:MePath), "-Engine", "-StatusFile", ('"{0}"' -f $A.StatusPath))
+  if ($NoLaunch) { $args2 += "-NoLaunch" }
+  if (-not [IO.File]::Exists($script:MePath)) { $script:MePath = Join-Path (Get-HomeDir) $ScriptName }   # moved by the 1.5.3 step
+  $A.Proc = Start-Process -FilePath (Get-PowerShellExe) -ArgumentList $args2 -WindowStyle Hidden -PassThru
+  $null = $A.Proc.Handle   # Windows PowerShell only keeps the exit code of a process whose handle was read
+  if ($env:DEEPSLATE_UPDATED_FROM) { [Environment]::SetEnvironmentVariable("DEEPSLATE_UPDATED_FROM", $null) }   # said once, by the first run
+}
+
+function On-Tick {
+  $A = $script:App
+  # a second start of the app (the Play button on the site, a shortcut): to the front, and Play when idle
+  if ($A.ShowSignal -and $A.ShowSignal.WaitOne(0)) {
+    try { if ($A.Window.WindowState -eq "Minimized") { $A.Window.WindowState = "Normal" }; $A.Window.Activate() | Out-Null; $A.Window.Topmost = $true; $A.Window.Topmost = $false } catch {}
+    $A.Tabs.SelectedItem = $A.PlayTab
+    if ($A.Mode -eq "idle") { Start-Run }
+  }
+  if ($A.Mode -ne "running" -or -not $A.StatusPath) { return }
+  Read-StatusLines
+  if ($A.Proc -and $A.Proc.HasExited) { Read-StatusLines; On-RunEnded ([int]$A.Proc.ExitCode) }
+}
+
+function Read-StatusLines {
+  $A = $script:App
+  # whole lines only: a line the engine is still writing is read on the next tick
+  try {
+    $fs = [IO.File]::Open($A.StatusPath, "Open", "Read", "ReadWrite")
+    try {
+      $null = $fs.Seek($A.StatusPos, "Begin")
+      $buf = New-Object byte[] ([int]($fs.Length - $A.StatusPos))
+      $n = $fs.Read($buf, 0, $buf.Length)
+    } finally { $fs.Dispose() }
+    $end = [Array]::LastIndexOf($buf, [byte]10, [Math]::Max(0, $n - 1))
+    if ($n -le 0 -or $end -lt 0) { return }
+    $text = [Text.Encoding]::UTF8.GetString($buf, 0, $end + 1)
+    $A.StatusPos += $end + 1
+  } catch { return }
+  foreach ($line in ($text -split "`n")) {
+    if (-not $line.Trim()) { continue }
+    try { $o = $line | ConvertFrom-Json } catch { continue }
+    switch ([string]$o.t) {
+      "step" { Add-PlayLine ([string]$o.text) "#555" | Out-Null }
+      "tick" { Add-PlayLine ([string]([char]0x2713) + "  " + [string]$o.text) "#2E7D5B" | Out-Null }
+      "note" { Add-PlayLine ("   " + [string]$o.text) "#666" | Out-Null }
+      "fail" { $A.LastFail = [string]$o.text; Add-PlayLine ([string]$o.text) "#B3261E" "SemiBold" | Out-Null }
+      "ask" { $A.LastAsk = $o }
+      "declined" { $A.LastDeclined = $o }
+      "used" { $A.Used[[string]$o.step] = [int]$o.level }
+      "changed" { $A.Changed = [string]$o.text }
+    }
+  }
+}
+
+function On-RunEnded([int]$code) {
+  $A = $script:App
+  $A.Mode = "idle"
+  $A.PlayButton.Content = "Play"
+  $A.PlayButton.IsEnabled = $true
+  foreach ($k in $A.Used.Keys) { Set-ConsentUsed $A.Consent $k $A.Used[$k] }
+  if ($A.Used.Count) { Save-Consent $A.ConsentPath $A.Consent }
+  try { Remove-Item -LiteralPath $A.StatusPath -Force -ErrorAction SilentlyContinue } catch {}
+  if ($code -eq $ExitAsk -and $A.LastAsk) {
+    $s = Get-ConsentStep ([string]$A.LastAsk.step)
+    $A.Answers = @{}
+    Show-FirstRun @($s) ([int]$A.LastAsk.level)
+    return
+  }
+  if ($code -eq $ExitDeclined -and $A.LastDeclined) { Show-Stopped (Get-ConsentStep ([string]$A.LastDeclined.step)); return }
+  if ($code -eq $ExitAlreadyRunning) { $A.PlayTitle.Text = "Already running"; $A.PlayStatus.Text = "Deepslate Works is busy in another window. Let it finish, then press Play."; return }
+  if ($code -ne 0) {
+    $A.PlayTitle.Text = "That didn't work"
+    $A.PlayStatus.Text = $(if ($A.LastFail) { $A.LastFail } else { "Something went wrong. The Log tab has the details; Alex has them too if reports are on." })
+    return
+  }
+  $A.PlayTitle.Text = "Ready"
+  $A.PlayStatus.Text = "The Minecraft Launcher is opening on Deepslate Works: press Play there. This window can stay open, or be closed."
+  if ($A.Changed) { $A.PlayChanged.Text = $A.Changed; $A.PlayChanged.Visibility = "Visible" }
+  # updated itself on this run: the window starts the new copy and closes
+  $now = Get-ScriptVersion $script:MePath
+  if ($now -and (Test-Newer $now $InstallerVersion)) {
+    Start-Process -FilePath (Get-PowerShellExe) -ArgumentList @("-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $script:MePath)) -WindowStyle Hidden
+    $A.Window.Close()
+  }
+}
+
+function Update-LogBox {
+  $A = $script:App
+  try {
+    $lines = @()
+    if ([IO.File]::Exists($LogFile)) { $lines = @([IO.File]::ReadAllLines($LogFile) | Select-Object -Last 500) }
+    $A.LogBox.Text = ($lines -join "`r`n")
+    $A.LogBox.ScrollToEnd()
+  } catch {}
+}
+
+# ---- the Extras tab ---------------------------------------------------------------------------------------
+function Show-Extras {
+  $A = $script:App
+  $A.ExtrasBody.Children.Clear()
+  $A.ExtrasStatus.Text = ""
+  $m = Read-JsonFile $A.ExtrasManifestPath
+  $st = Read-ExtrasState $A.ExtrasStatePath
+  $A.XManifest = $m; $A.XState = $st
+  $allowed = (Get-ConsentDecision $A.Consent "extras") -eq "allow"
+  if (-not $m -or -not $allowed -or -not $st.downloaded) {
+    $card = New-Card
+    $sp = New-Object Windows.Controls.StackPanel
+    $size = $(if ($m -and $m.size) { "{0:0}" -f ([double]$m.size / 1MB) } else { "10" })
+    $sp.Children.Add((New-Text "Download the optional visual extras?" 14 "SemiBold")) | Out-Null
+    $t = New-Text ("About {0} MB, nothing is switched on. Once they're on this PC, switching one on or off is instant and works offline." -f $size) 13 "Normal" "#444"; $t.Margin = "0,4,0,10"
+    $sp.Children.Add($t) | Out-Null
+    $b = New-Object Windows.Controls.Button; $b.Content = "Download"; $b.Style = $A.Window.FindResource("Primary"); $b.HorizontalAlignment = "Left"
+    $b.Add_Click({
+      Set-ConsentAnswer $script:App.Consent "extras" "allow" 1
+      Save-Consent $script:App.ConsentPath $script:App.Consent
+      $script:App.Tabs.SelectedItem = $script:App.PlayTab
+      Start-Run -NoLaunch
+    })
+    $sp.Children.Add($b) | Out-Null
+    $card.Child = $sp
+    $A.ExtrasBody.Children.Add($card) | Out-Null
+    $A.ApplyButton.IsEnabled = $false
+    return
+  }
+  $A.ApplyButton.IsEnabled = $true
+  $A.XBoxes = @{}
+  $A.XShader = @{}
+  $pictures = (Get-ExtrasPaths $DataDir).pictures
+  foreach ($x in @($m.extras | Where-Object { -not $_.shader })) {
+    $card = New-Card
+    $g = New-Object Windows.Controls.Grid
+    foreach ($wd in @((New-Object Windows.GridLength(52)), (New-Object Windows.GridLength(1, [Windows.GridUnitType]::Star)), [Windows.GridLength]::Auto)) { $c = New-Object Windows.Controls.ColumnDefinition; $c.Width = $wd; $g.ColumnDefinitions.Add($c) }
+    $img = New-Object Windows.Controls.Image; $img.Width = 40; $img.Height = 40; $img.VerticalAlignment = "Top"
+    $pic = Join-Path $pictures ("{0}.png" -f $x.id)
+    if ([IO.File]::Exists($pic)) { try { $bmp = New-Object Windows.Media.Imaging.BitmapImage; $bmp.BeginInit(); $bmp.CacheOption = "OnLoad"; $bmp.UriSource = New-Object Uri($pic); $bmp.EndInit(); $img.Source = $bmp } catch {} }
+    [Windows.Controls.Grid]::SetColumn($img, 0); $g.Children.Add($img) | Out-Null
+    $sp = New-Object Windows.Controls.StackPanel; [Windows.Controls.Grid]::SetColumn($sp, 1)
+    $head = New-Object Windows.Controls.WrapPanel
+    $head.Children.Add((New-Text ([string]$x.name) 14 "SemiBold")) | Out-Null
+    $tone = @{ Low = @("#E8F3EE", "#2E7D5B"); Medium = @("#FFF4E0", "#8A5A00"); High = @("#FDECEA", "#B3261E") }[[string]$x.fps]
+    $head.Children.Add((New-Badge ("FPS cost: {0}" -f $x.fps) $tone[0] $tone[1])) | Out-Null
+    if ($st.seen -notcontains [string]$x.id) { $head.Children.Add((New-Badge "New" "#E3F0FF" "#1A5FB4")) | Out-Null }
+    $sp.Children.Add($head) | Out-Null
+    $d = New-Text ([string]$x.description) 12.5 "Normal" "#555"; $d.Margin = "0,2,0,0"; $sp.Children.Add($d) | Out-Null
+    if ($A.Weak -and ([string]$x.fps -ne "Low")) { $wn = New-Text "This PC looks like an older laptop or one without a graphics card: this one may make the game stutter." 12 "Normal" "#8A5A00"; $wn.Margin = "0,4,0,0"; $sp.Children.Add($wn) | Out-Null }
+    $g.Children.Add($sp) | Out-Null
+    $cb = New-Object Windows.Controls.CheckBox; $cb.Content = "On"; $cb.VerticalAlignment = "Center"; $cb.Margin = "12,0,0,0"
+    $cb.IsChecked = [bool]$st.choices[[string]$x.id]
+    [Windows.Controls.Grid]::SetColumn($cb, 2); $g.Children.Add($cb) | Out-Null
+    $A.XBoxes[[string]$x.id] = $cb
+    $outer = New-Object Windows.Controls.StackPanel
+    $outer.Children.Add($g) | Out-Null
+    if ([string]$x.id -eq "iris") {
+      # Shaders: None / Light / Full, only with Iris on
+      $row = New-Object Windows.Controls.WrapPanel; $row.Margin = "52,8,0,0"
+      $row.Children.Add((New-Text "Shaders:  " 13 "SemiBold")) | Out-Null
+      foreach ($opt in @(@("none", "None"), @("light", "Light (MakeUp Ultra Fast)"), @("full", "Full (Complementary Reimagined)"))) {
+        $rb = New-Object Windows.Controls.RadioButton; $rb.Content = $opt[1]; $rb.GroupName = "shaders"; $rb.Margin = "0,0,14,0"
+        $rb.IsChecked = ($st.shader -eq $opt[0])
+        $sx = @($m.extras | Where-Object { $_.shader -eq $opt[0] })[0]
+        if ($sx -and $A.Weak -and [string]$sx.fps -ne "Low") { $rb.ToolTip = "This PC may stutter with these." }
+        $row.Children.Add($rb) | Out-Null
+        $A.XShader[$opt[0]] = $rb
+      }
+      $row.IsEnabled = [bool]$cb.IsChecked
+      $cb.Tag = $row
+      $cb.Add_Checked({ param($sender, $e) $sender.Tag.IsEnabled = $true })
+      $cb.Add_Unchecked({ param($sender, $e) $sender.Tag.IsEnabled = $false })
+      $outer.Children.Add($row) | Out-Null
+    }
+    $card.Child = $outer
+    $A.ExtrasBody.Children.Add($card) | Out-Null
+  }
+  # what has been shown counts as seen: "New" once
+  $st.seen = @($m.extras | ForEach-Object { [string]$_.id })
+  Save-ExtrasState $A.ExtrasStatePath $st
+  $A.XState = $st
+}
+
+function Read-ExtrasChoices {
+  $A = $script:App
+  $st = Read-ExtrasState $A.ExtrasStatePath
+  foreach ($k in $A.XBoxes.Keys) { $st.choices[$k] = [bool]$A.XBoxes[$k].IsChecked }
+  foreach ($k in $A.XShader.Keys) { if ($A.XShader[$k].IsChecked) { $st.shader = $k } }
+  return $st
+}
+
+function On-Apply {
+  $A = $script:App
+  if ($A.Mode -eq "running") { $A.ExtrasStatus.Text = "Wait until the Play tab is done."; return }
+  $m = $A.XManifest
+  $st = Read-ExtrasChoices
+  $running = @(Find-GameProcess $DataDir (Get-JavaProcesses))
+  $route = Get-ApplyRoute ($running.Count -gt 0) (Test-ExtrasChanged $m $st)
+  if ($route -eq "nothing") { Save-ExtrasState $A.ExtrasStatePath $st; $A.ExtrasStatus.Text = "Nothing to change."; return }
+  if ($route -eq "ask_restart") {
+    $answer = Show-RestartPrompt
+    if ($answer -ne "now") {
+      Save-ExtrasState $A.ExtrasStatePath $st
+      $A.ExtrasStatus.Text = "Saved. Your extras switch the next time you press Play."
+      return
+    }
+    $A.ExtrasStatus.Text = "Closing Minecraft..."
+    $A.Window.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Background)
+    $how = Stop-Game @($running | ForEach-Object { $_.Id })
+    Log ("extras: the game was " + $how + " to apply")
+  }
+  $r = Invoke-ExtrasApply (Get-ExtrasPaths $DataDir) $m $st
+  if ($r.ok) {
+    Save-ExtrasState $A.ExtrasStatePath $st
+    $A.ExtrasStatus.Text = $(if ($route -eq "ask_restart") { "Done. The Minecraft Launcher is opening again: press Play there." } else { "Done. They're on the next time the game starts." })
+    if ($route -eq "ask_restart") { $null = Open-Launcher }
+  } else {
+    $A.ExtrasStatus.Text = ("Nothing changed: {0}. Everything is as it was." -f $r.error)
+  }
+}
+
+function Show-RestartPrompt([switch]$NoWait) {
+  $d = [Windows.Markup.XamlReader]::Parse($RestartXaml)
+  $d.Owner = $script:App.Window
+  $script:App.RestartAnswer = "later"
+  ($d.FindName("Now")).Add_Click({ param($sender, $e) $script:App.RestartAnswer = "now"; [Windows.Window]::GetWindow($sender).Close() })
+  ($d.FindName("Later")).Add_Click({ param($sender, $e) $script:App.RestartAnswer = "later"; [Windows.Window]::GetWindow($sender).Close() })
+  if ($NoWait) { return $d }
+  [void]$d.ShowDialog()
+  return $script:App.RestartAnswer
+}
+
+# -Screenshots <folder>: the first-run Play tab, the Extras tab and the restart prompt, as PNG files. Drawn off screen.
+function Save-Png($visual, [string]$file) {
+  $visual.UpdateLayout()
+  $w = [int][Math]::Ceiling($visual.ActualWidth); $h = [int][Math]::Ceiling($visual.ActualHeight)
+  $bmp = New-Object Windows.Media.Imaging.RenderTargetBitmap($w, $h, 96, 96, [Windows.Media.PixelFormats]::Pbgra32)
+  $bmp.Render($visual)
+  $enc = New-Object Windows.Media.Imaging.PngBitmapEncoder
+  $enc.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bmp))
+  $fs = [IO.File]::Create($file); try { $enc.Save($fs) } finally { $fs.Dispose() }
+}
+function Save-Screenshots([string]$dir) {
+  $A = $script:App
+  [void][IO.Directory]::CreateDirectory($dir)
+  $pump = { $A.Window.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Background) }
+  $A.Window.WindowStartupLocation = "Manual"; $A.Window.Left = -20000; $A.Window.Top = 0; $A.Window.ShowInTaskbar = $false
+  $A.Window.Show(); & $pump
+  # 1. first run: every step unanswered
+  $A.Consent = @{}
+  Show-FirstRun
+  & $pump; Save-Png $A.Window.Content (Join-Path $dir "1-play-first-run.png")
+  # 2. Extras: what this PC has (it needs one Play with extras downloaded)
+  $A.Consent = Read-Consent $A.ConsentPath
+  $A.Tabs.SelectedItem = $A.ExtrasTab
+  Show-Extras
+  & $pump; Save-Png $A.Window.Content (Join-Path $dir "2-extras.png")
+  # 3. the restart prompt
+  $d = Show-RestartPrompt -NoWait
+  $d.WindowStartupLocation = "Manual"; $d.Left = -20000; $d.Top = 0; $d.ShowInTaskbar = $false
+  $d.Show(); $d.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Background)
+  Save-Png $d.Content (Join-Path $dir "3-restart-prompt.png")
+  $d.Close()
+  $A.Window.Close()
+  Write-Host ("Screenshots in {0}" -f $dir)
+  try { Start-Process $dir } catch {}
+}
+
+# Starts the window, once per PC user. A second start signals the first (to the front, Play) and ends.
+function Start-AppWindow {
+  $created = $false
+  $mutex = New-Object Threading.Mutex($true, "Local\DeepslateWorks.App", [ref]$created)
+  $signal = New-Object Threading.EventWaitHandle($false, [Threading.EventResetMode]::AutoReset, "Local\DeepslateWorks.App.Show")
+  if (-not $created) {
+    [void]$signal.Set()
+    Log "the window is already open: brought to the front"
+    return
+  }
+  try {
+    try {
+      Add-Type -Namespace DW -Name Win -MemberDefinition '[DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow(); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int n);'
+      $null = [DW.Win]::ShowWindow([DW.Win]::GetConsoleWindow(), 0)   # the console window PowerShell came with: hidden
+    } catch {}
+    $script:PendingSignal = $signal
+    Show-App
+  } finally {
+    try { $mutex.ReleaseMutex() } catch {}
+    $mutex.Dispose(); $signal.Dispose()
+  }
 }
 
 if ($SelfTest) {
@@ -1184,9 +2056,9 @@ if ($SelfTest) {
   $keepRoot = $env:SystemRoot; $env:SystemRoot = "C:\Windows"
   $home2 = "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1"
   $cmd = Get-HandlerCommand $home2
-  Check ("Windows is told to run the one script for the link: " + $cmd) ($cmd -eq '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1" "%1"')
+  Check ("Windows is told to run the one script for the link, without a console window: " + $cmd) ($cmd -eq '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1" "%1"')
   $sc = Get-ShortcutSpec $home2
-  Check ("the shortcuts run the same script, with nothing else: " + $sc.arguments) (($sc.target -eq "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe") -and ($sc.arguments -eq '-NoProfile -ExecutionPolicy Bypass -File "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1"'))
+  Check ("the shortcuts run the same script, with nothing else: " + $sc.arguments) (($sc.target -eq "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe") -and ($sc.arguments -eq '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\Users\x\AppData\Local\DeepslateWorks\DeepslateWorks.ps1"'))
   $env:SystemRoot = $keepRoot
 
   Write-Host "Self test: the home folder" -ForegroundColor White
@@ -1373,25 +2245,6 @@ if ($SelfTest) {
   Check "Iris's own file: the two lines changed, the rest as it was" ([IO.File]::ReadAllText($ip) -eq "#Iris settings`ncolorSpace=SRGB`nenableShaders=true`nmaxShadowRenderDistance=32`nshaderPack=MakeUp-UltraFast-9.5f.zip`n")
   Set-IrisShader $ip ""
   Check "None: shaders off, the pack name left" ([IO.File]::ReadAllText($ip) -eq "#Iris settings`ncolorSpace=SRGB`nenableShaders=false`nmaxShadowRenderDistance=32`nshaderPack=MakeUp-UltraFast-9.5f.zip`n")
-  $sp = Join-Path $od "shaderpacks"
-  [void][IO.Directory]::CreateDirectory($sp)
-  [IO.File]::WriteAllText((Join-Path $sp "Players Own.zip"), "theirs")
-  [IO.File]::WriteAllText((Join-Path $sp "Old_r5.9.2.zip"), "old")
-  $body = [Text.Encoding]::UTF8.GetBytes("shader bytes")
-  $bodySha = [BitConverter]::ToString([System.Security.Cryptography.SHA512]::Create().ComputeHash($body)).Replace("-", "").ToLower()
-  $fake = { param($url, $out) [IO.File]::WriteAllBytes($out, [Text.Encoding]::UTF8.GetBytes("shader bytes")) }
-  $want = @([pscustomobject]@{ filename = "New_r5.9.3.zip"; url = "https://example.invalid/x"; sha512 = $bodySha })
-  $r = Sync-PackFolder $sp $want @("Old_r5.9.2.zip", "New_r5.9.3.zip") (Join-Path $od ".downloading") $fake
-  Check "shader packs: the chosen one in, our old one out, the player's own one kept" (($r.fetched -eq 1) -and ($r.removed -eq 1) -and [IO.File]::Exists((Join-Path $sp "New_r5.9.3.zip")) -and -not [IO.File]::Exists((Join-Path $sp "Old_r5.9.2.zip")) -and [IO.File]::Exists((Join-Path $sp "Players Own.zip")))
-  $r = Sync-PackFolder $sp $want @("New_r5.9.3.zip") (Join-Path $od ".downloading") { param($url, $out) throw "should not download" }
-  Check "already there and right: not downloaded again" (($r.fetched -eq 0) -and ($r.removed -eq 0))
-  $r = Sync-PackFolder $sp @() @("New_r5.9.3.zip", "..", "..\x.zip") (Join-Path $od ".downloading") $fake
-  Check "extras off: ours out; names with a path in them are never followed" (($r.removed -eq 1) -and -not [IO.File]::Exists((Join-Path $sp "New_r5.9.3.zip")) -and [IO.File]::Exists((Join-Path $sp "Players Own.zip")))
-  $bad = @([pscustomobject]@{ filename = "Bad.zip"; url = "https://example.invalid/x"; sha512 = ("0" * 128) })
-  $threw = $false
-  try { $null = Sync-PackFolder $sp $bad @() (Join-Path $od ".downloading") $fake } catch { $threw = $true }
-  Check "a download with the wrong checksum is not kept" ($threw -and -not [IO.File]::Exists((Join-Path $sp "Bad.zip")))
-
   Write-Host "Self test: chat links (1.5.5)" -ForegroundColor White
   Remove-Temp $of
   $null = Set-RenderDistance $of $null 12 8
@@ -1613,6 +2466,10 @@ if ($SelfTest) {
     Remove-Temp "$pf.bak"
     $h = Join-Path $r "LocalAppData\DeepslateWorks"
     $null = Install-Home $PSCommandPath $h
+    # 2.0.0: the extras downloaded for the Extras tab, and the app's own two files
+    [void][IO.Directory]::CreateDirectory((Join-Path $g "extras\pictures"))
+    foreach ($f in @("extras\iris.jar", "extras\fa.zip", "extras\pictures\iris.png")) { [IO.File]::WriteAllText((Join-Path $g $f), "x") }
+    foreach ($f in @("consent.json", "extras.json", "extras-manifest.json")) { [IO.File]::WriteAllText((Join-Path $h $f), "{}") }
     foreach ($d in @("Desktop", "Programs", "Pictures")) { [void][IO.Directory]::CreateDirectory((Join-Path $r $d)) }
     foreach ($l in @("Desktop\Deepslate Works.lnk", "Programs\Deepslate Works.lnk", "Programs\Uninstall Deepslate Works.lnk", "Desktop\Somebody else.lnk")) { [IO.File]::WriteAllText((Join-Path $r $l), "lnk") }
     foreach ($k in @("registry\Software\Classes\deepslate\shell\open\command", "registry\Software\Microsoft\Windows\CurrentVersion\Uninstall\DeepslateWorks", "registry\Software\Classes\other")) { [void][IO.Directory]::CreateDirectory((Join-Path $r $k)) }
@@ -1642,6 +2499,7 @@ if ($SelfTest) {
   Check ("uninstall: nothing went wrong " + ($res.problems -join "; ")) ($res.problems.Count -eq 0)
   Check "the game folder is gone (mods, settings, our Java, logs, the sign-in)" (-not (Test-Path -LiteralPath $ut.gameDir))
   Check "Deepslate Works' own folder in AppData is gone" (-not (Test-Path -LiteralPath $ut.homeDir))
+  Check "with it the extras\ folder, consent.json and extras.json (2.0.0)" ((-not (Test-Path -LiteralPath (Join-Path $ut.gameDir "extras"))) -and (-not (Test-Path -LiteralPath (Join-Path $ut.homeDir "consent.json"))) -and (-not (Test-Path -LiteralPath (Join-Path $ut.homeDir "extras.json"))))
   Check "the deepslate:// link and the Settings -> Apps entry are gone, another program's key is not" ((-not (Test-Path -LiteralPath $ut.handlerKey)) -and (-not (Test-Path -LiteralPath $ut.uninstallKey)) -and (Test-Path -LiteralPath (Join-Path $ur "registry\Software\Classes\other")))
   Check "the three shortcuts are gone, somebody else's is not" ((@($ut.shortcuts | Where-Object { Test-Path -LiteralPath $_ }).Count -eq 0) -and (Test-Path -LiteralPath (Join-Path $ur "Desktop\Somebody else.lnk")))
   $pj = Read-Json $ut.profiles
@@ -1699,6 +2557,117 @@ if ($SelfTest) {
   Check "a wake that failed says so" ((Watch-Wake $seqCall { param($s) }) -eq "failed")
   Check "stops watching after its time" ((Watch-Wake $seqCall { param($s) } 0) -eq "gave up")
   $script:WakeRefused = $null
+
+  Write-Host "Self test: the app, permissions (2.0.0)" -ForegroundColor White
+  $cp = Join-Path $dir "app [x]\consent.json"
+  $c = Read-Consent $cp
+  $ids = @(Get-ConsentSteps | ForEach-Object { $_.id })
+  Check ("the planner's steps, in order: " + ($ids -join ", ")) (($ids -join ",") -eq "signin,launcher,java,neoforge,mods,profile,shortcuts,reports,extras")
+  Check "needed to play: all but shortcuts, reports and extras" ((@(Get-ConsentSteps | Where-Object { -not $_.required } | ForEach-Object { $_.id }) -join ",") -eq "shortcuts,reports,extras")
+  Check "first run: every step is asked" (@(Get-UnansweredSteps $c).Count -eq 9)
+  foreach ($s0 in Get-ConsentSteps) { Set-ConsentAnswer $c $s0.id $(if ($s0.id -eq "reports") { "decline" } else { "allow" }) $s0.top }
+  Save-Consent $cp $c
+  $c = Read-Consent $cp
+  Check "answers are remembered: nothing asked on the next run" (@(Get-UnansweredSteps $c).Count -eq 0)
+  Check "a declined optional step stays declined, without asking" ((Get-ConsentDecision $c "reports") -eq "decline")
+  $c.Remove("extras"); Save-Consent $cp $c; $c = Read-Consent $cp
+  Check "a step new since the last run is the only one asked" ((@(Get-UnansweredSteps $c) | ForEach-Object { $_.id }) -join "," -eq "extras")
+  Check "Java allowed on the first run covers a download then" ((Get-ConsentDecision $c "java" 2) -eq "allow")
+  Set-ConsentUsed $c "java" 1
+  Check "after a run that used the launcher's Java, a download is asked about again (bigger than before)" (((Get-ConsentDecision $c "java" 2) -eq "ask") -and ((Get-ConsentDecision $c "java" 1) -eq "allow"))
+  $j = Get-ConsentStep "java"
+  Check "the bigger Java question says how big" ($j.bigger -match "45 MB")
+  Check "the reports card says what still goes when declined" ((Get-ConsentStep "reports").text -match "pressed Play")
+  Set-Content -LiteralPath $cp -Value "{ not json"
+  Check "a damaged consent.json: everything is asked again, nothing breaks" (@(Get-UnansweredSteps (Read-Consent $cp)).Count -eq 9)
+
+  Write-Host "Self test: the app, extras (2.0.0)" -ForegroundColor White
+  $gd = Join-Path $dir "game [x]"
+  $xp = Get-ExtrasPaths $gd
+  foreach ($d0 in @($xp.extras, $xp.mods, $xp.resourcepacks, $xp.shaderpacks)) { [void][IO.Directory]::CreateDirectory($d0) }
+  $bodies = @{ "iris.jar" = "iris"; "makeup.zip" = "makeup"; "comp.zip" = "comp"; "fa.zip" = "fa"; "emf.jar" = "emf"; "etf.jar" = "etf"; "nea.jar" = "nea" }
+  $shaOf = @{}
+  foreach ($k in $bodies.Keys) { $f0 = Join-Path $dir "body.tmp"; [IO.File]::WriteAllText($f0, $bodies[$k] * 50); $shaOf[$k] = Get-Sha512 $f0; Remove-Item -LiteralPath $f0 }
+  $fx = { param($n, $kind) [pscustomobject]@{ filename = $n; kind = $kind; url = ("https://example.invalid/" + $n); sha512 = $shaOf[$n]; size = 200 } }
+  $xm = [pscustomobject]@{ extras = @(
+    [pscustomobject]@{ id = "iris"; fps = "High"; shader = $null; requires = @(); files = @((& $fx "iris.jar" "mod")) },
+    [pscustomobject]@{ id = "shader-light"; fps = "Medium"; shader = "light"; requires = @("iris"); files = @((& $fx "makeup.zip" "shader")) },
+    [pscustomobject]@{ id = "shader-full"; fps = "High"; shader = "full"; requires = @("iris"); files = @((& $fx "comp.zip" "shader")) },
+    [pscustomobject]@{ id = "fresh-animations"; fps = "Medium"; shader = $null; requires = @(); files = @((& $fx "fa.zip" "resourcepack"), (& $fx "emf.jar" "mod"), (& $fx "etf.jar" "mod")) },
+    [pscustomobject]@{ id = "nea"; fps = "Low"; shader = $null; requires = @(); files = @((& $fx "nea.jar" "mod")) }
+  ) }
+  $fetchX = { param($url, $out) $n = Split-Path -Leaf ([uri]$url).AbsolutePath; [IO.File]::WriteAllText($out, $bodies[$n] * 50) }
+  [IO.File]::WriteAllText((Join-Path $xp.mods "create.jar"), "pack"); [IO.File]::WriteAllText((Join-Path $xp.mods "sodium.jar"), "pack")
+  [IO.File]::WriteAllText($xp.options, "renderDistance:10`r`nresourcePacks:[`"vanilla`",`"file/Mine.zip`"]`r`n")
+  $snap = { param($d0) (@(Get-ChildItem -LiteralPath $d0 -File | Sort-Object Name | ForEach-Object { $_.Name + "=" + (Get-Sha512 $_.FullName) }) -join ";") }
+  $modsBefore = & $snap $xp.mods; $optBefore = [IO.File]::ReadAllText($xp.options)
+  $st = New-ExtrasState
+  $r = Sync-ExtrasFiles $xp $xm $st $fetchX
+  Check ("first download: every extra into extras\, nothing switched on, mods\ untouched: " + $r.downloaded) (($r.downloaded -eq 7) -and (@(Get-ChildItem -LiteralPath $xp.extras -File).Count -eq 7) -and ((& $snap $xp.mods) -eq $modsBefore))
+  Check "and again: nothing downloaded twice" ((Sync-ExtrasFiles $xp $xm $st { param($u, $o) throw "no" }).downloaded -eq 0)
+  Check "nothing switched: Apply has nothing to do" ((Get-ApplyRoute $false (Test-ExtrasChanged $xm $st)) -eq "nothing")
+  $st.choices["iris"] = $true; $st.choices["fresh-animations"] = $true; $st.shader = "full"
+  Check "the game running: Restart the game to apply? is asked" ((Get-ApplyRoute $true (Test-ExtrasChanged $xm $st)) -eq "ask_restart")
+  Check "the game not running: applied straight away" ((Get-ApplyRoute $false (Test-ExtrasChanged $xm $st)) -eq "apply")
+  $r = Invoke-ExtrasApply $xp $xm $st
+  Check ("on: Iris, Fresh Animations with EMF and ETF, the Full shader pack in place: " + $r.error) ($r.ok -and [IO.File]::Exists((Join-Path $xp.mods "iris.jar")) -and [IO.File]::Exists((Join-Path $xp.mods "emf.jar")) -and [IO.File]::Exists((Join-Path $xp.mods "etf.jar")) -and [IO.File]::Exists((Join-Path $xp.resourcepacks "fa.zip")) -and [IO.File]::Exists((Join-Path $xp.shaderpacks "comp.zip")) -and -not [IO.File]::Exists((Join-Path $xp.shaderpacks "makeup.zip")) -and -not [IO.File]::Exists((Join-Path $xp.mods "nea.jar")))
+  Check "Fresh Animations switched on in options.txt, the player's own pack kept" ([IO.File]::ReadAllText($xp.options) -match 'resourcePacks:\["vanilla","file/Mine.zip","file/fa.zip"\]')
+  Check "Iris set to the chosen shader pack" ([IO.File]::ReadAllText($xp.iris) -match "(?m)^shaderPack=comp.zip" -and [IO.File]::ReadAllText($xp.iris) -match "(?m)^enableShaders=true")
+  Check "dependencies on together: Light is chosen only with Iris" (((Get-ExtrasOn $xm @{ choices = @{}; shader = "light" }) -join ",") -eq "")
+  $st.shader = "light"
+  $r = Invoke-ExtrasApply $xp $xm $st
+  Check "Full to Light: one shader pack out, the other in" ($r.ok -and [IO.File]::Exists((Join-Path $xp.shaderpacks "makeup.zip")) -and -not [IO.File]::Exists((Join-Path $xp.shaderpacks "comp.zip")) -and [IO.File]::Exists((Join-Path $xp.extras "comp.zip")))
+  $st.choices = @{}; $st.shader = "none"
+  $r = Invoke-ExtrasApply $xp $xm $st
+  Check "all off again: mods\ exactly as before (names and contents), options.txt's list as before" ($r.ok -and ((& $snap $xp.mods) -eq $modsBefore) -and ([IO.File]::ReadAllText($xp.options) -eq $optBefore))
+  Check "and every extra is back in extras\" (@(Get-ChildItem -LiteralPath $xp.extras -File).Count -eq 7)
+  $st.choices["iris"] = $true; $st.choices["fresh-animations"] = $true; $st.choices["nea"] = $true; $st.shader = "full"
+  $n0 = 0
+  $badMove = @{ move = { param($a, $b) $script:MoveCount++; if ($script:MoveCount -ge 4) { throw "disk full" }; Move-ExtraFile $a $b } }
+  $script:MoveCount = 0
+  $r = Invoke-ExtrasApply $xp $xm $st $badMove
+  Check ("a move that fails half-way: everything put back (" + $r.error + ")") ((-not $r.ok) -and ((& $snap $xp.mods) -eq $modsBefore) -and (@(Get-ChildItem -LiteralPath $xp.extras -File).Count -eq 7) -and ([IO.File]::ReadAllText($xp.options) -eq $optBefore) -and (@($st.applied.mods).Count -eq 0))
+  [IO.File]::WriteAllText((Join-Path $xp.extras "nea.jar"), "damaged")
+  $r = Invoke-ExtrasApply $xp $xm $st
+  Check ("a damaged file found by the check after the moves: everything put back (" + $r.error + ")") ((-not $r.ok) -and ((& $snap $xp.mods) -eq $modsBefore) -and ([IO.File]::ReadAllText($xp.options) -eq $optBefore))
+  Remove-Item -LiteralPath (Join-Path $xp.extras "nea.jar")
+  $r = Invoke-ExtrasApply $xp $xm $st
+  Check "an extra not downloaded yet: refused, nothing changed" ((-not $r.ok) -and ($r.error -match "not downloaded") -and ((& $snap $xp.mods) -eq $modsBefore))
+  $r2 = Sync-ExtrasFiles $xp $xm $st $fetchX
+  Check "the next Play fetches what is missing and applies the choice that was waiting" ($r2.applied.ok -and [IO.File]::Exists((Join-Path $xp.mods "nea.jar")) -and [IO.File]::Exists((Join-Path $xp.mods "iris.jar")))
+  Check "the pack's mod sync leaves switched-on extras alone" ((@(Get-AppliedExtraJars $st) | Sort-Object) -join "," -eq "emf.jar,etf.jar,iris.jar,nea.jar")
+  # a new version of an extra that is on
+  $bodies["iris2.jar"] = "iris two"; $f0 = Join-Path $dir "body.tmp"; [IO.File]::WriteAllText($f0, $bodies["iris2.jar"] * 50); $shaOf["iris2.jar"] = Get-Sha512 $f0; Remove-Item -LiteralPath $f0
+  $xm.extras[0].files = @((& $fx "iris2.jar" "mod"))
+  $r3 = Sync-ExtrasFiles $xp $xm $st $fetchX
+  Check "a new version of an extra that is on: swapped in mods\, the old file gone everywhere" ($r3.applied.ok -and [IO.File]::Exists((Join-Path $xp.mods "iris2.jar")) -and -not [IO.File]::Exists((Join-Path $xp.mods "iris.jar")) -and -not [IO.File]::Exists((Join-Path $xp.extras "iris.jar")))
+  $sp0 = Join-Path $dir "app [x]\extras.json"
+  Save-ExtrasState $sp0 $st
+  $st2 = Read-ExtrasState $sp0
+  Check "extras.json remembers the choices and where the files are" ($st2.choices["nea"] -and $st2.shader -eq "full" -and (@($st2.applied.mods) -contains "nea.jar"))
+
+  Write-Host "Self test: the app, the game and the PC (2.0.0)" -ForegroundColor White
+  $procs = @(
+    [pscustomobject]@{ Id = 11; Name = "javaw.exe"; CommandLine = '"C:\Program Files\Java\bin\javaw.exe" -Xmx6G -Dminecraft.client.jar=... --gameDir C:\Users\x\AppData\Roaming\.minecraft-deepslate-works --username y' },
+    [pscustomobject]@{ Id = 12; Name = "javaw.exe"; CommandLine = '"javaw.exe" --gameDir C:\Users\x\AppData\Roaming\.minecraft' },
+    [pscustomobject]@{ Id = 13; Name = "chrome.exe"; CommandLine = 'chrome.exe .minecraft-deepslate-works' }
+  )
+  Check "finds the Deepslate game, not another Minecraft and not a browser" ((@(Find-GameProcess "C:\Users\x\AppData\Roaming\.minecraft-deepslate-works" $procs) | ForEach-Object { $_.Id }) -join "," -eq "11")
+  Check "no game running: no restart question" ((Get-ApplyRoute ((@(Find-GameProcess "C:\none" $procs)).Count -gt 0) $true) -eq "apply")
+  Check "weak: 4 GB with a real card" (Test-WeakPc 4 @("NVIDIA GeForce RTX 3060"))
+  Check "weak: 16 GB with built-in Intel graphics" (Test-WeakPc 16 @("Intel(R) UHD Graphics 620"))
+  Check "not weak: 16 GB and an RTX 3060" (-not (Test-WeakPc 16 @("Intel(R) UHD Graphics 770", "NVIDIA GeForce RTX 3060")))
+  Check "not weak: 16 GB and a Radeon RX 6600" (-not (Test-WeakPc 16 @("AMD Radeon RX 6600")))
+  Check "weak: memory known, no graphics card seen" (Test-WeakPc 16 @())
+
+  Write-Host "Self test: the window's layout (2.0.0)" -ForegroundColor White
+  $okXaml = $true; $names = @()
+  try { $x1 = [xml]$AppXaml; $x2 = [xml]$RestartXaml; $names = @($x1.SelectNodes("//*[@*[local-name()='Name']]") | ForEach-Object { $_.GetAttribute("Name", "http://schemas.microsoft.com/winfx/2006/xaml") }) } catch { $okXaml = $false }
+  Check "both windows' XAML is well-formed" $okXaml
+  $want = @("Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "PlayButton", "PlayBody", "ApplyButton", "ExtrasStatus", "ExtrasBody", "LogBox")
+  Check ("every name the code looks up is in the XAML") (@($want | Where-Object { $names -notcontains $_ }).Count -eq 0)
+  Check "the window is titled Deepslate Works with Play, Extras and Log tabs" (($AppXaml -match 'Title="Deepslate Works"') -and ($AppXaml -match 'Header="  Play  "') -and ($AppXaml -match 'Header="  Extras  "') -and ($AppXaml -match 'Header="  Log  "'))
+  Check "the restart prompt offers Restart now and Later" (($RestartXaml -match 'Content="Restart now"') -and ($RestartXaml -match 'Content="Later"'))
 
   $own = [IO.File]::ReadAllText($PSCommandPath)
   $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
@@ -1792,7 +2761,8 @@ if ($Setup) {
     exit 2
   }
   if (-not $DryRun -and -not $script:CustomRoot -and $OnWindows -and $dir) {
-    $r = Repair-Home $me $dir (Get-WindowsHomeIo (Join-Path $Root ".minecraft-deepslate-works")) -Force
+    # 2.0.0: the Play link and the shortcuts wait for their permission (the app's "Shortcuts and Play button" card)
+    $r = Repair-Home $me $dir (Get-WindowsHomeIo (Join-Path $Root ".minecraft-deepslate-works")) -Force -NoLinks
     foreach ($line in $r.said) {
       $colour = @{ ok = "DarkGray"; note = "Gray"; problem = "Yellow" }[$line.tone]
       Write-Host ("  " + $line.text) -ForegroundColor $colour
@@ -1802,7 +2772,13 @@ if ($Setup) {
     else { $env:DEEPSLATE_SETUP_PROBLEMS = "[]" }
   }
   $env:DEEPSLATE_FROM_SETUP = "1"
-  $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $target))
+  if ($OnWindows -and -not $DryRun -and -not $script:CustomRoot) {
+    # 2.0.0: the app's window, on its own; this console (Setup.bat's) closes
+    Start-Process -FilePath (Get-PowerShellExe) -ArgumentList @("-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $target)) -WindowStyle Hidden
+    Write-Host "Deepslate Works is opening in its own window." -ForegroundColor Green
+    exit 0
+  }
+  $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $target), "-Console")
   if ($DryRun) { $again += "-DryRun" }
   if ($script:CustomRoot) { $again += @("-Root", ('"{0}"' -f $Root)) }
   $child = Start-Process -FilePath ((Get-Process -Id $PID).Path) -ArgumentList $again -Wait -PassThru -NoNewWindow
@@ -1816,6 +2792,28 @@ function Read-Token {
   if (Test-Path -LiteralPath $tokenFile) { try { $t = (Get-Content -LiteralPath $tokenFile -Raw | ConvertFrom-Json).token } catch {} }
   if ($DryRun -and $env:DEEPSLATE_LAUNCHER_TOKEN) { $t = $env:DEEPSLATE_LAUNCHER_TOKEN }   # tests under pwsh on Linux
   return $t
+}
+
+# ---- 2.0.0: the window ------------------------------------------------------------------------------------
+# Every ordinary start on Windows (the Play button, the shortcut, Setup) opens the app's window; the window starts this
+# script again as -Engine for the install steps. Tests, -Console and a PC where WPF will not start run the steps here.
+$AppHome = $(if ($script:CustomRoot -or -not (Get-HomeDir)) { Join-Path $Root "LocalAppData\DeepslateWorks" } else { Get-HomeDir })
+$script:MePath = $PSCommandPath
+if ($OnWindows -and -not $Engine -and -not $Console -and -not $DryRun -and -not $script:CustomRoot -and @($PretendRunning).Count -eq 0) {
+  if ([Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
+    # WPF needs a single-threaded apartment: Windows PowerShell gives one, pwsh does not
+    Start-Process -FilePath (Get-PowerShellExe) -ArgumentList @("-NoProfile", "-Sta", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $PSCommandPath)) -WindowStyle Hidden
+    exit 0
+  }
+  try {
+    if ($Screenshots) { Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase; Show-App $Screenshots; exit 0 }
+    Start-AppWindow
+    exit 0
+  } catch {
+    Log ("the window could not open, running in the console: " + ($_ | Out-String))
+    Write-Host ("The Deepslate Works window could not open ({0}). Carrying on here." -f $_.Exception.Message) -ForegroundColor Yellow
+    $Console = $true
+  }
 }
 
 # ---- a. the lock ----------------------------------------------------------------------------------------
@@ -1887,6 +2885,12 @@ if ($FromSetup -and $env:DEEPSLATE_SETUP_PROBLEMS) {
 }
 $Minecraft = Join-Path $Root ".minecraft"
 $Profiles = Join-Path $Minecraft "launcher_profiles.json"
+# 2.0.0: what this PC's person allowed (the window asked); extras chosen in the Extras tab
+$script:Consent = Read-Consent (Join-Path $AppHome $ConsentFileName)
+$ExtrasStatePath = Join-Path $AppHome $ExtrasStateName
+$script:ExtrasState = Read-ExtrasState $ExtrasStatePath
+$script:ReportsOff = -not (Request-Consent "reports")
+if ($script:ReportsOff) { Log "install reports are switched off: only 'pressed Play' and the pack version are sent" }
 
 try {
   Clear-Leftovers $DataDir
@@ -1916,6 +2920,7 @@ try {
 
   # ---- c. sign in, only when not signed in --------------------------------------------------------------
   if (-not $token) {
+    $null = Request-Consent "signin"
     Step "Signing in"
     if ($DryRun) { Note "(dry run) would open the browser to sign in"; Fail "(dry run) not signed in; the mod list needs a sign-in" }
     try { $start = Invoke-RestMethod -Uri "$PortalUrl/api/launcher/start" -Method Post -ContentType "application/json" -Body (@{ hostname = $env:COMPUTERNAME } | ConvertTo-Json) -UseBasicParsing -TimeoutSec 30 }
@@ -1957,6 +2962,8 @@ try {
         $again = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $script:MePath))
         if ($FromLink) { $again += $Link }
         elseif ($script:CustomRoot) { $again += @("-Root", ('"{0}"' -f $Root)) }
+        # the window's engine stays the engine: same status file, no second window
+        if ($Engine) { $again += @("-Engine", "-StatusFile", ('"{0}"' -f $StatusFile)); if ($NoLaunch) { $again += "-NoLaunch" } }
         $child = Start-Process -FilePath ((Get-Process -Id $PID).Path) -ArgumentList $again -Wait -PassThru -NoNewWindow
         exit $child.ExitCode
       }
@@ -1976,6 +2983,7 @@ try {
   Log ("{0} mods for Minecraft {1} / NeoForge {2}; this run: {3}" -f $files.Count, $mc, $neo, $Mode)
 
   # ---- the launcher: there? Open is fine until something it would overwrite has to be written -------------
+  $null = Request-Consent "launcher"
   Step "Checking the Minecraft Launcher"
   if (-not (Test-Path -LiteralPath $Profiles)) {
     $script:Facts.launcher = [ordered]@{ kind = "not found"; version = $null; profilesFormat = $null }
@@ -1992,6 +3000,9 @@ try {
   $cmd = Get-Command java -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
   $onPath = if ($cmd) { [string]$cmd.Source } else { "" }
   $chosen = Select-Java $bundled $onPath (Join-Path $GameDir "runtime")
+  # A Java download is more than the answer may have covered (planner: "something bigger than before"): asked again.
+  $null = Request-Consent "java" $(if ($chosen.path) { 1 } else { 2 })
+  Emit ([ordered]@{ t = "used"; step = "java"; level = $(if ($chosen.path -and $chosen.source -notmatch "downloaded") { 1 } else { 2 }) })
   $java = $chosen.path
   $javaSource = $chosen.source
   $javaPassedOver = $chosen.passedOver
@@ -2018,6 +3029,7 @@ try {
   $script:Facts.java = [ordered]@{ source = $javaSource; path = [string]$java; version = $javaVersion; passedOver = $javaPassedOver }
 
   # ---- NeoForge ---------------------------------------------------------------------------------------------
+  $null = Request-Consent "neoforge"
   Step ("Installing NeoForge {0}" -f $neo)
   $versionId = "neoforge-$neo"
   $neoBefore = Test-Path -LiteralPath (Join-Path $Minecraft ("versions\{0}" -f $versionId))
@@ -2041,14 +3053,18 @@ try {
   }
 
   # ---- mods: downloaded into .downloading\, checked, then moved into mods\ ----------------------------------
+  $null = Request-Consent "mods"
   Step "Setting up the mods"
   foreach ($d in @("mods", "config", "resourcepacks")) { New-Item -ItemType Directory -Force -Path (Join-Path $GameDir $d) | Out-Null }
   $modsDir = Join-Path $GameDir "mods"
   $staging = Join-Path $GameDir ".downloading"
   $sha = [System.Security.Cryptography.SHA512]::Create()
   $keep = @{}
+  # the extras switched on in the Extras tab are the app's, not the pack's: left where they are
+  foreach ($x in @(Get-AppliedExtraJars $script:ExtrasState)) { $keep[$x] = $true }
   $i = 0
   $fetched = 0
+  $dropped = 0
   foreach ($f in $files) {
     $i++
     $dest = Join-Path $modsDir $f.filename
@@ -2068,6 +3084,7 @@ try {
   Write-Progress -Activity "Downloading mods" -Completed
   Get-ChildItem -LiteralPath $modsDir -Filter *.jar | Where-Object { -not $keep[$_.Name] } | ForEach-Object {
     Log ("removing " + $_.Name)
+    $dropped++
     if (-not $DryRun) {
       $gone = $_.Name
       try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop }
@@ -2075,6 +3092,13 @@ try {
     }
   }
   Tick ("{0} mods in place ({1} downloaded)" -f $files.Count, $fetched)
+  # "Updated 3 mods" on the Play tab, in place of asking about routine updates (planner)
+  if ($Mode -ne "first_install" -and ($fetched + $dropped) -gt 0) {
+    $what = @()
+    if ($fetched -gt 0) { $what += ("Updated {0} mod{1}" -f $fetched, $(if ($fetched -eq 1) { "" } else { "s" })) }
+    if ($dropped -gt 0) { $what += ("removed {0}" -f $dropped) }
+    Emit ([ordered]@{ t = "changed"; text = ($what -join ", ") })
+  }
 
   # ---- settings: the pack's config files (zip from the site) and, the first time, options.txt ---------------
   Step "Settings"
@@ -2104,49 +3128,24 @@ try {
     } catch { Note ("The render distance was left as it is: " + $_.Exception.Message) }
   }
 
-  # ---- visual extras (1.6.0): resource packs and shader packs, as chosen on the Me page ----------------------
-  $vis = $null
-  if ($manifest.PSObject.Properties["visuals"] -and $manifest.visuals) { $vis = $manifest.visuals }
-  $prevVis = $null
-  if ($prev -and $prev.PSObject.Properties["visuals"]) { $prevVis = $prev.visuals }
-  $script:VisualsDone = $prevVis
-  if ($vis) {
-    $wantRp = @($vis.resourcepacks | Where-Object { $_ })
-    $wantSp = @(@($vis.shaderpack) | Where-Object { $_ })
-    $shaderFile = $(if ($wantSp.Count) { [string]$wantSp[0].filename } else { "" })
-    $oursRp = @(@($vis.known.resourcepacks) + @($(if ($prevVis) { $prevVis.resourcepacks } else { @() })) | Where-Object { $_ } | ForEach-Object { [string]$_ })
-    $oursSp = @(@($vis.known.shaderpacks) + @($(if ($prevVis) { $prevVis.shaderpacks } else { @() })) | Where-Object { $_ } | ForEach-Object { [string]$_ })
-    $hadAny = @($oursRp | Where-Object { Test-Path -LiteralPath (Join-Path (Join-Path $GameDir "resourcepacks") $_) }).Count + @($oursSp | Where-Object { Test-Path -LiteralPath (Join-Path (Join-Path $GameDir "shaderpacks") $_) }).Count
-    Log ("visual extras: {0}, shaders {1}" -f $(if ($vis.extras) { "on" } else { "off" }), $vis.shader)
-    if ($vis.extras -or $hadAny -or ($prevVis -and $prevVis.extras)) {
+  # ---- extras (2.0.0): every extra downloaded into extras\, nothing switched on; the Extras tab switches them -----
+  if (-not $DryRun -and (Request-Consent "extras")) {
+    try {
+      $xm = Invoke-RestMethod -Uri "$PortalUrl/api/modpack/extras" -Headers $headers -UseBasicParsing -TimeoutSec 60
       Step "Visual extras"
-      if ($DryRun) { Note ("(dry run) visual extras {0}, shaders {1}" -f $(if ($vis.extras) { "on" } else { "off" }), $vis.shader) }
-      else {
-        try {
-          $web = { param($url, $out) Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing }
-          $a = Sync-PackFolder (Join-Path $GameDir "resourcepacks") $wantRp $oursRp $staging $web
-          $b = Sync-PackFolder (Join-Path $GameDir "shaderpacks") $wantSp $oursSp $staging $web
-          foreach ($busy in @($a.busy + $b.busy)) { Note ("{0} is in use; close Minecraft and press Play again to finish." -f $busy) }
-          $rp = Set-ResourcePackList (Join-Path $GameDir "options.txt") @($wantRp | ForEach-Object { [string]$_.filename }) $oursRp
-          Log $rp.text
-          # Iris's setting is written when the choice (or the shader's file, after an update) is new, so a pack picked
-          # in the game stays picked until the Me page choice changes.
-          $was = $(if ($prevVis -and $prevVis.extras) { [string]$prevVis.shader + "|" + [string]$prevVis.shaderFile } else { "" })
-          if ($vis.extras -and $was -ne ([string]$vis.shader + "|" + $shaderFile)) {
-            Set-IrisShader (Join-Path $GameDir "config\iris.properties") $shaderFile
-            Log ("iris.properties: " + $(if ($shaderFile) { "shaderPack=" + $shaderFile } else { "shaders off" }))
-          }
-          $script:VisualsDone = @{ extras = [bool]$vis.extras; shader = [string]$vis.shader; shaderFile = $shaderFile; resourcepacks = @($wantRp | ForEach-Object { [string]$_.filename }); shaderpacks = @($wantSp | ForEach-Object { [string]$_.filename }) }
-          if ($vis.extras) {
-            $say = @{ none = "no shaders"; light = "Light shaders (MakeUp Ultra Fast)"; full = "Full shaders (Complementary Reimagined)" }[[string]$vis.shader]
-            Tick ("Visual extras on, {0}" -f $(if ($say) { $say } else { [string]$vis.shader }))
-          } else { Tick "Visual extras off: taken out" }
-        } catch { Note ("Visual extras could not be set up this time: " + $_.Exception.Message) }
-      }
-    }
+      Write-JsonFile (Join-Path $AppHome $ExtrasManifestName) $xm
+      $xp = Get-ExtrasPaths $GameDir
+      $sx = Sync-ExtrasFiles $xp $xm $script:ExtrasState { param($url, $out) Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing }
+      if (-not $script:ExtrasState.downloaded) { $script:ExtrasState.seen = @($xm.extras | ForEach-Object { [string]$_.id }); $script:ExtrasState.downloaded = $true }
+      if ($sx.applied -and -not $sx.applied.ok) { Note ("Your extras could not be updated this time: " + $sx.applied.error) }
+      Save-ExtrasState $ExtrasStatePath $script:ExtrasState
+      Tick ("{0} extras ready ({1} downloaded), {2} on" -f @($xm.extras).Count, $sx.downloaded, @(Get-ExtrasOn $xm $script:ExtrasState).Count)
+      Emit ([ordered]@{ t = "extras"; downloaded = $sx.downloaded })
+    } catch { Note ("The visual extras could not be fetched this time: " + $_.Exception.Message) }
   }
 
   # ---- the server list (servers.dat: uncompressed NBT, one entry), the first time --------------------------
+  $null = Request-Consent "profile"
   $serversDat = Join-Path $GameDir "servers.dat"
   if (-not (Test-Path -LiteralPath $serversDat) -and -not $DryRun) {
     $ms = New-Object IO.MemoryStream
@@ -2213,14 +3212,15 @@ try {
   # ---- the Play link and the shortcuts: put right when missing (Setup.bat made them; this keeps them) ------
   if (-not $DryRun -and -not $script:CustomRoot -and $OnWindows -and (Get-HomeDir)) {
     try {
-      $rh = Repair-Home (Resolve-Path -LiteralPath $script:MePath).Path (Get-HomeDir) (Get-WindowsHomeIo $GameDir)
+      $links = Request-Consent "shortcuts"
+      $rh = Repair-Home (Resolve-Path -LiteralPath $script:MePath).Path (Get-HomeDir) (Get-WindowsHomeIo $GameDir) -NoLinks:(-not $links)
       Set-SetupState $rh
       if ($rh.fixed) { Tick "Play button set up on this run" }
       foreach ($line in @($rh.said | Where-Object { $_.tone -ne "ok" })) { Note $line.text }
     } catch { Log ("could not check the Play link and the shortcuts: " + $_.Exception.Message) }
   }
 
-  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender; visuals = $script:VisualsDone } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $installedFile }
+  if (-not $DryRun) { @{ version = $script:PackSeen; installedAt = $now; hash = $manifest.hash; installer = $InstallerVersion; renderDistance = $script:OurRender } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $installedFile }
 
   # ---- d. the report, e. the game -------------------------------------------------------------------------
   Log "=== done ==="
@@ -2231,7 +3231,9 @@ try {
   else { Write-Host "Everything is up to date." -ForegroundColor Green }
   Send-Report "ok"
   Exit-Lock
+  Emit ([ordered]@{ t = "done"; mode = $Mode; pack = [string]$script:PackSeen })
   if ($DryRun) { Write-Host "(dry run) Nothing was changed." -ForegroundColor Green }
+  elseif ($NoLaunch) { Log "not opening the launcher (asked not to)" }
   else {
     if ($profileLeft) { Write-Host ("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play." -f $PackName) -ForegroundColor Green }
     elseif (Open-Launcher) { Write-Host ("Opening the Minecraft Launcher on {0}. Press Play." -f $PackName) -ForegroundColor Green }

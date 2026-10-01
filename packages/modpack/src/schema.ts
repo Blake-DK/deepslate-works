@@ -4,12 +4,6 @@ import { z } from "zod";
 
 export const LOADS = ["L", "M", "H"] as const;
 export const SIDES = ["both", "client", "server"] as const;
-/** What a pack entry is: a mod jar (mods/), a resource pack (resourcepacks/) or a shader pack for Iris (shaderpacks/). */
-export const KINDS = ["mod", "resourcepack", "shader"] as const;
-/** The shader choices on the Me page besides "none" (planner, 2026-10-01). */
-export const SHADERS = ["light", "full"] as const;
-export type Kind = (typeof KINDS)[number];
-export type ShaderChoice = "none" | (typeof SHADERS)[number];
 
 export const videoSchema = z.object({
   title: z.string().min(1),
@@ -32,8 +26,6 @@ export const modSchema = z.object({
   videos: z.array(videoSchema).max(3).default([]),
   version: z.string().default("latest"), // "latest" or a Modrinth version id
   requires: z.array(z.string()).default([]),
-  kind: z.enum(KINDS).default("mod"),
-  shader: z.enum(SHADERS).optional(), // kind "shader" only: which Me page choice installs it
 });
 
 export const categorySchema = z.object({
@@ -41,9 +33,6 @@ export const categorySchema = z.object({
   title: z.string().min(1),
   blurb: z.string().max(300).default(""),
   votable: z.boolean().default(true), // base pack and server-only categories are not voted on
-  // Client-only extras each member switches on for themselves on the Me page (category "visuals"). Never on the server,
-  // never voted on; the mod list hands them only to members who chose them.
-  optional: z.boolean().default(false),
 });
 
 export const TIERS = ["LOW", "MID", "HIGH"] as const;

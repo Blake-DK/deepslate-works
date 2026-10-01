@@ -1,6 +1,6 @@
 import "server-only";
 import { rename, writeFile } from "node:fs/promises";
-import { buildLock, diffLocks, lintManifest, type LockFile } from "modpack";
+import { buildLock, diffLocks, lintManifest, lockExtras, type LockFile } from "modpack";
 import { getManifest, commitManifest } from "./manifest";
 import { getLock, P } from "./lock";
 import { apiFetch, apiStream } from "@/server/api-client";
@@ -33,14 +33,22 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
       if (d.neoforge) yield `~ neoforge ${d.neoforge.from} -> ${d.neoforge.to}`;
       for (const c of d.configs) yield `~ settings ${c}`;
       const changed = d.added.length + d.removed.length + d.changed.length + d.configs.length + (d.neoforge ? 1 : 0);
+      // The app's extras (modpack/extras.json) are locked with the pack, into a file of their own.
+      const extraLines: string[] = [];
+      const ex = await lockExtras(P, prev && changed === 0 ? prev : lock, m.loader, (s) => extraLines.push(s));
+      for (const l of extraLines) yield l;
       if (prev && changed === 0) {
         yield `mods.lock.json unchanged (${lock.files.length} files, NeoForge ${lock.neoforge}, ${lock.hash.slice(0, 8)})`;
+        if (ex.written) {
+          const c = await commitManifest("chore(modpack): lock the extras", { name: admin.displayName }, ["modpack/extras.lock.json"]);
+          yield c.ok ? `committed (${c.output || "ok"})` : `git commit failed: ${c.output}`;
+        }
         return;
       }
       await writeFile(`${P.lock}.tmp`, JSON.stringify(lock, null, 2) + "\n");
       await rename(`${P.lock}.tmp`, P.lock);
       yield `wrote mods.lock.json: ${lock.files.length} files, NeoForge ${lock.neoforge}, ${lock.hash.slice(0, 8)}`;
-      const commit = await commitManifest(`chore(modpack): lock ${lock.hash.slice(0, 8)} (${changed} change${changed === 1 ? "" : "s"})`, { name: admin.displayName }, ["modpack/mods.lock.json"]);
+      const commit = await commitManifest(`chore(modpack): lock ${lock.hash.slice(0, 8)} (${changed} change${changed === 1 ? "" : "s"})`, { name: admin.displayName }, ["modpack/mods.lock.json", ...(ex.written ? ["modpack/extras.lock.json"] : [])]);
       yield commit.ok ? `committed (${commit.output || "ok"})` : `git commit failed: ${commit.output}`;
     } else if (cmd === "build") {
       const lock = await getLock();

@@ -4,6 +4,50 @@
 
 A friend downloads one zip and double-clicks `Setup.bat` once. After that they press Play on the site or open **Deepslate Works** from their desktop; it keeps itself and the mods up to date and opens the normal Minecraft launcher on the Deepslate Works profile, with the server already in the server list. It never touches their vanilla installation.
 
+## Installer 2.0.0: the Deepslate Works app (planner, 2026-10-01)
+
+Replaces section B of the planner's performance/visuals brief (visual extras on the Me page, installer 1.6.0); the base performance mods (section A) stand.
+
+**One window, not a console.** `DeepslateWorks.ps1` is still the one script, started the same three ways (Setup.bat the first time, the desktop / Start Menu shortcut, `deepslate://play`), but an ordinary start on Windows now opens a WPF window titled "Deepslate Works" with three tabs: **Play**, **Extras**, **Log**. Pressing Play on the site opens it, or, when it is already open, brings it to the front and presses its Play (`Local\DeepslateWorks.App` mutex + `…App.Show` event). It stays open until it is closed; the game closing does not close it. The console PowerShell starts with is hidden (`-WindowStyle Hidden` in the Play link and the shortcuts, and `ShowWindow` as a fallback).
+
+The install steps do not run in the window. The window starts the same script again, hidden, as `-Engine -StatusFile <file>`, and reads JSON lines from that file every 250 ms (`step`, `tick`, `note`, `fail`, `ask`, `declined`, `used`, `changed`, `extras`, `done`). `-Console` runs the steps in a console as before (tests; a PC where WPF will not start falls back to it by itself). Setup.bat copies the script home, lists it in Settings → Apps and opens the window; its console then closes (it pauses only on an error).
+
+**Permission per step** (Play tab). The first run shows every step as a card, "Allow" / "Not now", then Continue:
+
+| Step | Card text | |
+|---|---|---|
+| Sign in with Discord | Links this PC to your account on deepslate.dsw.test so the server knows it's you. | Needed to play |
+| Check the Minecraft Launcher is closed | The launcher overwrites settings if it's open. | Needed to play |
+| Java 21 | Minecraft 1.21 needs Java 21. Uses the launcher's own copy if you have it, otherwise downloads one into the Deepslate folder only. | Needed to play |
+| NeoForge | The mod loader. Installed into its own profile; your normal Minecraft isn't touched. | Needed to play |
+| Mods and settings | Downloads the mods the server uses, from Modrinth. | Needed to play |
+| Launcher profile and server list | Adds a 'Deepslate Works' profile and the server address. | Needed to play |
+| Shortcuts and Play button | Adds a desktop icon and lets the website's Play button open this app. | Optional |
+| Send install reports | Sends a log of what happened to the site so Alex can fix problems. Your username and file paths are removed. (Not now: only "pressed Play" and the pack version are sent, which the server needs to let you in.) | Optional |
+| Optional visual extras | Download the optional visual extras? About N MB, nothing is switched on. | Optional |
+
+- Answers are kept in `%LOCALAPPDATA%\DeepslateWorks\consent.json` (`{ steps: { <id>: { answer, level, at } } }`). The engine checks each step before doing it (`Request-Consent`): allowed → on; an optional step declined → skipped; a step with no answer, or one about to do more than its answer covers → the engine stops with exit 20 and an `ask` line, the window shows that one card, then starts again. A needed step declined → exit 21; the window says which and that Review permissions changes it. Nothing is downloaded or written for a step that was not allowed.
+- "Bigger than before": each answer carries a level. After a run, the level becomes what was really done (`used` lines): a run that used the launcher's own Java leaves Java at level 1, so a later Java download (level 2, ~45 MB) is asked about again with its own wording.
+- Routine updates are not asked about once "Mods and settings" is allowed; the Play tab shows what changed ("Updated 3 mods, removed 1").
+- **Reports declined**: a minimal report still goes after every run: `packVersion`, `installerVersion`, `mode`, `outcome`, `durationSec`, `minimal: true`, no log, no PC details. Stored with `InstallReport.minimal` (migration 0018), shown as "(ping only)" on Admin → Installs; it counts for Play first like any run, and measures no PC tier.
+- **Shortcuts declined**: no Play link and no shortcuts (Setup no longer makes them before asking); the Settings → Apps entry is always made, so the app can be removed.
+- **Review permissions** (link on the Play tab) lists every step with its current answer.
+
+**Extras tab** (personal, never voted on). The `visuals` category and its mods left `mods.json`, and the Me page toggle is gone (migration 0018 drops `User.visualExtras` and `User.shaders`).
+- The list is `modpack/extras.json` (id, name, one-line description, FPS cost Low / Medium / High, `shader: light|full` for the two shader packs, `requires`, Modrinth projects). Every Lock also locks it into `modpack/extras.lock.json` (files, checksums, and each extra's Modrinth icon turned into a 64 px PNG, since WPF cannot show WebP); it is not part of the pack's version. The app fetches it from `GET /api/modpack/extras` (launcher token, gated like the mod list) and keeps a copy (`extras-manifest.json`) so the tab works offline.
+- Extras (2026-10-01): Iris (High), Shaders None / Light (MakeUp Ultra Fast, Medium) / Full (Complementary Reimagined, High) only with Iris on, Not Enough Animations (Low), 3D Skin Layers (Low), Falling Leaves (Low), Particle Rain (Medium), Sound Physics Remastered (Medium), Fresh Animations with EMF and ETF behind the one switch (Medium). All of them: 10.0 MB.
+- After "Optional visual extras" is allowed, every Play makes sure every extra's files are in `<game folder>\extras\` (checked by SHA-512), nothing switched on. Turning one on later moves files, no download.
+- Apply moves the chosen extras' files from `extras\` into `mods\`, `resourcepacks\` and `shaderpacks\` and the others back, switches Fresh Animations in `options.txt` (`resourcePacks`, the player's own packs and order kept) and sets Iris's shader (`config\iris.properties`: `shaderPack`, `enableShaders`). Dependencies go together (a shader pack only with Iris). Then every file is checked; on any error, or a check that fails, every move is undone and both settings files are put back as they were.
+- Minecraft running (a `java(w).exe` whose command line names the game folder): "Restart the game to apply?" with **Restart now** (WM_CLOSE to the game, 30 s to save and stop, then ended; Apply; the launcher opened on the Deepslate Works profile again) or **Later** (the choice is saved and the next Play applies it). Asked before anything moves, because Windows will not move a jar the running game has open.
+- Choices in `extras.json` (choices, shader, which files are where, which extras have been seen). The pack's mod sync leaves switched-on extras' jars in `mods\`. A new version of an extra that is on is swapped in on the next Play. An extra new in the list shows "New" until the tab has been opened. Extras are client-only: the server, the vote and the join check never see them, and people with different extras play together.
+- A weak PC (the site's own rule: under 8 GB, or no graphics card of its own, measured locally) gets a warning next to the Medium and High ones; nothing is blocked.
+
+**Uninstall** removes `extras\` with the game folder and `consent.json` / `extras.json` with the app's own folder.
+
+**Screenshots**: `DeepslateWorks.ps1 -Screenshots <folder>` draws the first-run Play tab, the Extras tab (as this PC has it) and the restart prompt into PNG files, off screen.
+
+**Tests.** Self test (205 checks under `pwsh` on Linux, which cannot load WPF): permissions remembered and asked again only for a new step or a bigger one; the Apply on/off round trip leaves `mods\` byte for byte as before; a move that fails half-way and a damaged file both roll back; an extra not downloaded is refused; the restart question only with the game running; finding the game's process; the weak-PC rule; both windows' XAML and every name the code looks up. End to end (`/root/.config/deepslate/e2e200/run.sh`: the real engine against a stand-in site): no answers → asks; "Mods and settings" declined → stops before any mod, no report; reports declined → plays, only the ping goes; extras downloaded, nothing on; a "Later" choice applied by the next Play; extras left in `mods\` by the mod sync; a new step and a Java download asked about. web tests: the ping is a valid report and opens Play first; the pack's version leaves extras out. **The window itself has not run on Windows yet.**
+
 ## Installer 1.5.6: when Setup can't set up the Play button (planner, 2026-09-30)
 
 **The fault.** Rowan (Pabulum) ran Setup.bat on 2026-09-30 and saw "Could not set up the Play button and the shortcuts (…). Carrying on from this folder." The copy into `%LOCALAPPDATA%\DeepslateWorks\` was refused ("Access to the path '…\DeepslateWorks\DeepslateWorks.ps1' is denied."), and because the copy, the Play link, the shortcuts and the Settings → Apps entry were in one `try`, nothing after the copy was done either. The Setup window's own line never reached a report (Setup runs in a process of its own and the report is sent by the run it starts); his 19:57 UTC report (1.5.4 → 1.5.5, run from the extracted download) shows the same refusal at the end of the run.

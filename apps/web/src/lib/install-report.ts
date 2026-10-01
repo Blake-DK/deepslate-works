@@ -63,6 +63,8 @@ export const reportSchema = z
     log: z.string().max(MAX_LOG_BYTES * 2),
     system: systemSchema.nullish().transform((v) => v ?? systemSchema.parse({})), // an uninstall (1.5.2) sends none: all fields empty
     setupProblems: z.array(setupProblemSchema).max(10).nullish().transform((v) => v ?? null), // since 1.5.6
+    // 2.0.0: install reports declined in the app; this is only "pressed Play, pack version" for Play first, no log
+    minimal: z.boolean().nullish().transform((v) => v ?? false),
   })
   .strip();
 export type Report = z.infer<typeof reportSchema>;

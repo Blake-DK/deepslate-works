@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { howToSchema, keySchema } from "./schema";
 import type { LockFile } from "./lock";
 import { getProject, getVersion, getVersions, NotFound } from "./modrinth";
 import { pickVersion } from "./lock";
@@ -22,13 +23,16 @@ export const extraSchema = z.object({
   // the mod ids the game loads for it, which the app looks for in the game's latest.log ("Confirmed in game")
   modIds: z.array(z.string().regex(/^[a-z0-9_.-]+$/)).default([]),
   projects: z.array(z.object({ slug: z.string().regex(/^[a-z0-9][a-z0-9._-]*$/), version: z.string().default("latest") })).min(1),
+  // the Mods guide's "Your extras" (/mods): every extra says how to use it
+  howTo: howToSchema,
+  keys: z.array(keySchema).max(12).optional(),
 });
 export const extrasSchema = z.object({ extras: z.array(extraSchema).min(1) });
 export type Extra = z.infer<typeof extraSchema>;
 export type ExtrasFile = z.infer<typeof extrasSchema>;
 
 export type ExtraFile = { slug: string; name: string; kind: ExtraKind; versionId: string; versionNumber: string; versionType: string; filename: string; url: string; sha512: string; size: number };
-export type LockedExtra = Omit<Extra, "projects"> & { files: ExtraFile[]; size: number; picture: string | null };
+export type LockedExtra = Omit<Extra, "projects" | "howTo" | "keys"> & { files: ExtraFile[]; size: number; picture: string | null };
 export type ExtrasLock = { generatedAt: string; minecraft: string; hash: string; extras: LockedExtra[] };
 
 export function lintExtras(raw: unknown): { extras: ExtrasFile | null; errors: string[] } {

@@ -218,6 +218,45 @@ export function invReply(message: string, name: string): InvReply | null {
   return null;
 }
 
+// Clearing items on the ground and the entity counts (status/ground.ts). The answers to `execute if entity …`,
+// `function …` and `kill …` as the server prints them to the console (en_us, 1.21.1).
+export type CountReply = { ok: true; count: number } | { ok: false; message: string };
+const COUNT_ERRORS: RegExp[] = [/^Unknown (?:entity )?(?:type )?tag '[^']+'/i, /^Unknown entity type tag/i, /^Unknown or incomplete command/, /^Incorrect argument for command/, /^Invalid .+/, /^Unknown objective '[^']+'/, /<--\[HERE\]$/];
+
+/** The server's answer to `execute if entity <selector>`, or null when the line is about something else. */
+export function countReply(message: string): CountReply | null {
+  const t = message.trim();
+  const m = /^Test passed, count: (\d+)$/.exec(t);
+  if (m) return { ok: true, count: Number(m[1]) };
+  if (t === "Test failed") return { ok: true, count: 0 };
+  if (COUNT_ERRORS.some((re) => re.test(t))) return { ok: false, message: t };
+  return null;
+}
+
+/** The answer to `kill <selector>`: how many went. "Killed Cobblestone" is one; "No entity was found" none. */
+export function killReply(message: string): number | null {
+  const t = message.trim();
+  const m = /^Killed (\d+) entities$/.exec(t);
+  if (m) return Number(m[1]);
+  if (t === "No entity was found") return 0;
+  if (/^Killed \S.*$/.test(t)) return 1;
+  return null;
+}
+
+/** The answer to `function deepslate:ground/…`: false when the datapack is not loaded (yet). */
+export function functionReply(message: string, name: string): boolean | null {
+  const t = message.trim();
+  if (t.startsWith(`Unknown function ${name}`) || (t.includes(name) && /^Unknown/.test(t))) return false;
+  if (t.includes(name) && /^(?:Executed|Running|Function)/.test(t)) return true;
+  return null;
+}
+
+/** What the portal's own counting leaves in the console; kept off the console page while it counts. */
+export function isCountChatter(text: string): boolean {
+  const t = reduce(text).message.trim();
+  return /^Test passed, count: \d+$/.test(t) || t === "Test failed" || /deepslate:ground\//.test(t);
+}
+
 /** An answer to `neoforge tps`. Kept off the console page only while the portal itself has just asked. */
 export function isTpsLine(text: string): boolean {
   return RE.tps.test(reduce(text).message.trim());

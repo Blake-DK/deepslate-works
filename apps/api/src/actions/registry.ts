@@ -37,6 +37,24 @@ export type Action<I> = {
 
 const define = <I,>(a: Action<I>) => a;
 
+// Clearing items on the ground (status/ground.ts) and the datapack deepslate-tools it needs.
+export const COUNTED = ["items", "xp", "hostile", "passive", "contraptions", "corpses", "all"] as const;
+export type Counted = (typeof COUNTED)[number];
+export const COUNT_SELECTORS: Record<Counted, string> = {
+  items: "@e[type=minecraft:item]",
+  xp: "@e[type=minecraft:experience_orb]",
+  hostile: "@e[type=#deepslate:hostile]",
+  passive: "@e[type=#deepslate:passive]",
+  contraptions: "@e[type=#deepslate:contraptions]",
+  corpses: "@e[type=corpse:corpse]",
+  all: "@e",
+};
+/** 2400 ticks = 2 minutes; the score is the item's Age, written by the datapack's ground/mark function. */
+export const OLD_ITEM_TICKS = 2400;
+export const OLD_ITEMS = `@e[type=minecraft:item,scores={deepslate_age=${OLD_ITEM_TICKS}..}]`;
+export const GROUND_MARK = "deepslate:ground/mark";
+export const GROUND_DONE = "deepslate:ground/done";
+
 // The room: a box 11 wide, 7 high, 11 long around LIMBO_POS, which is where people stand: the floor is the
 // block under their feet. Since 2026-09-29 it is in a dimension of its own (docs/14) and made of glass.
 const block = (c: Pos) => ({ x: Math.floor(c.x), y: Math.floor(c.y), z: Math.floor(c.z) });
@@ -427,6 +445,24 @@ export const actions = {
   // spark: one player's ping (docs/05 "Connection"). spark has no command for everyone at once.
   "server.pings": define({ name: "server.pings", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`spark ping --player ${name}`] }),
   // NeoForge's own tick report: TPS and milliseconds per tick, overall and per dimension (Admin → Server → Settings)
+  // Clearing items on the ground and the entity counts (planner, 2026-10-01; status/ground.ts). Only item entities
+  // older than 2 minutes are ever removed: the selector names minecraft:item and nothing else, so corpses, mobs,
+  // pets, item frames, armour stands, minecarts and Create/TaCZ entities cannot match.
+  "ground.count": define({ name: "ground.count", role: "system", input: z.object({ what: z.enum(COUNTED) }), build: (_ctx, { what }) => [`execute if entity ${COUNT_SELECTORS[what]}`] }),
+  "ground.warn": define({
+    name: "ground.warn",
+    role: "system",
+    input: z.object({ seconds: z.union([z.literal(60), z.literal(10)]) }),
+    build: (_ctx, { seconds }) => [`tellraw @a ${JSON.stringify(["", { text: seconds === 60 ? "Clearing items on the ground in 60 s. Pick up anything you want to keep." : "Clearing items on the ground in 10 s.", color: "yellow" }])}`],
+  }),
+  "ground.mark": define({ name: "ground.mark", role: "system", input: z.object({}), build: () => [`function ${GROUND_MARK}`] }),
+  "ground.kill": define({ name: "ground.kill", role: "system", input: z.object({}), build: () => [`kill ${OLD_ITEMS}`] }),
+  "ground.done": define({
+    name: "ground.done",
+    role: "system",
+    input: z.object({ removed: z.number().int().min(0).max(1_000_000) }),
+    build: (_ctx, { removed }) => [`function ${GROUND_DONE}`, `tellraw @a ${JSON.stringify(["", { text: `Cleared ${removed} item${removed === 1 ? "" : "s"} from the ground.`, color: "gray" }])}`],
+  }),
   "server.tps": define({ name: "server.tps", role: "system", input: z.object({}), build: () => ["neoforge tps"] }),
   // Open Parties and Claims (planner, 2026-10-01): the spawn area (blocks -64..63 around 0,0, 8×8 chunks) and the
   // entrance room's dimension are server claims, so no player can claim them. `anyway` lifts the size limit; claiming

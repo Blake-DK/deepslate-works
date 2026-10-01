@@ -1,4 +1,4 @@
-import { manifestSchema, type Manifest } from "./schema";
+import { isPlayerFacing, manifestSchema, type Manifest } from "./schema";
 
 export type LintIssue = { level: "error" | "warn"; message: string };
 
@@ -26,6 +26,10 @@ export function lintManifest(raw: unknown): { manifest: Manifest | null; issues:
       enabledByGroup.set(mod.exclusiveGroup, list);
     }
     if (!mod.hidden && mod.videos.length === 0) warn(`${mod.slug}: no videos (TODO)`);
+    // the Mods guide (/mods): every listed mod says where it goes, and every one a player uses says how
+    if (!mod.hidden && !mod.guide) err(`${mod.slug}: no "guide" (game, helper or behind): the Mods guide needs to know where it goes`);
+    if (isPlayerFacing(mod) && !mod.howTo) err(`${mod.slug}: switched on and player-facing, but has no "howTo" for the Mods guide`);
+    if (mod.guide !== "behind" && mod.side === "server") warn(`${mod.slug}: server-only but in the guide's "${mod.guide}" part`);
     if (mod.side === "server" && mod.exclusiveGroup) warn(`${mod.slug}: server-only mods should not be in an exclusive group`);
   }
   for (const mod of m.mods) {

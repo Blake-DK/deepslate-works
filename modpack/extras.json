@@ -13,6 +13,21 @@
       ],
       "modIds": [
         "iris"
+      ],
+      "howTo": "In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch it on and press **Apply**. Then pick **Shaders: Light or Full** in the same tab. In game, Options \u2192 Video Settings \u2192 Shader Packs changes the pack too.",
+      "keys": [
+        {
+          "key": "K",
+          "does": "Shaders on or off"
+        },
+        {
+          "key": "O",
+          "does": "Pick a shader pack"
+        },
+        {
+          "key": "R",
+          "does": "Reload shaders"
+        }
       ]
     },
     {
@@ -29,7 +44,8 @@
           "slug": "makeup-ultra-fast-shaders"
         }
       ],
-      "modIds": []
+      "modIds": [],
+      "howTo": "Needs Iris. In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch on Iris, choose **Shaders: Light** and press **Apply**. Try this first on a laptop or an older graphics card."
     },
     {
       "id": "shader-full",
@@ -45,7 +61,8 @@
           "slug": "complementary-reimagined"
         }
       ],
-      "modIds": []
+      "modIds": [],
+      "howTo": "Needs Iris. In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch on Iris, choose **Shaders: Full** and press **Apply**. If the game gets choppy, go back to Light."
     },
     {
       "id": "not-enough-animations",
@@ -59,6 +76,13 @@
       ],
       "modIds": [
         "notenoughanimations"
+      ],
+      "howTo": "In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch it on and press **Apply**. Nothing to set up: press **F5** to see yourself in third person.",
+      "keys": [
+        {
+          "key": "F5",
+          "does": "Third person (the game's own key)"
+        }
       ]
     },
     {
@@ -73,7 +97,8 @@
       ],
       "modIds": [
         "skinlayers3d"
-      ]
+      ],
+      "howTo": "In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch it on and press **Apply**. Nothing to set up: hats, jackets and sleeves on skins stand out in 3D."
     },
     {
       "id": "falling-leaves",
@@ -87,7 +112,8 @@
       ],
       "modIds": [
         "fallingleaves"
-      ]
+      ],
+      "howTo": "In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch it on and press **Apply**. Nothing to set up."
     },
     {
       "id": "particle-rain",
@@ -101,7 +127,8 @@
       ],
       "modIds": [
         "particlerain"
-      ]
+      ],
+      "howTo": "In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch it on and press **Apply**. Nothing to set up: you'll see it the next time it rains."
     },
     {
       "id": "sound-physics",
@@ -115,7 +142,8 @@
       ],
       "modIds": [
         "sound_physics_remastered"
-      ]
+      ],
+      "howTo": "In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch it on and press **Apply**. Nothing to set up: caves echo and walls muffle sound, voice chat included."
     },
     {
       "id": "fresh-animations",
@@ -136,7 +164,8 @@
       "modIds": [
         "entity_model_features",
         "entity_texture_features"
-      ]
+      ],
+      "howTo": "In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch it on and press **Apply**. Nothing to set up: it brings Entity Model Features and Entity Texture Features with it."
     }
   ]
 }

@@ -156,6 +156,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.restart.cancelled": "called off the planned restart",
   "server.backup": "started a backup",
   // Admin → Server → Settings: "Alex set view distance 10 → 12 (restart in 1 minute)"
+  "items.clear": (p) => (typeof p.removed === "number" ? `cleared ${s(p.removed)} item${p.removed === 1 ? "" : "s"} from the ground${p.auto ? ` (automatic: more than ${s(p.threshold)} lying around)` : ""}` : `tried to clear items on the ground${p.auto ? " (automatic)" : ""}`),
+  "items.clearPlan": (p) => (p.auto ? `turned automatic clearing of ground items on (above ${s(p.threshold)} items, checked every 10 minutes)` : "turned automatic clearing of ground items off"),
   "server.distance": (p) => `${p.refused ? "tried to set" : "set"} ${p.what === "simulation" ? "simulation" : "view"} distance ${p.from === null || p.from === undefined ? "" : `${s(p.from)} → `}${s(p.to)}${p.refused ? ": AMP does not let the portal change it" : p.apply === "now" ? " (restart in 1 minute)" : " (from the next restart)"}`,
   "server.wake": (p) => (p.failed ? "tried to wake the server (Play); it didn't wake up" : "woke the server (Play)"),
   "server.say": (p) => `said in game: ${s(p.text, "")}`,

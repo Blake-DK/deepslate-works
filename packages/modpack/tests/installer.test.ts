@@ -1,9 +1,9 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildInstaller, INSTALLER_BRIDGE, INSTALLER_SCRIPT, INSTALLER_ZIP_FILES, installerVersion, sha256File } from "../src/build";
+import { buildInstaller, CI_EXE_DIR, EXE_NAME, INSTALLER_BRIDGE, INSTALLER_SCRIPT, INSTALLER_ZIP_FILES, installerVersion, sha256File, takeCiExe } from "../src/build";
 import { openZip } from "../src/zip";
 import type { Manifest } from "../src/schema";
 import type { LockFile } from "../src/lock";
@@ -100,5 +100,42 @@ describe("sha256File", () => {
     const f = path.join(dir, "x.zip");
     await writeFile(f, "deepslate");
     expect(await sha256File(f)).toBe(createHash("sha256").update("deepslate").digest("hex"));
+  });
+});
+
+// Deepslate Works 3.0: the exe CI built (deploy.sh puts it in dist/ci) is published only when it checks out.
+describe("the 3.0 exe from CI", () => {
+  let dist = "";
+  afterEach(async () => { if (dist) await rm(dist, { recursive: true, force: true }); });
+  const put = async (body: Buffer, sum: string | null, version: string | null) => {
+    dist = await mkdtemp(path.join(tmpdir(), "installer-exe-"));
+    const ci = path.join(dist, CI_EXE_DIR);
+    await mkdir(ci, { recursive: true });
+    await writeFile(path.join(ci, EXE_NAME), body);
+    if (sum !== null) await writeFile(path.join(ci, `${EXE_NAME}.sha256`), `${sum}  ${EXE_NAME}\n`);
+    if (version !== null) await writeFile(path.join(ci, "VERSION"), `${version}\n`);
+  };
+  const exe = Buffer.concat([Buffer.from("MZ"), Buffer.alloc(500, 7)]);
+  const sum = createHash("sha256").update(exe).digest("hex");
+  it("is copied to dist/DeepslateWorks.exe and described with its version, checksum and size", async () => {
+    await put(exe, sum, "3.0.0");
+    expect(await takeCiExe(dist, () => {})).toEqual({ version: "3.0.0", sha256: sum, size: exe.length });
+    expect(await readFile(path.join(dist, EXE_NAME))).toEqual(exe);
+  });
+  it("is left out when the checksum is not CI's, the version is missing, or it is not a program", async () => {
+    await put(exe, "0".repeat(64), "3.0.0");
+    expect(await takeCiExe(dist, () => {})).toBeNull();
+    await rm(dist, { recursive: true, force: true });
+    await put(exe, sum, null);
+    expect(await takeCiExe(dist, () => {})).toBeNull();
+    await rm(dist, { recursive: true, force: true });
+    const text = Buffer.from("not a program");
+    await put(text, createHash("sha256").update(text).digest("hex"), "3.0.0");
+    expect(await takeCiExe(dist, () => {})).toBeNull();
+    await expect(stat(path.join(dist, EXE_NAME))).rejects.toThrow();
+  });
+  it("is null with nothing from CI (the PowerShell installer is handed out as before)", async () => {
+    dist = await mkdtemp(path.join(tmpdir(), "installer-exe-"));
+    expect(await takeCiExe(dist, () => {})).toBeNull();
   });
 });

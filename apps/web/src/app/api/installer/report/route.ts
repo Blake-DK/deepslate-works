@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   // Which installer ran against the one the site hands out now. From 1.5.0 on a copy that is behind updates itself on
   // the next Play; one below 1.5.0 cannot, and its window is told to download Deepslate Works again (its runs do not
   // count for Play first below Settings → Joining "Minimum installer version").
-  const current = (await getInstaller())?.version ?? null;
+  const current = (await getInstaller())?.current ?? null;
   const outdated = isOutdated(r.installerVersion, current);
   await audit({ userId: user.id, action: "installer.report", params: { reportId: row.id, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, packVersion: r.packVersion, installerVersion: r.installerVersion, currentInstaller: outdated ? current : undefined, durationSec: r.durationSec, modsMissing: missingLine(r.mods) ?? undefined }, result: r.outcome === "ok" || r.outcome === "skipped" ? "OK" : "FAILED" });
   const notice = r.mode !== "uninstall" && current && mustDownloadAgain(r.installerVersion, current) ? outdatedNotice(r.installerVersion, current, env.AUTH_URL.replace(/^https?:\/\//, "").replace(/\/$/, "")) : null;

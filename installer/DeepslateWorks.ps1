@@ -58,7 +58,7 @@ $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "2.1.2"   # 2.1.2: footer with versions (App, Pack, Server); 2.1.1: the chosen logo; 2.1.0: every mod checked before the game starts. Single source: installer/VERSION (a test keeps this line equal). History in docs/07
+$InstallerVersion = "2.1.3"   # 2.1.3: the bridge to Deepslate Works 3.0 (DeepslateWorks.exe), moves this PC over on its next Play; 2.1.2: footer with versions; 2.1.1: the chosen logo; 2.1.0: every mod checked before the game starts. The last PowerShell version: written here, not stamped from installer/VERSION (that is the exe's, 3.0.0). History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -497,6 +497,55 @@ function Update-Script($offer, [string]$scriptPath, [scriptblock]$fetch) {
     Move-Item -Force -LiteralPath $tmp -Destination $scriptPath
   } catch { Remove-Temp $tmp; return (& $fail ("it could not be written: {0}" -f $_.Exception.Message)) }
   return @{ status = "updated"; version = $new; problem = $null }
+}
+
+# ---- the bridge to 3.0 (planner, 2026-10-01) ---------------------------------------------------------------------
+# Deepslate Works 3.0 is one program, DeepslateWorks.exe. This script is the last PowerShell version: on its next Play,
+# when the site offers the exe (manifest installer.exe = {version, sha256, size}), it fetches it from this site's
+# /downloads (never from an address in the mod list), checks size, checksum and that it is a Windows program, and puts
+# it in %LOCALAPPDATA%\DeepslateWorks. The exe, started with -MigratedFrom, switches the Play link, the shortcuts and
+# the Settings -> Apps entry over to itself and then removes this script and its shim. Nothing to download by hand.
+# On any problem nothing is changed and this run carries on as 2.x (the next Play tries again).
+
+# @{ version; sha256; size } of the exe the site offers, or $null.
+function Get-OfferedExe($manifest) {
+  try {
+    if (-not $manifest -or -not $manifest.PSObject.Properties["installer"] -or -not $manifest.installer) { return $null }
+    $e = $manifest.installer.exe
+    if (-not $e -or -not (Test-Newer ([string]$e.version) $InstallerVersion)) { return $null }
+    if ([string]$e.sha256 -notmatch '^[0-9a-fA-F]{64}$') { return $null }
+    return @{ version = [string]$e.version; sha256 = ([string]$e.sha256).ToLower(); size = [long]$e.size }
+  } catch { return $null }
+}
+
+# @{ status = "moved" | "failed"; exe; problem }. $fetch: { param($url, $outFile) } downloads a file.
+function Install-Exe($offer, [string]$dir, [scriptblock]$fetch) {
+  $exe = Join-Path $dir "DeepslateWorks.exe"
+  $tmp = $exe + ".new"
+  $fail = { param($why) Remove-Temp $tmp; return @{ status = "failed"; exe = $exe; problem = $why } }
+  try {
+    [void][IO.Directory]::CreateDirectory($dir)
+    Remove-Temp $tmp
+    try { & $fetch "$PortalUrl/downloads/DeepslateWorks.exe" $tmp } catch { return (& $fail ("it could not be downloaded: {0}" -f $_.Exception.Message)) }
+    if (-not [IO.File]::Exists($tmp)) { return (& $fail "the download is empty") }
+    $len = (Get-Item -LiteralPath $tmp).Length
+    if ($offer.size -gt 0 -and $len -ne $offer.size) { return (& $fail ("the download is {0} bytes, the site said {1}" -f $len, $offer.size)) }
+    $got = (Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLower()
+    if ($got -ne $offer.sha256) { return (& $fail ("the checksum of the download ({0}...) is not the one the site gave ({1}...)" -f $got.Substring(0, 12), $offer.sha256.Substring(0, 12))) }
+    $head = New-Object byte[] 2
+    $fs = [IO.File]::OpenRead($tmp); try { [void]$fs.Read($head, 0, 2) } finally { $fs.Dispose() }
+    if ($head[0] -ne 0x4D -or $head[1] -ne 0x5A) { return (& $fail "the download is not a Windows program") }
+    if ([IO.File]::Exists($exe)) { [IO.File]::Delete($exe) }
+    [IO.File]::Move($tmp, $exe)
+  } catch { return (& $fail ("it could not be written: {0}" -f $_.Exception.Message)) }
+  return @{ status = "moved"; exe = $exe; problem = $null }
+}
+
+# The arguments the exe is started with: where it came from, and from which version (the window waits for this process).
+function Get-ExeHandOver([string]$from, [int]$waitFor) {
+  $a = @("-From", "update", "-MigratedFrom", $from)
+  if ($waitFor -gt 0) { $a += @("-WaitFor", [string]$waitFor) }
+  return $a
 }
 
 # ---- downloads land in a folder of their own first (docs/07 "Downloads") -------------------------------
@@ -1335,6 +1384,7 @@ $ExtrasStateName = "extras.json"
 $ExtrasManifestName = "extras-manifest.json"
 $ExitAsk = 20        # the engine needs an answer the window has to ask for (status line {t:"ask"})
 $ExitDeclined = 21   # a step needed to play was answered "Not now"
+$ExitMigrated = 30   # 2.1.3: DeepslateWorks.exe (3.0) is in place; the window starts it and closes
 
 function Get-ConsentSteps {
   $site = $PortalUrl
@@ -2667,6 +2717,21 @@ function On-RunEnded([int]$code) {
     return
   }
   if ($code -eq $ExitDeclined -and $A.LastDeclined) { Show-Stopped (Get-ConsentStep ([string]$A.LastDeclined.step)); return }
+  if ($code -eq $ExitMigrated) {
+    # 2.1.3, the bridge: the exe takes over (it waits for this window to close, then opens its own)
+    $exe = Join-Path (Get-HomeDir) "DeepslateWorks.exe"
+    Log ("window: Deepslate Works 3 is in place; starting " + $exe + " and closing")
+    try {
+      Grant-Foreground
+      Start-Process -FilePath $exe -ArgumentList (Get-ExeHandOver $InstallerVersion $PID)
+      $A.Window.Close()
+    } catch {
+      Log ("window: could not start the exe: " + $_.Exception.Message)
+      $A.PlayTitle.Text = "That didn't work"
+      $A.PlayStatus.Text = "Deepslate Works 3 is downloaded but would not start. Press Play to try again; the Log tab has the details."
+    }
+    return
+  }
   if ($code -eq $ExitAlreadyRunning) { $A.PlayTitle.Text = "Already running"; $A.PlayStatus.Text = "Deepslate Works is busy in another window. Let it finish, then press Play."; return }
   if ($code -ne 0) {
     $A.PlayTitle.Text = "That didn't work"
@@ -4129,6 +4194,30 @@ if ($SelfTest) {
   $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
   Check "no command's stderr is sent through 2>&1 anywhere in this script" ($left -eq 0)
 
+  Write-Host "Self test: the bridge to 3.0 (2.1.3)" -ForegroundColor White
+  $exeBytes = [byte[]](@(0x4D, 0x5A) + @(1..300 | ForEach-Object { 7 }))
+  $exeSum = ([BitConverter]::ToString((New-Object Security.Cryptography.SHA256Managed).ComputeHash($exeBytes)) -replace '-', '').ToLower()
+  $mf = { param($v, $sum, $size) [pscustomobject]@{ installer = [pscustomobject]@{ version = $InstallerVersion; exe = [pscustomobject]@{ version = $v; sha256 = $sum; size = $size } } } }
+  Check "the exe is offered when the site has a newer one with a checksum" ((Get-OfferedExe (& $mf "3.0.0" $exeSum 302)).version -eq "3.0.0")
+  Check "not when it is not newer, has no checksum, or there is no exe" (($null -eq (Get-OfferedExe (& $mf $InstallerVersion $exeSum 302))) -and ($null -eq (Get-OfferedExe (& $mf "3.0.0" "nope" 302))) -and ($null -eq (Get-OfferedExe ([pscustomobject]@{ installer = [pscustomobject]@{ version = "9.9.9" } }))) -and ($null -eq (Get-OfferedExe $null)))
+  $bd = Join-Path $dir "bridge home"
+  $offer = Get-OfferedExe (& $mf "3.0.0" $exeSum 302)
+  $asked = New-Object System.Collections.Generic.List[string]
+  $good = { param($url, $out) $asked.Add($url); [IO.File]::WriteAllBytes($out, $exeBytes) }.GetNewClosure()
+  $mv = Install-Exe $offer $bd $good
+  Check ("fetched from this site's /downloads only, checked, put in the home folder: " + $mv.status) (($mv.status -eq "moved") -and ($asked[0] -eq "$PortalUrl/downloads/DeepslateWorks.exe") -and [IO.File]::Exists((Join-Path $bd "DeepslateWorks.exe")) -and -not [IO.File]::Exists((Join-Path $bd "DeepslateWorks.exe.new")))
+  [IO.File]::Delete((Join-Path $bd "DeepslateWorks.exe"))
+  $mv = Install-Exe $offer $bd { param($url, $out) [IO.File]::WriteAllBytes($out, [byte[]](@(0x4D, 0x5A) + @(1..300 | ForEach-Object { 8 }))) }
+  Check ("another file with the same size: refused, nothing left: " + $mv.problem) (($mv.status -eq "failed") -and ($mv.problem -match 'checksum') -and -not [IO.File]::Exists((Join-Path $bd "DeepslateWorks.exe")) -and -not [IO.File]::Exists((Join-Path $bd "DeepslateWorks.exe.new")))
+  $txt = [Text.Encoding]::ASCII.GetBytes("<html>sign in</html>")
+  $txtSum = ([BitConverter]::ToString((New-Object Security.Cryptography.SHA256Managed).ComputeHash($txt)) -replace '-', '').ToLower()
+  $mv = Install-Exe @{ version = "3.0.0"; sha256 = $txtSum; size = $txt.Length } $bd { param($url, $out) [IO.File]::WriteAllBytes($out, $txt) }.GetNewClosure()
+  Check "a download that is not a Windows program: refused" (($mv.status -eq "failed") -and ($mv.problem -match 'not a Windows program'))
+  $mv = Install-Exe $offer $bd { param($url, $out) throw "The remote name could not be resolved" }
+  Check "offline: refused, the run carries on as 2.x" (($mv.status -eq "failed") -and ($mv.problem -match 'could not be downloaded'))
+  Check "the exe is told where it came from and which window to wait for" (((Get-ExeHandOver "2.1.3" 4242) -join " ") -eq "-From update -MigratedFrom 2.1.3 -WaitFor 4242")
+  Check "the window starts the exe on the bridge's exit code" (([IO.File]::ReadAllText($PSCommandPath)) -match '\$code -eq \$ExitMigrated')
+
   Write-Host "Self test: no console window, the window in front (2.0.3)" -ForegroundColor White
   $lt = Get-LauncherText
   Check "the shim is plain ASCII with Windows line ends" ((@($lt.ToCharArray() | Where-Object { [int]$_ -gt 126 -or ([int]$_ -lt 32 -and [int]$_ -ne 13 -and [int]$_ -ne 10) }).Count -eq 0) -and ($lt -match "`r`n") -and -not ($lt -match "[^`r]`n"))
@@ -4514,8 +4603,30 @@ try {
   if ($manifest.version) { $script:PackSeen = [string]$manifest.version }
   Emit ([ordered]@{ t = "versions"; app = $InstallerVersion; pack = $script:PackSeen })   # the window's footer: this script's version (new after a self-update)
 
+  # 2.1.3, the bridge: the site offers Deepslate Works 3.0 (DeepslateWorks.exe): fetched, checked, put in place; the
+  # window starts it. Only from the installed copy (a copy in a download folder has no home to move).
+  $exeOffer = Get-OfferedExe $manifest
+  if ($exeOffer -and -not $DryRun -and @($PretendRunning).Count -eq 0 -and (Get-HomeDir) -and -not $script:CustomRoot) {
+    Step ("Moving to Deepslate Works {0}" -f $exeOffer.version)
+    $mv = Install-Exe $exeOffer (Get-HomeDir) { param($url, $out) Invoke-WebRequest -Uri $url -Headers $headers -OutFile $out -UseBasicParsing -TimeoutSec 300 }
+    if ($mv.status -eq "moved") {
+      Tick ("Deepslate Works {0} is in place; it takes over from here" -f $exeOffer.version)
+      $script:Reported = $true   # the exe's first run reports, saying it came from this version
+      Exit-Lock
+      Emit ([ordered]@{ t = "migrate"; exe = $mv.exe; version = $exeOffer.version })
+      if (-not $Engine) {
+        # -Console (a PC where the window does not open): start the exe straight from here
+        Start-Process -FilePath $mv.exe -ArgumentList (Get-ExeHandOver $InstallerVersion 0)
+      }
+      exit $ExitMigrated
+    }
+    $script:UpdateProblem = $mv.problem
+    Log ("MOVE TO 3.0 NOT DONE: " + $mv.problem)
+    Note ("Deepslate Works {0} could not be put in place ({1}). Carrying on with {2}." -f $exeOffer.version, $mv.problem, $InstallerVersion)
+  }
+
   # A newer script on the site: fetched, checked, put in place and started with what this one was started with.
-  if (-not $script:UpdatedFrom -and -not $DryRun -and $script:MePath -and @($PretendRunning).Count -eq 0) {
+  if (-not $exeOffer -and -not $script:UpdatedFrom -and -not $DryRun -and $script:MePath -and @($PretendRunning).Count -eq 0) {
     $offer = Get-OfferedScript $manifest
     if ($offer -and (Test-Newer $offer.version $InstallerVersion)) {
       Step ("Updating Deepslate Works {0} {1} {2}" -f $InstallerVersion, [char]0x2192, $offer.version)

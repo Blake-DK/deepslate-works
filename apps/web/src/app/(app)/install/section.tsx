@@ -1,7 +1,10 @@
 import { headers } from "next/headers";
 import { requireOnboardedUser } from "@/server/auth/session";
 import { getManifest } from "@/server/modpack/manifest";
-import { distFile, getLock } from "@/server/modpack/lock";
+import Link from "next/link";
+import { getInstaller, getLock } from "@/server/modpack/lock";
+
+const EXE = "DeepslateWorks.exe";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonClasses } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,12 +33,13 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       </div>
     );
   }
-  const [m, lock, installer, play] = await Promise.all([getManifest(), getLock(), distFile("installer.zip"), getPlayInfo(user)]);
+  const [m, lock, installer, play] = await Promise.all([getManifest(), getLock(), getInstaller(), getPlayInfo(user)]);
   const version = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const settings = await getSettings();
   const showServer = canSeeServer(user, settings);
   const gate = await canDownload(user);
   const ready = Boolean(lock && installer) && gate.ok;
+  const exe = installer?.download === "DeepslateWorks.exe";
   const rd = user.pcTier === "HIGH" ? 12 : user.pcTier === "MID" ? 10 : 8;
 
   if (!showServer) {
@@ -77,27 +81,38 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
           <CardDescription>Once installed, use the Play button here to launch. It checks for updates every time.</CardDescription>
         </CardHeader>
         <CardContent>
-          <PlayButton name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null, !play.tooOld)} stepsHere  server={play.server} wake={play.wake} installed={play.installed} tooOld={play.tooOld} />
+          <PlayButton download={play.download} name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null, !play.tooOld)} stepsHere  server={play.server} wake={play.wake} installed={play.installed} tooOld={play.tooOld} />
         </CardContent>
       </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>First time on this PC</CardTitle>
-            <CardDescription>Download, double-click Setup.bat once. After that, just press Play here or open Deepslate Works from your desktop. It keeps itself up to date.</CardDescription>
+            <CardDescription>{exe ? <>Download {EXE} and run it once. After that, just press Play here or open Deepslate Works from your desktop. It keeps itself up to date.</> : <>Download, double-click Setup.bat once. After that, just press Play here or open Deepslate Works from your desktop. It keeps itself up to date.</>}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ol className="space-y-3">
               <li className="rounded-lg border p-3"><span className="font-medium">1. Install the normal Minecraft Launcher</span> from <a className="underline" href="https://www.minecraft.net/download" target="_blank" rel="noreferrer">minecraft.net</a> if you don&apos;t have it, and open it once (log in, let it update). Already have it? Skip this. <strong>Then close it completely</strong>: if its icon is still next to the clock, right-click the icon and choose Quit. While the launcher is open it throws the new profile away; Deepslate Works checks and tells you.</li>
               <li className="rounded-lg border p-3">
-                <span className="font-medium">2. Download, unzip, double-click <span className="font-mono">Setup.bat</span> once</span>. Your browser opens to sign you in with Discord and asks &quot;is this you?&quot;: say yes. A window installs everything (about five minutes, most of it downloading), puts &quot;{m.name}&quot; on your desktop and in the Start Menu, and opens the Minecraft Launcher on the &quot;{m.name}&quot; profile: press Play there. You can delete the zip afterwards.
+                {exe
+                  ? <><span className="font-medium">2. Download <span className="font-mono">{EXE}</span> and run it</span>. It puts itself in your AppData, adds &quot;{m.name}&quot; to your desktop and Start Menu, and opens its window: answer its questions (or press Allow all), then Play. Your browser opens to sign you in with Discord and asks &quot;is this you?&quot;: say yes. Everything is installed (about five minutes, most of it downloading) and the Minecraft Launcher opens on the &quot;{m.name}&quot; profile: press Play there. You can delete the download afterwards.</>
+                  : <><span className="font-medium">2. Download, unzip, double-click <span className="font-mono">Setup.bat</span> once</span>. Your browser opens to sign you in with Discord and asks &quot;is this you?&quot;: say yes. A window installs everything (about five minutes, most of it downloading), puts &quot;{m.name}&quot; on your desktop and in the Start Menu, and opens the Minecraft Launcher on the &quot;{m.name}&quot; profile: press Play there. You can delete the zip afterwards.</>}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <a href="/downloads/installer.zip" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")} aria-disabled={!ready}>Download{installer ? ` (${(installer.size / 1024).toFixed(0)} KB)` : ""}</a>
-                  <span className="text-xs text-muted-foreground">Windows may warn about an unknown app: choose &quot;More info&quot; then &quot;Run anyway&quot;. It&apos;s a plain script; you can read it.</span>
+                  <a href={`/downloads/${installer?.download ?? "installer.zip"}`} className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")} aria-disabled={!ready}>Download{installer ? ` (${(installer.downloadSize / 1024 / (exe ? 1024 : 1)).toFixed(exe ? 1 : 0)} ${exe ? "MB" : "KB"})` : ""}</a>
+                  {exe
+                    ? <span className="text-xs text-muted-foreground">The first time, Windows says &quot;Windows protected your PC&quot;: click <strong>More info</strong>, then <strong>Run anyway</strong>. <Link className="underline" href="/help#smartscreen">Why, with a picture</Link>.</span>
+                    : <span className="text-xs text-muted-foreground">Windows may warn about an unknown app: choose &quot;More info&quot; then &quot;Run anyway&quot;. It&apos;s a plain script; you can read it.</span>}
                 </div>
               </li>
             </ol>
-            <p className="text-sm text-muted-foreground">After that, just press Play here or open {m.name} from your desktop. It keeps itself and the mods up to date, then opens the launcher. The first time you press Play here your browser asks whether this site may open Windows PowerShell: say yes, and tick &quot;always allow&quot; if you like. The server is already in your server list.</p>
+            {exe && (
+              <figure id="smartscreen" className="scroll-mt-20 space-y-2 rounded-lg border p-3">
+                <figcaption className="text-sm"><strong>&quot;Windows protected your PC&quot;?</strong> Click <strong>More info</strong>, then <strong>Run anyway</strong>. Windows says this about any new program that isn&apos;t signed yet; it only appears the first time.</figcaption>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/help/smartscreen.png" alt="The blue &quot;Windows protected your PC&quot; box: More info, then the Run anyway button" className="max-w-full rounded border" width={532} loading="lazy" />
+              </figure>
+            )}
+            <p className="text-sm text-muted-foreground">After that, just press Play here or open {m.name} from your desktop. It keeps itself and the mods up to date, then opens the launcher. The first time you press Play here your browser asks whether this site may open {exe ? "Deepslate Works" : "Windows PowerShell"}: say yes, and tick &quot;always allow&quot; if you like. The server is already in your server list.</p>
           </CardContent>
         </Card>
 

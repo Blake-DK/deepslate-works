@@ -64,7 +64,7 @@ describe("the installer updates itself", () => {
 
   it("names the installer in the mod list only while installer.json describes the zip that is there", async () => {
     const { installerInfo } = await import("@/lib/installer-info");
-    expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: sha, size: 16022 })).toEqual({ version: "1.4.0", sha256: sha, size: 16022, script: null });
+    expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: sha, size: 16022 })).toEqual({ version: "1.4.0", sha256: sha, size: 16022, script: null, exe: null, current: "1.4.0", download: "installer.zip", downloadSize: 16022 });
     expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: "b".repeat(64), size: 16022 })).toBeNull(); // another zip
     expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: sha, size: 1 })).toBeNull();
     expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, null)).toBeNull(); // no zip
@@ -79,11 +79,27 @@ describe("the installer updates itself", () => {
     const ps = "c".repeat(64);
     const side = { version: "1.5.0", sha256: sha, size: 30000, script: { sha256: ps, size: 70000 } };
     const zip = { sha256: sha, size: 30000 };
-    expect(installerInfo(side, zip, { sha256: ps, size: 70000 })).toEqual({ version: "1.5.0", sha256: sha, size: 30000, script: { sha256: ps, size: 70000 } });
+    expect(installerInfo(side, zip, { sha256: ps, size: 70000 })).toEqual({ version: "1.5.0", sha256: sha, size: 30000, script: { sha256: ps, size: 70000 }, exe: null, current: "1.5.0", download: "installer.zip", downloadSize: 30000 });
     expect(installerInfo(side, zip, { sha256: "d".repeat(64), size: 70000 })?.script).toBeNull(); // another script: no PC is told to fetch it
     expect(installerInfo(side, zip, null)?.script).toBeNull(); // not on disk
     expect(installerInfo({ ...side, script: { sha256: "nope", size: 70000 } }, zip, { sha256: "nope", size: 70000 })?.script).toBeNull();
     expect(installerInfo(side, { sha256: "e".repeat(64), size: 30000 }, { sha256: ps, size: 70000 })).toBeNull(); // the zip decides whether there is an installer at all
+  });
+
+  it("names DeepslateWorks.exe (3.0) only while installer.json describes the exe that is there; it is then current and the download", async () => {
+    const { installerInfo } = await import("@/lib/installer-info");
+    const ex = "f".repeat(64);
+    const side = { version: "2.1.3", sha256: sha, size: 30000, exe: { version: "3.0.0", sha256: ex, size: 400000 } };
+    const zip = { sha256: sha, size: 30000 };
+    const i = installerInfo(side, zip, null, { sha256: ex, size: 400000 });
+    expect(i?.exe).toEqual({ version: "3.0.0", sha256: ex, size: 400000 });
+    expect(i?.version).toBe("2.1.3"); // what 2.x copies update to: the bridge
+    expect(i?.current).toBe("3.0.0");
+    expect(i?.download).toBe("DeepslateWorks.exe");
+    expect(i?.downloadSize).toBe(400000);
+    expect(installerInfo(side, zip, null, { sha256: "0".repeat(64), size: 400000 })?.exe).toBeNull(); // another exe
+    expect(installerInfo(side, zip, null, null)?.download).toBe("installer.zip"); // not on disk
+    expect(installerInfo({ ...side, exe: { ...side.exe, version: "3.0.0 x" } }, zip, null, { sha256: ex, size: 400000 })?.exe).toBeNull();
   });
 
   it("is in the report", () => {

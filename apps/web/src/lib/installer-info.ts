@@ -1,7 +1,22 @@
 // docs/07 "Updates". What the mod list says about the installer the site hands out. Pure, so it is tested.
 
-/** `sha256`/`size`: the zip. `script`: DeepslateWorks.ps1 on its own, which an installed copy fetches (1.5.0 on). */
-export type InstallerInfo = { version: string; sha256: string; size: number; script: { sha256: string; size: number } | null };
+/**
+ * `version`, `sha256`/`size`: the PowerShell installer and its zip (what 1.4.x-2.x copies check and update to; since
+ * 3.0 that script is the bridge that moves a PC to the exe). `script`: DeepslateWorks.ps1 on its own, which an
+ * installed 1.5.0-2.x copy fetches. `exe`: Deepslate Works 3.0, DeepslateWorks.exe (built by CI on windows), which a
+ * 3.x copy and the bridge fetch, and the one the site's download button gives. `current`: the newest of them, what
+ * "out of date" is measured against. `download`: the file the download button gives.
+ */
+export type InstallerInfo = {
+  version: string;
+  sha256: string;
+  size: number;
+  script: { sha256: string; size: number } | null;
+  exe: { version: string; sha256: string; size: number } | null;
+  current: string;
+  download: "DeepslateWorks.exe" | "installer.zip";
+  downloadSize: number;
+};
 type Actual = { sha256: string; size: number };
 
 const VERSION = /^\d{1,4}(\.\d{1,4}){1,3}$/; // the same shape the script accepts (Test-Newer)
@@ -19,10 +34,22 @@ const same = (claimed: unknown, actual: Actual | null): boolean => {
  * installer at all; a script that does not match and it names no script, so that no PC is told to fetch something that
  * will not check out.
  */
-export function installerInfo(sidecar: unknown, zip: Actual | null, script: Actual | null = null): InstallerInfo | null {
+export function installerInfo(sidecar: unknown, zip: Actual | null, script: Actual | null = null, exeFile: Actual | null = null): InstallerInfo | null {
   if (!zip || !sidecar || typeof sidecar !== "object") return null;
   const s = sidecar as Record<string, unknown>;
   if (typeof s.version !== "string" || !VERSION.test(s.version)) return null;
   if (!same(s, zip)) return null;
-  return { version: s.version, sha256: zip.sha256, size: zip.size, script: same(s.script, script) ? { sha256: script!.sha256, size: script!.size } : null };
+  // 3.0: the exe counts only when it is on disk as described and has a version of its own
+  const e = s.exe && typeof s.exe === "object" ? (s.exe as Record<string, unknown>) : null;
+  const exe = e && typeof e.version === "string" && VERSION.test(e.version) && same(e, exeFile) ? { version: e.version, sha256: exeFile!.sha256, size: exeFile!.size } : null;
+  return {
+    version: s.version,
+    sha256: zip.sha256,
+    size: zip.size,
+    script: same(s.script, script) ? { sha256: script!.sha256, size: script!.size } : null,
+    exe,
+    current: exe ? exe.version : s.version,
+    download: exe ? "DeepslateWorks.exe" : "installer.zip",
+    downloadSize: exe ? exe.size : zip.size,
+  };
 }

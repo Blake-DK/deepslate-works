@@ -5,7 +5,7 @@ import { statusText } from "@/lib/server-status";
 import type { ServerState } from "@/shared/server-state";
 import { db } from "@/server/db";
 import { getManifest } from "@/server/modpack/manifest";
-import { distFile, getLock } from "@/server/modpack/lock";
+import { getInstaller, getLock } from "@/server/modpack/lock";
 import { canDownload } from "@/server/modpack/gate";
 import { installedNow, tooOldToUpdate, updateAvailable, type LastLaunch } from "@/lib/play";
 import { getSection } from "@/server/site-settings";
@@ -24,6 +24,8 @@ export type PlayInfo = {
   update: boolean;
   /** docs/14 "Play first": may they join right now, and until when. Null when Play is not asked of them. */
   join: Gate | null;
+  /** The file the download buttons give: DeepslateWorks.exe (3.0) when it is published, else installer.zip. */
+  download: string;
   /** False when their latest report is an uninstall: the Play button offers the download again. */
   installed: boolean;
   /** Their latest report is from an installer older than 1.4.0, which cannot update itself: the button is the download. */
@@ -45,7 +47,7 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
   const [m, lock, installer, gate, report, joining, run, pack, status] = await Promise.all([
     getManifest(),
     getLock(),
-    distFile("installer.zip"),
+    getInstaller(),
     canDownload(user),
     db.installReport.findFirst({ where: { userId: user.id, outcome: "ok", mode: { not: "uninstall" } }, orderBy: { at: "desc" }, select: { packVersion: true, at: true } }),
     getSection("joining"),
@@ -60,7 +62,7 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
   const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date(), joining.minInstaller, await modsMissingFor(user.id, run)) : null;
   const current = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const last = report && installed ? { version: report.packVersion, at: report.at } : null;
-  return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, last, update: updateAvailable(current, last?.version), join, installed, tooOld, server: { state: said.state, line: said.line, hint: said.hint }, wake: status.wake };
+  return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, download: installer?.download ?? "installer.zip", last, update: updateAvailable(current, last?.version), join, installed, tooOld, server: { state: said.state, line: said.line, hint: said.hint }, wake: status.wake };
 }
 
 /**

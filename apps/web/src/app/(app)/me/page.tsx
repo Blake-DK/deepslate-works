@@ -39,7 +39,7 @@ export default async function MePage() {
     db.installReport.findFirst({ where: { userId: user.id, playLinkMissing: { not: null } }, orderBy: { at: "desc" }, select: { playLinkMissing: true } }),
   ]);
   // Their last run came from an older installer than the site hands out: until a report from a new one arrives.
-  const oldInstaller = install && install.mode !== "uninstall" && installer && mustDownloadAgain(install.installerVersion, installer.version) ? installer.version : null;
+  const oldInstaller = install && install.mode !== "uninstall" && installer && mustDownloadAgain(install.installerVersion, installer.current) ? installer.current : null;
   const showServer = canSeeServer(user, settings);
   const play = showServer ? await getPlayInfo(user) : null;
   const join = play ? joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null, !play.tooOld) : null;

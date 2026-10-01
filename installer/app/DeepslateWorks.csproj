@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Deepslate Works 3.0: the Windows app (docs/07). .NET Framework 4.8 (in Windows 10 and 11), WPF without XAML
+       compilation (the windows are XAML text loaded at run time), no NuGet packages at run time: one exe.
+       Built and tested by .github/workflows/installer.yml on a windows runner; the version comes from ../VERSION. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>DeepslateWorks</AssemblyName>
+    <RootNamespace>DeepslateWorks</RootNamespace>
+    <ApplicationIcon>..\DeepslateWorks.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Product>Deepslate Works</Product>
+    <Company>Deepslate Works</Company>
+    <Description>Deepslate Works: installs, updates and starts the Deepslate Works modpack</Description>
+    <Copyright>Deepslate Works</Copyright>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\VERSION').Trim())</Version>
+    <PortalUrl Condition="'$(PortalUrl)' == ''">https://deepslate.dsw.test</PortalUrl>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <DebugType>embedded</DebugType>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>CS1591</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Management" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\DeepslateWorks.ico" LogicalName="DeepslateWorks.ico" />
+    <AssemblyAttribute Include="DeepslateWorks.BuildInfoAttribute">
+      <_Parameter1>$(PortalUrl)</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

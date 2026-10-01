@@ -109,7 +109,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
               <figure id="smartscreen" className="scroll-mt-20 space-y-2 rounded-lg border p-3">
                 <figcaption className="text-sm"><strong>&quot;Windows protected your PC&quot;?</strong> Click <strong>More info</strong>, then <strong>Run anyway</strong>. Windows says this about any new program that isn&apos;t signed yet; it only appears the first time.</figcaption>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/help/smartscreen.png" alt="The blue &quot;Windows protected your PC&quot; box: More info, then the Run anyway button" className="max-w-full rounded border" width={540} loading="lazy" />
+                <img src="/help/smartscreen.png" alt="The blue &quot;Windows protected your PC&quot; box: More info, then the Run anyway button" className="max-w-full rounded border" width={532} loading="lazy" />
               </figure>
             )}
             <p className="text-sm text-muted-foreground">After that, just press Play here or open {m.name} from your desktop. It keeps itself and the mods up to date, then opens the launcher. The first time you press Play here your browser asks whether this site may open {exe ? "Deepslate Works" : "Windows PowerShell"}: say yes, and tick &quot;always allow&quot; if you like. The server is already in your server list.</p>

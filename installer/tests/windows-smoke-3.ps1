@@ -120,7 +120,7 @@ $procs = Get-Ours
 Check ("one Deepslate Works process, the copy in AppData (" + (($procs | ForEach-Object { $_.Path }) -join ", ") + ")") ($procs.Count -eq 1 -and $procs[0].Path -eq $homeExe)
 $apps = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\DeepslateWorks" -ErrorAction SilentlyContinue
 Check ("Settings -> Apps lists it: " + $apps.UninstallString) ($apps -and $apps.UninstallString -match [regex]::Escape($homeExe) -and $apps.DisplayVersion -eq $version)
-$main = Main-Window
+$main = @(Main-Window)
 Check ("the window ({0} found, want 'Deepslate Works {1}'): '{2}'" -f $main.Count, $version, (($main | ForEach-Object { $_.title + "' pid " + $_.pid }) -join "; '")) ($main.Count -ge 1 -and $main[0].title -eq "Deepslate Works $version")
 if ($main.Count -ge 1) { Soft "the window is in front" ([Smoke.W]::GetForegroundWindow() -eq $main[0].handle) }
 Check "no console window" ((Consoles).Count -eq 0)
@@ -132,7 +132,7 @@ Start-Sleep -Seconds 1
 Start-Process -FilePath $homeExe -ArgumentList @("-From", "desktop")
 Start-Sleep -Seconds 5
 Check "still one window" ((Get-Ours).Count -eq 1)
-$main = Main-Window
+$main = @(Main-Window)
 if ($main.Count -ge 1) { Soft "brought back to the front" ([Smoke.W]::GetForegroundWindow() -eq $main[0].handle) }
 Save-Screen "2-started-again.png"
 $text = $(if (Test-Path $log) { Get-Content -Raw $log } else { "" })

@@ -480,6 +480,15 @@ namespace DeepslateWorks
                 if (f.Success) { s.Found.Add(f.Groups[1].Value); continue; }
                 var rl = Regex.Match(l, "Reloading ResourceManager: (.*)$", RegexOptions.IgnoreCase);
                 if (rl.Success) { s.Packs = Regex.Split(rl.Groups[1].Value, @",\s*").ToList(); s.Loaded = true; continue; }
+                var cn = Regex.Match(l, @"Connecting to ([^,\s]+), ?(\d+)");
+                if (cn.Success) { s.Connects.Add(cn.Groups[1].Value + ":" + cn.Groups[2].Value); continue; }
+                if (Regex.IsMatch(l, @"missing on the client side|neoforge\.network\.negotiation\.failure"))
+                {
+                    s.Refused = true;
+                    var rm = Regex.Match(l, "Channel of mod '([^']{1,80})'"); if (rm.Success) s.RefusedMod = rm.Groups[1].Value;
+                    var rc = Regex.Match(l, @"\(([a-z0-9_.-]{1,64}):[a-z0-9_./-]{1,64}\)"); if (rc.Success) s.RefusedChannel = rc.Groups[1].Value;
+                    continue;
+                }
                 if (failRe.IsMatch(l)) { s.Failed = true; s.Errors.Add(l.Trim()); }
             }
             return s;

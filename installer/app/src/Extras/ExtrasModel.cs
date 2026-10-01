@@ -321,6 +321,10 @@ namespace DeepslateWorks
         public bool Failed;
         public readonly List<string> Errors = new List<string>();
         public bool Loaded;
+        // 2.1.0: servers it went for ("Connecting to host, port"); refused = the server refused it at the handshake
+        public readonly List<string> Connects = new List<string>();
+        public bool Refused;
+        public string RefusedMod, RefusedChannel;
     }
 
     /// <summary>Per extra in game: active | waiting | problem (with Reason) | off | off-loaded.</summary>

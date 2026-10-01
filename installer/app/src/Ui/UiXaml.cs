@@ -18,10 +18,25 @@ namespace DeepslateWorks
       <Setter Property=""Padding"" Value=""14,7""/><Setter Property=""Margin"" Value=""0,0,8,0""/><Setter Property=""Cursor"" Value=""Hand""/>
     </Style>
   </Window.Resources>
+  <DockPanel>
+  <StackPanel x:Name=""Footer"" DockPanel.Dock=""Bottom"" Orientation=""Horizontal"" Margin=""14,0,14,8"">
+    <TextBlock x:Name=""FooterApp"" Foreground=""#666""/>
+    <TextBlock Text=""  ·  "" Foreground=""#999""/>
+    <TextBlock x:Name=""FooterPack"" Foreground=""#666""/>
+    <TextBlock Text=""  ·  "" Foreground=""#999""/>
+    <TextBlock x:Name=""FooterServer"" Foreground=""#666""/>
+  </StackPanel>
   <TabControl x:Name=""Tabs"" Margin=""8"" Background=""White"">
     <TabItem Header=""  Play  "" x:Name=""PlayTab"">
       <DockPanel Margin=""14"">
         <StackPanel DockPanel.Dock=""Top"" Margin=""0,0,0,10"">
+          <StackPanel x:Name=""BrandBar"" Orientation=""Horizontal"" Margin=""0,0,0,8"" Visibility=""Collapsed"">
+            <Image x:Name=""BrandLogo"" Width=""40"" Height=""40"" Margin=""0,0,10,0"" VerticalAlignment=""Center""/>
+            <StackPanel VerticalAlignment=""Center"">
+              <TextBlock x:Name=""BrandName"" FontWeight=""SemiBold"" Text=""Deepslate Works""/>
+              <TextBlock x:Name=""BrandTagline"" Foreground=""#C0661F""/>
+            </StackPanel>
+          </StackPanel>
           <TextBlock x:Name=""PlayTitle"" FontSize=""20"" FontWeight=""SemiBold"" Text=""Deepslate Works""/>
           <TextBlock x:Name=""PlayStatus"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""#444""/>
           <TextBlock x:Name=""PlayChanged"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""#2E7D5B"" FontWeight=""SemiBold"" Visibility=""Collapsed""/>
@@ -71,6 +86,7 @@ namespace DeepslateWorks
       <ListBox x:Name=""LogList"" Margin=""10"" FontFamily=""Consolas"" FontSize=""12"" BorderThickness=""0""/>
     </TabItem>
   </TabControl>
+  </DockPanel>
 </Window>";
 
         /// <summary>One question with up to three answers (Yes / Later / Allow all). The text says what will happen; Allow all
@@ -98,6 +114,7 @@ namespace DeepslateWorks
         {
             "Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody",
             "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList",
+            "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "Footer", "FooterApp", "FooterPack", "FooterServer",
         };
 
         /// <summary>Every name the question window looks up in AskXaml.</summary>

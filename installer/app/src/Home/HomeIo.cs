@@ -150,7 +150,8 @@ namespace DeepslateWorks
                     if (k == null) return false;
                     var want = UninstallEntry(exe, gameDir, 0);
                     return Convert.ToString(k.GetValue("UninstallString", "")) == J.Str(want, "UninstallString")
-                        && Convert.ToString(k.GetValue("DisplayVersion", "")) == Env.Version;
+                        && Convert.ToString(k.GetValue("DisplayVersion", "")) == Env.Version
+                        && Convert.ToString(k.GetValue("DisplayIcon", "")) == J.Str(want, "DisplayIcon");   // 2.1.1: a new logo lists it again
                 }
             }
             catch { return false; }

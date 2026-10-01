@@ -98,6 +98,7 @@ namespace DeepslateWorks
             run.Token = token;
             var packVersion = J.Str(manifest, "version");
             if (!string.IsNullOrEmpty(packVersion)) run.PackSeen = packVersion;
+            run.Emit(J.O("t", "versions", "app", Env.Version, "pack", run.PackSeen ?? ""));   // the window's footer: this exe's version (new after a self-update)
 
             // A newer app on the site: fetched, checked, put in place and started with what this one was started with.
             if (string.IsNullOrEmpty(run.UpdatedFrom) && !run.DryRun && (run.PretendRunning == null || run.PretendRunning.Length == 0))
@@ -203,6 +204,7 @@ namespace DeepslateWorks
             run.Step("Setting up the mods");
             foreach (var d in new[] { "mods", "config", "resourcepacks" }) Directory.CreateDirectory(Path.Combine(gameDir, d));
             var modsDir = Path.Combine(gameDir, "mods");
+            run.PackCheckDir = modsDir; run.PackCheckFiles = files.Cast<object>().ToList();   // 2.1.0: for the report of a run that stops part-way
             var staging = Path.Combine(gameDir, ".downloading");
             var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             // the extras switched on in the Extras tab are the app's, not the pack's: left where they are
@@ -294,6 +296,20 @@ namespace DeepslateWorks
                 catch (Exception e) when (!IsControl(e)) { run.Note("The visual extras could not be fetched this time: " + e.Message); }
             }
 
+            // ---- the logo: the .ico for the window, shortcuts and Settings -> Apps (planner, 2026-10-01; 2.1.1) ---------
+            var brandChanged = false;
+            var branding = J.Get(manifest, "branding");
+            if (!run.DryRun && Env.OnWindows && !Env.CustomRoot && branding != null)
+            {
+                var b = Brand.Save(branding, Env.AppHome, url =>
+                {
+                    var tmp = Path.Combine(Env.Temp, "deepslate-logo.ico");
+                    try { Http.Download(url, tmp, 30); return File.ReadAllBytes(tmp); } finally { Log.RemoveTemp(tmp); }
+                });
+                if (b == "saved") { brandChanged = true; run.Tick("New logo in place"); }
+                else if (b.StartsWith("failed")) run.Note("The logo could not be updated this time: " + b.Substring(8));
+            }
+
             // ---- the server list (servers.dat: uncompressed NBT, one entry), the first time --------------------------
             run.RequestConsent("profile");
             var serversDat = Path.Combine(gameDir, "servers.dat");
@@ -325,7 +341,7 @@ namespace DeepslateWorks
             var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", Inv);
             var profileId = J.Str(profile, "id");
             var entry = J.O("name", Env.PackName, "type", "custom", "lastVersionId", versionId, "gameDir", gameDir, "javaArgs", javaArgs,
-                            "javaDir", java, "icon", J.Get(profile, "icon"), "created", now, "lastUsed", now);
+                            "javaDir", java, "icon", Brand.ProfileIcon(branding, J.Get(profile, "icon")), "created", now, "lastUsed", now);   // 2.1.1: the logo
             bool profileLeft = false;
             if (!run.DryRun && FindLauncher(run).Count > 0 && TestLauncherProfile(Env.Profiles, profileId, versionId) == "")
             {
@@ -368,7 +384,7 @@ namespace DeepslateWorks
                 try
                 {
                     var links = run.RequestConsent("shortcuts");
-                    var rh = Home.RepairHere(run, links);
+                    var rh = Home.RepairHere(run, links, brandChanged);   // 2.1.1: a new logo makes the shortcuts again
                     if (rh != null)
                     {
                         if (rh.Fixed) run.Tick("Play button set up on this run");
@@ -378,8 +394,24 @@ namespace DeepslateWorks
                 catch (Exception e) when (!IsControl(e)) { Log.Line("could not check the Play link and the shortcuts: " + e.Message); }
             }
 
+            // ---- 2.1.0: every mod checked once more before anything can start the game ------------------------------
+            // (kanefinch, 2026-10-01: a game without TaCZ was refused at the server's handshake.) What is missing or
+            // wrong is fetched again and checked again; still not right, and this run stops here: no launcher, no "installed".
+            if (!run.DryRun)
+            {
+                run.Step("Checking every mod before the game starts");
+                run.ModsCheck = RepairPackMods(modsDir, run.PackCheckFiles, (f, dest) =>
+                {
+                    var r = SaveModFile(J.Str(f, "url"), dest, J.Str(f, "sha512") ?? "", staging, (url, outFile) => Http.Download(url, outFile));
+                    if (r != "") throw new IOException(r);
+                });
+                if (!run.ModsCheck.Ok) throw run.Fail(MissingText(run.ModsCheck));
+                run.Tick(string.Format("All {0} mods checked", run.ModsCheck.Checked));
+                try { SavePackList(PackListPath, manifest); } catch (Exception e) when (!IsControl(e)) { Log.Line("could not keep the mod list for the game check: " + e.Message); }
+            }
             if (!run.DryRun)
                 Json.WriteFile(Env.InstalledFile, J.O("version", run.PackSeen, "installedAt", now, "hash", J.Get(manifest, "hash"), "installer", Env.Version, "renderDistance", ourRender));
+            if (!run.DryRun) run.Emit(J.O("t", "installed", "pack", run.PackSeen ?? ""));   // the window's footer: the pack on this PC now
 
             // ---- d. the report, e. the game -------------------------------------------------------------------------
             Log.Line("=== done ===");
@@ -391,8 +423,12 @@ namespace DeepslateWorks
             else if (run.NoLaunch) Log.Line("not opening the launcher (asked not to)");
             else
             {
-                if (profileLeft) Show(run, string.Format("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play.", Env.PackName));
-                else if (!OpenLauncher()) Show(run, string.Format("Open the Minecraft Launcher from the Start menu, choose {0}, press Play.", Env.PackName));
+                if (profileLeft) { run.Emit(J.O("t", "launched", "opened", false)); Show(run, string.Format("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play.", Env.PackName)); }
+                else if (!OpenLauncherChecked(run, modsDir, run.PackCheckFiles))
+                {
+                    if (run.ModsCheck != null && !run.ModsCheck.Ok) throw run.Fail(MissingText(run.ModsCheck));
+                    Show(run, string.Format("Open the Minecraft Launcher from the Start menu, choose {0}, press Play.", Env.PackName));
+                }
                 if (run.Mode == "first_install") Show(run, string.Format("From now on, press Play on {0} or open {1} from your desktop. It keeps itself up to date.", Env.PortalUrl.Replace("https://", ""), Env.PackName));
                 if (wake.Waking) wake.Watch(run, Wake.Call, Sleep);
             }

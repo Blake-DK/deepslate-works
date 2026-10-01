@@ -36,6 +36,8 @@ namespace DeepslateWorks
         Border HeadlineBox;
         TextRun ErrorText;
         ListBox LogList;
+        StackPanel BrandBar; Image BrandLogo; TextBlock BrandName, BrandTagline, FooterApp, FooterPack, FooterServer;   // 2.1.1 / 2.1.2
+        string VerApp = Env.Version, VerLocal, VerCurrent, VerServer;   // the footer's sources (2.1.2)
 
         // the state
         readonly Run first;            // what Program made: copied into each run (UpdatedFrom only into the first)
@@ -48,6 +50,9 @@ namespace DeepslateWorks
         int AskLevel = 1;
         readonly Dictionary<string, int> Used = new Dictionary<string, int>();
         string LastFail, Changed;
+        DateTime? Launched;                 // 2.1.0: when the engine opened the launcher (after checking every mod)
+        DateTime? WatchSince, WatchUntil;   // 2.1.0: the game's log is watched for the session this launch starts
+        ModsCheck GameProblem;
         RestartFlow Flow;              // the Apply -> restart flow in progress (planner H)
         bool GameRunning;
         DateTime NextGameCheck = DateTime.MinValue;
@@ -79,6 +84,8 @@ namespace DeepslateWorks
             PlayTitle = Find<TextBlock>("PlayTitle"); PlayStatus = Find<TextBlock>("PlayStatus"); PlayChanged = Find<TextBlock>("PlayChanged");
             ReviewLink = Find<Hyperlink>("ReviewLink"); ResetButton = Find<Button>("ResetButton"); AllowAllButton = Find<Button>("AllowAllButton");
             PlayButton = Find<Button>("PlayButton"); PlayBody = Find<StackPanel>("PlayBody");
+            BrandBar = Find<StackPanel>("BrandBar"); BrandLogo = Find<Image>("BrandLogo"); BrandName = Find<TextBlock>("BrandName"); BrandTagline = Find<TextBlock>("BrandTagline");
+            FooterApp = Find<TextBlock>("FooterApp"); FooterPack = Find<TextBlock>("FooterPack"); FooterServer = Find<TextBlock>("FooterServer");
             HeadlineBox = Find<Border>("HeadlineBox"); HeadlineText = Find<TextBlock>("HeadlineText"); HeadlineButton = Find<Button>("HeadlineButton");
             ErrorLine = Find<TextBlock>("ErrorLine"); ErrorText = Find<TextRun>("ErrorText"); DetailsLink = Find<Hyperlink>("DetailsLink");
             ProgressBox = Find<StackPanel>("ProgressBox"); CheckButton = Find<Button>("CheckButton"); ApplyButton = Find<Button>("ApplyButton");
@@ -96,6 +103,17 @@ namespace DeepslateWorks
                     }
             }
             catch { }
+            UpdateAppBrand();   // 2.1.1: the chosen logo instead, with the header's logo and tagline
+            VerLocal = Footer.InstalledPack();
+            UpdateAppFooter();
+            new Thread(() =>
+            {
+                // the current pack and the server's state, from the site (public, a few seconds at most)
+                string pack = null, status = null;
+                try { var r = Http.GetJson(Env.PortalUrl + "/api/version", 4); pack = J.Str(r, "pack"); status = J.Str(r, "status"); }
+                catch (Exception e) { Log.Line("the versions could not be read from the site: " + e.Message); }
+                try { w.Dispatcher.BeginInvoke(new Action(() => { if (pack != null) VerCurrent = pack; if (status != null) VerServer = status; UpdateAppFooter(); })); } catch { }
+            }) { IsBackground = true, Name = "site versions" }.Start();
 
             PlayButton.Click += (s, e) => OnPlayButton();
             AllowAllButton.Click += (s, e) => OnAllowAll();
@@ -371,7 +389,7 @@ namespace DeepslateWorks
             PlayButton.Content = UiText.Working;
             PlayButton.IsEnabled = false;
             Used.Clear();
-            LastFail = null; Changed = null;
+            LastFail = null; Changed = null; Launched = null; WatchSince = null; WatchUntil = null; GameProblem = null;
             var isFirst = !firstUsed;
             var run = NewRun(noLaunch);
             Run.Current = run;
@@ -407,6 +425,9 @@ namespace DeepslateWorks
                 case "fail": LastFail = J.Str(o, "text"); break;
                 case "used": var id = J.Str(o, "step"); if (id != null) Used[id] = J.Int(o, "level", 1); break;
                 case "changed": Changed = J.Str(o, "text"); break;
+                case "launched": Launched = DateTime.UtcNow; break;
+                case "versions": { var a = J.Str(o, "app"); var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(a)) VerApp = a; if (!string.IsNullOrEmpty(p)) VerCurrent = p; UpdateAppFooter(); break; }
+                case "installed": { var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(p)) VerLocal = p; UpdateAppFooter(); break; }
             }
         }
 
@@ -444,10 +465,95 @@ namespace DeepslateWorks
                 Window.Close();
                 return;
             }
+            UpdateAppBrand();   // a run may have brought a new logo
             PlayTitle.Text = UiText.ReadyTitle;
             PlayStatus.Text = UiText.ReadyStatus;
             if (!string.IsNullOrEmpty(Changed)) { PlayChanged.Text = Changed; PlayChanged.Visibility = Visibility.Visible; }
             if (Tabs.SelectedItem == ExtrasTab) ShowExtras();
+            // 2.1.0: watch the game's log for the session this launch starts
+            if (Launched.HasValue) { WatchSince = Launched.Value.AddSeconds(-5); WatchUntil = Launched.Value.AddMinutes(30); }
+        }
+
+        // 2.1.1: the window's icon (taskbar too) and the header's logo and tagline, from what the last run put in the home
+        // folder. Read from bytes, so the files are never held open while the next run replaces them.
+        void UpdateAppBrand()
+        {
+            try
+            {
+                var dir = Env.AppHome;
+                var ico = Brand.LogoIconPath(dir);
+                if (File.Exists(ico)) Window.Icon = BitmapFrame.Create(new MemoryStream(File.ReadAllBytes(ico)), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                var m = Brand.ReadMarker(dir);
+                var png = Path.Combine(dir, Brand.LogoPngName);
+                if (m != null && File.Exists(png))
+                {
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit(); bmp.CacheOption = BitmapCacheOption.OnLoad; bmp.StreamSource = new MemoryStream(File.ReadAllBytes(png)); bmp.EndInit();
+                    BrandLogo.Source = bmp;
+                    // pixel art stays crisp: nearest-neighbour, never smoothed
+                    RenderOptions.SetBitmapScalingMode(BrandLogo, J.Bool(m, "pixel") ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
+                    var name = J.Str(m, "name"); if (!string.IsNullOrEmpty(name)) BrandName.Text = name;
+                    BrandTagline.Text = J.Str(m, "tagline") ?? "";
+                    BrandBar.Visibility = Visibility.Visible;
+                }
+            }
+            catch (Exception e) { Log.Line("the logo could not be shown: " + e.Message); }
+        }
+
+        // 2.1.2: "App x · Pack y · Server: z" under the tabs
+        void UpdateAppFooter()
+        {
+            if (FooterApp == null) return;
+            var f = Footer.Parts(VerApp, VerLocal, VerCurrent, VerServer);
+            FooterApp.Text = f.App; FooterPack.Text = f.Pack; FooterServer.Text = f.Server;
+            FooterPack.Foreground = NewBrush(f.PackTone);
+        }
+
+        // 2.1.0: every start of the game from the window goes through Play (the engine checks every mod, then opens the
+        // launcher); nothing in the window opens the launcher itself. False when a run is already going.
+        bool RequestPlay(string why)
+        {
+            Log.Line(string.Format("window: the game was asked for ({0}): through Play", why));
+            if (Mode != "idle") return false;
+            Tabs.SelectedItem = PlayTab;
+            StartRun();
+            return true;
+        }
+
+        // 2.1.0: after a launch, the game's own log: did it start with every mod of the pack? Every 2 s, for up to 30 minutes.
+        void WatchGame()
+        {
+            if (!WatchSince.HasValue) return;
+            if (DateTime.UtcNow > WatchUntil) { Log.Line("game check: no game session seen within 30 minutes of the launch"); WatchSince = null; return; }
+            var list = Engine.ReadPackList(Engine.PackListPath);
+            var files = J.Arr(list, "files");
+            if (files.Count == 0) { WatchSince = null; return; }
+            var host = (J.Str(list, "server") ?? "").Split(':')[0];
+            var found = Engine.FindGameSession(Env.DataDir, Env.Minecraft, WatchSince.Value, host);
+            if (found == null) return;
+            WatchSince = null;
+            var c = Engine.TestGameMods(found.Session, files, found.Elsewhere);
+            if (c == null) { Log.Line("game check: the game's log lists no mod files; nothing to compare"); return; }
+            Log.Line("game check: " + (c.Ok ? string.Format("the game started with all {0} mods", c.Checked) : string.Format("{0} ({1} not loaded{2})", Engine.MissingText(c), c.Missing.Count, c.Elsewhere ? ", another launcher profile" : "")));
+            var pack = J.Str(list, "version") ?? "";
+            var off = Consents.Decision(Consent, "reports") == "decline";
+            new Thread(() => Engine.SendGameCheck(c, pack, off)) { IsBackground = true, Name = "game check" }.Start();
+            if (c.Ok) return;
+            GameProblem = c;
+            if (Mode == "idle") ShowGameProblem();
+        }
+
+        void ShowGameProblem()
+        {
+            var c = GameProblem; if (c == null) return;
+            ClearPlayBody();
+            PlayTitle.Text = "Your game is missing mods";
+            PlayStatus.Text = Engine.MissingText(c);
+            if (c.Elsewhere) AddPlayLine("The Minecraft Launcher started another profile. Play puts Deepslate Works back as the one it starts.", "#8A5A00");
+            foreach (var m in c.Missing.Take(8)) if (!string.IsNullOrEmpty(m.Name)) AddPlayLine("\u2717  " + m.Name, "#B3261E");
+            PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true;
+            Tabs.SelectedItem = PlayTab;
+            ShowFront("the game is missing mods");
         }
 
         void OnTick()
@@ -467,6 +573,7 @@ namespace DeepslateWorks
                 NextGameCheck = DateTime.Now.AddSeconds(2);
                 var was = GameRunning;
                 GameRunning = Extras.GameRunning();
+                if (WatchSince.HasValue) { try { WatchGame(); } catch (Exception e) { Log.Line("game check failed: " + e.Message); WatchSince = null; } }
                 var done = Extras.InstallQueuedIfClosed(GameRunning, Mode == "running");
                 if (done != null) AfterInstall(done);
                 else if (Tabs.SelectedItem == ExtrasTab && (was != GameRunning || DateTime.Now.Second % 6 < 2)) ShowExtras(true);
@@ -751,7 +858,8 @@ namespace DeepslateWorks
                 if (ans == "all") { Consents.SetAnswer(Consent, "launch", "allow", 1); Consents.Save(Env.ConsentPath, Consent); ans = "yes"; }
                 if (ans != "yes") { ExtrasStatus.Text = ExtrasText.InstalledLater; return; }
             }
-            ExtrasStatus.Text = Extras.StartAfterInstall(Engine.OpenLauncher);
+            // 2.1.0: the game starts the way Play starts it: every mod checked first
+            ExtrasStatus.Text = Extras.StartAfterInstall(() => RequestPlay("relaunch after Apply"));
         }
 
         // Yes with the game running: close it, install, check, start it again. One stage per tick of the timer, so the
@@ -769,7 +877,7 @@ namespace DeepslateWorks
         {
             var f = Flow;
             var hadSay = f.Say != null;
-            var line = f.Step(Engine.OpenLauncher);
+            var line = f.Step(() => RequestPlay("restart after Apply"));   // 2.1.0: through Play, so every mod is checked first
             if (line != null) AddProgress(line);
             if (!hadSay && f.Say != null) ExtrasStatus.Text = f.Say;
             if (f.Finished)

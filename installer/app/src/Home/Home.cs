@@ -95,14 +95,17 @@ namespace DeepslateWorks
             }
         }
 
-        public static HomeResult RepairHere(Run run, bool links)
+        public static HomeResult RepairHere(Run run, bool links) => RepairHere(run, links, false);
+
+        /// <summary>force: the shortcuts and the Apps entry are made again (2.1.1: a new logo).</summary>
+        public static HomeResult RepairHere(Run run, bool links, bool force)
         {
             if (run != null && run.DryRun)
             {
                 Log.Line("(dry run) the Play link, the shortcuts and Settings -> Apps were not checked");
                 return new HomeResult { Exe = Env.MePath };
             }
-            var r = Repair(Env.MePath, Env.AppHome, DefaultIo(), false, !links);
+            var r = Repair(Env.MePath, Env.AppHome, DefaultIo(), force, !links);
             if (run != null) SetSetupState(run, r);
             return r;
         }
@@ -374,7 +377,8 @@ namespace DeepslateWorks
 
         /// <summary>What deepslate:// runs: "&lt;exe&gt;" "%1".</summary>
         public static string HandlerCommand(string exe) => "\"" + exe + "\" \"%1\"";
-        public static string IconLocation(string exe) => "\"" + exe + "\",0";
+        /// <summary>2.1.1: the chosen logo (logo.ico next to the exe) wins over the exe's own icon.</summary>
+        public static string IconLocation(string exe) => "\"" + Brand.IconFile(exe) + "\",0";
 
         public static Shortcut ShortcutSpec(string exe, string where = "desktop") => new Shortcut
         {
@@ -382,7 +386,7 @@ namespace DeepslateWorks
             Arguments = "-From " + where,
             WorkingDirectory = ParentOf(exe),
             Description = ShortcutDescription,
-            IconPath = exe,
+            IconPath = Brand.IconFile(exe),   // 2.1.1: the chosen logo when there is one
             IconIndex = 0,
             AppUserModelId = Env.AppUserModelId,   // a pinned shortcut and the window share one taskbar button
         };

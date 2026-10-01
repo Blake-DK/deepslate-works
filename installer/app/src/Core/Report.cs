@@ -146,6 +146,15 @@ namespace DeepslateWorks
             catch { return ".NET " + Environment.Version; }
         }
 
+        /// <summary>2.1.0: the last check of mods\ in this run; a run that stopped part-way through the mods says what mods\
+        /// holds now, so the report says what is missing. Null before the mods step.</summary>
+        public static JObj ModsBlock(Run run)
+        {
+            var c = run.ModsCheck;
+            if (c == null && run.PackCheckDir != null && run.PackCheckFiles != null) { try { c = Engine.TestPackMods(run.PackCheckDir, run.PackCheckFiles); } catch { } }
+            return c?.ToJson();
+        }
+
         public static JObj New(Run run, string outcome)
         {
             string failed = outcome != "ok" && !string.IsNullOrEmpty(run.StepName) ? run.StepName : null;
@@ -159,6 +168,7 @@ namespace DeepslateWorks
                 "updateProblem", problem,
                 "setupProblems", run.SetupChecked ? (object)run.SetupProblems.Cast<object>().ToList() : null,
                 "extras", extras,
+                "mods", ModsBlock(run),
                 "mode", run.Mode,
                 "outcome", outcome,
                 "failedStep", failed,
@@ -178,7 +188,7 @@ namespace DeepslateWorks
             {
                 var rep = New(run, outcome);
                 if (run.ReportsOff) rep = J.O("packVersion", rep["packVersion"], "installerVersion", rep["installerVersion"], "mode", rep["mode"], "outcome", rep["outcome"],
-                                              "durationSec", rep["durationSec"], "log", "", "system", null, "minimal", true, "extras", rep["extras"]);
+                                              "durationSec", rep["durationSec"], "log", "", "system", null, "minimal", true, "extras", rep["extras"], "mods", rep["mods"]);
                 var answer = Http.PostJson(Env.ReportUrl, rep, 20);
                 Log.Line("install report sent");
                 var notice = J.Str(answer, "notice");

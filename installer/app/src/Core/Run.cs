@@ -40,6 +40,9 @@ namespace DeepslateWorks
         public bool DryRun;
         public bool AllowAll;                       // tests and --console: every permission taken as given
         public bool NoLaunch;                       // the Extras tab's download: do not open the launcher at the end
+        public ModsCheck ModsCheck;                 // 2.1.0: the last check of mods\ in this run (the report's `mods`)
+        public string PackCheckDir;                 // 2.1.0: mods\ and the PC set, for the report of a run that stops part-way
+        public List<object> PackCheckFiles;
         public string[] PretendRunning = new string[0];   // tests: process names to treat as running
         /// <summary>What this process was started with that a restart after a self-update passes on (never a link's
         /// extra words: a link run passes only the link).</summary>

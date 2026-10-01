@@ -12,7 +12,7 @@ import { newTotpSecret, verifyTotp } from "@/server/auth/totp";
 // Admin password sign-in (planner, 2026-10-01): set up and look after one's own. Nobody sets or sees another admin's
 // password; another admin can only turn it off (Admin → People).
 
-export type FormState = { ok?: string; error?: string; codes?: string[] };
+export type FormState = { ok?: string; error?: string; codes?: string[]; done?: boolean };
 
 const PATH = "/me/sign-in";
 const BAD_CODE = "That code didn't match. Use the 6-digit code your authenticator app shows now.";
@@ -46,8 +46,8 @@ export async function confirmSetup(_prev: FormState, fd: FormData): Promise<Form
   const { codes, entries } = newRecoveryCodes();
   await db.adminLogin.update({ where: { userId: me.id }, data: { totpSecret: row.pendingSecret, pendingSecret: null, enabled: true, enabledAt: new Date(), lastStep: step, recovery: json(entries) } });
   await audit({ userId: me.id, action: "auth.adminSetup", params: { username: row.username }, result: "OK" });
-  revalidatePath(PATH);
-  return { ok: "Password sign-in is on.", codes };
+  // No revalidatePath here: it would swap this step for the "On" view and the codes, shown only now, would go with it.
+  return { ok: "Password sign-in is on.", codes, done: true };
 }
 
 export async function cancelSetup(): Promise<void> {
@@ -91,8 +91,7 @@ export async function confirmTotpReset(_prev: FormState, fd: FormData): Promise<
   if (step === null) return { error: BAD_CODE };
   await db.adminLogin.update({ where: { userId: me.id }, data: { totpSecret: row.pendingSecret, pendingSecret: null, lastStep: step } });
   await audit({ userId: me.id, action: "auth.adminTotpReset", params: { username: row.username }, result: "OK" });
-  revalidatePath(PATH);
-  return { ok: "The new authenticator is in use; the old one no longer works." };
+  return { ok: "The new authenticator is in use; the old one no longer works.", done: true };
 }
 
 export async function cancelTotpReset(): Promise<void> {

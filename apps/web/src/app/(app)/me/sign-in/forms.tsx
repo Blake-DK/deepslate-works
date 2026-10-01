@@ -1,7 +1,7 @@
 "use client";
 import { useActionState } from "react";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import type { FormState } from "./actions";
 
@@ -30,10 +30,11 @@ export function StateForm({ action, fields, submit, danger = false, testId }: { 
           {f.hint && <p className="mt-1 text-xs text-muted-foreground">{f.hint}</p>}
         </div>
       ))}
-      <Button type="submit" size="sm" variant={danger ? "danger" : "primary"} disabled={pending}>{submit}</Button>
+      {!state.done && <Button type="submit" size="sm" variant={danger ? "danger" : "primary"} disabled={pending}>{submit}</Button>}
       {state.error && <Alert tone="error">{state.error}</Alert>}
       {state.ok && !state.codes && <Alert tone="success">{state.ok}</Alert>}
       {state.codes && <RecoveryCodes codes={state.codes} note={state.ok} />}
+      {state.done && <a href="/me/sign-in" className={buttonClasses("secondary", "sm")} data-testid="done">{state.codes ? "I've saved them: done" : "Done"}</a>}
     </form>
   );
 }

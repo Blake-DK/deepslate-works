@@ -179,7 +179,7 @@ namespace DeepslateWorks.Tests
         [Fact] public void Restart_arguments_never_pass_From_or_WaitFor_twice()
         {
             Assert.Equal(new[] { "-Uninstall", "-WaitFor", "42", "-From", "update" }, SelfUpdate.RestartArgs(new[] { "-From", "apps", "-Uninstall", "-WaitFor", "7" }, 42));
-            Assert.Equal("a \"b c\" \"d\\\"e\" \"f\\\\\"", Home.QuoteArgs(new[] { "a", "b c", "d\"e", "f\\" }));
+            Assert.Equal("a \"b c\" \"d\\\"e\" f\\", Home.QuoteArgs(new[] { "a", "b c", "d\"e", "f\\" }));   // a trailing backslash without a space needs no quotes
         }
 
         [Fact] public void The_old_exe_goes_on_the_next_start()

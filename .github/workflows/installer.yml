@@ -55,10 +55,6 @@ jobs:
       - name: Build DeepslateWorks.exe
         shell: pwsh
         run: dotnet build installer/app/DeepslateWorks.csproj -c Release -o out -p:PortalUrl=https://deepslate.dsw.test
-      - name: Tests (the self test, ported)
-        timeout-minutes: 10
-        shell: pwsh
-        run: dotnet test installer/tests/DeepslateWorks.Tests/DeepslateWorks.Tests.csproj -c Release --logger "trx;LogFileName=tests.trx" --logger "console;verbosity=normal" --results-directory shots/tests
       - name: The exe, its checksum and version
         shell: pwsh
         run: |
@@ -77,6 +73,11 @@ jobs:
         timeout-minutes: 10
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-smoke-3.ps1 -Exe publish/DeepslateWorks.exe -Out shots
+      - name: Tests (the self test, ported)
+        if: success() || failure()
+        timeout-minutes: 10
+        shell: pwsh
+        run: dotnet test installer/tests/DeepslateWorks.Tests/DeepslateWorks.Tests.csproj -c Release --logger "trx;LogFileName=tests.trx" --logger "console;verbosity=normal" --results-directory shots/tests
       - uses: actions/upload-artifact@v4
         if: always()
         with:

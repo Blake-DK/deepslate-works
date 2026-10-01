@@ -337,6 +337,7 @@ namespace DeepslateWorks.Tests
                 var gone = s.P("gone", "java.exe");
                 c = Engine.SelectJava(noLauncher, gone, noJre);
                 Assert.Null(c.Path); Assert.Null(Engine.GetJavaVersionText(gone));
+                Directory.CreateDirectory(Path.GetDirectoryName(J21));
                 File.WriteAllText(J21, "the launcher's own");   // as a file that is there
                 c = Engine.SelectJava(J21, J8, jre);
                 Assert.Equal(J21, c.Path); Assert.Equal("the launcher's own", c.Source); Assert.Equal("Using the launcher's own Java", c.Say); Assert.Null(c.PassedOver);

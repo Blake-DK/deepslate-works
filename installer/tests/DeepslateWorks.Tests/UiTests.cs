@@ -200,7 +200,7 @@ namespace DeepslateWorks.Tests
         static void OnSta(Action a)
         {
             Exception err = null;
-            var t = new Thread(() => { try { a(); } catch (Exception e) { err = e; } });
+            var t = new Thread(() => { try { a(); } catch (Exception e) { err = e; } finally { System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown(); } });   // shut WPF down on its own thread, not at process exit
             t.SetApartmentState(ApartmentState.STA);
             t.Start();
             Assert.True(t.Join(TimeSpan.FromMinutes(2)), "the window did not finish drawing");

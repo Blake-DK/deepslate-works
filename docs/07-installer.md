@@ -4,6 +4,45 @@
 
 A friend downloads one zip and double-clicks `Setup.bat` once. After that they press Play on the site or open **Deepslate Works** from their desktop; it keeps itself and the mods up to date and opens the normal Minecraft launcher on the Deepslate Works profile, with the server already in the server list. It never touches their vanilla installation.
 
+## Deepslate Works 3.0: a real Windows app, DeepslateWorks.exe (planner, 2026-10-01)
+
+**What it is.** The 2.x PowerShell app ported to C#: WPF on .NET Framework 4.8 (part of Windows 10 and 11, nothing to install), one file `DeepslateWorks.exe` (about 280 KB), no NuGet packages at run time. Same features, same texts, same files: consent.json, extras.json, extras-manifest.json, installed.json, launcher.json, launcher_profiles.json edits, `%TEMP%\deepslate-works.log`, `logs\extras-<date>.log`. A 2.x PC notices nothing but the missing console. The windows are the 2.x XAML, loaded at run time (no XAML compilation), so they look the same.
+
+**Source.** `installer/app` (`DeepslateWorks.csproj`): `src/Core` (Env: names and paths; Log; Json/J/JObj on JavaScriptSerializer; Http, where the launcher token goes only to the site; Native; Run: one run's state and status lines; Consents; Report; Args), `src/Home` (first run, Play link, IShellLink shortcuts with the window's AppUserModelID, Settings → Apps, self-update, uninstall, the 2.x clean-up), `src/Engine` (the install steps, which 2.x ran as `-Engine`; here on a background thread), `src/Extras`, `src/Ui` (the window), `src/App/Program.cs` (arguments, dispatch). Version: `installer/VERSION`. The site address is built in (`-p:PortalUrl`), and the exe is never stamped or changed after CI, so the checksum CI writes is the one every PC checks.
+
+**Built and tested only by CI** (`.github/workflows/installer.yml`, job `app`, windows-latest): build, `dotnet test` on `installer/tests/DeepslateWorks.Tests` (the 2.x self test ported to xUnit; Windows-only checks are `[WindowsFact]`), check that the exe's version matches VERSION, `DeepslateWorks.exe.sha256`, then `installer/tests/windows-smoke-3.ps1`:
+- a fresh download marked as from the internet, opened through Explorer (SmartScreen pictured where it shows)
+- the hand-over to the copy in AppData, the Apps entry, no console window, the window in front, and a second start
+- a 2.x home moved over (`-MigratedFrom`)
+- `-Uninstall -Yes`
+
+Pictures, the log and the test results are the run's artifact. Job `publish` (main only) pushes `ghcr.io/<owner>/deepslate-installer:{VERSION,sha,latest}`, an image FROM scratch holding the exe, its .sha256 and VERSION. On the VPS a compile check is allowed in a capped container (`mcr.microsoft.com/dotnet/sdk:8.0`, `--memory=1500m`); the shipped exe never comes from there.
+
+**To the site.** `deploy/deploy.sh` (step "installer exe") pulls that image and copies the three files into `dist/ci/`. Admin → Build (installer) (`takeCiExe` in packages/modpack/src/build.ts) checks the checksum, the version and the MZ header, then copies the exe to `dist/DeepslateWorks.exe`. installer.json gains `exe: {version, sha256, size}`, which the mod list passes on as `installer.exe`. `installer.version` stays the PowerShell bridge's version, because 2.x copies update by it, and `installer.zip` is still built for 1.4.x copies. The web side (`lib/installer-info.ts`): `current` is the exe's version when there is one, and that is what "out of date" means now; `download` is `DeepslateWorks.exe`, served from `/downloads/DeepslateWorks.exe` behind the same gate as the other downloads. The download buttons on /help and the Play button give it directly, with no zip.
+
+**First run.** A start from anywhere but `%LOCALAPPDATA%\DeepslateWorks` copies the exe there (a newer one already there is left alone; `.copy`, then moved), lists it in Settings → Apps, starts that copy with `-From download` and exits. From inside a zip or a temp folder it refuses with a message box (problem `in_zip`). The Play link (`"<exe>" "%1"`) and the desktop and Start Menu shortcuts (`-From desktop` / `-From startmenu`, plus "Uninstall Deepslate Works" `-Uninstall -From startmenu`) come once the "Shortcuts and Play button" card is allowed, as in 2.x. The Apps entry's UninstallString is `"<exe>" -Uninstall -From apps`.
+
+**SmartScreen.** The exe is unsigned, so the first run from a browser download shows "Windows protected your PC". The Help page (Getting in, `#smartscreen`, picture `apps/web/public/help/smartscreen.png`) says: click More info, then Run anyway. Signing would remove the box; see "Signing" below.
+
+**Self-update.** The mod list's `installer.exe` must be newer than `Env.Version`. The exe is downloaded only from `<site>/downloads/DeepslateWorks.exe` to `<exe>.new`, and checked for size, SHA-256, MZ header and that its product version equals the offered one. Then the running exe is renamed to `.old` and the new one moved in. It starts with the same switches (a link run passes only the link) plus `-WaitFor <pid> -From update` and `DEEPSLATE_UPDATED_FROM`, and the old window closes. If the new exe cannot start, `.old` is put back. `.old` is deleted on the next start.
+
+**Migration from 2.x: `DeepslateWorks.ps1` 2.1.3, the bridge.** Every 2.x copy updates itself to 2.1.3 as before. On its next Play, when the mod list offers `installer.exe`, 2.1.3 does this:
+1. Step "Moving to Deepslate Works 3.x": fetch from the site's /downloads only, check size, SHA-256 and MZ, and put it at `%LOCALAPPDATA%\DeepslateWorks\DeepslateWorks.exe` (`Install-Exe`).
+2. Exit 30. The window starts the exe with `-From update -MigratedFrom 2.1.3 -WaitFor <pid>` and closes.
+
+A file downloaded by PowerShell carries no mark of the web, so SmartScreen does not ask. Once its window is open, the exe re-points the Play link, the shortcuts and the Apps entry, in that order (consent.json is shared, so the 2.x answers stand). When the link reads back as the exe, it removes DeepslateWorks.ps1, .vbs, .ico, install.ps1, install.ps1.bak and DeepslateWorks.ps1.bak. Its first report says `updatedFrom: 2.1.3`. On any problem nothing is changed and the run carries on as 2.1.3; the next Play tries again.
+
+**Uninstall.** As 2.x, with message boxes instead of a console. It refuses while the window is open. The home folder goes a few seconds after the last box closes (a hidden `cmd /c timeout & rmdir`), because a running exe cannot delete itself.
+
+**Entry points in the log**: `started: Deepslate Works 3.0.0, process N, from <play-link|desktop|startmenu|apps|download|update|a download|unknown…>, by <parent> (pid)`.
+
+**Signing (not done; for Alex to decide).** Azure Trusted Signing (now Artifact Signing) costs about $9.99 a month (Basic, 5,000 signatures). It would need:
+- an Azure subscription
+- an Artifact Signing account and a certificate profile
+- identity validation. The individual-developer route is for the USA and Canada only, so from the UK this means validating an organisation (a registered company).
+
+Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
+
 ## Installer 2.0.3: no console window, the window in front (planner, 2026-10-01)
 
 **What Alex saw (2.0.1):** Play opened an empty PowerShell window titled "Deepslate Works 2.0.1" and the real window was behind other windows. Cause: every entry point started `powershell.exe -WindowStyle Hidden` directly. Where Windows Terminal is the default console (Windows 11), the console is handed to Terminal before PowerShell reads that flag, so Terminal shows an empty window that `ShowWindow(GetConsoleWindow(), 0)` cannot hide; and a window started from the browser has no right to the foreground, so it opened behind.

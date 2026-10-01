@@ -69,7 +69,7 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
       <Group label="Play">
         <NavLink href="/" exact>Home</NavLink>
         <NavLink href="/map">Map</NavLink>
-        <NavLink href="/help">Help</NavLink>
+        <NavLink href="/help">Getting started</NavLink>
       </Group>
       <Group label="Community">
         <NavLink href="/players">{stats ? "Players & stats" : "Players"}</NavLink>

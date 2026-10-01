@@ -146,7 +146,7 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
         <Alert tone="info" data-testid="play-missing">
           <p className="font-medium">{installed ? "Looks like the launcher isn\u2019t set up on this PC" : "Download Deepslate Works"}</p>
           {!installed && <p className="mt-1">It was taken off your PC. To play again, set it up once more:</p>}
-          <p className="mt-1">Download, unzip and double-click <span className="font-mono">Setup.bat</span> once. After that, Play works from here and it keeps itself up to date.{!stepsHere && <> The steps are under <Link href="/help" className="underline">Help → Getting in</Link>.</>}</p>
+          <p className="mt-1">Download, unzip and double-click <span className="font-mono">Setup.bat</span> once. After that, Play works from here and it keeps itself up to date.{!stepsHere && <> The steps are under <Link href="/help" className="underline">Getting started → Getting in</Link>.</>}</p>
           <p className="mt-2 flex flex-wrap items-center gap-3">
             <a href="/downloads/installer.zip" className={buttonClasses("secondary", "sm")}>Download installer</a>
             <span className="text-xs text-muted-foreground">Already installed? If your browser asked whether to open Windows PowerShell, answer yes.</span>

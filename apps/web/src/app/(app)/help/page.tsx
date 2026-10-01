@@ -5,7 +5,7 @@ import InstallSection from "../install/section";
 import GuideSection from "../guide/section";
 import RulesSection from "../rules/section";
 
-export const metadata: Metadata = { title: "Help" };
+export const metadata: Metadata = { title: "Getting started" };
 
 const TABS = [{ key: "in", label: "Getting in" }, { key: "guide", label: "Guide" }, { key: "rules", label: "Rules" }] as const;
 
@@ -15,7 +15,7 @@ export default async function HelpPage({ searchParams }: { searchParams: PageQue
   const q = await searchParams;
   const tab = pickTab(q.tab, TABS);
   return (
-    <TabbedPage title="Help" base="/help" tabs={TABS} current={tab}>
+    <TabbedPage title="Getting started" base="/help" tabs={TABS} current={tab}>
       {tab === "in" ? <InstallSection searchParams={asSectionQuery(q)} /> : tab === "guide" ? <GuideSection /> : <RulesSection />}
     </TabbedPage>
   );

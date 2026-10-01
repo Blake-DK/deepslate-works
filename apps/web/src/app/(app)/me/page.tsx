@@ -52,7 +52,7 @@ export default async function MePage() {
       {install && (
         <p className="text-sm text-muted-foreground" data-testid="last-install">
           {install.mode === "uninstall" && install.outcome === "ok"
-            ? <>Deepslate Works was taken off your PC on {formatDate(install.at)}. To play again, <Link href="/help" className="underline">download it from Help → Getting in</Link>.</>
+            ? <>Deepslate Works was taken off your PC on {formatDate(install.at)}. To play again, <Link href="/help" className="underline">download it from Getting started → Getting in</Link>.</>
             : install.outcome === "ok"
             ? <>Installed {install.packVersion.split("+")[0]} on {formatDate(install.at)}, all good.</>
             : install.outcome === "cancelled"
@@ -68,7 +68,7 @@ export default async function MePage() {
       {oldInstaller && (
         <Alert tone="info" data-testid="installer-outdated">
           <strong>Download Deepslate Works again.</strong> Your last run used {install!.installerVersion === "unknown" ? "an old installer" : <>installer {install!.installerVersion}</>}, which cannot update itself; the current one is {oldInstaller}.{" "}
-          <Link href="/help" className="font-medium underline">Download it from Help → Getting in</Link> and double-click Setup.bat once. After that it keeps itself up to date.
+          <Link href="/help" className="font-medium underline">Download it from Getting started → Getting in</Link> and double-click Setup.bat once. After that it keeps itself up to date.
         </Alert>
       )}
       {join && (

@@ -1,4 +1,5 @@
 import { isOutdated, SELF_UPDATING_FROM } from "@/lib/installer-version";
+import { MISSING_MODS_TEXT, type GateReason } from "@/shared/join-gate";
 
 // docs/05 "Play from the site". The Play button is a link, deepslate://play, which Windows hands to the
 // installed copy of DeepslateWorks.ps1. Pure, so it is tested.
@@ -15,9 +16,10 @@ export type LastLaunch = { version: string; at: Date };
  * docs/14 "Play first": the line next to the Play button. `time` is the end of the window, already written out.
  * `selfUpdates`: their copy updates itself when Play is pressed (1.4.0 or later), so an "old installer" only needs Play.
  */
-export function joinLine(join: { ok: true; time: string } | { ok: false; reason: "no report" | "old installer" | "stale" | "wrong version" } | null, selfUpdates = false): { text: string; ready: boolean } | null {
+export function joinLine(join: { ok: true; time: string } | { ok: false; reason: GateReason } | null, selfUpdates = false): { text: string; ready: boolean } | null {
   if (!join) return null;
   if (join.ok) return { text: `Ready to join until ${join.time}`, ready: true };
+  if (join.reason === "missing mods") return { text: MISSING_MODS_TEXT, ready: false };
   if (join.reason === "old installer" && selfUpdates) return { text: "Press Play before you join: it updates Deepslate Works first.", ready: false };
   if (join.reason === "old installer") return { text: "Download Deepslate Works again from deepslate.dsw.test/install, run Setup.bat once, then press Play. It keeps itself up to date after that.", ready: false };
   if (join.reason === "wrong version") return { text: "The pack has changed since you pressed Play. Press it again before you join.", ready: false };

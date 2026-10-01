@@ -1,4 +1,5 @@
 import "server-only";
+import { Prisma } from "@prisma/client";
 import { getStatus, type WakeView } from "@/server/status";
 import { statusText } from "@/lib/server-status";
 import type { ServerState } from "@/shared/server-state";
@@ -8,7 +9,7 @@ import { distFile, getLock } from "@/server/modpack/lock";
 import { canDownload } from "@/server/modpack/gate";
 import { installedNow, tooOldToUpdate, updateAvailable, type LastLaunch } from "@/lib/play";
 import { getSection } from "@/server/site-settings";
-import { PLAY_MODES, playGate, type Gate } from "@/shared/join-gate";
+import { modsMissingSince, PLAY_MODES, playGate, type Gate } from "@/shared/join-gate";
 
 type GateUser = Parameters<typeof canDownload>[0];
 
@@ -56,8 +57,21 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
   const installed = installedNow(latest);
   const tooOld = tooOldToUpdate(latest);
   const said = statusText(status, user.role === "ADMIN");
-  const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date(), joining.minInstaller) : null;
+  const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date(), joining.minInstaller, await modsMissingFor(user.id, run)) : null;
   const current = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const last = report && installed ? { version: report.packVersion, at: report.at } : null;
   return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, last, update: updateAvailable(current, last?.version), join, installed, tooOld, server: { state: said.state, line: said.line, hint: said.hint }, wake: status.wake };
+}
+
+/**
+ * 2.1.0: was the game on their PC seen without some of the pack's mods since their last Play (`modsMissingSince`)?
+ * The newest report that says anything about the mods, and the last time the server refused them at the handshake.
+ */
+export async function modsMissingFor(userId: string, run: { at: Date; packVersion: string } | null): Promise<boolean> {
+  const [mods, refused] = await Promise.all([
+    db.installReport.findFirst({ where: { userId, mods: { not: Prisma.DbNull } }, orderBy: { at: "desc" }, select: { at: true, mods: true } }),
+    db.event.findFirst({ where: { kind: "JOIN_BLOCKED", actor: userId, meta: { path: ["params", "reason"], equals: "missing mods" } }, orderBy: { at: "desc" }, select: { at: true } }),
+  ]);
+  const ok = (mods?.mods as { ok?: unknown } | null)?.ok;
+  return modsMissingSince(run, mods && typeof ok === "boolean" ? { at: mods.at, ok } : null, refused?.at ?? null);
 }

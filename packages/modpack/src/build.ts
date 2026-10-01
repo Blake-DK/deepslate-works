@@ -7,6 +7,8 @@ import type { LockFile, LockEntry } from "./lock";
 import type { Manifest } from "./schema";
 import { fetchJar } from "./download";
 import { shortHash } from "./lock";
+import { jarChannels } from "./sides";
+import { openZipFile } from "./zip";
 
 // docs/06 + docs/07: dist/server/, dist/config.zip, dist/installer.zip
 
@@ -57,6 +59,8 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
   for (const e of lock.files.filter(forServer)) {
     wanted.add(e.filename);
     if ((await fetchJar(e, path.join(modsDir, e.filename), log)) === "downloaded") downloaded++;
+    // 2.1.0: a server-only mod with required network channels would get every player refused at the handshake
+    if (e.side === "server" && jarChannels(await openZipFile(path.join(modsDir, e.filename))) === "required") throw new Error(`${e.slug} is server-only but registers network channels every PC must have: make it "both" in mods.json, Lock, Build again`);
   }
   for (const name of await readdir(modsDir)) {
     if (!wanted.has(name)) {

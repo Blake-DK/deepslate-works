@@ -50,7 +50,7 @@ export async function GET(req: Request) {
     simulation_distance: dist.simulation,
     tier: tier ?? null,
     config_url: lock.configs.length ? `${env.AUTH_URL}/downloads/config.zip${k}` : null,
-    files: lock.files.map((f) => ({ slug: f.slug, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size, side: f.side })),
+    files: lock.files.map((f) => ({ slug: f.slug, name: f.name, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size, side: f.side })),
     configs: lock.configs,
     // docs/07 "The installer updates itself": which installer is current, and the checksum of its zip. No address:
     // the installer fetches it from /downloads on the site it was built for, and from nowhere else.

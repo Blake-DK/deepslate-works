@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { audit } from "@/server/events";
 import { bearer, userFromLauncherToken } from "@/server/launcher";
 import { RateLimiter } from "@/server/auth/rate-limit";
-import { playLinkMissing, reportSchema, sanitizeReport, suggestTier } from "@/lib/install-report";
+import { missingLine, playLinkMissing, reportSchema, sanitizeReport, suggestTier } from "@/lib/install-report";
 import { getSettings } from "@/server/settings";
 import { mayReport } from "@/shared/access";
 import { getInstaller } from "@/server/modpack/lock";
@@ -46,10 +46,10 @@ export async function POST(req: Request) {
     return no(403, "not_live", "Not launched yet");
   }
   // The PC tier is measured, not asked (Alex, 2026-09-29): every report that says enough about the hardware sets it.
-  const measured = r.mode === "uninstall" ? null : suggestTier(r.system);
+  const measured = r.mode === "uninstall" || r.mode === "game_check" ? null : suggestTier(r.system);
   const row = await db.installReport.create({
     data: { userId: user.id, packVersion: r.packVersion, installerVersion: r.installerVersion, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, durationSec: r.durationSec, system: r.system as Prisma.InputJsonValue, log: r.log, tierBefore: user.pcTier, tierMeasured: measured?.tier ?? null,
-      setupProblems: r.setupProblems ? (r.setupProblems as Prisma.InputJsonValue) : Prisma.DbNull, playLinkMissing: playLinkMissing(r.setupProblems), minimal: r.minimal, extras: r.extras ? (r.extras as Prisma.InputJsonValue) : Prisma.DbNull },
+      setupProblems: r.setupProblems ? (r.setupProblems as Prisma.InputJsonValue) : Prisma.DbNull, playLinkMissing: playLinkMissing(r.setupProblems), minimal: r.minimal, extras: r.extras ? (r.extras as Prisma.InputJsonValue) : Prisma.DbNull, mods: r.mods ? (r.mods as Prisma.InputJsonValue) : Prisma.DbNull },
     select: { id: true },
   });
   if (measured) {
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   // count for Play first below Settings → Joining "Minimum installer version").
   const current = (await getInstaller())?.version ?? null;
   const outdated = isOutdated(r.installerVersion, current);
-  await audit({ userId: user.id, action: "installer.report", params: { reportId: row.id, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, packVersion: r.packVersion, installerVersion: r.installerVersion, currentInstaller: outdated ? current : undefined, durationSec: r.durationSec }, result: r.outcome === "ok" || r.outcome === "skipped" ? "OK" : "FAILED" });
+  await audit({ userId: user.id, action: "installer.report", params: { reportId: row.id, mode: r.mode, updatedFrom: r.updatedFrom, updateProblem: r.updateProblem, outcome: r.outcome, failedStep: r.failedStep, packVersion: r.packVersion, installerVersion: r.installerVersion, currentInstaller: outdated ? current : undefined, durationSec: r.durationSec, modsMissing: missingLine(r.mods) ?? undefined }, result: r.outcome === "ok" || r.outcome === "skipped" ? "OK" : "FAILED" });
   const notice = r.mode !== "uninstall" && current && mustDownloadAgain(r.installerVersion, current) ? outdatedNotice(r.installerVersion, current, env.AUTH_URL.replace(/^https?:\/\//, "").replace(/\/$/, "")) : null;
   return Response.json({ ok: true, id: row.id, tier: measured?.tier ?? null, installer: { ran: r.installerVersion, current, outdated }, notice });
 }

@@ -11,9 +11,10 @@ export const MAX_LOG_BYTES = 512 * 1024;
 export const OUTCOMES = ["ok", "failed", "cancelled", "skipped"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 // 1.5.0 on (docs/07): first_install, update, play, already_running; "install" (Setup.bat) and "play" before that.
-export const MODES = ["install", "play", "first_install", "update", "already_running", "uninstall"] as const;
+// 2.1.0: game_check = the app read the game's log after it started and says which of the pack's mods it loaded.
+export const MODES = ["install", "play", "first_install", "update", "already_running", "uninstall", "game_check"] as const;
 /** What a run of each kind is called on the admin pages. */
-export const MODE_LABEL: Record<string, string> = { install: "Setup.bat", play: "Play", first_install: "First install", update: "Update", already_running: "Already running", uninstall: "Uninstall" };
+export const MODE_LABEL: Record<string, string> = { install: "Setup.bat", play: "Play", first_install: "First install", update: "Update", already_running: "Already running", uninstall: "Uninstall", game_check: "Game check" };
 export type Mode = (typeof MODES)[number];
 
 const short = (max: number) => z.string().max(max).transform((v) => v.trim());
@@ -50,6 +51,30 @@ export function playLinkMissing(problems: SetupProblem[] | null | undefined): bo
   return problems.some((p) => p.code === "in_zip" || p.code === "copy_denied" || p.code === "link_failed");
 }
 
+/**
+ * 2.1.0 (kanefinch's TaCZ kick, 2026-10-01): the pack's mods on that PC. `where`: "folder" = mods\ checked file by
+ * file against the mod list just before the game was started; "game" = what the game's own log says it loaded.
+ * `elsewhere`: the game that started was not ours (another launcher profile, so another folder).
+ */
+export const modsSchema = z
+  .object({
+    ok: z.boolean(),
+    where: z.enum(["folder", "game"]),
+    checked: z.number().int().min(0).max(1000),
+    missing: z.array(z.object({ slug: short(80), name: optional(120), filename: short(200) }).strip()).max(200),
+    elsewhere: z.boolean().nullish().transform((v) => v ?? false),
+  })
+  .strip();
+export type ModsCheck = z.infer<typeof modsSchema>;
+
+/** "TaCZ (Timeless and Classics Zero) and 3 more": for the admin pages and the events. */
+export function missingLine(m: ModsCheck | null | undefined): string | null {
+  if (!m || m.ok) return null;
+  const names = m.missing.map((x) => x.name || x.slug);
+  if (names.length === 0) return m.elsewhere ? "the game started from another launcher profile" : "some mods";
+  return names.length === 1 ? names[0]! : `${names[0]} and ${names.length - 1} more`;
+}
+
 export const reportSchema = z
   .object({
     packVersion: short(60),
@@ -68,6 +93,8 @@ export const reportSchema = z
     minimal: z.boolean().nullish().transform((v) => v ?? false),
     // 2.0.1: the Extras tab's state on this PC (lib/extras-line.ts)
     extras: extrasReportSchema.nullish().transform((v) => v ?? null),
+    // 2.1.0: the pack's mods before the game started / in the game that started
+    mods: modsSchema.nullish().transform((v) => v ?? null),
   })
   .strip();
 export type Report = z.infer<typeof reportSchema>;

@@ -17,6 +17,8 @@ export type GameEvent =
   | { type: "uuid"; name: string; uuid: string }
   | { type: "join"; name: string; ip: string | null }
   | { type: "leave"; name: string; reason: string | null }
+  // 2.1.0: NeoForge refused them at the handshake because their game lacks a mod the server needs (they never joined)
+  | { type: "refused"; name: string; uuid: string | null; reason: string; mod: string | null; channel: string | null }
   | { type: "list"; online: number; max: number; names: string[] }
   | { type: "chat"; name: string; text: string }
   | { type: "death"; name: string; text: string }
@@ -82,12 +84,26 @@ export function reduce(text: string, meta: Meta = {}): Reduced {
   return { message: text.slice(m?.[0].length ?? 0).replace(/\s+$/, ""), level, logger: m?.[3]?.replace(/\/$/, "") || null, thread };
 }
 
+/**
+ * 2.1.0 (kanefinch, 2026-10-01): "Channel of mod 'Timeless & Classics Guns: Zero' failed to connect: This channel is
+ * missing on the client side, but required on the server (tacz:acknowledge) [+1 more]". NeoForge's own words, or its
+ * translation key when the server has no text for it. Null when the reason is anything else.
+ */
+export function refusedFor(reason: string): { mod: string | null; channel: string | null } | null {
+  if (!/missing on the client|neoforge\.network\.negotiation|Channel of mod .* failed to connect|mods? .*(?:missing|not installed) on the client/i.test(reason)) return null;
+  const mod = /Channel of mod '([^']{1,80})'/.exec(reason)?.[1] ?? null;
+  const channel = /\(([a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64})\)/.exec(reason)?.[1] ?? null;
+  return { mod, channel };
+}
+
 const RE = {
   uuid: new RegExp(`^UUID of player (${NAME}) is ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$`, "i"),
   login: new RegExp(`^(${NAME})\\[/?((?:\\[[^\\]]*\\])?[^\\]]*)\\] logged in with entity id \\d+`),
   joined: new RegExp(`^(${NAME}) joined the game$`),
   left: new RegExp(`^(${NAME}) left the game$`),
   lost: new RegExp(`^(${NAME}) lost connection: (.*)$`),
+  // during the handshake (configuration phase) Minecraft writes the UUID too: "kanefinch (0f…) lost connection: …"
+  lostConfig: new RegExp(`^(${NAME}) \\(([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\) lost connection: (.*)$`, "i"),
   list: /^There are (\d+) of a max of (\d+) players online:\s*(.*)$/,
   chat: new RegExp(`^(?:\\[Not Secure\\] )?<(${NAME})> (.*)$`),
   advancement: new RegExp(`^(${NAME}) has (made the advancement|completed the challenge|reached the goal) \\[(.+)\\]$`),
@@ -319,7 +335,14 @@ export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) =
   if ((m = RE.uuid.exec(message))) return [{ type: "uuid", name: m[1]!, uuid: m[2]!.toLowerCase() }];
   if ((m = RE.login.exec(message))) return [{ type: "join", name: m[1]!, ip: ipOf(m[2]!) }];
   if ((m = RE.joined.exec(message))) return [{ type: "join", name: m[1]!, ip: null }];
-  if ((m = RE.lost.exec(message))) return [{ type: "leave", name: m[1]!, reason: m[2]! }];
+  if ((m = RE.lostConfig.exec(message))) {
+    const r = refusedFor(m[3]!);
+    return r ? [{ type: "refused", name: m[1]!, uuid: m[2]!.toLowerCase(), reason: m[3]!, ...r }] : [{ type: "leave", name: m[1]!, reason: m[3]! }];
+  }
+  if ((m = RE.lost.exec(message))) {
+    const r = refusedFor(m[2]!);
+    return r ? [{ type: "refused", name: m[1]!, uuid: null, reason: m[2]!, ...r }, { type: "leave", name: m[1]!, reason: m[2]! }] : [{ type: "leave", name: m[1]!, reason: m[2]! }];
+  }
   if ((m = RE.left.exec(message))) return [{ type: "leave", name: m[1]!, reason: null }];
   if ((m = RE.list.exec(message))) return [{ type: "list", online: Number(m[1]), max: Number(m[2]), names: m[3]!.split(",").map((s) => s.trim()).filter(Boolean) }];
   if ((m = RE.advancement.exec(message))) {

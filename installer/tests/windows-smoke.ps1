@@ -3,7 +3,7 @@
 # pictures of it all. Windows PowerShell 5.1. Exit code 1 when a check fails. Touches only this (throwaway) PC user.
 param([string]$Out = "shots")
 $ErrorActionPreference = "Stop"
-$repo = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+$inst = Split-Path -Parent (Split-Path -Parent $PSCommandPath)   # installer\
 [void][IO.Directory]::CreateDirectory($Out)
 $Out = (Resolve-Path $Out).Path
 $bad = 0
@@ -48,7 +48,7 @@ function Write-WindowList([string]$name) { Get-Windows | Where-Object { $_.title
 $dl = Join-Path $env:TEMP "smoke-download"
 Remove-Item $dl -Recurse -Force -ErrorAction SilentlyContinue
 [void][IO.Directory]::CreateDirectory($dl)
-Copy-Item (Join-Path $repo "installer\DeepslateWorks.ps1"), (Join-Path $repo "installer\Setup.bat") $dl
+Copy-Item (Join-Path $inst "DeepslateWorks.ps1"), (Join-Path $inst "Setup.bat") $dl
 $log = Join-Path $env:TEMP "deepslate-works.log"
 Remove-Item $log -Force -ErrorAction SilentlyContinue
 

@@ -108,8 +108,9 @@ namespace DeepslateWorks
             public string Refused;
             public bool Waking;
 
-            /// <summary>The real call: (method) -> the site's answer.</summary>
-            public static object Call(string method) => Http.Call(method, Env.WakeUrl, 15);
+            /// <summary>The real call: (method) -> the site's answer. 3.2.0: said to come from the app, so the event log reads
+            /// "&lt;name&gt; woke the server (app)" (planner 2026-10-02).</summary>
+            public static object Call(string method) => method == "POST" ? Http.PostJson(Env.WakeUrl, J.O("via", "app"), 15) : Http.Call(method, Env.WakeUrl, 15);
 
             /// <summary>"waking", "no" (not asked or refused), or what the site said (Request-Wake).</summary>
             public string Request(Run run, Func<string, object> call)

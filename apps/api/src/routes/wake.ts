@@ -37,7 +37,8 @@ export function wakeRoutes(app: FastifyInstance, wake: Wake, view: ServerView, d
     const decision = wakeDecision({ member: Boolean(who), openFor: who ? isOpenFor(who, await deps.live()) : false, state });
     if (decision === "start") {
       try {
-        await wake.start(id!, who!.displayName);
+        const via = (req.body as { via?: unknown } | null)?.via === "app" ? "app" : "play";
+        await wake.start(id!, who!.displayName, via);
       } catch (e) {
         return reply.code(502).send({ error: { code: "amp_error", message: e instanceof Error ? e.message : String(e) }, wake: wake.view() });
       }

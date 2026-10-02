@@ -54,15 +54,17 @@ export function isAdmin(user: Member | null | undefined): boolean {
   return user?.role === "ADMIN";
 }
 
-export type Door = "in" | "not open" | "play first";
+export type Door = "in" | "not open" | "vote first" | "play first";
 
 /**
  * At the door, for a linked member of the Discord server. First of all: is the server open for them, live or early
- * access (admins always)? If not they wait, whatever Play first says. Then Play first.
- * `hasPlayed`: their last run of Play went through, inside the window, with the server's pack (shared/join-gate).
+ * access (admins always)? If not they wait, whatever else. Then the must-vote polls (planner 2026-10-02): `unvoted` is
+ * how many open must-vote polls they have not answered; admins are asked like everyone else but never held. Then Play
+ * first. `hasPlayed`: their last run of Play went through, inside the window, with the server's pack (shared/join-gate).
  */
-export function doorRule(user: Member, d: { live: boolean; requirePlay: boolean; hasPlayed: boolean }): Door {
+export function doorRule(user: Member, d: { live: boolean; requirePlay: boolean; hasPlayed: boolean; unvoted?: number }): Door {
   if (!isOpenFor(user, d.live)) return "not open";
+  if (user.role !== "ADMIN" && (d.unvoted ?? 0) > 0) return "vote first";
   return !playFirstApplies(user, d.requirePlay) || d.hasPlayed ? "in" : "play first";
 }
 

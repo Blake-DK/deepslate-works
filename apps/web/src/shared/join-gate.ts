@@ -50,11 +50,12 @@ export function playGate(run: PlayRun | null, serverPack: string | null, windowM
   return { ok: true, until };
 }
 
-/** Why somebody was held at the door: the server is not open for them yet, or Play first. */
-export type BlockReason = GateReason | "not live";
+/** Why somebody was held at the door: the server is not open for them yet, a vote they have not answered, or Play first. */
+export type BlockReason = GateReason | "not live" | "vote";
 
 export const GATE_TEXT: Record<BlockReason, string> = {
   "not live": "the server is not open yet",
+  vote: "has not answered the new vote",
   "no report": "has not pressed Play on the site",
   "old installer": "has an installer older than the minimum",
   "missing mods": "started the game without some of the pack's mods",

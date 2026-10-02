@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { NOT_OPEN_TEXT } from "../shared/access.js";
 import { MISSING_MODS_TEXT } from "../shared/join-gate.js";
+import { VOTE_FIRST_TEXT } from "../shared/polls.js";
 import { CODE_RE, showCode } from "../shared/join-code.js";
 import { COMPONENTS_RE, ITEM_RE, SLOT_RE } from "../shared/slots.js";
 
@@ -176,7 +177,7 @@ export function bookCheckCommands(name: string, portalUrl: string, code: string)
 }
 
 /** Who waits in the room, and for what: to link their Discord, for Play first, for the server to open, or for a new installer. */
-export type HeldKind = "link" | "play" | "closed" | "old" | "mods";
+export type HeldKind = "link" | "play" | "closed" | "old" | "mods" | "vote";
 
 /** What stays on their screen while they wait (docs/14 "The prompt"). */
 export function screenText(kind: HeldKind, portalUrl: string, code = ""): { title: string; subtitle: string; bar?: string } {
@@ -187,6 +188,8 @@ export function screenText(kind: HeldKind, portalUrl: string, code = ""): { titl
   // 2026-10-02: every copy from 1.4.0 up updates itself on Play (to the app since 2.2.0/3.1.0), so Play comes first
   if (kind === "old") return { title: "Update Deepslate Works", subtitle: `Press Play on ${host}: it updates itself` };
   if (kind === "mods") return { title: "Your game is missing some mods", subtitle: `Press Play on ${host} to fix it` };
+  // planner 2026-10-02: a must-vote poll they have not answered
+  if (kind === "vote") return { title: "There's a new vote", subtitle: `Open Deepslate Works or ${host} to vote, then you're in` };
   return { title: "Not open yet", subtitle: "You'll be let in when the server goes live" };
 }
 
@@ -241,6 +244,33 @@ export function modsTellraw(name: string, portalUrl: string): string {
   return `tellraw ${name} ${JSON.stringify(payload)}`;
 }
 
+/** Planner 2026-10-02: a must-vote poll they have not answered (VOTE_FIRST_TEXT, with the site as a link). */
+export function voteTellraw(name: string, portalUrl: string): string {
+  const host = hostOf(portalUrl);
+  const [before, after] = VOTE_FIRST_TEXT(host).split(host) as [string, string];
+  const payload = [
+    "",
+    { text: before, color: "gold" },
+    { text: host, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: `${portalUrl.replace(/\/+$/, "")}/votes` }, hoverEvent: { action: "show_text", value: "Opens the vote in your browser" } },
+    { text: after, color: "gold" },
+  ];
+  return `tellraw ${name} ${JSON.stringify(payload)}`;
+}
+
+/** Planner 2026-10-02: a poll opened while people are playing. They are not held for it now; a chat line to all. */
+export function pollChat(question: string, portalUrl: string): string {
+  const host = hostOf(portalUrl);
+  const payload = [
+    "",
+    { text: "New vote: ", color: "gold", bold: true },
+    { text: `${question} `, color: "white" },
+    { text: "Vote in Deepslate Works or on ", color: "gold" },
+    { text: host, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: `${portalUrl.replace(/\/+$/, "")}/votes` }, hoverEvent: { action: "show_text", value: "Opens the vote in your browser" } },
+    { text: "; it's asked before your next game.", color: "gold" },
+  ];
+  return `tellraw @a[tag=verified] ${JSON.stringify(payload)}`;
+}
+
 export function playTellraw(name: string, portalUrl: string): string {
   const host = hostOf(portalUrl);
   const payload = [
@@ -285,7 +315,7 @@ export const actions = {
   "limbo.bar": define({
     name: "limbo.bar",
     role: "system",
-    input: z.object({ name: MC_NAME, kind: z.enum(["link", "play", "closed", "old", "mods"]), code: z.string().regex(CODE_RE).optional() }),
+    input: z.object({ name: MC_NAME, kind: z.enum(["link", "play", "closed", "old", "mods", "vote"]), code: z.string().regex(CODE_RE).optional() }),
     build: (ctx, { name, kind, code }) => {
       const t = screenText(kind, ctx.portalUrl, code);
       return [`title @a[name=${name},tag=!verified] actionbar ${component(t.bar ?? t.subtitle, "yellow")}`];
@@ -389,6 +419,21 @@ export const actions = {
     build: (ctx, { name }) => [...intoRoom(ctx, name), ...screenCommands(name, "mods", ctx.portalUrl), modsTellraw(name, ctx.portalUrl)],
   }),
   "limbo.remindMods": define({ name: "limbo.remindMods", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [...screenCommands(name, "mods", ctx.portalUrl), modsTellraw(name, ctx.portalUrl)] }),
+  // planner 2026-10-02: held until they answer the open must-vote polls; released within seconds of voting.
+  "limbo.holdVote": define({
+    name: "limbo.holdVote",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [...intoRoom(ctx, name), ...screenCommands(name, "vote", ctx.portalUrl), voteTellraw(name, ctx.portalUrl)],
+  }),
+  "limbo.remindVote": define({ name: "limbo.remindVote", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [...screenCommands(name, "vote", ctx.portalUrl), voteTellraw(name, ctx.portalUrl)] }),
+  "limbo.kickIdleVote": define({ name: "limbo.kickIdleVote", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [`kick ${name} ${VOTE_FIRST_TEXT(hostOf(ctx.portalUrl))}`] }),
+  "server.pollOpened": define({
+    name: "server.pollOpened",
+    role: "system",
+    input: z.object({ question: z.string().min(1).max(200).regex(/^[^\n\r]+$/) }),
+    build: (ctx, { question }) => [pollChat(question.replace(/[§]/g, ""), ctx.portalUrl)],
+  }),
   "limbo.kickIdleMods": define({ name: "limbo.kickIdleMods", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${MISSING_MODS_TEXT}`] }),
   "limbo.kickIdleOld": define({
     name: "limbo.kickIdleOld",

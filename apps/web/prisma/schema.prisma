@@ -73,6 +73,7 @@ model User {
   sessionVersion Int    @default(0) // raised to end every session the member has (made a player, password sign-in turned off)
   adminLogin   AdminLogin?
   oneTimeLogins OneTimeLogin[]
+  pollAnswers  PollAnswer[]
 }
 
 /// Admin password sign-in (planner, 2026-10-01): username + password (argon2id) + authenticator code. Admins only.
@@ -120,7 +121,43 @@ model Vote {
   closesAt   DateTime?
   questions  Json
   resultJson Json?
+  mustVote   Boolean    @default(false) // planner 2026-10-02: members answer it before they can play (the door holds them)
   ballots    Ballot[]
+}
+
+/// A quick single question (planner 2026-10-02, "votes before play"): 2 to 8 options plus "I don't mind", single or
+/// multiple choice, optionally closing by itself. Separate from the season's mod ballot (Vote).
+model Poll {
+  id        String     @id @default(cuid())
+  question  String
+  options   Json       // [{id, text, image?, link?, modId?}], "I don't mind" last (shared/polls.ts)
+  multiple  Boolean    @default(false)
+  mustVote  Boolean    @default(true)
+  status    VoteStatus @default(OPEN)
+  createdAt DateTime   @default(now())
+  createdBy String
+  openedAt  DateTime?
+  closesAt  DateTime?
+  closedAt  DateTime?
+  closedBy  String?    // a member's id, or "system" when it closed at its date
+  answers   PollAnswer[]
+
+  @@index([status, openedAt])
+}
+
+/// One member's answer to a poll; changed in place until the poll closes.
+model PollAnswer {
+  id        String   @id @default(cuid())
+  pollId    String
+  userId    String
+  choices   String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+  @@index([userId])
 }
 
 model Ballot {

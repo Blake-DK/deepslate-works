@@ -28,7 +28,7 @@ export type Actor = { role: "ADMIN" | "PLAYER" | "system" | null; name: string |
 
 /** Must agree with the CASE in prisma/migrations/0005_events_sessions_settings. */
 export function kindOf(action: string, role: Actor["role"]): EventKind {
-  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "limbo.kickIdleClosed" || action === "limbo.kickIdleOld" || action === "limbo.kickIdleMods" || action === "join.ready") return "LINK";
+  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "limbo.kickIdleClosed" || action === "limbo.kickIdleOld" || action === "limbo.kickIdleMods" || action === "limbo.kickIdleVote" || action === "join.ready") return "LINK";
   if (action === "player.revoke" || action === "user.remove" || action === "user.clearMinecraft") return "REVOKE";
   if (action.startsWith("modpack.sync")) return "SYNC";
   if (action === "server.backup") return "BACKUP";
@@ -100,6 +100,12 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "vote.close": (p) => (p.auto ? "the vote closed by itself" : "closed the vote"),
   "vote.delete": (p) => `deleted the vote "${s(p.title)}"`,
   "vote.apply": "applied the vote's results to the mod list",
+  "vote.mustVote": (p) => (p.on ? `made the vote "${s(p.title)}" a must-vote: members answer it before they play` : `made the vote "${s(p.title)}" optional again`),
+  // planner 2026-10-02, quick polls: the choice is in `meta` (admins only), never in the line
+  "poll.open": (p) => `opened the poll "${s(p.question)}"${p.mustVote ? " (must vote before playing)" : ""}`,
+  "poll.close": (p) => (p.auto ? `the poll "${s(p.question)}" closed at its date: ${s(p.result, "no clear answer")}` : `closed the poll "${s(p.question)}": ${s(p.result, "no clear answer")}`),
+  "poll.delete": (p) => `deleted the poll "${s(p.question)}"`,
+  "poll.vote": (p) => `${p.changed ? "changed their vote" : "voted"} in "${s(p.question)}"`,
   "invite.create": "created an invite",
   "invite.revoke": "revoked an invite",
   "user.earlyAccess": (p) => (p.on ? `gave ${s(p.displayName, "a member")} early access` : `took early access away from ${s(p.displayName, "a member")}`),
@@ -113,10 +119,11 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "link.bind": (p) => (p.refused ? "was stopped from trying more join codes: too many wrong ones" : `linked their Minecraft account ${s(p.mcUsername)}${p.via === "join" ? " with the code on /join" : ""}`),
   "link.release": (p) => `let ${s(p.name)} in`,
   "limbo.held": (p) => `${s(p.name)} is waiting in the entrance room`,
-  "join.blocked": (p) => p.refused ? `${s(p.name)} was refused by the server: their game is missing ${s(p.mod, "a mod the server needs")} (${s(p.channel, "?")}); the site and the app tell them to press Play` : `${s(p.name)} was held in the entrance room: ${p.reason === "missing mods" ? "their game was missing some of the pack's mods; they were told to press Play" : p.reason === "not live" ? "the server is not open yet" : p.reason === "no report" ? "has not pressed Play on the site" : p.reason === "stale" ? "pressed Play too long ago" : p.reason === "wrong version" ? "pressed Play before the pack changed" : p.reason === "old installer" ? "their installer is older than the minimum; they were told to press Play to update it" : s(p.reason, "Play first")}`,
-  "join.ready": (p) => `${s(p.name)} ${p.was === "not live" ? "was let in: the server is open for them now" : p.was === "old installer" ? "installed the new Deepslate Works and was let in" : "pressed Play and was let in"}${p.back ? ", back to where they were" : ""}`,
+  "join.blocked": (p) => p.refused ? `${s(p.name)} was refused by the server: their game is missing ${s(p.mod, "a mod the server needs")} (${s(p.channel, "?")}); the site and the app tell them to press Play` : `${s(p.name)} was held in the entrance room: ${p.reason === "missing mods" ? "their game was missing some of the pack's mods; they were told to press Play" : p.reason === "vote" ? "they have not answered the new vote yet" : p.reason === "not live" ? "the server is not open yet" : p.reason === "no report" ? "has not pressed Play on the site" : p.reason === "stale" ? "pressed Play too long ago" : p.reason === "wrong version" ? "pressed Play before the pack changed" : p.reason === "old installer" ? "their installer is older than the minimum; they were told to press Play to update it" : s(p.reason, "Play first")}`,
+  "join.ready": (p) => `${s(p.name)} ${p.was === "not live" ? "was let in: the server is open for them now" : p.was === "old installer" ? "installed the new Deepslate Works and was let in" : p.was === "vote" ? "voted and was let in" : "pressed Play and was let in"}${p.back ? ", back to where they were" : ""}`,
   "limbo.kickIdleClosed": (p) => `${s(p.name)} waited too long in the entrance room while the server is not open and was disconnected`,
   "limbo.kickIdleOld": (p) => `${s(p.name)} waited too long in the entrance room with an old installer and was disconnected`,
+  "limbo.kickIdleVote": (p) => `${s(p.name)} waited too long in the entrance room without voting and was disconnected`,
   "limbo.kickIdleMods": (p) => `${s(p.name)} waited too long in the entrance room with mods missing from their game and was disconnected`,
   "limbo.kickIdlePlay": (p) => `${s(p.name)} waited too long in the entrance room without pressing Play and was disconnected`,
   "limbo.kickIdle": (p) => `${s(p.name)} waited too long in the entrance room and was disconnected`,
@@ -176,7 +183,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "items.clear": (p) => (typeof p.removed === "number" ? `cleared ${s(p.removed)} item${p.removed === 1 ? "" : "s"} from the ground${p.auto ? ` (automatic: more than ${s(p.threshold)} lying around)` : ""}` : `tried to clear items on the ground${p.auto ? " (automatic)" : ""}`),
   "items.clearPlan": (p) => (p.auto ? `turned automatic clearing of ground items on (above ${s(p.threshold)} items, checked every 10 minutes)` : "turned automatic clearing of ground items off"),
   "server.distance": (p) => `${p.refused ? "tried to set" : "set"} ${p.what === "simulation" ? "simulation" : "view"} distance ${p.from === null || p.from === undefined ? "" : `${s(p.from)} → `}${s(p.to)}${p.refused ? ": AMP does not let the portal change it" : p.apply === "now" ? " (restart in 1 minute)" : " (from the next restart)"}`,
-  "server.wake": (p) => (p.failed ? "tried to wake the server (Play); it didn't wake up" : "woke the server (Play)"),
+  "server.wake": (p) => (p.failed ? `tried to wake the server (${p.via === "app" ? "app" : "Play"}); it didn't wake up` : `woke the server (${p.via === "app" ? "app" : "Play"})`),
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
   "console.send": (p) => `ran: ${s(p.command, "")}`,
   // docs/13 §13, the inventory editor (the same words as invPhrase in slots.ts)
@@ -198,7 +205,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
 };
 
 // Phrases that already say who (or have no who).
-const SELF_CONTAINED = new Set(["auth.adminPasswordFailed", "auth.adminLinkFailed", "auth.adminBreakGlass", "download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "limbo.kickIdleMods", "modpack.serverMods", "world.pregenAutoPause"]);
+const SELF_CONTAINED = new Set(["auth.adminPasswordFailed", "auth.adminLinkFailed", "auth.adminBreakGlass", "download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "limbo.kickIdleMods", "limbo.kickIdleVote", "modpack.serverMods", "world.pregenAutoPause"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
 const OUTCOME_IN_PHRASE = new Set(["auth.adminPasswordFailed", "auth.adminLinkFailed", "server.wake", "installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);
@@ -208,7 +215,7 @@ export function describeAction(action: string, actor: Actor, params: unknown, re
   const phrase = PHRASES[action];
   const text = typeof phrase === "function" ? phrase(p) : (phrase ?? action);
   const who = actor.name ?? (actor.role === "system" ? "The portal" : "Someone");
-  const auto = action === "vote.close" && p.auto;
+  const auto = (action === "vote.close" || action === "poll.close") && p.auto;
   const planned = action === "server.restart" && p.scheduled;
   // what the pre-generation does by itself has no "who": "Pre-generation finished (100%, radius 1500)"
   const byItself = (action === "world.pregenOff" && (p.reason === "done" || p.reason === "cap")) || (action === "world.pregenContinue" && !actor.name);

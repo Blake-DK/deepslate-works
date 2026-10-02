@@ -10,6 +10,7 @@ import { getSection } from "../settings.js";
 import { PLAY_MODES, playGate, type BlockReason, type PlayRun } from "../shared/join-gate.js";
 import { serverPack } from "./pack.js";
 import { modsMissingFor } from "./mods.js";
+import { unvotedFor } from "./polls.js";
 import { doorRule, type Member } from "../shared/access.js";
 import { CODE_TTL_MS, makeCode } from "../shared/join-code.js";
 
@@ -31,12 +32,15 @@ export type Back = { dimension: string; x: number; y: number; z: number };
 /** `lastReminder`: when the prompt last went to them (docs/14 "The prompt"). */
 /** "old": their last run was from an installer below Settings → Joining "Minimum installer version". */
 type Held = { uuid: string; code: string; since: number; lastReminder: number; kind: "link" | HeldFor; userId?: string; back?: Back | null };
-type HeldFor = "play" | "closed" | "old" | "mods";
+/** "vote": an open must-vote poll they have not answered (planner 2026-10-02). */
+type HeldFor = "play" | "closed" | "old" | "mods" | "vote";
 /** Which wait a reason at the door is. */
-export const waitFor = (reason: BlockReason): HeldFor => (reason === "not live" ? "closed" : reason === "old installer" ? "old" : reason === "missing mods" ? "mods" : "play");
-const HOLD = { play: "limbo.holdPlay", closed: "limbo.holdClosed", old: "limbo.holdOld", mods: "limbo.holdMods" } as const;
-const REMIND = { play: "limbo.remindPlay", closed: "limbo.remindClosed", old: "limbo.remindOld", mods: "limbo.remindMods" } as const;
-const KICK = { link: "limbo.kickIdle", play: "limbo.kickIdlePlay", closed: "limbo.kickIdleClosed", old: "limbo.kickIdleOld", mods: "limbo.kickIdleMods" } as const;
+export const waitFor = (reason: BlockReason): HeldFor => (reason === "not live" ? "closed" : reason === "vote" ? "vote" : reason === "old installer" ? "old" : reason === "missing mods" ? "mods" : "play");
+const HOLD = { play: "limbo.holdPlay", closed: "limbo.holdClosed", old: "limbo.holdOld", mods: "limbo.holdMods", vote: "limbo.holdVote" } as const;
+const REMIND = { play: "limbo.remindPlay", closed: "limbo.remindClosed", old: "limbo.remindOld", mods: "limbo.remindMods", vote: "limbo.remindVote" } as const;
+const KICK = { link: "limbo.kickIdle", play: "limbo.kickIdlePlay", closed: "limbo.kickIdleClosed", old: "limbo.kickIdleOld", mods: "limbo.kickIdleMods", vote: "limbo.kickIdleVote" } as const;
+/** What a wait was, in the event log's words ("join.ready" `was`). */
+const WAS: Record<HeldFor, string> = { closed: "not live", old: "old installer", mods: "missing mods", vote: "vote", play: "play" };
 type Known = Member & { id: string };
 
 export type JoinDecision = { action: "release" | "hold"; reason: string };
@@ -53,12 +57,15 @@ export function decideJoin(user: { verifiedAt: Date | null; guildMember: boolean
 }
 
 /**
- * Pure: the door for a linked member, in its order. Open for them (admin, live, early access)? Then Play first:
- * `run` is their latest run of Play or of the installer that went through. Null: in. Joining and having just
- * linked in the room both come through here (2026-09-29: a member who linked was let in without Play first).
+ * Pure: the door for a linked member, in its order. Open for them (admin, live, early access)? Then the must-vote
+ * polls: `unvoted` is how many open ones they have not answered (planner 2026-10-02; admins are never held for it).
+ * Then Play first: `run` is their latest run of Play or of the installer that went through. Null: in. Joining and
+ * having just linked in the room both come through here (2026-09-29: a member who linked was let in without Play first).
  */
-export function doorReason(user: Member, d: { live: boolean; requirePlay: boolean; windowMin: number; run: PlayRun | null; pack: string | null; now: Date; minInstaller?: string; modsMissing?: boolean }): BlockReason | null {
-  if (doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: true }) === "not open") return "not live";
+export function doorReason(user: Member, d: { live: boolean; requirePlay: boolean; windowMin: number; run: PlayRun | null; pack: string | null; now: Date; minInstaller?: string; modsMissing?: boolean; unvoted?: number }): BlockReason | null {
+  const door = doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: true, unvoted: d.unvoted });
+  if (door === "not open") return "not live";
+  if (door === "vote first") return "vote";
   if (doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: false }) === "in") return null; // Play is not asked of them
   const gate = playGate(d.run, d.pack, d.windowMin, d.now, d.minInstaller ?? "", d.modsMissing ?? false);
   return gate.ok ? null : gate.reason;
@@ -201,8 +208,8 @@ export class Limbo {
       db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { at: true, packVersion: true, installerVersion: true } }),
       serverPack(),
     ]);
-    const modsMissing = await modsMissingFor(user.id, run);
-    return doorReason(user, { live, requirePlay: joining.requirePlay, windowMin: joining.windowMin, run, pack, now: new Date(), minInstaller: joining.minInstaller, modsMissing });
+    const [modsMissing, unvoted] = await Promise.all([modsMissingFor(user.id, run), user.role === "ADMIN" ? Promise.resolve(0) : unvotedFor(user.id)]);
+    return doorReason(user, { live, requirePlay: joining.requirePlay, windowMin: joining.windowMin, run, pack, now: new Date(), minInstaller: joining.minInstaller, modsMissing, unvoted });
   }
 
   /** Asks the server where they are and waits for the answer; null when none comes. */
@@ -234,7 +241,7 @@ export class Limbo {
   private async releaseBack(name: string, h: Held) {
     this.held.delete(name);
     const r = await runAction(this.amp, this.ctx, "limbo.releaseBack", { name, back: h.back ?? null }, null);
-    await audit({ userId: h.userId ?? null, action: "join.ready", params: { name, uuid: h.uuid, back: Boolean(h.back), was: h.kind === "closed" ? "not live" : h.kind === "old" ? "old installer" : h.kind === "mods" ? "missing mods" : "play" }, result: r.ok ? "OK" : "FAILED", detail: r.detail ?? null });
+    await audit({ userId: h.userId ?? null, action: "join.ready", params: { name, uuid: h.uuid, back: Boolean(h.back), was: WAS[h.kind === "link" ? "play" : h.kind] }, result: r.ok ? "OK" : "FAILED", detail: r.detail ?? null });
   }
 
   private async hold(name: string, uuid: string, reason: string) {
@@ -305,8 +312,8 @@ export class Limbo {
         continue;
       }
       if (h.kind !== "link") {
-        // The site may have gone live, the flag may have been given, they may have pressed Play: looked at every
-        // round, so that the door opens within seconds.
+        // The site may have gone live, the flag may have been given, they may have voted or pressed Play: looked at
+        // every round, so that the door opens within seconds.
         const user = h.userId ? await db.user.findUnique({ where: { id: h.userId }, select: { id: true, role: true, earlyAccess: true } }) : null;
         const blocked = user ? await this.atTheDoor(user) : null;
         if (user && blocked === null) {

@@ -141,6 +141,23 @@ namespace DeepslateWorks
                 files.Add(SavePng(sd.Content as FrameworkElement, Path.Combine(dir, "11-play-settings.png")));
                 sd.Close();
                 ui.Guided = 0;
+
+                // 3.2.0 (planner 2026-10-02): the server on the Play tab while a wake runs; switched off, with an admin's
+                // Start; a vote before play (Play shut), and its results
+                ui.Consent = real3;
+                ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Waking)), "ready");
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "12-play-server-waking.png")));
+                ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.OffAdmin)), "idle");
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "13-play-switched-off-admin.png")));
+                ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready");
+                ui.SimPick("o2");
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "14-vote.png")));
+                ui.Tabs.SelectedItem = ui.PlayTab;
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "14b-play-vote-first.png")));
+                ui.Tabs.SelectedItem = ui.VoteTab;
+                ui.SimVoted(SiteHome.ParsePoll(Json.Parse(HomeSamples.Voted)));
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "15-vote-results.png")));
+                ui.SimDone();
             }
             finally { w.Close(); }
             return files;

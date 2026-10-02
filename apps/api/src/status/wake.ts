@@ -25,7 +25,8 @@ export class Wake {
   }
 
   /** Sends the one start. The caller has decided (shared/server-state.ts `wakeDecision`) that it is "start". */
-  async start(userId: string, name: string): Promise<void> {
+  /** `via`: "app" when Deepslate Works asked (planner 2026-10-02, the app as the front door), else the site's Play. */
+  async start(userId: string, name: string, via: "play" | "app" = "play"): Promise<void> {
     this.phase = "waking";
     this.startedAt = this.now();
     this.endedAt = 0;
@@ -34,10 +35,10 @@ export class Wake {
       await this.amp.call("Core", "Start");
     } catch (e) {
       this.end("failed");
-      await this.audit({ userId, action: "server.wake", params: { name, failed: true }, result: "FAILED", detail: e instanceof Error ? e.message : String(e) });
+      await this.audit({ userId, action: "server.wake", params: { name, via, failed: true }, result: "FAILED", detail: e instanceof Error ? e.message : String(e) });
       throw e;
     }
-    await this.audit({ userId, action: "server.wake", params: { name }, result: "OK" });
+    await this.audit({ userId, action: "server.wake", params: { name, via }, result: "OK" });
   }
 
   /** Every status poll and every tick: Running ends the wake; three minutes without it is a failed wake. */

@@ -44,6 +44,9 @@ namespace DeepslateWorks
         /// run's thread until then. False: not started (the window closed). Null: start as soon as it is ready.</summary>
         public Func<bool> WaitForGo;
         public bool HandOver;                       // 3.1.0: opened to move over from the old launcher (guided setup first)
+        /// <summary>3.2.0: started by opening the app (desktop, Start Menu), not by Play: the game waits for Play, and a
+        /// window closed before that sends no report when nothing changed (it is not "pressed Play and closed it").</summary>
+        public bool OpenedOnly;
         public ModsCheck ModsCheck;                 // 2.1.0: the last check of mods\ in this run (the report's `mods`)
         public string PackCheckDir;                 // 2.1.0: mods\ and the PC set, for the report of a run that stops part-way
         public List<object> PackCheckFiles;

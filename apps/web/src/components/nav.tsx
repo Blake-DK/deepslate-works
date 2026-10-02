@@ -6,6 +6,7 @@ import { getBranding } from "@/server/branding";
 import { getStatus } from "@/server/status";
 import { statusText } from "@/lib/server-status";
 import { getOpenVote } from "@/server/vote/votes";
+import { pendingFor } from "@/server/polls";
 import { getSection } from "@/server/site-settings";
 import { MobileMenu, NavLink } from "./nav-link";
 
@@ -55,7 +56,8 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
   }
 
   const admin = user.role === "ADMIN";
-  const [status, vote, privacy] = await Promise.all([getStatus(), getOpenVote(), getSection("privacy")]);
+  const [status, vote, privacy, pending] = await Promise.all([getStatus(), getOpenVote(), getSection("privacy"), pendingFor({ id: user.id, role: user.role }).catch(() => null)]);
+  const polls = pending?.polls.length ?? 0;
   const stats = admin || privacy.analyticsForPlayers;
   const a = statusText(status, admin);
   const statusLine = (
@@ -75,6 +77,7 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
       <Group label="Community">
         <NavLink href="/players">{stats ? "Players & stats" : "Players"}</NavLink>
         <NavLink href="/pack" badge={vote ? <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">vote</span> : null}>Mods &amp; vote</NavLink>
+        <NavLink href="/votes" badge={polls ? <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">{polls === 1 ? "new" : polls}</span> : null}>Votes</NavLink>
         <NavLink href="/activity">Activity</NavLink>
       </Group>
       <Group label="You">

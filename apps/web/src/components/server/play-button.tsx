@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { PLAY_LINK, PLAY_WAIT_MS, nothingHappened } from "@/lib/play";
 import { JOINABLE, WAKE_TIMEOUT_MS, wakeLine, type ServerState } from "@/shared/server-state";
 import type { WakeView } from "@/server/status";
+import { VOTE_FIRST_BUTTON } from "@/shared/polls";
 
 type Props = {
   name: string;
@@ -28,6 +29,8 @@ type Props = {
   download?: string;
   /** Their copy is older than 1.4.0 and cannot update itself (1.5.3): the button is the new download instead. */
   tooOld?: boolean;
+  /** Planner 2026-10-02: a must-vote poll they have not answered. Play asks for the vote first (the banner on the page). */
+  voteFirst?: boolean;
 };
 
 const POLL_MS = 3000;
@@ -36,7 +39,7 @@ const POLL_MS = 3000;
  * docs/05 "Play from the site". A plain link to deepslate://play. After the click the page waits 2.5 s: if it is
  * still in front and never lost focus, nothing on this PC took the link, and the installer download is offered.
  */
-export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false, server, wake: initialWake, installed = true, tooOld = false, download = "installer.zip" }: Props) {
+export function PlayButton({ name, current, ready, last, update, join = null, stepsHere = false, server, wake: initialWake, installed = true, tooOld = false, download = "installer.zip", voteFirst = false }: Props) {
   const [wake, setWake] = useState<WakeView>(initialWake);
   const poller = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -119,7 +122,9 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
   return (
     <div className="space-y-3" data-testid="play">
       <div className="flex flex-wrap items-center gap-3">
-        {tooOld
+        {voteFirst && !tooOld
+          ? <a href="#vote" data-testid="play-vote-first" className={buttonClasses("secondary", "lg")}>{VOTE_FIRST_BUTTON}</a>
+          : tooOld
           ? <a href={`/downloads/${download ?? "installer.zip"}`} onClick={(e) => { if (!ready) e.preventDefault(); }} aria-disabled={!ready} data-testid="play-download" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")}>Download the new installer</a>
           : <a href={PLAY_LINK} onClick={clicked} aria-disabled={!ready} className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")}>
               {state === "waiting" ? "Starting…" : "Play"}

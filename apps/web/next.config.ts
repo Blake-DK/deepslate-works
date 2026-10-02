@@ -5,8 +5,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   transpilePackages: ["modpack"],
   serverExternalPackages: ["@prisma/client", "bcryptjs", "@node-rs/argon2"],
-  // Admin → Branding uploads pictures of up to 2 MB through a server action; the default limit is 1 MB.
-  experimental: { serverActions: { bodySizeLimit: "4mb" } },
+  // Admin → Branding uploads pictures of up to 2 MB through a server action; the default limit is 1 MB. A new poll
+  // (planner 2026-10-02) may carry a picture of up to 3 MB for each of its 8 options.
+  experimental: { serverActions: { bodySizeLimit: "26mb" } },
   // docs/13 §11 layout: every address from before the sidebar still works. Temporary (307) on purpose while v6
   // settles: a browser remembers a 308 for good, and would keep going to the new addresses after a rollback.
   async redirects() {

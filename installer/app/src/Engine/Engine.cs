@@ -457,7 +457,9 @@ namespace DeepslateWorks
                 if (!go)
                 {
                     Log.Line("ready: the game was not started (the window was closed)");
-                    Report.Send(run, "cancelled");
+                    // 3.2.0: opening the app and closing it again, with nothing updated, is not a press of Play
+                    if (run.OpenedOnly && run.Mode == "play") { Log.Line("ready: opened without playing, nothing changed: no report"); run.Reported = true; }
+                    else Report.Send(run, "cancelled");
                     return false;
                 }
                 run.StepName = "";

@@ -176,7 +176,7 @@ DISCORD_WEBHOOK_UPDATES=
 ## 12. Open, for Alex
 
 1. ~~The chat channel.~~ Answered 2026-10-02: #game-chat for chat, the forum season-updates for votes and season posts (§13).
-2. **Who may talk into the game**: anybody who can write in the chat channel (default), or only people whose Discord account is on the portal.
+2. ~~Who may talk into the game.~~ Answered 2026-10-02: anybody who can write in #game-chat. Their Minecraft name shows if their Discord account is on the portal, their Discord name if not (§5, as written).
 3. **Admin commands**: `/restart`, `/cancel-restart`, `/say` and `/feed` are in. Say if any should go or if one is missing.
 4. **Deaths, joins and challenges in #game-chat** (§13): the planner's reading, because that is where they show in the game. Say if they should go somewhere else or nowhere.
 5. **News** as posts in season-updates (§13), or kept out of the forum.

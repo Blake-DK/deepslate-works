@@ -76,4 +76,4 @@ export function modsMissingSince(run: PlayRun | null, mods: { at: Date; ok: bool
 }
 
 /** What somebody reads in the room while their installer is below the minimum (planner, installer 1.5.0). */
-export const OLD_INSTALLER_TEXT = "Download Deepslate Works again from deepslate.dsw.test/install";
+export const OLD_INSTALLER_TEXT = "Press Play on deepslate.dsw.test to update Deepslate Works";

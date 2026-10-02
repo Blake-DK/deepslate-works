@@ -184,7 +184,8 @@ export function screenText(kind: HeldKind, portalUrl: string, code = ""): { titl
   // 2026-09-30 (planner): an account with chat switched off never opens the chat, so the book comes first on screen
   if (kind === "link") return { title: "Sign in to play", subtitle: `Right-click the book, or go to ${host}/join and enter ${showCode(code)}`, bar: `Click the link in chat or right-click the book in your hand, or go to ${host}/join and enter ${showCode(code)}` };
   if (kind === "play") return { title: "Press Play first", subtitle: `Press Play on ${host} and you'll be let in` };
-  if (kind === "old") return { title: "Download Deepslate Works again", subtitle: `from ${host}/install, then press Play` };
+  // 2026-10-02: every copy from 1.4.0 up updates itself on Play (to the app since 2.2.0/3.1.0), so Play comes first
+  if (kind === "old") return { title: "Update Deepslate Works", subtitle: `Press Play on ${host}: it updates itself` };
   if (kind === "mods") return { title: "Your game is missing some mods", subtitle: `Press Play on ${host} to fix it` };
   return { title: "Not open yet", subtitle: "You'll be let in when the server goes live" };
 }
@@ -219,9 +220,11 @@ export function oldTellraw(name: string, portalUrl: string): string {
   const url = `${portalUrl.replace(/\/+$/, "")}/install`;
   const payload = [
     "",
-    { text: "Download Deepslate Works again from ", color: "gold" },
+    { text: "Press Play on ", color: "gold" },
+    { text: host, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: portalUrl.replace(/\/+$/, "") }, hoverEvent: { action: "show_text", value: "Opens the site in your browser" } },
+    { text: ": Deepslate Works updates itself, then you can join. If Play does nothing, download it again from ", color: "gold" },
     { text: `${host}/install`, color: "aqua", underlined: true, clickEvent: { action: "open_url", value: url }, hoverEvent: { action: "show_text", value: "Opens the install page in your browser" } },
-    { text: ". Run Setup.bat once, then press Play; from then on it keeps itself up to date.", color: "gold" },
+    { text: ".", color: "gold" },
   ];
   return `tellraw ${name} ${JSON.stringify(payload)}`;
 }
@@ -391,7 +394,7 @@ export const actions = {
     name: "limbo.kickIdleOld",
     role: "system",
     input: z.object({ name: MC_NAME }),
-    build: (ctx, { name }) => [`kick ${name} Download Deepslate Works again from ${ctx.portalUrl.replace(/^https?:\/\//, "")}/install and join again.`],
+    build: (ctx, { name }) => [`kick ${name} Press Play on ${ctx.portalUrl.replace(/^https?:\/\//, "")} to update Deepslate Works, then join again.`],
   }),
   "limbo.kickIdlePlay": define({
     name: "limbo.kickIdlePlay",

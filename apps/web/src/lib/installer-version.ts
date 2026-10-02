@@ -51,7 +51,7 @@ export function mustDownloadAgain(version: string | null | undefined, current: s
 /** What the Play window and the install window are told at the end of a run from an old installer. */
 export function outdatedNotice(version: string, current: string, site: string): string {
   const which = version === UNKNOWN_INSTALLER ? "an old installer" : `installer ${version}`;
-  return `This PC has ${which}; the current one is ${current}. Download Deepslate Works again from ${site}/install and run Setup.bat once. After that it keeps itself up to date.`;
+  return `This PC has ${which}; the current one is ${current}. Download Deepslate Works again from ${site}/install and open it once. After that it keeps itself up to date.`;
 }
 
 /**

@@ -190,14 +190,15 @@ describe("the door after linking: the same order as at a join", () => {
     const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
     const cmds = actions["limbo.holdOld"].build(ctx, { name: "samoyedx" });
     expect(cmds).toContain("execute in deepslate:limbo run tp samoyedx 0.5 65 0.5");
-    expect(cmds).toContain('title @a[name=samoyedx,tag=!verified] title {"text":"Download Deepslate Works again","color":"gold"}');
+    expect(cmds).toContain('title @a[name=samoyedx,tag=!verified] title {"text":"Update Deepslate Works","color":"gold"}');
+    expect(cmds).toContain('title @a[name=samoyedx,tag=!verified] subtitle {"text":"Press Play on deepslate.dsw.test: it updates itself","color":"white"}');
     expect(cmds).toContain("title @a[name=samoyedx,tag=!verified] times 0 400 0");
     const chat = JSON.parse(cmds.at(-1)!.replace(/^tellraw samoyedx /, "")) as Array<string | { text: string }>;
-    expect(chat.map((p) => (typeof p === "string" ? p : p.text)).join("")).toMatch(/^Download Deepslate Works again from deepslate\.dsw\.test\/install\./);
+    expect(chat.map((p) => (typeof p === "string" ? p : p.text)).join("")).toBe("Press Play on deepslate.dsw.test: Deepslate Works updates itself, then you can join. If Play does nothing, download it again from deepslate.dsw.test/install.");
     expect(actions["limbo.remindOld"].build(ctx, { name: "samoyedx" })).toEqual(cmds.slice(-5));
-    expect(actions["limbo.kickIdleOld"].build(ctx, { name: "samoyedx" })).toEqual(["kick samoyedx Download Deepslate Works again from deepslate.dsw.test/install and join again."]);
+    expect(actions["limbo.kickIdleOld"].build(ctx, { name: "samoyedx" })).toEqual(["kick samoyedx Press Play on deepslate.dsw.test to update Deepslate Works, then join again."]);
     expect(waitFor("old installer")).toBe("old");
-    expect(describeAction("join.blocked", { role: "PLAYER", name: "Pabulum" }, { name: "Pabulum", reason: "old installer" })).toBe("Pabulum was held in the entrance room: their installer is older than the minimum; they were told to download it again");
+    expect(describeAction("join.blocked", { role: "PLAYER", name: "Pabulum" }, { name: "Pabulum", reason: "old installer" })).toBe("Pabulum was held in the entrance room: their installer is older than the minimum; they were told to press Play to update it");
   });
 
   async function roomWith(blocked: BlockReason | null) {

@@ -35,7 +35,7 @@ describe("installer versions", () => {
     expect(reportSchema.parse({ ...base, installerVersion: "1.4.0" }).installerVersion).toBe("1.4.0");
   });
   it("tells the Play window what to do", () => {
-    expect(outdatedNotice("1.4.3", "1.5.0", "deepslate.dsw.test")).toBe("This PC has installer 1.4.3; the current one is 1.5.0. Download Deepslate Works again from deepslate.dsw.test/install and run Setup.bat once. After that it keeps itself up to date.");
+    expect(outdatedNotice("1.4.3", "1.5.0", "deepslate.dsw.test")).toBe("This PC has installer 1.4.3; the current one is 1.5.0. Download Deepslate Works again from deepslate.dsw.test/install and open it once. After that it keeps itself up to date.");
     expect(outdatedNotice("unknown", "1.5.0", "deepslate.dsw.test")).toContain("This PC has an old installer;");
   });
   it("tells only installers below 1.4.0 to download again: from 1.4.0 on a copy updates itself at the next Play", async () => {

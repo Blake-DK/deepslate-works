@@ -20,6 +20,9 @@ export type VotePoster = {
   createPost(forum: string, title: string, message: BotMessage, tag: string): Promise<{ ok: true; threadId: string; messageId: string } | { ok: false; error: string; gone: boolean }>;
   edit(channel: string, messageId: string, message: Partial<BotMessage>): Promise<{ ok: boolean; retry: boolean; error?: string }>;
   tagFor(forum: string, name: string): string[];
+  /** A plain message from the bot into a channel (the admin channel picked on the card). */
+  sendTo(channel: string, message: BotMessage): Promise<{ ok: true; id: string } | { ok: false; retry: boolean; error: string }>;
+  channelName(id: string): string | null;
   components(poll: { id: string; options: unknown; multiple: boolean }, closed: boolean): Component[];
   pollShape(id: string): Promise<{ id: string; options: unknown; multiple: boolean } | null>;
 };
@@ -95,7 +98,19 @@ export class Announcer {
   }
 
   get configured(): boolean {
-    return Boolean(this.d.feed || this.d.admin || this.d.updates);
+    return Boolean(this.d.feed || this.d.admin || this.d.updates || this.d.bot);
+  }
+
+  /** The admin channel picked on the card, posted to by the bot; read at every round. */
+  private adminChannel = "";
+
+  /** Crashes and problems go to the picked channel through the bot; DISCORD_WEBHOOK_ADMIN only while none is picked. */
+  private botAdmin(): boolean {
+    return Boolean(this.adminChannel && this.d.bot?.inGuild);
+  }
+
+  private canAdmin(): boolean {
+    return this.botAdmin() || this.usable("admin") !== null;
   }
 
   /** docs/22 §13: with the updates forum (or the bot) votes, news and We're live go there; without, docs/21's one feed. */
@@ -151,6 +166,7 @@ export class Announcer {
     try {
       const st = await this.load();
       const sw = await this.d.store.switches();
+      this.adminChannel = sw.adminChannel ?? "";
       if (sw.paused) {
         // nothing posted and nothing queued: the cursor moves on
         const newest = (await this.d.store.newestEventId()).toString();
@@ -229,6 +245,16 @@ export class Announcer {
   /** Output number `n` of the event in hand: delivered at most once even if the event is tried again. */
   private async send(e: FeedEvent | null, n: number, ch: Channel, what: string, msg: Message, file?: Attachment, where: Where = {}): Promise<Outcome> {
     if (e && this.partial?.id === e.id && this.partial.done.has(n)) return { ok: true, id: "", channelId: "" };
+    if (ch === "admin" && this.botAdmin()) {
+      const r = await this.d.bot!.sendTo(this.adminChannel, { content: msg.content, embeds: msg.embeds, allowed_mentions: msg.allowed_mentions, ...(msg.flags ? { flags: msg.flags } : {}) });
+      this.record({ channel: "admin", what, ok: r.ok, ...(r.ok ? {} : { error: r.error }) });
+      const out: Outcome = r.ok ? { ok: true, id: r.id, channelId: this.adminChannel } : { ok: false, retry: r.retry };
+      if (e && (out.ok || !out.retry)) {
+        if (this.partial?.id !== e.id) this.partial = { id: e.id, done: new Set() };
+        this.partial.done.add(n);
+      }
+      return out;
+    }
     const hook = this.usable(ch);
     if (!hook) return { ok: false, retry: false };
     const r = await this.outcome(ch, what, await hook.send(msg, file, where));
@@ -247,6 +273,18 @@ export class Announcer {
 
   /** Send a test line to one channel (Admin → Site settings → Discord). Works while paused, and on a refused webhook. */
   async test(ch: Channel): Promise<{ ok: boolean; error?: string }> {
+    if (ch === "admin") {
+      this.adminChannel = (await this.d.store.switches()).adminChannel ?? "";
+      if (this.botAdmin()) {
+        await this.load();
+        const r = await this.send(null, 0, "admin", "test", asServer(await this.d.store.brand(), TEST_TEXT));
+        if (this.dirtyState && this.st) {
+          this.dirtyState = false;
+          await this.d.store.saveState(this.st).catch(() => undefined);
+        }
+        return r.ok ? { ok: true } : { ok: false, error: this.st?.log[0]?.error ?? "not taken" };
+      }
+    }
     const hook = this.hook(ch);
     if (!hook) return { ok: false, error: `no webhook set (DISCORD_WEBHOOK_${ch.toUpperCase()})` };
     await this.load();
@@ -308,7 +346,9 @@ export class Announcer {
       if (!info.ok) return info.refused ? { state: "refused" as const } : { state: "unreachable" as const, error: info.error };
       return { state: "ok" as const, name: info.name, channel: info.channel };
     };
-    const [feed, admin, updates] = await Promise.all([one("feed"), one("admin"), one("updates")]);
+    this.adminChannel = (await this.d.store.switches().catch(() => null))?.adminChannel ?? this.adminChannel;
+    const adminView = async () => (this.botAdmin() ? { state: "ok" as const, name: "the bot", channel: this.d.bot!.channelName(this.adminChannel) } : one("admin"));
+    const [feed, admin, updates] = await Promise.all([one("feed"), adminView(), one("updates")]);
     return { feed, admin, updates, recent: this.st?.log ?? [] };
   }
 
@@ -374,13 +414,13 @@ export class Announcer {
       }
       case "CRASH": {
         if (!sw.problems) return true;
-        const adminTold = this.usable("admin") !== null;
+        const adminTold = this.canAdmin();
         const a = adminTold ? await this.send(e, 0, "admin", "crash", asServer(brand, crashAdminText(e.at, this.d.portal))) : ({ ok: true, id: "" } as Outcome);
         if (!ok(a)) return false;
         return ok(await this.send(e, 1, "feed", "crash", asServer(brand, crashFeedText(adminTold && a.ok))));
       }
       case "ERROR": {
-        if (!sw.problems || !this.usable("admin")) return true;
+        if (!sw.problems || !this.canAdmin()) return true;
         const t = now.getTime();
         const seen = this.problems.get(e.message);
         this.problemTimes = this.problemTimes.filter((x) => t - x < 60 * 60_000);

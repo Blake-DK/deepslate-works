@@ -113,6 +113,13 @@ export class Bot {
     return { ok: true, threadId: t.id, messageId: t.message?.id ?? t.id };
   }
 
+  async sendTo(channel: string, message: BotMessage): Promise<{ ok: true; id: string } | { ok: false; retry: boolean; error: string }> {
+    const r = await this.d.rest.send(channel, message);
+    if (r.ok) return { ok: true, id: (r.data as { id?: string } | null)?.id ?? "" };
+    // 403: the bot cannot see or write in that channel (a private channel it has not been let into)
+    return { ok: false, retry: r.status === null || (r.status ?? 0) >= 500 || r.status === 429, error: r.status === 403 ? "the bot cannot write in that channel: add Deepslate Works to the channel's permissions" : r.error };
+  }
+
   async edit(channel: string, messageId: string, message: Partial<BotMessage>): Promise<{ ok: boolean; retry: boolean; error?: string }> {
     const r = await this.d.rest.edit(channel, messageId, message);
     if (r.ok) return { ok: true, retry: false };

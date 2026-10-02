@@ -25,7 +25,7 @@ export async function saveDiscordBotAction(formData: FormData) {
   const admin = await requireAdmin();
   const current = await getSection("discord");
   const id = (k: string) => String(formData.get(k) ?? "").trim();
-  const next = { ...current, ...Object.fromEntries(BOT_SWITCHES.map((s) => [s.key, formData.get(s.key) === "on"])), chatChannel: id("chatChannel"), updatesForum: id("updatesForum") };
+  const next = { ...current, ...Object.fromEntries(BOT_SWITCHES.map((s) => [s.key, formData.get(s.key) === "on"])), chatChannel: id("chatChannel"), updatesForum: id("updatesForum"), adminChannel: id("adminChannel") };
   const r = await setSection("discord", next, admin.id);
   await audit({ userId: admin.id, action: "discord.settings", params: r.ok ? { value: r.value } : { problems: r.problems }, result: r.ok ? "OK" : "DENIED" });
   revalidatePath("/admin/site");

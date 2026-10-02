@@ -43,6 +43,77 @@ namespace DeepslateWorks
         public const string DownloadButton = "Download", AllowAll = "Allow all";
         public const string CloseWhileBusy = "Deepslate Works is still busy. Close anyway? It carries on next time you press Play.";
 
+        // ---- Play with a countdown (3.1.0, planner B) --------------------------------------------------------------
+        public const string IdleTitle = "Deepslate Works";
+        public const string IdleStatus = "Press Play to check for updates and start the game.";
+        public const string ReadyToPlayTitle = "Ready to play";
+        public const string ReadyToPlayStatus = "Everything is up to date and every mod is checked. Press Play to start the game.";
+        public const string CountdownButton = "Starting the game in {0}\u2026";
+        public const string CountdownHint = "Click anywhere to stop";
+        public const string CountdownStatus = "Everything is up to date and every mod is checked.";
+        public const string CountdownStopped = "Stopped. Press Play when you're ready.";
+        public const string NewExtrasStatus = "New visual extras have been added: have a look on the Extras tab. Press Play when you're ready.";
+        public const string QueuedExtrasStatus = "Your extras changes are waiting to install. Press Play when you're ready.";
+        public const string WaitingForPlayStep = "Waiting for you to press Play";
+        public const string SettingsLink = "\u2699 Play settings";
+        public const string SettingsQuestion = "When I press Play on the website";
+        public static readonly KeyValuePair<string, string>[] WebsitePlayLabels =
+        {
+            new KeyValuePair<string, string>(AppSettings.Countdown, "Start after 5 seconds"),
+            new KeyValuePair<string, string>(AppSettings.Wait, "Wait for me to press Play"),
+            new KeyValuePair<string, string>(AppSettings.Now, "Start straight away"),
+        };
+        public const string SettingsNote = "Opening Deepslate Works from the desktop or the Start Menu never starts the game by itself.";
+
+        // ---- the guided setup after the old launcher (3.1.0, planner A3) -------------------------------------------
+        public static readonly string[] GuidedSteps = { "Welcome", "Move over", "Permissions", "Extras" };
+        public static string StepLabel(int n) => string.Format("Step {0} of {1}: {2}", n, GuidedSteps.Length, GuidedSteps[n - 1]);
+        public const string WelcomeTitle = "Welcome to the new Deepslate Works app";
+        public static readonly string[] WelcomeLines =
+        {
+            "One program: no black window, nothing running in PowerShell.",
+            "A Play button of its own. From the website the game starts after a 5-second countdown you can stop.",
+            "Every mod is checked before the game starts, and the app keeps itself up to date.",
+        };
+        public const string WelcomeKept = "Your mods, settings, extras and sign-in are kept.";
+        public const string Next = "Next", Retry = "Retry";
+        public const string MoveTitle = "Moving over from the old launcher";
+        public const string MoveStatus = "Each line ticks as it's done. The old launcher is removed only once the new app has checked its own install.";
+        public const string MoveFailedStatus = "Something didn't work: the line in red says why. Retry tries the lines that aren't done.";
+        public const string MoveCopy = "Deepslate Works in its own folder";
+        public const string MoveLink = "The Play button on the website opens the new app";
+        public const string MoveShortcuts = "Desktop and Start Menu shortcuts";
+        public const string MoveApps = "Its entry in Settings \u2192 Apps";
+        public const string MoveCarry = "Your permissions, extras, sign-in and installed pack";
+        public const string MoveVerify = "Checking the new app's install";
+        public const string MoveCleanup = "Removing the old launcher";
+        public const string MoveNoLinks = "You said Not now to the Play button and shortcuts (Review permissions changes that)";
+        public const string MoveKeptLink = "The Play button you already had now opens the new app";
+        public const string MoveVerified = "The Play button, the shortcuts and Settings \u2192 Apps all start the new app";
+        public const string MoveNothingOld = "Nothing of the old launcher was left";
+        public const string PermTitle = "Permissions";
+        public const string PermNone = "Nothing new to ask. Your answers from the old launcher are kept:";
+        public const string PermSome = "The new app asks about something the old one didn't. Everything you answered before stays answered.";
+        public const string ExtrasStepHeadline = "Step 4 of 4: the visual extras, if you'd like any. Then press Continue.";
+        public const string DoneTitle = "All set";
+        public const string DoneStatus = "You're moved over to the new app. Press Play when you're ready: the game starts only when you do.";
+
+        /// <summary>A Move over line's mark and colour by its status.</summary>
+        public static PlayLine MoveLine(MoveItem it)
+        {
+            switch (it.Status)
+            {
+                case "ok": return new PlayLine("\u2713  " + it.Label + (it.Detail != "" ? ": " + it.Detail : ""), "#2E7D5B");
+                case "skipped": return new PlayLine("\u2013  " + it.Label + ": " + it.Detail, "#666");
+                case "failed": return new PlayLine("\u2717  " + it.Label + ": " + it.Detail, "#B3261E", "SemiBold");
+                case "doing": return new PlayLine("\u2026  " + it.Label, "#1A5FB4");
+                default: return new PlayLine("    " + it.Label, "#888");
+            }
+        }
+
+        /// <summary>One kept answer, for the Permissions step: "Allowed" or "Not now", with the card's title.</summary>
+        public static string KeptAnswer(ConsentStep s, ConsentAnswer a) => string.Format("{0}  {1}: {2}", a.Answer == "allow" ? "\u2713" : "\u2013", s.Title, a.Answer == "allow" ? "allowed" : "not now");
+
         /// <summary>The badge colours by tone (planner G): background, text.</summary>
         public static readonly Dictionary<string, string[]> Tones = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {

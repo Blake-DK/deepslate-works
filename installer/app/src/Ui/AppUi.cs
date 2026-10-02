@@ -30,7 +30,8 @@ namespace DeepslateWorks
         public TabControl Tabs;
         public TabItem PlayTab, ExtrasTab, LogTab;
         TextBlock PlayTitle, PlayStatus, PlayChanged, HeadlineText, ErrorLine, ExtrasStatus, ChecksTitle;
-        Hyperlink ReviewLink, DetailsLink;
+        TextBlock StepLabel, PlayHint;   // 3.1.0: the guided setup's step; "Click anywhere to stop" under the countdown
+        Hyperlink ReviewLink, DetailsLink, SettingsLink;
         Button ResetButton, AllowAllButton, PlayButton, HeadlineButton, CheckButton, ApplyButton;
         StackPanel PlayBody, ProgressBox, ExtrasBody, ChecksBody;
         Border HeadlineBox;
@@ -58,6 +59,21 @@ namespace DeepslateWorks
         DateTime NextGameCheck = DateTime.MinValue;
         readonly bool Weak;
         public EventWaitHandle ShowSignal;
+        public EventWaitHandle PlaySignal;     // 3.1.0: a second start from the website's Play button
+        public bool FromWebsite;               // 3.1.0: this window was opened by deepslate://play
+
+        // 3.1.0, Play with a countdown (planner B): the run gets the game ready, then waits here for the go-ahead
+        readonly ManualResetEvent goEvent = new ManualResetEvent(false);
+        volatile bool goAnswer;
+        bool runFromWebsite, runPressed;       // how the run in hand was started: the website, or Play/Continue pressed
+        bool firstRunAtOpen, handOverThisTime; // no countdown on a first run, or after the move from the old launcher
+        public Countdown Count;
+        DispatcherTimer CountTimer;
+        // 3.1.0, the guided setup after the old launcher (planner A3): 0 = not in it, else the step on screen
+        public int Guided;
+        List<MoveItem> MoveItems;
+        Thread moveWorker;
+        bool moveReported;
         EventWaitHandle UpEvent;
         DispatcherTimer Timer;
         Thread worker;
@@ -91,6 +107,8 @@ namespace DeepslateWorks
             ProgressBox = Find<StackPanel>("ProgressBox"); CheckButton = Find<Button>("CheckButton"); ApplyButton = Find<Button>("ApplyButton");
             ExtrasStatus = Find<TextBlock>("ExtrasStatus"); ExtrasBody = Find<StackPanel>("ExtrasBody"); ChecksTitle = Find<TextBlock>("ChecksTitle");
             ChecksBody = Find<StackPanel>("ChecksBody"); LogList = Find<ListBox>("LogList");
+            StepLabel = Find<TextBlock>("StepLabel"); PlayHint = Find<TextBlock>("PlayHint"); SettingsLink = Find<Hyperlink>("SettingsLink");
+            SettingsLink.Inlines.Clear(); SettingsLink.Inlines.Add(UiText.SettingsLink);
             try { w.Title = string.Format("{0} {1}", Env.PackName, Env.Version); } catch { }
             try
             {
@@ -123,9 +141,15 @@ namespace DeepslateWorks
             CheckButton.Click += (s, e) => OnCheck();
             HeadlineButton.Click += (s, e) => OnHeadline();
             DetailsLink.Click += (s, e) => ShowLogDetails();
+            SettingsLink.Click += (s, e) => ShowSettings();
+            // 3.1.0: any click anywhere, any key, a tab switch or a setting stops the countdown, for good (planner B3).
+            // The click that stops it does nothing else (it never reaches the Play button under it).
+            w.PreviewMouseDown += (s, e) => { if (CancelCountdown("a click")) e.Handled = true; };
+            w.PreviewKeyDown += (s, e) => { if (CancelCountdown("a key")) e.Handled = true; };
             Tabs.SelectionChanged += (s, e) =>
             {
                 if (e.OriginalSource != Tabs) return;
+                CancelCountdown("a tab switch");
                 if (Tabs.SelectedItem == ExtrasTab) ShowExtras();
                 else if (Tabs.SelectedItem == LogTab) UpdateLogBox();
             };
@@ -146,11 +170,32 @@ namespace DeepslateWorks
             {
                 ShowFront("opened");
                 try { UpEvent = new EventWaitHandle(false, EventResetMode.ManualReset, Env.AppUpEvent); UpEvent.Set(); } catch { }   // Setup's wait may end now
+                // 3.1.0: moved over from the old launcher: the guided setup, which takes the Play link and the shortcuts
+                // over itself and removes the old launcher only after checking (so no repair here)
+                if (first.HandOver) { StartGuided(); return; }
                 StartRepair();
-                if (Consents.Unanswered(Consent).Count > 0) ShowFirstRun(); else StartRun();
+                // 3.1.0: the game never starts the moment the app opens. From the website: ready the game, then the
+                // countdown (PlayStart.Decide); from the desktop or the Start Menu: the Play button
+                if (Consents.Unanswered(Consent).Count > 0) { firstRunAtOpen = true; ShowFirstRun(); }
+                else if (FromWebsite) StartRun(false, true);
+                else ShowIdle();
             };
             Window.Closing += (s, e) =>
             {
+                if (Mode == "ready")
+                {
+                    // the game was ready but not started: the run reports that, then ends
+                    CancelCountdown("closing the window");
+                    Go(false);
+                    try { worker?.Join(TimeSpan.FromSeconds(5)); } catch { }
+                    return;
+                }
+                if (moveWorker != null && moveWorker.IsAlive)
+                {
+                    var r = MessageBox.Show(Window, UiText.CloseWhileBusy, Env.PackName, MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (r != MessageBoxResult.Yes) { e.Cancel = true; return; }
+                }
+                if (Guided > 0 && Guided <= 2 && !moveReported) SendMoveReport("cancelled", true);
                 if (Mode == "running" || Flow != null)
                 {
                     var r = MessageBox.Show(Window, UiText.CloseWhileBusy, Env.PackName, MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -234,7 +279,7 @@ namespace DeepslateWorks
         // ---- the Play tab ----------------------------------------------------------------------------------------------
         void UpdateContinueButton()
         {
-            if (Mode != "asking") return;
+            if (Mode != "asking" && Guided != 3) return;
             PlayButton.IsEnabled = Asking.All(s => Answers.ContainsKey(s.Id));
         }
 
@@ -282,7 +327,7 @@ namespace DeepslateWorks
         // Allow all: ticks Allow on every card shown (they stay on screen), then carries on as Continue would.
         void OnAllowAll()
         {
-            if (Mode != "asking") return;
+            if (Mode != "asking" && Guided != 3) return;
             foreach (var r in AllowRadios.ToList()) r.IsChecked = true;
             Consents.ApproveAll(Answers, Asking);
             Log.Line("permissions: Allow all on " + string.Join(", ", Asking.Select(s => s.Id)));
@@ -301,6 +346,8 @@ namespace DeepslateWorks
 
         void OnPlayButton()
         {
+            if (Guided > 0) { OnGuidedButton(); return; }
+            if (Mode == "ready") { Go(true); return; }   // 3.1.0: the game is ready; Play starts it
             if (Mode == "asking")
             {
                 SaveAnswers();
@@ -327,7 +374,8 @@ namespace DeepslateWorks
         // Review permissions: every step with its current answer, changeable; Allow all and Reset all.
         void ShowReview()
         {
-            if (Mode == "running") return;
+            if (Mode == "running" || Guided > 0) return;
+            if (Mode == "ready") { CancelCountdown("a setting"); return; }   // the game is ready: start it or close first
             Answers = new Dictionary<string, string>();
             foreach (var k in Consent.Keys) Answers[k] = Consent[k].Answer;
             ShowFirstRun(Consents.Steps());
@@ -348,6 +396,8 @@ namespace DeepslateWorks
                 DryRun = first.DryRun, AllowAll = first.AllowAll, NoLaunch = first.NoLaunch || noLaunch,
                 PretendRunning = first.PretendRunning ?? new string[0], RestartArgs = first.RestartArgs ?? new string[0], EntryPoint = first.EntryPoint ?? "",
             };
+            // 3.1.0: once the game is ready the run waits for the window's go-ahead (OnReady), then reports and starts it
+            if (!r.NoLaunch && !r.DryRun) r.WaitForGo = () => { goEvent.WaitOne(); return goAnswer; };
             foreach (var kv in Consent) r.Consent[kv.Key] = new ConsentAnswer { Answer = kv.Value.Answer, Level = kv.Value.Level, At = kv.Value.At };
             if (!firstUsed)
             {
@@ -378,9 +428,14 @@ namespace DeepslateWorks
             t.Start();
         }
 
-        void StartRun(bool noLaunch = false)
+        /// <summary>fromWebsite: started by deepslate://play (the countdown may follow); otherwise Play or Continue was
+        /// pressed, which starts the game as soon as it is ready.</summary>
+        void StartRun(bool noLaunch = false, bool fromWebsite = false)
         {
             if (worker != null && worker.IsAlive) return;   // one run at a time (2.0.x only ever had one engine)
+            runFromWebsite = fromWebsite; runPressed = !fromWebsite;
+            goAnswer = false; goEvent.Reset();
+            HideCountdown();
             Mode = "running";
             ClearPlayBody();
             SetPromptButtons(false, false);
@@ -426,6 +481,7 @@ namespace DeepslateWorks
                 case "used": var id = J.Str(o, "step"); if (id != null) Used[id] = J.Int(o, "level", 1); break;
                 case "changed": Changed = J.Str(o, "text"); break;
                 case "launched": Launched = DateTime.UtcNow; break;
+                case "ready": OnReady(); break;   // 3.1.0: the game is ready; the run waits for Go
                 case "versions": { var a = J.Str(o, "app"); var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(a)) VerApp = a; if (!string.IsNullOrEmpty(p)) VerCurrent = p; UpdateAppFooter(); break; }
                 case "installed": { var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(p)) VerLocal = p; UpdateAppFooter(); break; }
             }
@@ -433,6 +489,8 @@ namespace DeepslateWorks
 
         void OnRunEnded(string outcome, Exception err)
         {
+            CancelCountdown("the run ended");
+            HideCountdown();
             Mode = "idle";
             PlayButton.Content = UiText.Play;
             PlayButton.IsEnabled = true;
@@ -466,6 +524,8 @@ namespace DeepslateWorks
                 return;
             }
             UpdateAppBrand();   // a run may have brought a new logo
+            if (Guided == 4) { Tabs.SelectedItem = ExtrasTab; ShowGuidedStep(4); return; }   // the extras fetched during the guided setup
+            if (outcome == "not_launched") { ShowIdle(); return; }
             PlayTitle.Text = UiText.ReadyTitle;
             PlayStatus.Text = UiText.ReadyStatus;
             if (!string.IsNullOrEmpty(Changed)) { PlayChanged.Text = Changed; PlayChanged.Visibility = Visibility.Visible; }
@@ -514,6 +574,7 @@ namespace DeepslateWorks
         bool RequestPlay(string why)
         {
             Log.Line(string.Format("window: the game was asked for ({0}): through Play", why));
+            if (Mode == "ready") { Tabs.SelectedItem = PlayTab; Go(true); return true; }   // 3.1.0: ready and waiting: start it
             if (Mode != "idle") return false;
             Tabs.SelectedItem = PlayTab;
             StartRun();
@@ -558,13 +619,23 @@ namespace DeepslateWorks
 
         void OnTick()
         {
-            // a second start of the app (the Play button on the site, a shortcut): to the front, and Play when idle
+            // a second start of the app. 3.1.0: from a shortcut, only to the front; from the website's Play button, to
+            // the front and Play: the game readied, then the countdown (or what the setting says)
             if (ShowSignal != null && ShowSignal.WaitOne(0))
             {
-                Log.Line("window: started again (the Play button or a shortcut)");
+                Log.Line("window: started again (a shortcut): to the front");
                 ShowFront("started again");
-                Tabs.SelectedItem = PlayTab;
-                if (Mode == "idle" && Flow == null) StartRun();
+            }
+            if (PlaySignal != null && PlaySignal.WaitOne(0))
+            {
+                Log.Line("window: started again (the Play button on the website)");
+                ShowFront("Play on the website");
+                if (Guided == 0)
+                {
+                    Tabs.SelectedItem = PlayTab;
+                    if (Mode == "idle" && Flow == null) StartRun(false, true);
+                    else if (Mode == "ready" && (Count == null || !Count.Running)) { runFromWebsite = true; runPressed = false; OnReady(); }
+                }
             }
             if (Flow != null) { StepFlow(); return; }
             // every 2 s: is the game running? Queued changes install the moment it closes (planner H, Later)
@@ -657,6 +728,7 @@ namespace DeepslateWorks
             HeadlineBox.Background = NewBrush(UiText.HeadlineBackground(o.HeadlineTone));
             // the last thing that went wrong, in one line
             if (o.ErrorLine != null) { ErrorText.Text = o.ErrorLine + " "; ErrorLine.Visibility = Visibility.Visible; } else ErrorLine.Visibility = Visibility.Collapsed;
+            if (Guided == 4) GuidedHeadline();
             if (quiet && XRendered) { UpdateExtrasRows(o.Statuses); ShowChecks(o.CheckRows); return; }
             ExtrasBody.Children.Clear();
             ApplyButton.IsEnabled = true;
@@ -795,6 +867,7 @@ namespace DeepslateWorks
             card.Child = sp;
             ExtrasBody.Children.Add(card);
             ApplyButton.IsEnabled = false;
+            if (Guided == 4) GuidedHeadline();
         }
 
         ExtrasChoice ReadExtrasChoices()
@@ -891,8 +964,343 @@ namespace DeepslateWorks
         void OnHeadline(string action = "")
         {
             if (string.IsNullOrEmpty(action)) action = HeadlineButton.Tag as string ?? "";
-            if (action == "play") { Tabs.SelectedItem = PlayTab; if (Mode == "idle") StartRun(); return; }
+            if (action == "guided-done") { FinishGuided(); return; }
+            if (action == "play") { Tabs.SelectedItem = PlayTab; if (Mode == "idle") StartRun(); else if (Mode == "ready") Go(true); return; }
             if (action == "restart") StartFlow(Extras.RestartForQueue(XManifest));
+        }
+
+        // ---- Play with a countdown (3.1.0, planner B) -----------------------------------------------------------------
+
+        /// <summary>The Play tab with nothing running: opened from the desktop or the Start Menu, or a start that was not
+        /// taken. Nothing starts until Play is pressed.</summary>
+        void ShowIdle(string status = null)
+        {
+            Mode = "idle";
+            ClearPlayBody();
+            SetPromptButtons(false, false);
+            HideCountdown();
+            PlayTitle.Text = UiText.IdleTitle;
+            PlayStatus.Text = status ?? UiText.IdleStatus;
+            PlayButton.Content = UiText.Play;
+            PlayButton.IsEnabled = true;
+        }
+
+        /// <summary>The run has the game ready and waits (Engine.WaitForGo). What happens now: PlayStart.Decide.</summary>
+        void OnReady()
+        {
+            Mode = "ready";
+            PlayButton.Content = UiText.Play;
+            PlayButton.IsEnabled = true;
+            bool newExtras = false, queued = false;
+            try
+            {
+                var st = ExtrasState.Read(Env.ExtrasStatePath);
+                queued = st != null && st.Queued != null;
+                if (Consents.Decision(Consent, "extras") == "allow") newExtras = Extras.Overview(true, GameRunning).New.Count > 0;
+            }
+            catch (Exception e) { Log.Line("window: could not look at the extras: " + e.Message); }
+            var d = PlayStart.Decide(runFromWebsite, runPressed, AppSettings.WebsitePlay(), firstRunAtOpen, handOverThisTime, false, newExtras, queued);
+            Log.Line("window: the game is ready: " + d);
+            PlayTitle.Text = UiText.ReadyToPlayTitle;
+            if (d.Do == "now") { Go(true); return; }
+            if (d.Do == "countdown") { StartCountdown(); return; }
+            PlayStatus.Text = newExtras ? UiText.NewExtrasStatus : queued ? UiText.QueuedExtrasStatus : UiText.ReadyToPlayStatus;
+            if (newExtras && runFromWebsite) { Tabs.SelectedItem = ExtrasTab; }   // the Extras tab instead (planner B5)
+        }
+
+        /// <summary>The go-ahead for the waiting run: true starts the game (and sends "pressed Play"), false ends the run
+        /// without it.</summary>
+        void Go(bool start)
+        {
+            if (Mode != "ready") return;
+            HideCountdown();
+            Mode = "running";
+            PlayButton.Content = UiText.Working;
+            PlayButton.IsEnabled = false;
+            Log.Line(start ? "window: starting the game" : "window: not starting the game");
+            goAnswer = start;
+            goEvent.Set();
+        }
+
+        void StartCountdown()
+        {
+            Count = new Countdown();
+            PlayStatus.Text = UiText.CountdownStatus;
+            PlayButton.Content = Count.ButtonText;
+            PlayButton.IsEnabled = true;
+            PlayHint.Text = UiText.CountdownHint;
+            PlayHint.Visibility = Visibility.Visible;
+            CountTimer?.Stop();
+            CountTimer = new DispatcherTimer(DispatcherPriority.Normal, Window.Dispatcher) { Interval = TimeSpan.FromSeconds(1) };
+            CountTimer.Tick += (s, e) =>
+            {
+                if (Count == null || !Count.Running) { CountTimer?.Stop(); return; }
+                if (Count.Tick()) { CountTimer.Stop(); Log.Line("window: the countdown reached 0"); Go(true); return; }
+                PlayButton.Content = Count.ButtonText;
+            };
+            CountTimer.Start();
+            Log.Line(string.Format("window: starting the game in {0} s unless stopped", Count.Left));
+        }
+
+        /// <summary>Stops a running countdown (planner B3): the button says Play until it is pressed. False when none ran.</summary>
+        public bool CancelCountdown(string by)
+        {
+            if (Count == null || !Count.Running) return false;
+            Count.Cancel(by);
+            CountTimer?.Stop();
+            PlayButton.Content = UiText.Play;
+            PlayHint.Visibility = Visibility.Collapsed;
+            PlayStatus.Text = UiText.CountdownStopped;
+            Log.Line("window: the countdown was stopped by " + by);
+            return true;
+        }
+
+        void HideCountdown()
+        {
+            CountTimer?.Stop();
+            if (Count != null && Count.Running) Count.Cancel("replaced");
+            PlayHint.Visibility = Visibility.Collapsed;
+        }
+
+        /// <summary>The cog: "When I press Play on the website". A change is saved at once and stops a countdown.</summary>
+        void ShowSettings()
+        {
+            CancelCountdown("a setting");
+            var d = MakeSettings();
+            d.ShowDialog();
+        }
+
+        public Window MakeSettings()
+        {
+            var d = (Window)XamlReader.Parse(AppWindow.SettingsXaml);
+            try { if (Window.IsVisible) d.Owner = Window; } catch { }
+            ((TextBlock)d.FindName("SQ")).Text = UiText.SettingsQuestion;
+            ((TextBlock)d.FindName("SNote")).Text = UiText.SettingsNote;
+            var box = (StackPanel)d.FindName("SChoices");
+            var now = AppSettings.WebsitePlay();
+            foreach (var kv in UiText.WebsitePlayLabels)
+            {
+                var r = new RadioButton { Content = kv.Value, GroupName = "websitePlay", Margin = new Thickness(0, 0, 0, 6), IsChecked = kv.Key == now };
+                var v = kv.Key;
+                r.Checked += (s, e) =>
+                {
+                    try { AppSettings.SetWebsitePlay(v); Log.Line("settings: when Play is pressed on the website: " + v); }
+                    catch (Exception x) { Log.Line("settings: could not be saved: " + x.Message); }
+                };
+                box.Children.Add(r);
+            }
+            ((Button)d.FindName("SDone")).Click += (s, e) => d.Close();
+            return d;
+        }
+
+        // ---- the guided setup after the old launcher (3.1.0, planner A3) ----------------------------------------------
+        // Step 1 Welcome, 2 Move over (each line ticks; Retry), 3 Permissions (only what is new; what was answered stays),
+        // 4 Extras (the Extras tab, as on any first run). Then the Play tab: nothing starts until Play is pressed.
+
+        void StartGuided()
+        {
+            handOverThisTime = true;
+            var st = HandOverState.Read(Env.AppHome);
+            Log.Line(string.Format("window: moved over from the old launcher {0}: the guided setup{1}", first.MigratedFrom ?? st?.From ?? "?", st != null ? " (handover.json: " + st.State + ")" : ""));
+            ShowGuidedStep(st?.FirstStep ?? 1);
+        }
+
+        public void ShowGuidedStep(int n)
+        {
+            Guided = n;
+            Mode = "guided";
+            HideCountdown();
+            ClearPlayBody();
+            SetPromptButtons(false, false);
+            StepLabel.Text = UiText.StepLabel(n);
+            StepLabel.Visibility = Visibility.Visible;
+            ExtrasTab.IsEnabled = n == 4;
+            PlayButton.IsEnabled = true;
+            if (n != 4) Tabs.SelectedItem = PlayTab;
+            switch (n)
+            {
+                case 1:
+                    PlayTitle.Text = UiText.WelcomeTitle;
+                    PlayStatus.Text = "";
+                    foreach (var l in UiText.WelcomeLines) AddPlayLine("\u2022  " + l);
+                    var kept = AddPlayLine(UiText.WelcomeKept, "#2E7D5B", "SemiBold"); kept.Margin = new Thickness(0, 10, 0, 0);
+                    PlayButton.Content = UiText.Next;
+                    break;
+                case 2:
+                    PlayTitle.Text = UiText.MoveTitle;
+                    PlayStatus.Text = UiText.MoveStatus;
+                    if (MoveItems == null) MoveItems = HandOver.NewItems();
+                    RenderMove();
+                    StartMove();
+                    break;
+                case 3:
+                {
+                    PlayTitle.Text = UiText.PermTitle;
+                    var ask = Consents.Unanswered(Consent);
+                    if (ask.Count > 0)
+                    {
+                        // only the cards that are new: everything answered before stays answered
+                        PlayStatus.Text = UiText.PermSome;
+                        Asking = ask; AskLevel = 1; Answers = new Dictionary<string, string>(); AllowRadios = new List<RadioButton>();
+                        var size = Extras.DownloadSizeMb(ExtrasManifest.Read(Env.ExtrasManifestPath));
+                        foreach (var c in ask) PlayBody.Children.Add(NewConsentCard(c, 1, size));
+                        PlayButton.Content = UiText.Continue;
+                        AllowAllButton.Visibility = Visibility.Visible;
+                        PlayButton.IsEnabled = ask.All(c => Answers.ContainsKey(c.Id));
+                    }
+                    else
+                    {
+                        PlayStatus.Text = UiText.PermNone;
+                        foreach (var c in Consents.Steps()) if (Consent.TryGetValue(c.Id, out var a)) AddPlayLine(UiText.KeptAnswer(c, a), a.Answer == "allow" ? "#2E7D5B" : "#666");
+                        PlayButton.Content = UiText.Next;
+                    }
+                    break;
+                }
+                case 4:
+                    PlayTitle.Text = UiText.GuidedSteps[3];
+                    PlayStatus.Text = UiText.ExtrasStepHeadline;
+                    PlayButton.Content = UiText.Continue;
+                    Tabs.SelectedItem = ExtrasTab;
+                    ShowExtras();
+                    GuidedHeadline();
+                    break;
+            }
+        }
+
+        void OnGuidedButton()
+        {
+            switch (Guided)
+            {
+                case 1: ShowGuidedStep(2); return;
+                case 2:
+                    if (moveWorker != null && moveWorker.IsAlive) return;
+                    if (MoveItems != null && MoveItems.All(i => i.Ok)) ShowGuidedStep(3); else StartMove();   // Next, or Retry
+                    return;
+                case 3:
+                    if (Asking.Count > 0) { SaveAnswers(); Asking = new List<ConsentStep>(); }
+                    AllowAllButton.Visibility = Visibility.Collapsed;
+                    ShowGuidedStep(4);
+                    return;
+                case 4: FinishGuided(); return;
+            }
+        }
+
+        void StartMove()
+        {
+            PlayButton.Content = UiText.Working;
+            PlayButton.IsEnabled = false;
+            PlayStatus.Text = UiText.MoveStatus;
+            var items = MoveItems;
+            var c = new HandOver.Context { Me = Env.MePath, Dir = Env.AppHome, Io = Home.DefaultIo(), Links = Consents.Decision(Consent, "shortcuts") == "allow", Consent = Consent };
+            var d = Window.Dispatcher;
+            moveWorker = new Thread(() =>
+            {
+                bool all = false;
+                try { all = HandOver.MoveOver(items, c, it => d.BeginInvoke(new Action(RenderMove))); }
+                catch (Exception e) { Log.Line("move over: " + e); }
+                d.BeginInvoke(new Action(() => OnMoveEnded(all)));
+            }) { IsBackground = true, Name = "move over" };
+            moveWorker.Start();
+        }
+
+        void RenderMove()
+        {
+            if (Guided != 2 || MoveItems == null) return;
+            PlayBody.Children.Clear();
+            foreach (var it in MoveItems) { var l = UiText.MoveLine(it); AddPlayLine(l.Text, l.Color, l.Weight); }
+        }
+
+        void OnMoveEnded(bool all)
+        {
+            RenderMove();
+            PlayButton.IsEnabled = true;
+            if (all)
+            {
+                PlayButton.Content = UiText.Next;
+                if (!moveReported) SendMoveReport("ok", false);
+                return;
+            }
+            PlayStatus.Text = UiText.MoveFailedStatus;
+            PlayButton.Content = UiText.Retry;
+            SendMoveReport("failed", false);
+        }
+
+        /// <summary>The app's side of the hand-over (mode handover, planner A6): ok once moved over; failed (each try that
+        /// fails); cancelled when closed before the move was done. Waits up to 3 s when the window is closing.</summary>
+        void SendMoveReport(string outcome, bool closing)
+        {
+            if (outcome == "ok" || outcome == "cancelled") moveReported = true;
+            var r = new Run { Mode = "handover", UpdatedFrom = first.MigratedFrom, StepName = Guided <= 1 ? UiText.GuidedSteps[0] : UiText.GuidedSteps[1] };
+            r.ReportsOff = Consents.Decision(Consent, "reports") == "decline";
+            r.SetupChecked = MoveItems != null;
+            foreach (var it in MoveItems ?? new List<MoveItem>())
+                if (it.Status == "failed") Home.AddSetupProblem(r.SetupProblems, new[] { "copy", "link", "shortcuts", "apps" }.Contains(it.Id) ? it.Id : "setup", it.Id == "link" ? "link_failed" : "other", it.Label + ": " + it.Detail);
+            var t = new Thread(() =>
+            {
+                try { r.Token = Engine.ReadToken(r); Report.Send(r, outcome); }
+                catch (Exception e) { Log.Line("move over: the report was not sent: " + e.Message); }
+            }) { IsBackground = true, Name = "hand-over report" };
+            t.Start();
+            if (closing) t.Join(TimeSpan.FromSeconds(3));
+        }
+
+        void GuidedHeadline()
+        {
+            HeadlineText.Text = UiText.ExtrasStepHeadline;
+            HeadlineButton.Content = UiText.Continue;
+            HeadlineButton.Tag = "guided-done";
+            HeadlineButton.Visibility = Visibility.Visible;
+            HeadlineBox.Background = NewBrush("#E3F0FF");
+        }
+
+        void FinishGuided()
+        {
+            HandOver.Finish(Env.AppHome);
+            Guided = 0;
+            StepLabel.Visibility = Visibility.Collapsed;
+            ExtrasTab.IsEnabled = true;
+            Tabs.SelectedItem = PlayTab;
+            ShowIdle(UiText.DoneStatus);
+            PlayTitle.Text = UiText.DoneTitle;
+            Log.Line("window: the guided setup is done; Play starts the game");
+        }
+
+        // ---- the screenshots' stand-ins (AppWindow.DrawScreenshots) ---------------------------------------------------
+        public void SimMove(List<MoveItem> items, bool failed)
+        {
+            Guided = 2; Mode = "guided";
+            ClearPlayBody();
+            StepLabel.Text = UiText.StepLabel(2); StepLabel.Visibility = Visibility.Visible;
+            PlayTitle.Text = UiText.MoveTitle;
+            PlayStatus.Text = failed ? UiText.MoveFailedStatus : UiText.MoveStatus;
+            MoveItems = items; RenderMove();
+            PlayButton.Content = failed ? UiText.Retry : UiText.Next; PlayButton.IsEnabled = true;
+        }
+
+        public void SimReady(bool countdown, int left = AppSettings.CountdownSeconds)
+        {
+            Guided = 0; StepLabel.Visibility = Visibility.Collapsed; ExtrasTab.IsEnabled = true;
+            ClearPlayBody(); SetPromptButtons(false, false);
+            Tabs.SelectedItem = PlayTab;
+            AddPlayLine("Checking for updates", "#555");
+            AddPlayLine("\u2713  Signed in", "#2E7D5B");
+            AddPlayLine("\u2713  All 61 mods checked", "#2E7D5B");
+            Mode = "ready";
+            PlayTitle.Text = UiText.ReadyToPlayTitle;
+            if (countdown)
+            {
+                Count = new Countdown(left);
+                PlayStatus.Text = UiText.CountdownStatus;
+                PlayButton.Content = Count.ButtonText;
+                PlayHint.Text = UiText.CountdownHint; PlayHint.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                Count = new Countdown(left); Count.Cancel("a click");
+                PlayStatus.Text = UiText.CountdownStopped;
+                PlayButton.Content = UiText.Play; PlayHint.Visibility = Visibility.Collapsed;
+            }
+            PlayButton.IsEnabled = true;
         }
 
         // A question with Yes / Later / Allow all.

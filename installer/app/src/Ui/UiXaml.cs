@@ -37,16 +37,23 @@ namespace DeepslateWorks
               <TextBlock x:Name=""BrandTagline"" Foreground=""#C0661F""/>
             </StackPanel>
           </StackPanel>
+          <TextBlock x:Name=""StepLabel"" Foreground=""#1A5FB4"" FontWeight=""SemiBold"" Margin=""0,0,0,2"" Visibility=""Collapsed""/>
           <TextBlock x:Name=""PlayTitle"" FontSize=""20"" FontWeight=""SemiBold"" Text=""Deepslate Works""/>
           <TextBlock x:Name=""PlayStatus"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""#444""/>
           <TextBlock x:Name=""PlayChanged"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""#2E7D5B"" FontWeight=""SemiBold"" Visibility=""Collapsed""/>
         </StackPanel>
         <DockPanel DockPanel.Dock=""Bottom"" Margin=""0,10,0,0"">
-          <TextBlock DockPanel.Dock=""Left"" VerticalAlignment=""Center""><Hyperlink x:Name=""ReviewLink"">Review permissions</Hyperlink></TextBlock>
-          <StackPanel DockPanel.Dock=""Right"" Orientation=""Horizontal"" HorizontalAlignment=""Right"">
-            <Button x:Name=""ResetButton"" Style=""{StaticResource Plain}"" Content=""Reset all"" Visibility=""Collapsed""/>
-            <Button x:Name=""AllowAllButton"" Style=""{StaticResource Plain}"" Content=""Allow all"" Visibility=""Collapsed""/>
-            <Button x:Name=""PlayButton"" Style=""{StaticResource Primary}"" Content=""Play"" MinWidth=""150""/>
+          <StackPanel DockPanel.Dock=""Left"" VerticalAlignment=""Center"">
+            <TextBlock><Hyperlink x:Name=""ReviewLink"">Review permissions</Hyperlink></TextBlock>
+            <TextBlock Margin=""0,4,0,0""><Hyperlink x:Name=""SettingsLink"">Play settings</Hyperlink></TextBlock>
+          </StackPanel>
+          <StackPanel DockPanel.Dock=""Right"" HorizontalAlignment=""Right"">
+            <StackPanel Orientation=""Horizontal"" HorizontalAlignment=""Right"">
+              <Button x:Name=""ResetButton"" Style=""{StaticResource Plain}"" Content=""Reset all"" Visibility=""Collapsed""/>
+              <Button x:Name=""AllowAllButton"" Style=""{StaticResource Plain}"" Content=""Allow all"" Visibility=""Collapsed""/>
+              <Button x:Name=""PlayButton"" Style=""{StaticResource Primary}"" Content=""Play"" MinWidth=""190"" FontSize=""15""/>
+            </StackPanel>
+            <TextBlock x:Name=""PlayHint"" HorizontalAlignment=""Right"" Margin=""0,4,0,0"" Foreground=""#666"" FontSize=""12"" Visibility=""Collapsed""/>
           </StackPanel>
         </DockPanel>
         <ScrollViewer VerticalScrollBarVisibility=""Auto""><StackPanel x:Name=""PlayBody""/></ScrollViewer>
@@ -106,6 +113,18 @@ namespace DeepslateWorks
   </StackPanel>
 </Window>";
 
+        /// <summary>3.1.0: the cog on the Play tab, "When I press Play on the website". A change is saved at once.</summary>
+        public const string SettingsXaml = @"<Window xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
+        Title=""Play settings"" Width=""400"" SizeToContent=""Height"" ResizeMode=""NoResize"" WindowStartupLocation=""CenterOwner""
+        FontFamily=""Segoe UI"" FontSize=""13"" Background=""White"">
+  <StackPanel Margin=""18"">
+    <TextBlock x:Name=""SQ"" FontSize=""16"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Margin=""0,0,0,10""/>
+    <StackPanel x:Name=""SChoices""/>
+    <TextBlock x:Name=""SNote"" TextWrapping=""Wrap"" Margin=""0,10,0,14"" Foreground=""#666"" FontSize=""12""/>
+    <Button x:Name=""SDone"" Content=""Done"" HorizontalAlignment=""Right"" Padding=""18,6"" Background=""#2E7D5B"" Foreground=""White"" BorderThickness=""0"" FontWeight=""SemiBold""/>
+  </StackPanel>
+</Window>";
+
         /// <summary>The restart question uses the same window (the self test and the screenshots refer to it).</summary>
         public const string RestartXaml = AskXaml;
 
@@ -115,7 +134,11 @@ namespace DeepslateWorks
             "Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody",
             "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList",
             "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "Footer", "FooterApp", "FooterPack", "FooterServer",
+            "StepLabel", "SettingsLink", "PlayHint",
         };
+
+        /// <summary>Every name the settings window looks up in SettingsXaml.</summary>
+        public static readonly string[] SettingsNames = { "SQ", "SChoices", "SNote", "SDone" };
 
         /// <summary>Every name the question window looks up in AskXaml.</summary>
         public static readonly string[] AskNames = { "Q", "Why", "AllNote", "Later", "All", "Yes" };

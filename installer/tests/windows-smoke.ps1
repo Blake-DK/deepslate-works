@@ -100,6 +100,7 @@ foreach ($p in @(Get-Ours)) { try { Stop-Process -Id $p.ProcessId -Force } catch
 Write-Host "The window's states, drawn (-Screenshots)"
 $p = Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f (Join-Path $home1 "DeepslateWorks.ps1")), "-Screenshots", ('"{0}"' -f (Join-Path $Out "window"))) -Wait -PassThru
 Check "-Screenshots drew the window" ($p.ExitCode -eq 0 -and @(Get-ChildItem (Join-Path $Out "window") -Filter *.png -ErrorAction SilentlyContinue).Count -gt 0)
+Check "2.2.0: the question about the new app was drawn, also with Not now replaced" ((Test-Path (Join-Path $Out "window\5-new-app-question.png")) -and (Test-Path (Join-Path $Out "window\6-new-app-question-required.png")) -and (Test-Path (Join-Path $Out "window\7-new-app-downloading.png")))
 Get-Process explorer -ErrorAction SilentlyContinue | Out-Null
 
 if ($bad -gt 0) { Write-Host "$bad check(s) failed"; exit 1 }

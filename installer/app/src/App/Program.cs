@@ -42,7 +42,10 @@ namespace DeepslateWorks
             var up = Environment.GetEnvironmentVariable("DEEPSLATE_UPDATED_FROM");
             if (Ver.Valid(up)) run.UpdatedFrom = up;
             Environment.SetEnvironmentVariable("DEEPSLATE_UPDATED_FROM", null);
-            if (Ver.Valid(a.MigratedFrom)) { run.UpdatedFrom = a.MigratedFrom; run.MigratedFrom = a.MigratedFrom; }
+            if (Ver.Valid(a.MigratedFrom)) { run.UpdatedFrom = a.MigratedFrom; run.MigratedFrom = a.MigratedFrom; run.HandOver = true; }
+            // 3.1.0: a move from the old launcher that has not finished (handover.json): the guided setup opens again,
+            // whichever way this was started (planner A4)
+            try { if (!run.HandOver && !a.Uninstall && !Env.CustomRoot && HandOverState.Pending(Env.AppHome)) { run.HandOver = true; run.MigratedFrom = HandOverState.Read(Env.AppHome)?.From; } } catch { }
 
             LogStart(a, run);
             try { SelfUpdate.CleanOld(); } catch (Exception e) { Log.Line("could not remove the old exe: " + e.Message); }

@@ -22,7 +22,8 @@ namespace DeepslateWorks
         public const string ExeName = "DeepslateWorks.exe";
         public const string LockName = @"Global\DeepslateWorks";              // the install steps: one run per PC user at a time (same name as 2.0.x)
         public const string AppMutexName = @"Local\DeepslateWorks.App";      // one window per PC user (same name as 2.0.x)
-        public const string AppShowEvent = @"Local\DeepslateWorks.App.Show"; // a second start: to the front, and Play when idle
+        public const string AppShowEvent = @"Local\DeepslateWorks.App.Show"; // a second start: to the front (3.1.0: from the desktop or the Start Menu, nothing more)
+        public const string AppPlayEvent = @"Local\DeepslateWorks.App.Play"; // 3.1.0: a second start from the website's Play button: to the front, and Play
         public const string AppUpEvent = @"Local\DeepslateWorks.App.Up";     // set once the window is on screen
         public const string AppUserModelId = "DeepslateWorks.App";           // its own taskbar button, as 2.0.3
         public const int ExitAlreadyRunning = 3;

@@ -135,3 +135,25 @@ In `installer/tests/DeepslateWorks.Tests`, on the windows runner as today:
 - [ ] A read-only home folder still opens the app, in Segoe UI, with one log line.
 - [ ] Every existing test passes unchanged except the width numbers in `ReviewTests`.
 - [ ] The app on a weak PC: no effect classes (`DropShadowEffect`, `BlurEffect`) anywhere in `src/`; a grep in `ThemeTests` enforces it.
+
+## 11. 3.4.1: landscape, and clearer text (planner, 2026-10-03, after Alex saw 3.4.0 on his PC)
+
+Alex's two notes on 3.4.0: the window should be wider than it is tall, and the text is not clear enough. `branding/launcher/mockup.html` is updated to this layout; match it.
+
+**Landscape.** `Window` 980×620, MinWidth 900, MinHeight 560 (a 1366×768 laptop still fits it with the taskbar). The banner `Hero` is 128 px, always (drop the 160/110 rule), with the picture aligned so the ground line sits in its lower third (`Stretch="UniformToFill"`, `VerticalAlignment="Bottom"` is enough with the 300×84 source). `BrandName` 32, the tagline 13, the status pill 13.
+
+The Play tab's body is a two-column `Grid` (columns `340` and `*`, rows `*` and `Auto`, gap 16 across and 12 down):
+- Left column, top to bottom: `ServerBox` (the server line as the card's title, SemiBold 14, wrapping; "Open the site" on its own line under it as a link, not on the right; `OnlineHeads` + `ServerOnline`; `NewsBox`), then `ChangedBox`. Both fill the column's width; the column scrolls only if it must.
+- Right column: `PlayTitle` (Segoe UI SemiBold 20, no longer the display face), `PlayStatus` (`Muted`), then `PlayBody` in a `Card` that fills the rest of the row (`ScrollViewer` inside it, as today). The question cards, the guided setup and the Review view render in this right column with the left column kept.
+- Bottom row, spanning both columns: `ReviewLink` and `SettingsLink` side by side on the left (gap 18, vertically centred on the buttons), `PlayButton` + `UpdateButton` right, `PlayHint` and `UpdateLine` under them, as today.
+
+Vote tab: one column; the options in a two-column grid of cards when the window is 900 or wider (they already wrap in `VoteBody`; a `UniformGrid Columns="2"` or a `WrapPanel` with cards at half the width), `VoteButton` bottom right. Extras tab: the extras' rows in the same two-column grid; the headline and the checks full width. Log tab unchanged.
+
+Screenshots (`-Screenshots`): 22 to 28 are retaken at 980×620; add `29-min-size-900x560`.
+
+**Clearer text.** Three causes in 3.4.0, three fixes:
+1. *The pixel face is used where it is too small to be crisp* (the tabs at 16, "Ready to play" at 20, the vote question at 22). Pixelify Sans only where it is big: `BrandName` (32) and the Play and Vote blocks (24 and 22). Tabs, `PlayTitle`, `VoteTitle`, the Extras title, `ChecksTitle` and every other heading go back to Segoe UI SemiBold (tabs 14, titles 20, Checks 15). The two keep-the-face-up-to-N-characters rules of 3.4.0 go with it: the Play and Vote blocks keep the face for their short labels ("Play", "Vote", "Update", "Continue"); a long label ("Vote first, it takes ten seconds") is Segoe UI SemiBold 15, as 3.4.0 already does.
+2. *Rendering.* On the window: `TextOptions.TextFormattingMode="Display"`, `TextOptions.TextRenderingMode="ClearType"`, `UseLayoutRounding="True"`, `SnapsToDevicePixels="True"`. On the three elements that use the pixel face: `TextOptions.TextRenderingMode="Aliased"`, so its pixels stay square instead of being smoothed into grey. Every `Image` of pixel art already has `NearestNeighbor`; the two drawn text shadows (the name, the Play label) stay 2 and 3 px offsets in solid colour.
+3. *Contrast.* Body text goes from 13 to 14 px and the greys come up: `Fg` `#F2F0EB` (was `#EBE9E4`), `Muted` `#B5B2AA` (was `#A09D95`; 8.6:1 on Card), `Dim` stays `#908D85` (3.4.0's measured value). The status pill's text is `Fg`. `ThemeTests`' contrast table takes the new values.
+
+Nothing else changes: the words, the order of the steps, the tests' names. Version 3.4.1. Acceptance: the window matches the updated mock-up by eye at 980×620 and 900×560 (Alex); every text/background pair passes 4.5:1; the pixel face appears in exactly three places (a `LookTests` check walks the tree); `windows-smoke-3.ps1` still passes.

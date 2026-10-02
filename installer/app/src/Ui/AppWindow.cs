@@ -171,6 +171,16 @@ namespace DeepslateWorks
                 ui.SimGameRunning();
                 ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "19-update-game-running.png")));
                 ui.SimEnd();
+
+                // 3.3.1: Review permissions at the window's smallest width: Allow all, Reset all, Save, nothing cut off
+                ui.Consent = real3;
+                ui.SimCheck(new Waiting { CheckedAt = at });
+                var wide = w.Width; w.Width = w.MinWidth; ui.Pump();
+                ui.PressReview();
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "20-review-permissions-min-width.png")));
+                ui.PressTab("log"); ui.PressTab("play");
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "21-play-row-min-width.png")));
+                w.Width = wide;
             }
             finally { w.Close(); }
             return files;

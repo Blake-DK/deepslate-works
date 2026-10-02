@@ -75,7 +75,7 @@ namespace DeepslateWorks
             Log.Line("update check: " + UpdateCheck.Line(w));
             UpdateButton.Content = UpdateCheck.Button(w, false);
             UpdateLine.Text = UpdateCheck.Line(w);
-            UpdateLine.Visibility = Visibility.Visible;
+            SyncUpdateRow();
             UpdateButtonEnabled();
         }
 
@@ -114,7 +114,7 @@ namespace DeepslateWorks
             updating = true;
             UpdateButton.Content = UpdateCheck.Button(LastCheck, true);
             UpdateButton.IsEnabled = false;
-            UpdateLine.Text = UiText.UpdateStarting; UpdateLine.Visibility = Visibility.Visible;
+            UpdateLine.Text = UiText.UpdateStarting; SyncUpdateRow();
             PlayTitle.Text = UiText.UpdatingTitle;
             PlayStatus.Text = UiText.UpdatingStatus;
             PlayButton.Content = UiText.Play;

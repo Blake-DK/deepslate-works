@@ -128,22 +128,23 @@ namespace DeepslateWorks
         {
             switch (it.Status)
             {
-                case "ok": return new PlayLine("\u2713  " + it.Label + (it.Detail != "" ? ": " + it.Detail : ""), "#2E7D5B");
-                case "skipped": return new PlayLine("\u2013  " + it.Label + ": " + it.Detail, "#666");
-                case "failed": return new PlayLine("\u2717  " + it.Label + ": " + it.Detail, "#B3261E", "SemiBold");
-                case "doing": return new PlayLine("\u2026  " + it.Label, "#1A5FB4");
-                default: return new PlayLine("    " + it.Label, "#888");
+                case "ok": return new PlayLine("\u2713  " + it.Label + (it.Detail != "" ? ": " + it.Detail : ""), "GreenText");
+                case "skipped": return new PlayLine("\u2013  " + it.Label + ": " + it.Detail, "Muted");
+                case "failed": return new PlayLine("\u2717  " + it.Label + ": " + it.Detail, "Red", "SemiBold");
+                case "doing": return new PlayLine("\u2026  " + it.Label, "Blue");
+                default: return new PlayLine("    " + it.Label, "Dim");
             }
         }
 
         /// <summary>One kept answer, for the Permissions step: "Allowed" or "Not now", with the card's title.</summary>
         public static string KeptAnswer(ConsentStep s, ConsentAnswer a) => string.Format("{0}  {1}: {2}", a.Answer == "allow" ? "\u2713" : "\u2013", s.Title, a.Answer == "allow" ? "allowed" : "not now");
 
-        /// <summary>The badge colours by tone (planner G): background, text.</summary>
+        /// <summary>The badge colours by tone (planner G): background, text, as Theme keys (3.4.0: a raised dark badge with
+        /// the tone in its text, docs/21 §3).</summary>
         public static readonly Dictionary<string, string[]> Tones = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
-            { "grey", new[] { "#EEF0F2", "#555555" } }, { "blue", new[] { "#E3F0FF", "#1A5FB4" } }, { "amber", new[] { "#FFF4E0", "#8A5A00" } },
-            { "green", new[] { "#E8F3EE", "#2E7D5B" } }, { "red", new[] { "#FDECEA", "#B3261E" } },
+            { "grey", new[] { "Card2", "Muted" } }, { "blue", new[] { "Card2", "Blue" } }, { "amber", new[] { "Card2", "Amber" } },
+            { "green", new[] { "Card2", "GreenText" } }, { "red", new[] { "Card2", "Red" } },
         };
         public static string[] Tone(string tone) => tone != null && Tones.TryGetValue(tone, out var t) ? t : Tones["grey"];
 
@@ -159,9 +160,10 @@ namespace DeepslateWorks
             }
         }
 
-        /// <summary>The Extras headline box's colour (Overview.HeadlineTone): green, red, amber, else the plain blue-grey.</summary>
-        public static string HeadlineBackground(string tone)
-            => tone == "green" ? "#E8F3EE" : tone == "red" ? "#FDECEA" : tone == "amber" ? "#FFF4E0" : "#EEF4F8";
+        /// <summary>The Extras headline box's stripe (Overview.HeadlineTone), a Theme key: green, red, amber; null for the
+        /// plain card. 3.4.0: the box stays a Card2 card and the tone is the stripe on its left (docs/21 §3).</summary>
+        public static string HeadlineStripe(string tone)
+            => tone == "green" ? "GreenText" : tone == "red" ? "Red" : tone == "amber" ? "Amber" : null;
 
         /// <summary>The Play tab's title when questions are shown (Show-FirstRun).</summary>
         public static string QuestionsTitle(bool first, int count) => first ? FirstTitle : count == 1 ? OneQuestion : FewQuestions;
@@ -186,10 +188,10 @@ namespace DeepslateWorks
             var text = J.Str(o, "text") ?? "";
             switch (J.Str(o, "t"))
             {
-                case "step": return new PlayLine(text, "#555");
-                case "tick": return new PlayLine("✓  " + text, "#2E7D5B");
-                case "note": return new PlayLine("   " + text, "#666");
-                case "fail": return new PlayLine(text, "#B3261E", "SemiBold");
+                case "step": return new PlayLine(text, "Muted");
+                case "tick": return new PlayLine("✓  " + text, "GreenText");
+                case "note": return new PlayLine("   " + text, "Muted");
+                case "fail": return new PlayLine(text, "Red", "SemiBold");
                 default: return null;
             }
         }

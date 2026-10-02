@@ -227,6 +227,7 @@ namespace DeepslateWorks
             // the extras switched on in the Extras tab are the app's, not the pack's: left where they are
             foreach (var x in Extras.AppliedJars() ?? new List<string>()) if (!string.IsNullOrEmpty(x)) keep.Add(x);
             int fetched = 0, dropped = 0;
+            var gotNames = new List<string>(); var goneNames = new List<string>();   // 3.4.0: what changed, by name
             foreach (var f in files)
             {
                 var name = J.Str(f, "filename");
@@ -236,11 +237,11 @@ namespace DeepslateWorks
                 if (File.Exists(dest) && string.Equals(Sha512Hex(dest), sha, StringComparison.OrdinalIgnoreCase)) continue;
                 if (run.DryRun) { run.Note(string.Format("(dry run) would download {0}", name)); continue; }
                 // 3.3.0: already downloaded by an Update while the game was running: moved in, not fetched again
-                if (TakeWaiting(Path.Combine(gameDir, WaitingFolder), name, sha, dest)) { fetched++; Log.Line("moved in from .waiting: " + name); continue; }
+                if (TakeWaiting(Path.Combine(gameDir, WaitingFolder), name, sha, dest)) { fetched++; gotNames.Add(name); Log.Line("moved in from .waiting: " + name); continue; }
                 var r = SaveModFile(J.Str(f, "url"), dest, sha, staging, (url, outFile) => Http.Download(url, outFile));
                 if (r == "wrong") throw run.Fail(string.Format("{0} downloaded wrong. Press Play again.", name));
                 if (r == "in use") throw run.Fail(string.Format("{0} is in use. Close Minecraft (the game, not only the launcher), then press Play again.", name));
-                fetched++;
+                fetched++; gotNames.Add(name);
                 Log.Line("downloaded " + name);
             }
             foreach (var jarPath in Directory.GetFiles(modsDir, "*.jar"))
@@ -248,7 +249,7 @@ namespace DeepslateWorks
                 var gone = Path.GetFileName(jarPath);
                 if (keep.Contains(gone)) continue;
                 Log.Line("removing " + gone);
-                dropped++;
+                dropped++; goneNames.Add(gone);
                 if (!run.DryRun)
                 {
                     try { File.SetAttributes(jarPath, FileAttributes.Normal); File.Delete(jarPath); }
@@ -267,7 +268,7 @@ namespace DeepslateWorks
                 var what = new List<string>();
                 if (fetched > 0) what.Add(string.Format("Updated {0} mod{1}", fetched, fetched == 1 ? "" : "s"));
                 if (dropped > 0) what.Add(string.Format("removed {0}", dropped));
-                run.Emit(J.O("t", "changed", "text", string.Join(", ", what)));
+                run.Emit(J.O("t", "changed", "text", string.Join(", ", what), "detail", ChangedDetail(gotNames, goneNames)));
             }
 
             // ---- settings: the pack's config files (zip from the site) and, the first time, options.txt ---------------
@@ -519,6 +520,17 @@ namespace DeepslateWorks
             int n = parts.Length;
             if (n > 0 && parts[n - 1].Length == 0) n--;
             for (int i = 0; i < n; i++) yield return parts[i];
+        }
+
+        /// <summary>3.4.0 (docs/21 §4): the line under "Updated 3 mods" on the Play tab: the files by name, ".jar" left off,
+        /// removed ones marked, at most max of them and "and N more".</summary>
+        public static string ChangedDetail(IList<string> updated, IList<string> removed, int max = 6)
+        {
+            string Bare(string f) => f != null && f.EndsWith(".jar", StringComparison.OrdinalIgnoreCase) ? f.Substring(0, f.Length - 4) : f ?? "";
+            var all = (updated ?? new List<string>()).Select(Bare).Concat((removed ?? new List<string>()).Select(f => Bare(f) + " (removed)")).ToList();
+            if (all.Count == 0) return "";
+            var shown = string.Join(", ", all.Take(max));
+            return all.Count > max ? string.Format("{0} and {1} more", shown, all.Count - max) : shown;
         }
     }
 }

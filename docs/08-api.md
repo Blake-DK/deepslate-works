@@ -17,6 +17,7 @@ Rewritten 2026-09-29 from the code. Two services answer HTTP: `web` (the site; t
 | GET | `/api/events/stream` | members | the event log as it happens (`text/event-stream`), cut down for players |
 | GET | `/branding/<file>` | anyone | logo, banner, tab icon |
 | GET | `/news-image/<file>` | members | a news item's picture |
+| GET | `/api/app/head/<uuid>.png` | members (the app's token, or a session) | a player's 24 px head (docs/21 §7). Fetched from Crafatar by `web` once a day per player and kept under `data/heads/`; only for members with a linked Minecraft account. Anyone else, and any failure, gets the grey placeholder (`branding/launcher/head-placeholder.png`); after a failed fetch that player is not asked for again for 10 minutes. `x-head-source`: `cache`, `fetched`, `stale` or `placeholder` |
 | GET | `/api/admin/console` | admins | the server's console as it happens. Each event's `id` is the line's sequence number; a browser that reconnects sends `Last-Event-ID` and gets what it missed. Ends after 10 min, the browser reconnects |
 | POST | `/api/admin/modpack/<cmd>` | admins | `lock`, `build`, `sync`, `sync-dry`; the log as it is written. `lock` runs in `web`; the others are handed to `api`. One at a time |
 | GET | `/api/admin/events/export`, `/api/admin/analytics/export` | admins | CSV |

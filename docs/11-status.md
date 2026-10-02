@@ -25,6 +25,29 @@ Built in §10's order: the gateway and the card, slash commands, vote buttons, c
 7. **4014** (an intent not switched on): the bot reconnects once without both privileged intents and the card says to switch on Message Content Intent and Server Members Intent; it does not try to find out which of the two was missing.
 8. **Not verified, needs the real thing:** that `/msg` and an Open Parties and Claims party message never become `CHAT` events (only `<name> text` lines are parsed as chat; none of the 43 chat rows so far is a whisper or party line), the reconnect behaviour over a night (§10 step 1), and every §11 box that needs Discord itself.
 
+## Players' heads in the app (2026-10-02, docs/21 §7 / §9 step 6; merged as PR #46, 19:48 UTC)
+
+`web`: `GET /api/app/head/<uuid>.png` (`src/server/heads.ts`, `src/lib/heads.ts`) fetches `https://crafatar.com/avatars/<uuid>?size=24&overlay` once a day per player into `data/heads/`. It keeps only a 24x24 PNG of at most 32 KB, answers yesterday's head when Crafatar is down, the placeholder when there is none, and does not try that player again for 10 minutes after a failure. Two asks at once share one fetch. `GET /api/app/home` adds `players: [{name, uuid}]`. App: `OnlineHeads` before "Online now", the placeholder (embedded in the exe, not written to `assets\`) at once, the real head swapped in when the site answers, one log line per player whose head fails. Tests: web `tests/heads.test.ts`, app `HeadsTests.cs`. `make-art.py` draws `head-placeholder.png` (8x8 at 3x); a rerun leaves every other picture byte for byte the same.
+
+Deviations from docs/21 §7:
+- The UUIDs come in a new `players` list, not as `online[].uuid`: apps before 3.4.0 read `online` as names and would show nobody online if it became objects. `online` is unchanged.
+- The route needs the app's sign-in (or a site session) and fetches only for UUIDs of members with a linked Minecraft account, so it is not an open proxy to Crafatar. A guest in the world gets the placeholder.
+- **Not seen live:** that the VPS's `web` container reaches crafatar.com (it already reaches the Mojang API), and the heads in the real window. After deploy: `GET /api/app/head/<a linked member's uuid>.png` with a session should answer `x-head-source: fetched` (then `cache`), not `placeholder`; a refusal shows in `web`'s log as `head <uuid>: …`.
+
+## App 3.4.0: the launcher's look (2026-10-02, docs/21 §9 steps 1 to 5; merged as PR #44, 19:48 UTC)
+
+Built from `docs/21-launcher-look.md` (PR 42). `Ui/Theme.cs` holds every colour as a frozen brush by key; `AppWindow.Load` parses a window and puts the brushes and `PixelFont` into its resources, and the XAML reads them as `{DynamicResource Key}`. `AppWindow.ThemeXaml` (the blocks `Primary`, `PlayBlock`, `VoteBlock`, `Plain`, the tab strip, links in Blue) goes into the main window, the question window and Play settings. The main window: the deepslate tile at 35 % over Ground, the banner (`Hero`, 160 px, 110 under 660 px tall) with `BrandBar` (always shown; the drawn "D" tile `LogoFallback` until a logo is picked), the name with a drawn shadow, the tagline, and `HeroStatus` (the server line shortened, `SiteHome.HeroLine`/`HeroDot`), the tab strip with `VoteBadge`, cards for the server and "Since last time" (`ChangedBox`), the footer on Panel. `Home/Assets.cs` writes the five files from the exe to `<home>\assets\` when the folder or `version.txt` is missing or older. Colours in `UiText` (`PlayLine.Color`, `Tones`, `HeadlineStripe`), `Footer.Parts.PackTone` and the dot (`Theme.ToneKey`, replacing `SiteHome.ToneColour`) are Theme keys now, so their tests changed with them. Tests: `ThemeTests.cs`, `AssetsTests.cs`, `LookTests.cs`; screenshots 22 to 28.
+
+**State at merge:** CI green on the merged head: the exe builds, every app test passes on the Windows runner, and `windows-smoke-3.ps1` walks the guided setup on a real desktop. Two things CI caught on the way: `packages/modpack/tests/versions.test.ts` pins the app's version (moved to 3.4.0), and a restyled `TabControl` must keep its content host named `PART_SelectedContentHost` or UI Automation (screen readers, the smoke test) sees nothing inside the tabs (`LookTests` now checks it). **Not done from this session:** `deploy/deploy.sh` and Admin → Modpack → Build (installer) to publish 3.4.0. **Unverified by eye:** the window against `branding/launcher/mockup.html` on Windows, at 600×740 and 560×560 (docs/21 §10, Alex); CI's screenshots 22 to 28 are in the `installer` run's artifact.
+
+Deviations from docs/21:
+- Four colours of §3 failed its own 4.5:1 bar when measured: Dim `#6F6D66` → `#908D85` (3.6:1 on Panel), Red `#E5484D` → `#F06A6E` (4.1:1 on Card), DisabledText `#A09D95` → `#BDBAB3` (3.6:1 on Disabled), and white on Copper is 2.7:1, so the Vote block and the tab badge have dark text (`OnCopper` `#16171A`, as the mock-up's badge has). Extra keys for the drawn parts: `White`, `Black`, `Shadow`, `BoxLine`, `LogoLo`, `HeroFade`, `Pill`, `OnCopper`.
+- Badges are a Card2 chip with the tone in the text; the Extras headline is a Card2 card with the tone as a 3 px stripe on its left (the spec's stripe rule, applied there too).
+- Play and Vote use the display face for labels up to 14 characters; longer ones ("Vote first, it takes ten seconds") are Segoe UI SemiBold 15 so the row fits at 560. A vote question uses the display face up to 90 characters, else Segoe UI SemiBold 20 (a character count, not a measured three lines). WPF on .NET Framework has no letter spacing.
+- Step 4: the Update button's ✓/● is drawn in Copper by a `ContentTemplate` (`MarkSplit` converter), so its `Content` stays the plain label the tests read. `PlayChangedDetail` names the files a run changed (`Engine.ChangedDetail`, from a new `detail` on the "changed" status line: up to six names, ".jar" left off, removed ones marked, "and N more"). Vote options use a drawn 16 px box (`PickBox` style on the same radio/check buttons, so the picking logic is unchanged) and 36 px pictures before the words; a picked card gets one 2 px Copper edge, the same pixels as the spec's two 1 px borders. A poll option backed by a mods.json entry has no picture yet: the site sends no icon for it. The Log tab draws the last line in Fg; the footer's values are Muted (Copper for "Pack update available").
+- Not done: §7 player heads (its own PR, it touches `web`).
+- `AssetsTests` makes the assets folder unwritable by putting a file where it would go, rather than changing the runner's permissions.
+
 ## The Discord feed · §10 steps 1 to 3 (docs/21, 2026-10-02)
 
 Built: the pipe, votes, news / We're live / New pack / First join ever. **Steps 4 and 5 (season moments, "has awoken") are not built**: they need docs/20 steps 3 and 4, which do not exist yet. The `season` switch is on the card and does nothing until then.
@@ -133,18 +156,21 @@ Tests: app `UpdateTests.cs` (a whole Update run against a stand-in site: newer p
 
 Tests: api `tests/votes-before-play.test.ts` (door table rows, held and released on vote, mid-session poll does not hold, admin never held, closed poll no longer blocks) and `server-state.test.ts` (wake via app); web `tests/polls.test.ts` (options, results, vote change before close, refused after); app `FrontDoorTests.cs` (Vote screen blocks Play, wake says app, open-without-play sends no report). Screenshots from `-Screenshots`: `12-play-server-waking`, `13-play-switched-off-admin`, `14-vote`, `14b-play-vote-first`, `15-vote-results`.
 
-## Where the build stands (2026-09-29, 19:00 UTC)
+## Where the build stands (2026-10-02, 20:00 UTC)
+
+Two kinds of row. **Repo**: read from `main` this evening, or from CI on it. **Last recorded**: the newest dated fact from the VPS, the server or the site, copied from elsewhere in this file. Nobody checked it again tonight: the session that wrote this table had no route to the VPS.
 
 | | |
 |---|---|
-| Deployed | `main` at `7282e71` plus docs; images from CI; migrations 0001 to 0013 applied |
-| Checks | api 188 tests, web 224, modpack 21, installer self test 63 checks (under `pwsh` on Linux); all pass |
-| The site | not live (`live = false`). 4 members, 2 of them admins, 2 linked to a Minecraft account, 1 with early access (Pabulum). Vote "Season 1 mods" open, 4 ballots |
-| The pack | `0.1.0+1a48e8ff`: 40 mods in the catalogue, 30 switched on (the recommended set among them, the vote left open), 32 files in the lock, 25 on the server, 29 on a PC, 2 settings files shipped |
-| The installer | 1.4.1. 15 reports so far, 6 of runs that went through. Alex's own copy is still 1.3.0, which cannot update itself |
-| The server | NeoForge 21.1.252, 31 entries in the loader's list, no errors at start. World of 2026-09-29, seed `-3899835130120818196`, spawn `0 105 0`, 35,721 chunks made ahead of time (before the recommended mods were on). Entrance room in `deepslate:limbo`. `pvp=false`, whitelist off |
-| The map | **empty since 18:36:33 UTC** (deleted on Alex's word). BlueMap renders while the server runs; to have it finish, Admin → Server → Pre-generation → "Render the map only" |
-| Played | 10 sessions, two players (bramble09, samoyedx). Joins, leaves, one death, starts and stops are in the event log |
+| Code | **Repo:** `main` at `35f8c86` (PR #48). Migrations 0001 to 0022 (`0022_discord_post`). Merged today: #44 app 3.4.0, the look; #45 the Discord feed; #46 players' heads |
+| Deployed | **Not checked tonight.** To go out: #44 and #46 need `deploy/deploy.sh`, then Admin → Modpack → Build (installer) for the 3.4.0 exe. #45 needs `DISCORD_WEBHOOK_FEED` (and `DISCORD_WEBHOOK_ADMIN`) in `deploy/.env` first. Last recorded deploy in this file: portal v6, 2026-09-30 05:43 UTC; later sections say "deployed" without a commit |
+| Checks | **Repo**, all pass: api 416 tests, web 354, modpack 66 (run on `main` tonight). App: 203 tests on the Windows runner, and `windows-smoke-3.ps1` walks a fresh download through the guided setup on a real desktop (CI on #46's head). The PowerShell bridge's self test passes under `pwsh` (CI) |
+| The site | **Last recorded 2026-09-29:** not live (`live = false`). 4 members, 2 of them admins, 2 linked to a Minecraft account, 1 with early access (Pabulum). Vote "Season 1 mods" open, 4 ballots |
+| The pack | **Repo:** `0.1.0+72931447`. 71 mods in the catalogue (plus 12 hidden libraries), 50 switched on. 60 files in the lock: 48 on the server (39 both sides, 9 server only), 51 on a PC (12 client only). 3 settings files shipped. NeoForge 21.1.252. **Last recorded:** built and synced to the server 2026-10-02 18:35 UTC (the bosses step, docs/20 §9 step 1) |
+| The app | **Repo:** `DeepslateWorks.exe` 3.4.0 (`installer/VERSION`), not published yet. The PowerShell bridge `DeepslateWorks.ps1` is 2.2.0: it moves 2.x PCs to the exe. **Not checked tonight:** which versions players run (Admin → Installs) |
+| The server | **Last recorded 2026-10-02 18:35:45 UTC:** started with the bosses pack, "Done" in 18.5 s, nobody online. World of 2026-09-29, seed `-3899835130120818196`, spawn `0 105 0`. Entrance room in `deepslate:limbo`. `pvp=false`, whitelist off |
+| The map | **Last recorded 2026-09-29:** emptied at 18:36:33 UTC on Alex's word. BlueMap renders while the server runs; to have it finish, Admin → Server → Pre-generation → "Render the map only". Nothing later in this file says it was rendered again |
+| Played | **Last recorded 2026-09-29:** 10 sessions, two players (bramble09, samoyedx). Admin → Players has the current figures |
 
 **Phases, against docs/10** (a box is ticked there only with what shows it):
 

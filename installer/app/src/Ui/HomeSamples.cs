@@ -14,7 +14,20 @@ namespace DeepslateWorks
   ""online"": [], ""news"": null,
   ""votes"": { ""polls"": [], ""ballot"": null, ""order"": [], ""button"": ""Vote first, it takes ten seconds"" } }";
 
-        public const string Poll1 = @"{ ""id"": ""p1"", ""question"": ""What's the next boss?"", ""multiple"": false, ""mustVote"": true, ""open"": true, ""closes"": ""4 Oct, 19:00"", ""mine"": null, ""results"": null,
+        // 3.4.0: the banner's pill and the Play tab with the server up and nobody waiting to vote; and asleep
+        public const string Up = @"{ ""signedIn"": true, ""site"": ""https://deepslate.dsw.test"", ""name"": ""Pabulum"", ""admin"": false,
+  ""server"": { ""state"": ""online"", ""line"": ""Online, 2 playing"", ""label"": ""Online"", ""tone"": ""good"", ""hint"": ""The server is up."", ""wake"": { ""phase"": ""idle"", ""leftS"": null, ""line"": null }, ""canStart"": false },
+  ""online"": [""Bramble09"", ""samoyedx""],
+  ""players"": [ { ""name"": ""Bramble09"", ""uuid"": ""069a79f4-44e9-4726-a5be-fca90e38aaf5"" }, { ""name"": ""samoyedx"", ""uuid"": null } ],
+  ""news"": { ""body"": ""Season 1 mods: the vote closes on Sunday. Boss mods are in the pack from day one."", ""at"": ""yesterday"", ""author"": ""m1owl"", ""image"": null },
+  ""votes"": { ""polls"": [], ""ballot"": null, ""order"": [], ""button"": ""Vote first, it takes ten seconds"" } }";
+
+        public const string Asleep = @"{ ""signedIn"": true, ""site"": ""https://deepslate.dsw.test"", ""name"": ""Pabulum"", ""admin"": false,
+  ""server"": { ""state"": ""asleep"", ""line"": ""Asleep, join to wake it"", ""label"": ""Asleep"", ""tone"": ""info"", ""hint"": ""Nobody is on, so it is asleep. Press Play or join and it wakes up in about 30 seconds."", ""wake"": { ""phase"": ""idle"", ""leftS"": null, ""line"": null }, ""canStart"": false },
+  ""online"": [], ""news"": null,
+  ""votes"": { ""polls"": [], ""ballot"": null, ""order"": [], ""button"": ""Vote first, it takes ten seconds"" } }";
+
+        public const string Poll1 =@"{ ""id"": ""p1"", ""question"": ""What's the next boss?"", ""multiple"": false, ""mustVote"": true, ""open"": true, ""closes"": ""4 Oct, 19:00"", ""mine"": null, ""results"": null,
   ""options"": [
     { ""id"": ""o1"", ""text"": ""The Warden"", ""imageUrl"": null, ""link"": ""https://minecraft.wiki/w/Warden"", ""mod"": null },
     { ""id"": ""o2"", ""text"": ""A Lava Golem"", ""imageUrl"": null, ""link"": null, ""mod"": null },

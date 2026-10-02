@@ -91,7 +91,7 @@ namespace DeepslateWorks
                     d.BeginInvoke(new Action(() =>
                     {
                         if (h != null) ApplyHome(h);
-                        else if (SiteNow == null) { ServerLineText.Text = "Can't reach " + Env.SiteHost + " right now."; Log.Line("window: the site's home could not be read: " + err?.Message); }
+                        else if (SiteNow == null) { ServerLineText.Text = "Can't reach " + Env.SiteHost + " right now."; SetHero(null); Log.Line("window: the site's home could not be read: " + err?.Message); }
                     }));
                 }
                 catch { }
@@ -115,17 +115,20 @@ namespace DeepslateWorks
             }
             else if (VoteTab.Visibility == Visibility.Visible && !voteResults) FinishVotes();
             GatePlay();
+            UpdateVoteBadge();
         }
 
         void ShowServer(HomeInfo h)
         {
             var s = h.Server;
-            ServerDot.Fill = NewBrush(SiteHome.ToneColour(s.Tone));
+            ServerDot.Fill = NewBrush(Theme.ToneKey(s.Tone));
+            SetHero(h);   // 3.4.0: the pill on the banner says the same, shortened
             ServerLineText.Text = SiteHome.ServerLine(s);
             var hint = s.State == "online" || s.Waking ? "" : s.Hint;
             ServerHint.Text = hint; ServerHint.Visibility = string.IsNullOrEmpty(hint) ? Visibility.Collapsed : Visibility.Visible;
             var online = SiteHome.OnlineLine(h);
             ServerOnline.Text = online; ServerOnline.Visibility = string.IsNullOrEmpty(online) ? Visibility.Collapsed : Visibility.Visible;
+            ShowHeads(h);   // 3.4.0 (docs/21 §7): their heads before the names
             StartButton.Visibility = h.Admin && s.CanStart ? Visibility.Visible : Visibility.Collapsed;
             if (h.News != null)
             {
@@ -224,13 +227,15 @@ namespace DeepslateWorks
             VotePicked = new List<string>(item.Poll?.Mine ?? new List<string>());
             VoteError.Text = "";
             VoteBody.Children.Clear();
+            optionCards.Clear();
             var left = PendingVotes.Count;
-            VoteStep.Text = SiteHome.StepLine(answeredThisRound, answeredThisRound + Math.Max(1, left));
+            VoteStep.Text = SiteHome.StepLine(answeredThisRound, answeredThisRound + Math.Max(1, left)).ToUpperInvariant();   // 3.4.0: a small upper-case label (docs/21 §4)
             VoteTab.Visibility = Visibility.Visible;
             if (item.Poll != null)
             {
                 var p = item.Poll;
                 VoteTitle.Text = p.Question;
+                FitVoteTitle();
                 VoteNote.Text = SiteHome.PickNote(p);
                 var group = "poll-" + p.Id;
                 foreach (var o in p.Options) VoteBody.Children.Add(NewOptionCard(p, o, group));
@@ -241,12 +246,19 @@ namespace DeepslateWorks
             {
                 var b = item.Ballot;
                 VoteTitle.Text = b.Title;
+                FitVoteTitle();
                 VoteNote.Text = UiText.BallotNote;
                 VoteButton.Content = UiText.BallotOpen;
                 VoteButton.IsEnabled = true;
             }
             Log.Line("window: a vote to answer before playing: " + (item.Poll?.Question ?? item.Ballot?.Title));
             if (select && Mode != "asking") Tabs.SelectedItem = VoteTab;
+        }
+
+        void FitVoteTitle()
+        {
+            if ((VoteTitle.Text ?? "").Length <= VoteTitleFaceMaxChars) { VoteTitle.FontFamily = Theme.PixelFont; VoteTitle.FontSize = 22; VoteTitle.FontWeight = FontWeights.Bold; }
+            else { VoteTitle.FontFamily = new FontFamily("Segoe UI"); VoteTitle.FontSize = 20; VoteTitle.FontWeight = FontWeights.SemiBold; }
         }
 
         Border NewOptionCard(PollInfo p, PollOptionInfo o, string group)
@@ -257,25 +269,29 @@ namespace DeepslateWorks
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             var dontMind = o.Id == SiteHome.DontMind;
             ToggleButton pick = p.Multiple && !dontMind ? (ToggleButton)new CheckBox() : new RadioButton { GroupName = group };
+            pick.Style = (Style)Window.FindResource("PickBox");   // 3.4.0: a drawn 16 px box, ✓ in CopperHi when picked (docs/21 §4)
             pick.VerticalAlignment = VerticalAlignment.Top; pick.Margin = new Thickness(0, 2, 10, 0);
             pick.IsChecked = VotePicked.Contains(o.Id);
             var id = o.Id;
             pick.Checked += (s, e) => OnPick(id, true);
             pick.Unchecked += (s, e) => OnPick(id, false);
             pick.Tag = id;
+            optionCards[id] = card;   // 3.4.0: a picked option's card has a copper edge
             Grid.SetColumn(pick, 0); g.Children.Add(pick);
             var sp = new StackPanel(); Grid.SetColumn(sp, 1);
             var row = new DockPanel();
             if (!string.IsNullOrEmpty(o.ImageUrl))
             {
-                var img = new Image { Width = 72, Height = 48, Stretch = Stretch.UniformToFill, Margin = new Thickness(10, 0, 0, 0) };
-                DockPanel.SetDock(img, Dock.Right);
+                // 3.4.0: 36 px before the words; pixel art stays crisp when the branding says pixel
+                var img = new Image { Width = 36, Height = 36, Stretch = Stretch.UniformToFill, Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Top };
+                RenderOptions.SetBitmapScalingMode(img, J.Bool(Brand.ReadMarker(Env.AppHome), "pixel") ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
+                DockPanel.SetDock(img, Dock.Left);
                 row.Children.Add(img);
                 LoadPicture(img, o.ImageUrl);
             }
             var texts = new StackPanel();
-            texts.Children.Add(NewText(o.Text, 14, "SemiBold", dontMind ? "#666" : "#222"));
-            if (!string.IsNullOrEmpty(o.ModName)) { var m = NewText(o.ModName + ": " + (o.ModDescription ?? ""), 12, "Normal", "#555"); m.Margin = new Thickness(0, 2, 0, 0); texts.Children.Add(m); }
+            texts.Children.Add(NewText(o.Text, 14, "SemiBold", dontMind ? "Muted" : "Fg"));
+            if (!string.IsNullOrEmpty(o.ModName)) { var m = NewText(o.ModName + ": " + (o.ModDescription ?? ""), 12, "Normal", "Muted"); m.Margin = new Thickness(0, 2, 0, 0); texts.Children.Add(m); }
             var links = new WrapPanel { Margin = new Thickness(0, 2, 0, 0) };
             void AddLink(string text, string url)
             {
@@ -290,7 +306,7 @@ namespace DeepslateWorks
             sp.Children.Add(row);
             g.Children.Add(sp);
             card.Child = g;
-            if (dontMind) { card.BorderBrush = NewBrush("#C9CED3"); card.Background = NewBrush("#FAFBFC"); }
+            MarkPicked(card, VotePicked.Contains(id));
             // the whole card picks it, not only the round button
             card.Cursor = System.Windows.Input.Cursors.Hand;
             card.MouseLeftButtonUp += (s, e) => { if (e.OriginalSource is Hyperlink) return; pick.IsChecked = p.Multiple && !dontMind ? pick.IsChecked != true : true; };
@@ -308,11 +324,27 @@ namespace DeepslateWorks
             try
             {
                 foreach (var b in FindPicks(VoteBody)) b.IsChecked = VotePicked.Contains(b.Tag as string);
+                foreach (var kv in optionCards) MarkPicked(kv.Value, VotePicked.Contains(kv.Key));
             }
             finally { picking = false; }
             VoteButton.IsEnabled = VotePicked.Count > 0 && !voteBusy;
             VoteError.Text = "";
         }
+
+        readonly Dictionary<string, Border> optionCards = new Dictionary<string, Border>();
+
+        /// <summary>A picked option (docs/21 §4): a 2 px Copper edge (two 1 px borders in the spec; one 2 px border here, the
+        /// same pixels), the padding 1 px less so nothing moves.</summary>
+        static void MarkPicked(Border card, bool on)
+        {
+            card.BorderBrush = Theme.Brush(on ? "Copper" : "Line");
+            card.BorderThickness = new Thickness(on ? 2 : 1);
+            card.Padding = on ? new Thickness(11, 9, 11, 9) : new Thickness(12, 10, 12, 10);
+        }
+
+        /// <summary>The question in the display face up to this long (about three lines at 22 px); longer ones in Segoe UI
+        /// SemiBold 20 so they stay readable.</summary>
+        public const int VoteTitleFaceMaxChars = 90;
 
         static IEnumerable<ToggleButton> FindPicks(DependencyObject root)
         {
@@ -393,19 +425,19 @@ namespace DeepslateWorks
             {
                 var row = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
                 var line = new DockPanel();
-                var n = NewText(string.Format("{0} · {1}%", c.Votes, c.Percent), 12.5, "Normal", "#555"); DockPanel.SetDock(n, Dock.Right);
+                var n = NewText(string.Format("{0} · {1}%", c.Votes, c.Percent), 12.5, "Normal", "Muted"); DockPanel.SetDock(n, Dock.Right);
                 line.Children.Add(n);
-                line.Children.Add(NewText(c.Text + (mine.Contains(c.Id) ? "  ✓" : ""), 13.5, mine.Contains(c.Id) ? "SemiBold" : "Normal", c.Id == SiteHome.DontMind ? "#666" : "#222"));
+                line.Children.Add(NewText(c.Text + (mine.Contains(c.Id) ? "  ✓" : ""), 13.5, mine.Contains(c.Id) ? "SemiBold" : "Normal", c.Id == SiteHome.DontMind ? "Muted" : "Fg"));
                 row.Children.Add(line);
                 var bar = new Grid { Height = 8, Margin = new Thickness(0, 3, 0, 0) };
                 bar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(0, c.Percent), GridUnitType.Star) });
                 bar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(0, 100 - c.Percent), GridUnitType.Star) });
-                var back = new Border { Background = NewBrush("#EEF0F2"), CornerRadius = new CornerRadius(4) }; Grid.SetColumnSpan(back, 2); bar.Children.Add(back);
-                var fill = new Border { Background = NewBrush(c.Id == SiteHome.DontMind ? "#A0A7AE" : "#2E7D5B"), CornerRadius = new CornerRadius(4) }; Grid.SetColumn(fill, 0); bar.Children.Add(fill);
+                var back = new Border { Background = NewBrush("Line"), CornerRadius = new CornerRadius(4) }; Grid.SetColumnSpan(back, 2); bar.Children.Add(back);
+                var fill = new Border { Background = NewBrush(c.Id == SiteHome.DontMind ? "Dim" : "GreenHi"), CornerRadius = new CornerRadius(4) }; Grid.SetColumn(fill, 0); bar.Children.Add(fill);
                 row.Children.Add(bar);
                 VoteBody.Children.Add(row);
             }
-            var total = NewText(string.Format("{0} {1} so far.", p.Voters, p.Voters == 1 ? "vote" : "votes"), 12, "Normal", "#666"); total.Margin = new Thickness(0, 4, 0, 0);
+            var total = NewText(string.Format("{0} {1} so far.", p.Voters, p.Voters == 1 ? "vote" : "votes"), 12, "Normal", "Muted"); total.Margin = new Thickness(0, 4, 0, 0);
             VoteBody.Children.Add(total);
             var more = PendingVotes.Count > 0;
             VoteButton.Content = more ? UiText.NextVote : UiText.GoToPlay;

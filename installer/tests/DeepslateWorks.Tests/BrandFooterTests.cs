@@ -63,9 +63,9 @@ namespace DeepslateWorks.Tests
         [Fact] public void The_footer_says_app_pack_and_server()
         {
             var f1 = Footer.Parts("9.9.9", "0.1.0+aaaa1111", "0.1.0+aaaa1111", "Online");
-            Assert.Equal("App 9.9.9", f1.App); Assert.Equal("Pack 0.1.0+aaaa1111", f1.Pack); Assert.Equal("Server: Online", f1.Server); Assert.Equal("#666", f1.PackTone);
+            Assert.Equal("App 9.9.9", f1.App); Assert.Equal("Pack 0.1.0+aaaa1111", f1.Pack); Assert.Equal("Server: Online", f1.Server); Assert.Equal("Dim", f1.PackTone);   // 3.4.0: Theme keys
             var f2 = Footer.Parts("9.9.9", "0.1.0+aaaa1111", "0.1.0+bbbb2222", "Asleep");
-            Assert.EndsWith("Pack update available", f2.Pack); Assert.Equal("#B26A00", f2.PackTone);   // differs from the site's: amber
+            Assert.EndsWith("Pack update available", f2.Pack); Assert.Equal("Copper", f2.PackTone);
             var f3 = Footer.Parts("9.9.9", null, "0.1.0+bbbb2222", null);
             Assert.Equal("Pack update available", f3.Pack); Assert.Equal("Server: ?", f3.Server);   // never installed, site not reached
             Assert.Equal("Pack not installed yet", Footer.Parts("9.9.9", null, null, null).Pack);

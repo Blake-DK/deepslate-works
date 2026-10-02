@@ -50,6 +50,15 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\DeepslateWorks.ico" LogicalName="DeepslateWorks.ico" />
+    <!-- 3.4.0 (docs/21 §5): the banner, the tile and the display face with its licence, written to <home>\assets\ at start
+         (Home/Assets.cs). %40 is MSBuild's escape for the @ in the tile's name. -->
+    <EmbeddedResource Include="..\..\branding\launcher\hero.png" LogicalName="assets/hero.png" />
+    <EmbeddedResource Include="..\..\branding\launcher\deepslate-tile%403x.png" LogicalName="assets/deepslate-tile%403x.png" />
+    <EmbeddedResource Include="..\..\branding\launcher\fonts\PixelifySans-Bold.ttf" LogicalName="assets/PixelifySans-Bold.ttf" />
+    <EmbeddedResource Include="..\..\branding\launcher\fonts\PixelifySans-Regular.ttf" LogicalName="assets/PixelifySans-Regular.ttf" />
+    <EmbeddedResource Include="..\..\branding\launcher\fonts\OFL-PixelifySans.txt" LogicalName="assets/OFL-PixelifySans.txt" />
+    <!-- docs/21 §7: the grey head shown until a player's real one arrives; read straight from the exe, never written out -->
+    <EmbeddedResource Include="..\..\branding\launcher\head-placeholder.png" LogicalName="assets/head-placeholder.png" />
     <AssemblyAttribute Include="DeepslateWorks.BuildInfoAttribute">
       <_Parameter1>$(PortalUrl)</_Parameter1>
     </AssemblyAttribute>

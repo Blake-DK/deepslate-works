@@ -26,7 +26,7 @@ namespace DeepslateWorks.Tests
             var on = H(HomeSamples.TwoVotes);
             Assert.Equal("Online, 2 playing", SiteHome.ServerLine(on.Server));
             Assert.Equal("Online now: Bramble09, m1_owl", SiteHome.OnlineLine(on));
-            Assert.Equal("#2E7D5B", SiteHome.ToneColour(on.Server.Tone));
+            Assert.Equal("GreenHi", Theme.ToneKey(on.Server.Tone));   // 3.4.0: a Theme key, no colour outside Theme.cs
         }
 
         [Fact] public void Only_an_admin_gets_Start_and_only_for_a_server_that_will_not_wake()

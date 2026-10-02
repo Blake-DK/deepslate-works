@@ -540,3 +540,43 @@ The exe was branched from 2.0.3. Before it shipped, the three PowerShell version
 - **2.1.2, the footer.** `Footer.Parts` gives "App · Pack · Server" (amber "Pack update available" when the site's pack differs). App comes from the engine's `versions` line (new after a self-update), Pack from installed.json and the `installed` line, and the current pack and the server's state from `<site>/api/version`, read once in the background when the window opens. `apps/web/tests/no-version-literals.test.ts` reads only the PowerShell bridge's markers; the C# footer holds no version literal either (it builds every string from `Env.Version`, installed.json and the site).
 
 Version numbers: `installer/VERSION` is the app's version, which is now the exe's (3.0.0); its csproj and CI read it. `DeepslateWorks.ps1` is the 2.1.3 bridge and keeps the version written in it. Build no longer stamps VERSION into the script; it checks that the bridge is older than the exe (`checkBridge`), since otherwise a 2.x PC would never be offered the exe.
+
+## The move to the app, asked first (2026-10-02, planner; old launcher 2.2.0, app 3.1.0)
+
+- **Who sees what.** The mod list names `installer.exe` only to the app (user agent `DeepslateWorks/<version>`). The old
+  launcher is shown `installer.app` (same shape) and `installer.minimum` (Settings → Joining). 2.1.3 moved a PC the moment
+  it saw `exe`, without asking; it now sees none, updates itself to 2.2.0, and 2.2.0 asks. `lib/installer-info.ts installerFor`.
+- **2.2.0's question**, before anything else: "A new Deepslate Works app is ready. It replaces this one: same game, same
+  mods, nothing to reinstall. It has its own Play button and no black window." **Update now** / **Not now** (no Allow all).
+  Not now plays with 2.2.0 and asks again next Play. With `minimum` above 2.2.0, Not now is replaced by why it can no longer
+  join. The engine stops with exit 31 and a `{t:"handover"}` line; the window asks and starts it again with `-HandOver now|later`.
+  A 2.2.0 just fetched by an older engine ends with nothing done (exit 0) so its old window restarts into 2.2.0, which asks.
+- **Update now**: downloaded from this site's `/downloads` with progress, size + sha256 + `MZ` checked, `handover.json`
+  written (`state: downloaded`), the app started with `-From update -HandOver 2.2.0 -WaitFor <window>`.
+- **SmartScreen**: the app is downloaded by the launcher itself (no Zone.Identifier mark) and started with Start-Process, so
+  SmartScreen is not expected; CI's windows smoke checks it (`$HandOverSmartScreen` turns on the warning and the Help
+  picture if that ever changes).
+- **The app's guided setup** (`-HandOver`, 2.1.3's `-MigratedFrom`, or a `handover.json` not done): 1 Welcome, 2 Move over
+  (own folder, Play link, shortcuts, Settings → Apps, carried over: consent.json, extras.json, launcher.json, installed.json
+  are the same files and are only read back; a check of its own install; then the old launcher's files removed; each line
+  ticks, a failed one says why, Retry), 3 Permissions (only cards new in 3.x; the rest stays answered), 4 Extras. Then the
+  Play tab; nothing starts until Play. `handover.json`: downloaded → moving → moved → done. Not done: the next start of
+  either launcher carries on (the app at step 1, or step 3 once moved). Said Not now to the Play button but the old launcher
+  had one: it is pointed at the app, never left naming a removed file.
+- **Reports**: `mode: handover`. From 2.2.0: ok (Update now, downloaded), skipped (Not now), failed (with why). From the
+  app: ok (moved over), failed (each try), cancelled (closed before Move over finished). Not a Play for Play first.
+
+## Play with a countdown (2026-10-02, planner; app 3.1.0)
+
+- The app never starts the game the moment it opens. From the website (`deepslate://play`) it gets the game ready, then
+  counts down on the Play button: "Starting the game in 5…", "Click anywhere to stop". Any click, key, tab switch or
+  setting stops it for good (the stopping click does nothing else). From the desktop or the Start Menu: only Play. A
+  second start from a shortcut only brings the window to the front (`Local\DeepslateWorks.App.Show`); one from the
+  website asks it to play (`Local\DeepslateWorks.App.Play`).
+- No countdown on a first run, after the hand-over, while a permission is asked, with new extras (the Extras tab instead)
+  or queued extras changes. Pressing Play or Continue starts the game as soon as it is ready.
+- Play settings (Play tab): "When I press Play on the website": start after 5 seconds (default) / wait for me to press
+  Play / start straight away. `%LOCALAPPDATA%\DeepslateWorks\settings.json`.
+- The run waits after "every mod checked" (`Run.WaitForGo`); the "pressed Play" report (Play first's 30 minutes) goes
+  when the game is started; closed without starting, it reports `cancelled` at "Waiting for you to press Play". Wake on
+  Play still fires when the app opens from the website. The same in 2.2.0 was left out: 2.2.0's only job is the move.

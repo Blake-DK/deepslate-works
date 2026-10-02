@@ -222,11 +222,15 @@ namespace DeepslateWorks.Tests
                 var dir = s.P("shots");
                 List<string> files = null;
                 OnSta(() => files = AppWindow.DrawScreenshots(dir));
-                Assert.Equal(2, files.Count);
+                Assert.Equal(2 + NewShots.Length, files.Count);
                 AssertPng(Path.Combine(dir, "1-permissions-allow-all.png"));
                 AssertPng(Path.Combine(dir, "2-restart-question.png"));
+                foreach (var n in NewShots) AssertPng(Path.Combine(dir, n));
             }
         }
+
+        // 3.1.0: the guided setup (with a failed Move over), the countdown, the countdown stopped, Play settings
+        static readonly string[] NewShots = { "5-guided-1-welcome.png", "6-guided-2-move-over.png", "6b-guided-2-retry.png", "7-guided-3-permissions.png", "8-guided-4-extras.png", "9-countdown.png", "9b-countdown-3.png", "10-countdown-stopped.png", "11-play-settings.png" };
 
         [WindowsFact] public void With_the_extras_list_it_draws_the_Extras_tab_too()
         {
@@ -244,7 +248,7 @@ namespace DeepslateWorks.Tests
                 var dir = s.P("shots");
                 List<string> files = null;
                 OnSta(() => files = AppWindow.DrawScreenshots(dir));
-                Assert.Equal(4, files.Count);
+                Assert.Equal(4 + NewShots.Length, files.Count);
                 foreach (var f in files) AssertPng(f);
             }
         }

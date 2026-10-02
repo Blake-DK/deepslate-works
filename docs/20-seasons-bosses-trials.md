@@ -139,6 +139,15 @@ The other half of Cataclysm is Season 2's ladder. The mod is in from the start; 
 
 **Words on the site and in the event log**: "samoyedx beat the Elder Guardian (Season 1, first on the server)", "Trial opened: The Small Gate", "Season 1 ended. Bramble09 leads with 85 points". An announcement is made by itself when a trial opens, when a boss falls for the first time and when a season starts or ends; with the Discord bot (Phase 5) the same lines go to Discord.
 
+**In the app** (Alex, 2026-10-02): a season banner on the Play tab of the Deepslate Works app, above the server box, one line high so nothing below it is pushed out of the window.
+
+- Running: "Season 1 · First Blood · Week 3 of 6 · 12 days left", and under it in small type this week's trial ("This week: The Small Gate"). A click opens `/season` on the site in the browser.
+- Before the first season: "Season 1 starts on 14 November" once a start date is set; no banner at all while there is none.
+- Between seasons: "Season 1 has ended · Season 2 starts on <date>", or only the first half while there is no date.
+- The accent colour and the season's icon come from the season file (`accent`, `icon`, both optional; the site's branding colour otherwise).
+- Source: `GET /api/season/current` on the portal, for members and for the app with the key it already uses: `{ state: "none" | "upcoming" | "running" | "ended", id, name, startsAt, endsAt, week, weeks, daysLeft, thisWeek, next: { name, startsAt } }`. The app asks when it opens and with its usual status check, keeps the last answer and shows it greyed with no error when the site cannot be reached. Weeks and days are worked out by the portal, not on the PC.
+- The same line is the one Home shows, from the same endpoint: one wording in both places.
+
 **Guide** (docs/18): a "Season" section built from the current file: how to reach the Frontier, that it is wiped, what counts, that a group kill counts for all within 48 blocks.
 
 ## 8. Rules that stay
@@ -165,6 +174,7 @@ The other half of Cataclysm is Season 2's ladder. The mod is in from the start; 
 - [ ] A trial added to the file reaches the game by Build, Sync and reload with nobody restarting or updating and shows on `/season` as open at its `opensAt`.
 - [ ] A kill made while the api was down appears on `/season` within 10 minutes of the api coming back.
 - [ ] Two equal titles, an unknown entity or a date outside the season fail the build with a line that says which.
+- [ ] The app's Play tab shows the season banner with the same words as Home, and nothing when no season has a date.
 - [ ] End season freezes the board; a later kill of a Season 1 boss changes nothing in the hall of fame.
 - [ ] The wipe removes the Frontier's folder and nothing else, nobody is left inside it and the old map is still viewable.
 

@@ -43,9 +43,10 @@ const SAVED: Record<string, string> = { discord: "Saved.", paused: "The feed is 
 /** docs/21 §7: Admin → Site settings → Discord. */
 export default async function DiscordSection({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string; detail?: string; tested?: string; testError?: string }> }) {
   const admin = await requireAdmin();
-  const [q, sw, overview] = await Promise.all([
+  const [q, sw, privacy, overview] = await Promise.all([
     searchParams,
     getSection("discord"),
+    getSection("privacy"),
     apiFetch<Overview>("/discord", { caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 12_000 }).catch(() => null),
   ]);
   const feedSet = overview ? overview.feed.state !== "unset" : false;
@@ -117,6 +118,7 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
                   </select>
                 </label>
               </div>
+              {!privacy.chat && <p className="text-sm text-muted-foreground">Chat relay is off because chat logging is off (Site settings → Privacy).</p>}
               {BOT_SWITCHES.map((s) => (
                 <label key={s.key} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
                   <input type="checkbox" name={s.key} defaultChecked={sw[s.key]} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />

@@ -251,8 +251,9 @@ export class Announcer {
     if (!hook) return { ok: false, error: `no webhook set (DISCORD_WEBHOOK_${ch.toUpperCase()})` };
     await this.load();
     const brand = await this.d.store.brand();
-    // a forum takes posts, not lines: the test starts one (docs/22 §13)
-    const r = await this.outcome(ch, "test", await hook.send(asServer(brand, TEST_TEXT), undefined, ch === "updates" ? { threadName: "Test from Deepslate Works" } : {}));
+    // a forum takes posts, not lines: the test makes one and replies in it, the three calls §13 builds on
+    if (ch === "updates") return this.forumTest(hook, brand);
+    const r = await this.outcome(ch, "test", await hook.send(asServer(brand, TEST_TEXT)));
     if (r.ok && this.st?.refused[ch]) {
       delete this.st.refused[ch];
       this.dirtyState = true;
@@ -262,6 +263,38 @@ export class Announcer {
       await this.d.store.saveState(this.st).catch(() => undefined);
     }
     return r.ok ? { ok: true } : { ok: false, error: this.st?.log[0]?.error ?? "not taken" };
+  }
+
+  /**
+   * docs/22 §13, checked against the real forum: a post started with `thread_name`, a reply in it with `thread_id`, and
+   * that reply edited with `thread_id`. The error says which of the three Discord would not do.
+   */
+  private async forumTest(hook: Webhook, brand: Brand): Promise<{ ok: boolean; error?: string }> {
+    const finish = async (ok: boolean, error?: string) => {
+      if (ok && this.st?.refused.updates) {
+        delete this.st.refused.updates;
+        this.dirtyState = true;
+      }
+      if (this.dirtyState && this.st) {
+        this.dirtyState = false;
+        await this.d.store.saveState(this.st).catch(() => undefined);
+      }
+      return ok ? { ok: true } : { ok: false, error };
+    };
+    const post = await hook.send(asServer(brand, TEST_TEXT), undefined, { threadName: "Test from Deepslate Works" });
+    this.record({ channel: "updates", what: "test post", ok: post.ok, ...(post.ok ? {} : { error: post.error }) });
+    if (!post.ok) {
+      if (post.refused) await this.refuse("updates", post.error);
+      return finish(false, `starting a post (thread_name): ${post.error}`);
+    }
+    if (!post.channelId) return finish(false, "Discord took the message but gave no post id back: is this webhook in the forum season-updates?");
+    const reply = await hook.send(asServer(brand, "A reply in the same post."), undefined, { threadId: post.channelId });
+    this.record({ channel: "updates", what: "test reply", ok: reply.ok, ...(reply.ok ? {} : { error: reply.error }) });
+    if (!reply.ok) return finish(false, `replying in the post (thread_id): ${reply.error}`);
+    const edited = await hook.edit(reply.id, asServer(brand, "A reply in the same post, edited."), post.channelId);
+    this.record({ channel: "updates", what: "test edit", ok: edited.ok, ...(edited.ok ? {} : { error: edited.error }) });
+    if (!edited.ok) return finish(false, `editing the reply (thread_id): ${edited.error}`);
+    return finish(true);
   }
 
   /** What the settings card shows. */

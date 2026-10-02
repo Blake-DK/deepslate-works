@@ -419,6 +419,17 @@ describe("where things go (docs/22 §13)", () => {
     expect(replies.map((c) => (c.body.thread_name ? "post" : (c.url.match(/thread_id=(\d+)/)?.[1] ?? "?")))).toEqual(["post", "9001", "post", t.posts.get("poll:p1")!.threadId]);
   });
 
+  it("Test season-updates makes a post, replies in it and edits the reply: the three forum calls §13 builds on", async () => {
+    const t = routed();
+    expect(await t.a.test("updates")).toEqual({ ok: true });
+    expect(t.calls.map((c) => [c.method, t.where(c), c.body.thread_name ?? null, c.url.match(/thread_id=(\d+)/)?.[1] ?? null])).toEqual([
+      ["POST", "updates", "Test from Deepslate Works", null],
+      ["POST", "updates", null, "9001"],
+      ["PATCH", "updates", null, "9001"],
+    ]);
+    expect(t.calls[2]!.url).toContain("/messages/5002?");
+  });
+
   it("news is a post titled by its first line; a death goes to #game-chat and not the forum", async () => {
     const t = routed();
     t.add({ meta: { action: "announcement.create", params: { announcementId: "n1" }, result: "OK" } });

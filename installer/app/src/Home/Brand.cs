@@ -89,9 +89,9 @@ namespace DeepslateWorks
     {
         public static FooterParts Parts(string app, string local, string current, string server)
         {
-            var f = new FooterParts { App = string.IsNullOrEmpty(app) ? "App" : "App " + app, Pack = "Pack not installed yet", PackTone = "#666" };
+            var f = new FooterParts { App = string.IsNullOrEmpty(app) ? "App" : "App " + app, Pack = "Pack not installed yet", PackTone = "Dim" };
             if (!string.IsNullOrEmpty(local)) f.Pack = "Pack " + local;
-            if (!string.IsNullOrEmpty(current) && current != local) { f.Pack = string.IsNullOrEmpty(local) ? "Pack update available" : f.Pack + "  ·  Pack update available"; f.PackTone = "#B26A00"; }
+            if (!string.IsNullOrEmpty(current) && current != local) { f.Pack = string.IsNullOrEmpty(local) ? "Pack update available" : f.Pack + "  ·  Pack update available"; f.PackTone = "Copper"; }
             f.Server = string.IsNullOrEmpty(server) ? "Server: ?" : "Server: " + server;
             return f;
         }

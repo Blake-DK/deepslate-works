@@ -130,8 +130,29 @@ namespace DeepslateWorks
             return s.Line;
         }
 
-        /// <summary>The colour of the dot: the site's tones (good, info, warn, neutral, bad).</summary>
-        public static string ToneColour(string tone) => tone == "good" ? "#2E7D5B" : tone == "info" ? "#1A5FB4" : tone == "warn" ? "#C0661F" : tone == "bad" ? "#B3261E" : "#888888";
+        /// <summary>3.4.0 (docs/21 §4): the server pill on the banner, the Play tab's line shortened. Null: the site could not
+        /// be reached.</summary>
+        public static string HeroLine(HomeInfo h)
+        {
+            var s = h?.Server;
+            if (s == null) return "Can't reach the site";
+            if (s.Waking) return s.WakeLeftS.HasValue && s.WakeLeftS.Value > 0 && s.WakeLeftS.Value < 30 ? string.Format("Waking, about {0} s", s.WakeLeftS.Value) : "Waking, about 30 s";
+            if (s.State == "online") return h.Online.Count > 0 ? string.Format("Server is up · {0} playing", h.Online.Count) : "Server is up";
+            if (s.State == "asleep") return "Server is asleep";
+            return !string.IsNullOrEmpty(s.Label) ? "Server: " + s.Label : s.Line;
+        }
+
+        /// <summary>The pill's dot, as a Theme key: up green, waking or starting copper, the site unreachable or the
+        /// server crashed red, asleep, off or anything else dim.</summary>
+        public static string HeroDot(HomeInfo h)
+        {
+            var s = h?.Server;
+            if (s == null) return "Red";
+            if (s.Waking || s.State == "starting" || s.State == "restarting" || s.State == "stopping") return "Copper";
+            if (s.State == "online") return "GreenHi";
+            if (s.State == "crashed") return "Red";
+            return "Dim";
+        }
 
         public static string OnlineLine(HomeInfo h)
         {

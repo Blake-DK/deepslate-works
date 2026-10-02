@@ -21,3 +21,6 @@ It never touches your normal Minecraft. Anything you drop into its mods folder i
 To remove it: close the Minecraft Launcher, then Settings -> Apps -> "Deepslate Works" -> Uninstall, or
 "Uninstall Deepslate Works" in the Start Menu. It removes all of the above and keeps your screenshots (moved to
 Pictures), Java, the launcher and your other profiles.
+
+The app's titles use Pixelify Sans by The Pixelify Sans Project Authors, under the SIL Open Font Licence 1.1.
+The licence comes with it: %LOCALAPPDATA%\DeepslateWorks\assets\OFL-PixelifySans.txt.

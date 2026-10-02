@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/server/auth/session";
-import { setSettings } from "@/server/settings";
+import { getSettings, setSettings } from "@/server/settings";
 import { getSection, setSection } from "@/server/site-settings";
 import { ukLocalToDate } from "@/lib/uk-time";
 import { audit } from "@/server/events";
@@ -20,8 +20,10 @@ export async function saveSettingsAction(formData: FormData) {
     if (!launchAt) redirect("/admin/site?tab=launch&error=form");
   }
   const live = parsed.data.live === "on";
+  const was = (await getSettings()).live;
   await setSettings({ live, launchAt }, admin.id);
-  await audit({ userId: admin.id, action: "site.settings", params: { live, launchAt: launchAt?.toISOString() ?? null }, result: "OK" });
+  // was: the Discord feed posts "We're live" when this goes from off to on (docs/21 §4)
+  await audit({ userId: admin.id, action: "site.settings", params: { live, was, launchAt: launchAt?.toISOString() ?? null }, result: "OK" });
   for (const p of ["/", "/help", "/me", "/admin/site"]) revalidatePath(p);
   redirect("/admin/site?tab=launch&saved=1");
 }

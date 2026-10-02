@@ -56,6 +56,23 @@ export const sections = {
     favicon: z.string().max(80).default(""),
     banner: z.string().max(80).default(""),
   }),
+  // docs/21: what the Discord feed posts. The webhooks themselves are secrets in deploy/.env, never here.
+  discord: z.object({
+    deaths: z.boolean().default(true),
+    joins: z.boolean().default(true),
+    challenges: z.boolean().default(true),
+    advancements: z.boolean().default(false),
+    votes: z.boolean().default(true),
+    mentionUnvoted: z.boolean().default(true), // the reminder before a vote closes names who has not voted
+    season: z.boolean().default(true),
+    news: z.boolean().default(true),
+    live: z.boolean().default(true),
+    serverUpDown: z.boolean().default(true),
+    pack: z.boolean().default(true),
+    problems: z.boolean().default(true),
+    firstJoin: z.boolean().default(true),
+    paused: z.boolean().default(false), // nothing posted and nothing queued; the cursor moves on
+  }),
 } as const;
 
 export type SectionName = keyof typeof sections;

@@ -200,6 +200,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "download.modlist": (p) => modlist(p, false),
   "download.modlist.key": (p) => modlist(p, true),
   "retention.prune": (p) => `old entries cleared: ${s(p.events, "0")} events, ${s(p.ips, "0")} addresses${p.installs ? `, ${s(p.installs)} install reports` : ""}`,
+  "discord.test": (p) => `sent a test message to the Discord ${p.channel === "admin" ? "admin channel" : "feed"}${p.ok === false ? ` (${s(p.error, "it was not taken")})` : ""}`,
+  "discord.settings": (p) => (p.paused === true ? "paused the Discord feed" : p.paused === false && p.wasPaused ? "switched the Discord feed back on" : "changed what the Discord feed posts"),
   "events.export": "exported the event log",
   "analytics.export": "exported the analytics",
 };
@@ -208,7 +210,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
 const SELF_CONTAINED = new Set(["auth.adminPasswordFailed", "auth.adminLinkFailed", "auth.adminBreakGlass", "download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "limbo.kickIdleMods", "limbo.kickIdleVote", "modpack.serverMods", "world.pregenAutoPause"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
-const OUTCOME_IN_PHRASE = new Set(["auth.adminPasswordFailed", "auth.adminLinkFailed", "server.wake", "installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);
+const OUTCOME_IN_PHRASE = new Set(["auth.adminPasswordFailed", "discord.test", "auth.adminLinkFailed", "server.wake", "installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);
 
 export function describeAction(action: string, actor: Actor, params: unknown, result: AuditResult = "OK"): string {
   const p = (params && typeof params === "object" ? params : {}) as P;

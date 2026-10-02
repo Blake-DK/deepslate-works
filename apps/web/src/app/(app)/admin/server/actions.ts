@@ -187,8 +187,9 @@ export async function announceAction(formData: FormData) {
     if (!stored.ok) redirect(to("error", stored.reason));
     image = stored.file;
   }
-  await db.announcement.create({ data: { body, pinned, pinnedUntil: dates.pinnedUntil, expiresAt: dates.expiresAt, authorId: admin.id, image } });
-  await audit({ userId: admin.id, action: "announcement.create", params: { pinned, say, length: body.length, image: Boolean(image) }, result: "OK" });
+  const item = await db.announcement.create({ data: { body, pinned, pinnedUntil: dates.pinnedUntil, expiresAt: dates.expiresAt, authorId: admin.id, image } });
+  // announcementId: the Discord feed reads the item itself (docs/21 §4 News)
+  await audit({ userId: admin.id, action: "announcement.create", params: { announcementId: item.id, pinned, say, length: body.length, image: Boolean(image) }, result: "OK" });
   for (const p of ["/", "/admin/news"]) revalidatePath(p);
   let said = "";
   if (say) {

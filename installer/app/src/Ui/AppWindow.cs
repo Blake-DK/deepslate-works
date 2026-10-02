@@ -152,7 +152,15 @@ namespace DeepslateWorks
             visual.UpdateLayout();
             int w = (int)Math.Ceiling(visual.ActualWidth), h = (int)Math.Ceiling(visual.ActualHeight);
             var bmp = new RenderTargetBitmap(Math.Max(1, w), Math.Max(1, h), 96, 96, PixelFormats.Pbgra32);
-            bmp.Render(visual);
+            // painted at its own size: rendered straight, an element keeps its offset in the window (its margin), so the
+            // right and bottom edge of a question window were cut off in the pictures
+            var dv = new DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, Math.Max(1, w), Math.Max(1, h)));
+                dc.DrawRectangle(new VisualBrush(visual), null, new Rect(0, 0, Math.Max(1, w), Math.Max(1, h)));
+            }
+            bmp.Render(dv);
             var enc = new PngBitmapEncoder();
             enc.Frames.Add(BitmapFrame.Create(bmp));
             using (var fs = File.Create(file)) enc.Save(fs);

@@ -3287,7 +3287,14 @@ function Save-Png($visual, [string]$file) {
   $visual.UpdateLayout()
   $w = [int][Math]::Ceiling($visual.ActualWidth); $h = [int][Math]::Ceiling($visual.ActualHeight)
   $bmp = New-Object Windows.Media.Imaging.RenderTargetBitmap($w, $h, 96, 96, [Windows.Media.PixelFormats]::Pbgra32)
-  $bmp.Render($visual)
+  # painted at its own size: rendered straight, an element keeps its offset in the window (its margin), so the right
+  # and bottom edge of a question window were cut off in the pictures
+  $dv = New-Object Windows.Media.DrawingVisual
+  $dc = $dv.RenderOpen()
+  $dc.DrawRectangle((New-Brush "White"), $null, (New-Object Windows.Rect(0, 0, $w, $h)))
+  $dc.DrawRectangle((New-Object Windows.Media.VisualBrush($visual)), $null, (New-Object Windows.Rect(0, 0, $w, $h)))
+  $dc.Close()
+  $bmp.Render($dv)
   $enc = New-Object Windows.Media.Imaging.PngBitmapEncoder
   $enc.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bmp))
   $fs = [IO.File]::Create($file); try { $enc.Save($fs) } finally { $fs.Dispose() }

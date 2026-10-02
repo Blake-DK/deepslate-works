@@ -72,6 +72,13 @@ export const sections = {
     problems: z.boolean().default(true),
     firstJoin: z.boolean().default(true),
     paused: z.boolean().default(false), // nothing posted and nothing queued; the cursor moves on
+    // docs/22: the bot. Channel ids are not secrets. Empty = not picked.
+    chatChannel: z.string().regex(/^(\d{5,25})?$/).default(""), // #game-chat: chat both ways
+    updatesForum: z.string().regex(/^(\d{5,25})?$/).default(""), // the forum season-updates: votes posted by the bot
+    voteButtons: z.boolean().default(true),
+    chatToDiscord: z.boolean().default(true), // only once a chat channel is picked
+    chatToGame: z.boolean().default(false), // off until Alex has tried it in the game (docs/22 §10 step 6)
+    commands: z.boolean().default(true),
   }),
 } as const;
 

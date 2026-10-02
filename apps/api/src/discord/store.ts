@@ -132,10 +132,10 @@ export function prismaFeedStore(portal: string): FeedStore {
     },
     async post(key) {
       const r = await db.discordPost.findUnique({ where: { key } });
-      return r ? { key: r.key, channel: r.channel === "admin" ? "admin" : "feed", messageId: r.messageId, postedAt: r.postedAt, editedAt: r.editedAt } : null;
+      return r ? { key: r.key, channel: r.channel === "admin" ? "admin" : r.channel === "updates" ? "updates" : "feed", messageId: r.messageId, postedAt: r.postedAt, editedAt: r.editedAt, via: r.via === "bot" ? "bot" : "webhook", threadId: r.threadId } : null;
     },
     async savePost(row: PostRow) {
-      const data = { channel: row.channel, messageId: row.messageId, postedAt: row.postedAt, editedAt: row.editedAt };
+      const data = { channel: row.channel, messageId: row.messageId, postedAt: row.postedAt, editedAt: row.editedAt, via: row.via ?? "webhook", threadId: row.threadId ?? null };
       await db.discordPost.upsert({ where: { key: row.key }, create: { key: row.key, ...data }, update: data });
     },
     async addError(message, meta) {

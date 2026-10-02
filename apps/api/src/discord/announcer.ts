@@ -1,15 +1,28 @@
 // docs/21 §3: the Discord feed. Reads the event log after a cursor every 3 s and posts what `lines.ts` makes of each row
 // to the feed's webhook (and crashes and problems to the admin one). Its own loop: a dead webhook or a Discord outage
 // never slows the recorder, the door or a page.
-import type { Attachment, Message, Sent, Webhook } from "./webhook.js";
+// docs/22 §13: with the forum season-updates (its webhook, or the bot), votes, news and We're live are forum posts there
+// (replies in the same post), and #game-chat (the feed webhook) also carries the game's chat.
+import type { Attachment, Message, Sent, Webhook, Where } from "./webhook.js";
+import type { BotMessage, Component } from "./rest.js";
 import {
-  actionOf, advancementText, asPlayer, asServer, backText, crashAdminText, crashFeedText, deathRun, deathText, isStale,
-  joinText, leaveText, liveText, metaOf, newsMessage, packText, paramsOf, problemText, refusedText, reminderMessage,
+  actionOf, advancementText, asPlayer, asServer, backText, chatText, crashAdminText, crashFeedText, deathRun, deathText, isStale,
+  joinText, leaveText, LIVE_TITLE, liveText, metaOf, newsMessage, packText, paramsOf, postTitle, problemText, refusedText, reminderMessage,
   restartText, resultOf, stopText, TEST_TEXT, voteClosedText, voteMessage, welcomeText,
   type Brand, type Channel, type FeedEvent, type PollView, type Switches,
 } from "./lines.js";
 
-export type PostRow = { key: string; channel: Channel; messageId: string; postedAt: Date; editedAt: Date | null };
+export type PostRow = { key: string; channel: Channel; messageId: string; postedAt: Date; editedAt: Date | null; via?: "webhook" | "bot"; threadId?: string | null };
+
+/** What the Announcer needs of the bot (docs/22 §4): votes with buttons are the bot's own forum posts. */
+export type VotePoster = {
+  readonly inGuild: boolean;
+  createPost(forum: string, title: string, message: BotMessage, tag: string): Promise<{ ok: true; threadId: string; messageId: string } | { ok: false; error: string; gone: boolean }>;
+  edit(channel: string, messageId: string, message: Partial<BotMessage>): Promise<{ ok: boolean; retry: boolean; error?: string }>;
+  tagFor(forum: string, name: string): string[];
+  components(poll: { id: string; options: unknown; multiple: boolean }, closed: boolean): Component[];
+  pollShape(id: string): Promise<{ id: string; options: unknown; multiple: boolean } | null>;
+};
 export type LogEntry = { at: string; channel: Channel; what: string; ok: boolean; error?: string };
 export type FeedState = { cursor: string | null; hash: string; refused: Partial<Record<Channel, string>>; log: LogEntry[] };
 
@@ -40,6 +53,9 @@ type Deps = {
   store: FeedStore;
   feed: Webhook | null;
   admin: Webhook | null;
+  updates?: Webhook | null; // docs/22 §13: the forum season-updates
+  bot?: VotePoster | null; // docs/22: set when DISCORD_BOT_TOKEN is
+  chatRelay?: boolean; // docs/22 §5: game chat to #game-chat needs the bot (the chat channel is picked through it)
   portal: string; // https://deepslate.dsw.test
   log: (o: unknown, m: string) => void;
   now?: () => Date;
@@ -54,7 +70,8 @@ const BACK_MS = 30 * 60_000; // "The server is back." only after a down line of 
 const PROBLEM_REPEAT_MS = 6 * 60 * 60_000;
 const PROBLEMS_PER_HOUR = 10;
 
-type Outcome = { ok: true; id: string } | { ok: false; retry: boolean };
+type Outcome = { ok: true; id: string; channelId: string } | { ok: false; retry: boolean; gone?: boolean };
+const CHANNELS: Channel[] = ["feed", "admin", "updates"];
 
 export class Announcer {
   private timer: NodeJS.Timeout | null = null;
@@ -78,7 +95,12 @@ export class Announcer {
   }
 
   get configured(): boolean {
-    return Boolean(this.d.feed || this.d.admin);
+    return Boolean(this.d.feed || this.d.admin || this.d.updates);
+  }
+
+  /** docs/22 §13: with the updates forum (or the bot) votes, news and We're live go there; without, docs/21's one feed. */
+  private get twoChannels(): boolean {
+    return Boolean(this.d.updates || this.d.bot);
   }
 
   start() {
@@ -99,8 +121,12 @@ export class Announcer {
     return !this.d.feed.valid || this.st?.refused.feed === this.d.feed.hash ? "refused" : "on";
   }
 
+  private hook(ch: Channel): Webhook | null {
+    return (ch === "updates" ? this.d.updates : this.d[ch]) ?? null;
+  }
+
   private hookHash(): string {
-    return `${this.d.feed?.hash ?? ""}:${this.d.admin?.hash ?? ""}`;
+    return `${this.d.feed?.hash ?? ""}:${this.d.admin?.hash ?? ""}${this.d.updates ? `:${this.d.updates.hash}` : ""}`;
   }
 
   private async load(): Promise<FeedState> {
@@ -112,8 +138,8 @@ export class Announcer {
       this.st = { cursor: (await this.d.store.newestEventId()).toString(), hash, refused: saved?.hash === hash ? saved.refused : {}, log: saved?.log ?? [] };
       this.dirtyState = true;
     } else this.st = saved;
-    for (const ch of ["feed", "admin"] as const) {
-      const hook = this.d[ch];
+    for (const ch of CHANNELS) {
+      const hook = this.hook(ch);
       if (hook && !hook.valid) await this.refuse(ch, "not a Discord webhook address");
     }
     return this.st;
@@ -135,8 +161,20 @@ export class Announcer {
         return;
       }
       const events = await this.d.store.eventsAfter(BigInt(st.cursor ?? "0"), BATCH);
-      for (const e of events) {
+      for (let i = 0; i < events.length; i++) {
+        const e = events[i]!;
         const now = this.now();
+        if (e.kind === "CHAT") {
+          // docs/22 §5: what one player says inside a second is one message
+          let j = i;
+          while (j + 1 < events.length && events[j + 1]!.kind === "CHAT" && events[j + 1]!.actor === e.actor && events[j + 1]!.at.getTime() - e.at.getTime() < 1000) j++;
+          if (!isStale(e, now) && !(await this.chat(events.slice(i, j + 1), sw))) break;
+          st.cursor = events[j]!.id.toString();
+          this.partial = null;
+          this.dirtyState = true;
+          i = j;
+          continue;
+        }
         if (!isStale(e, now)) {
           const done = await this.handle(e, sw, now);
           if (!done) break; // Discord is away: this event again at the next round
@@ -164,7 +202,7 @@ export class Announcer {
   }
 
   private async refuse(ch: Channel, error: string) {
-    const hook = this.d[ch];
+    const hook = this.hook(ch);
     if (!hook || !this.st || this.st.refused[ch] === hook.hash) return;
     this.st.refused[ch] = hook.hash;
     this.dirtyState = true;
@@ -173,7 +211,7 @@ export class Announcer {
   }
 
   private usable(ch: Channel): Webhook | null {
-    const hook = this.d[ch];
+    const hook = this.hook(ch);
     if (!hook || !hook.valid || this.st?.refused[ch] === hook.hash) return null;
     return hook;
   }
@@ -181,19 +219,19 @@ export class Announcer {
   private async outcome(ch: Channel, what: string, r: Sent): Promise<Outcome> {
     if (r.ok) {
       this.record({ channel: ch, what, ok: true });
-      return { ok: true, id: r.id };
+      return { ok: true, id: r.id, channelId: r.channelId };
     }
     this.record({ channel: ch, what, ok: false, error: r.error });
     if (r.refused) await this.refuse(ch, r.error);
-    return { ok: false, retry: !r.dropped && !r.refused };
+    return { ok: false, retry: !r.dropped && !r.refused, gone: r.gone };
   }
 
   /** Output number `n` of the event in hand: delivered at most once even if the event is tried again. */
-  private async send(e: FeedEvent | null, n: number, ch: Channel, what: string, msg: Message, file?: Attachment): Promise<Outcome> {
-    if (e && this.partial?.id === e.id && this.partial.done.has(n)) return { ok: true, id: "" };
+  private async send(e: FeedEvent | null, n: number, ch: Channel, what: string, msg: Message, file?: Attachment, where: Where = {}): Promise<Outcome> {
+    if (e && this.partial?.id === e.id && this.partial.done.has(n)) return { ok: true, id: "", channelId: "" };
     const hook = this.usable(ch);
     if (!hook) return { ok: false, retry: false };
-    const r = await this.outcome(ch, what, await hook.send(msg, file));
+    const r = await this.outcome(ch, what, await hook.send(msg, file, where));
     if (e && (r.ok || !r.retry)) {
       if (this.partial?.id !== e.id) this.partial = { id: e.id, done: new Set() };
       this.partial.done.add(n);
@@ -201,19 +239,20 @@ export class Announcer {
     return r;
   }
 
-  private async edit(ch: Channel, what: string, messageId: string, msg: Message): Promise<Outcome> {
+  private async edit(ch: Channel, what: string, messageId: string, msg: Message, threadId?: string | null): Promise<Outcome> {
     const hook = this.usable(ch);
     if (!hook) return { ok: false, retry: false };
-    return this.outcome(ch, what, await hook.edit(messageId, msg));
+    return this.outcome(ch, what, await hook.edit(messageId, msg, threadId));
   }
 
   /** Send a test line to one channel (Admin → Site settings → Discord). Works while paused, and on a refused webhook. */
   async test(ch: Channel): Promise<{ ok: boolean; error?: string }> {
-    const hook = this.d[ch];
+    const hook = this.hook(ch);
     if (!hook) return { ok: false, error: `no webhook set (DISCORD_WEBHOOK_${ch.toUpperCase()})` };
     await this.load();
     const brand = await this.d.store.brand();
-    const r = await this.outcome(ch, "test", await hook.send(asServer(brand, TEST_TEXT)));
+    // a forum takes posts, not lines: the test starts one (docs/22 §13)
+    const r = await this.outcome(ch, "test", await hook.send(asServer(brand, TEST_TEXT), undefined, ch === "updates" ? { threadName: "Test from Deepslate Works" } : {}));
     if (r.ok && this.st?.refused[ch]) {
       delete this.st.refused[ch];
       this.dirtyState = true;
@@ -229,15 +268,15 @@ export class Announcer {
   async overview() {
     await this.load().catch(() => null);
     const one = async (ch: Channel) => {
-      const hook = this.d[ch];
+      const hook = this.hook(ch);
       if (!hook) return { state: "unset" as const };
       if (!hook.valid || this.st?.refused[ch] === hook.hash) return { state: "refused" as const };
       const info = await hook.info();
       if (!info.ok) return info.refused ? { state: "refused" as const } : { state: "unreachable" as const, error: info.error };
       return { state: "ok" as const, name: info.name, channel: info.channel };
     };
-    const [feed, admin] = await Promise.all([one("feed"), one("admin")]);
-    return { feed, admin, recent: this.st?.log ?? [] };
+    const [feed, admin, updates] = await Promise.all([one("feed"), one("admin"), one("updates")]);
+    return { feed, admin, updates, recent: this.st?.log ?? [] };
   }
 
   // ---- §4: one event ------------------------------------------------------------------------------------------------
@@ -366,11 +405,13 @@ export class Announcer {
         const item = await this.d.store.news(p.announcementId);
         if (!item) return true;
         const pic = item.image ? await this.d.store.picture(item.image) : null;
-        return ok(await this.send(e, 0, "feed", "news", newsMessage(brand, item.body, pic?.name ?? null), pic ?? undefined));
+        const ch = this.twoChannels ? "updates" : "feed";
+        return ok(await this.send(e, 0, ch, "news", newsMessage(brand, item.body, pic?.name ?? null), pic ?? undefined, ch === "updates" ? { threadName: postTitle(item.body), tags: this.tags(sw, "News") } : {}));
       }
       case "site.settings": {
         if (!sw.live || p.live !== true || p.was !== false) return true;
-        return ok(await this.send(e, 0, "feed", "live", asServer(brand, liveText(brand.name, new URL(this.d.portal).host))));
+        const ch = this.twoChannels ? "updates" : "feed";
+        return ok(await this.send(e, 0, ch, "live", asServer(brand, liveText(brand.name, new URL(this.d.portal).host)), undefined, ch === "updates" ? { threadName: LIVE_TITLE, tags: this.tags(sw, "News") } : {}));
       }
       case "poll.open":
       case "vote.open":
@@ -389,16 +430,86 @@ export class Announcer {
     }
   }
 
-  // ---- §5: votes ----------------------------------------------------------------------------------------------------
+  /** docs/22 §5: game chat to #game-chat, as the player with their head. Linked players only; needs the bot's channel. */
+  private async chat(group: FeedEvent[], sw: Switches): Promise<boolean> {
+    const e = group[0]!;
+    if (!this.d.chatRelay || !sw.chatToDiscord || !sw.chatChannel || !e.actor || !(await this.d.store.member(e.actor))) return true;
+    const name = String(metaOf(e).name ?? "");
+    const text = group.map((g) => chatText(g)).filter(Boolean).join("\n").slice(0, 1900);
+    if (!text) return true;
+    const r = await this.send(e, 0, "feed", "chat", asPlayer(await this.d.store.brand(), name, e.actor, text));
+    return r.ok || !r.retry;
+  }
+
+  // ---- §5: votes (docs/22 §4, §13: a forum post each, the bot's own with buttons when it can) -------------------------
+
+  private tags(sw: Switches, name: string): string[] {
+    return this.d.bot && sw.updatesForum ? this.d.bot.tagFor(sw.updatesForum, name) : [];
+  }
+
+  /** The bot posts a poll when it is in the server, buttons are on and the forum is picked. */
+  private botPosts(sw: Switches, kind: PollView["kind"]): boolean {
+    return Boolean(this.d.bot?.inGuild && sw.voteButtons && sw.updatesForum && kind === "poll" && this.usable("updates"));
+  }
+
+  private async components(kind: PollView["kind"], id: string, closed: boolean): Promise<Component[]> {
+    const shape = kind === "poll" && this.d.bot ? await this.d.bot.pollShape(id) : null;
+    return shape ? this.d.bot!.components(shape, closed) : [];
+  }
+
+  /** The vote's message kept up to date, the way it was posted. */
+  private async editVote(post: PostRow, kind: PollView["kind"], v: PollView, brand: Brand, what: string): Promise<{ ok: boolean; retry: boolean }> {
+    const msg = voteMessage(brand, v, this.d.portal);
+    if (post.via === "bot" && this.d.bot && post.threadId) {
+      const r = await this.d.bot.edit(post.threadId, post.messageId, { embeds: msg.embeds, components: await this.components(kind, v.id, v.status !== "OPEN"), allowed_mentions: msg.allowed_mentions });
+      this.record({ channel: post.channel, what, ok: r.ok, ...(r.error ? { error: r.error } : {}) });
+      return r;
+    }
+    const r = await this.edit(post.channel, what, post.messageId, msg, post.threadId);
+    return { ok: r.ok, retry: !r.ok && r.retry };
+  }
+
+  /** Open a vote's post: the bot's (buttons) or the webhook's (a link to the site). */
+  private async openVote(e: FeedEvent | null, kind: PollView["kind"], v: PollView, sw: Switches, brand: Brand, now: Date): Promise<Outcome & { row?: PostRow }> {
+    const key = `${kind}:${v.id}`;
+    const msg = voteMessage(brand, v, this.d.portal);
+    if (this.botPosts(sw, kind)) {
+      const r = await this.d.bot!.createPost(sw.updatesForum, v.title, { embeds: msg.embeds, components: await this.components(kind, v.id, false), allowed_mentions: msg.allowed_mentions }, "Vote");
+      this.record({ channel: "updates", what: `${kind} opened`, ok: r.ok, ...(r.ok ? {} : { error: r.error }) });
+      if (r.ok) {
+        const row: PostRow = { key, channel: "updates", messageId: r.messageId, postedAt: now, editedAt: null, via: "bot", threadId: r.threadId };
+        await this.d.store.savePost(row);
+        return { ok: true, id: r.messageId, channelId: r.threadId, row };
+      }
+      // the bot could not post: the webhook's post, without buttons
+    }
+    const ch: Channel = this.twoChannels ? "updates" : "feed";
+    const r = await this.send(e, 0, ch, `${kind} opened`, msg, undefined, ch === "updates" ? { threadName: v.title, tags: this.tags(sw, "Vote") } : {});
+    if (!r.ok) return r;
+    const row: PostRow = { key, channel: ch, messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId: ch === "updates" ? r.channelId || null : null };
+    await this.d.store.savePost(row);
+    return { ...r, row };
+  }
+
+  /** A reply in the vote's post (the reminder, the result line). A post deleted by hand is made again, once. */
+  private async replyToVote(e: FeedEvent | null, n: number, kind: PollView["kind"], id: string, what: string, msg: Message, brand: Brand, sw: Switches, now: Date): Promise<Outcome> {
+    const post = await this.d.store.post(`${kind}:${id}`);
+    const ch: Channel = post?.channel ?? (this.twoChannels ? "updates" : "feed");
+    const r = await this.send(e, n, ch, what, msg, undefined, post?.threadId ? { threadId: post.threadId } : {});
+    if (r.ok || !r.gone) return r;
+    const v = await this.d.store.vote(kind, id);
+    if (!v) return { ok: false, retry: false };
+    const again = await this.openVote(null, kind, v, sw, brand, now);
+    if (!again.ok || !again.row?.threadId) return { ok: false, retry: false };
+    return this.send(null, n, ch, what, msg, undefined, { threadId: again.row.threadId });
+  }
 
   private async voteOpened(e: FeedEvent, kind: PollView["kind"], id: string, sw: Switches, brand: Brand, now: Date): Promise<boolean> {
     if (!sw.votes || !id) return true;
-    const key = `${kind}:${id}`;
-    if (await this.d.store.post(key)) return true;
+    if (await this.d.store.post(`${kind}:${id}`)) return true;
     const v = await this.d.store.vote(kind, id);
     if (!v || v.status !== "OPEN") return true; // closed or deleted since: nothing
-    const r = await this.send(e, 0, "feed", `${kind} opened`, voteMessage(brand, v, this.d.portal));
-    if (r.ok) await this.d.store.savePost({ key, channel: "feed", messageId: r.id, postedAt: now, editedAt: null });
+    const r = await this.openVote(e, kind, v, sw, brand, now);
     return r.ok || !r.retry;
   }
 
@@ -410,13 +521,14 @@ export class Announcer {
     this.dirtyVotes.delete(key);
     const post = await this.d.store.post(key);
     if (post?.messageId && !(this.partial?.id === e.id && this.partial.done.has(0))) {
-      const r = await this.edit("feed", `${kind} result`, post.messageId, voteMessage(brand, v, this.d.portal));
+      // the first message turns into the result; the buttons go
+      const r = await this.editVote(post, kind, v, brand, `${kind} result`);
       if (r.ok) await this.d.store.savePost({ ...post, editedAt: now });
       if (!r.ok && r.retry) return false;
       if (this.partial?.id !== e.id) this.partial = { id: e.id, done: new Set() };
       this.partial.done.add(0);
     }
-    const r = await this.send(e, 1, "feed", `${kind} closed`, asServer(brand, voteClosedText(v, this.d.portal)));
+    const r = await this.replyToVote(e, 1, kind, id, `${kind} closed`, asServer(brand, voteClosedText(v, this.d.portal)), brand, sw, now);
     return r.ok || !r.retry;
   }
 
@@ -449,7 +561,7 @@ export class Announcer {
       const v = await this.d.store.vote(kind, id);
       this.dirtyVotes.delete(key);
       if (!v || v.status !== "OPEN") continue; // the close edits it
-      const r = await this.edit("feed", `${kind} count`, post.messageId, voteMessage(brand, v, this.d.portal));
+      const r = await this.editVote(post, kind, v, brand, `${kind} count`);
       if (r.ok) await this.d.store.savePost({ ...post, editedAt: now });
       else if (r.retry) this.dirtyVotes.add(key);
     }
@@ -464,7 +576,8 @@ export class Announcer {
         await this.d.store.savePost({ key, channel: "feed", messageId: "", postedAt: now, editedAt: null }); // everybody has
         continue;
       }
-      const r = await this.send(null, 0, "feed", "reminder", reminderMessage(brand, v, missing, sw.mentionUnvoted, now));
+      const buttons = (await this.d.store.post(`${v.kind}:${v.id}`))?.via === "bot";
+      const r = await this.replyToVote(null, 0, v.kind, v.id, "reminder", reminderMessage(brand, v, missing, sw.mentionUnvoted, now, buttons), brand, sw, now);
       if (r.ok || !r.retry) await this.d.store.savePost({ key, channel: "feed", messageId: r.ok ? r.id : "", postedAt: now, editedAt: null });
     }
   }

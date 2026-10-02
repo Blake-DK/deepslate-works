@@ -26,7 +26,7 @@ export class Wake {
 
   /** Sends the one start. The caller has decided (shared/server-state.ts `wakeDecision`) that it is "start". */
   /** `via`: "app" when Deepslate Works asked (planner 2026-10-02, the app as the front door), else the site's Play. */
-  async start(userId: string, name: string, via: "play" | "app" = "play"): Promise<void> {
+  async start(userId: string, name: string, via: "play" | "app" | "discord" = "play"): Promise<void> {
     this.phase = "waking";
     this.startedAt = this.now();
     this.endedAt = 0;

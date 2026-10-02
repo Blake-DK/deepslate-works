@@ -1,6 +1,19 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { Prisma } from "@prisma/client";
 import { db } from "./db.js";
 import { auditMeta, describeAction, kindOf, type AuditResult } from "./shared/events.js";
+
+/** docs/22 §6: what a slash command sets off is marked "via Discord" on its event (params.via and the line). */
+export const viaDiscord = new AsyncLocalStorage<true>();
+
+/**
+ * The bot calls api's own routes in-process with `x-via: discord` (behind the service token like every caller); the
+ * rest of that request runs inside the mark, the way @fastify/request-context does it.
+ */
+export function viaDiscordHook(req: { headers: Record<string, unknown> }, _reply: unknown, done: () => void) {
+  if (req.headers["x-via"] === "discord") viaDiscord.run(true, done);
+  else done();
+}
 
 /**
  * Records something the portal or a person did, as an Event (docs/16 §4; this used to be an AuditLog row).
@@ -10,6 +23,8 @@ import { auditMeta, describeAction, kindOf, type AuditResult } from "./shared/ev
 export async function audit(data: { userId?: string | null; action: string; params: Prisma.InputJsonValue; result: string; detail?: string | null }) {
   try {
     const result = (["OK", "DENIED", "FAILED", "TIMEOUT"].includes(data.result) ? data.result : "OK") as AuditResult;
+    const discord = viaDiscord.getStore() === true;
+    if (discord && data.params && typeof data.params === "object" && !Array.isArray(data.params)) data = { ...data, params: { ...(data.params as object), via: "discord" } as Prisma.InputJsonValue };
     const user = data.userId ? await db.user.findUnique({ where: { id: data.userId }, select: { role: true, displayName: true } }) : null;
     // No caller: api itself ("The portal let bramble09 in"). A caller that is not a member of the portal is somebody
     // using the service token directly, a script or a session on the VPS: "System".
@@ -19,7 +34,7 @@ export async function audit(data: { userId?: string | null; action: string; para
       data: {
         kind: kindOf(data.action, actor.role),
         actor: user ? data.userId : null,
-        message: describeAction(data.action, actor, data.params, result),
+        message: `${describeAction(data.action, actor, data.params, result)}${discord && !/Discord/.test(describeAction(data.action, actor, data.params, result)) ? " (via Discord)" : ""}`.slice(0, 500),
         meta: auditMeta(data.action, data.params, result, detail) as Prisma.InputJsonValue,
       },
     });

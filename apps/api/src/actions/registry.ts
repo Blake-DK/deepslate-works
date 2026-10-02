@@ -35,6 +35,8 @@ export type Action<I> = {
   role: "system" | "ADMIN";
   input: z.ZodType<I>;
   build: (ctx: ActionCtx, input: I) => string[];
+  /** What the event log keeps of the input, when not all of it (docs/22: chat from Discord keeps who and how long). */
+  audit?: (input: I) => object;
 };
 
 const define = <I,>(a: Action<I>) => a;
@@ -518,6 +520,20 @@ export const actions = {
     role: "ADMIN",
     input: z.object({ command: z.string().max(1000).regex(/^[^\r\n]*$/).transform((c) => c.trim().replace(/^\/+/, "")).pipe(z.string().min(1)) }),
     build: (_ctx, { command }) => [command],
+  }),
+  // docs/22 §5: the one place where a person's free text goes to the console. One tellraw to verified players, its text
+  // one JSON string from JSON.stringify of plain text components (no selector, click, hover, translation or NBT),
+  // cleaned by discordChatText/discordChatName first and checked again here.
+  "chat.fromDiscord": define({
+    name: "chat.fromDiscord",
+    role: "system",
+    input: z.object({
+      name: z.string().min(1).max(32).regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}§]+$/u),
+      text: z.string().min(1).max(257).regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}§]+$/u),
+      member: z.string().max(40).nullable(),
+    }),
+    build: (_ctx, { name, text }) => [`tellraw @a[tag=verified] ${JSON.stringify(["", { text: "[Discord] ", color: "blue" }, { text: name, color: "white" }, { text: `: ${text}`, color: "gray" }])}`],
+    audit: ({ name, text, member }) => ({ name, member, length: text.length }),
   }),
   "server.say": define({
     name: "server.say",

@@ -368,6 +368,17 @@ export class Limbo {
     return { kicked: r.ok, name };
   }
 
+  /**
+   * docs/22 §7: the gateway says a member left (or came back to) the Discord server. Checked at once, the same way the
+   * five-minute check does it: the flag, and someone playing is taken out as by docs/14.
+   */
+  async memberChanged(discordId: string, inGuild: boolean) {
+    const u = await db.user.findUnique({ where: { discordId }, select: { id: true, mcUuid: true, guildMember: true } });
+    if (!u) return;
+    if (u.guildMember !== inGuild) await db.user.update({ where: { id: u.id }, data: { guildMember: inGuild } });
+    if (!inGuild && u.mcUuid) await this.revoke(u.mcUuid, null);
+  }
+
   /** With a bot token: re-check guild membership of online, linked players every 5 min. Without one: rely on login-time checks. */
   private async refreshGuild() {
     if (!this.env.DISCORD_BOT_TOKEN || !this.env.DISCORD_GUILD_ID || this.tail.state !== 20 || this.tail.online.size === 0) return;

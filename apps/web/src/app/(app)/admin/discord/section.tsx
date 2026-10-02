@@ -6,11 +6,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { pauseDiscordAction, saveDiscordAction, testDiscordAction } from "./actions";
-import { SWITCHES } from "./switches";
+import { pauseDiscordAction, saveDiscordAction, saveDiscordBotAction, testDiscordAction } from "./actions";
+import { BOT_SWITCHES, SWITCHES, UPDATES } from "./switches";
 
 type Hook = { state: "unset" } | { state: "refused" } | { state: "unreachable"; error: string } | { state: "ok"; name: string; channel: string | null };
-type Overview = { feed: Hook; admin: Hook; recent: Array<{ at: string; channel: "feed" | "admin"; what: string; ok: boolean; error?: string }> };
+type Channel = { id: string; name: string };
+type BotView =
+  | { state: "unset" | "no_guild" }
+  | { state: "connecting" | "on" | "reconnecting" | "refused" | "stopped"; tag: string | null; refused: string | null; missingIntents: boolean; inGuild: boolean; textChannels: Channel[]; forums: Channel[]; invite: string | null };
+type Overview = { feed: Hook; admin: Hook; updates?: Hook; bot?: BotView; recent: Array<{ at: string; channel: "feed" | "admin" | "updates"; what: string; ok: boolean; error?: string }> };
+
+/** docs/22 §7: the bot's state in one line. */
+function botLine(b: BotView | undefined): React.ReactNode {
+  if (!b || b.state === "unset") return <>No bot token set. Ask the VPS session to add <span className="font-mono">DISCORD_BOT_TOKEN</span>.</>;
+  if (b.state === "no_guild") return <>The bot has a token but no server: <span className="font-mono">DISCORD_GUILD_ID</span> is not set.</>;
+  if (b.state === "refused") return <span className="text-danger">{b.refused === "intents" ? "Switch on Message Content Intent and Server Members Intent in the Developer Portal (Bot page)." : "Discord refused the token."}</span>;
+  if (b.state !== "on") return <>Connecting to Discord…</>;
+  return <>The bot is connected as {b.tag ?? "the bot"}{b.missingIntents ? <span className="text-danger">. Switch on Message Content Intent and Server Members Intent in the Developer Portal: chat from Discord and leaving the server are not seen without them</span> : null}{b.inGuild ? "." : ", but it is not in the server yet."}</>;
+}
 
 function where(h: Hook, env: string): React.ReactNode {
   switch (h.state) {
@@ -37,11 +50,12 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
   ]);
   const feedSet = overview ? overview.feed.state !== "unset" : false;
   const adminSet = overview ? overview.admin.state !== "unset" : false;
+  const twoChannels = Boolean(overview && ((overview.updates && overview.updates.state !== "unset") || (overview.bot && overview.bot.state !== "unset" && overview.bot.state !== "no_guild")));
   return (
     <div className="space-y-4">
       {q.saved && <Alert tone="success">{SAVED[q.saved] ?? "Saved."}</Alert>}
       {q.error && <Alert tone="error">Not saved. {q.detail}</Alert>}
-      {q.tested && <Alert tone="success">Discord took the test message. Look in the {q.tested === "admin" ? "admin channel" : "feed's channel"}.</Alert>}
+      {q.tested && <Alert tone="success">Discord took the test message. Look in the {q.tested === "admin" ? "admin channel" : q.tested === "updates" ? "forum season-updates (a new post)" : "chat channel"}.</Alert>}
       {q.testError && <Alert tone="error">The test message did not arrive: {q.testError}</Alert>}
       <Card>
         <CardHeader>
@@ -57,14 +71,17 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
             <Alert tone="error">The portal&apos;s back end did not answer, so the webhooks&apos; state is unknown.</Alert>
           ) : (
             <dl className="grid gap-2 text-sm sm:grid-cols-[10rem_1fr]">
-              <dt className="font-medium">Feed</dt>
+              <dt className="font-medium">#game-chat</dt>
               <dd>{where(overview.feed, "DISCORD_WEBHOOK_FEED")}</dd>
+              <dt className="font-medium">season-updates</dt>
+              <dd>{!overview.updates || overview.updates.state === "unset" ? <>No webhook set{overview.bot && overview.bot.state !== "unset" ? <>: votes, news and the season are not posted. Ask the VPS session to add <span className="font-mono">DISCORD_WEBHOOK_UPDATES</span>.</> : <> (optional): votes and news go to #game-chat as before.</>}</> : where(overview.updates, "DISCORD_WEBHOOK_UPDATES")}</dd>
               <dt className="font-medium">Admin channel</dt>
               <dd>{overview.admin.state === "unset" ? <>None (optional). Crashes and problems are then not posted anywhere.</> : where(overview.admin, "DISCORD_WEBHOOK_ADMIN")}</dd>
             </dl>
           )}
           <form action={testDiscordAction.bind(null, "feed")} className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" variant="secondary" disabled={!feedSet}>Send a test message</Button>
+            <Button type="submit" size="sm" variant="secondary" disabled={!overview?.updates || overview.updates.state === "unset"} formAction={testDiscordAction.bind(null, "updates")}>Test season-updates</Button>
             <Button type="submit" size="sm" variant="secondary" disabled={!adminSet} formAction={testDiscordAction.bind(null, "admin")}>Test the admin channel</Button>
             {sw.paused ? (
               <Button type="submit" size="sm" formAction={pauseDiscordAction.bind(null, false)}>Switch the feed back on</Button>
@@ -72,6 +89,43 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
               <Button type="submit" size="sm" variant="ghost" formAction={pauseDiscordAction.bind(null, true)}>Pause the feed</Button>
             )}
           </form>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Bot</CardTitle>
+          <CardDescription>Vote buttons, chat both ways, slash commands, and leaving the Discord server is noticed within seconds. Who someone is in Discord is who they are on the portal; Discord roles give nothing here.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm">{botLine(overview?.bot)}</p>
+          {overview?.bot && "invite" in overview.bot && overview.bot.invite && !overview.bot.inGuild && (
+            <a href={overview.bot.invite} target="_blank" rel="noreferrer" className="inline-block rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted">Add the bot to the server</a>
+          )}
+          {overview?.bot && "inGuild" in overview.bot && overview.bot.inGuild && (
+            <form action={saveDiscordBotAction} className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-sm"><span className="block font-medium">Chat channel</span>
+                  <select name="chatChannel" defaultValue={sw.chatChannel} className="mt-1 w-full rounded-lg border bg-background px-3 py-2">
+                    <option value="">None: no chat relay</option>
+                    {overview.bot.textChannels.map((c) => <option key={c.id} value={c.id}>#{c.name}</option>)}
+                  </select>
+                </label>
+                <label className="text-sm"><span className="block font-medium">Updates forum</span>
+                  <select name="updatesForum" defaultValue={sw.updatesForum} className="mt-1 w-full rounded-lg border bg-background px-3 py-2">
+                    <option value="">None: votes without buttons</option>
+                    {overview.bot.forums.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </label>
+              </div>
+              {BOT_SWITCHES.map((s) => (
+                <label key={s.key} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
+                  <input type="checkbox" name={s.key} defaultChecked={sw[s.key]} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />
+                  <span><span className="block font-medium">{s.title}</span><span className="block text-sm text-muted-foreground">{s.example}</span></span>
+                </label>
+              ))}
+              <Button type="submit">Save</Button>
+            </form>
+          )}
         </CardContent>
       </Card>
       <Card>
@@ -84,7 +138,7 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
             {SWITCHES.map((s) => (
               <label key={s.key} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
                 <input type="checkbox" name={s.key} defaultChecked={sw[s.key]} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />
-                <span><span className="block font-medium">{s.title}</span><span className="block text-sm text-muted-foreground">{s.example}</span></span>
+                <span><span className="block font-medium">{s.title} <span className="font-normal text-muted-foreground">{s.key === "problems" ? "· to the admin channel" : twoChannels && UPDATES.has(s.key) ? "· to season-updates" : "· to #game-chat"}</span></span><span className="block text-sm text-muted-foreground">{s.example}</span></span>
               </label>
             ))}
             <Button type="submit">Save</Button>
@@ -101,7 +155,7 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
               {overview.recent.map((r, i) => (
                 <li key={i} className="flex flex-wrap items-baseline gap-x-3 py-1.5">
                   <span className="w-28 shrink-0 text-muted-foreground">{ukShort(new Date(r.at))}</span>
-                  <span className="w-16 shrink-0">{r.channel === "admin" ? "admin" : "feed"}</span>
+                  <span className="w-28 shrink-0">{r.channel === "admin" ? "admin" : r.channel === "updates" ? "season-updates" : "#game-chat"}</span>
                   <span className="flex-1">{r.what}</span>
                   {r.ok ? <Badge tone="good">taken</Badge> : <Badge tone="bad" title={r.error}>not taken</Badge>}
                   {!r.ok && r.error && <span className="basis-full text-xs text-muted-foreground">{r.error}</span>}

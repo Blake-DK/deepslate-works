@@ -24,6 +24,10 @@ const schema = z.object({
   // not a Discord webhook does not stop api: the feed treats it as refused and says so on the settings card.
   DISCORD_WEBHOOK_FEED: z.string().optional(),
   DISCORD_WEBHOOK_ADMIN: z.string().optional(),
+  // docs/22: the forum channel season-updates (votes, season posts, news), and the Discord app's id (not a secret) for
+  // the slash commands and the "Add the bot" link. The bot itself is DISCORD_BOT_TOKEN.
+  DISCORD_WEBHOOK_UPDATES: z.string().optional(),
+  DISCORD_CLIENT_ID: z.string().optional(), // used only when it looks like an id
   // modpack build (runs as a child process of api): the repo mounts and the CLI's location in the image
   REPO_DIR: z.string().default("/repo"),
   MODPACK_PKG_DIR: z.string().default("/app/packages/modpack"),

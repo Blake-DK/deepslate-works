@@ -3,7 +3,7 @@ import { AmpClient, MockAmp, type Amp } from "./amp/client.js";
 import { serviceAuth } from "./auth.js";
 import type { Env } from "./env.js";
 import { health, tcpReachable } from "./health.js";
-import { audit } from "./audit.js";
+import { audit, viaDiscordHook } from "./audit.js";
 import { Wake } from "./status/wake.js";
 import { ServerView, reasonFor } from "./status/view.js";
 import { PollWatch, pollRoutes } from "./players/polls.js";
@@ -47,6 +47,8 @@ import { Announcer } from "./discord/announcer.js";
 import { prismaFeedStore } from "./discord/store.js";
 import { Webhook } from "./discord/webhook.js";
 import { discordRoutes } from "./routes/discord.js";
+import { makeBot, votePoster } from "./discord/wire.js";
+import { runAction } from "./actions/run.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
@@ -55,11 +57,9 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     : new AmpClient({ url: env.AMP_URL, username: env.AMP_USERNAME, password: env.AMP_PASSWORD, instanceId: env.AMP_INSTANCE_ID }));
 
   app.addHook("onRequest", serviceAuth(env.API_SERVICE_TOKEN));
-  // docs/21: the Discord feed, posted from the event log by its own loop
-  const hook = (url: string | undefined) => (url ? new Webhook(url, { botToken: env.DISCORD_BOT_TOKEN }) : null);
-  const feed = new Announcer({ store: prismaFeedStore(env.PORTAL_URL.replace(/\/+$/, "")), feed: hook(env.DISCORD_WEBHOOK_FEED), admin: hook(env.DISCORD_WEBHOOK_ADMIN), portal: env.PORTAL_URL.replace(/\/+$/, ""), log: (o, m) => app.log.info(o, m) });
-  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState() }));
-  discordRoutes(app, feed);
+  app.addHook("onRequest", viaDiscordHook);
+  // docs/21 + docs/22: the Discord feed and the bot are made further down; /health reads them when asked
+  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState(), discordBot: bot ? bot.state() : "off" }));
   modpackRoutes(app, env, ampClient, deps.build, () => pregen.quiesce());
 
   // Console tail, status poller and the wait room run for the life of the process (docs/05, docs/14).
@@ -90,6 +90,29 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const wake = new Wake(ampClient, (a) => audit(a as Parameters<typeof audit>[0]));
   let tunnelUp: boolean | null = null;
   const view = new ServerView({ poller, wake, lastDown: () => recorder.lastDown, sleep: () => ({ on: pregen.sleep.on, delayMin: pregen.sleep.delayMin }), tunnelUp: () => tunnelUp });
+  // docs/22: the bot (only with DISCORD_BOT_TOKEN and DISCORD_GUILD_ID), and docs/21's feed, which posts its votes
+  const bot = makeBot({
+    app, env, log,
+    server: () => {
+      const live = poller.fresh();
+      const extra = view.extra(live);
+      return { state: extra.server, players: live?.players ?? [], tps: live?.tps ?? null, sleepInMin: extra.sleepInMin };
+    },
+    async toGame(line) {
+      // nobody on: nothing is sent and the server is not woken (docs/22 §5)
+      if (tail.state !== 20 || tail.online.size === 0) return "nobody";
+      const r = await runAction(ampClient, limbo.actionCtx, "chat.fromDiscord", line, line.member);
+      return r.ok ? "sent" : "failed";
+    },
+    memberChanged: (id, inGuild) => limbo.memberChanged(id, inGuild),
+  });
+  const hook = (url: string | undefined) => (url ? new Webhook(url, { botToken: env.DISCORD_BOT_TOKEN }) : null);
+  const portal = env.PORTAL_URL.replace(/\/+$/, "");
+  const feed = new Announcer({
+    store: prismaFeedStore(portal), feed: hook(env.DISCORD_WEBHOOK_FEED), admin: hook(env.DISCORD_WEBHOOK_ADMIN), updates: hook(env.DISCORD_WEBHOOK_UPDATES),
+    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), portal, log: (o, m) => app.log.info(o, m),
+  });
+  discordRoutes(app, feed, bot, env);
   poller.stateName = (live) => (wake.waking && live.stateCode !== 20 ? "Waking" : live.state);
   statusRoutes(app, ampClient, poller, tail, () => pings.current(), view);
   wakeRoutes(app, wake, view);
@@ -170,6 +193,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     ground.start();
     polls.start();
     feed.start();
+    bot?.start();
     serverVersions.start();
     online.start();
     pregenWatch.start();
@@ -186,6 +210,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     online.stop();
     polls.stop();
     feed.stop();
+    bot?.stop();
     pregen.stop();
     restarts.stop();
     ground.stop();

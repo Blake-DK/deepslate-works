@@ -313,6 +313,8 @@ model DiscordPost {
   key       String    @unique // "poll:<id>", "ballot:<id>", "deaths:<uuid>", "remind:poll:<id>", "welcome:<userId>"
   channel   String    // "feed" | "admin"
   messageId String    // Discord's id of the message; "" for a marker (something decided, nothing posted)
+  via       String    @default("webhook") // docs/22: "webhook" or "bot"; an edit goes the way the message was posted
+  threadId  String?   // docs/22 §13: the forum post (thread) the message opened or sits in
   postedAt  DateTime  @default(now())
   editedAt  DateTime?
 }

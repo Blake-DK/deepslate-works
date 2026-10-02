@@ -1,4 +1,2 @@
-# Custom Window Title (planner, 2026-10-01): the game window says Deepslate Works. Build points icon at the
-# chosen logo (customwindowtitle/icon.png) once there is one; until then Minecraft's own icon shows.
 title = 'Deepslate Works'
 icon = ''

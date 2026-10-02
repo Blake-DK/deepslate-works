@@ -173,7 +173,8 @@ namespace DeepslateWorks.Tests
                 var right = left + b.ActualWidth;
                 Assert.True(left >= linksRight, string.Format("{0}: {1} starts at {2:0} under the links (they end at {3:0})", view, n, left, linksRight));
                 Assert.True(right <= tabRight, string.Format("{0}: {1} ends at {2:0}, past the tab's edge {3:0}", view, n, right, tabRight));
-                Assert.True(b.ActualWidth >= b.DesiredSize.Width - 0.5, string.Format("{0}: {1} is squeezed", view, n));
+                // DesiredSize counts the margin; the button itself is squeezed when it got less than that minus its margin
+                Assert.True(b.ActualWidth + b.Margin.Left + b.Margin.Right >= b.DesiredSize.Width - 0.5, string.Format("{0}: {1} is squeezed ({2:0} of {3:0})", view, n, b.ActualWidth + b.Margin.Left + b.Margin.Right, b.DesiredSize.Width));
             }
         }
         static double Right(FrameworkElement e, FrameworkElement root) => e.TranslatePoint(new Point(e.ActualWidth, 0), root).X;

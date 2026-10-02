@@ -133,6 +133,8 @@ export class Bot {
         this.inGuild = true;
         this.channels.clear();
         for (const c of guild.channels ?? []) this.channels.set(c.id, { name: c.name, type: c.type, tags: c.available_tags });
+        // the bot was just added from the card (or came back): the slash commands could not be registered before it was in
+        await this.register();
         return;
       }
       case "GUILD_DELETE":

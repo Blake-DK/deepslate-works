@@ -722,7 +722,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 **To do**
 
-0. **Discord bot and channels (docs/22 §8)**, once:
+0. **Discord bot and channels (docs/22 §8)**, once. Click by click, with the checks afterwards: **`docs/22a-discord-setup.md`**. In short:
    1. Developer Portal (discord.com/developers/applications) → the Deepslate Works app → **Bot**: Reset Token and copy it. On the same page switch on **Message Content Intent** and **Server Members Intent**. Switch off "Public Bot".
    2. In Discord, two webhooks named "Deepslate Works" (Edit channel → Integrations → Webhooks → New webhook): one in **#game-chat** (`DISCORD_WEBHOOK_FEED`) and one in the forum **season-updates** (`DISCORD_WEBHOOK_UPDATES`). Copy both URLs.
    3. Hand the token and the two URLs to the VPS session for `deploy/.env`, then `deploy/deploy.sh`.

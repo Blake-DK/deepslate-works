@@ -20,6 +20,10 @@ const schema = z.object({
   SPAWN_POS: z.string().regex(/^-?\d+(?:\.\d+)? -?\d+(?:\.\d+)? -?\d+(?:\.\d+)?$/).optional(),
   DISCORD_BOT_TOKEN: z.string().optional(),
   DISCORD_GUILD_ID: z.string().optional(),
+  // docs/21, the Discord feed: webhooks of the channel the server posts to and of a private admin channel. A URL that is
+  // not a Discord webhook does not stop api: the feed treats it as refused and says so on the settings card.
+  DISCORD_WEBHOOK_FEED: z.string().optional(),
+  DISCORD_WEBHOOK_ADMIN: z.string().optional(),
   // modpack build (runs as a child process of api): the repo mounts and the CLI's location in the image
   REPO_DIR: z.string().default("/repo"),
   MODPACK_PKG_DIR: z.string().default("/app/packages/modpack"),

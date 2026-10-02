@@ -6,7 +6,7 @@ import { SUPPRESS_EMBEDS, type Message } from "./webhook.js";
 
 export type Switches = Section<"discord">;
 export type Brand = { name: string; accent: string; avatar: string | null };
-export type Channel = "feed" | "admin";
+export type Channel = "feed" | "admin" | "updates"; // updates: the forum season-updates (docs/22 §13)
 
 /** An `Event` row as the Announcer reads it. */
 export type FeedEvent = { id: bigint; at: Date; kind: string; actor: string | null; message: string; meta: unknown };
@@ -14,6 +14,7 @@ export type FeedEvent = { id: bigint; at: Date; kind: string; actor: string | nu
 /** How long a line may wait: 10 minutes, or 24 hours for the kinds marked *keep* (§3). */
 export const STALE_MS = 10 * 60_000;
 export const KEEP_MS = 24 * 60 * 60_000;
+export const CHAT_STALE_MS = 2 * 60_000;
 const KEEP_ACTIONS = new Set(["poll.open", "poll.close", "poll.vote", "vote.open", "vote.close", "ballot.save", "announcement.create", "site.settings"]);
 
 export function actionOf(e: Pick<FeedEvent, "meta">): string | null {
@@ -35,6 +36,7 @@ export function metaOf(e: Pick<FeedEvent, "meta">): Record<string, unknown> {
 /** Kept kinds wait 24 hours; the rest are dropped after 10 minutes (§2.7: old news is not posted). */
 export function isStale(e: Pick<FeedEvent, "at" | "kind" | "meta">, now: Date): boolean {
   const age = now.getTime() - e.at.getTime();
+  if (e.kind === "CHAT") return age > CHAT_STALE_MS; // docs/22 §5: old chat is not replayed
   const action = actionOf(e);
   const keep = e.kind === "SEASON" || (action !== null && KEEP_ACTIONS.has(action));
   return age > (keep ? KEEP_MS : STALE_MS);
@@ -115,6 +117,20 @@ export function advancementText(how: string, title: string): string {
   const t = `**${escapeText(title)}**`;
   return how === "challenge" ? `completed the challenge ${t}` : how === "goal" ? `reached the goal ${t}` : `made the advancement ${t}`;
 }
+
+/** docs/22 §5: what a player said, without the "<name> " the event line starts with. */
+export function chatText(e: Pick<FeedEvent, "message" | "meta">): string {
+  const name = String(metaOf(e).name ?? "");
+  const text = name && e.message.startsWith(`<${name}> `) ? e.message.slice(name.length + 3) : e.message;
+  return escapeText(text.trim());
+}
+
+/** A forum post's title: plain text, one line, at most 100 characters. */
+export function postTitle(s: string): string {
+  const line = (s.split(/\r?\n/).find((l) => l.trim()) ?? "").replace(/[*_~`|>#[\]()]/g, "").replace(/\s+/g, " ").trim();
+  return (line.length > 100 ? `${line.slice(0, 99)}…` : line) || "News";
+}
+export const LIVE_TITLE = "We're live";
 
 export const welcomeText = (name: string) => `**${escapeText(name)}** is in. Welcome!`;
 export const liveText = (brandName: string, host: string) => `**${escapeText(brandName)} is open.** Press Play at ${host}`;
@@ -205,10 +221,10 @@ export function voteClosedText(v: PollView, portal: string): string {
  * The reminder 24 hours before a vote closes. With mentions on, the members with a Discord account who have not voted
  * are named (and only they can be pinged); the others are counted.
  */
-export function reminderMessage(brand: Brand, v: Pick<PollView, "title" | "closesAt">, missing: { discordIds: string[]; others: number }, mention: boolean, now: Date): Message {
+export function reminderMessage(brand: Brand, v: Pick<PollView, "title" | "closesAt">, missing: { discordIds: string[]; others: number }, mention: boolean, now: Date, buttons = false): Message {
   const when = v.closesAt ? closesIn(v.closesAt, now) : "soon";
   const total = missing.discordIds.length + missing.others;
-  const head = `The vote **${escapeText(v.title)}** closes ${when}.`;
+  const head = `The vote **${escapeText(v.title)}** closes ${when}.${buttons ? " Vote with the buttons above." : ""}`;
   if (!mention || missing.discordIds.length === 0) return asServer(brand, `${head} ${total} ${total === 1 ? "person" : "people"} still to vote.`);
   const ids = missing.discordIds.slice(0, 50);
   const extra = total - ids.length;

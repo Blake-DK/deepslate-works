@@ -2,6 +2,29 @@
 
 Last updated 2026-09-29, 19:00 UTC (the evening the first player who is not an admin got in). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
 
+## The Discord bot · docs/22 §10 steps 1 to 6 (2026-10-02, built against a stand-in)
+
+Built in §10's order: the gateway and the card, slash commands, vote buttons, chat game → Discord, the two channels (§13), chat Discord → game. **Nothing has met the real Discord yet**: there is no token and there are no webhooks for #game-chat and season-updates. Everything is tested against a stand-in (a fake gateway socket, a fake Discord REST and webhooks in `apps/api/tests/discord-bot.test.ts`). With no `DISCORD_BOT_TOKEN` nothing changes: no bot is made, `/health` says `discordBot: "off"`, and docs/21's feed routes as before unless `DISCORD_WEBHOOK_UPDATES` is set.
+
+- **Forum posts by webhook, checked against Discord's API reference** (discord-api-docs, `webhook.mdx`, 2026-10-02): Execute Webhook takes `thread_name` ("requires the webhook channel to be a forum or media channel") and `applied_tags`; `?thread_id=` sends into a thread of the webhook's channel; Edit Webhook Message takes `?thread_id=`; with `?wait=true` the answer is the message, whose `channel_id` is the new post's id. **Not yet tried live**: the first `Send a test message` to season-updates (Admin → Site settings → Discord → Test season-updates) is that check; if it fails, the forum part stops there and is reported. The same reference says a webhook not owned by the app ignores buttons, which is why polls are posted by the bot (§4).
+- **Where:** `apps/api/src/discord/` gains `gateway.ts` (identify, heartbeat with a dead-connection check, resume at `resume_gateway_url`, back-off 1 s doubling to 60 s, 4004 and 4010–4013 stop for good, 4014 retries once without the two privileged intents), `rest.ts` (bot-token calls; with `webhook.ts` the only code that calls Discord), `bot.ts`, `commands.ts`, `votes.ts`, `chat.ts`, `wire.ts`. `routes/discord.ts` adds the bot to the card's view and the "Add the bot" link. Migration `0023_discord_bot` (`DiscordPost.via`, `threadId`). `/health` → `discordBot`.
+- **No library:** the gateway runs on Node 22's built-in `WebSocket` (present in the api image, v22.23), so neither `ws` nor `discord.js` was added.
+- **One vote rule:** `castVote` in `shared/polls.ts` (the shared file both apps hold, compared by the existing test). Web's `answerPoll` and Discord's buttons both call it; the event is `poll.vote` with `via: "discord"` from a button.
+- **Commands** call api's own routes in-process (`app.inject`, the service token, the member's id and role, `x-via: discord`): `/restart` → `POST /server/restart-in`, `/cancel-restart` → `DELETE /server/schedule`, `/say` → `POST /actions/server.say`, `/wake` → `POST /server/wake` (`via: "discord"`). The route's own permission check and audit run; an `onRequest` hook marks the request so its event carries `via: "discord"` and "(via Discord)". `/feed pause|resume` writes `Setting` `discord` through the same schema. Admin commands are refused unless the member is ADMIN on the portal.
+- **`chat.fromDiscord`:** one `tellraw @a[tag=verified]` of plain text components from `JSON.stringify`; cleaned before (one line, no control or format characters, no line/paragraph separators, no `§`, 256 characters with "…") and checked again by the action's schema. Its event keeps the name, the member and the length, not the text (`Action.audit`, new). The §5 injection test is in `discord-bot.test.ts`. Read from the picked chat channel only; never from a bot or a webhook; nothing when nobody is on (the server is not woken); 1 a second per person and 5 in all, the rest get 🐌. Switch **off** by default.
+- **Membership:** `GUILD_MEMBER_REMOVE` runs `Limbo.memberChanged` at once: the same as the five-minute check (flag, and someone playing is taken out as by docs/14). `GUILD_MEMBER_ADD` sets the flag back.
+
+**Deviations, and choices the doc left open:**
+
+1. **Two-channel routing** (§13) is on when `DISCORD_WEBHOOK_UPDATES` is set or the bot is there; without either, docs/21's single feed as today. With the bot but no updates webhook, votes, news and We're live are not posted anywhere (§13: no fallback to #game-chat).
+2. **Chat game → Discord needs the bot** (a chat channel picked on the card) although it posts through the #game-chat webhook: with no token nothing may change (§2.8), and the chat channel is picked from the bot's list.
+3. **Interaction answers** go straight back when the work takes under ~2 s; otherwise "thinking…" (ephemeral) first and the answer after. A "shown to the channel" command that has to wait is then answered only to the person.
+4. **Invite permissions** add Create Public Threads (a forum post is a thread) and Manage Messages (pinning the season's post, §13) to §7's list.
+5. **`/season`** says "No season is running yet." (docs/20 step 3 does not exist). Boss, trial and season posts (§13) are not built for the same reason; the routing has room for them (`updates` channel, `threadId`).
+6. **The mod ballot** stays a webhook message with a link (§4); only polls get buttons.
+7. **4014** (an intent not switched on): the bot reconnects once without both privileged intents and the card says to switch on Message Content Intent and Server Members Intent; it does not try to find out which of the two was missing.
+8. **Not verified, needs the real thing:** that `/msg` and an Open Parties and Claims party message never become `CHAT` events (only `<name> text` lines are parsed as chat; none of the 43 chat rows so far is a whisper or party line), the reconnect behaviour over a night (§10 step 1), and every §11 box that needs Discord itself.
+
 ## Players' heads in the app (2026-10-02, docs/21 §7 / §9 step 6; merged as PR #46, 19:48 UTC)
 
 `web`: `GET /api/app/head/<uuid>.png` (`src/server/heads.ts`, `src/lib/heads.ts`) fetches `https://crafatar.com/avatars/<uuid>?size=24&overlay` once a day per player into `data/heads/`. It keeps only a 24x24 PNG of at most 32 KB, answers yesterday's head when Crafatar is down, the placeholder when there is none, and does not try that player again for 10 minutes after a failure. Two asks at once share one fetch. `GET /api/app/home` adds `players: [{name, uuid}]`. App: `OnlineHeads` before "Online now", the placeholder (embedded in the exe, not written to `assets\`) at once, the real head swapped in when the site answers, one log line per player whose head fails. Tests: web `tests/heads.test.ts`, app `HeadsTests.cs`. `make-art.py` draws `head-placeholder.png` (8x8 at 3x); a rerun leaves every other picture byte for byte the same.
@@ -699,7 +722,13 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 **To do**
 
-0. **Discord feed (docs/21):** make a webhook in the feed's channel (and optionally a private admin channel), hand the URLs to the VPS session for `deploy/.env`, then Admin → Site settings → Discord → Send a test message.
+0. **Discord bot and channels (docs/22 §8)**, once:
+   1. Developer Portal (discord.com/developers/applications) → the Deepslate Works app → **Bot**: Reset Token and copy it. On the same page switch on **Message Content Intent** and **Server Members Intent**. Switch off "Public Bot".
+   2. In Discord, two webhooks named "Deepslate Works" (Edit channel → Integrations → Webhooks → New webhook): one in **#game-chat** (`DISCORD_WEBHOOK_FEED`) and one in the forum **season-updates** (`DISCORD_WEBHOOK_UPDATES`). Copy both URLs.
+   3. Hand the token and the two URLs to the VPS session for `deploy/.env`, then `deploy/deploy.sh`.
+   4. Admin → Site settings → Discord → **Add the bot to the server**, pick the server, Authorise.
+   5. On the same card pick #game-chat as the chat channel and season-updates as the updates forum.
+   Then: Test season-updates (checks forum posts by webhook), send a `/msg` and a party message in the game and see that neither reaches #game-chat, and try Chat Discord → game in the game before leaving its switch on.
 1. **Render the map.** It is empty. Admin → Server → Pre-generation → "Render the map only" → Turn on. About an hour with the server kept awake; it stops by itself. "When nobody's online" waits while anyone plays; "Now" does not.
 2. **Download the installer once more on your own PC.** Your copy is 1.3.0 (your last Play, 17:32 UTC, says so), and 1.3.0 has no update step. From 1.4.0 on a copy keeps itself up to date whenever Play is pressed.
 3. **Press Play before you next join**, and tell Pabulum to: the pack is `0.1.0+1a48e8ff` since 18:20 UTC, and Play first asks for it. (Admins are never held, so for you it is only the settings that come with it.)

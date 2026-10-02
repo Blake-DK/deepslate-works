@@ -120,3 +120,34 @@ export function pendingOrder(list: Pending[]): Pending[] {
 export function voteHolds(user: { role: "ADMIN" | "PLAYER" }, unanswered: number): boolean {
   return user.role !== "ADMIN" && unanswered > 0;
 }
+
+/**
+ * docs/22 §4: storing a member's vote, the one rule for the site, the app and Discord's buttons. The database and the
+ * audit are handed in (web and api each have their own client), so this file stays the same in both apps.
+ */
+type PollRow = PollLike & { status: "DRAFT" | "OPEN" | "CLOSED" };
+export type VoteStore = {
+  poll: { findUnique(args: { where: { id: string } }): Promise<PollRow | null> };
+  pollAnswer: {
+    findUnique(args: { where: { pollId_userId: { pollId: string; userId: string } }; select: { choices: true } }): Promise<{ choices: string[] } | null>;
+    upsert(args: { where: { pollId_userId: { pollId: string; userId: string } }; create: { pollId: string; userId: string; choices: string[] }; update: { choices: string[] } }): Promise<unknown>;
+  };
+};
+export type VoteAudit = (a: { userId: string; action: "poll.vote"; params: Record<string, unknown>; result: "OK" }) => Promise<void>;
+export type Cast = { ok: true; question: string; choices: string[]; texts: string[]; changed: boolean } | { ok: false; status: number; code: string; message: string };
+
+export async function castVote(store: VoteStore, audit: VoteAudit, userId: string, pollId: string, raw: unknown, via?: "discord"): Promise<Cast> {
+  const poll = await store.poll.findUnique({ where: { id: pollId } });
+  if (!poll || poll.status === "DRAFT") return { ok: false, status: 404, code: "not_found", message: "There's no such vote." };
+  if (!isOpen(poll, new Date())) return { ok: false, status: 409, code: "closed", message: "This vote has closed." };
+  const c = checkChoices(poll, raw);
+  if (!c.ok) return { ok: false, status: 400, code: "bad_choice", message: c.reason };
+  const key = { pollId_userId: { pollId, userId } };
+  const before = await store.pollAnswer.findUnique({ where: key, select: { choices: true } });
+  await store.pollAnswer.upsert({ where: key, create: { pollId, userId, choices: c.choices }, update: { choices: c.choices } });
+  const texts = readOptions(poll.options).filter((o) => c.choices.includes(o.id)).map((o) => o.text);
+  if (!before || before.choices.join() !== c.choices.join()) {
+    await audit({ userId, action: "poll.vote", params: { pollId, question: poll.question, choices: texts, changed: Boolean(before), ...(via ? { via } : {}) }, result: "OK" });
+  }
+  return { ok: true, question: poll.question, choices: c.choices, texts, changed: Boolean(before) };
+}

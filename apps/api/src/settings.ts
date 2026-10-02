@@ -1,5 +1,6 @@
 import { db } from "./db.js";
-import { parseSection, type Section, type SectionName } from "./shared/settings.js";
+import type { Prisma } from "@prisma/client";
+import { parseSection, sections, type Section, type SectionName } from "./shared/settings.js";
 
 // Settings are edited in the portal (Admin → Settings) and read here; 30 s is soon enough for a change to bite.
 const TTL_MS = 30_000;
@@ -17,4 +18,11 @@ export async function getSection<K extends SectionName>(name: K): Promise<Sectio
   }
   cache.set(name, { at: Date.now(), value });
   return value;
+}
+
+/** docs/22 §6 (/feed pause): api writes a section too, through the same schema as the site's settings page. */
+export async function setSection<K extends SectionName>(name: K, value: Section<K>, updatedById: string | null): Promise<void> {
+  const parsed = sections[name].parse(value) as Prisma.InputJsonValue;
+  await db.setting.upsert({ where: { key: name }, create: { key: name, value: parsed, updatedById }, update: { value: parsed, updatedById } });
+  cache.delete(name);
 }

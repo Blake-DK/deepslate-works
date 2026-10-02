@@ -1,7 +1,12 @@
 import type { Section } from "@/shared/settings";
 
 // docs/21 §4: the switches on the card, each with an example of its line (the real words are in api's discord/lines.ts).
-type Key = Exclude<keyof Section<"discord">, "paused">;
+type S = Section<"discord">;
+type Bools = { [K in keyof S]: S[K] extends boolean ? K : never }[keyof S];
+type Key = Exclude<Bools, "paused" | BotKey>;
+type BotKey = "voteButtons" | "chatToDiscord" | "chatToGame" | "commands";
+/** docs/22 §13: where a switch's lines go once the forum season-updates is in use. */
+export const UPDATES: ReadonlySet<string> = new Set(["votes", "mentionUnvoted", "season", "news", "live"]);
 export const SWITCHES: ReadonlyArray<{ key: Key; title: string; example: string }> = [
   { key: "deaths", title: "Deaths", example: "samoyedx: was blown up by Creeper. From the third death in five minutes, the last line counts them instead." },
   { key: "joins", title: "Joins and leaves", example: "samoyedx: joined · 3 online. Leaving and coming back within two minutes is not posted." },
@@ -16,4 +21,12 @@ export const SWITCHES: ReadonlyArray<{ key: Key; title: string; example: string 
   { key: "pack", title: "New pack", example: "New pack: 3 mods changed. The app updates it when you press Play." },
   { key: "problems", title: "Crashes and problems", example: "To the admin channel: The server crashed at 21:04. Open Admin → Server. The feed only hears \"The server fell over\"." },
   { key: "firstJoin", title: "First join ever", example: "samoyedx is in. Welcome!" },
+];
+
+// docs/22 §7: the bot's own switches.
+export const BOT_SWITCHES: ReadonlyArray<{ key: BotKey; title: string; example: string }> = [
+  { key: "voteButtons", title: "Vote buttons", example: "Polls are posted by the bot in season-updates with a button per option; a press votes for the member whose Discord account pressed it." },
+  { key: "commands", title: "Slash commands", example: "/online, /status, /votes, /season, /me, /wake; for the portal's admins /restart, /cancel-restart, /say and /feed." },
+  { key: "chatToDiscord", title: "Chat, game → Discord", example: "What linked players say in the game shows in the chat channel, as them with their head." },
+  { key: "chatToGame", title: "Chat, Discord → game", example: "What people write in the chat channel shows in the game as [Discord] name: text, while somebody is on. Leave off until it has been tried in the game." },
 ];

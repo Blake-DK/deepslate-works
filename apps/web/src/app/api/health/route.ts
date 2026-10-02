@@ -2,7 +2,7 @@ import { db } from "@/server/db";
 import { env, missingEnv } from "@/env";
 import { apiFetch } from "@/server/api-client";
 
-type ApiHealth = { ok: boolean; tunnel: string; amp: string; rsync: string; discordFeed?: "on" | "off" | "refused" };
+type ApiHealth = { ok: boolean; tunnel: string; amp: string; rsync: string; discordFeed?: "on" | "off" | "refused"; discordBot?: "on" | "off" | "refused" | "reconnecting" };
 
 export async function GET() {
   let dbOk = false;

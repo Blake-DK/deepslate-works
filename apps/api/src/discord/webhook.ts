@@ -26,7 +26,11 @@ export type Message = {
 };
 export type Attachment = { name: string; type: string; data: Buffer };
 
-export type Sent = { ok: true; id: string } | { ok: false; refused: boolean; dropped: boolean; status: number | null; error: string };
+/** `channelId` is the thread's id when the message started or sits in a forum post. `gone`: the post was deleted. */
+export type Sent = { ok: true; id: string; channelId: string } | { ok: false; refused: boolean; dropped: boolean; gone?: boolean; status: number | null; error: string };
+/** docs/22 §13: in a forum, `threadName` starts a post and `threadId` replies in one. */
+export type Where = { threadId?: string | null; threadName?: string; tags?: string[] };
+const UNKNOWN_CHANNEL = 10003;
 
 /** 4: suppress embeds, so a link in a line is not turned into a preview. */
 export const SUPPRESS_EMBEDS = 4;
@@ -65,18 +69,20 @@ export class Webhook {
   }
 
   /** Post a message and get its id (`?wait=true`). With a picture, it goes as an attachment (`attachment://<name>`). */
-  send(msg: Message, file?: Attachment): Promise<Sent> {
-    return this.queue(() => this.request("POST", `${this.base}?wait=true`, msg, file));
+  send(msg: Message, file?: Attachment, where: Where = {}): Promise<Sent> {
+    const body: Message & { thread_name?: string; applied_tags?: string[] } = where.threadName ? { ...msg, thread_name: where.threadName.slice(0, 100), ...(where.tags?.length ? { applied_tags: where.tags } : {}) } : msg;
+    return this.queue(() => this.request("POST", `${this.base}?wait=true${where.threadId ? `&thread_id=${where.threadId}` : ""}`, body, file));
   }
 
   /** Change a message this webhook posted earlier. */
-  edit(messageId: string, msg: Message): Promise<Sent> {
+  edit(messageId: string, msg: Message, threadId?: string | null): Promise<Sent> {
     if (!/^\d{1,25}$/.test(messageId)) return Promise.resolve({ ok: false, refused: false, dropped: true, status: null, error: "no message to edit" });
     const rest: Message = { ...msg }; // an edit cannot change who sent it
     delete rest.username;
     delete rest.avatar_url;
     delete rest.flags;
-    return this.queue(() => this.request("PATCH", `${this.base}/messages/${messageId}`, rest));
+    if (threadId && !/^\d{1,25}$/.test(threadId)) return Promise.resolve({ ok: false, refused: false, dropped: true, status: null, error: "bad thread" });
+    return this.queue(() => this.request("PATCH", `${this.base}/messages/${messageId}${threadId ? `?thread_id=${threadId}` : ""}`, rest));
   }
 
   /** The webhook's own name and its channel's name (the channel's only with a bot token: a webhook cannot read it). */
@@ -128,8 +134,8 @@ export class Webhook {
         continue;
       }
       if (res.ok) {
-        const j = (await res.json().catch(() => null)) as { id?: string } | null;
-        return { ok: true, id: j?.id ?? "" };
+        const j = (await res.json().catch(() => null)) as { id?: string; channel_id?: string } | null;
+        return { ok: true, id: j?.id ?? "", channelId: j?.channel_id ?? "" };
       }
       if (res.status === 429) {
         if (++limited > 5) return { ok: false, refused: false, dropped: false, status: 429, error: "Discord kept saying slow down" };
@@ -143,10 +149,13 @@ export class Webhook {
         await this.sleep(2000 * failures);
         continue;
       }
-      const refused = res.status === 401 || res.status === 403 || (res.status === 404 && method === "POST");
       const detail = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 200);
+      const code = Number((/"code":\s*(\d+)/.exec(detail) ?? [])[1] ?? 0);
+      // a forum post deleted by hand: "unknown channel" for that thread, not a refused webhook
+      const gone = code === UNKNOWN_CHANNEL || (res.status === 404 && /thread_id=/.test(url));
+      const refused = !gone && (res.status === 401 || res.status === 403 || (res.status === 404 && method === "POST"));
       // anything else (400, a message edited after it was deleted) is this message's problem: it is dropped, not retried
-      return { ok: false, refused, dropped: true, status: res.status, error: `Discord answered ${res.status}${detail ? `: ${detail}` : ""}` };
+      return { ok: false, refused, dropped: true, gone, status: res.status, error: `Discord answered ${res.status}${detail ? `: ${detail}` : ""}` };
     }
   }
 

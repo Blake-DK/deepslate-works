@@ -19,6 +19,7 @@ export async function runAction(amp: Amp, ctx: ActionCtx, name: ActionName, rawI
   }
   const input = parsed.data;
   const commands = (action.build as (c: ActionCtx, i: unknown) => string[])(ctx, input);
+  const kept = (action as { audit?: (i: unknown) => object }).audit?.(input) ?? (input as object);
   let sent = 0;
   try {
     for (const cmd of commands) {
@@ -26,12 +27,12 @@ export async function runAction(amp: Amp, ctx: ActionCtx, name: ActionName, rawI
       sent++;
     }
     if (!QUIET.has(name) && !(callerId === null && QUIET_FROM_THE_PORTAL.has(name))) {
-      await audit({ userId: callerId, action: name, params: input as object, result: "OK", detail: `${sent} command(s)` });
+      await audit({ userId: callerId, action: name, params: kept, result: "OK", detail: `${sent} command(s)` });
     }
     return { ok: true, commands: sent };
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
-    await audit({ userId: callerId, action: name, params: input as object, result: "FAILED", detail: `${detail} after ${sent}/${commands.length}` });
+    await audit({ userId: callerId, action: name, params: kept, result: "FAILED", detail: `${detail} after ${sent}/${commands.length}` });
     return { ok: false, commands: sent, detail };
   }
 }

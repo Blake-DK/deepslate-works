@@ -183,8 +183,10 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "items.clear": (p) => (typeof p.removed === "number" ? `cleared ${s(p.removed)} item${p.removed === 1 ? "" : "s"} from the ground${p.auto ? ` (automatic: more than ${s(p.threshold)} lying around)` : ""}` : `tried to clear items on the ground${p.auto ? " (automatic)" : ""}`),
   "items.clearPlan": (p) => (p.auto ? `turned automatic clearing of ground items on (above ${s(p.threshold)} items, checked every 10 minutes)` : "turned automatic clearing of ground items off"),
   "server.distance": (p) => `${p.refused ? "tried to set" : "set"} ${p.what === "simulation" ? "simulation" : "view"} distance ${p.from === null || p.from === undefined ? "" : `${s(p.from)} → `}${s(p.to)}${p.refused ? ": AMP does not let the portal change it" : p.apply === "now" ? " (restart in 1 minute)" : " (from the next restart)"}`,
-  "server.wake": (p) => (p.failed ? `tried to wake the server (${p.via === "app" ? "app" : "Play"}); it didn't wake up` : `woke the server (${p.via === "app" ? "app" : "Play"})`),
+  "server.wake": (p) => (p.failed ? `tried to wake the server (${p.via === "app" ? "app" : p.via === "discord" ? "Discord" : "Play"}); it didn't wake up` : `woke the server (${p.via === "app" ? "app" : p.via === "discord" ? "Discord" : "Play"})`),
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
+  // docs/22 §5: what was written is Discord's to keep; the log keeps who and how long
+  "chat.fromDiscord": (p) => `${s(p.name)} wrote into the game from Discord (${s(p.length, "?")} characters)`,
   "console.send": (p) => `ran: ${s(p.command, "")}`,
   // docs/13 §13, the inventory editor (the same words as invPhrase in slots.ts)
   "inv.change": (p) => (p.op === "give" ? `gave ${s(p.player)} ${s(p.count, "1")} × ${s(p.item)}` : p.op === "clear" ? `cleared ${s(p.player)}'s ${s(p.slot)}` : `set ${s(p.player)}'s ${s(p.slot)} to ${s(p.item)}${Number(p.count) > 1 ? ` × ${s(p.count)}` : ""}`),
@@ -207,7 +209,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
 };
 
 // Phrases that already say who (or have no who).
-const SELF_CONTAINED = new Set(["auth.adminPasswordFailed", "auth.adminLinkFailed", "auth.adminBreakGlass", "download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "limbo.kickIdleMods", "limbo.kickIdleVote", "modpack.serverMods", "world.pregenAutoPause"]);
+const SELF_CONTAINED = new Set(["chat.fromDiscord", "auth.adminPasswordFailed", "auth.adminLinkFailed", "auth.adminBreakGlass", "download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "limbo.kickIdleMods", "limbo.kickIdleVote", "modpack.serverMods", "world.pregenAutoPause"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
 const OUTCOME_IN_PHRASE = new Set(["auth.adminPasswordFailed", "discord.test", "auth.adminLinkFailed", "server.wake", "installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);

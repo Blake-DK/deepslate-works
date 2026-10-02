@@ -7,7 +7,7 @@ import { apiFetch } from "@/server/api-client";
 import { getManifest, modBySlug } from "@/server/modpack/manifest";
 import { newsImageUrl, SYSTEM_AUTHOR } from "@/server/announcements";
 import { ukShort } from "@/lib/uk-time";
-import { checkChoices, closedNews, DONT_MIND, isOpen, openedNews, pendingOrder, readOptions, resultLine, tallyPoll, type PollOption, type Pending, type Tally } from "@/shared/polls";
+import { castVote, closedNews, DONT_MIND, isOpen, openedNews, pendingOrder, readOptions, resultLine, tallyPoll, type PollOption, type Pending, type Tally, type VoteStore } from "@/shared/polls";
 
 // Planner 2026-10-02, "votes before play": quick polls on the site and in the app, and must-vote. The rules are in
 // shared/polls.ts (the api reads the same tables for the door and closes polls at their date: players/polls.ts).
@@ -99,18 +99,10 @@ export type Answered = { ok: true; poll: PollView; changed: boolean } | { ok: fa
 
 /** A member's vote, or a changed vote while it is open. */
 export async function answerPoll(who: Viewer & { displayName?: string }, pollId: string, raw: unknown): Promise<Answered> {
-  const poll = await db.poll.findUnique({ where: { id: pollId } });
-  if (!poll || poll.status === "DRAFT") return { ok: false, status: 404, code: "not_found", message: "There's no such vote." };
-  if (!isOpen(poll, new Date())) return { ok: false, status: 409, code: "closed", message: "This vote has closed." };
-  const c = checkChoices(poll, raw);
-  if (!c.ok) return { ok: false, status: 400, code: "bad_choice", message: c.reason };
-  const before = await db.pollAnswer.findUnique({ where: { pollId_userId: { pollId, userId: who.id } }, select: { choices: true } });
-  await db.pollAnswer.upsert({ where: { pollId_userId: { pollId, userId: who.id } }, create: { pollId, userId: who.id, choices: c.choices }, update: { choices: c.choices } });
-  const texts = readOptions(poll.options).filter((o) => c.choices.includes(o.id)).map((o) => o.text);
-  if (!before || before.choices.join() !== c.choices.join()) {
-    await audit({ userId: who.id, action: "poll.vote", params: { pollId, question: poll.question, choices: texts, changed: Boolean(before) }, result: "OK" });
-  }
-  return { ok: true, poll: (await getPoll(pollId, who))!, changed: Boolean(before) };
+  // the rule itself is shared with api (Discord's vote buttons, docs/22 §4)
+  const r = await castVote(db as unknown as VoteStore, (a) => audit(a), who.id, pollId, raw);
+  if (!r.ok) return r;
+  return { ok: true, poll: (await getPoll(pollId, who))!, changed: r.changed };
 }
 
 export type NewPoll = { question: string; options: PollOption[]; multiple: boolean; mustVote: boolean; closesAt: Date | null };

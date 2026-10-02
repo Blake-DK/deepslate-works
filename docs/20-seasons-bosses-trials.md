@@ -18,12 +18,13 @@ The whole thing is driven by one file per season in the repo (principle 3: the m
 2. **Some of a season is on the world, some is off it.** Bosses and their dungeons generate in the main world. Each season also has its own dimension, **the Frontier**, which is wiped when the season ends (§5).
 3. **Boss mods go straight in**, not through the vote: L_Ender's Cataclysm and Mowzie's Mobs, in the base of the pack before the world is made again after the vote closes, so their structures exist from the first chunk.
 4. **A season runs six weeks.** Start and end are dates in the manifest, changeable by an admin.
+5. **Season 1 starts one month after the server goes live** (Alex, 2026-10-02, later the same day). The first month is plain play: people settle, build a base and meet the bosses with nothing counted. The boss mods are in the world from day one all the same (decision 3). A boss killed before the season starts earns no tick: the season's advancements do not exist until its datapack is in.
 
 Planner's defaults, change them if Alex says otherwise:
 
-5. **Rewards are trophies, titles and points, not better gear.** The bosses drop their own loot already. A season must not leave late joiners behind.
-6. **Group kills count for the group.** Everybody within 48 blocks of a boss kill gets the tick.
-7. **Mods change only at a season's start.** Inside a season only data changes (trials, gateways, dates), which needs no update on any PC.
+6. **Rewards are trophies, titles and points, not better gear.** The bosses drop their own loot already. A season must not leave late joiners behind.
+7. **Group kills count for the group.** Everybody within 48 blocks of a boss kill gets the tick.
+8. **Mods change only at a season's start.** Inside a season only data changes (trials, gateways, dates), which needs no update on any PC.
 
 ## 3. Mods
 
@@ -55,19 +56,21 @@ Before any of this is built on (the working rules: start the server once with an
 {
   "id": "s1",
   "name": "Season 1 · First Blood",
-  "startsAt": "2026-10-10T16:00:00Z",
-  "endsAt": "2026-11-21T16:00:00Z",
+  "startsAt": "<We're live + 1 month>",
+  "endsAt": "<startsAt + 6 weeks>",
   "frontier": { "dimension": "deepslate:frontier_s1", "noise": "minecraft:large_biomes", "radius": 3000 },
   "bosses": [
     { "id": "elder_guardian", "title": "The Elder Guardian", "entity": "minecraft:elder_guardian", "tier": 1, "points": 10, "where": "Ocean monument", "hint": "Bring milk and a door." }
   ],
   "trials": [
-    { "id": "week1_iron", "title": "Trial: Iron Week", "opensAt": "2026-10-10T16:00:00Z", "points": 5, "kind": "advancement", "criteria": { "trigger": "minecraft:inventory_changed", "conditions": {} }, "hint": "…" },
-    { "id": "gate_small", "title": "Trial: The Small Gate", "opensAt": "2026-10-17T16:00:00Z", "points": 15, "kind": "gateway", "gateway": "deepslate:s1/small" }
+    { "id": "week1_iron", "title": "Trial: Iron Week", "opensAt": "<startsAt>", "points": 5, "kind": "advancement", "criteria": { "trigger": "minecraft:inventory_changed", "conditions": {} }, "hint": "…" },
+    { "id": "gate_small", "title": "Trial: The Small Gate", "opensAt": "<startsAt + 1 week>", "points": 15, "kind": "gateway", "gateway": "deepslate:s1/small" }
   ],
-  "finale": { "at": "2026-11-21T18:00:00Z", "title": "The Dragon, together", "boss": "ender_dragon" }
+  "finale": { "at": "<the last evening>", "title": "The Dragon, together", "boss": "ender_dragon" }
 }
 ```
+
+The dates above are placeholders, real files carry ISO dates. Season 1's are set by the planner once "We're live" has been pressed: start one month after that day, at the hour from §11.
 
 `pnpm modpack build seasons` (part of `build server`) turns it into a datapack `deepslate-season-<id>`:
 
@@ -148,7 +151,7 @@ The other half of Cataclysm is Season 2's ladder. The mod is in from the start; 
 ## 9. Order of work
 
 1. **Mods and the check** (§3). Report: start time, errors, what Apothic Attributes changes, the LOW-tier numbers, the entity and structure ids, whether Multiplayer Bosses does anything to a Cataclysm boss. *This must land before the world is made again after the vote closes; it is the only step with a deadline.*
-2. **The Frontier for Season 1** (§5) without the wipe: dimension, waystones, pre-generation, map. Goes in with the same world reset.
+2. **The Frontier for Season 1** (§5) without the wipe: dimension, waystones, pre-generation, map. It does not have to go in with the world reset: it opens with Season 1, a month after going live, and needs one restart of its own. Steps 2 to 5 are to be finished and tried a week before that date.
 3. **Season file, build, datapack, recording, `/season`** (§4, §7) with the sample season. Read-only for players.
 4. **Admin → Seasons**, start and end, the freeze, hall of fame.
 5. **Gateway trials**, if step 1 cleared the mod.
@@ -169,4 +172,4 @@ The other half of Cataclysm is Season 2's ladder. The mod is in from the start; 
 
 1. The season's day and hour for weekly openings and the finale (a time most of the group can make).
 2. Names: "the Frontier" and "Season 1 · First Blood" are placeholders.
-3. Whether the first season starts with "We're live" or a week after, so people have a base first. Planner's suggestion: a week after.
+3. ~~When the first season starts.~~ Answered 2026-10-02: one month after the server goes live (§2, decision 5).

@@ -43,6 +43,10 @@ import { runRetentionIfDue } from "./events/retention.js";
 import { requireAdmin } from "./auth.js";
 import { ServerMods, SERVER_MODS_KEY } from "./modpack/server-mods.js";
 import { getSection } from "./settings.js";
+import { Announcer } from "./discord/announcer.js";
+import { prismaFeedStore } from "./discord/store.js";
+import { Webhook } from "./discord/webhook.js";
+import { discordRoutes } from "./routes/discord.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
@@ -51,7 +55,11 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     : new AmpClient({ url: env.AMP_URL, username: env.AMP_USERNAME, password: env.AMP_PASSWORD, instanceId: env.AMP_INSTANCE_ID }));
 
   app.addHook("onRequest", serviceAuth(env.API_SERVICE_TOKEN));
-  app.get("/health", async () => health(env, ampClient));
+  // docs/21: the Discord feed, posted from the event log by its own loop
+  const hook = (url: string | undefined) => (url ? new Webhook(url, { botToken: env.DISCORD_BOT_TOKEN }) : null);
+  const feed = new Announcer({ store: prismaFeedStore(env.PORTAL_URL.replace(/\/+$/, "")), feed: hook(env.DISCORD_WEBHOOK_FEED), admin: hook(env.DISCORD_WEBHOOK_ADMIN), portal: env.PORTAL_URL.replace(/\/+$/, ""), log: (o, m) => app.log.info(o, m) });
+  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState() }));
+  discordRoutes(app, feed);
   modpackRoutes(app, env, ampClient, deps.build, () => pregen.quiesce());
 
   // Console tail, status poller and the wait room run for the life of the process (docs/05, docs/14).
@@ -161,6 +169,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     distances.start();
     ground.start();
     polls.start();
+    feed.start();
     serverVersions.start();
     online.start();
     pregenWatch.start();
@@ -176,6 +185,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     pings.stop();
     online.stop();
     polls.stop();
+    feed.stop();
     pregen.stop();
     restarts.stop();
     ground.stop();

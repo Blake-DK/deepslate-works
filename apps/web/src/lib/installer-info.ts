@@ -75,3 +75,11 @@ export function installerFor(info: InstallerInfo | null, userAgent: string | nul
   if (isApp(userAgent)) return info;
   return { ...info, exe: null, app: info.exe, minimum: minimum || null };
 }
+
+/**
+ * The app version the footers show (planner, 2026-10-01; fixed 2026-10-02): the newest of the download, which since
+ * 3.0 is the app (DeepslateWorks.exe), not the old launcher's script version (2.2.0) that `version` still holds.
+ */
+export function shownAppVersion(info: Pick<InstallerInfo, "version" | "current"> | null | undefined): string | null {
+  return info ? info.current || info.version || null : null;
+}

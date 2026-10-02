@@ -181,6 +181,35 @@ namespace DeepslateWorks
                 ui.PressTab("log"); ui.PressTab("play");
                 ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "21-play-row-min-width.png")));
                 w.Width = wide;
+
+                // 3.4.0 (docs/21): the look. Play ready with the server up, mid-update, the server asleep, a vote, the
+                // Extras tab, a question card, and the whole window at its smallest
+                var up = SiteHome.Parse(Json.Parse(HomeSamples.Up));
+                ui.SimCheck(new Waiting { CheckedAt = at });
+                ui.SimHome(up, "ready");
+                ui.SimChanged("Since last time: 3 mods changed, 1 settings file.");
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "22-play-ready.png")));
+                ui.SimUpdating("Setting up the mods");
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "23-play-updating.png")));
+                ui.SimEnd();
+                ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Asleep)), "idle");
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "24-play-server-asleep.png")));
+                ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready");
+                ui.SimPick("o2");
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "25-vote.png")));
+                ui.SimDone();
+                ui.Tabs.SelectedItem = ui.ExtrasTab; ui.XRendered = false; ui.ShowExtras();
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "26-extras.png")));
+                ui.Tabs.SelectedItem = ui.PlayTab;
+                ui.Consent = new Dictionary<string, ConsentAnswer>();
+                ui.ShowFirstRun();
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "27-question-card.png")));
+                ui.Consent = real3;
+                var tall = w.Height; w.Width = w.MinWidth; w.Height = w.MinHeight;
+                ui.SimCheck(new Waiting { CheckedAt = at });
+                ui.SimHome(up, "ready");
+                ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "28-min-size-560x560.png")));
+                w.Width = wide; w.Height = tall;
             }
             finally { w.Close(); }
             return files;
@@ -197,7 +226,7 @@ namespace DeepslateWorks
             var dv = new DrawingVisual();
             using (var dc = dv.RenderOpen())
             {
-                dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, Math.Max(1, w), Math.Max(1, h)));
+                dc.DrawRectangle(Theme.Brush("Ground"), null, new Rect(0, 0, Math.Max(1, w), Math.Max(1, h)));
                 dc.DrawRectangle(new VisualBrush(visual), null, new Rect(0, 0, Math.Max(1, w), Math.Max(1, h)));
             }
             bmp.Render(dv);

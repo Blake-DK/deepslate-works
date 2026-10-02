@@ -69,9 +69,10 @@ namespace DeepslateWorks.Tests
         {
             var x = AppWindow.AppXaml;
             Assert.Contains("Title=\"Deepslate Works\"", x);
-            Assert.Contains("Header=\"  Play  \"", x);
-            Assert.Contains("Header=\"  Extras  \"", x);
-            Assert.Contains("Header=\"  Log  \"", x);
+            // 3.4.0: the tab strip's template pads the headers (docs/21 §4), so they lost their spaces
+            Assert.Contains("Header=\"Play\"", x);
+            Assert.Contains("Header=\"Extras\"", x);
+            Assert.Contains("Header=\"Log\"", x);
         }
 
         [Fact] public void The_questions_offer_Yes_Later_and_Allow_all()
@@ -112,13 +113,14 @@ namespace DeepslateWorks.Tests
         [Fact] public void Status_lines_show_as_2_0_x_showed_them()
         {
             var step = UiText.LineFor(J.O("t", "step", "text", "Checking for updates"));
-            Assert.Equal("Checking for updates", step.Text); Assert.Equal("#555", step.Color); Assert.Equal("Normal", step.Weight);
+            // 3.4.0: the colours are Theme keys (docs/21 §3)
+            Assert.Equal("Checking for updates", step.Text); Assert.Equal("Muted", step.Color); Assert.Equal("Normal", step.Weight);
             var tick = UiText.LineFor(J.O("t", "tick", "text", "Signed in"));
-            Assert.Equal("✓  Signed in", tick.Text); Assert.Equal("#2E7D5B", tick.Color);
+            Assert.Equal("✓  Signed in", tick.Text); Assert.Equal("GreenText", tick.Color);
             var note = UiText.LineFor(J.O("t", "note", "text", "Pack 1 → 2"));
-            Assert.Equal("   Pack 1 → 2", note.Text); Assert.Equal("#666", note.Color);
+            Assert.Equal("   Pack 1 → 2", note.Text); Assert.Equal("Muted", note.Color);
             var fail = UiText.LineFor(J.O("t", "fail", "text", "No internet."));
-            Assert.Equal("No internet.", fail.Text); Assert.Equal("#B3261E", fail.Color); Assert.Equal("SemiBold", fail.Weight);
+            Assert.Equal("No internet.", fail.Text); Assert.Equal("Red", fail.Color); Assert.Equal("SemiBold", fail.Weight);
             foreach (var t in new[] { "ask", "declined", "used", "changed", "extras", "done" }) Assert.Null(UiText.LineFor(J.O("t", t, "text", "x")));
         }
 
@@ -181,13 +183,15 @@ namespace DeepslateWorks.Tests
 
         [Fact] public void Tones_and_colours()
         {
-            Assert.Equal(new[] { "#E8F3EE", "#2E7D5B" }, UiText.Tone("green"));
-            Assert.Equal(new[] { "#EEF0F2", "#555555" }, UiText.Tone("nonsense"));
-            Assert.Equal(new[] { "#FDECEA", "#B3261E" }, UiText.FpsTone("High"));
-            Assert.Equal(new[] { "#FFF4E0", "#8A5A00" }, UiText.FpsTone("Medium"));
-            Assert.Equal(new[] { "#E8F3EE", "#2E7D5B" }, UiText.FpsTone("Low"));
-            Assert.Equal("#EEF4F8", UiText.HeadlineBackground("blue"));
-            Assert.Equal("#FFF4E0", UiText.HeadlineBackground("amber"));
+            // 3.4.0: Theme keys; a raised badge with the tone in its text, a stripe on the headline (docs/21 §3)
+            Assert.Equal(new[] { "Card2", "GreenText" }, UiText.Tone("green"));
+            Assert.Equal(new[] { "Card2", "Muted" }, UiText.Tone("nonsense"));
+            Assert.Equal(new[] { "Card2", "Red" }, UiText.FpsTone("High"));
+            Assert.Equal(new[] { "Card2", "Amber" }, UiText.FpsTone("Medium"));
+            Assert.Equal(new[] { "Card2", "GreenText" }, UiText.FpsTone("Low"));
+            Assert.Null(UiText.HeadlineStripe("blue"));
+            Assert.Equal("Amber", UiText.HeadlineStripe("amber"));
+            foreach (var t in UiText.Tones.Values) foreach (var k in t) Assert.True(Theme.Has(k), k);
         }
 
         [Fact] public void Stopped_names_the_step()
@@ -240,7 +244,9 @@ namespace DeepslateWorks.Tests
             // 3.3.0: the Update button: waiting, mid-update, up to date, the game running
             "16-update-waiting.png", "17-updating.png", "18-up-to-date.png", "19-update-game-running.png",
             // 3.3.1: Review permissions and the Play row at the smallest width
-            "20-review-permissions-min-width.png", "21-play-row-min-width.png" };
+            "20-review-permissions-min-width.png", "21-play-row-min-width.png",
+            // 3.4.0: the look (docs/21 §8)
+            "22-play-ready.png", "23-play-updating.png", "24-play-server-asleep.png", "25-vote.png", "26-extras.png", "27-question-card.png", "28-min-size-560x560.png" };
 
         [WindowsFact] public void With_the_extras_list_it_draws_the_Extras_tab_too()
         {

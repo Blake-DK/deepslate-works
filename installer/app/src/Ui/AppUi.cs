@@ -95,7 +95,8 @@ namespace DeepslateWorks
             Consent = Consents.Read(Env.ConsentPath);
             try { Weak = Extras.LocalWeakPc(); } catch { }
 
-            var w = (Window)XamlReader.Parse(AppWindow.AppXaml);
+            AppWindow.PrepareAssets(Env.AppHome);   // 3.4.0: the banner, the tile and the display face (docs/21 §5)
+            var w = AppWindow.Load(AppWindow.AppXaml);
             Window = w;
             T Find<T>(string n) where T : class => w.FindName(n) as T ?? throw new InvalidOperationException("the window has no " + n);
             Tabs = Find<TabControl>("Tabs"); PlayTab = Find<TabItem>("PlayTab"); ExtrasTab = Find<TabItem>("ExtrasTab"); LogTab = Find<TabItem>("LogTab");
@@ -103,6 +104,7 @@ namespace DeepslateWorks
             ReviewLink = Find<Hyperlink>("ReviewLink"); ResetButton = Find<Button>("ResetButton"); AllowAllButton = Find<Button>("AllowAllButton");
             PlayButton = Find<Button>("PlayButton"); PlayBody = Find<StackPanel>("PlayBody");
             BrandBar = Find<StackPanel>("BrandBar"); BrandLogo = Find<Image>("BrandLogo"); BrandName = Find<TextBlock>("BrandName"); BrandTagline = Find<TextBlock>("BrandTagline");
+            LogoFallback = Find<Border>("LogoFallback");
             FooterApp = Find<TextBlock>("FooterApp"); FooterPack = Find<TextBlock>("FooterPack"); FooterServer = Find<TextBlock>("FooterServer");
             HeadlineBox = Find<Border>("HeadlineBox"); HeadlineText = Find<TextBlock>("HeadlineText"); HeadlineButton = Find<Button>("HeadlineButton");
             ErrorLine = Find<TextBlock>("ErrorLine"); ErrorText = Find<TextRun>("ErrorText"); DetailsLink = Find<Hyperlink>("DetailsLink");
@@ -163,6 +165,7 @@ namespace DeepslateWorks
             Timer.Tick += (s, e) => OnTick();
             WireHome();   // 3.2.0: the server on the Play tab, and the Vote tab
             WireUpdate(); // 3.3.0: the Update button
+            WireLook();   // 3.4.0: the ground, the banner, the badge (docs/21)
         }
 
         /// <summary>Show-App's ending: on screen until closed.</summary>
@@ -224,14 +227,15 @@ namespace DeepslateWorks
         }
 
         // ---- drawing helpers (New-Brush, New-Text, New-Badge, New-Card, New-Button) ---------------------------------
-        static Brush NewBrush(string hex) => (Brush)new BrushConverter().ConvertFromString(hex);
+        // 3.4.0: a colour is a Theme key ("Card", "Muted", "Red"...), never a hex value (docs/21 §3)
+        static Brush NewBrush(string key) => Theme.Brush(key);
         static FontWeight Weight(string w) => w == "SemiBold" ? FontWeights.SemiBold : w == "Bold" ? FontWeights.Bold : FontWeights.Normal;
-        static TextBlock NewText(string text, double size = 13, string weight = "Normal", string color = "#222")
+        static TextBlock NewText(string text, double size = 13, string weight = "Normal", string color = "Fg")
             => new TextBlock { Text = text ?? "", FontSize = size, TextWrapping = TextWrapping.Wrap, Foreground = NewBrush(color), FontWeight = Weight(weight) };
         static Border NewBadge(string text, string bg, string fg)
-            => new Border { Background = NewBrush(bg), CornerRadius = new CornerRadius(8), Padding = new Thickness(6, 1, 6, 1), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Child = NewText(text, 11, "SemiBold", fg) };
+            => new Border { Background = NewBrush(bg), CornerRadius = new CornerRadius(3), Padding = new Thickness(6, 1, 6, 1), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Child = NewText(text, 11, "SemiBold", fg) };
         static Border NewCard()
-            => new Border { BorderBrush = NewBrush("#D9DDE1"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(12), Margin = new Thickness(0, 0, 0, 8), Background = NewBrush("White") };
+            => new Border { BorderBrush = NewBrush("Line"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Padding = new Thickness(12, 10, 12, 10), Margin = new Thickness(0, 0, 0, 8), Background = NewBrush("Card") };
         Button NewButton(string text, bool primary = false) => new Button { Content = text, Style = (Style)Window.FindResource(primary ? "Primary" : "Plain") };
         public void Pump() { try { Window.Dispatcher.Invoke(new Action(() => { }), DispatcherPriority.Background); } catch { } }
 
@@ -242,15 +246,15 @@ namespace DeepslateWorks
             var sp = new StackPanel();
             var head = new StackPanel { Orientation = Orientation.Horizontal };
             head.Children.Add(NewText(step.Title, 14, "SemiBold"));
-            head.Children.Add(step.Required ? NewBadge(UiText.NeededBadge, "#E8F3EE", "#2E7D5B") : NewBadge(UiText.OptionalBadge, "#EEF0F2", "#555"));
+            head.Children.Add(step.Required ? NewBadge(UiText.NeededBadge, UiText.Tone("green")[0], UiText.Tone("green")[1]) : NewBadge(UiText.OptionalBadge, UiText.Tone("grey")[0], UiText.Tone("grey")[1]));
             sp.Children.Add(head);
-            var body = NewText(UiText.CardText(step, level, size), 13, "Normal", "#444"); body.Margin = new Thickness(0, 4, 0, 8);
+            var body = NewText(UiText.CardText(step, level, size), 13, "Normal", "Muted"); body.Margin = new Thickness(0, 4, 0, 8);
             sp.Children.Add(body);
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             var group = "consent-" + step.Id;
             var allow = new RadioButton { Content = UiText.Allow, GroupName = group, Margin = new Thickness(0, 0, 18, 0) };
             var no = new RadioButton { Content = UiText.NotNow, GroupName = group };
-            var warn = NewText("", 12, "Normal", "#B3261E"); warn.Margin = new Thickness(0, 6, 0, 0); warn.Visibility = Visibility.Collapsed;
+            var warn = NewText("", 12, "Normal", "Red"); warn.Margin = new Thickness(0, 6, 0, 0); warn.Visibility = Visibility.Collapsed;
             var id = step.Id;
             allow.Checked += (s, e) => { Answers[id] = "allow"; warn.Visibility = Visibility.Collapsed; UpdateContinueButton(); };
             no.Checked += (s, e) =>
@@ -295,7 +299,7 @@ namespace DeepslateWorks
         }
 
         void ClearPlayBody() { PlayBody.Children.Clear(); PlayChanged.Visibility = Visibility.Collapsed; AllowRadios = new List<RadioButton>(); }
-        TextBlock AddPlayLine(string text, string color = "#222", string weight = "Normal")
+        TextBlock AddPlayLine(string text, string color = "Fg", string weight = "Normal")
         {
             var t = NewText(text, 13, weight, color); t.Margin = new Thickness(0, 2, 0, 2);
             PlayBody.Children.Add(t);
@@ -583,6 +587,8 @@ namespace DeepslateWorks
                 if (File.Exists(ico)) Window.Icon = BitmapFrame.Create(new MemoryStream(File.ReadAllBytes(ico)), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
                 var m = Brand.ReadMarker(dir);
                 var png = Path.Combine(dir, Brand.LogoPngName);
+                // 3.4.0: the brand bar is always on the banner; the drawn "D" tile until a logo is picked
+                BrandBar.Visibility = Visibility.Visible;
                 if (m != null && File.Exists(png))
                 {
                     var bmp = new BitmapImage();
@@ -592,8 +598,9 @@ namespace DeepslateWorks
                     RenderOptions.SetBitmapScalingMode(BrandLogo, J.Bool(m, "pixel") ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
                     var name = J.Str(m, "name"); if (!string.IsNullOrEmpty(name)) BrandName.Text = name;
                     BrandTagline.Text = J.Str(m, "tagline") ?? "";
-                    BrandBar.Visibility = Visibility.Visible;
+                    BrandLogo.Visibility = Visibility.Visible; LogoFallback.Visibility = Visibility.Collapsed;
                 }
+                else { BrandLogo.Visibility = Visibility.Collapsed; LogoFallback.Visibility = Visibility.Visible; }
             }
             catch (Exception e) { Log.Line("the logo could not be shown: " + e.Message); }
         }
@@ -650,8 +657,8 @@ namespace DeepslateWorks
             ClearPlayBody();
             PlayTitle.Text = "Your game is missing mods";
             PlayStatus.Text = Engine.MissingText(c);
-            if (c.Elsewhere) AddPlayLine("The Minecraft Launcher started another profile. Play puts Deepslate Works back as the one it starts.", "#8A5A00");
-            foreach (var m in c.Missing.Take(8)) if (!string.IsNullOrEmpty(m.Name)) AddPlayLine("\u2717  " + m.Name, "#B3261E");
+            if (c.Elsewhere) AddPlayLine("The Minecraft Launcher started another profile. Play puts Deepslate Works back as the one it starts.", "Amber");
+            foreach (var m in c.Missing.Take(8)) if (!string.IsNullOrEmpty(m.Name)) AddPlayLine("\u2717  " + m.Name, "Red");
             PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true;
             Tabs.SelectedItem = PlayTab;
             ShowFront("the game is missing mods");
@@ -700,7 +707,7 @@ namespace DeepslateWorks
         static TextBlock LogItem(string l)
         {
             var t = new TextBlock { Text = l, TextWrapping = TextWrapping.NoWrap };
-            if (UiText.IsErrorLine(l)) { t.Foreground = NewBrush("#B3261E"); t.FontWeight = FontWeights.SemiBold; } else t.Foreground = NewBrush("#222");
+            if (UiText.IsErrorLine(l)) { t.Foreground = NewBrush("Red"); t.FontWeight = FontWeights.SemiBold; } else t.Foreground = NewBrush("Muted");
             return t;
         }
 
@@ -770,7 +777,7 @@ namespace DeepslateWorks
             HeadlineButton.Visibility = o.Headline.Action != null ? Visibility.Visible : Visibility.Collapsed;
             HeadlineButton.Content = o.Headline.Action == "restart" ? "Restart now" : "Play now";
             HeadlineButton.Tag = o.Headline.Action;
-            HeadlineBox.Background = NewBrush(UiText.HeadlineBackground(o.HeadlineTone));
+            Stripe(HeadlineBox, UiText.HeadlineStripe(o.HeadlineTone));
             // the last thing that went wrong, in one line
             if (o.ErrorLine != null) { ErrorText.Text = o.ErrorLine + " "; ErrorLine.Visibility = Visibility.Visible; } else ErrorLine.Visibility = Visibility.Collapsed;
             if (Guided == 4) GuidedHeadline();
@@ -800,13 +807,13 @@ namespace DeepslateWorks
                 head.Children.Add(NewText(x.Name, 14, "SemiBold"));
                 var tone = UiText.FpsTone(x.Fps);
                 head.Children.Add(NewBadge(string.Format("FPS cost: {0}", x.Fps), tone[0], tone[1]));
-                if (o.New.Contains(x.Id)) head.Children.Add(NewBadge("New", "#E3F0FF", "#1A5FB4"));
+                if (o.New.Contains(x.Id)) head.Children.Add(NewBadge("New", UiText.Tone("blue")[0], UiText.Tone("blue")[1]));
                 sp.Children.Add(head);
-                var d = NewText(x.Description, 12.5, "Normal", "#555"); d.Margin = new Thickness(0, 2, 0, 0); sp.Children.Add(d);
-                if (Weak && !string.Equals(x.Fps, "Low", StringComparison.OrdinalIgnoreCase)) { var wn = NewText(ExtrasText.WeakWarning, 12, "Normal", "#8A5A00"); wn.Margin = new Thickness(0, 4, 0, 0); sp.Children.Add(wn); }
+                var d = NewText(x.Description, 12.5, "Normal", "Muted"); d.Margin = new Thickness(0, 2, 0, 0); sp.Children.Add(d);
+                if (Weak && !string.Equals(x.Fps, "Low", StringComparison.OrdinalIgnoreCase)) { var wn = NewText(ExtrasText.WeakWarning, 12, "Normal", "Amber"); wn.Margin = new Thickness(0, 4, 0, 0); sp.Children.Add(wn); }
                 // the status, in words and a colour (planner G), with Restart now or Show details where they help
                 var row = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
-                var sb = NewBadge("", "#EEF0F2", "#555"); sb.Margin = new Thickness(0, 0, 8, 0);
+                var sb = NewBadge("", UiText.Tone("grey")[0], UiText.Tone("grey")[1]); sb.Margin = new Thickness(0, 0, 8, 0);
                 row.Children.Add(sb);
                 var rb = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
                 var hl = new Hyperlink(); hl.Inlines.Add("Restart now"); hl.Click += (s, e) => OnHeadline("restart");
@@ -875,9 +882,9 @@ namespace DeepslateWorks
             string group = null;
             foreach (var r in rows)
             {
-                if (r.Group != group) { group = r.Group; ChecksBody.Children.Add(NewText(group, 13, "SemiBold", "#333")); }
+                if (r.Group != group) { group = r.Group; ChecksBody.Children.Add(NewText(group, 13, "SemiBold", "Fg")); }
                 var mark = r.Ok == true ? "✓" : r.Ok == null ? "…" : "✗";
-                var col = r.Ok == true ? "#2E7D5B" : r.Ok == null ? "#1A5FB4" : "#B3261E";
+                var col = r.Ok == true ? "GreenText" : r.Ok == null ? "Blue" : "Red";
                 ChecksBody.Children.Add(NewText(string.Format("  {0}  {1}", mark, r.Text), 12.5, "Normal", col));
             }
         }
@@ -891,7 +898,7 @@ namespace DeepslateWorks
             var card = NewCard();
             var sp = new StackPanel();
             sp.Children.Add(NewText(ExtrasText.DownloadQuestion, 14, "SemiBold"));
-            var t = NewText(string.Format(ExtrasText.DownloadText, size), 13, "Normal", "#444"); t.Margin = new Thickness(0, 4, 0, 10);
+            var t = NewText(string.Format(ExtrasText.DownloadText, size), 13, "Normal", "Muted"); t.Margin = new Thickness(0, 4, 0, 10);
             sp.Children.Add(t);
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             var b = NewButton(UiText.DownloadButton, true); b.Margin = new Thickness(0, 0, 8, 0);
@@ -993,7 +1000,7 @@ namespace DeepslateWorks
             ApplyButton.IsEnabled = false;
             foreach (var p in f.Progress) AddProgress(p);
         }
-        void AddProgress(string text) => ProgressBox.Children.Add(NewText(text, 13, "SemiBold", "#1A5FB4"));
+        void AddProgress(string text) => ProgressBox.Children.Add(NewText(text, 13, "SemiBold", "Blue"));
         void StepFlow()
         {
             var f = Flow;
@@ -1125,7 +1132,7 @@ namespace DeepslateWorks
 
         public Window MakeSettings()
         {
-            var d = (Window)XamlReader.Parse(AppWindow.SettingsXaml);
+            var d = AppWindow.Load(AppWindow.SettingsXaml);
             try { if (Window.IsVisible) d.Owner = Window; } catch { }
             ((TextBlock)d.FindName("SQ")).Text = UiText.SettingsQuestion;
             ((TextBlock)d.FindName("SNote")).Text = UiText.SettingsNote;
@@ -1178,7 +1185,7 @@ namespace DeepslateWorks
                     PlayTitle.Text = UiText.WelcomeTitle;
                     PlayStatus.Text = "";
                     foreach (var l in UiText.WelcomeLines) AddPlayLine("\u2022  " + l);
-                    var kept = AddPlayLine(UiText.WelcomeKept, "#2E7D5B", "SemiBold"); kept.Margin = new Thickness(0, 10, 0, 0);
+                    var kept = AddPlayLine(UiText.WelcomeKept, "GreenText", "SemiBold"); kept.Margin = new Thickness(0, 10, 0, 0);
                     PlayButton.Content = UiText.Next;
                     break;
                 case 2:
@@ -1206,7 +1213,7 @@ namespace DeepslateWorks
                     else
                     {
                         PlayStatus.Text = UiText.PermNone;
-                        foreach (var c in Consents.Steps()) if (Consent.TryGetValue(c.Id, out var a)) AddPlayLine(UiText.KeptAnswer(c, a), a.Answer == "allow" ? "#2E7D5B" : "#666");
+                        foreach (var c in Consents.Steps()) if (Consent.TryGetValue(c.Id, out var a)) AddPlayLine(UiText.KeptAnswer(c, a), a.Answer == "allow" ? "GreenText" : "Muted");
                         PlayButton.Content = UiText.Next;
                     }
                     break;
@@ -1305,7 +1312,7 @@ namespace DeepslateWorks
             HeadlineButton.Content = UiText.Continue;
             HeadlineButton.Tag = "guided-done";
             HeadlineButton.Visibility = Visibility.Visible;
-            HeadlineBox.Background = NewBrush("#E3F0FF");
+            Stripe(HeadlineBox, "Blue");
         }
 
         void FinishGuided()
@@ -1338,9 +1345,9 @@ namespace DeepslateWorks
             Guided = 0; StepLabel.Visibility = Visibility.Collapsed; ExtrasTab.IsEnabled = true;
             ClearPlayBody(); SetPromptButtons(false, false);
             Tabs.SelectedItem = PlayTab;
-            AddPlayLine("Checking for updates", "#555");
-            AddPlayLine("\u2713  Signed in", "#2E7D5B");
-            AddPlayLine("\u2713  All 61 mods checked", "#2E7D5B");
+            AddPlayLine("Checking for updates", "Muted");
+            AddPlayLine("\u2713  Signed in", "GreenText");
+            AddPlayLine("\u2713  All 61 mods checked", "GreenText");
             Mode = "ready";
             PlayTitle.Text = UiText.ReadyToPlayTitle;
             if (countdown)
@@ -1362,7 +1369,7 @@ namespace DeepslateWorks
         // A question with Yes / Later / Allow all.
         public Window MakeAsk(string question, string why, string allNote)
         {
-            var d = (Window)XamlReader.Parse(AppWindow.AskXaml);
+            var d = AppWindow.Load(AppWindow.AskXaml);
             try { if (Window.IsVisible) d.Owner = Window; } catch { }
             ((TextBlock)d.FindName("Q")).Text = question;
             ((TextBlock)d.FindName("Why")).Text = why;

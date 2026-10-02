@@ -218,8 +218,8 @@ namespace DeepslateWorks
         public void SimUpdating(string step)
         {
             homeSim = true; Mode = "running"; ClearPlayBody(); UpdateStarted();
-            foreach (var l in new[] { "Signed in", "Launcher found", "Java 21 (the launcher's own)", "Already installed" }) AddPlayLine("✓ " + l, "#2E7D5B");
-            AddPlayLine(step, "#1A5FB4", "SemiBold");
+            foreach (var l in new[] { "Signed in", "Launcher found", "Java 21 (the launcher's own)", "Already installed" }) AddPlayLine("✓ " + l, "GreenText");
+            AddPlayLine(step, "Blue", "SemiBold");
             UpdateStep(step);
         }
         public void SimUpToDate() { homeSim = true; updating = true; Changed = "Updated 3 mods"; UpdateEnded("done", null); homeSim = true; }

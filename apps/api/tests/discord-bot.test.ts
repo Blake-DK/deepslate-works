@@ -454,3 +454,24 @@ describe("where things go (docs/22 §13)", () => {
     expect(off.calls).toHaveLength(0);
   });
 });
+
+describe("the bot joins the server (docs/22 §7)", () => {
+  it("slash commands refused before the bot is in the server are registered when it joins", async () => {
+    const { Bot } = await import("../src/discord/bot.js");
+    const registered: string[] = [];
+    let inServer = false;
+    let dispatch: (t: string, d: unknown) => void = () => {};
+    const rest = { registerCommands: async (app: string, guild: string) => { registered.push(`${app}/${guild}:${inServer ? "ok" : "403"}`); return inServer ? { ok: true, data: [] } : { ok: false, status: 403, code: 50001, error: "Missing Access" }; } };
+    const gateway = (g: { onDispatch: (t: string, d: unknown) => void }) => { dispatch = g.onDispatch; return { state: "on", user: null, applicationId: "99", start() {}, stop() {}, setPresence() {} } as never; };
+    const bot = new Bot({ token: "t", guild: "1", clientId: "99", rest: rest as never, log: () => {}, switches: async () => ({}) as never, commands: {} as never, vote: async () => ({ ok: true, text: "" }), toGame: async () => "nobody", memberName: async () => null, memberChanged: async () => {}, presence: () => "", gateway });
+    dispatch("READY", {});
+    await new Promise((r) => setTimeout(r, 0));
+    inServer = true;
+    dispatch("GUILD_CREATE", { id: "1", channels: [{ id: "700", name: "game-chat", type: 0 }, { id: "800", name: "season-updates", type: 15 }] });
+    await new Promise((r) => setTimeout(r, 0));
+    dispatch("GUILD_CREATE", { id: "1", channels: [] }); // a reconnect: not registered twice
+    await new Promise((r) => setTimeout(r, 0));
+    expect(registered).toEqual(["99/1:403", "99/1:ok"]);
+    expect(bot.inGuild).toBe(true);
+  });
+});

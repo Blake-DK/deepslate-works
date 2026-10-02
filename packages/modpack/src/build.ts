@@ -116,7 +116,12 @@ export async function buildConfigZip(paths: { dist: string; config: string }, lo
   return out;
 }
 
-/** Pure: Custom Window Title's `icon = '…'` line pointed at `file`. */
+/**
+ * Pure: Custom Window Title's `icon = '…'` line pointed at `file`.
+ * modpack/config/customwindowtitle-client.toml gives the game window the name Deepslate Works (planner, 2026-10-01) and
+ * this points its icon at the chosen logo. The mod (1.4.1) reads `key = 'value'` lines and nothing else: a `#` comment
+ * line stops it loading and the game crashes at start (2026-10-02, Alex's PC), so the file carries no comments.
+ */
 export function windowIcon(toml: string, file: string): string {
   return /^icon\s*=/m.test(toml) ? toml.replace(/^icon\s*=.*$/m, `icon = '${file}'`) : `${toml.trimEnd()}\nicon = '${file}'\n`;
 }

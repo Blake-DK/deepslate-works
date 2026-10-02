@@ -57,4 +57,12 @@ describe("the .ico and the window icon", () => {
     expect(windowIcon("title = 'Deepslate Works'\nicon = ''\n", "customwindowtitle/icon.png")).toBe("title = 'Deepslate Works'\nicon = 'customwindowtitle/icon.png'\n");
     expect(windowIcon("title = 'x'", "a.png")).toBe("title = 'x'\nicon = 'a.png'\n");
   });
+  it("the shipped Custom Window Title config is key = 'value' lines only (a # line crashes the game at start)", async () => {
+    const shipped = await readFile(path.resolve(__dirname, "..", "..", "..", "modpack", "config", "customwindowtitle-client.toml"), "utf8");
+    for (const text of [shipped, windowIcon(shipped, "customwindowtitle/icon.png")]) {
+      const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
+      expect(lines.length).toBeGreaterThan(0);
+      for (const l of lines) expect(l).toMatch(/^(title|icon) = '[^']*'$/);
+    }
+  });
 });

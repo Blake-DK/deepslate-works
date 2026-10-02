@@ -2249,9 +2249,9 @@ $AppXaml = @'
   <DockPanel>
   <StackPanel x:Name="Footer" DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="14,0,14,8">
     <TextBlock x:Name="FooterApp" Foreground="#666"/>
-    <TextBlock Text="  ·  " Foreground="#999"/>
+    <TextBlock Text="  &#183;  " Foreground="#999"/>
     <TextBlock x:Name="FooterPack" Foreground="#666"/>
-    <TextBlock Text="  ·  " Foreground="#999"/>
+    <TextBlock Text="  &#183;  " Foreground="#999"/>
     <TextBlock x:Name="FooterServer" Foreground="#666"/>
   </StackPanel>
   <TabControl x:Name="Tabs" Margin="8" Background="White">
@@ -2436,7 +2436,7 @@ function Get-FooterParts($v) {
   $app = if ($v.app) { "App " + [string]$v.app } else { "App" }
   $pack = "Pack not installed yet"; $tone = "#666"
   if ($v.local) { $pack = "Pack " + [string]$v.local }
-  if ($v.current -and [string]$v.current -ne [string]$v.local) { $pack = $(if ($v.local) { $pack + "  ·  Pack update available" } else { "Pack update available" }); $tone = "#B26A00" }
+  if ($v.current -and [string]$v.current -ne [string]$v.local) { $pack = $(if ($v.local) { $pack + "  " + [char]0x00B7 + "  Pack update available" } else { "Pack update available" }); $tone = "#B26A00" }
   $server = if ($v.server) { "Server: " + [string]$v.server } else { "Server: ?" }
   return @{ app = $app; pack = $pack; packTone = $tone; server = $server }
 }
@@ -3341,6 +3341,7 @@ function Save-Screenshots([string]$dir) {
     $d.Close()
   }
   Clear-PlayBody
+  Set-PromptButtons $false $false
   $A.PlayTitle.Text = "Getting the game ready"
   Add-PlayLine "Fetching the new Deepslate Works app (3.1.0)" "#555" | Out-Null
   $A.PlayStatus.Text = "Downloading the new app: 62% of 0.3 MB"
@@ -4375,6 +4376,11 @@ if ($SelfTest) {
   $own = [IO.File]::ReadAllText($PSCommandPath)
   $left = @([regex]::Matches($own, '(?m)^(?!\s*#)(?!.*\[regex\]).*&\s+\$[\w.:]+[^\r\n|]*2>&1')).Count
   Check "no command's stderr is sent through 2>&1 anywhere in this script" ($left -eq 0)
+
+  # Windows PowerShell 5.1 reads this file as ANSI (no BOM): a character above 127 in code comes out garbled
+  # (2.1.2's footer showed "Â·"). Comments may have them; code writes [char]0x.. or an XML entity.
+  $nonAscii = @(([IO.File]::ReadAllLines($PSCommandPath)) | Where-Object { $_ -match '[^\x00-\x7F]' -and $_ -notmatch '^\s*#' })
+  Check ("no character above 127 outside comments (" + $nonAscii.Count + ")") ($nonAscii.Count -eq 0)
 
   Write-Host "Self test: the bridge to 3.0 (2.1.3)" -ForegroundColor White
   $exeBytes = [byte[]](@(0x4D, 0x5A) + @(1..300 | ForEach-Object { 7 }))

@@ -5,7 +5,7 @@ namespace DeepslateWorks
         // The window's layout, verbatim from 2.0.x (DeepslateWorks.ps1 $AppXaml / $AskXaml), loaded at run time with
         // XamlReader.Parse (no XAML compilation), so the look stays exactly as it was.
 
-        /// <summary>The main window: Play, Extras and Log tabs.</summary>
+        /// <summary>The main window: Play, (Vote,) Extras and Log tabs.</summary>
         public const string AppXaml = @"<Window xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
         Title=""Deepslate Works"" Width=""600"" Height=""740"" MinWidth=""500"" MinHeight=""560"" WindowStartupLocation=""CenterScreen""
         FontFamily=""Segoe UI"" FontSize=""13"" Background=""#F6F7F8"">
@@ -41,6 +41,26 @@ namespace DeepslateWorks
           <TextBlock x:Name=""PlayTitle"" FontSize=""20"" FontWeight=""SemiBold"" Text=""Deepslate Works""/>
           <TextBlock x:Name=""PlayStatus"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""#444""/>
           <TextBlock x:Name=""PlayChanged"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""#2E7D5B"" FontWeight=""SemiBold"" Visibility=""Collapsed""/>
+          <Border x:Name=""ServerBox"" Background=""#F6F7F8"" CornerRadius=""6"" Padding=""10,8"" Margin=""0,10,0,0"">
+            <StackPanel>
+              <DockPanel>
+                <Button x:Name=""StartButton"" DockPanel.Dock=""Right"" Style=""{StaticResource Primary}"" Padding=""12,4"" Content=""Start"" Visibility=""Collapsed""/>
+                <TextBlock x:Name=""SiteLinkLine"" DockPanel.Dock=""Right"" VerticalAlignment=""Center"" Margin=""10,0,10,0""><Hyperlink x:Name=""SiteLink"">Open the site</Hyperlink></TextBlock>
+                <StackPanel Orientation=""Horizontal"" VerticalAlignment=""Center"">
+                  <Ellipse x:Name=""ServerDot"" Width=""9"" Height=""9"" Fill=""#888888"" Margin=""0,0,7,0"" VerticalAlignment=""Center""/>
+                  <TextBlock x:Name=""ServerLine"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Text=""Asking the site how the server is...""/>
+                </StackPanel>
+              </DockPanel>
+              <TextBlock x:Name=""ServerHint"" TextWrapping=""Wrap"" Margin=""16,2,0,0"" Foreground=""#555"" FontSize=""12"" Visibility=""Collapsed""/>
+              <TextBlock x:Name=""ServerOnline"" TextWrapping=""Wrap"" Margin=""16,2,0,0"" Foreground=""#444"" FontSize=""12"" Visibility=""Collapsed""/>
+              <Border x:Name=""NewsBox"" BorderBrush=""#D9DDE1"" BorderThickness=""0,1,0,0"" Margin=""0,8,0,0"" Padding=""0,6,0,0"" Visibility=""Collapsed"">
+                <StackPanel>
+                  <TextBlock x:Name=""NewsText"" TextWrapping=""Wrap"" FontSize=""12.5""/>
+                  <TextBlock x:Name=""NewsMeta"" Foreground=""#777"" FontSize=""11"" Margin=""0,2,0,0""/>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
         </StackPanel>
         <DockPanel DockPanel.Dock=""Bottom"" Margin=""0,10,0,0"">
           <StackPanel DockPanel.Dock=""Left"" VerticalAlignment=""Center"">
@@ -57,6 +77,20 @@ namespace DeepslateWorks
           </StackPanel>
         </DockPanel>
         <ScrollViewer VerticalScrollBarVisibility=""Auto""><StackPanel x:Name=""PlayBody""/></ScrollViewer>
+      </DockPanel>
+    </TabItem>
+    <TabItem Header=""  Vote  "" x:Name=""VoteTab"" Visibility=""Collapsed"">
+      <DockPanel Margin=""14"">
+        <StackPanel DockPanel.Dock=""Top"" Margin=""0,0,0,10"">
+          <TextBlock x:Name=""VoteStep"" Foreground=""#1A5FB4"" FontWeight=""SemiBold"" Margin=""0,0,0,2""/>
+          <TextBlock x:Name=""VoteTitle"" FontSize=""20"" FontWeight=""SemiBold"" TextWrapping=""Wrap""/>
+          <TextBlock x:Name=""VoteNote"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""#444""/>
+        </StackPanel>
+        <DockPanel DockPanel.Dock=""Bottom"" Margin=""0,10,0,0"">
+          <Button x:Name=""VoteButton"" DockPanel.Dock=""Right"" Style=""{StaticResource Primary}"" Content=""Vote"" MinWidth=""150"" FontSize=""15""/>
+          <TextBlock x:Name=""VoteError"" TextWrapping=""Wrap"" VerticalAlignment=""Center"" Margin=""0,0,12,0"" Foreground=""#B3261E"" FontWeight=""SemiBold""/>
+        </DockPanel>
+        <ScrollViewer VerticalScrollBarVisibility=""Auto""><StackPanel x:Name=""VoteBody""/></ScrollViewer>
       </DockPanel>
     </TabItem>
     <TabItem Header=""  Extras  "" x:Name=""ExtrasTab"">
@@ -135,6 +169,9 @@ namespace DeepslateWorks
             "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList",
             "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "Footer", "FooterApp", "FooterPack", "FooterServer",
             "StepLabel", "SettingsLink", "PlayHint",
+            // 3.2.0 (planner 2026-10-02): the server on the Play tab, and the Vote tab
+            "ServerBox", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "StartButton", "SiteLink", "NewsBox", "NewsText", "NewsMeta",
+            "VoteTab", "VoteStep", "VoteTitle", "VoteNote", "VoteBody", "VoteButton", "VoteError",
         };
 
         /// <summary>Every name the settings window looks up in SettingsXaml.</summary>

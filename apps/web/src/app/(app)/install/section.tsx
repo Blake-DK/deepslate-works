@@ -17,6 +17,8 @@ import { LaunchBanner } from "@/components/launch-banner";
 import { isWindows, WINDOWS_ONLY } from "@/lib/platform";
 import { getPlayInfo } from "@/server/play";
 import { PlayButton } from "@/components/server/play-button";
+import { VoteBanner } from "@/components/polls/vote-banner";
+import { pendingFor } from "@/server/polls";
 import { joinLine } from "@/lib/play";
 import { clock } from "@/lib/utils";
 
@@ -33,7 +35,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       </div>
     );
   }
-  const [m, lock, installer, play] = await Promise.all([getManifest(), getLock(), getInstaller(), getPlayInfo(user)]);
+  const [m, lock, installer, play, pending] = await Promise.all([getManifest(), getLock(), getInstaller(), getPlayInfo(user), pendingFor({ id: user.id, role: user.role })]);
   const version = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const settings = await getSettings();
   const showServer = canSeeServer(user, settings);
@@ -75,13 +77,14 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       {offline && gate.ok && <Alert tone="info">The server was offline a moment ago; it&apos;s reachable now, try again.</Alert>}
       {gate.reason === "admin" && <Alert tone="info">Admin: downloads are always open for you. Players only see them while the server is online, asleep or waking.</Alert>}
 
+      <VoteBanner pending={pending} />
       <Card className="border-primary">
         <CardHeader>
           <CardTitle>Play</CardTitle>
           <CardDescription>Once installed, use the Play button here to launch. It checks for updates every time.</CardDescription>
         </CardHeader>
         <CardContent>
-          <PlayButton download={play.download} name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null, !play.tooOld)} stepsHere  server={play.server} wake={play.wake} installed={play.installed} tooOld={play.tooOld} />
+          <PlayButton download={play.download} name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null, !play.tooOld)} stepsHere  server={play.server} wake={play.wake} installed={play.installed} tooOld={play.tooOld} voteFirst={pending.list.length > 0} />
         </CardContent>
       </Card>
 

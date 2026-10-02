@@ -23,7 +23,7 @@ namespace DeepslateWorks
     /// Show-Extras, On-Apply...). Everything here runs on the window's thread; the install steps run on a thread of their
     /// own and hand their status lines over with Dispatcher.BeginInvoke.
     /// </summary>
-    sealed class AppUi
+    sealed partial class AppUi
     {
         // the controls AppXaml names
         public Window Window;
@@ -160,6 +160,7 @@ namespace DeepslateWorks
 
             Timer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromMilliseconds(250) };
             Timer.Tick += (s, e) => OnTick();
+            WireHome();   // 3.2.0: the server on the Play tab, and the Vote tab
         }
 
         /// <summary>Show-App's ending: on screen until closed.</summary>
@@ -172,15 +173,17 @@ namespace DeepslateWorks
             {
                 ShowFront("opened");
                 try { UpEvent = new EventWaitHandle(false, EventResetMode.ManualReset, Env.AppUpEvent); UpEvent.Set(); } catch { }   // Setup's wait may end now
+                StartHome();   // 3.2.0: the server's state, who's online, the news, the votes; every 10 s while open
                 // 3.1.0: moved over from the old launcher: the guided setup, which takes the Play link and the shortcuts
                 // over itself and removes the old launcher only after checking (so no repair here)
                 if (first.HandOver) { StartGuided(); return; }
                 StartRepair();
                 // 3.1.0: the game never starts the moment the app opens. From the website: ready the game, then the
-                // countdown (PlayStart.Decide); from the desktop or the Start Menu: the Play button
+                // countdown (PlayStart.Decide). 3.2.0 (planner 2026-10-02, the app as the front door): from the desktop or
+                // the Start Menu too it signs in, checks for updates and wakes the server straight away, then waits for Play
                 if (Consents.Unanswered(Consent).Count > 0) { firstRunAtOpen = true; ShowFirstRun(); }
                 else if (FromWebsite) StartRun(false, true);
-                else ShowIdle();
+                else StartRun(false, false, true);
             };
             Window.Closing += (s, e) =>
             {
@@ -208,6 +211,7 @@ namespace DeepslateWorks
             Window.Closed += (s, e) =>
             {
                 Timer.Stop();
+                StopHome();
                 Log.Written -= live;
                 try { UpEvent?.Dispose(); } catch { }
             };
@@ -349,6 +353,7 @@ namespace DeepslateWorks
         void OnPlayButton()
         {
             if (Guided > 0) { OnGuidedButton(); return; }
+            if (VotesBlock && (Mode == "idle" || Mode == "ready")) { ShowVoteTab(); return; }   // 3.2.0: the vote first
             if (Mode == "ready") { Go(true); return; }   // 3.1.0: the game is ready; Play starts it
             if (Mode == "asking")
             {
@@ -441,25 +446,27 @@ namespace DeepslateWorks
             t.Start();
         }
 
-        /// <summary>fromWebsite: started by deepslate://play (the countdown may follow); otherwise Play or Continue was
+        /// <summary>fromWebsite: started by deepslate://play (the countdown may follow); atOpen (3.2.0): the app was opened
+        /// from the desktop or the Start Menu, so it gets the game ready and waits for Play; otherwise Play or Continue was
         /// pressed, which starts the game as soon as it is ready.</summary>
-        void StartRun(bool noLaunch = false, bool fromWebsite = false)
+        void StartRun(bool noLaunch = false, bool fromWebsite = false, bool atOpen = false)
         {
             if (worker != null && worker.IsAlive) return;   // one run at a time (2.0.x only ever had one engine)
-            runFromWebsite = fromWebsite; runPressed = !fromWebsite; runWaiting = false; keepScreen = false;
+            runFromWebsite = fromWebsite; runPressed = !fromWebsite && !atOpen; runWaiting = false; keepScreen = false;
             goAnswer = false; goEvent.Reset();
             HideCountdown();
             Mode = "running";
             ClearPlayBody();
             SetPromptButtons(false, false);
             PlayTitle.Text = UiText.RunningTitle;
-            PlayStatus.Text = noLaunch ? UiText.RunningExtrasStatus : UiText.RunningStatus;
+            PlayStatus.Text = noLaunch ? UiText.RunningExtrasStatus : atOpen ? UiText.OpenedStatus : UiText.RunningStatus;
             PlayButton.Content = UiText.Working;
             PlayButton.IsEnabled = false;
             Used.Clear();
             LastFail = null; Changed = null; Launched = null; WatchSince = null; WatchUntil = null; GameProblem = null;
             var isFirst = !firstUsed;
             var run = NewRun(noLaunch);
+            run.OpenedOnly = atOpen;
             Run.Current = run;
             Log.Line("window: starting the install steps" + (noLaunch ? " (extras only, no launcher)" : ""));
             var d = Window.Dispatcher;
@@ -494,7 +501,7 @@ namespace DeepslateWorks
                 case "used": var id = J.Str(o, "step"); if (id != null) Used[id] = J.Int(o, "level", 1); break;
                 case "changed": Changed = J.Str(o, "text"); break;
                 case "launched": Launched = DateTime.UtcNow; break;
-                case "ready": OnReady(); break;   // 3.1.0: the game is ready; the run waits for Go
+                case "ready": RefreshHome(); OnReady(); break;   // 3.1.0: the game is ready; the run waits for Go (3.2.0: votes looked at again)
                 case "versions": { var a = J.Str(o, "app"); var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(a)) VerApp = a; if (!string.IsNullOrEmpty(p)) VerCurrent = p; UpdateAppFooter(); break; }
                 case "installed": { var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(p)) VerLocal = p; UpdateAppFooter(); break; }
             }
@@ -538,6 +545,13 @@ namespace DeepslateWorks
             }
             UpdateAppBrand();   // a run may have brought a new logo
             if (Guided == 4) { Tabs.SelectedItem = ExtrasTab; ShowGuidedStep(4); return; }   // the extras fetched during the guided setup
+            if (outcome == "not_launched" && extrasAfter)
+            {
+                extrasAfter = false; keepScreen = false; Mode = "idle";
+                try { worker?.Join(TimeSpan.FromSeconds(3)); } catch { }   // its last act was handing this over
+                StartRun(true);
+                return;
+            }
             if (outcome == "not_launched") { if (keepScreen) { keepScreen = false; Mode = "idle"; PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true; return; } ShowIdle(); return; }
             PlayTitle.Text = UiText.ReadyTitle;
             PlayStatus.Text = UiText.ReadyStatus;
@@ -587,6 +601,7 @@ namespace DeepslateWorks
         bool RequestPlay(string why)
         {
             Log.Line(string.Format("window: the game was asked for ({0}): through Play", why));
+            if (VotesBlock) { ShowVoteTab(); return false; }   // 3.2.0: the vote first
             if (Mode == "ready") { Tabs.SelectedItem = PlayTab; Go(true); return true; }   // 3.1.0: ready and waiting: start it
             if (Mode != "idle") return false;
             Tabs.SelectedItem = PlayTab;
@@ -648,8 +663,10 @@ namespace DeepslateWorks
                     Tabs.SelectedItem = PlayTab;
                     if (Mode == "idle" && Flow == null) StartRun(false, true);
                     else if (Mode == "ready" && (Count == null || !Count.Running)) { runFromWebsite = true; runPressed = false; OnReady(); }
+                    if (VotesBlock) ShowVoteTab();   // 3.2.0: the updates go on; the game waits for the vote
                 }
             }
+            GatePlay();   // 3.2.0: Play stays shut while a vote waits
             if (Flow != null) { StepFlow(); return; }
             // every 2 s: is the game running? Queued changes install the moment it closes (planner H, Later)
             if (DateTime.Now >= NextGameCheck)
@@ -872,6 +889,9 @@ namespace DeepslateWorks
                     Consents.Save(Env.ConsentPath, Consent);
                     Extras.XLog("download: the extras were allowed; fetching them");
                     Tabs.SelectedItem = PlayTab;
+                    // 3.2.0: the app opens straight into a run that waits for Play; that run ends first (the game not
+                    // started), then the extras are fetched
+                    if (runWaiting) { extrasAfter = true; keepScreen = true; Go(false); return; }
                     StartRun(true);
                 };
             }
@@ -1013,13 +1033,15 @@ namespace DeepslateWorks
                 if (Consents.Decision(Consent, "extras") == "allow") newExtras = Extras.Overview(true, GameRunning).New.Count > 0;
             }
             catch (Exception e) { Log.Line("window: could not look at the extras: " + e.Message); }
-            var d = PlayStart.Decide(runFromWebsite, runPressed, AppSettings.WebsitePlay(), firstRunAtOpen, handOverThisTime, false, newExtras, queued);
+            var d = PlayStart.Decide(runFromWebsite, runPressed, AppSettings.WebsitePlay(), firstRunAtOpen, handOverThisTime, false, newExtras, queued, VotesBlock);
             Log.Line("window: the game is ready: " + d);
             PlayTitle.Text = UiText.ReadyToPlayTitle;
             if (d.Do == "now") { Go(true); return; }
             if (d.Do == "countdown") { StartCountdown(); return; }
             PlayStatus.Text = newExtras ? UiText.NewExtrasStatus : queued ? UiText.QueuedExtrasStatus : UiText.ReadyToPlayStatus;
+            if (VotesBlock) { GatePlay(); if (runFromWebsite || Tabs.SelectedItem == PlayTab) ShowVoteTab(); return; }   // 3.2.0: the vote first
             if (newExtras && runFromWebsite) { Tabs.SelectedItem = ExtrasTab; }   // the Extras tab instead (planner B5)
+            ShowWakeHint();
         }
 
         /// <summary>The go-ahead for the waiting run: true starts the game (and sends "pressed Play"), false ends the run
@@ -1033,6 +1055,7 @@ namespace DeepslateWorks
             PlayButton.Content = UiText.Working;
             PlayButton.IsEnabled = false;
             Log.Line(start ? "window: starting the game" : "window: not starting the game");
+            if (start) WakeIfAsleep("Play");   // 3.2.0: Play on a server that fell asleep while the game was ready
             goAnswer = start;
             goEvent.Set();
         }

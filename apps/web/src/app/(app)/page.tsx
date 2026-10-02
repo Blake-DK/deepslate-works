@@ -19,6 +19,8 @@ import { buttonClasses } from "@/components/ui/button";
 import { isWindows, WINDOWS_ONLY } from "@/lib/platform";
 import { getPlayInfo } from "@/server/play";
 import { PlayButton } from "@/components/server/play-button";
+import { VoteBanner } from "@/components/polls/vote-banner";
+import { pendingFor } from "@/server/polls";
 import { joinLine } from "@/lib/play";
 import { clock } from "@/lib/utils";
 import { getBranding } from "@/server/branding";
@@ -26,7 +28,7 @@ import { getBranding } from "@/server/branding";
 export default async function HomePage() {
   const user = await requireOnboardedUser();
   const brand = await getBranding();
-  const [members, openVote, settings, status, series, news, play, agent] = await Promise.all([
+  const [members, openVote, settings, status, series, news, play, agent, pending] = await Promise.all([
     db.user.count(),
     getOpenVote(),
     getSettings(),
@@ -35,6 +37,7 @@ export default async function HomePage() {
     getAnnouncements(3),
     getPlayInfo(user),
     headers().then((h) => h.get("user-agent")),
+    pendingFor({ id: user.id, role: user.role }),
   ]);
   const showServer = canSeeServer(user, settings);
   const mapUp = Boolean(env.MAP_URL) && status.server === "online";
@@ -47,6 +50,7 @@ export default async function HomePage() {
         <p className="text-muted-foreground">{user.mcUsername ? <>Linked to Minecraft account <span className="font-mono">{user.mcUsername}</span>.</> : <>Your Minecraft account gets linked the first time you join the server.</>} {members} {members === 1 ? "person" : "people"} in the group so far.</p>
       </div>
       {!settings.live && !(user.earlyAccess && user.role !== "ADMIN") && <LaunchBanner launchAt={settings.launchAt} admin={user.role === "ADMIN"} />}
+      <VoteBanner pending={pending} />
       <div className="grid gap-4 sm:grid-cols-2">
         <StatusCard status={status} series={series} address={showServer ? env.SERVER_ADDRESS : null} admin={user.role === "ADMIN"} />
         <div className="space-y-4">
@@ -58,7 +62,7 @@ export default async function HomePage() {
               </CardHeader>
               <CardContent>
                 {isWindows(agent)
-                  ? <PlayButton download={play.download} name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null, !play.tooOld)}  server={play.server} wake={play.wake} installed={play.installed} tooOld={play.tooOld} />
+                  ? <PlayButton download={play.download} name={play.name} current={play.current} ready={play.ready} last={play.last ? { version: play.last.version, on: formatDate(play.last.at) } : null} update={play.update} join={joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null, !play.tooOld)}  server={play.server} wake={play.wake} installed={play.installed} tooOld={play.tooOld} voteFirst={pending.list.length > 0} />
                   : <p className="text-sm text-muted-foreground">{WINDOWS_ONLY(play.name)}</p>}
               </CardContent>
             </Card>

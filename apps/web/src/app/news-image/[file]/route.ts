@@ -1,10 +1,13 @@
 import { loadCurrentUser } from "@/server/auth/session";
 import { readPhoto } from "@/server/news-images";
+import { bearer, userFromLauncherToken } from "@/server/launcher";
 
-// Pictures of news items (docs/05). For members who are signed in, like the news itself. The name carries a hash
-// of the content, so a browser may keep it for good.
-export async function GET(_req: Request, { params }: { params: Promise<{ file: string }> }) {
-  if (!(await loadCurrentUser())) return new Response("Sign in first", { status: 401, headers: { "content-type": "text/plain; charset=utf-8" } });
+// Pictures of news items (docs/05), and of poll options (planner 2026-10-02). For members who are signed in, like the
+// news itself: on the site, or in Deepslate Works with its sign-in. The name carries a hash of the content, so a browser
+// may keep it for good.
+export async function GET(req: Request, { params }: { params: Promise<{ file: string }> }) {
+  const token = bearer(req);
+  if (!(token ? await userFromLauncherToken(token) : await loadCurrentUser())) return new Response("Sign in first", { status: 401, headers: { "content-type": "text/plain; charset=utf-8" } });
   const img = await readPhoto((await params).file);
   if (!img) return new Response("Not found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
   return new Response(new Uint8Array(img.data), {

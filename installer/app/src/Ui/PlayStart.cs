@@ -25,8 +25,11 @@ namespace DeepslateWorks
         /// fromWebsite: this window was opened (or brought back) by deepslate://play. pressedPlay: the person pressed Play
         /// or Continue in the window, which is a start in itself. The rest are the planner's "no countdown" cases.
         /// </summary>
-        public static Decision Decide(bool fromWebsite, bool pressedPlay, string setting, bool firstRun, bool handOver, bool newPermission, bool newExtras, bool queuedExtras)
+        /// 3.2.0 (planner 2026-10-02, votes before play): `votesPending`, a must-vote poll not answered yet, keeps the game
+        /// waiting whatever else says go; once it is answered the same rules decide again.
+        public static Decision Decide(bool fromWebsite, bool pressedPlay, string setting, bool firstRun, bool handOver, bool newPermission, bool newExtras, bool queuedExtras, bool votesPending = false)
         {
+            if (votesPending) return new Decision { Do = "wait", Why = "a vote to answer first" };
             if (pressedPlay) return new Decision { Do = "now" };
             if (!fromWebsite) return new Decision { Do = "wait", Why = "opened from the desktop or the Start Menu" };
             var no = new List<string>();

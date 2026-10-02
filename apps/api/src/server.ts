@@ -6,6 +6,7 @@ import { health, tcpReachable } from "./health.js";
 import { audit } from "./audit.js";
 import { Wake } from "./status/wake.js";
 import { ServerView, reasonFor } from "./status/view.js";
+import { PollWatch, pollRoutes } from "./players/polls.js";
 import { wakeRoutes } from "./routes/wake.js";
 import { Catalogue, InventoryEditor } from "./players/editor.js";
 import { statusRoutes } from "./routes/status.js";
@@ -84,6 +85,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   poller.stateName = (live) => (wake.waking && live.stateCode !== 20 ? "Waking" : live.state);
   statusRoutes(app, ampClient, poller, tail, () => pings.current(), view);
   wakeRoutes(app, wake, view);
+  const polls = new PollWatch(log);
+  pollRoutes(app, ampClient, tail, () => limbo.actionCtx);
   playerRoutes(app, ampClient, tail, limbo, () => pregen.quiesce());
   serverRoutes(app, ampClient, tail, restarts);
   brandingRoutes(app, env, ampClient, deps.build);
@@ -157,6 +160,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     pings.start();
     distances.start();
     ground.start();
+    polls.start();
     serverVersions.start();
     online.start();
     pregenWatch.start();
@@ -171,6 +175,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     limbo.stop();
     pings.stop();
     online.stop();
+    polls.stop();
     pregen.stop();
     restarts.stop();
     ground.stop();

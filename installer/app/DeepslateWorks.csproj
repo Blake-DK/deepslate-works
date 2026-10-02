@@ -30,6 +30,10 @@
     <Compile Include="src/**/*.cs" />
   </ItemGroup>
   <ItemGroup>
+    <!-- 3.2.0: the window tests look at the Play button and the Vote tab -->
+    <InternalsVisibleTo Include="DeepslateWorks.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>

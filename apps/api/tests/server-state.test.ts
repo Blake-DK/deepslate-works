@@ -107,7 +107,24 @@ describe("POST /server/wake", () => {
     const r = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: {} });
     expect([r.statusCode, r.json().result, r.json().wake.phase, r.json().wake.leftS]).toEqual([202, "started", "waking", 30]);
     expect(t.calls).toEqual(["Start"]);
-    expect(t.audits).toEqual([{ userId: "u1", action: "server.wake", params: { name: "Pabulum" }, result: "OK" }]);
+    expect(t.audits).toEqual([{ userId: "u1", action: "server.wake", params: { name: "Pabulum", via: "play" }, result: "OK" }]);
+  });
+  it("says (app) when Deepslate Works asked: on opening, or on its Play (planner 2026-10-02)", async () => {
+    const t = setup({ state: 30 });
+    const r = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: { via: "app" } });
+    expect([r.statusCode, r.json().result]).toEqual([202, "started"]);
+    expect(t.audits).toEqual([{ userId: "u1", action: "server.wake", params: { name: "Pabulum", via: "app" }, result: "OK" }]);
+    const again = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: { via: "app" } }); // opened, then Play pressed
+    expect([again.statusCode, again.json().result]).toEqual([200, "already"]);
+    expect(t.calls).toEqual(["Start"]); // one start, however often
+  });
+  it("never starts a switched-off or crashed server from the app either", async () => {
+    for (const s of [{ state: 0 }, { state: 0, crashed: true }] as const) {
+      const t = setup(s);
+      const r = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: { via: "app" } });
+      expect(r.statusCode).toBe(409);
+      expect(t.calls).toEqual([]);
+    }
   });
   it("sends no second start while a wake runs (the debounce)", async () => {
     const t = setup({ state: 30 });

@@ -42,6 +42,19 @@ export function kindOf(action: string, role: Actor["role"]): EventKind {
 type P = Record<string, unknown>;
 const s = (v: unknown, fallback = "?") => (typeof v === "string" && v ? v : typeof v === "number" ? String(v) : fallback);
 
+// 2.2.0 / 3.1.0 (planner, 2026-10-02): the move from the old launcher (2.x) to the app (3.x). The old launcher reports
+// the answer to its prompt and the download; the app reports its guided setup.
+function handover(p: Record<string, unknown>): string {
+  if (/^2\./.test(s(p.installerVersion, ""))) {
+    if (p.outcome === "ok") return "said Update now: the old launcher fetched the app and handed over";
+    if (p.outcome === "skipped") return "said Not now to the new app and played with the old launcher";
+    return `said Update now, but the old launcher could not fetch the app${p.updateProblem ? ` (${s(p.updateProblem)})` : ""}`;
+  }
+  if (p.outcome === "ok") return `moved over to the app (${s(p.installerVersion, "3.x")}); the old launcher is removed`;
+  if (p.outcome === "cancelled") return `closed the app during the move-over${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}; it carries on at the next Play`;
+  return `the move-over to the app stopped${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`;
+}
+
 const from = (p: P) => (typeof p.ip === "string" && p.ip ? ` from ${p.ip}${typeof p.country === "string" && p.country ? ` (${p.country})` : ""}` : "");
 const size = (v: unknown) => (typeof v === "number" && v > 0 ? (v < 1_048_576 ? `${Math.max(1, Math.round(v / 1024))} KB` : `${(v / 1_048_576).toFixed(1)} MB`) : "");
 const WHY_NOT: Record<string, string> = { not_live: "the site is not open yet and they have no early access", server_offline: "downloads are open while the server is up" };
@@ -169,7 +182,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   // docs/13 §13, the inventory editor (the same words as invPhrase in slots.ts)
   "inv.change": (p) => (p.op === "give" ? `gave ${s(p.player)} ${s(p.count, "1")} × ${s(p.item)}` : p.op === "clear" ? `cleared ${s(p.player)}'s ${s(p.slot)}` : `set ${s(p.player)}'s ${s(p.slot)} to ${s(p.item)}${Number(p.count) > 1 ? ` × ${s(p.count)}` : ""}`),
   "world.save": "saved the world",
-  "installer.report": (p) => p.mode === "game_check" ? (p.outcome === "ok" ? "started the game with every mod of the pack" : `started the game without ${s(p.modsMissing, "some of the pack's mods")}; the app asks them to press Play`) : p.refused ? "sent a report of a run that cannot have happened: the site is not open for them" : p.mode === "already_running" ? "pressed Play while Deepslate Works was already running in another window: nothing done" : p.mode === "uninstall" ? (p.outcome === "ok" ? "removed Deepslate Works from their PC" : "tried to remove Deepslate Works from their PC") : `${p.mode === "first_install" || p.mode === "update"
+  "installer.report": (p) => p.mode === "game_check" ? (p.outcome === "ok" ? "started the game with every mod of the pack" : `started the game without ${s(p.modsMissing, "some of the pack's mods")}; the app asks them to press Play`) : p.refused ? "sent a report of a run that cannot have happened: the site is not open for them" : p.mode === "already_running" ? "pressed Play while Deepslate Works was already running in another window: nothing done" : p.mode === "uninstall" ? (p.outcome === "ok" ? "removed Deepslate Works from their PC" : "tried to remove Deepslate Works from their PC") : p.mode === "handover" ? handover(p) : `${p.mode === "first_install" || p.mode === "update"
     ? (p.outcome === "ok" ? (p.mode === "first_install" ? `installed ${s(p.packVersion, "the pack")}: all good` : `pressed Play and updated to ${s(p.packVersion, "the new pack")}`) : p.outcome === "cancelled" ? `closed the window during the ${p.mode === "update" ? "update" : "first install"}${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}` : `${p.mode === "update" ? "updated" : "installed"} and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)
     : p.mode === "play"
     ? (p.outcome === "ok" ? `pressed Play: ${s(p.packVersion, "the pack")}, launcher opened` : p.outcome === "cancelled" ? "pressed Play and closed the window" : `pressed Play and it failed${p.failedStep ? ` at "${s(p.failedStep)}"` : ""}`)

@@ -1,6 +1,8 @@
 import { getManifest } from "@/server/modpack/manifest";
 import { distancesFor } from "modpack/schema";
 import { getInstaller, getLock } from "@/server/modpack/lock";
+import { installerFor } from "@/lib/installer-info";
+import { getSection } from "@/server/site-settings";
 import { loadCurrentUser } from "@/server/auth/session";
 import { canDownload, manifestKeyOk } from "@/server/modpack/gate";
 import { env } from "@/env";
@@ -31,7 +33,8 @@ export async function GET(req: Request) {
       return Response.json({ error: { code, message } }, { status: gate.reason === "anonymous" ? 401 : 403 });
     }
   }
-  const [m, lock, installer, brand] = await Promise.all([getManifest(), getLock(), getInstaller(), getBranding()]);
+  const [m, lock, installerInfo, brand, joining] = await Promise.all([getManifest(), getLock(), getInstaller(), getBranding(), getSection("joining")]);
+  const installer = installerFor(installerInfo, req.headers.get("user-agent"), joining.minInstaller);
   if (!lock) return Response.json({ error: { code: "no_lock", message: "Pack not built yet" } }, { status: 503 });
   // The member's measured PC tier picks the distances (mods.json render_by_tier); as plain numbers, which every
   // installer reads. Only a first install and a value the installer set itself are changed (docs/07).
@@ -54,7 +57,8 @@ export async function GET(req: Request) {
     files: lock.files.map((f) => ({ slug: f.slug, name: f.name, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size, side: f.side })),
     configs: lock.configs,
     // docs/07 "The installer updates itself": which installer is current, and the checksum of its zip. No address:
-    // the installer fetches it from /downloads on the site it was built for, and from nowhere else.
+    // the installer fetches it from /downloads on the site it was built for, and from nowhere else. The old launcher
+    // sees the app as `app` (2.2.0 asks first), never as `exe` (2.1.3 would move without asking): installerFor.
     installer,
     // the chosen logo (planner, 2026-10-01): the app puts it on the launcher profile (128 px PNG) and fetches the
     // .ico from /brand/logo.ico?v=<hash> on its own site; null until a logo is picked

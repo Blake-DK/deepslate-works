@@ -33,7 +33,8 @@ param(
   [string]$Screenshots = "", # draw the window's main states into PNG files in this folder, then exit
   [switch]$NoLaunch,        # the engine: do not open the Minecraft Launcher at the end (the Extras tab's download)
   [switch]$VerifyExtras,    # 2.0.1: print the Extras tab's checks; exit code 1 when one fails
-  [string]$From = ""        # 2.0.3: which entry point started this run (desktop, startmenu, apps, setup, update, ...), for the log only
+  [string]$From = "",       # 2.0.3: which entry point started this run (desktop, startmenu, apps, setup, update, ...), for the log only
+  [string]$HandOver = ""    # 2.2.0, the engine: the answer to "A new Deepslate Works app is ready": now | later ("" = ask)
 )
 
 # ---- started from a link on a web page ------------------------------------------------------------------
@@ -51,14 +52,14 @@ if ($FromLink) {
     exit 1
   }
   $Setup = $false; $DryRun = $false; $SelfTest = $false; $Root = ""; $PretendRunning = @(); $Uninstall = $false; $Yes = $false; $Play = $false; $NoPrompt = $false
-  $Engine = $false; $StatusFile = ""; $Console = $false; $AllowAll = $false; $Screenshots = ""; $NoLaunch = $false; $VerifyExtras = $false; $From = ""
+  $Engine = $false; $StatusFile = ""; $Console = $false; $AllowAll = $false; $Screenshots = ""; $NoLaunch = $false; $VerifyExtras = $false; $From = ""; $HandOver = ""
 }
 # ---- config block (stamped by `modpack build installer`) ----
 $PortalUrl = "https://deepslate.dsw.test"
 $PackName = "Deepslate Works"
 $PackVersion = "dev"
 # -------------------------------------------------------------
-$InstallerVersion = "2.1.3"   # 2.1.3: the bridge to Deepslate Works 3.0 (DeepslateWorks.exe), moves this PC over on its next Play; 2.1.2: footer with versions; 2.1.1: the chosen logo; 2.1.0: every mod checked before the game starts. The last PowerShell version: written here, not stamped from installer/VERSION (that is the exe's, 3.0.0). History in docs/07
+$InstallerVersion = "2.2.0"   # 2.2.0: asks before it moves the PC to the app (Update now / Not now), resumes a move cut off half-way; 2.1.3: the bridge to Deepslate Works 3.0 (DeepslateWorks.exe), moves this PC over on its next Play; 2.1.2: footer with versions; 2.1.1: the chosen logo; 2.1.0: every mod checked before the game starts. The last PowerShell version: written here, not stamped from installer/VERSION (that is the exe's, 3.0.0). History in docs/07
 $ManifestUrl = "$PortalUrl/api/modpack/manifest"
 $ScriptName = "DeepslateWorks.ps1"
 $LockName = "Global\DeepslateWorks"
@@ -499,23 +500,114 @@ function Update-Script($offer, [string]$scriptPath, [scriptblock]$fetch) {
   return @{ status = "updated"; version = $new; problem = $null }
 }
 
-# ---- the bridge to 3.0 (planner, 2026-10-01) ---------------------------------------------------------------------
-# Deepslate Works 3.0 is one program, DeepslateWorks.exe. This script is the last PowerShell version: on its next Play,
-# when the site offers the exe (manifest installer.exe = {version, sha256, size}), it fetches it from this site's
-# /downloads (never from an address in the mod list), checks size, checksum and that it is a Windows program, and puts
-# it in %LOCALAPPDATA%\DeepslateWorks. The exe, started with -MigratedFrom, switches the Play link, the shortcuts and
-# the Settings -> Apps entry over to itself and then removes this script and its shim. Nothing to download by hand.
-# On any problem nothing is changed and this run carries on as 2.x (the next Play tries again).
+# ---- the bridge to 3.0 (planner, 2026-10-01), and the question first (2.2.0, planner 2026-10-02) ------------------------
+# Deepslate Works 3.x is one program, DeepslateWorks.exe. This script is the last PowerShell version. When the site
+# offers the app (2.2.0: manifest installer.app = {version, sha256, size}; the site never shows the old launcher
+# installer.exe, which 2.1.3 took as "move now, without asking"), the next Play asks first, before anything else is
+# done: "A new Deepslate Works app is ready", Update now / Not now. Update now fetches it from this site's /downloads
+# (never from an address in the mod list), checks size, checksum and that it is a Windows program, puts it in
+# %LOCALAPPDATA%\DeepslateWorks and starts it with -HandOver; the app's guided setup moves the Play link, the
+# shortcuts and the Settings -> Apps entry over to itself, and removes this script only after it has checked its own
+# install. Not now plays with this script this time and asks again on the next Play, until Settings -> Joining's
+# "Minimum installer version" is above this script: then Not now is replaced by why this launcher can no longer join.
+# A move cut off half-way (handover.json in the home folder, the app there and checking out) carries on at the next
+# Play from either launcher, without asking again. On any problem nothing is changed and this run carries on as 2.x.
 
-# @{ version; sha256; size } of the exe the site offers, or $null.
+$HandOverFile = "handover.json"
+$HandOverSmartScreen = $false   # does Windows' SmartScreen stop the app started this way? (CI windows smoke: it does not)
+
+# @{ version; sha256; size; minimum; forced } of the app the site offers, or $null. forced: this launcher is older than
+# the site's minimum installer version, so its runs no longer let anyone in (Not now cannot be offered).
 function Get-OfferedExe($manifest) {
   try {
     if (-not $manifest -or -not $manifest.PSObject.Properties["installer"] -or -not $manifest.installer) { return $null }
-    $e = $manifest.installer.exe
+    $i = $manifest.installer
+    $e = $null
+    if ($i.PSObject.Properties["app"] -and $i.app) { $e = $i.app } elseif ($i.PSObject.Properties["exe"] -and $i.exe) { $e = $i.exe }   # exe: a site from before 2.2.0
     if (-not $e -or -not (Test-Newer ([string]$e.version) $InstallerVersion)) { return $null }
     if ([string]$e.sha256 -notmatch '^[0-9a-fA-F]{64}$') { return $null }
-    return @{ version = [string]$e.version; sha256 = ([string]$e.sha256).ToLower(); size = [long]$e.size }
+    $min = ""
+    if ($i.PSObject.Properties["minimum"] -and $i.minimum) { $min = [string]$i.minimum }
+    $forced = ($min -match '^\d{1,4}(\.\d{1,4}){1,3}$') -and (Test-Newer $min $InstallerVersion)
+    return @{ version = [string]$e.version; sha256 = ([string]$e.sha256).ToLower(); size = [long]$e.size; minimum = $min; forced = [bool]$forced }
   } catch { return $null }
+}
+
+# A move cut off half-way: handover.json says which app was fetched, and the app is there with that checksum. Then the
+# next Play carries on with it (no question, no download). $null when there is nothing to carry on with.
+function Get-PendingHandOver([string]$dir) {
+  try {
+    $f = Join-Path $dir $HandOverFile
+    if (-not [IO.File]::Exists($f)) { return $null }
+    $h = [IO.File]::ReadAllText($f) | ConvertFrom-Json
+    if ([string]$h.state -eq "done") { return $null }
+    $exe = Join-Path $dir "DeepslateWorks.exe"
+    if (-not [IO.File]::Exists($exe)) { return $null }
+    $sum = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLower()
+    if ($sum -ne ([string]$h.sha256).ToLower()) { return $null }
+    return @{ exe = $exe; version = [string]$h.app; from = [string]$h.from; state = [string]$h.state }
+  } catch { return $null }
+}
+
+# Written the moment the app is in place: the app reads it (its guided setup), and both launchers carry on from it.
+function Save-HandOver([string]$dir, $offer) {
+  $o = [ordered]@{ version = 1; from = $InstallerVersion; app = $offer.version; sha256 = $offer.sha256; state = "downloaded"; at = (Get-Date).ToUniversalTime().ToString("s") + "Z"; steps = [ordered]@{} }
+  $o | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $dir $HandOverFile) -Encoding UTF8
+}
+
+# The question, as the window shows it (Show-HandOver) and the self test checks it.
+function Get-HandOverText($offer) {
+  $t = [ordered]@{
+    title = "A new Deepslate Works app is ready"
+    body = "It replaces this one: same game, same mods, nothing to reinstall. It has its own Play button and no black window."
+    smartscreen = $(if ($HandOverSmartScreen) { "Windows may ask. Click More info, then Run anyway." } else { "" })
+    forced = ""
+    now = "Update now"
+    later = "Not now"
+  }
+  if ($offer.forced) {
+    $t.forced = ("This launcher ({0}) can no longer join the server: the site now needs Deepslate Works {1} or newer. Update now moves you over; it takes a moment and nothing has to be reinstalled." -f $InstallerVersion, $offer.minimum)
+    $t.later = ""
+  }
+  return $t
+}
+
+# Downloads with progress: $onProgress { param($done, $total) } every 256 KB or so.
+function Save-WithProgress([string]$url, [string]$outFile, $headers, [scriptblock]$onProgress) {
+  $req = [Net.WebRequest]::Create($url)   # http(s); file:// in the self test
+  $req.Timeout = 300000
+  if ($req -is [Net.HttpWebRequest]) { $req.ReadWriteTimeout = 300000 }
+  if ($headers) { foreach ($k in $headers.Keys) { $req.Headers[$k] = [string]$headers[$k] } }
+  $res = $req.GetResponse()
+  try {
+    $total = [long]$res.ContentLength
+    $in = $res.GetResponseStream()
+    $out = [IO.File]::Create($outFile)
+    try {
+      $buf = New-Object byte[] 65536
+      $done = [long]0; $last = [long]-1
+      while (($n = $in.Read($buf, 0, $buf.Length)) -gt 0) {
+        $out.Write($buf, 0, $n); $done += $n
+        if ($onProgress -and ($done - $last -ge 262144 -or $done -eq $total)) { $last = $done; & $onProgress $done $total }
+      }
+    } finally { $out.Dispose(); $in.Dispose() }
+  } finally { $res.Close() }
+}
+
+# A report of its own for the hand-over (mode handover), next to this run's own: Update now (ok, or failed with why)
+# and Not now (skipped). Never the run's report: a Not now run still reports its Play.
+function Send-HandOverReport([string]$outcome, [string]$problem = "") {
+  if ($DryRun -or $SelfTest -or -not $script:Token) { return }
+  try {
+    $rep = New-Report $outcome
+    $rep.mode = "handover"
+    $rep.failedStep = $null
+    $rep.updateProblem = $(if ($problem) { Redact $problem -Addresses } else { $null })
+    if ($script:ReportsOff) { $rep = [ordered]@{ packVersion = $rep.packVersion; installerVersion = $rep.installerVersion; mode = "handover"; outcome = $outcome; durationSec = $rep.durationSec; log = ""; system = $null; minimal = $true } }
+    $json = $rep | ConvertTo-Json -Depth 8 -Compress
+    $null = Invoke-RestMethod -Uri "$PortalUrl/api/installer/report" -Method Post -Headers @{ Authorization = "Bearer $($script:Token)" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($json)) -UseBasicParsing -TimeoutSec 20
+    Log ("hand-over report sent: " + $outcome)
+  } catch { Log ("hand-over report not sent: " + $_.Exception.Message) }
 }
 
 # @{ status = "moved" | "failed"; exe; problem }. $fetch: { param($url, $outFile) } downloads a file.
@@ -541,9 +633,10 @@ function Install-Exe($offer, [string]$dir, [scriptblock]$fetch) {
   return @{ status = "moved"; exe = $exe; problem = $null }
 }
 
-# The arguments the exe is started with: where it came from, and from which version (the window waits for this process).
+# The arguments the app is started with: where it came from, the hand-over flag with this version (its guided setup), and
+# which process to wait for (the window, which closes).
 function Get-ExeHandOver([string]$from, [int]$waitFor) {
-  $a = @("-From", "update", "-MigratedFrom", $from)
+  $a = @("-From", "update", "-HandOver", $from)
   if ($waitFor -gt 0) { $a += @("-WaitFor", [string]$waitFor) }
   return $a
 }
@@ -1385,6 +1478,7 @@ $ExtrasManifestName = "extras-manifest.json"
 $ExitAsk = 20        # the engine needs an answer the window has to ask for (status line {t:"ask"})
 $ExitDeclined = 21   # a step needed to play was answered "Not now"
 $ExitMigrated = 30   # 2.1.3: DeepslateWorks.exe (3.0) is in place; the window starts it and closes
+$ExitHandOverAsk = 31   # 2.2.0: the site offers the app; the window asks Update now / Not now (status line {t:"handover"})
 
 function Get-ConsentSteps {
   $site = $PortalUrl
@@ -2244,6 +2338,31 @@ $AskXaml = @'
 '@
 $RestartXaml = $AskXaml   # the restart question uses the same window (self test and screenshots refer to it)
 
+# 2.2.0: "A new Deepslate Works app is ready". Two answers, no Allow all: a one-off choice. When the site's minimum
+# installer version is above this launcher, Not now is gone and Forced says why. SmartScreen: only when Windows asks.
+$HandOverXaml = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Deepslate Works" Width="480" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner"
+        FontFamily="Segoe UI" FontSize="13" Background="White">
+  <StackPanel Margin="20">
+    <TextBlock x:Name="HTitle" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
+    <TextBlock x:Name="HBody" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#333"/>
+    <TextBlock x:Name="HSize" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="#666" FontSize="12"/>
+    <Border x:Name="HForcedBox" Background="#FFF4E0" CornerRadius="6" Padding="10,8" Margin="0,12,0,0" Visibility="Collapsed">
+      <TextBlock x:Name="HForced" TextWrapping="Wrap" Foreground="#8A5A00" FontWeight="SemiBold"/>
+    </Border>
+    <StackPanel x:Name="HSmartBox" Margin="0,12,0,0" Visibility="Collapsed">
+      <TextBlock x:Name="HSmart" TextWrapping="Wrap" Foreground="#1A5FB4" FontWeight="SemiBold"/>
+      <Image x:Name="HSmartPic" MaxWidth="440" Margin="0,6,0,0" HorizontalAlignment="Left"/>
+    </StackPanel>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+      <Button x:Name="HLater" Padding="16,6" Margin="0,0,8,0"/>
+      <Button x:Name="HNow" Padding="18,6" Background="#2E7D5B" Foreground="White" BorderThickness="0" FontWeight="SemiBold"/>
+    </StackPanel>
+  </StackPanel>
+</Window>
+'@
+
 $Tones = @{ grey = @("#EEF0F2", "#555555"); blue = @("#E3F0FF", "#1A5FB4"); amber = @("#FFF4E0", "#8A5A00"); green = @("#E8F3EE", "#2E7D5B"); red = @("#FDECEA", "#B3261E") }
 
 function New-Brush([string]$hex) { return (New-Object Windows.Media.BrushConverter).ConvertFromString($hex) }
@@ -2616,7 +2735,7 @@ function Show-GameProblem {
   try { $A.Window.Activate() | Out-Null; $A.Window.Topmost = $true; $A.Window.Topmost = $false } catch {}
 }
 
-function Start-Run([switch]$NoLaunch) {
+function Start-Run([switch]$NoLaunch, [string]$HandOver = "") {
   $A = $script:App
   $A.Mode = "running"
   Clear-PlayBody
@@ -2629,11 +2748,13 @@ function Start-Run([switch]$NoLaunch) {
   $A.StatusPath = Join-Path $Temp ("deepslate-status-{0}.jsonl" -f ([guid]::NewGuid().ToString("N").Substring(0, 8)))
   [IO.File]::WriteAllText($A.StatusPath, "")
   $A.StatusPos = 0
+  $A.LastHandOver = $null
   $A.LastAsk = $null; $A.LastDeclined = $null; $A.LastFail = $null; $A.Changed = $null; $A.Launched = $null; $A.GameProblem = $null; $A.Watch = $null
   if (-not [IO.File]::Exists($script:MePath)) { $script:MePath = Join-Path (Get-HomeDir) $ScriptName }   # moved by the 1.5.3 step
   $args2 = Get-HiddenArgs $script:MePath @("-Engine", "-StatusFile", ('"{0}"' -f $A.StatusPath))
   if ($NoLaunch) { $args2 += "-NoLaunch" }
-  Log ("window: starting the install steps" + $(if ($NoLaunch) { " (extras only, no launcher)" } else { "" }))
+  if ($HandOver) { $args2 += @("-HandOver", $HandOver) }   # 2.2.0: the answer to the question about the new app
+  Log ("window: starting the install steps" + $(if ($NoLaunch) { " (extras only, no launcher)" } else { "" }) + $(if ($HandOver) { " (new app: " + $HandOver + ")" } else { "" }))
   $A.Proc = Start-Hidden $args2   # 2.0.3: CreateNoWindow, never a console window
   $null = $A.Proc.Handle   # Windows PowerShell only keeps the exit code of a process whose handle was read
   if ($env:DEEPSLATE_UPDATED_FROM) { [Environment]::SetEnvironmentVariable("DEEPSLATE_UPDATED_FROM", $null) }   # said once, by the first run
@@ -2695,6 +2816,8 @@ function Read-StatusLines {
       "used" { $A.Used[[string]$o.step] = [int]$o.level }
       "changed" { $A.Changed = [string]$o.text }
       "launched" { $A.Launched = Get-Date }
+      "handover" { $A.LastHandOver = $o }   # 2.2.0: the site offers the app; asked when the engine ends
+      "progress" { $A.PlayStatus.Text = [string]$o.text }
       "versions" { if ($o.app) { $A.Ver.app = [string]$o.app }; if ($o.pack) { $A.Ver.current = [string]$o.pack }; Update-AppFooter }
       "installed" { if ($o.pack) { $A.Ver.local = [string]$o.pack }; Update-AppFooter }
     }
@@ -2717,6 +2840,17 @@ function On-RunEnded([int]$code) {
     return
   }
   if ($code -eq $ExitDeclined -and $A.LastDeclined) { Show-Stopped (Get-ConsentStep ([string]$A.LastDeclined.step)); return }
+  if ($code -eq $ExitHandOverAsk -and $A.LastHandOver) {
+    # 2.2.0: the question, before anything else is done
+    $o = $A.LastHandOver
+    $ans = Show-HandOver @{ version = [string]$o.version; size = [long]$o.size; forced = [bool]$o.forced; minimum = [string]$o.minimum }
+    Log ("window: the new app: " + $ans)
+    if ($ans -eq "now") { Start-Run -HandOver "now"; return }
+    if ($ans -eq "later") { Start-Run -HandOver "later"; return }
+    $A.PlayTitle.Text = "Deepslate Works"
+    $A.PlayStatus.Text = $(if ($o.forced) { "This launcher can no longer join the server. Press Play and choose Update now to move to the new app." } else { "Press Play when you're ready." })
+    return
+  }
   if ($code -eq $ExitMigrated) {
     # 2.1.3, the bridge: the exe takes over (it waits for this window to close, then opens its own)
     $exe = Join-Path (Get-HomeDir) "DeepslateWorks.exe"
@@ -3121,6 +3255,32 @@ function Show-Ask([string]$question, [string]$why, [string]$allNote, [switch]$No
   return $script:App.AskAnswer
 }
 
+# 2.2.0: the question about the new app. Returns "now", "later" or "" (closed). -NoWait: the window, not shown (screenshots).
+function Show-HandOver($offer, [switch]$NoWait) {
+  $t = Get-HandOverText $offer
+  $d = [Windows.Markup.XamlReader]::Parse($HandOverXaml)
+  try { if ($script:App.Window.IsVisible) { $d.Owner = $script:App.Window } } catch {}
+  ($d.FindName("HTitle")).Text = $t.title
+  ($d.FindName("HBody")).Text = $t.body
+  ($d.FindName("HSize")).Text = $(if ($offer.size -gt 0) { "Deepslate Works {0}, a {1} MB download from {2}." -f $offer.version, [Math]::Round($offer.size / 1MB, 1), (([uri]$PortalUrl).Host) } else { "Deepslate Works {0}." -f $offer.version })
+  if ($t.forced) { ($d.FindName("HForced")).Text = $t.forced; ($d.FindName("HForcedBox")).Visibility = "Visible" }
+  if ($t.smartscreen) {
+    ($d.FindName("HSmart")).Text = $t.smartscreen
+    try { $img = New-Object Windows.Media.Imaging.BitmapImage; $img.BeginInit(); $img.UriSource = [uri]("$PortalUrl/help/smartscreen.png"); $img.EndInit(); ($d.FindName("HSmartPic")).Source = $img } catch {}
+    ($d.FindName("HSmartBox")).Visibility = "Visible"
+  }
+  $now = $d.FindName("HNow"); $later = $d.FindName("HLater")
+  $now.Content = $t.now
+  if ($t.later) { $later.Content = $t.later } else { $later.Visibility = "Collapsed" }
+  $script:App.HandOverAnswer = ""
+  $now.Add_Click({ param($sender, $e) $script:App.HandOverAnswer = "now"; [Windows.Window]::GetWindow($sender).Close() })
+  $later.Add_Click({ param($sender, $e) $script:App.HandOverAnswer = "later"; [Windows.Window]::GetWindow($sender).Close() })
+  if ($NoWait) { return $d }
+  Show-Front "the question about the new app"
+  [void]$d.ShowDialog()
+  return $script:App.HandOverAnswer
+}
+
 # -Screenshots <folder>: drawn off screen. The questions with Allow all, the restart question, the extras waiting for
 # the game to close, everything active in game (with the checks).
 function Save-Png($visual, [string]$file) {
@@ -3164,6 +3324,21 @@ function Save-Screenshots([string]$dir) {
     Show-Extras -sim @{ running = $false; state = $s4; inGameAll = $true }
     Pump; Save-Png $A.Window.Content (Join-Path $dir "4-all-active.png")
   } else { Write-Host "No extras on this PC yet: press Play once with extras allowed, then take the Extras screenshots." -ForegroundColor Yellow }
+  # 5-7. 2.2.0: the question about the new app; with the minimum above this launcher; the download under way
+  $A.Tabs.SelectedItem = $A.PlayTab; Pump
+  foreach ($shot in @(@{ f = "5-new-app-question.png"; forced = $false }, @{ f = "6-new-app-question-required.png"; forced = $true })) {
+    $d = Show-HandOver @{ version = "3.1.0"; size = 323584; forced = $shot.forced; minimum = "3.0" } -NoWait
+    $d.WindowStartupLocation = "Manual"; $d.Left = -20000; $d.Top = 0; $d.ShowInTaskbar = $false
+    $d.Show(); $d.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Background)
+    Save-Png $d.Content (Join-Path $dir $shot.f)
+    $d.Close()
+  }
+  Clear-PlayBody
+  $A.PlayTitle.Text = "Getting the game ready"
+  Add-PlayLine "Fetching the new Deepslate Works app (3.1.0)" "#555" | Out-Null
+  $A.PlayStatus.Text = "Downloading the new app: 62% of 0.3 MB"
+  $A.PlayButton.Content = "Working..."; $A.PlayButton.IsEnabled = $false
+  Pump; Save-Png $A.Window.Content (Join-Path $dir "7-new-app-downloading.png")
   $A.Window.Close()
   Write-Host ("Screenshots in {0}" -f $dir)
   try { Start-Process $dir } catch {}
@@ -4215,8 +4390,51 @@ if ($SelfTest) {
   Check "a download that is not a Windows program: refused" (($mv.status -eq "failed") -and ($mv.problem -match 'not a Windows program'))
   $mv = Install-Exe $offer $bd { param($url, $out) throw "The remote name could not be resolved" }
   Check "offline: refused, the run carries on as 2.x" (($mv.status -eq "failed") -and ($mv.problem -match 'could not be downloaded'))
-  Check "the exe is told where it came from and which window to wait for" (((Get-ExeHandOver "2.1.3" 4242) -join " ") -eq "-From update -MigratedFrom 2.1.3 -WaitFor 4242")
+  Check "the app is told where it came from (the hand-over flag) and which window to wait for" (((Get-ExeHandOver "2.2.0" 4242) -join " ") -eq "-From update -HandOver 2.2.0 -WaitFor 4242")
   Check "the window starts the exe on the bridge's exit code" (([IO.File]::ReadAllText($PSCommandPath)) -match '\$code -eq \$ExitMigrated')
+
+  Write-Host "Self test: the question about the new app (2.2.0)" -ForegroundColor White
+  $ma = { param($v, $sum, $size, $min) [pscustomobject]@{ installer = [pscustomobject]@{ version = $InstallerVersion; exe = $null; app = [pscustomobject]@{ version = $v; sha256 = $sum; size = $size }; minimum = $min } } }
+  $oa = Get-OfferedExe (& $ma "3.1.0" $exeSum 302 "1.5.0")
+  Check "the app is read from installer.app (the site never shows this launcher installer.exe)" (($oa.version -eq "3.1.0") -and ($oa.sha256 -eq $exeSum) -and -not $oa.forced)
+  $of = Get-OfferedExe (& $ma "3.1.0" $exeSum 302 "3.0")
+  Check "a minimum above this launcher: Not now can no longer be offered" ($of.forced -and ($of.minimum -eq "3.0"))
+  Check "no minimum, or one this launcher meets: Not now stays" ((-not (Get-OfferedExe (& $ma "3.1.0" $exeSum 302 "")).forced) -and (-not (Get-OfferedExe (& $ma "3.1.0" $exeSum 302 "2.0.0")).forced))
+  $qt = Get-HandOverText $oa
+  Check "the question says what the planner wrote, with Update now and Not now" (($qt.title -eq "A new Deepslate Works app is ready") -and ($qt.body -eq "It replaces this one: same game, same mods, nothing to reinstall. It has its own Play button and no black window.") -and ($qt.now -eq "Update now") -and ($qt.later -eq "Not now") -and -not $qt.forced)
+  $qf = Get-HandOverText $of
+  Check "with the minimum above it: no Not now, and why this launcher can no longer join" ((-not $qf.later) -and ($qf.forced -match "can no longer join the server") -and ($qf.forced -match "3\.0"))
+  $hx = [xml]$HandOverXaml
+  Check "a one-off choice: two buttons, no Allow all" ((@($hx.SelectNodes("//*[local-name()='Button']")).Count -eq 2) -and ($HandOverXaml -notmatch 'Allow all'))
+  Check "the SmartScreen line is the Help page's, shown only when Windows asks" ((& { $HandOverSmartScreen = $true; (Get-HandOverText $oa).smartscreen }) -eq "Windows may ask. Click More info, then Run anyway." -and ((Get-HandOverText $oa).smartscreen -eq ([string]$(if ($HandOverSmartScreen) { "Windows may ask. Click More info, then Run anyway." } else { "" }))))
+  $src = [IO.File]::ReadAllText($PSCommandPath)
+  $ask = $src.LastIndexOf('exit $ExitHandOverAsk'); $fetch = $src.LastIndexOf('$mv = Install-Exe $exeOffer $homeDir')
+  Check "the engine asks before it fetches anything" (($ask -gt 0) -and ($fetch -gt $ask))
+  Check "the window asks on the engine's exit code and starts it again with the answer" (($src -match '\$code -eq \$ExitHandOverAsk') -and ($src -match 'Start-Run -HandOver "now"') -and ($src -match 'Start-Run -HandOver "later"'))
+  Check "a link cannot answer the question for anyone" ($src -match '\$VerifyExtras = \$false; \$From = ""; \$HandOver = ""')
+  Check "a copy just fetched by an older one leaves the question to its own window" ($src -match '\$HandOver -eq "" -and \$script:UpdatedFrom\)')
+  # the download, with progress (file:// here; the site's /downloads on a PC)
+  $big = Join-Path $dir "new app.bin"
+  $bigBytes = [byte[]](@(0x4D, 0x5A) + (New-Object byte[] 700000))
+  [IO.File]::WriteAllBytes($big, $bigBytes)
+  $seen = New-Object System.Collections.Generic.List[long]
+  $got = Join-Path $dir "new app.got"
+  Save-WithProgress ((New-Object Uri ("file:///" + ($big -replace "\\", "/").TrimStart("/"))).AbsoluteUri) $got $null { param($done, $total) $seen.Add($done) }.GetNewClosure()
+  Check ("the download reports its progress as it goes ({0} steps) and ends with all of it" -f $seen.Count) (($seen.Count -ge 3) -and ($seen[$seen.Count - 1] -eq $bigBytes.Length) -and ((Get-Item -LiteralPath $got).Length -eq $bigBytes.Length))
+  # a move cut off half-way carries on
+  $ph = Join-Path $dir "pending home"
+  [void][IO.Directory]::CreateDirectory($ph)
+  Check "nothing to carry on with: no handover.json" ($null -eq (Get-PendingHandOver $ph))
+  [IO.File]::WriteAllBytes((Join-Path $ph "DeepslateWorks.exe"), $exeBytes)
+  Save-HandOver $ph @{ version = "3.1.0"; sha256 = $exeSum }
+  $pd = Get-PendingHandOver $ph
+  Check "the app fetched and handover.json written: the next Play carries on without asking" (($pd.version -eq "3.1.0") -and ($pd.from -eq $InstallerVersion) -and ($pd.state -eq "downloaded"))
+  [IO.File]::WriteAllBytes((Join-Path $ph "DeepslateWorks.exe"), [byte[]](@(0x4D, 0x5A, 9)))
+  Check "an app that no longer checks out is not carried on with (asked again, fetched again)" ($null -eq (Get-PendingHandOver $ph))
+  [IO.File]::WriteAllBytes((Join-Path $ph "DeepslateWorks.exe"), $exeBytes)
+  $hj = Get-Content -Raw -LiteralPath (Join-Path $ph $HandOverFile) | ConvertFrom-Json; $hj.state = "done"; $hj | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $ph $HandOverFile)
+  Check "a move the app finished is never started again" ($null -eq (Get-PendingHandOver $ph))
+  Check "the carry-on comes before the question" ($src.LastIndexOf('Get-PendingHandOver $homeDir') -lt $ask)
 
   Write-Host "Self test: no console window, the window in front (2.0.3)" -ForegroundColor White
   $lt = Get-LauncherText
@@ -4603,15 +4821,53 @@ try {
   if ($manifest.version) { $script:PackSeen = [string]$manifest.version }
   Emit ([ordered]@{ t = "versions"; app = $InstallerVersion; pack = $script:PackSeen })   # the window's footer: this script's version (new after a self-update)
 
-  # 2.1.3, the bridge: the site offers Deepslate Works 3.0 (DeepslateWorks.exe): fetched, checked, put in place; the
-  # window starts it. Only from the installed copy (a copy in a download folder has no home to move).
+  # The bridge to the app (2.1.3; 2.2.0 asks first). Only from the installed copy (a copy in a download folder has no
+  # home to move). A move cut off half-way carries on without asking; otherwise the window asks Update now / Not now
+  # (this engine stops here, nothing done yet, and is started again with the answer). -Console (no window) moves.
   $exeOffer = Get-OfferedExe $manifest
-  if ($exeOffer -and -not $DryRun -and @($PretendRunning).Count -eq 0 -and (Get-HomeDir) -and -not $script:CustomRoot) {
-    Step ("Moving to Deepslate Works {0}" -f $exeOffer.version)
-    $mv = Install-Exe $exeOffer (Get-HomeDir) { param($url, $out) Invoke-WebRequest -Uri $url -Headers $headers -OutFile $out -UseBasicParsing -TimeoutSec 300 }
+  $homeDir = Get-HomeDir
+  $canMove = (-not $DryRun -and @($PretendRunning).Count -eq 0 -and $homeDir -and -not $script:CustomRoot)
+  $pending = $(if ($canMove) { Get-PendingHandOver $homeDir } else { $null })
+  if ($pending) {
+    Step "Carrying on with the move to the new app"
+    Tick ("Deepslate Works {0} is already here and checks out; it takes over from here" -f $pending.version)
+    $script:Reported = $true   # the app reports its guided setup
+    Exit-Lock
+    Emit ([ordered]@{ t = "migrate"; exe = $pending.exe; version = $pending.version; resumed = $true })
+    if (-not $Engine) { Start-Process -FilePath $pending.exe -ArgumentList (Get-ExeHandOver $InstallerVersion 0) }
+    exit $ExitMigrated
+  }
+  if ($exeOffer -and $canMove -and $Engine -and $HandOver -eq "" -and $script:UpdatedFrom) {
+    # Fetched just now by an older copy, whose window does not know the question: this run ends with nothing done and
+    # that window, seeing a newer script, starts this one's window (every 2.x window does), which asks.
+    Log ("updated from {0}; the window restarts as {1} to ask about Deepslate Works {2}" -f $script:UpdatedFrom, $InstallerVersion, $exeOffer.version)
+    Note "Deepslate Works updated itself. The window opens again in a moment with a question."
+    $script:Reported = $true
+    Exit-Lock
+    exit 0
+  }
+  if ($exeOffer -and $canMove -and $Engine -and $HandOver -eq "") {
+    Log ("the site offers Deepslate Works {0}: asking first{1}" -f $exeOffer.version, $(if ($exeOffer.forced) { " (this launcher is below the minimum " + $exeOffer.minimum + ": no Not now)" } else { "" }))
+    $script:Reported = $true   # nothing was done; the run that follows the answer reports
+    Exit-Lock
+    Emit ([ordered]@{ t = "handover"; version = $exeOffer.version; size = $exeOffer.size; forced = $exeOffer.forced; minimum = $exeOffer.minimum; smartscreen = $HandOverSmartScreen })
+    exit $ExitHandOverAsk
+  }
+  if ($exeOffer -and $canMove -and $HandOver -eq "later") {
+    if ($exeOffer.forced) { Fail ("This launcher can no longer join the server: the site needs Deepslate Works {0} or newer. Press Play and choose Update now." -f $exeOffer.minimum) }
+    Note ("Not now: playing with this launcher. Deepslate Works {0} is offered again on the next Play." -f $exeOffer.version)
+    Send-HandOverReport "skipped"
+  }
+  elseif ($exeOffer -and $canMove) {
+    Step ("Fetching the new Deepslate Works app ({0})" -f $exeOffer.version)
+    $mb = [Math]::Round($exeOffer.size / 1MB, 1)
+    $progress = { param($done, $total) $t = $(if ($total -gt 0) { $total } else { $exeOffer.size }); $pct = $(if ($t -gt 0) { [int](100 * $done / $t) } else { 0 }); Emit ([ordered]@{ t = "progress"; pct = $pct; text = ("Downloading the new app: {0}% of {1} MB" -f $pct, $mb) }) }.GetNewClosure()
+    $mv = Install-Exe $exeOffer $homeDir { param($url, $out) Save-WithProgress $url $out $headers $progress }.GetNewClosure()
     if ($mv.status -eq "moved") {
-      Tick ("Deepslate Works {0} is in place; it takes over from here" -f $exeOffer.version)
-      $script:Reported = $true   # the exe's first run reports, saying it came from this version
+      try { Save-HandOver $homeDir $exeOffer } catch { Log ("could not write " + $HandOverFile + ": " + $_.Exception.Message) }
+      Tick ("Deepslate Works {0} downloaded and checked; it takes over from here" -f $exeOffer.version)
+      Send-HandOverReport "ok"
+      $script:Reported = $true   # the app's first run reports, saying it came from this version
       Exit-Lock
       Emit ([ordered]@{ t = "migrate"; exe = $mv.exe; version = $exeOffer.version })
       if (-not $Engine) {
@@ -4621,8 +4877,10 @@ try {
       exit $ExitMigrated
     }
     $script:UpdateProblem = $mv.problem
-    Log ("MOVE TO 3.0 NOT DONE: " + $mv.problem)
-    Note ("Deepslate Works {0} could not be put in place ({1}). Carrying on with {2}." -f $exeOffer.version, $mv.problem, $InstallerVersion)
+    Log ("MOVE TO THE APP NOT DONE: " + $mv.problem)
+    Send-HandOverReport "failed" $mv.problem
+    if ($exeOffer.forced) { Fail ("The new app could not be fetched ({0}). Press Play to try again." -f $mv.problem) }
+    Note ("The new app could not be fetched ({0}). Carrying on with {1}; Play tries again next time." -f $mv.problem, $InstallerVersion)
   }
 
   # A newer script on the site: fetched, checked, put in place and started with what this one was started with.

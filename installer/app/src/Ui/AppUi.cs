@@ -138,7 +138,7 @@ namespace DeepslateWorks
             PlayButton.Click += (s, e) => OnPlayButton();
             AllowAllButton.Click += (s, e) => OnAllowAll();
             ResetButton.Click += (s, e) => OnResetAll();
-            ReviewLink.Click += (s, e) => ShowReview();
+            ReviewLink.Click += (s, e) => OpenReview();   // 3.3.1: a view of its own (AppUiReview.cs)
             ApplyButton.Click += (s, e) => OnApply();
             CheckButton.Click += (s, e) => OnCheck();
             HeadlineButton.Click += (s, e) => OnHeadline();
@@ -152,6 +152,7 @@ namespace DeepslateWorks
             {
                 if (e.OriginalSource != Tabs) return;
                 CancelCountdown("a tab switch");
+                if (reviewing && Tabs.SelectedItem != PlayTab) CloseReview("another tab");   // 3.3.1: answers not saved
                 if (Tabs.SelectedItem == ExtrasTab) ShowExtras();
                 else if (Tabs.SelectedItem == LogTab) UpdateLogBox();
             };
@@ -351,6 +352,7 @@ namespace DeepslateWorks
             Consent = new Dictionary<string, ConsentAnswer>();
             Answers = new Dictionary<string, string>();
             Log.Line("permissions: Reset all");
+            LeaveReviewForReset();
             ShowFirstRun();
         }
 
@@ -364,7 +366,9 @@ namespace DeepslateWorks
                 SaveAnswers();
                 SetPromptButtons(false, false);
                 var no = Asking.FirstOrDefault(s => s.Required && Answers.TryGetValue(s.Id, out var a) && a == "decline");
-                if (no != null) { ShowStopped(no); return; }
+                if (no != null) { LeaveReviewForReset(); ShowStopped(no); return; }
+                // 3.3.1: Save in Review stores the answers and goes back to the Play view as it was; nothing starts
+                if (reviewing) { CloseReview("saved"); return; }
                 if (runWaiting)
                 {
                     Log.Line("window: permissions saved; starting the game that was ready");
@@ -392,21 +396,6 @@ namespace DeepslateWorks
             PlayButton.IsEnabled = true;
         }
 
-        // Review permissions: every step with its current answer, changeable; Allow all and Reset all.
-        void ShowReview()
-        {
-            if (Mode == "running" || Guided > 0) return;
-            // the game may be ready and waiting: the run keeps waiting while the answers are looked at (Save and play
-            // starts it; a needed step declined ends it)
-            CancelCountdown("a setting");
-            Answers = new Dictionary<string, string>();
-            foreach (var k in Consent.Keys) Answers[k] = Consent[k].Answer;
-            ShowFirstRun(Consents.Steps());
-            PlayTitle.Text = UiText.ReviewTitle;
-            PlayStatus.Text = UiText.ReviewStatus;
-            PlayButton.Content = UiText.SaveAndPlay;
-            SetPromptButtons(true, true);
-        }
 
         // ---- the install steps -------------------------------------------------------------------------------------------
 
@@ -691,6 +680,7 @@ namespace DeepslateWorks
             }
             GatePlay();   // 3.2.0: Play stays shut while a vote waits
             UpdateTick(); // 3.3.0: an Update waiting for the game finishes when it closes
+            SyncUpdateRow(); // 3.3.1: the Update button and its line only in the Play view
             if (Flow != null) { StepFlow(); return; }
             // every 2 s: is the game running? Queued changes install the moment it closes (planner H, Later)
             if (DateTime.Now >= NextGameCheck)

@@ -7,7 +7,7 @@ namespace DeepslateWorks
 
         /// <summary>The main window: Play, (Vote,) Extras and Log tabs.</summary>
         public const string AppXaml = @"<Window xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
-        Title=""Deepslate Works"" Width=""600"" Height=""740"" MinWidth=""500"" MinHeight=""560"" WindowStartupLocation=""CenterScreen""
+        Title=""Deepslate Works"" Width=""600"" Height=""740"" MinWidth=""560"" MinHeight=""560"" WindowStartupLocation=""CenterScreen""
         FontFamily=""Segoe UI"" FontSize=""13"" Background=""#F6F7F8"">
   <Window.Resources>
     <Style TargetType=""Button"" x:Key=""Primary"">
@@ -69,8 +69,8 @@ namespace DeepslateWorks
           </StackPanel>
           <StackPanel DockPanel.Dock=""Right"" HorizontalAlignment=""Right"">
             <StackPanel Orientation=""Horizontal"" HorizontalAlignment=""Right"">
-              <Button x:Name=""ResetButton"" Style=""{StaticResource Plain}"" Content=""Reset all"" Visibility=""Collapsed""/>
               <Button x:Name=""AllowAllButton"" Style=""{StaticResource Plain}"" Content=""Allow all"" Visibility=""Collapsed""/>
+              <Button x:Name=""ResetButton"" Style=""{StaticResource Plain}"" Content=""Reset all"" Visibility=""Collapsed""/>
               <Button x:Name=""PlayButton"" Style=""{StaticResource Primary}"" Content=""Play"" MinWidth=""190"" FontSize=""15""/>
               <Button x:Name=""UpdateButton"" Style=""{StaticResource Plain}"" Content=""Update"" MinWidth=""118"" Margin=""8,0,0,0"" Padding=""12,6""/>
             </StackPanel>

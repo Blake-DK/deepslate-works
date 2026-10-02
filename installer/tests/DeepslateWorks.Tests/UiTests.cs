@@ -238,7 +238,9 @@ namespace DeepslateWorks.Tests
             // 3.2.0: the server on the Play tab (a wake; switched off with an admin's Start), the Vote tab, Play shut, the results
             "12-play-server-waking.png", "13-play-switched-off-admin.png", "14-vote.png", "14b-play-vote-first.png", "15-vote-results.png",
             // 3.3.0: the Update button: waiting, mid-update, up to date, the game running
-            "16-update-waiting.png", "17-updating.png", "18-up-to-date.png", "19-update-game-running.png" };
+            "16-update-waiting.png", "17-updating.png", "18-up-to-date.png", "19-update-game-running.png",
+            // 3.3.1: Review permissions and the Play row at the smallest width
+            "20-review-permissions-min-width.png", "21-play-row-min-width.png" };
 
         [WindowsFact] public void With_the_extras_list_it_draws_the_Extras_tab_too()
         {

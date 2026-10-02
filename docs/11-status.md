@@ -2,6 +2,10 @@
 
 Last updated 2026-09-29, 19:00 UTC (the evening the first player who is not an admin got in). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
 
+## App 3.3.1: Review permissions fits the window (2026-10-02, planner)
+
+Review permissions is now its own view (`Ui/AppUiReview.cs`). Its row is Allow all, Reset all and Save. Save stores the answers and restores the Play view snapshot taken on entry, with no run and no game; a ready game stays ready. Leaving for another tab restores without saving. The Update button and its line show only in the Play view (`SyncUpdateRow`, every tick), never on the question cards or in the guided setup. The window's MinWidth goes from 500 to 560. Tests: `ReviewTests.cs` (view state, Save, Allow all, ready run kept, tab leave, every row fits at the minimum width). **Unverified on Windows until Alex opens it.** The CI pictures are 20 and 21.
+
 ## App 3.3.0: an Update button next to Play (2026-10-02, planner; stacked on 3.2.0)
 
 The Update button sits to the right of Play. It reads "✓ Up to date" (a click checks again), "● Update" when the site has a newer app, pack, settings or extras, or "Updating…" with the step under it. The check runs when the app opens and every 10 minutes, against `GET /api/app/updates`. That endpoint only returns what is compared (pack files and settings with their hashes, the current app, the extras' files); it never gives an address and logs no download, so the event log is not filled by the check. The app compares it with its own `pack-list.json` (which now also keeps the pack hash and settings files), `installed.json` and the extras list. The line under the buttons says what is waiting ("New pack: 3 mods changed. New version of this app.") or "Checked at 15:42. Nothing to update."

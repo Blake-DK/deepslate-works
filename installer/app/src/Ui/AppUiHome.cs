@@ -142,6 +142,7 @@ namespace DeepslateWorks
         /// <summary>Under the Play button while a wake runs: the game loads anyway, the server boots meanwhile.</summary>
         void ShowWakeHint()
         {
+            if (Mode == "asking" || reviewing) return;   // 3.3.1: no Play hint on the question cards
             if (Count != null && Count.Running) return;   // "Click anywhere to stop" has the line
             if (VotesBlock && Guided == 0 && (Mode == "idle" || Mode == "ready")) return;   // GatePlay has it
             var waking = SiteNow != null && SiteNow.Server.Waking && (Mode == "ready" || Mode == "running" || Mode == "idle");

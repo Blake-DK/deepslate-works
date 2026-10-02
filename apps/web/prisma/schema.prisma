@@ -305,3 +305,14 @@ model ServerSnapshot {
 
   @@index([at])
 }
+
+// docs/21: Discord messages that are edited after they are posted (a vote's count and result, a run of deaths).
+// Only keyed messages get a row; plain lines are posted and forgotten.
+model DiscordPost {
+  id        String    @id @default(cuid())
+  key       String    @unique // "poll:<id>", "ballot:<id>", "deaths:<uuid>", "remind:poll:<id>", "welcome:<userId>"
+  channel   String    // "feed" | "admin"
+  messageId String    // Discord's id of the message; "" for a marker (something decided, nothing posted)
+  postedAt  DateTime  @default(now())
+  editedAt  DateTime?
+}

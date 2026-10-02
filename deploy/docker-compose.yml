@@ -105,6 +105,7 @@ services:
       - ${DEEPSLATE_DIR:-..}/dist:/repo/dist             # `modpack build` writes it (owner uid 1000); sync-server rsyncs dist/server/ to the AMP host
       - ${DEEPSLATE_DIR:-..}/modpack:/repo/modpack:ro
       - ${DEEPSLATE_DIR:-..}/installer:/repo/installer:ro
+      - ${DEEPSLATE_DIR:-..}/data/news:/repo/data/news:ro   # docs/21: news pictures go to Discord as attachments
       # country lookup for the analytics page: MaxMind's GeoLite2-Country, kept current by the web-proxy stack
       - ${GEOIP_DIR:-/root/docker/web-proxy/geoip}:/geoip:ro
     depends_on:

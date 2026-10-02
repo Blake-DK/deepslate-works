@@ -23,6 +23,36 @@ Deviations from docs/21:
 - Not done: §7 player heads (its own PR, it touches `web`).
 - `AssetsTests` makes the assets folder unwritable by putting a file where it would go, rather than changing the runner's permissions.
 
+## The Discord feed · §10 steps 1 to 3 (docs/21, 2026-10-02)
+
+Built: the pipe, votes, news / We're live / New pack / First join ever. **Steps 4 and 5 (season moments, "has awoken") are not built**: they need docs/20 steps 3 and 4, which do not exist yet. The `season` switch is on the card and does nothing until then.
+
+- **Checked first:** api reaches `discord.com` from inside the tunnel namespace (`GET /api/v10/gateway` → 200 from `deepslate-api`, 2026-10-02 19:0x UTC). The poster lives in api as planned.
+- **Where:** `apps/api/src/discord/` (`webhook.ts` the only caller of Discord, `lines.ts` every word, `announcer.ts` the loop, `store.ts` its database side), `routes/discord.ts` (`GET /discord`, `POST /discord/test`, admin only), `/health` → `discordFeed: on|off|refused`. Web: Admin → Site settings → **Discord** (`app/(app)/admin/discord/`), `Setting` `discord` in `shared/settings.ts`. Migration `0022_discord_post` (`DiscordPost`). Announcer state (cursor, refusals, last 20 messages) is `Setting` `_discordFeed`.
+- **Tests:** `apps/api/tests/discord-lines.test.ts` (the lines, against real `Event` rows read from the database on 2026-10-02, kept in `tests/fixtures/discord-events.ts`) and `discord-feed.test.ts` (the §11 list against a fake Discord: first run, unlinked player, five deaths, rejoin, 20-minute outage, poll count/close/reminder, 429, refusal, Pause, switches). No poll and no challenge row exists in the database yet; those rows are written in the exact shape the code writes them.
+
+**Deviations, and choices the doc left open:**
+
+1. **Leaves wait two minutes** before they are posted, and a rejoin in that time drops both the leave and the join. The doc's literal rule ("a rejoin within 2 minutes of a leave is not posted") would have left a "left" line in the channel for somebody who is back. Inferred joins and leaves (api restart, the server going down) are never posted.
+2. **The channel's name** needs a bot: a webhook cannot read it. The card shows "Posting to #channel" when `DISCORD_BOT_TOKEN` is set and "Posting through the webhook "<name>"" otherwise.
+3. **News pictures** are members-only on the site (`/news-image` needs a sign-in), so Discord cannot fetch them by address. api now mounts `data/news` read-only and sends the picture as an attachment. Old `announcement.create` rows carry no item id and are never posted; new ones carry `announcementId`.
+4. **We're live** is posted when `site.settings` goes from off to on: the audit row now carries `was`.
+5. **New pack:** `_packSynced` now also keeps the lock's mods (slug → version id), the previous version and the number of mods changed. The first sync after this deploy has nothing to compare with and posts no "New pack" line. The restart line for a sync is "restarting for an update"; an admin's or a planned restart says "The server is restarting. Back in about a minute." An admin stop says "The server has been switched off for now." "The server is back." follows only a down line of ours (30 minutes at most); sleeping and waking are never posted.
+6. **Crash line in the feed** says "Alex has been told." only when the admin webhook is set and took the message; otherwise "The server fell over."
+7. **Problems to the admin channel:** every `ERROR` row would flood it (mods log errors at every start), so the same text is posted once per 6 hours and at most 10 a hour. `WARN` is never posted.
+8. **The mod ballot's result** counts the mods with half the votes or more (Apply results' rule without exclusive groups); the real list is what Apply results decides.
+9. **Members** in "0 of 6 have voted" are all accounts on the portal, admins included, as the door asks everyone. The reminder names members with a Discord account; the rest are "and 1 more". It is posted only for a vote that was open before the 24-hour mark (a vote opened with less than a day to go has just been posted).
+10. **Pause and the switches** are read through the settings cache: a change takes up to 30 seconds to bite.
+
+**Alex, once** (also in the to-do list):
+
+1. In Discord: the channel the feed goes to → Edit channel → Integrations → Webhooks → New webhook. Name it "Deepslate Works", copy the URL.
+2. The same in a private admin channel, if wanted.
+3. Hand both URLs to the VPS session for `deploy/.env` (`DISCORD_WEBHOOK_FEED`, `DISCORD_WEBHOOK_ADMIN`), then `deploy/deploy.sh`.
+4. Admin → Site settings → Discord → Send a test message.
+
+Open for Alex (docs/21 §12): one channel or two; voting inside Discord next or not; "has awoken" before Season 1; joins and leaves on by default.
+
 ## Seasons, bosses and trials · §9 step 1 report (docs/20, 2026-10-02)
 
 Step 1 only; step 2 waits for the planner to read this. PR #40 (`f2a5881`): new non-votable category `adventure` ("Bosses & trials") in `mods.json`. Lock 60 files, NeoForge 21.1.252, pack `0.1.0+72931447`. Build all, then Sync (6 jars: Cataclysm 3.33, Mowzie's Mobs 1.8.2, Ender Dragon Fight Remastered 5.0.2 server-only, curios 9.5.1, geckolib 4.9.3, lionfish-api 3.1). Started once at 18:35:45 UTC, Running, nobody online. Modrinth versions are the ones §3 lists.
@@ -661,8 +691,10 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Alex's to-do (rewritten 2026-09-29, 19:00 UTC; what was done is at the end)
 
+
 **To do**
 
+0. **Discord feed (docs/21):** make a webhook in the feed's channel (and optionally a private admin channel), hand the URLs to the VPS session for `deploy/.env`, then Admin → Site settings → Discord → Send a test message.
 1. **Render the map.** It is empty. Admin → Server → Pre-generation → "Render the map only" → Turn on. About an hour with the server kept awake; it stops by itself. "When nobody's online" waits while anyone plays; "Now" does not.
 2. **Download the installer once more on your own PC.** Your copy is 1.3.0 (your last Play, 17:32 UTC, says so), and 1.3.0 has no update step. From 1.4.0 on a copy keeps itself up to date whenever Play is pressed.
 3. **Press Play before you next join**, and tell Pabulum to: the pack is `0.1.0+1a48e8ff` since 18:20 UTC, and Play first asks for it. (Admins are never held, so for you it is only the settings that come with it.)

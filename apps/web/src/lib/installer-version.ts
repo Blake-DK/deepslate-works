@@ -53,3 +53,15 @@ export function outdatedNotice(version: string, current: string, site: string): 
   const which = version === UNKNOWN_INSTALLER ? "an old installer" : `installer ${version}`;
   return `This PC has ${which}; the current one is ${current}. Download Deepslate Works again from ${site}/install and run Setup.bat once. After that it keeps itself up to date.`;
 }
+
+/**
+ * Which kind of installer a version is (planner, 2026-10-02): 3.x and later the app (DeepslateWorks.exe), 2.x the old
+ * launcher (DeepslateWorks.ps1), 1.x the first installer (Setup.bat, cannot update itself to the app). Null when unknown.
+ */
+export function installerKind(version: string | null | undefined): { kind: "app" | "old launcher" | "old installer"; label: string } | null {
+  const m = /^(\d{1,4})(\.\d{1,4}){1,3}$/.exec(version ?? "");
+  if (!m) return null;
+  const major = Number(m[1]);
+  const kind = major >= 3 ? "app" : major === 2 ? "old launcher" : "old installer";
+  return { kind, label: `${kind} ${version}` };
+}

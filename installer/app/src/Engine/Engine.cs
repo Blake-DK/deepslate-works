@@ -414,13 +414,18 @@ namespace DeepslateWorks
             if (!run.DryRun) run.Emit(J.O("t", "installed", "pack", run.PackSeen ?? ""));   // the window's footer: the pack on this PC now
 
             // ---- d. the report, e. the game -------------------------------------------------------------------------
+            // 3.1.0 (planner B8): a run that ends with the game sends its report, the "pressed Play" that Play first
+            // counts from, when the game is started: after the countdown, or after Play is pressed in the window. A run
+            // that ends without the game (dry run, the Extras download) reports here.
             Log.Line("=== done ===");
             run.StepName = "";
-            Report.Send(run, "ok");
+            var launching = !run.DryRun && !run.NoLaunch;
+            if (!launching) Report.Send(run, "ok");
             ExitLock(ref mutex);
             run.Emit(J.O("t", "done", "mode", run.Mode, "pack", run.PackSeen ?? ""));
             if (run.DryRun) Show(run, "(dry run) Nothing was changed.");
             else if (run.NoLaunch) Log.Line("not opening the launcher (asked not to)");
+            else if (!WaitForGo(run)) return "not_launched";
             else
             {
                 if (profileLeft) { run.Emit(J.O("t", "launched", "opened", false)); Show(run, string.Format("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play.", Env.PackName)); }
@@ -433,6 +438,33 @@ namespace DeepslateWorks
                 if (wake.Waking) wake.Watch(run, Wake.Call, Sleep);
             }
             return "done";
+        }
+
+        /// <summary>
+        /// 3.1.0: the game is ready. With a window (run.WaitForGo set) this waits for it: the countdown reaching 0, Play
+        /// pressed, or the setting "start straight away". Then the report goes ("pressed Play", for Play first) and the
+        /// game starts. Closed without starting: the report says so ("cancelled", at "Waiting for you to press Play").
+        /// </summary>
+        public static bool WaitForGo(Run run)
+        {
+            if (run.WaitForGo != null)
+            {
+                run.StepName = UiText.WaitingForPlayStep;
+                run.Emit(J.O("t", "ready", "mode", run.Mode, "pack", run.PackSeen ?? ""));
+                Log.Line("ready: waiting for the window to start the game");
+                bool go;
+                try { go = run.WaitForGo(); } catch (Exception e) { Log.Line("ready: " + e.Message); go = false; }
+                if (!go)
+                {
+                    Log.Line("ready: the game was not started (the window was closed)");
+                    Report.Send(run, "cancelled");
+                    return false;
+                }
+                run.StepName = "";
+                Log.Line("ready: starting the game");
+            }
+            Report.Send(run, "ok");
+            return true;
         }
 
         /// <summary>java -jar installer.jar --install-client "%APPDATA%\.minecraft": no window; what it printed comes back.</summary>

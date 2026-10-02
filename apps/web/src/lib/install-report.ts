@@ -12,9 +12,11 @@ export const OUTCOMES = ["ok", "failed", "cancelled", "skipped"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 // 1.5.0 on (docs/07): first_install, update, play, already_running; "install" (Setup.bat) and "play" before that.
 // 2.1.0: game_check = the app read the game's log after it started and says which of the pack's mods it loaded.
-export const MODES = ["install", "play", "first_install", "update", "already_running", "uninstall", "game_check"] as const;
+// 2.2.0 / 3.1.0: handover = the move from the old launcher to the app; the old launcher reports the download, the app
+// its guided setup. Not a Play: it does not count for Play first (join-gate PLAY_MODES).
+export const MODES = ["install", "play", "first_install", "update", "already_running", "uninstall", "game_check", "handover"] as const;
 /** What a run of each kind is called on the admin pages. */
-export const MODE_LABEL: Record<string, string> = { install: "Setup.bat", play: "Play", first_install: "First install", update: "Update", already_running: "Already running", uninstall: "Uninstall", game_check: "Game check" };
+export const MODE_LABEL: Record<string, string> = { install: "Setup.bat", play: "Play", first_install: "First install", update: "Update", already_running: "Already running", uninstall: "Uninstall", game_check: "Game check", handover: "Hand-over" };
 export type Mode = (typeof MODES)[number];
 
 const short = (max: number) => z.string().max(max).transform((v) => v.trim());

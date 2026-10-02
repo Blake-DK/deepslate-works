@@ -53,3 +53,25 @@ export function installerInfo(sidecar: unknown, zip: Actual | null, script: Actu
     downloadSize: exe ? exe.size : zip.size,
   };
 }
+
+/** What the mod list says about installers to whoever asks (planner, 2026-10-02, the hand-over to the app). */
+export type InstallerOffer = InstallerInfo & {
+  /** The app, offered to the old launcher under a name only 2.2.0 reads: 2.2.0 asks first (Update now / Not now). */
+  app?: InstallerInfo["exe"];
+  /** Settings → Joining "Minimum installer version", so 2.2.0 knows when "Not now" can no longer join. */
+  minimum?: string | null;
+};
+
+/** The app says who it is ("DeepslateWorks/3.0.0 (Windows)"); the PowerShell launcher sends PowerShell's own agent. */
+export const isApp = (userAgent: string | null | undefined): boolean => /^DeepslateWorks\/\d/.test(userAgent ?? "");
+
+/**
+ * The app gets `exe` (its own self-update). The old launcher never does: 2.1.3 moves to the app the moment it sees
+ * `exe`, without asking, so it is shown no exe, updates itself to the current script (2.2.0) and that one asks. 2.2.0
+ * finds the app under `app`, with the minimum installer version.
+ */
+export function installerFor(info: InstallerInfo | null, userAgent: string | null | undefined, minimum: string): InstallerOffer | null {
+  if (!info) return null;
+  if (isApp(userAgent)) return info;
+  return { ...info, exe: null, app: info.exe, minimum: minimum || null };
+}

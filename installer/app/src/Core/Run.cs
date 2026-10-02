@@ -40,6 +40,10 @@ namespace DeepslateWorks
         public bool DryRun;
         public bool AllowAll;                       // tests and --console: every permission taken as given
         public bool NoLaunch;                       // the Extras tab's download: do not open the launcher at the end
+        /// <summary>3.1.0: the window's go-ahead once the game is ready (countdown, Play, or straight away); blocks this
+        /// run's thread until then. False: not started (the window closed). Null: start as soon as it is ready.</summary>
+        public Func<bool> WaitForGo;
+        public bool HandOver;                       // 3.1.0: opened to move over from the old launcher (guided setup first)
         public ModsCheck ModsCheck;                 // 2.1.0: the last check of mods\ in this run (the report's `mods`)
         public string PackCheckDir;                 // 2.1.0: mods\ and the PC set, for the report of a run that stops part-way
         public List<object> PackCheckFiles;

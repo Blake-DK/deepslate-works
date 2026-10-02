@@ -24,27 +24,29 @@ namespace DeepslateWorks
         {
             var mutex = new Mutex(true, Env.AppMutexName, out var created);
             var signal = new EventWaitHandle(false, EventResetMode.AutoReset, Env.AppShowEvent);
+            var play = new EventWaitHandle(false, EventResetMode.AutoReset, Env.AppPlayEvent);
             if (!created)
             {
                 Native.GrantForeground();   // the open window may take the foreground from this process
-                signal.Set();
+                // 3.1.0: the website's Play button asks the open window to play; a shortcut only brings it to the front
+                if (args != null && args.Link != "") play.Set(); else signal.Set();
                 try { using (var up = new EventWaitHandle(false, EventResetMode.ManualReset, Env.AppUpEvent)) up.Set(); } catch { }
-                Log.Line("the window is already open: brought to the front");
-                signal.Dispose(); mutex.Dispose();
+                Log.Line("the window is already open: brought to the front" + (args != null && args.Link != "" ? ", asked to play" : ""));
+                signal.Dispose(); play.Dispose(); mutex.Dispose();
                 return 0;
             }
             try
             {
                 // before any window: its own taskbar button (2.0.3), never grouped under another program
                 try { Native.SetCurrentProcessExplicitAppUserModelID(Env.AppUserModelId); } catch (Exception e) { Log.Line("window: " + e.Message); }
-                var ui = new AppUi(run ?? new DeepslateWorks.Run(), false) { ShowSignal = signal };
+                var ui = new AppUi(run ?? new DeepslateWorks.Run(), false) { ShowSignal = signal, PlaySignal = play, FromWebsite = args != null && args.Link != "" };
                 ui.Open();
                 return 0;
             }
             finally
             {
                 try { mutex.ReleaseMutex(); } catch { }
-                mutex.Dispose(); signal.Dispose();
+                mutex.Dispose(); signal.Dispose(); play.Dispose();
             }
         }
 
@@ -102,6 +104,43 @@ namespace DeepslateWorks
                     ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "4-all-active.png")));
                 }
                 else Log.Line("No extras on this PC yet: press Play once with extras allowed, then take the Extras screenshots.");
+
+                // 3.1.0: the guided setup after the old launcher, the countdown, the countdown stopped, the Play settings
+                var real3 = ui.Consent;
+                ui.ShowGuidedStep(1);
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "5-guided-1-welcome.png")));
+                var items = HandOver.NewItems();
+                foreach (var it in items) it.Status = "ok";
+                items[0].Detail = Env.AppHome; items[4].Detail = "Kept: 9 permission answers, your extras, your sign-in, pack 0.1.0+43978c76";
+                items[5].Detail = UiText.MoveVerified; items[6].Detail = "DeepslateWorks.ps1, DeepslateWorks.vbs, DeepslateWorks.ico";
+                ui.SimMove(items, false);
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "6-guided-2-move-over.png")));
+                var bad = HandOver.NewItems();
+                for (int i = 0; i < 4; i++) bad[i].Status = "ok";
+                bad[0].Detail = Env.AppHome; bad[4].Status = "ok"; bad[4].Detail = "Kept: 9 permission answers, your extras, your sign-in, pack 0.1.0+43978c76";
+                bad[5].Status = "failed"; bad[5].Detail = "the website's Play button does not start it";
+                bad[6].Status = "failed"; bad[6].Detail = "Waiting for the check above";
+                ui.SimMove(bad, true);
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "6b-guided-2-retry.png")));
+                ui.Consent = new Dictionary<string, ConsentAnswer>();
+                foreach (var st in Consents.Steps()) if (st.FirstRun) Consents.SetAnswer(ui.Consent, st.Id, st.Id == "reports" ? "decline" : "allow", 1);
+                ui.ShowGuidedStep(3);
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "7-guided-3-permissions.png")));
+                ui.Consent = real3;
+                ui.ShowGuidedStep(4);
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "8-guided-4-extras.png")));
+                ui.SimReady(true, 5);
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "9-countdown.png")));
+                ui.SimReady(true, 3);
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "9b-countdown-3.png")));
+                ui.SimReady(false);
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "10-countdown-stopped.png")));
+                var sd = ui.MakeSettings();
+                sd.WindowStartupLocation = WindowStartupLocation.Manual; sd.Left = -20000; sd.Top = 0; sd.ShowInTaskbar = false;
+                sd.Show(); ui.Pump();
+                files.Add(SavePng(sd.Content as FrameworkElement, Path.Combine(dir, "11-play-settings.png")));
+                sd.Close();
+                ui.Guided = 0;
             }
             finally { w.Close(); }
             return files;

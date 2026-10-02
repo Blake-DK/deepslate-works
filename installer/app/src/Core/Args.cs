@@ -9,7 +9,7 @@ namespace DeepslateWorks
     {
         public string Link = "";          // the deepslate:// link, when Windows starts this from the Play button on the site
         public bool Uninstall, Yes, VerifyExtras, Console, AllowAll, DryRun, NoLaunch;
-        public string Screenshots = "", Root = "", From = "", MigratedFrom = "";
+        public string Screenshots = "", Root = "", From = "", MigratedFrom = "";   // MigratedFrom: -HandOver (3.1.0), or 2.1.3's -MigratedFrom
         public int WaitFor;
         public string[] PretendRunning = new string[0];
         public List<string> Unknown = new List<string>();
@@ -37,7 +37,7 @@ namespace DeepslateWorks
                     case "screenshots": a.Screenshots = Next(); break;
                     case "root": a.Root = Next(); break;
                     case "from": a.From = Next(); break;
-                    case "migratedfrom": a.MigratedFrom = Next(); break;
+                    case "migratedfrom": case "handover": a.MigratedFrom = Next(); break;
                     case "waitfor": int.TryParse(Next(), out a.WaitFor); break;
                     case "pretendrunning": a.PretendRunning = Next().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries); break;
                     default: a.Unknown.Add(raw); break;

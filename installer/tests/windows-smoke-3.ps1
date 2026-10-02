@@ -59,6 +59,26 @@ Remove-Item $log -Force -ErrorAction SilentlyContinue
 $version = ((Get-Item $Exe).VersionInfo.ProductVersion -split '\+')[0]
 "{0}: {1:N0} bytes" -f $Exe, (Get-Item $Exe).Length | Write-Host
 
+# 3.1.0 (planner A5): the old launcher 2.2.0 downloads the app itself (HttpWebRequest, no "from the internet" mark) and
+# starts it with Start-Process. Does SmartScreen stop that? First, before Windows has seen this exe run from a download.
+Write-Host "Started the way the old launcher 2.2.0 starts it (its own download: no Zone.Identifier)"
+$hoDir = Join-Path $env:TEMP "handover-check"
+[void][IO.Directory]::CreateDirectory($hoDir)
+$hoExe = Join-Path $hoDir "DeepslateWorks.exe"
+Copy-Item $Exe $hoExe -Force
+Check "no 'from the internet' mark on it" (-not (Get-Item $hoExe -Stream Zone.Identifier -ErrorAction SilentlyContinue))
+$hoShots = Join-Path $Out "handover-check"
+$p = Start-Process -FilePath $hoExe -ArgumentList @("-Screenshots", ('"{0}"' -f $hoShots)) -PassThru
+$smart = $null
+for ($i = 0; $i -lt 40 -and -not $p.HasExited -and -not $smart; $i++) {
+  Start-Sleep -Milliseconds 500
+  $smart = @(Get-Windows | Where-Object { (Get-Process -Id $_.pid -ErrorAction SilentlyContinue).ProcessName -eq 'smartscreen' -or $_.title -match 'Windows protected your PC|SmartScreen' })[0]
+}
+if ($smart) { Save-Screen "0-handover-smartscreen.png"; Get-Process smartscreen -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue }
+Check ("SmartScreen does not stop the app the old launcher fetched and started" + $(if ($smart) { " (it showed: the 2.2.0 question must say so; set `$HandOverSmartScreen)" } else { "" })) (-not $smart)
+try { $p.WaitForExit(60000) | Out-Null } catch {}
+Get-ChildItem $hoShots -Filter *.png -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue   # not this run's pictures
+
 Write-Host "A fresh download (marked as from the internet, as a browser does)"
 $dlDir = Join-Path $env:USERPROFILE "Downloads"
 [void][IO.Directory]::CreateDirectory($dlDir)
@@ -143,7 +163,7 @@ Write-Host "The window's states, drawn (-Screenshots)"
 $p = Start-Process -FilePath $homeExe -ArgumentList @("-Screenshots", ('"{0}"' -f (Join-Path $Out "window"))) -Wait -PassThru
 Check "-Screenshots drew the window" ($p.ExitCode -eq 0 -and @(Get-ChildItem (Join-Path $Out "window") -Filter *.png -ErrorAction SilentlyContinue).Count -gt 0)
 
-Write-Host "A 2.x PC: the bridge put the exe in place and started it (-MigratedFrom); the exe takes the PC over"
+Write-Host "A PC on the old launcher: 2.2.0 put the app in place and started it (-HandOver); the guided setup takes the PC over"
 $vbs = Join-Path $homeDir "DeepslateWorks.vbs"
 foreach ($f in @("DeepslateWorks.ps1", "DeepslateWorks.vbs", "DeepslateWorks.ico", "install.ps1.bak")) { Set-Content -Path (Join-Path $homeDir $f) -Value "2.x" }
 $key = "HKCU:\Software\Classes\deepslate"
@@ -153,24 +173,73 @@ New-ItemProperty -Path $key -Name "URL Protocol" -Value "" -PropertyType String 
 Set-Item -Path "$key\shell\open\command" -Value ('"{0}\System32\wscript.exe" "{1}" "%1"' -f $env:SystemRoot, $vbs)
 $sh = New-Object -ComObject WScript.Shell
 $lnk = $sh.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Desktop")) "Deepslate Works.lnk")); $lnk.TargetPath = "$env:SystemRoot\System32\wscript.exe"; $lnk.Arguments = ('"{0}" -From desktop' -f $vbs); $lnk.Save()
-# what 2.x answered (the same consent.json): the Play link and the shortcuts allowed. "signin" left unanswered so the
-# window stops at that card and never starts a run against the real site.
+# what 2.x answered (the same consent.json). "signin" left unanswered: the Permissions step then shows that one card
+# (only what is new is asked), and Play is never pressed, so nothing talks to the real site.
 $steps = [ordered]@{}; foreach ($s in @("launcher", "java", "neoforge", "mods", "profile", "shortcuts", "reports", "extras")) { $steps[$s] = [ordered]@{ answer = "allow"; level = 1; at = "2026-10-01T12:00:00" } }
-[IO.File]::WriteAllText((Join-Path $homeDir "consent.json"), (ConvertTo-Json -InputObject ([ordered]@{ version = 1; steps = $steps }) -Depth 4))
+$steps["reports"].answer = "decline"
+$consentText = ConvertTo-Json -InputObject ([ordered]@{ version = 1; steps = $steps }) -Depth 4
+[IO.File]::WriteAllText((Join-Path $homeDir "consent.json"), $consentText)
+$extrasText = '{"version":1,"choices":{"iris":true},"shader":"light"}'
+[IO.File]::WriteAllText((Join-Path $homeDir "extras.json"), $extrasText)
+$sum = (Get-FileHash $homeExe -Algorithm SHA256).Hash.ToLower()
+[IO.File]::WriteAllText((Join-Path $homeDir "handover.json"), ('{{"version":1,"from":"2.2.0","app":"{0}","sha256":"{1}","state":"downloaded","at":"2026-10-02T06:00:00Z","steps":{{}}}}' -f $version, $sum))
+function Hand-State { try { return [string]((Get-Content -Raw (Join-Path $homeDir "handover.json") | ConvertFrom-Json).state) } catch { return "" } }
+function Press([string]$name) {
+  $w = Main-Window | Select-Object -First 1
+  if (-not $w) { return $false }
+  $root = [Windows.Automation.AutomationElement]::FromHandle($w.handle)
+  $b = Find-Named $root $name
+  if (-not $b) { return $false }
+  $b.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
+  Start-Sleep -Milliseconds 800
+  return $true
+}
+function Shot-Window([string]$name) { $w = Main-Window | Select-Object -First 1; if ($w) { Save-Crop $w.handle $name } else { Save-Screen $name } }
 $up = Wait-Up
-Start-Process -FilePath $homeExe -ArgumentList @("-From", "update", "-MigratedFrom", "2.1.3")
-Check "the exe's window opened" ($up.WaitOne(60000))
-Start-Sleep -Seconds 10   # the switch-over runs right after the window opens; the run itself goes on to the site and may fail here
+Start-Process -FilePath $homeExe -ArgumentList @("-From", "update", "-HandOver", "2.2.0")
+Check "the app's window opened" ($up.WaitOne(60000))
+Start-Sleep -Seconds 3
+Shot-Window "3a-guided-1-welcome.png"
+$cmd0 = [string](Get-Item "$key\shell\open\command" -ErrorAction SilentlyContinue).GetValue("")
+Check "nothing moved before Next: the old launcher still has the Play link" ($cmd0 -match 'wscript' -and (Test-Path (Join-Path $homeDir "DeepslateWorks.ps1")))
+Check "Welcome -> Next" (Press "Next")
+for ($i = 0; $i -lt 30 -and (Hand-State) -ne "moved"; $i++) { Start-Sleep -Seconds 1 }
+Start-Sleep -Seconds 1
+Shot-Window "3b-guided-2-move-over.png"
+Check ("Move over finished (handover.json: " + (Hand-State) + ")") ((Hand-State) -eq "moved")
 $cmd = [string](Get-Item "$key\shell\open\command" -ErrorAction SilentlyContinue).GetValue("")
-Check ("the Play link now starts the exe: " + $cmd) ($cmd -eq ('"{0}" "%1"' -f $homeExe))
+Check ("the Play link now starts the app: " + $cmd) ($cmd -eq ('"{0}" "%1"' -f $homeExe))
 $lnk = $sh.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Desktop")) "Deepslate Works.lnk"))
-Check ("the desktop shortcut starts the exe: " + $lnk.TargetPath + " " + $lnk.Arguments) ($lnk.TargetPath -eq $homeExe -and $lnk.Arguments -eq "-From desktop")
+Check ("the desktop shortcut starts the app: " + $lnk.TargetPath + " " + $lnk.Arguments) ($lnk.TargetPath -eq $homeExe -and $lnk.Arguments -eq "-From desktop")
 Check "the Start Menu has it and its uninstall" ((Test-Path (Join-Path ([Environment]::GetFolderPath("Programs")) "Deepslate Works.lnk")) -and (Test-Path (Join-Path ([Environment]::GetFolderPath("Programs")) "Uninstall Deepslate Works.lnk")))
 $left = @("DeepslateWorks.ps1", "DeepslateWorks.vbs", "DeepslateWorks.ico", "install.ps1.bak" | Where-Object { Test-Path (Join-Path $homeDir $_) })
-Check ("the 2.x files are gone (left: " + ($left -join ", ") + ")") ($left.Count -eq 0)
+Check ("the old launcher's files are gone (left: " + ($left -join ", ") + ")") ($left.Count -eq 0)
+Check "consent.json and extras.json carried over untouched" (([IO.File]::ReadAllText((Join-Path $homeDir "consent.json")) -eq $consentText) -and ([IO.File]::ReadAllText((Join-Path $homeDir "extras.json")) -eq $extrasText))
+Check "Move over -> Next" (Press "Next")
+Shot-Window "3c-guided-3-permissions.png"
+Check "Permissions: only the new card, answered with Allow all" (Press "Allow all")
+Start-Sleep -Seconds 2
+Shot-Window "3d-guided-4-extras.png"
+Check "Extras -> Continue" (Press "Continue")
+Start-Sleep -Seconds 2
+Shot-Window "3e-guided-done.png"
+Check ("the move is done (handover.json: " + (Hand-State) + ")") ((Hand-State) -eq "done")
+$c = Get-Content -Raw (Join-Path $homeDir "consent.json") | ConvertFrom-Json
+Check "what was answered before stayed answered (reports: Not now), the new card was added" (($c.steps.reports.answer -eq "decline") -and ($c.steps.signin.answer -eq "allow"))
 $text = $(if (Test-Path $log) { Get-Content -Raw $log } else { "" })
-Check "the log says it came from 2.1.3" ($text -match 'updated from 2\.1\.3')
-Save-Screen "3-migrated.png"
+Check "the log says it came from 2.2.0" ($text -match 'updated from 2\.2\.0')
+$sinceHandOver = $(if ($text.LastIndexOf('updated from 2.2.0') -ge 0) { $text.Substring($text.LastIndexOf('updated from 2.2.0')) } else { "" })
+Check "nothing started the game: no run after the guided setup" ($sinceHandOver -and -not ($sinceHandOver -match 'window: starting the install steps'))
+Stop-Ours
+Write-Host "Started again after it was cut off: a move that is not done opens the guided setup again"
+$st = Get-Content -Raw (Join-Path $homeDir "handover.json") | ConvertFrom-Json; $st.state = "moved"; [IO.File]::WriteAllText((Join-Path $homeDir "handover.json"), ($st | ConvertTo-Json))
+$up = Wait-Up
+Start-Process -FilePath $homeExe -ArgumentList @("-From", "desktop")
+Check "the window opened" ($up.WaitOne(60000))
+Start-Sleep -Seconds 3
+Shot-Window "3f-resumed.png"
+$text = $(if (Test-Path $log) { Get-Content -Raw $log } else { "" })
+Check "it carried on at Permissions (handover.json said moved)" ($text -match 'the guided setup \(handover\.json: moved\)')
 Stop-Ours
 Copy-Item $log (Join-Path $Out "deepslate-works.log") -ErrorAction SilentlyContinue
 

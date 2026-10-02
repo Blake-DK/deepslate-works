@@ -323,6 +323,7 @@ namespace DeepslateWorks
             AskLevel = level;
             SetPromptButtons(true, false);
             UpdateContinueButton();
+            SyncUpdateRow();   // 3.3.1: no Update button on the question cards, from the first frame
         }
 
         void SaveAnswers()
@@ -1164,6 +1165,7 @@ namespace DeepslateWorks
             HideCountdown();
             ClearPlayBody();
             SetPromptButtons(false, false);
+            SyncUpdateRow();   // 3.3.1: no Update button in the guided setup
             StepLabel.Text = UiText.StepLabel(n);
             StepLabel.Visibility = Visibility.Visible;
             ReviewLink.IsEnabled = false;   // the Permissions step is step 3

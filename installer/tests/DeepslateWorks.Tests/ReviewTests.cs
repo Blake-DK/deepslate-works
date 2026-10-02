@@ -159,8 +159,9 @@ namespace DeepslateWorks.Tests
         static void AssertRowFits(Window w, string view)
         {
             var root = (FrameworkElement)w.Content;
-            var links = (FrameworkElement)((FrameworkElement)w.FindName("ReviewLink")).Parent;
-            var settings = (FrameworkElement)((FrameworkElement)w.FindName("SettingsLink")).Parent;
+            // the links are Hyperlinks (not laid out themselves): their TextBlocks are
+            var links = (FrameworkElement)((FrameworkContentElement)w.FindName("ReviewLink")).Parent;
+            var settings = (FrameworkElement)((FrameworkContentElement)w.FindName("SettingsLink")).Parent;
             double linksRight = Math.Max(Right(links, root), Right(settings, root));
             var tab = (FrameworkElement)w.FindName("Tabs");
             double tabRight = Right(tab, root);

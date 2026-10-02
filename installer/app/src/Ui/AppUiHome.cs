@@ -429,8 +429,11 @@ namespace DeepslateWorks
             VoteTab.Visibility = Visibility.Collapsed;
             if (wasOn || Tabs.SelectedItem == null) Tabs.SelectedItem = PlayTab;
             Log.Line("window: every vote answered: Play is open");
-            if (Mode == "idle") { PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true; PlayHint.Visibility = Visibility.Collapsed; }
-            else if (Mode == "ready" && runWaiting) { PlayHint.Visibility = Visibility.Collapsed; OnReady(); }
+            if (Mode == "idle" || Mode == "ready")
+            {
+                PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true; PlayHint.Visibility = Visibility.Collapsed;
+                if (Mode == "ready" && runWaiting) OnReady();   // the game is ready: the countdown rules decide again
+            }
             ShowWakeHint();
         }
 

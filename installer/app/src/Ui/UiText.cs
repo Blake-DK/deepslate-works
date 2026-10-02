@@ -76,6 +76,20 @@ namespace DeepslateWorks
         public const string BallotOpen = "Open the vote on the site", BallotDone = "I've voted";
         public const string BallotChecking = "Checking with the site...";
 
+        // ---- the Update button (3.3.0, planner 2026-10-02) ---------------------------------------------------------
+        public const string UpdatingTitle = "Updating";
+        public const string UpdatingStatus = "Bringing everything up to date. The game won't start.";
+        public const string UpdateStarting = "Starting...";
+        public const string UpToDateTitle = "Up to date";
+        public const string UpToDateStatus = "Up to date. Press Play when you're ready.";
+        public const string UpdateFailedTitle = "The update didn't finish";
+        public const string UpdateFailedLine = "Press Update to try again.";
+        public const string OpenTheLog = "Open the log";
+        public const string UpdateWaitTitle = "Waiting for the game to close";
+        public const string UpdateWaitStatus = "Close the game to finish. It will finish by itself when you do.";
+        public const string UpdateWaitLine = "Downloaded. Finishes when the game closes.";
+        public const string PlayAfterUpdate = "Play starts the game once the update has finished.";
+
         // ---- the guided setup after the old launcher (3.1.0, planner A3) -------------------------------------------
         public static readonly string[] GuidedSteps = { "Welcome", "Move over", "Permissions", "Extras" };
         public static string StepLabel(int n) => string.Format("Step {0} of {1}: {2}", n, GuidedSteps.Length, GuidedSteps[n - 1]);

@@ -20,7 +20,12 @@ namespace DeepslateWorks
     {
         static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
-        static bool IsControl(Exception e) => e is RunFailed || e is NeedAnswer || e is StepDeclined || e is AlreadyRunning;
+        static bool IsControl(Exception e) => e is RunFailed || e is NeedAnswer || e is StepDeclined || e is AlreadyRunning || e is UpdateDeferred;
+
+        /// <summary>Is the game running (seam: the tests say so). 3.3.0: Update leaves mods\ alone while it is.</summary>
+        public static Func<bool> GameRunningNow = () => Extras.GameRunning();
+        /// <summary>3.3.0: where Update puts what it downloaded while the game was running (moved in when it has closed).</summary>
+        public const string WaitingFolder = ".waiting";
 
         public static string Execute(Run run)
         {
@@ -79,7 +84,7 @@ namespace DeepslateWorks
             var wake = new Wake();
             if (token != null)
             {
-                if (!run.DryRun) wake.Waking = wake.Request(run, Wake.Call) == "waking";
+                if (!run.DryRun && !run.UpdateOnly) wake.Waking = wake.Request(run, Wake.Call) == "waking";   // 3.3.0: Update never wakes it
                 run.Step("Checking for updates");
                 manifest = GetManifest(run, wake, out var unauthorized);
                 if (unauthorized) { manifest = null; token = null; run.Token = null; run.Note("Your sign-in expired; signing in again"); }
@@ -91,7 +96,7 @@ namespace DeepslateWorks
             {
                 run.RequestConsent("signin");
                 token = SignIn(run);
-                if (!wake.Waking) wake.Waking = wake.Request(run, Wake.Call) == "waking";
+                if (!wake.Waking && !run.UpdateOnly) wake.Waking = wake.Request(run, Wake.Call) == "waking";
                 manifest = GetManifest(run, wake, out var unauthorized);
                 if (unauthorized) throw run.Fail("The site did not take the new sign-in. Press Play again.");
             }
@@ -125,6 +130,18 @@ namespace DeepslateWorks
             run.Mode = GetRunMode(prev, J.Str(manifest, "hash") ?? "");
             if (run.Mode == "update") run.Note(string.Format("Pack {0} {1} {2}", J.Str(prev, "version"), '→', run.PackSeen));
             Log.Line(string.Format("{0} mods for Minecraft {1} / NeoForge {2}; this run: {3}", files.Count, mc, neo, run.Mode));
+
+            // ---- 3.3.0, Update with the game running: the app is done (above); the changed mods go into .waiting\ and the
+            // rest waits until the game has closed (the window starts the same run again then, and it moves them in) ----
+            if (run.UpdateOnly && !run.DryRun && GameRunningNow())
+            {
+                run.Step("Downloading for when the game closes");
+                var n = PrefetchWaiting(Path.Combine(gameDir, "mods"), Path.Combine(gameDir, WaitingFolder), files, (url, outFile) => Http.Download(url, outFile));
+                run.Tick(n == 0 ? "Nothing to download" : string.Format("{0} file{1} downloaded, waiting for the game to close", n, n == 1 ? "" : "s"));
+                Log.Line("update: the game is running; the rest finishes when it closes");
+                run.Reported = true;   // the run that finishes reports
+                throw new UpdateDeferred(n);
+            }
 
             // ---- the launcher: there? Open is fine until something it would overwrite has to be written -------------
             run.RequestConsent("launcher");
@@ -218,6 +235,8 @@ namespace DeepslateWorks
                 keep.Add(name);
                 if (File.Exists(dest) && string.Equals(Sha512Hex(dest), sha, StringComparison.OrdinalIgnoreCase)) continue;
                 if (run.DryRun) { run.Note(string.Format("(dry run) would download {0}", name)); continue; }
+                // 3.3.0: already downloaded by an Update while the game was running: moved in, not fetched again
+                if (TakeWaiting(Path.Combine(gameDir, WaitingFolder), name, sha, dest)) { fetched++; Log.Line("moved in from .waiting: " + name); continue; }
                 var r = SaveModFile(J.Str(f, "url"), dest, sha, staging, (url, outFile) => Http.Download(url, outFile));
                 if (r == "wrong") throw run.Fail(string.Format("{0} downloaded wrong. Press Play again.", name));
                 if (r == "in use") throw run.Fail(string.Format("{0} is in use. Close Minecraft (the game, not only the launcher), then press Play again.", name));
@@ -241,6 +260,7 @@ namespace DeepslateWorks
                 }
             }
             run.Tick(string.Format("{0} mods in place ({1} downloaded)", files.Count, fetched));
+            ClearWaiting(Path.Combine(gameDir, WaitingFolder));
             // "Updated 3 mods" on the Play tab, in place of asking about routine updates (planner)
             if (run.Mode != "first_install" && fetched + dropped > 0)
             {

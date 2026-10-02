@@ -9,6 +9,9 @@ namespace DeepslateWorks
     public sealed class NeedAnswer : Exception { public string StepId { get; } public int Level { get; } public NeedAnswer(string id, int level) : base("needs an answer: " + id) { StepId = id; Level = level; } }
     /// <summary>A step needed to play was answered Not now (2.0.x: engine exit 21).</summary>
     public sealed class StepDeclined : Exception { public string StepId { get; } public StepDeclined(string id) : base("declined: " + id) { StepId = id; } }
+    /// <summary>3.3.0: Update found the game running. The app is updated and every changed mod is downloaded into
+    /// .waiting\; the rest finishes by itself when the game closes. Not a failure, and no report yet.</summary>
+    public sealed class UpdateDeferred : Exception { public int Files { get; } public UpdateDeferred(int files) : base("waiting for the game to close") { Files = files; } }
     /// <summary>Another copy holds the lock (2.0.x: exit 3).</summary>
     public sealed class AlreadyRunning : Exception { public AlreadyRunning() : base("already running") { } }
 
@@ -47,6 +50,11 @@ namespace DeepslateWorks
         /// <summary>3.2.0: started by opening the app (desktop, Start Menu), not by Play: the game waits for Play, and a
         /// window closed before that sends no report when nothing changed (it is not "pressed Play and closed it").</summary>
         public bool OpenedOnly;
+        /// <summary>3.3.0, the Update button: everything Play runs before the launch, then stop. No launcher, no game,
+        /// no countdown, no wake; the report says "update_only"; with the game running it waits for it (UpdateDeferred).</summary>
+        public bool UpdateOnly;
+        /// <summary>What the report calls this run: the Update button's own kind, else the mode (first_install, update, play).</summary>
+        public string ReportMode => UpdateOnly && (Mode == "play" || Mode == "update" || Mode == "first_install") ? "update_only" : Mode;
         public ModsCheck ModsCheck;                 // 2.1.0: the last check of mods\ in this run (the report's `mods`)
         public string PackCheckDir;                 // 2.1.0: mods\ and the PC set, for the report of a run that stops part-way
         public List<object> PackCheckFiles;

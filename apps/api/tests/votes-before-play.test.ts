@@ -4,6 +4,7 @@ import { doorReason, waitFor } from "../src/players/limbo.js";
 import { doorRule } from "../src/shared/access.js";
 import { describeAction, kindOf } from "../src/shared/events.js";
 import { checkChoices, dueToClose, isOpen, VOTE_FIRST_TEXT } from "../src/shared/polls.js";
+import { PLAY_MODES } from "../src/shared/join-gate.js";
 
 // Planner 2026-10-02, "votes before play". The door's order becomes linked → open for them → must-vote polls answered
 // → Play first → in. A member with an open must-vote poll they have not answered waits in the room ("There's a new
@@ -85,8 +86,14 @@ describe("the door, in its new order: linked → open for them → votes answere
     ["player, live, Play first off, voted", player, true, false, null, 0, null],
     ["admin, vote open", admin, false, true, null, 3, null], // asked like everyone else, never held
     ["admin, live, vote open", admin, true, true, run(5), 1, null],
+    // app 3.3.0: the Update button's report ("update_only") counts like Play or an install (atTheDoor reads PLAY_MODES)
+    ["Player, live, vote 0, last report Update and fresh", player, true, true, run(8), 0, null],
   ] as const)("%s", (_who, user, live, requirePlay, r, unvoted, expected) => {
     expect(doorReason(user, { live, requirePlay, windowMin: 30, run: r, pack: PACK, now, minInstaller: "1.5.0", unvoted })).toBe(expected);
+  });
+
+  it("takes the Update button's report as the latest run that went through", () => {
+    expect(PLAY_MODES as readonly string[]).toContain("update_only");
   });
 
   it("is the same rule as the shared doorRule", () => {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace DeepslateWorks
@@ -9,6 +10,7 @@ namespace DeepslateWorks
     {
         public string Link = "";          // the deepslate:// link, when Windows starts this from the Play button on the site
         public bool Uninstall, Yes, VerifyExtras, Console, AllowAll, DryRun, NoLaunch;
+        public bool Update;               // 3.3.0: the app updated itself during an Update and carries on with it
         public string Screenshots = "", Root = "", From = "", MigratedFrom = "";   // MigratedFrom: -HandOver (3.1.0), or 2.1.3's -MigratedFrom
         public int WaitFor;
         public string[] PretendRunning = new string[0];
@@ -34,6 +36,7 @@ namespace DeepslateWorks
                     case "allowall": a.AllowAll = true; break;
                     case "dryrun": a.DryRun = true; break;
                     case "nolaunch": a.NoLaunch = true; break;
+                    case "update": a.Update = true; break;
                     case "screenshots": a.Screenshots = Next(); break;
                     case "root": a.Root = Next(); break;
                     case "from": a.From = Next(); break;
@@ -53,12 +56,22 @@ namespace DeepslateWorks
             return a;
         }
 
+        /// <summary>3.3.0: what an Update's restart after a self-update passes on: the switches, never a link (a link run
+        /// would reset them), and -Update so the new copy goes straight on with it.</summary>
+        public static string[] ForUpdate(string[] restartArgs)
+        {
+            var r = (restartArgs ?? new string[0]).Where(x => !IsPlayLink(x) && !string.Equals(x, "-Update", StringComparison.OrdinalIgnoreCase)).ToList();
+            r.Add("-Update");
+            return r.ToArray();
+        }
+
         /// <summary>What a restart after a self-update passes on: only the link for a link run; else the switches that matter.</summary>
         public string[] ForRestart()
         {
             if (Link != "") return new[] { Link };
             var r = new List<string>();
             if (Console) r.Add("-Console");
+            if (Update) r.Add("-Update");
             if (NoLaunch) r.Add("-NoLaunch");
             return r.ToArray();
         }

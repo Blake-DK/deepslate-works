@@ -39,7 +39,7 @@ namespace DeepslateWorks
             {
                 // before any window: its own taskbar button (2.0.3), never grouped under another program
                 try { Native.SetCurrentProcessExplicitAppUserModelID(Env.AppUserModelId); } catch (Exception e) { Log.Line("window: " + e.Message); }
-                var ui = new AppUi(run ?? new DeepslateWorks.Run(), false) { ShowSignal = signal, PlaySignal = play, FromWebsite = args != null && args.Link != "" };
+                var ui = new AppUi(run ?? new DeepslateWorks.Run(), false) { ShowSignal = signal, PlaySignal = play, FromWebsite = args != null && args.Link != "", AutoUpdate = args != null && args.Update };
                 ui.Open();
                 return 0;
             }
@@ -158,6 +158,19 @@ namespace DeepslateWorks
                 ui.SimVoted(SiteHome.ParsePoll(Json.Parse(HomeSamples.Voted)));
                 ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "15-vote-results.png")));
                 ui.SimDone();
+
+                // 3.3.0: the Update button: something waiting, mid-update, up to date, and the game running
+                var at = new DateTime(2026, 10, 2, 15, 42, 0);
+                ui.SimCheck(new Waiting { ModsChanged = 3, PackNew = true, AppVersion = "3.3.1", CheckedAt = at });
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "16-update-waiting.png")));
+                ui.SimUpdating("Setting up the mods");
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "17-updating.png")));
+                ui.SimUpToDate();
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "18-up-to-date.png")));
+                ui.SimCheck(new Waiting { ModsChanged = 3, PackNew = true, CheckedAt = at });
+                ui.SimGameRunning();
+                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "19-update-game-running.png")));
+                ui.SimEnd();
             }
             finally { w.Close(); }
             return files;

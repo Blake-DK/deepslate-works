@@ -45,7 +45,9 @@ namespace DeepslateWorks
         public static void SavePackList(string path, object manifest)
         {
             var files = PackFiles(manifest).Select(f => (object)J.O("slug", J.Str(f, "slug") ?? "", "name", ModLabel(f), "filename", J.Str(f, "filename") ?? "", "sha512", J.Str(f, "sha512") ?? "")).ToList();
-            Json.WriteFile(path, J.O("version", J.Str(manifest, "version") ?? "", "server", J.Str(manifest, "server_address") ?? "", "savedAt", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), "files", files));
+            // 3.3.0: the pack's hash and its settings files too, so the Update button can say what changed without the mod list
+            var configs = J.Arr(manifest, "configs").Select(c => (object)J.O("path", J.Str(c, "path") ?? "", "sha256", J.Str(c, "sha256") ?? "")).ToList();
+            Json.WriteFile(path, J.O("version", J.Str(manifest, "version") ?? "", "hash", J.Str(manifest, "hash") ?? "", "server", J.Str(manifest, "server_address") ?? "", "savedAt", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), "files", files, "configs", configs));
         }
 
         public static object ReadPackList(string path)

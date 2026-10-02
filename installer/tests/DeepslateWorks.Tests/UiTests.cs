@@ -49,7 +49,8 @@ namespace DeepslateWorks.Tests
             var n = Named(AppWindow.AppXaml);
             Assert.Equal("TabControl", n["Tabs"]);
             foreach (var t in new[] { "PlayTab", "VoteTab", "ExtrasTab", "LogTab" }) Assert.Equal("TabItem", n[t]);
-            foreach (var t in new[] { "StartButton", "VoteButton" }) Assert.Equal("Button", n[t]);
+            foreach (var t in new[] { "StartButton", "VoteButton", "UpdateButton" }) Assert.Equal("Button", n[t]);
+            Assert.Equal("TextBlock", n["UpdateLine"]);
             foreach (var t in new[] { "ServerLine", "ServerHint", "ServerOnline", "NewsText", "VoteTitle", "VoteNote", "VoteError" }) Assert.Equal("TextBlock", n[t]);
             Assert.Equal("StackPanel", n["VoteBody"]);
             foreach (var t in new[] { "PlayTitle", "PlayStatus", "PlayChanged", "HeadlineText", "ErrorLine", "ExtrasStatus", "ChecksTitle" }) Assert.Equal("TextBlock", n[t]);
@@ -235,7 +236,9 @@ namespace DeepslateWorks.Tests
         // 3.1.0: the guided setup (with a failed Move over), the countdown, the countdown stopped, Play settings
         static readonly string[] NewShots = { "5-guided-1-welcome.png", "6-guided-2-move-over.png", "6b-guided-2-retry.png", "7-guided-3-permissions.png", "8-guided-4-extras.png", "9-countdown.png", "9b-countdown-3.png", "10-countdown-stopped.png", "11-play-settings.png",
             // 3.2.0: the server on the Play tab (a wake; switched off with an admin's Start), the Vote tab, Play shut, the results
-            "12-play-server-waking.png", "13-play-switched-off-admin.png", "14-vote.png", "14b-play-vote-first.png", "15-vote-results.png" };
+            "12-play-server-waking.png", "13-play-switched-off-admin.png", "14-vote.png", "14b-play-vote-first.png", "15-vote-results.png",
+            // 3.3.0: the Update button: waiting, mid-update, up to date, the game running
+            "16-update-waiting.png", "17-updating.png", "18-up-to-date.png", "19-update-game-running.png" };
 
         [WindowsFact] public void With_the_extras_list_it_draws_the_Extras_tab_too()
         {

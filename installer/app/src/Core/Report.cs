@@ -169,7 +169,7 @@ namespace DeepslateWorks
                 "setupProblems", run.SetupChecked ? (object)run.SetupProblems.Cast<object>().ToList() : null,
                 "extras", extras,
                 "mods", ModsBlock(run),
-                "mode", run.Mode,
+                "mode", run.ReportMode,
                 "outcome", outcome,
                 "failedStep", failed,
                 "durationSec", (int)(DateTime.Now - run.Started).TotalSeconds,

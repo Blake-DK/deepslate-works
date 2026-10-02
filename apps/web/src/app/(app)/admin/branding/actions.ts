@@ -23,9 +23,7 @@ export async function saveBrandingAction(formData: FormData) {
     ...current,
     name: text(formData, "name"),
     tagline: text(formData, "tagline"),
-    accent: text(formData, "accent").toLowerCase(),
-    accentDark: text(formData, "accentDark").toLowerCase(),
-    defaultTheme: text(formData, "defaultTheme"),
+    // accent, accentDark and defaultTheme are kept as stored: the site has one theme (docs/23 §3); accent still colours Discord's embeds
     discordInvite: text(formData, "discordInvite").trim(),
     footer: text(formData, "footer"),
     rules: text(formData, "rules").replace(/\r\n?/g, "\n"),

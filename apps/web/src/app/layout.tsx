@@ -30,25 +30,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
-// Runs before the first paint. The visitor's own choice wins; otherwise the site's default, otherwise their system's.
-const themeScript = (fallback: "light" | "dark" | "system") =>
-  `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'){t=${fallback === "system" ? "matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'" : `'${fallback}'`}}document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme='${fallback === "light" ? "light" : "dark"}'}})()`;
-
-const HEX = /^#[0-9a-fA-F]{6}$/;
-
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [b, user] = await Promise.all([getBranding(), loadCurrentUser().catch(() => null)]);
-  // docs/16 §5: the accent comes from the branding row at request time, so a change needs no rebuild.
-  // The values are checked again here: only a six-digit hex colour ever reaches the style sheet.
-  const light = HEX.test(b.accent) ? b.accent : "#b8652c";
-  const dark = HEX.test(b.accentDark) ? b.accentDark : "#d9823f";
-  const accentCss = `:root{--primary:${light};--ring:${light}}:root[data-theme="dark"]{--primary:${dark};--ring:${dark}}`;
+  // docs/23 §3: one theme with fixed colours; the branding accent no longer reaches the page (it still colours Discord's embeds).
   return (
-    <html lang="en-GB" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript(b.defaultTheme) }} />
-        <style dangerouslySetInnerHTML={{ __html: accentCss }} />
-      </head>
+    <html lang="en-GB">
       <body className="min-h-dvh flex flex-col">
         <AppFrame
           footer={

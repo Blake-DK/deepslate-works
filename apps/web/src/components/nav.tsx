@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/auth";
 import { loadCurrentUser } from "@/server/auth/session";
-import { ThemeToggle } from "./theme-toggle";
 import { getBranding } from "@/server/branding";
 import { getStatus } from "@/server/status";
 import { statusText } from "@/lib/server-status";
@@ -46,7 +45,7 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
         <header className="border-b bg-card">
           <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3">
             {brandBlock}
-            <div className="ml-auto flex items-center gap-2"><ThemeToggle />{signOutForm}</div>
+            <div className="ml-auto flex items-center gap-2">{signOutForm}</div>
           </div>
         </header>
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
@@ -98,7 +97,6 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
   const foot = (
     <div className="mt-auto flex items-center gap-1 border-t pt-3">
       <span className="min-w-0 flex-1 truncate px-2 text-sm text-muted-foreground">{user.displayName}</span>
-      <ThemeToggle />
       {signOutForm}
     </div>
   );

@@ -38,7 +38,8 @@ export async function InventoryPanel({ uuid, name, caller, fresh, refresh }: { u
         {d.pos && <span className="font-mono text-xs">{DIMENSION[d.dimension ?? ""] ?? d.dimension ?? ""} {d.pos.map((p) => Math.floor(p)).join(" ")}</span>}
       </div>
       {!live && <p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground" data-testid="inventory-offline">Player is offline. Changes can be made when they&apos;re next on.</p>}
-      <InventoryGrid initial={{ inventory: d.inventory, ender: d.ender, selectedSlot: d.selectedSlot }} player={name} uuid={uuid} editable={live} />
+      {/* The grid keeps its items in state, so a new player (or a fresh read) must start a new grid, not reuse the old one */}
+      <InventoryGrid key={`${uuid}:${r.savedAt ?? ""}:${r.fresh}:${live}`} initial={{ inventory: d.inventory, ender: d.ender, selectedSlot: d.selectedSlot }} player={name} uuid={uuid} editable={live} />
       {!live && (
         <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span>{r.fresh ? "Saved by the game just now." : saved ? `As the game last saved it, ${timeAgo(saved)}.` : "As the game last saved it."}{!r.fresh && r.running ? " The game saves every few minutes and when a player leaves." : ""}</span>

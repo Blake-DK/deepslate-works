@@ -161,6 +161,7 @@ namespace DeepslateWorks
             Timer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromMilliseconds(250) };
             Timer.Tick += (s, e) => OnTick();
             WireHome();   // 3.2.0: the server on the Play tab, and the Vote tab
+            WireUpdate(); // 3.3.0: the Update button
         }
 
         /// <summary>Show-App's ending: on screen until closed.</summary>
@@ -174,6 +175,7 @@ namespace DeepslateWorks
                 ShowFront("opened");
                 try { UpEvent = new EventWaitHandle(false, EventResetMode.ManualReset, Env.AppUpEvent); UpEvent.Set(); } catch { }   // Setup's wait may end now
                 StartHome();   // 3.2.0: the server's state, who's online, the news, the votes; every 10 s while open
+                StartUpdateChecks();   // 3.3.0: what an Update would bring; every 10 minutes while open
                 // 3.1.0: moved over from the old launcher: the guided setup, which takes the Play link and the shortcuts
                 // over itself and removes the old launcher only after checking (so no repair here)
                 if (first.HandOver) { StartGuided(); return; }
@@ -182,6 +184,7 @@ namespace DeepslateWorks
                 // countdown (PlayStart.Decide). 3.2.0 (planner 2026-10-02, the app as the front door): from the desktop or
                 // the Start Menu too it signs in, checks for updates and wakes the server straight away, then waits for Play
                 if (Consents.Unanswered(Consent).Count > 0) { firstRunAtOpen = true; ShowFirstRun(); }
+                else if (AutoUpdate) StartRun(true, false, false, true);   // 3.3.0: the app updated itself during an Update: on with it
                 else if (FromWebsite) StartRun(false, true);
                 else StartRun(false, false, true);
             };
@@ -212,6 +215,7 @@ namespace DeepslateWorks
             {
                 Timer.Stop();
                 StopHome();
+                try { UpdTimer.Stop(); } catch { }
                 Log.Written -= live;
                 try { UpEvent?.Dispose(); } catch { }
             };
@@ -369,6 +373,7 @@ namespace DeepslateWorks
                     Go(true);
                     return;
                 }
+                if (resumeUpdate) { resumeUpdate = false; StartRun(true, false, false, true); return; }   // 3.3.0: the Update goes on
                 StartRun();
                 return;
             }
@@ -449,7 +454,7 @@ namespace DeepslateWorks
         /// <summary>fromWebsite: started by deepslate://play (the countdown may follow); atOpen (3.2.0): the app was opened
         /// from the desktop or the Start Menu, so it gets the game ready and waits for Play; otherwise Play or Continue was
         /// pressed, which starts the game as soon as it is ready.</summary>
-        void StartRun(bool noLaunch = false, bool fromWebsite = false, bool atOpen = false)
+        void StartRun(bool noLaunch = false, bool fromWebsite = false, bool atOpen = false, bool updateOnly = false)
         {
             if (worker != null && worker.IsAlive) return;   // one run at a time (2.0.x only ever had one engine)
             runFromWebsite = fromWebsite; runPressed = !fromWebsite && !atOpen; runWaiting = false; keepScreen = false;
@@ -462,11 +467,18 @@ namespace DeepslateWorks
             PlayStatus.Text = noLaunch ? UiText.RunningExtrasStatus : atOpen ? UiText.OpenedStatus : UiText.RunningStatus;
             PlayButton.Content = UiText.Working;
             PlayButton.IsEnabled = false;
+            if (updateOnly) UpdateStarted(); else UpdateButton.IsEnabled = false;   // 3.3.0: one run at a time
             Used.Clear();
             LastFail = null; Changed = null; Launched = null; WatchSince = null; WatchUntil = null; GameProblem = null;
             var isFirst = !firstUsed;
             var run = NewRun(noLaunch);
             run.OpenedOnly = atOpen;
+            if (updateOnly)
+            {
+                // 3.3.0: no launcher, no countdown, no wake; an app update on the way restarts it straight into the Update
+                run.UpdateOnly = true; run.NoLaunch = true; run.WaitForGo = null;
+                run.RestartArgs = Args.ForUpdate(run.RestartArgs);
+            }
             Run.Current = run;
             Log.Line("window: starting the install steps" + (noLaunch ? " (extras only, no launcher)" : ""));
             var d = Window.Dispatcher;
@@ -493,6 +505,7 @@ namespace DeepslateWorks
         // Read-StatusLines: what each line from the install steps does here.
         void OnStatusLine(JObj o)
         {
+            if (J.Str(o, "t") == "step") UpdateStep(J.Str(o, "text"));   // 3.3.0: under "Updating…"
             var show = UiText.LineFor(o);
             if (show != null) AddPlayLine(show.Text, show.Color, show.Weight);
             switch (J.Str(o, "t"))
@@ -503,7 +516,7 @@ namespace DeepslateWorks
                 case "launched": Launched = DateTime.UtcNow; break;
                 case "ready": RefreshHome(); OnReady(); break;   // 3.1.0: the game is ready; the run waits for Go (3.2.0: votes looked at again)
                 case "versions": { var a = J.Str(o, "app"); var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(a)) VerApp = a; if (!string.IsNullOrEmpty(p)) VerCurrent = p; UpdateAppFooter(); break; }
-                case "installed": { var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(p)) VerLocal = p; UpdateAppFooter(); break; }
+                case "installed": { var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(p)) VerLocal = p; UpdateAppFooter(); if (!updating) CheckUpdates(); break; }
             }
         }
 
@@ -517,6 +530,14 @@ namespace DeepslateWorks
             foreach (var kv in Used) Consents.SetUsed(Consent, kv.Key, kv.Value);
             if (Used.Count > 0) Consents.Save(Env.ConsentPath, Consent);
             Log.Line(string.Format("window: the install steps ended, exit code {0}{1}", UiText.ExitCodeFor(err), outcome == "updated" ? " (updated)" : ""));
+            if (UpdateEnded(outcome, err)) return;   // 3.3.0: the Update button's run
+            if (outcome == "not_launched" && updateAfter)
+            {
+                updateAfter = false; keepScreen = false; Mode = "idle";
+                try { worker?.Join(TimeSpan.FromSeconds(3)); } catch { }
+                StartRun(true, false, false, true);
+                return;
+            }
             if (err is NeedAnswer na)
             {
                 var s = Consents.Step(na.StepId);
@@ -602,6 +623,7 @@ namespace DeepslateWorks
         {
             Log.Line(string.Format("window: the game was asked for ({0}): through Play", why));
             if (VotesBlock) { ShowVoteTab(); return false; }   // 3.2.0: the vote first
+            if (PlayWaitsForUpdate(why)) return true;          // 3.3.0: after the Update, once
             if (Mode == "ready") { Tabs.SelectedItem = PlayTab; Go(true); return true; }   // 3.1.0: ready and waiting: start it
             if (Mode != "idle") return false;
             Tabs.SelectedItem = PlayTab;
@@ -661,12 +683,14 @@ namespace DeepslateWorks
                 if (Guided == 0)
                 {
                     Tabs.SelectedItem = PlayTab;
-                    if (Mode == "idle" && Flow == null) StartRun(false, true);
+                    if (PlayWaitsForUpdate("the Play button on the website")) { }   // 3.3.0: it launches once the Update is done
+                    else if (Mode == "idle" && Flow == null) StartRun(false, true);
                     else if (Mode == "ready" && (Count == null || !Count.Running)) { runFromWebsite = true; runPressed = false; OnReady(); }
                     if (VotesBlock) ShowVoteTab();   // 3.2.0: the updates go on; the game waits for the vote
                 }
             }
             GatePlay();   // 3.2.0: Play stays shut while a vote waits
+            UpdateTick(); // 3.3.0: an Update waiting for the game finishes when it closes
             if (Flow != null) { StepFlow(); return; }
             // every 2 s: is the game running? Queued changes install the moment it closes (planner H, Later)
             if (DateTime.Now >= NextGameCheck)

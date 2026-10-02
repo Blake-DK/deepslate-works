@@ -19,6 +19,7 @@ const RUN: Record<string, string> = {
   update: "Play: the pack had changed and was updated",
   already_running: "Play while another copy was running: nothing done",
   uninstall: "Uninstall: Deepslate Works was taken off this PC (the account and the Minecraft link stay)",
+  update_only: "Update: the app's Update button brought this PC up to date without starting the game",
 };
 
 export const metadata: Metadata = { title: "Install report" };

@@ -177,7 +177,7 @@ describe("the door after linking: the same order as at a join", () => {
   });
 
   it("counts a run of the installer as a run of Play, but not a run that found another one already running", () => {
-    expect(PLAY_MODES).toEqual(["play", "install", "first_install", "update"]);
+    expect(PLAY_MODES).toEqual(["play", "install", "first_install", "update", "update_only"]);
     expect(PLAY_MODES).not.toContain("already_running");
   });
   it("takes no minimum when the setting is empty", () => {

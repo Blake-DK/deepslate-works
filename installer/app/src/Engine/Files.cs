@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
@@ -33,6 +34,53 @@ namespace DeepslateWorks
             try { MoveOver(part, dest); }
             catch (Exception e) { Log.Line("could not put " + dest + " in place: " + e.Message); Log.RemoveTemp(part); return "in use"; }
             return "";
+        }
+
+        // ---- 3.3.0: Update while the game is running -----------------------------------------------------------------
+        // The game holds mods\ open, so nothing there is touched: every file the pack wants that mods\ does not have
+        // (right) is downloaded into .waiting\ and checked. When the game has closed, the same run as ever goes again and
+        // moves them in (TakeWaiting) instead of downloading them a second time.
+
+        /// <summary>Downloads into waitingDir what mods\ lacks; returns how many files are waiting there now.</summary>
+        public static int PrefetchWaiting(string modsDir, string waitingDir, IEnumerable<object> files, Action<string, string> fetch)
+        {
+            Directory.CreateDirectory(waitingDir);
+            int n = 0;
+            foreach (var f in files)
+            {
+                var name = Path.GetFileName(J.Str(f, "filename") ?? "");
+                var sha = J.Str(f, "sha512") ?? "";
+                if (name.Length == 0) continue;
+                var dest = Path.Combine(modsDir, name);
+                if (File.Exists(dest) && string.Equals(Sha512Hex(dest), sha, StringComparison.OrdinalIgnoreCase)) continue;
+                var ready = Path.Combine(waitingDir, name);
+                if (File.Exists(ready) && string.Equals(Sha512Hex(ready), sha, StringComparison.OrdinalIgnoreCase)) { n++; continue; }
+                var part = ready + ".part";
+                Log.RemoveTemp(part);
+                fetch(J.Str(f, "url"), part);
+                if (!string.Equals(Sha512Hex(part), sha, StringComparison.OrdinalIgnoreCase)) { Log.RemoveTemp(part); throw new IOException(name + " downloaded wrong"); }
+                MoveOver(part, ready);
+                Log.Line("downloaded for later: " + name);
+                n++;
+            }
+            return n;
+        }
+
+        /// <summary>A file Update downloaded while the game was running, moved into mods\ when it is the one wanted.</summary>
+        public static bool TakeWaiting(string waitingDir, string name, string sha512, string dest)
+        {
+            var ready = Path.Combine(waitingDir, Path.GetFileName(name));
+            if (!File.Exists(ready)) return false;
+            if (!string.Equals(Sha512Hex(ready), sha512 ?? "", StringComparison.OrdinalIgnoreCase)) { Log.RemoveTemp(ready); return false; }
+            try { MoveOver(ready, dest); return true; }
+            catch (Exception e) { Log.Line("could not move " + name + " in from .waiting: " + e.Message); return false; }
+        }
+
+        /// <summary>What is left in .waiting\ once mods\ is right (an older pack's file): gone.</summary>
+        public static void ClearWaiting(string waitingDir)
+        {
+            if (!Directory.Exists(waitingDir)) return;
+            foreach (var f in Directory.GetFiles(waitingDir)) Log.RemoveTemp(f);
         }
 
         /// <summary>Leftovers of a run that was stopped: part files in .downloading\ and, from installers before 1.5.0, in mods\.</summary>

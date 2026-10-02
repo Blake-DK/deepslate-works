@@ -7,14 +7,14 @@ import { checkBridge, installerVersion, readVersionFile, stampInstallerVersion }
 const INSTALLER = path.resolve(__dirname, "..", "..", "..", "installer");
 
 describe("the app's version", () => {
-  it("is written once, in installer/VERSION (the app's, 3.2.0); the old launcher (2.2) is older, so it hands over", async () => {
+  it("is written once, in installer/VERSION (the app's, 3.3.0); the old launcher (2.2) is older, so it hands over", async () => {
     const v = readVersionFile(await readFile(path.join(INSTALLER, "VERSION"), "utf8"));
     const ps1 = await readFile(path.join(INSTALLER, "DeepslateWorks.ps1"), "utf8");
-    expect(v).toBe("3.2.0");
+    expect(v).toBe("3.3.0");
     expect(installerVersion(ps1)).toBe("2.2.0");
     expect(() => checkBridge(installerVersion(ps1), v)).not.toThrow();
-    expect(() => checkBridge("3.2.0", v)).toThrow(/never offer the exe/);
-    expect(() => checkBridge("3.2.1", v)).toThrow();
+    expect(() => checkBridge("3.3.0", v)).toThrow(/never offer the exe/);
+    expect(() => checkBridge("3.3.1", v)).toThrow();
     expect(() => checkBridge(null, v)).toThrow();
   });
   it("is stamped into the download from that file", () => {

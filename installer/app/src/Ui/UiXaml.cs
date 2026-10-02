@@ -72,8 +72,10 @@ namespace DeepslateWorks
               <Button x:Name=""ResetButton"" Style=""{StaticResource Plain}"" Content=""Reset all"" Visibility=""Collapsed""/>
               <Button x:Name=""AllowAllButton"" Style=""{StaticResource Plain}"" Content=""Allow all"" Visibility=""Collapsed""/>
               <Button x:Name=""PlayButton"" Style=""{StaticResource Primary}"" Content=""Play"" MinWidth=""190"" FontSize=""15""/>
+              <Button x:Name=""UpdateButton"" Style=""{StaticResource Plain}"" Content=""Update"" MinWidth=""118"" Margin=""8,0,0,0"" Padding=""12,6""/>
             </StackPanel>
             <TextBlock x:Name=""PlayHint"" HorizontalAlignment=""Right"" Margin=""0,4,0,0"" Foreground=""#666"" FontSize=""12"" Visibility=""Collapsed""/>
+            <TextBlock x:Name=""UpdateLine"" HorizontalAlignment=""Right"" TextAlignment=""Right"" TextWrapping=""Wrap"" MaxWidth=""380"" Margin=""0,4,0,0"" Foreground=""#444"" FontSize=""12"" Visibility=""Collapsed""/>
           </StackPanel>
         </DockPanel>
         <ScrollViewer VerticalScrollBarVisibility=""Auto""><StackPanel x:Name=""PlayBody""/></ScrollViewer>
@@ -172,6 +174,7 @@ namespace DeepslateWorks
             // 3.2.0 (planner 2026-10-02): the server on the Play tab, and the Vote tab
             "ServerBox", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "StartButton", "SiteLink", "NewsBox", "NewsText", "NewsMeta",
             "VoteTab", "VoteStep", "VoteTitle", "VoteNote", "VoteBody", "VoteButton", "VoteError",
+            "UpdateButton", "UpdateLine",   // 3.3.0
         };
 
         /// <summary>Every name the settings window looks up in SettingsXaml.</summary>

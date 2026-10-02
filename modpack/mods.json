@@ -78,6 +78,12 @@
       "votable": true
     },
     {
+      "id": "adventure",
+      "title": "Bosses & trials",
+      "blurb": "Not up for vote. Big fights in dungeons out in the world, and wave fights you open yourself. Bosses drop their own gear; seasons count who beat what.",
+      "votable": false
+    },
+    {
       "id": "server",
       "title": "On the server only",
       "blurb": "Runs on the server, nothing to install on your PC.",
@@ -2180,6 +2186,199 @@
       "exclusiveGroup": null,
       "description": "Library needed by Rechiseled, for its connected textures. Only on PCs.",
       "wiki": "https://modrinth.com/mod/fusion-connected-textures",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "l_enders-cataclysm",
+      "name": "L_Ender's Cataclysm",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Eight or so large bosses, each in its own dungeon out in the world, with gear of their own to win.",
+      "wiki": "https://modrinth.com/mod/l_enders-cataclysm",
+      "videos": [
+        {
+          "title": "The Ultimate Guide to Cataclysm",
+          "url": "https://www.youtube.com/watch?v=ItPOKokmrIo"
+        },
+        {
+          "title": "L_Ender's Cataclysm mod | All Bosses",
+          "url": "https://www.youtube.com/watch?v=wBe84st6vm0"
+        },
+        {
+          "title": "Full Showcase of L_Enders Cataclysm Mod",
+          "url": "https://www.youtube.com/watch?v=NUknJfNq09k"
+        }
+      ],
+      "version": "latest",
+      "requires": [],
+      "guide": "game",
+      "howTo": "Big dungeons generate in the world: a ruined citadel, a sunken city, a burning arena and more, each guarded by a boss. Most are fights for a **group**: go together and bring food, armour and a bed nearby. What they drop is gear you can't get any other way."
+    },
+    {
+      "slug": "mowzies-mobs",
+      "name": "Mowzie's Mobs",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Four smaller bosses and some odd creatures met while exploring. Good for two or three players.",
+      "wiki": "https://modrinth.com/mod/mowzies-mobs",
+      "videos": [
+        {
+          "title": "Minecraft Mowzie's Mobs All Bosses Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=uFAIlnjUNb4"
+        },
+        {
+          "title": "Mowzie's Mobs mod | All Bosses",
+          "url": "https://www.youtube.com/watch?v=sXA6KJYqOS0"
+        },
+        {
+          "title": "The Mod That Makes Minecraft Bosses ACTUALLY HARD",
+          "url": "https://www.youtube.com/watch?v=NmhCMBxHdSw"
+        }
+      ],
+      "version": "latest",
+      "requires": [],
+      "guide": "game",
+      "howTo": "You'll meet these while exploring: a frost beast in snowy plains, a sun chief in savanna villages, an armoured knight in a hidden hall underground. Each fight has a pattern: watch it once before you swing. Their drops are unusual tools and weapons."
+    },
+    {
+      "slug": "gateways-to-eternity",
+      "name": "Gateways to Eternity",
+      "category": "adventure",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Trials as wave fights: open a gateway, beat the waves, take the reward.",
+      "wiki": "https://github.com/Shadows-of-Fire/GatewaysToEternity",
+      "videos": [
+        {
+          "title": "Gateways Of Eternity Mod! Get Loot from Portals!",
+          "url": "https://www.youtube.com/watch?v=zfskRKXd5Wc"
+        },
+        {
+          "title": "Gateways to Eternity Mod Tutorial",
+          "url": "https://www.youtube.com/watch?v=d3gyNze2yLI"
+        }
+      ],
+      "version": "latest",
+      "requires": [],
+      "guide": "game",
+      "howTo": "A gateway is an item: use it on open ground and a portal opens that sends **waves** of monsters at you. Beat every wave before the timer runs out and it pays out its reward. Walk too far away and it fails. Season trials come as gateways.",
+      "note": "Held: Apothic Attributes changes combat (docs/20 \u00a73), waiting for the planner"
+    },
+    {
+      "slug": "edf-remastered",
+      "name": "Ender Dragon Fight Remastered",
+      "category": "adventure",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "The Ender Dragon gets a second phase and 500 health. Runs on the server: nothing on your PC.",
+      "wiki": "https://modrinth.com/mod/edf-remastered",
+      "videos": [
+        {
+          "title": "POV: The Ender Dragon Starts Trying (Ender Dragon Fight Remastered)",
+          "url": "https://www.youtube.com/watch?v=8n_7fZu1A6Y"
+        }
+      ],
+      "version": "latest",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
+      "slug": "multiplayerbosses",
+      "name": "Multiplayer Bosses",
+      "category": "adventure",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Boss health and loot go up with the number of players nearby.",
+      "wiki": "https://modrinth.com/mod/multiplayerbosses",
+      "videos": [],
+      "version": "latest",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
+      "slug": "lionfish-api",
+      "name": "Lionfish API",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by L_Ender's Cataclysm.",
+      "wiki": "https://modrinth.com/mod/lionfish-api",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "curios",
+      "name": "Curios API",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by L_Ender's Cataclysm.",
+      "wiki": "https://modrinth.com/mod/curios",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "geckolib",
+      "name": "GeckoLib",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Mowzie's Mobs.",
+      "wiki": "https://modrinth.com/mod/geckolib",
+      "videos": [],
+      "version": "latest",
+      "requires": []
+    },
+    {
+      "slug": "apothic-attributes",
+      "name": "Apothic Attributes",
+      "category": "adventure",
+      "side": "both",
+      "enabled": false,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Gateways to Eternity.",
+      "wiki": "https://modrinth.com/mod/apothic-attributes",
       "videos": [],
       "version": "latest",
       "requires": []

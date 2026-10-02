@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-01T19:40:40.565Z",
+  "generatedAt": "2026-10-02T18:25:51.714Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "4362ce7a542f3a3ce0050ec092b3767349055975ee2b6da95a41a27968b73845",
+  "hash": "1759caceae76ef00df142b97a0b1a65d53961f303bd32c862021b645fca7c5fe",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -331,6 +331,28 @@
       "channels": "required"
     },
     {
+      "slug": "curios",
+      "name": "Curios API",
+      "projectId": "vvuO3ImH",
+      "versionId": "yohfFbgD",
+      "versionNumber": "9.5.1+1.21.1",
+      "versionType": "release",
+      "filename": "curios-neoforge-9.5.1+1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/vvuO3ImH/versions/yohfFbgD/curios-neoforge-9.5.1%2B1.21.1.jar",
+      "sha512": "5981a267686b744e7e3c227f78cbcd5267c14ac6979a28e814695f4589273998563147207fef4a5cdb7cdbdc39797cd95d9e4abadb55869f18e02a38d0654ae5",
+      "sha1": "418fcd42e3a7844c9bdc71c9b6401fdb3894e0c4",
+      "size": 410690,
+      "side": "both",
+      "requiredBy": [
+        "l_enders-cataclysm"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
+    },
+    {
       "slug": "custom-window-title",
       "name": "Custom Window Title",
       "projectId": "RGH5gtzF",
@@ -367,6 +389,26 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
+      },
+      "channels": "none"
+    },
+    {
+      "slug": "edf-remastered",
+      "name": "Ender Dragon Fight Remastered",
+      "projectId": "HQsBdHGd",
+      "versionId": "5OYoqItD",
+      "versionNumber": "5.0.2+mod",
+      "versionType": "release",
+      "filename": "edf-remastered-5.0.2.jar",
+      "url": "https://cdn.modrinth.com/data/HQsBdHGd/versions/5OYoqItD/edf-remastered-5.0.2.jar",
+      "sha512": "4bb2774e373e9a6c744f9226c48a29e10a602a06a48bc739f6e703176833c75b7e35f4c5a59cf16a3c3598fed7800d782c93a19ff1be1cf628336e2fcc0e3bf4",
+      "sha1": "01badac01410bca4624fed803d9c777a43162c3d",
+      "size": 6841557,
+      "side": "server",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "required"
       },
       "channels": "none"
     },
@@ -511,6 +553,28 @@
       "channels": "none"
     },
     {
+      "slug": "geckolib",
+      "name": "GeckoLib",
+      "projectId": "8BmcQJ2H",
+      "versionId": "Grwn5rUB",
+      "versionNumber": "4.9.3",
+      "versionType": "release",
+      "filename": "geckolib-neoforge-1.21.1-4.9.3.jar",
+      "url": "https://cdn.modrinth.com/data/8BmcQJ2H/versions/Grwn5rUB/geckolib-neoforge-1.21.1-4.9.3.jar",
+      "sha512": "8dfa5f8c57224a5e34e5098367ea9819ca6dc9c11357cd3062c16da3455c8bd1a483098af7383debc4b9ce8e4d7ab3fdc799b415644eb829da83eb72a7335dfd",
+      "sha1": "5cfe835472a5c5457ae9ac192d9d7b317454d5ac",
+      "size": 634531,
+      "side": "both",
+      "requiredBy": [
+        "mowzies-mobs"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "optional"
+      },
+      "channels": "optional"
+    },
+    {
       "slug": "get-it-together-drops",
       "name": "Get It Together, Drops!",
       "projectId": "T0OUgf8P",
@@ -633,6 +697,48 @@
       "channels": "none"
     },
     {
+      "slug": "l_enders-cataclysm",
+      "name": "L_Ender's Cataclysm",
+      "projectId": "46KJle7n",
+      "versionId": "PsPYpoCC",
+      "versionNumber": "3.33",
+      "versionType": "release",
+      "filename": "L_Ender's Cataclysm 1.21.1-3.33.jar",
+      "url": "https://cdn.modrinth.com/data/46KJle7n/versions/PsPYpoCC/L_Ender%27s%20Cataclysm%201.21.1-3.33.jar",
+      "sha512": "289f6e8364a6e432f34803a47cff8381899a1df0fdc675170323b43fd1c09579b1320d8b4e0de5df65c609b738d450c13c89e240d6d79f607888da26b7724947",
+      "sha1": "f0310277167c82fd16a5c2bab220b5c5c262f133",
+      "size": 73375667,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "optional"
+    },
+    {
+      "slug": "lionfish-api",
+      "name": "Lionfish API",
+      "projectId": "FoVacERa",
+      "versionId": "fTRMVgyZ",
+      "versionNumber": "3.1",
+      "versionType": "release",
+      "filename": "lionfishapi-3.1.jar",
+      "url": "https://cdn.modrinth.com/data/FoVacERa/versions/fTRMVgyZ/lionfishapi-3.1.jar",
+      "sha512": "fdd90f19d0424c3a837111291d6ac1547d62cbcedd43b74d3a8946912f9c5212a5ea239a6969eccf678289bcb77cbb9a937db01fdaf60e57826f9a99893d19cb",
+      "sha1": "353ca00ed118eb67cf11085abbbd699884722326",
+      "size": 91596,
+      "side": "both",
+      "requiredBy": [
+        "l_enders-cataclysm"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "optional"
+    },
+    {
       "slug": "lithium",
       "name": "Lithium",
       "projectId": "gvQqBUqZ",
@@ -751,6 +857,26 @@
         "server": "unsupported"
       },
       "channels": "none"
+    },
+    {
+      "slug": "mowzies-mobs",
+      "name": "Mowzie's Mobs",
+      "projectId": "BFbX9xcm",
+      "versionId": "xgAXTl17",
+      "versionNumber": "1.8.2",
+      "versionType": "release",
+      "filename": "mowziesmobs-1.21.1-1.8.2.jar",
+      "url": "https://cdn.modrinth.com/data/BFbX9xcm/versions/xgAXTl17/mowziesmobs-1.21.1-1.8.2.jar",
+      "sha512": "ab10d2f759df613d5094bac26c5a8bbe144786699018f7e4ae027fc4a86632aa7f96206f2c8be9970338eadef42539614a19b41d0d70b6216c3ed1c4c4421f0a",
+      "sha1": "d64475cd77444b056ece6472c79d40293dc63c6c",
+      "size": 36042925,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "noisium",
@@ -943,14 +1069,14 @@
       "slug": "sophisticated-backpacks",
       "name": "Sophisticated Backpacks",
       "projectId": "TyCTlI4b",
-      "versionId": "pJxNzk4X",
-      "versionNumber": "1.21.1-3.26.6.2174",
+      "versionId": "Igmp9PwW",
+      "versionNumber": "1.21.1-3.26.7.2182",
       "versionType": "release",
-      "filename": "sophisticatedbackpacks-1.21.1-3.26.6.2174.jar",
-      "url": "https://cdn.modrinth.com/data/TyCTlI4b/versions/pJxNzk4X/sophisticatedbackpacks-1.21.1-3.26.6.2174.jar",
-      "sha512": "de88746802c53786c09defe878ff4e766b246a1146cd417f4985765bf032cedfb89f08778e7350820bdf67a3514ec63e58e9d8e76856332c265c1adbf7ef84b4",
-      "sha1": "c4f240d4071835631da9b698481ec607b9f1f8be",
-      "size": 1239554,
+      "filename": "sophisticatedbackpacks-1.21.1-3.26.7.2182.jar",
+      "url": "https://cdn.modrinth.com/data/TyCTlI4b/versions/Igmp9PwW/sophisticatedbackpacks-1.21.1-3.26.7.2182.jar",
+      "sha512": "e720916477f8faaea3ac45609f557e5997db3ea8e83d10b06d8ffd3b0a0e1348dc17b00f773c1c7d0495f795b12d002f17e99d0bf67008c1efe6c77c28d5a015",
+      "sha1": "765da4f602b17376909d810bffc39691fae9d583",
+      "size": 1239138,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
@@ -963,14 +1089,14 @@
       "slug": "sophisticated-core",
       "name": "Sophisticated Core",
       "projectId": "nmoqTijg",
-      "versionId": "blXGSmAb",
-      "versionNumber": "1.21.1-1.5.2.2343",
+      "versionId": "nSoNwJfm",
+      "versionNumber": "1.21.1-1.5.5.2363",
       "versionType": "release",
-      "filename": "sophisticatedcore-1.21.1-1.5.2.2343.jar",
-      "url": "https://cdn.modrinth.com/data/nmoqTijg/versions/blXGSmAb/sophisticatedcore-1.21.1-1.5.2.2343.jar",
-      "sha512": "ecaf6db1348d61934cbce15e39bb211d9af33ae7d8f2a1bb770c911f317807c15f67450363c92b9fe178eb12e922842ddc733b54d09784b359b7677b9318b852",
-      "sha1": "86a5cf18608b3feec76c17a8ccac4de36d660fbc",
-      "size": 1809363,
+      "filename": "sophisticatedcore-1.21.1-1.5.5.2363.jar",
+      "url": "https://cdn.modrinth.com/data/nmoqTijg/versions/nSoNwJfm/sophisticatedcore-1.21.1-1.5.5.2363.jar",
+      "sha512": "8bc1f6f05c0ca0722b58210283fb3deb31155d3185936053e92c90f41bc61220e49d23bf83791f09121afcbe30ba469c5a04134b1b8595591e33a2c1cfc16768",
+      "sha1": "7efd2447a97bf572e572764bd9939aa0ed7b8c32",
+      "size": 1811070,
       "side": "both",
       "requiredBy": [
         "sophisticated-backpacks"

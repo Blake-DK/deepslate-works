@@ -30,6 +30,8 @@ namespace DeepslateWorks
     }
     public sealed class BallotInfo { public string Id, Title, Url; }
     public sealed class NewsInfo { public string Body, At, Author; }
+    /// <summary>3.4.0 (docs/21 §7): a player in the world, with the UUID whose head the site serves (null: not known).</summary>
+    public sealed class OnlinePlayer { public string Name, Uuid; }
     /// <summary>One thing to answer before Play, in the order the site gives (oldest first): a poll, or the mod ballot.</summary>
     public sealed class VoteItem { public PollInfo Poll; public BallotInfo Ballot; public string Id => Poll?.Id ?? Ballot?.Id; }
 
@@ -40,6 +42,7 @@ namespace DeepslateWorks
         public string Site, Name;
         public ServerInfo Server = new ServerInfo();
         public List<string> Online = new List<string>();
+        public List<OnlinePlayer> Players = new List<OnlinePlayer>();   // 3.4.0: the same players with their UUIDs
         public NewsInfo News;
         public List<VoteItem> Votes = new List<VoteItem>();
         public string VoteFirstButton = SiteHome.VoteFirstButton;
@@ -65,6 +68,11 @@ namespace DeepslateWorks
                 Server = ParseServer(J.Obj(j, "server")),
                 Online = J.Strs(j, "online"),
             };
+            foreach (var p in J.Arr(j, "players"))
+            {
+                var name = J.Str(p, "name");
+                if (!string.IsNullOrEmpty(name)) h.Players.Add(new OnlinePlayer { Name = name, Uuid = IsUuid(J.Str(p, "uuid")) ? J.Str(p, "uuid").ToLowerInvariant() : null });
+            }
             var n = J.Obj(j, "news");
             if (n != null && !string.IsNullOrWhiteSpace(J.Str(n, "body"))) h.News = new NewsInfo { Body = J.Str(n, "body"), At = J.Str(n, "at"), Author = J.Str(n, "author") };
             var v = J.Obj(j, "votes");
@@ -161,6 +169,22 @@ namespace DeepslateWorks
             var names = h.Online.Take(8).ToList();
             return "Online now: " + string.Join(", ", names) + (h.Online.Count > names.Count ? string.Format(" and {0} more", h.Online.Count - names.Count) : "");
         }
+
+        /// <summary>3.4.0 (docs/21 §7): whose heads go before "Online now", in the same order and as many as the line names
+        /// (8). A site before 3.4.0 sends names only: those get the placeholder, nothing is fetched.</summary>
+        public static List<OnlinePlayer> HeadsFor(HomeInfo h)
+        {
+            if (h == null || !h.SignedIn) return new List<OnlinePlayer>();
+            var all = h.Players.Count > 0 ? h.Players : h.Online.Select(n => new OnlinePlayer { Name = n }).ToList();
+            return all.Take(8).ToList();
+        }
+
+        static readonly System.Text.RegularExpressions.Regex UuidRe = new System.Text.RegularExpressions.Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+        /// <summary>A dashed UUID, so nothing else ever goes into a head's address.</summary>
+        public static bool IsUuid(string s) => s != null && UuidRe.IsMatch(s);
+
+        /// <summary>A member's head on this app's own site (it fetches it from Crafatar; the app never does).</summary>
+        public static string HeadUrl(string uuid) => Env.PortalUrl + "/api/app/head/" + uuid + ".png";
 
         /// <summary>A must-vote poll left unanswered keeps Play shut (the door would hold them anyway); nothing else does.</summary>
         public static bool BlocksPlay(HomeInfo h) => h != null && h.SignedIn && h.Votes.Count > 0;

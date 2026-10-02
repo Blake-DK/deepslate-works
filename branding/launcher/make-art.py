@@ -169,10 +169,32 @@ def button_tile(size=16, light=(0x35, 0x8F, 0x5B), mid=(0x2E, 0x7D, 0x5B), dark=
     return img
 
 
+def head_placeholder(size=8):
+    """A player's head before the real one arrives (docs/21 §7): a plain deepslate-grey face, two eyes, a mouth. Not a
+    skin from the game. Drawn at 8x8 and scaled 3x to the 24 px the app shows."""
+    img = Image.new("RGB", (size, size), SLATE[4])
+    px = img.load()
+    r = random.Random(23)
+    for y in range(size):
+        for x in range(size):
+            if r.random() < 0.25:
+                px[x, y] = SLATE[5] if r.random() < 0.5 else SLATE[3]
+    for x in range(size):        # a darker rim, so the head reads on any card
+        px[x, 0] = px[x, size - 1] = SLATE[2]
+    for y in range(size):
+        px[0, y] = px[size - 1, y] = SLATE[2]
+    for x, y in ((2, 3), (5, 3)):  # the eyes
+        px[x, y] = SLATE[0]
+    for x in (3, 4):               # the mouth
+        px[x, 5] = SLATE[1]
+    return img
+
+
 if __name__ == "__main__":
     save(deepslate_tile(), "deepslate-tile.png", 1)      # 16x16, the source
     save(deepslate_tile(), "deepslate-tile@3x.png", 3)   # 48x48, what the app tiles (already scaled, so WPF never smooths it)
     save(deepslate_tile(), "deepslate-tile@4x.png", 4)   # for the docs and the HTML mock-up
     save(hero(), "hero.png", 4)                          # 1200x336
     save(button_tile(), "play-button.png", 4)            # 64x64, nine-grid 12 px
+    save(head_placeholder(), "head-placeholder.png", 3)  # 24x24, the head before the real one (docs/21 §7)
     print("done")

@@ -18,6 +18,7 @@ namespace DeepslateWorks
         public const string Up = @"{ ""signedIn"": true, ""site"": ""https://deepslate.dsw.test"", ""name"": ""Pabulum"", ""admin"": false,
   ""server"": { ""state"": ""online"", ""line"": ""Online, 2 playing"", ""label"": ""Online"", ""tone"": ""good"", ""hint"": ""The server is up."", ""wake"": { ""phase"": ""idle"", ""leftS"": null, ""line"": null }, ""canStart"": false },
   ""online"": [""Bramble09"", ""samoyedx""],
+  ""players"": [ { ""name"": ""Bramble09"", ""uuid"": ""069a79f4-44e9-4726-a5be-fca90e38aaf5"" }, { ""name"": ""samoyedx"", ""uuid"": null } ],
   ""news"": { ""body"": ""Season 1 mods: the vote closes on Sunday. Boss mods are in the pack from day one."", ""at"": ""yesterday"", ""author"": ""m1owl"", ""image"": null },
   ""votes"": { ""polls"": [], ""ballot"": null, ""order"": [], ""button"": ""Vote first, it takes ten seconds"" } }";
 

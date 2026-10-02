@@ -57,6 +57,8 @@
     <EmbeddedResource Include="..\..\branding\launcher\fonts\PixelifySans-Bold.ttf" LogicalName="assets/PixelifySans-Bold.ttf" />
     <EmbeddedResource Include="..\..\branding\launcher\fonts\PixelifySans-Regular.ttf" LogicalName="assets/PixelifySans-Regular.ttf" />
     <EmbeddedResource Include="..\..\branding\launcher\fonts\OFL-PixelifySans.txt" LogicalName="assets/OFL-PixelifySans.txt" />
+    <!-- docs/21 §7: the grey head shown until a player's real one arrives; read straight from the exe, never written out -->
+    <EmbeddedResource Include="..\..\branding\launcher\head-placeholder.png" LogicalName="assets/head-placeholder.png" />
     <AssemblyAttribute Include="DeepslateWorks.BuildInfoAttribute">
       <_Parameter1>$(PortalUrl)</_Parameter1>
     </AssemblyAttribute>

@@ -128,6 +128,7 @@ namespace DeepslateWorks
             ServerHint.Text = hint; ServerHint.Visibility = string.IsNullOrEmpty(hint) ? Visibility.Collapsed : Visibility.Visible;
             var online = SiteHome.OnlineLine(h);
             ServerOnline.Text = online; ServerOnline.Visibility = string.IsNullOrEmpty(online) ? Visibility.Collapsed : Visibility.Visible;
+            ShowHeads(h);   // 3.4.0 (docs/21 §7): their heads before the names
             StartButton.Visibility = h.Admin && s.CanStart ? Visibility.Visible : Visibility.Collapsed;
             if (h.News != null)
             {

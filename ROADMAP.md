@@ -72,7 +72,7 @@ Last updated 2026-09-29, 19:00 UTC: the first friend is in, and the recommended 
 - **The map**: deleted on 2026-09-29 evening to be rendered clean from Admin → Server ("Render the map only"), about an hour.
 - **Waiting on a person**: Play first with a friend who is not an admin; the mods tried in the game (guns, quarry, vein mining, trees by hand); a five-minute planned restart watched through; whether someone who has just linked should also be held for Play first.
 - **Vote close**: apply results, lock, build, sync, flip "We're live".
-- **Seasons, bosses and trials (docs/20)**: step 1 under way: Cataclysm, Mowzie's Mobs, Gateways to Eternity and the Ender Dragon remaster in a new non-votable "Bosses & trials" category, started once on the server and reported in docs/11. Must land before the world is made again after the vote closes. Steps 2 to 6 wait for the planner.
+- **Seasons, bosses and trials (docs/20)**: step 1 done 2026-10-02 (Cataclysm, Mowzie's Mobs and the Ender Dragon remaster in a new non-votable "Bosses & trials" category, started once; Gateways and Multiplayer Bosses held for the planner; report in docs/11). Must land before the world is made again after the vote closes. Steps 2 to 6 wait for the planner.
 - **Bedrock** through NetherNet (TCP 19132 + UDP 19134–19153): forwards set, external join not yet tested.
 - **World terrain**: spawn's 1500 blocks were pre-generated before Create, Farmer's Delight and the rest went on, so their ores and crops only appear beyond that. One more reset after the vote closes is the clean fix.
 

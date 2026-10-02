@@ -14,6 +14,58 @@ Deviations from docs/21:
 - Not done: §7 player heads (its own PR, it touches `web`).
 - `AssetsTests` makes the assets folder unwritable by putting a file where it would go, rather than changing the runner's permissions.
 
+## Seasons, bosses and trials · §9 step 1 report (docs/20, 2026-10-02)
+
+Step 1 only; step 2 waits for the planner to read this. PR #40 (`f2a5881`): new non-votable category `adventure` ("Bosses & trials") in `mods.json`. Lock 60 files, NeoForge 21.1.252, pack `0.1.0+72931447`. Build all, then Sync (6 jars: Cataclysm 3.33, Mowzie's Mobs 1.8.2, Ender Dragon Fight Remastered 5.0.2 server-only, curios 9.5.1, geckolib 4.9.3, lionfish-api 3.1). Started once at 18:35:45 UTC, Running, nobody online. Modrinth versions are the ones §3 lists.
+
+- **Switched on:** Cataclysm (M), Mowzie's (M), EDF (L).
+- **Listed but off:**
+  - Gateways to Eternity and its library Apothic Attributes (see below).
+  - Multiplayer Bosses (left for the planner).
+- **Sophisticated Backpacks and Core** are pinned to the builds the server runs (`pJxNzk4X`, `blXGSmAb`). Lock would have taken newer builds, and CI's `check-sides` refuses jars the server loaded that the lock no longer has. Take the pins off at the next ordinary Lock.
+
+**Time to Done:** 18.5 s from the first log line to "Done". The previous start today (18:25, without the new mods) took 17.7 s, and §3 gives 16 s. Minecraft's own "Done (1.039s)" covers only the world load.
+
+**Errors:**
+- **ERROR lines:** one, as before: the `createdeco:placard` recipe, already there without the new mods.
+- **New warnings, all harmless:**
+  - Refmap notices for the new jars.
+  - Cataclysm's block tags `needs_black_steel_tool` / `needs_monstrosity_tool` are not filled in.
+  - `corpse-server.toml` "is not correct. Correcting": NeoForge adds default keys. The pack ships no Corpse config.
+- **One "Can't keep up" (2 s):** while I ran the 19 `locate` commands below, and not otherwise.
+
+**Apothic Attributes on this pack (read from the 2.11.0 jar): it changes combat in ways the friends would notice, so Gateways is held until the planner answers.** Just by being installed:
+- **Armour:** armour goes through a new formula (`a / (a + armor)`), and toughness only resists armour pierce, so it no longer lowers damage. Iron armour hit for 6 takes about 40% of the damage (vanilla 52%). Diamond takes about 33% (vanilla 26%).
+- **Protection enchantment:** it gives 2.5% per point, capped at 85% (vanilla: 4%, capped at 80%). Full Prot IV goes from 64% to 40% reduction, so about 1.67× the damage taken.
+- **Crits:** every living attacker, mobs and bosses included, gets a 5% crit chance at ×1.5, with particles. There is no config key for it.
+- **TaCZ:** bullets roll those crits too. The part of a bullet that ignores armour skips the new armour formula, but not Protection. Against unarmoured mobs nothing else changes.
+- **Corpse:** unaffected.
+- **Also added:** 22 new attributes on every entity (neutral apart from the crits), new effects and about 37 brewing recipes, and an attributes button plus potion tooltips in the inventory.
+- **Config:** armour and Protection can be set back to vanilla in `config/apotheosis/apothic_attributes.cfg` (`[combat_rules]` formulas); the crits cannot. If the planner wants Gateways anyway, that file would go in `modpack/config/`.
+
+**Multiplayer Bosses (read from the 1.0.0 jar, not tried with two players): it does apply to Cataclysm.**
+- **Which mobs count:** it treats an entity as a boss through the `c:bosses` tag, and through its own list (which also names `cataclysm:ender_golem`). On the running server `c:bosses` holds 14: Cataclysm's ancient_remnant, ender_guardian, ignis, maledictus, netherite_monstrosity, scylla, the_harbinger, the_leviathan; Mowzie's ferrous_wroughtnaut, frostmaw, sculptor, umvuthi; plus the Ender Dragon and Wither.
+- **Health:** +100% max health per extra player within 100 blocks. This is set once when the boss loads and never lowered afterwards.
+- **Loot:** one loot bag per player.
+- **Bug:** its "Should Scale Boss Drops" switch is never read. Drop scaling follows the health switch.
+- **Status:** left off; whether to switch it on is the planner's call.
+
+**Entity ids, checked on the running server** (`execute if entity @e[type=…]`: unknown ids are refused).
+- `cataclysm:` amethyst_crab, ancient_remnant, aptrgangr, cindaria, clawdian, coral_golem, coralssus, deepling, deepling_angler, deepling_brute, deepling_priest, deepling_warlock, draugr, drowned_host, elite_draugr, ender_golem, ender_guardian, endermaptera, hippocamtus, ignis, ignited_berserker, ignited_revenant, kobolediator, koboleton, lionfish, maledictus, modern_remnant, netherite_ministrosity, netherite_monstrosity, royal_draugr, scylla, symbiocto, the_baby_leviathan, the_harbinger, the_leviathan, the_prowler, the_watcher, urchinkin, wadjet.
+- `mowziesmobs:` baby_foliaath, bluff, elokosa_follower_howler, elokosa_howler, ferrous_wroughtnaut, foliaath, frostmaw, grottol, lantern, naga, sculptor, umvuthana, umvuthana_crane, umvuthana_crane_player, umvuthana_follower_player, umvuthana_follower_raptor, umvuthana_raptor, umvuthi.
+- **Refused:** the jars' language files also name `cataclysm:ancient_ancient_remnant`, `nameless_sorcerer`, `old_netherite_monstrosity` and `mowziesmobs:boulder`. The server refuses these, so they are not entities.
+
+**Structure ids, checked on the running server** (`locate structure` from the overworld):
+- `cataclysm:` abandoned_spire, abandoned_temple, abandoned_village, acropolis, amethyst_nest, ancient_factory, cursed_pyramid, desert_occupied_village, desert_site, desert_temple, frosted_prison, sunken_city. All registered and found in the overworld.
+- `cataclysm:` burning_arena, ruined_citadel, soul_black_smith. These are registered but have no place in any overworld biome: they generate in another dimension.
+- `mowziesmobs:` frostmaw_spawn, monastery, umvuthana_grove, wrought_chamber. All registered and found.
+
+**In today's world the nearest of each is 10,000 to 14,700 blocks away:** chunks generated before the mods went in have none. This is the reason the mods must be in before the world is made again (decision 3).
+
+**Not done in this step:**
+- The LOW-tier PC in a Cataclysm dungeon (§3). It needs a player with a measured LOW tier; I have no Minecraft account. It should be done after the reset, when a dungeon is near spawn.
+- Step 2 not started.
+
 ## App 3.3.1: Review permissions fits the window (2026-10-02, planner)
 
 Review permissions is now its own view (`Ui/AppUiReview.cs`). Its row is Allow all, Reset all and Save. Save stores the answers and restores the Play view snapshot taken on entry, with no run and no game; a ready game stays ready. Leaving for another tab restores without saving. The Update button and its line show only in the Play view (`SyncUpdateRow`, every tick), never on the question cards or in the guided setup. The window's MinWidth goes from 500 to 560. Tests: `ReviewTests.cs` (view state, Save, Allow all, ready run kept, tab leave, every row fits at the minimum width). **Unverified on Windows until Alex opens it.** The CI pictures are 20 and 21.

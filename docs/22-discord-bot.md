@@ -24,7 +24,7 @@ Planner's defaults, change them if Alex says otherwise:
 2. **The bot is the Discord app that already exists** (the one the site's sign-in uses), with a bot user added. One app, one name, one picture.
 3. **Everything comes over the bot's own outgoing connection** (Discord's gateway), from `api`. No public address for Discord to call, nothing new on `web`, no change to Caddy. docs/21 §9 said voting would need an interactions address on `web`: it does not, and this replaces that sentence.
 4. **The webhooks stay.** The feed keeps posting through them, because only a webhook can post as the player with their head. The bot posts what must carry buttons (votes) and answers commands.
-5. **Chat gets its own channel**, separate from the feed. Otherwise every remark about a death lands in the game. This overrides docs/21 decision 6 ("no game chat in Discord"), on Alex's word.
+5. **Two channels, both exist already** (Alex, 2026-10-02): the text channel **#game-chat** for chat and the everyday lines, and the forum channel **season-updates** for votes and season posts. §13 says what goes where; it also changes where docs/21's lines go. This overrides docs/21 decision 3 (one feed channel) and decision 6 ("no game chat in Discord").
 6. **Who you are in Discord is who you are on the portal**: the account's `discordId`. A vote or a command from somebody whose Discord account is not on the portal is answered with "Sign in at deepslate.dsw.test once, then try again." Nothing is typed, nothing is linked by hand.
 7. **Admin commands follow the portal's roles, not Discord's.** A Discord role or "Administrator" gives nothing here.
 8. **With no bot token set, nothing changes.** docs/21 works exactly as today.
@@ -65,9 +65,9 @@ For polls (`Poll`). The season's mod ballot stays a link to the site: it is a pa
 
 ## 5. Two-way chat
 
-One channel, picked on the card (§7), for example `#minecraft-chat`.
+The channel is **#game-chat**, picked on the card (§7).
 
-**Game → Discord.** From `CHAT` events, through the Announcer, to a third webhook (`DISCORD_WEBHOOK_CHAT`), as the player with their head, the text and nothing else. Linked players only, as every feed line. Same escaping as docs/21 §3; nobody can be pinged from the game.
+**Game → Discord.** From `CHAT` events, through the Announcer, through the #game-chat webhook (`DISCORD_WEBHOOK_FEED`, §13), as the player with their head, the text and nothing else. Linked players only, as every feed line. Same escaping as docs/21 §3; nobody can be pinged from the game.
 
 - Several lines inside a second are sent as one message per player, so a busy evening stays under Discord's limit.
 - The stale rule is 2 minutes for chat: old chat is not replayed.
@@ -116,9 +116,9 @@ Registered for the group's server at start (`PUT /applications/<id>/guilds/<guil
 **Admin → Site settings → Discord** gains a "Bot" part above the feed's switches:
 
 - State: "The bot is connected as Deepslate Works#1234" / "No bot token set" / "Discord refused the token" / "Switch on Message Content Intent in the Developer Portal".
-- **Add the bot to the server**: a link built from `DISCORD_CLIENT_ID` with scopes `bot applications.commands` and the permissions View Channels, Send Messages, Embed Links, Read Message History, Add Reactions. Shown until the bot is in the server.
-- **Chat channel**: a list of the server's text channels (read by the bot). Channel ids are not secrets and live in `Setting` `discord`. Empty = no chat relay.
-- **Vote channel**: where the bot posts votes. Default: the channel the feed's webhook posts to.
+- **Add the bot to the server**: a link built from `DISCORD_CLIENT_ID` with scopes `bot applications.commands` and the permissions View Channels, Send Messages, Send Messages in Threads, Embed Links, Read Message History, Add Reactions. Shown until the bot is in the server.
+- **Chat channel**: a list of the server's text channels (read by the bot); Alex picks #game-chat. Channel ids are not secrets and live in `Setting` `discord`. Empty = no chat relay.
+- **Updates forum**: a list of the server's forum channels; Alex picks season-updates. The bot posts votes there (§13).
 - Switches: Vote buttons, Chat game → Discord, Chat Discord → game, Slash commands, each with a line of what it does. All on by default once the bot is connected, except the two chat ones, which wait for a chat channel to be picked.
 - The docs/21 line "Posting through the webhook "<name>"" becomes "Posting to #channel" by itself (status, deviation 2).
 
@@ -128,19 +128,19 @@ Registered for the group's server at start (`PUT /applications/<id>/guilds/<guil
 # The bot of the Discord app above (Developer Portal → Bot → Reset Token). With it: vote buttons, chat relay,
 # slash commands, and leaving the Discord server is noticed within seconds (docs/22). Empty = none of that.
 DISCORD_BOT_TOKEN=
-# A webhook of the chat channel: what is said in the game is posted through it (docs/22 §5).
-DISCORD_WEBHOOK_CHAT=
+# A webhook of the forum channel season-updates: votes and season posts go through it (docs/22 §13).
+DISCORD_WEBHOOK_UPDATES=
 ```
 
-`DISCORD_BOT_TOKEN` exists already; only its comment changes. api also needs `DISCORD_CLIENT_ID` (the application id, not a secret) passed in by compose.
+`DISCORD_BOT_TOKEN` exists already; only its comment changes. `DISCORD_WEBHOOK_FEED` (docs/21) is now the #game-chat webhook and its comment says so. api also needs `DISCORD_CLIENT_ID` (the application id, not a secret) passed in by compose.
 
 ## 8. What Alex does once
 
 1. **Developer Portal** (discord.com/developers/applications) → the Deepslate Works app → **Bot**: Reset Token and copy it. On the same page switch on **Message Content Intent** and **Server Members Intent**. Switch off "Public Bot" so nobody else can add it.
-2. In Discord: make the chat channel, then Edit channel → Integrations → Webhooks → New webhook, name it "Deepslate Works chat", copy the URL.
-3. Hand the token and the URL to the VPS session for `deploy/.env`, then `deploy/deploy.sh`.
+2. In Discord, two webhooks, each by Edit channel → Integrations → Webhooks → New webhook, both named "Deepslate Works": one in **#game-chat** (`DISCORD_WEBHOOK_FEED`) and one in the forum **season-updates** (`DISCORD_WEBHOOK_UPDATES`). Copy both URLs.
+3. Hand the token and the two URLs to the VPS session for `deploy/.env`, then `deploy/deploy.sh`.
 4. Admin → Site settings → Discord → **Add the bot to the server**, pick the server, Authorise.
-5. On the same card pick the chat channel.
+5. On the same card pick #game-chat as the chat channel and season-updates as the updates forum.
 
 ## 9. Rules that stay
 
@@ -157,7 +157,8 @@ DISCORD_WEBHOOK_CHAT=
 2. **Slash commands** (§6), the read-only ones first, then the admin ones.
 3. **Vote buttons** (§4), with the vote rule in one place.
 4. **Chat, game → Discord** (§5).
-5. **Chat, Discord → game** (§5), last, with its test list. Tried by Alex in the game before the switch is left on.
+5. **The two channels** (§13): the forum posts for votes and season moments, the everyday lines to #game-chat. Step 3's votes are posted the §13 way from the start.
+6. **Chat, Discord → game** (§5), last, with its test list. Tried by Alex in the game before the switch is left on.
 
 ## 11. Done when
 
@@ -174,6 +175,36 @@ DISCORD_WEBHOOK_CHAT=
 
 ## 12. Open, for Alex
 
-1. **The chat channel**: its own (default), or the same channel as the feed.
+1. ~~The chat channel.~~ Answered 2026-10-02: #game-chat for chat, the forum season-updates for votes and season posts (§13).
 2. **Who may talk into the game**: anybody who can write in the chat channel (default), or only people whose Discord account is on the portal.
 3. **Admin commands**: `/restart`, `/cancel-restart`, `/say` and `/feed` are in. Say if any should go or if one is missing.
+4. **Deaths, joins and challenges in #game-chat** (§13): the planner's reading, because that is where they show in the game. Say if they should go somewhere else or nowhere.
+5. **News** as posts in season-updates (§13), or kept out of the forum.
+
+## 13. Where things go (Alex, 2026-10-02, later the same day)
+
+Two places, and this section also re-routes docs/21's lines. `lines.ts` already returns a channel per message ("feed" or "admin"); it gains a third, "updates".
+
+| Goes to | What |
+|---|---|
+| **#game-chat** (text channel, `DISCORD_WEBHOOK_FEED`) | Game chat both ways (§5). Deaths, joins and leaves, challenges, first join ever, server up and down, new pack, the crash line. In short: what shows in the game's own chat, shows here |
+| **season-updates** (forum channel, `DISCORD_WEBHOOK_UPDATES`, and the bot) | Votes. Every season moment of docs/21 §6. News and "We're live" |
+| the private admin channel (`DISCORD_WEBHOOK_ADMIN`) | Unchanged: crashes and problems |
+
+**A forum channel has posts, not lines.** Each post is a thread with a title, so the routing is by post:
+
+- **A vote is one post.** Title: the question (at most 100 characters). First message: the vote's embed with its buttons. The count is edited on that message, the reminder and the result are replies in the same post, and the first message turns into the result as before. When the vote closes the post is left open for talk; it is not locked.
+- **A boss is one post**, made the first time something happens to that boss in a season. Title: "Ignis · Season 1". First message: who it is, where, the hint and its points, from the season file. Replies in it: "has awoken", "has fallen, first on the server, to …", later kills. So the whole story of one boss is one thread. A new boss or mob added to the pack mid-season by the planner gets its post when the season file names it ("New this week: …").
+- **A trial is one post**, made when it opens. Replies: who is first through, the rest as short lines.
+- **A season is one post**, made at its start: "Season 1 · First Blood". Replies: the new leader, the server goal's milestones, a week to go, the finale reminder, the end with the top three, the Frontier's reset. Pinned in the forum while the season runs, if the bot is there to pin it.
+- **News** is a post per item, titled by its first line. "We're live" is a post.
+- **Tags.** If the forum has tags named Vote, Boss, Trial, Season or News, the post gets the matching one. The bot does not create or change tags; Alex makes them if he wants them.
+
+**How a post is made.** By webhook: the first message is sent with `thread_name`, and Discord answers with the new thread's id; replies go to the same webhook with `thread_id`. By the bot (votes, because of the buttons): a thread created in the forum with its first message. Either way the thread id is kept on the `DiscordPost` row (new column `threadId`), keyed `poll:<id>`, `boss:<season>:<id>`, `trial:<season>:<id>`, `season:<id>`, `news:<id>`. Verify both calls against Discord before building on them; if a webhook cannot start a forum post the way this says, report.
+
+- A post that was deleted by hand in Discord: the next reply fails with "unknown channel"; make the post again once and carry on, do not retry in a loop.
+- Without the bot, votes are still posted in the forum by the webhook, without buttons, with the link to the site.
+- Without `DISCORD_WEBHOOK_UPDATES`, the updates lines are not posted anywhere. They do not fall back to #game-chat.
+- **Chat from Discord into the game is read from #game-chat only.** What people write in the forum's posts stays in Discord.
+- The card's switches stay as they are; each now shows where its lines go ("to #game-chat", "to season-updates").
+- Done when, added to §11: a vote opened on the site appears as a new post in season-updates with buttons and its result lands in the same post; a boss woken and killed is one post with two replies; a death shows in #game-chat and not in the forum; nothing written in a forum post reaches the game.

@@ -4,10 +4,12 @@ import path from "node:path";
 import { apiFetch } from "@/server/api-client";
 import { getInstaller, getLock } from "@/server/modpack/lock";
 import { getManifest } from "@/server/modpack/manifest";
+import { shownAppVersion } from "@/lib/installer-info";
 
 // Versions in the footers (planner, 2026-10-01). One source each, read at runtime or stamped at build:
 //   portal (web, api): package.json's semver + the commit and build time CI stamps (PORTAL_COMMIT, PORTAL_BUILT_AT)
-//   app: the version Build read from installer/VERSION into the download (dist/installer.json)
+//   app: the version Build read from installer/VERSION into the download (dist/installer.json): the 3.x app, not the
+//        old launcher (2.2.0) that installer.json's `version` still names (shownAppVersion)
 //   pack: the lock (mods.json's version + the lock's hash, as the mod list gives it)
 //   server: Minecraft and NeoForge from the running server's log, or the lock's when it is asleep ("from the pack")
 
@@ -50,7 +52,7 @@ export async function getVersions(): Promise<Versions> {
     web: webBuild(),
     api: api?.api ?? null,
     pack: lock && m ? `${m.version}+${lock.hash.slice(0, 8)}` : null,
-    app: installer?.version ?? null,
+    app: shownAppVersion(installer),
     server: api?.server ? { ...api.server, from: "server" } : lock ? { minecraft: lock.minecraft, neoforge: lock.neoforge, from: "pack" } : null,
   };
   cache = { at: Date.now(), v };

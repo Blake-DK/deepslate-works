@@ -64,3 +64,12 @@ describe("hand-over reports", () => {
     expect(say({ installerVersion: "3.1.0", outcome: "cancelled", failedStep: "Move over" })).toContain("carries on at the next Play");
   });
 });
+
+describe("the app version in the footers", () => {
+  it("is the app the download gives (3.x), not the old launcher's script version", async () => {
+    const { shownAppVersion } = await import("@/lib/installer-info");
+    expect(shownAppVersion(info)).toBe("3.1.0");
+    expect(shownAppVersion({ version: "2.2.0", current: "2.2.0" })).toBe("2.2.0"); // before the app was built
+    expect(shownAppVersion(null)).toBeNull();
+  });
+});

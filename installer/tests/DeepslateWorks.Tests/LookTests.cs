@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Media;
 using Xunit;
 
@@ -143,6 +145,30 @@ namespace DeepslateWorks.Tests
                     Log.Line("look test: the last line");
                     ui.PressTab("log"); ui.Pump();
                     Assert.Equal(Of("Fg"), ui.LastLogColour);
+                });
+        }
+
+        /// <summary>Every UI Automation element under a peer, depth first (what windows-smoke-3.ps1 searches).</summary>
+        static IEnumerable<AutomationPeer> Peers(AutomationPeer p)
+        {
+            foreach (var c in p.GetChildren() ?? new List<AutomationPeer>())
+            {
+                yield return c;
+                foreach (var d in Peers(c)) yield return d;
+            }
+        }
+
+        [WindowsFact] public void The_tabs_content_is_reachable_by_UI_Automation()
+        {
+            // the restyled tab strip once hid every button from UI Automation: the content host lacked its part name
+            using (new Scratch())
+                WithWindow(ui =>
+                {
+                    Assert.NotNull(ui.Tabs.Template.FindName("PART_SelectedContentHost", ui.Tabs));
+                    var root = UIElementAutomationPeer.CreatePeerForElement(ui.Window);
+                    var buttons = Peers(root).Where(p => p.GetClassName() == "Button").Select(p => p.GetName()).ToList();
+                    Assert.Contains("Play", buttons);
+                    Assert.Contains(buttons, n => n.StartsWith("✓") || n.StartsWith("●") || n == "Update");
                 });
         }
 

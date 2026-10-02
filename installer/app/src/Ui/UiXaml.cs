@@ -86,9 +86,11 @@ namespace DeepslateWorks
         <ControlTemplate TargetType=""TabControl"">
           <DockPanel>
             <Border DockPanel.Dock=""Top"" Background=""{DynamicResource Panel}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""0,0,0,1"" Padding=""14,0,14,0"">
-              <TabPanel IsItemsHost=""True""/>
+              <TabPanel x:Name=""HeaderPanel"" IsItemsHost=""True""/>
             </Border>
-            <ContentPresenter ContentSource=""SelectedContent""/>
+            <!-- the name matters: WPF shows a tab's content to UI Automation (screen readers, the smoke test) only
+                 through the part called PART_SelectedContentHost -->
+            <ContentPresenter x:Name=""PART_SelectedContentHost"" ContentSource=""SelectedContent""/>
           </DockPanel>
         </ControlTemplate>
       </Setter.Value></Setter>

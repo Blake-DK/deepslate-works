@@ -133,18 +133,21 @@ Tests: app `UpdateTests.cs` (a whole Update run against a stand-in site: newer p
 
 Tests: api `tests/votes-before-play.test.ts` (door table rows, held and released on vote, mid-session poll does not hold, admin never held, closed poll no longer blocks) and `server-state.test.ts` (wake via app); web `tests/polls.test.ts` (options, results, vote change before close, refused after); app `FrontDoorTests.cs` (Vote screen blocks Play, wake says app, open-without-play sends no report). Screenshots from `-Screenshots`: `12-play-server-waking`, `13-play-switched-off-admin`, `14-vote`, `14b-play-vote-first`, `15-vote-results`.
 
-## Where the build stands (2026-09-29, 19:00 UTC)
+## Where the build stands (2026-10-02, 20:00 UTC)
+
+Two kinds of row. **Repo**: read from `main` this evening, or from CI on it. **Last recorded**: the newest dated fact from the VPS, the server or the site, copied from elsewhere in this file. Nobody checked it again tonight: the session that wrote this table had no route to the VPS.
 
 | | |
 |---|---|
-| Deployed | `main` at `7282e71` plus docs; images from CI; migrations 0001 to 0013 applied |
-| Checks | api 188 tests, web 224, modpack 21, installer self test 63 checks (under `pwsh` on Linux); all pass |
-| The site | not live (`live = false`). 4 members, 2 of them admins, 2 linked to a Minecraft account, 1 with early access (Pabulum). Vote "Season 1 mods" open, 4 ballots |
-| The pack | `0.1.0+1a48e8ff`: 40 mods in the catalogue, 30 switched on (the recommended set among them, the vote left open), 32 files in the lock, 25 on the server, 29 on a PC, 2 settings files shipped |
-| The installer | 1.4.1. 15 reports so far, 6 of runs that went through. Alex's own copy is still 1.3.0, which cannot update itself |
-| The server | NeoForge 21.1.252, 31 entries in the loader's list, no errors at start. World of 2026-09-29, seed `-3899835130120818196`, spawn `0 105 0`, 35,721 chunks made ahead of time (before the recommended mods were on). Entrance room in `deepslate:limbo`. `pvp=false`, whitelist off |
-| The map | **empty since 18:36:33 UTC** (deleted on Alex's word). BlueMap renders while the server runs; to have it finish, Admin → Server → Pre-generation → "Render the map only" |
-| Played | 10 sessions, two players (bramble09, samoyedx). Joins, leaves, one death, starts and stops are in the event log |
+| Code | **Repo:** `main` at `35f8c86` (PR #48). Migrations 0001 to 0022 (`0022_discord_post`). Merged today: #44 app 3.4.0, the look; #45 the Discord feed; #46 players' heads |
+| Deployed | **Not checked tonight.** To go out: #44 and #46 need `deploy/deploy.sh`, then Admin → Modpack → Build (installer) for the 3.4.0 exe. #45 needs `DISCORD_WEBHOOK_FEED` (and `DISCORD_WEBHOOK_ADMIN`) in `deploy/.env` first. Last recorded deploy in this file: portal v6, 2026-09-30 05:43 UTC; later sections say "deployed" without a commit |
+| Checks | **Repo**, all pass: api 416 tests, web 354, modpack 66 (run on `main` tonight). App: 203 tests on the Windows runner, and `windows-smoke-3.ps1` walks a fresh download through the guided setup on a real desktop (CI on #46's head). The PowerShell bridge's self test passes under `pwsh` (CI) |
+| The site | **Last recorded 2026-09-29:** not live (`live = false`). 4 members, 2 of them admins, 2 linked to a Minecraft account, 1 with early access (Pabulum). Vote "Season 1 mods" open, 4 ballots |
+| The pack | **Repo:** `0.1.0+72931447`. 71 mods in the catalogue (plus 12 hidden libraries), 50 switched on. 60 files in the lock: 48 on the server (39 both sides, 9 server only), 51 on a PC (12 client only). 3 settings files shipped. NeoForge 21.1.252. **Last recorded:** built and synced to the server 2026-10-02 18:35 UTC (the bosses step, docs/20 §9 step 1) |
+| The app | **Repo:** `DeepslateWorks.exe` 3.4.0 (`installer/VERSION`), not published yet. The PowerShell bridge `DeepslateWorks.ps1` is 2.2.0: it moves 2.x PCs to the exe. **Not checked tonight:** which versions players run (Admin → Installs) |
+| The server | **Last recorded 2026-10-02 18:35:45 UTC:** started with the bosses pack, "Done" in 18.5 s, nobody online. World of 2026-09-29, seed `-3899835130120818196`, spawn `0 105 0`. Entrance room in `deepslate:limbo`. `pvp=false`, whitelist off |
+| The map | **Last recorded 2026-09-29:** emptied at 18:36:33 UTC on Alex's word. BlueMap renders while the server runs; to have it finish, Admin → Server → Pre-generation → "Render the map only". Nothing later in this file says it was rendered again |
+| Played | **Last recorded 2026-09-29:** 10 sessions, two players (bramble09, samoyedx). Admin → Players has the current figures |
 
 **Phases, against docs/10** (a box is ticked there only with what shows it):
 

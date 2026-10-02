@@ -65,6 +65,8 @@ namespace DeepslateWorks
         // 3.1.0, Play with a countdown (planner B): the run gets the game ready, then waits here for the go-ahead
         readonly ManualResetEvent goEvent = new ManualResetEvent(false);
         volatile bool goAnswer;
+        bool runWaiting;                       // a run has the game ready and waits for Go (Review may be open meanwhile)
+        bool keepScreen;                       // the run was ended from a screen that stays (Stopped)
         bool runFromWebsite, runPressed;       // how the run in hand was started: the website, or Play/Continue pressed
         bool firstRunAtOpen, handOverThisTime; // no countdown on a first run, or after the move from the old launcher
         public Countdown Count;
@@ -182,7 +184,7 @@ namespace DeepslateWorks
             };
             Window.Closing += (s, e) =>
             {
-                if (Mode == "ready")
+                if (runWaiting)
                 {
                     // the game was ready but not started: the run reports that, then ends
                     CancelCountdown("closing the window");
@@ -354,6 +356,14 @@ namespace DeepslateWorks
                 SetPromptButtons(false, false);
                 var no = Asking.FirstOrDefault(s => s.Required && Answers.TryGetValue(s.Id, out var a) && a == "decline");
                 if (no != null) { ShowStopped(no); return; }
+                if (runWaiting)
+                {
+                    Log.Line("window: permissions saved; starting the game that was ready");
+                    Mode = "ready"; ClearPlayBody();
+                    PlayTitle.Text = UiText.ReadyToPlayTitle; PlayStatus.Text = UiText.CountdownStatus;
+                    Go(true);
+                    return;
+                }
                 StartRun();
                 return;
             }
@@ -362,6 +372,7 @@ namespace DeepslateWorks
 
         void ShowStopped(ConsentStep step)
         {
+            if (runWaiting) { keepScreen = true; Go(false); }   // a needed step declined: the ready run ends without the game
             Mode = "idle";
             ClearPlayBody();
             SetPromptButtons(false, false);
@@ -375,7 +386,9 @@ namespace DeepslateWorks
         void ShowReview()
         {
             if (Mode == "running" || Guided > 0) return;
-            if (Mode == "ready") { CancelCountdown("a setting"); return; }   // the game is ready: start it or close first
+            // the game may be ready and waiting: the run keeps waiting while the answers are looked at (Save and play
+            // starts it; a needed step declined ends it)
+            CancelCountdown("a setting");
             Answers = new Dictionary<string, string>();
             foreach (var k in Consent.Keys) Answers[k] = Consent[k].Answer;
             ShowFirstRun(Consents.Steps());
@@ -433,7 +446,7 @@ namespace DeepslateWorks
         void StartRun(bool noLaunch = false, bool fromWebsite = false)
         {
             if (worker != null && worker.IsAlive) return;   // one run at a time (2.0.x only ever had one engine)
-            runFromWebsite = fromWebsite; runPressed = !fromWebsite;
+            runFromWebsite = fromWebsite; runPressed = !fromWebsite; runWaiting = false; keepScreen = false;
             goAnswer = false; goEvent.Reset();
             HideCountdown();
             Mode = "running";
@@ -525,7 +538,7 @@ namespace DeepslateWorks
             }
             UpdateAppBrand();   // a run may have brought a new logo
             if (Guided == 4) { Tabs.SelectedItem = ExtrasTab; ShowGuidedStep(4); return; }   // the extras fetched during the guided setup
-            if (outcome == "not_launched") { ShowIdle(); return; }
+            if (outcome == "not_launched") { if (keepScreen) { keepScreen = false; Mode = "idle"; PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true; return; } ShowIdle(); return; }
             PlayTitle.Text = UiText.ReadyTitle;
             PlayStatus.Text = UiText.ReadyStatus;
             if (!string.IsNullOrEmpty(Changed)) { PlayChanged.Text = Changed; PlayChanged.Visibility = Visibility.Visible; }
@@ -989,6 +1002,7 @@ namespace DeepslateWorks
         void OnReady()
         {
             Mode = "ready";
+            runWaiting = true;
             PlayButton.Content = UiText.Play;
             PlayButton.IsEnabled = true;
             bool newExtras = false, queued = false;
@@ -1012,7 +1026,8 @@ namespace DeepslateWorks
         /// without it.</summary>
         void Go(bool start)
         {
-            if (Mode != "ready") return;
+            if (!runWaiting) return;
+            runWaiting = false;
             HideCountdown();
             Mode = "running";
             PlayButton.Content = UiText.Working;
@@ -1114,6 +1129,7 @@ namespace DeepslateWorks
             SetPromptButtons(false, false);
             StepLabel.Text = UiText.StepLabel(n);
             StepLabel.Visibility = Visibility.Visible;
+            ReviewLink.IsEnabled = false;   // the Permissions step is step 3
             ExtrasTab.IsEnabled = n == 4;
             PlayButton.IsEnabled = true;
             if (n != 4) Tabs.SelectedItem = PlayTab;
@@ -1259,6 +1275,7 @@ namespace DeepslateWorks
             Guided = 0;
             StepLabel.Visibility = Visibility.Collapsed;
             ExtrasTab.IsEnabled = true;
+            ReviewLink.IsEnabled = true;
             Tabs.SelectedItem = PlayTab;
             ShowIdle(UiText.DoneStatus);
             PlayTitle.Text = UiText.DoneTitle;

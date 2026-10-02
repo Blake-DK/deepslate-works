@@ -99,6 +99,23 @@ namespace DeepslateWorks.Tests
             Assert.Equal(110, AppWindow.HeroHeight(560));
         }
 
+        [Fact] public void The_Update_buttons_mark_is_split_from_its_words()
+        {
+            Assert.Equal("✓", MarkSplit.Mark("✓ Up to date")); Assert.Equal(" Up to date", MarkSplit.Rest("✓ Up to date"));
+            Assert.Equal("●", MarkSplit.Mark("● Update")); Assert.Equal(" Update", MarkSplit.Rest("● Update"));
+            Assert.Equal("", MarkSplit.Mark("Updating…")); Assert.Equal("Updating…", MarkSplit.Rest("Updating…"));
+            Assert.Equal("", MarkSplit.Mark("Update")); Assert.Equal("", MarkSplit.Mark(null)); Assert.Equal("", MarkSplit.Rest(null));
+            foreach (var label in new[] { UpdateCheck.Button(null, false), UpdateCheck.Button(null, true), UpdateCheck.Button(new Waiting { ModsChanged = 1 }, false) })
+                Assert.Equal(label, MarkSplit.Mark(label) + MarkSplit.Rest(label));   // nothing lost
+        }
+
+        [Fact] public void What_changed_is_named_under_Since_last_time()
+        {
+            Assert.Equal("fallingtree-1.2.9, jade-15.8, tabtps-1.3 (removed)", Engine.ChangedDetail(new[] { "fallingtree-1.2.9.jar", "jade-15.8.jar" }, new[] { "tabtps-1.3.jar" }));
+            Assert.Equal("", Engine.ChangedDetail(new string[0], null));
+            Assert.Equal("a, b, c, d, e, f and 2 more", Engine.ChangedDetail(new[] { "a.jar", "b.jar", "c.jar", "d.jar", "e.jar", "f.jar", "g.jar", "h.jar" }, null));
+        }
+
         [Fact] public void Every_window_carries_the_shared_styles_and_no_colour()
         {
             foreach (var x in new[] { AppWindow.AppXaml, AppWindow.AskXaml, AppWindow.SettingsXaml })
@@ -109,6 +126,8 @@ namespace DeepslateWorks.Tests
             }
             Assert.Contains("Style=\"{StaticResource PlayBlock}\"", AppWindow.AppXaml);
             Assert.Contains("Style=\"{StaticResource VoteBlock}\"", AppWindow.AppXaml);
+            Assert.Contains("x:Key=\"PickBox\"", AppWindow.AppXaml);
+            Assert.Contains("ContentTemplate=\"{StaticResource MarkedLabel}\"", AppWindow.AppXaml);
         }
     }
 }

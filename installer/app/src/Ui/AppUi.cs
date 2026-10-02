@@ -463,7 +463,7 @@ namespace DeepslateWorks
             PlayButton.IsEnabled = false;
             if (updateOnly) UpdateStarted(); else UpdateButton.IsEnabled = false;   // 3.3.0: one run at a time
             Used.Clear();
-            LastFail = null; Changed = null; Launched = null; WatchSince = null; WatchUntil = null; GameProblem = null;
+            LastFail = null; Changed = null; ChangedDetailText = null; Launched = null; WatchSince = null; WatchUntil = null; GameProblem = null;
             var isFirst = !firstUsed;
             var run = NewRun(noLaunch);
             run.OpenedOnly = atOpen;
@@ -506,7 +506,7 @@ namespace DeepslateWorks
             {
                 case "fail": LastFail = J.Str(o, "text"); break;
                 case "used": var id = J.Str(o, "step"); if (id != null) Used[id] = J.Int(o, "level", 1); break;
-                case "changed": Changed = J.Str(o, "text"); break;
+                case "changed": Changed = J.Str(o, "text"); ChangedDetailText = J.Str(o, "detail"); break;
                 case "launched": Launched = DateTime.UtcNow; break;
                 case "ready": RefreshHome(); OnReady(); break;   // 3.1.0: the game is ready; the run waits for Go (3.2.0: votes looked at again)
                 case "versions": { var a = J.Str(o, "app"); var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(a)) VerApp = a; if (!string.IsNullOrEmpty(p)) VerCurrent = p; UpdateAppFooter(); break; }
@@ -570,7 +570,7 @@ namespace DeepslateWorks
             if (outcome == "not_launched") { if (keepScreen) { keepScreen = false; Mode = "idle"; PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true; return; } ShowIdle(); return; }
             PlayTitle.Text = UiText.ReadyTitle;
             PlayStatus.Text = UiText.ReadyStatus;
-            if (!string.IsNullOrEmpty(Changed)) { PlayChanged.Text = Changed; PlayChanged.Visibility = Visibility.Visible; }
+            ShowChanged();
             if (Tabs.SelectedItem == ExtrasTab) ShowExtras();
             // 2.1.0: watch the game's log for the session this launch starts
             if (Launched.HasValue) { WatchSince = Launched.Value.AddSeconds(-5); WatchUntil = Launched.Value.AddMinutes(30); }
@@ -610,8 +610,7 @@ namespace DeepslateWorks
         {
             if (FooterApp == null) return;
             var f = Footer.Parts(VerApp, VerLocal, VerCurrent, VerServer);
-            FooterApp.Text = f.App; FooterPack.Text = f.Pack; FooterServer.Text = f.Server;
-            FooterPack.Foreground = NewBrush(f.PackTone);
+            FooterLine(FooterApp, f.App, null); FooterLine(FooterPack, f.Pack, f.PackTone); FooterLine(FooterServer, f.Server, null);
         }
 
         // 2.1.0: every start of the game from the window goes through Play (the engine checks every mod, then opens the
@@ -732,6 +731,7 @@ namespace DeepslateWorks
             {
                 LogList.Items.Clear();
                 foreach (var l in ReadLogTail(Env.LogFile, UiText.LogLines)) LogList.Items.Add(LogItem(l));
+                MarkLastLog();
                 if (LogList.Items.Count > 0) LogList.ScrollIntoView(LogList.Items[LogList.Items.Count - 1]);
             }
             catch { }
@@ -748,6 +748,7 @@ namespace DeepslateWorks
                 for (int i = Math.Max(0, n - 5); i < n; i++) if ((LogList.Items[i] as TextBlock)?.Text == line) return;   // already read from the file
                 LogList.Items.Add(LogItem(line));
                 while (LogList.Items.Count > UiText.LogLines) LogList.Items.RemoveAt(0);
+                MarkLastLog();
                 LogList.ScrollIntoView(LogList.Items[LogList.Items.Count - 1]);
             }
             catch { }

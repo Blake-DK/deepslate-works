@@ -268,6 +268,7 @@ namespace DeepslateWorks
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             var dontMind = o.Id == SiteHome.DontMind;
             ToggleButton pick = p.Multiple && !dontMind ? (ToggleButton)new CheckBox() : new RadioButton { GroupName = group };
+            pick.Style = (Style)Window.FindResource("PickBox");   // 3.4.0: a drawn 16 px box, ✓ in CopperHi when picked (docs/21 §4)
             pick.VerticalAlignment = VerticalAlignment.Top; pick.Margin = new Thickness(0, 2, 10, 0);
             pick.IsChecked = VotePicked.Contains(o.Id);
             var id = o.Id;
@@ -280,8 +281,10 @@ namespace DeepslateWorks
             var row = new DockPanel();
             if (!string.IsNullOrEmpty(o.ImageUrl))
             {
-                var img = new Image { Width = 72, Height = 48, Stretch = Stretch.UniformToFill, Margin = new Thickness(10, 0, 0, 0) };
-                DockPanel.SetDock(img, Dock.Right);
+                // 3.4.0: 36 px before the words; pixel art stays crisp when the branding says pixel
+                var img = new Image { Width = 36, Height = 36, Stretch = Stretch.UniformToFill, Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Top };
+                RenderOptions.SetBitmapScalingMode(img, J.Bool(Brand.ReadMarker(Env.AppHome), "pixel") ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
+                DockPanel.SetDock(img, Dock.Left);
                 row.Children.Add(img);
                 LoadPicture(img, o.ImageUrl);
             }

@@ -187,7 +187,7 @@ namespace DeepslateWorks
                 var up = SiteHome.Parse(Json.Parse(HomeSamples.Up));
                 ui.SimCheck(new Waiting { CheckedAt = at });
                 ui.SimHome(up, "ready");
-                ui.SimChanged("Since last time: 3 mods changed, 1 settings file.");
+                ui.SimChanged("Updated 3 mods, removed 1", Engine.ChangedDetail(new[] { "fallingtree-1.21.1-1.2.9.jar", "bettertabinfo-1.1.jar", "jade-15.8.jar" }, new[] { "tabtps-1.3.jar" }));
                 ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "22-play-ready.png")));
                 ui.SimUpdating("Setting up the mods");
                 ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "23-play-updating.png")));

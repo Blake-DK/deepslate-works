@@ -163,7 +163,7 @@ namespace DeepslateWorks
             }
             PlayTitle.Text = UiText.UpToDateTitle;
             PlayStatus.Text = UiText.UpToDateStatus;
-            if (!string.IsNullOrEmpty(Changed)) { PlayChanged.Text = Changed; PlayChanged.Visibility = Visibility.Visible; }
+            ShowChanged();
             var now = new Waiting { CheckedAt = DateTime.Now };
             LastCheck = now;
             UpdateButton.Content = UpdateCheck.Button(now, false);

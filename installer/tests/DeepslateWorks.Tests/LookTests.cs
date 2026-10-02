@@ -123,6 +123,29 @@ namespace DeepslateWorks.Tests
                 });
         }
 
+        [WindowsFact] public void Step_4_the_cards_the_marks_and_the_log()
+        {
+            using (new Scratch())
+                WithWindow(ui =>
+                {
+                    // "Since last time" names the files under the line
+                    ui.SimChanged("Updated 2 mods", "jade-15.8, tabtps-1.3 (removed)"); ui.Pump();
+                    Assert.Equal("jade-15.8, tabtps-1.3 (removed)", ui.ChangedDetailNow);
+                    ui.SimChanged("Updated 2 mods", null); ui.Pump();
+                    Assert.Null(ui.ChangedDetailNow);
+                    // the Update button's content stays the plain label; the template draws the mark
+                    ui.SimCheck(new Waiting { ModsChanged = 2, CheckedAt = DateTime.Now }); ui.Pump();
+                    Assert.Equal("● Update", ui.UpdateLabel);
+                    // the vote's options are drawn boxes
+                    ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready"); ui.SimPick("o2"); ui.Pump();
+                    Assert.Equal(4, ui.OptionBoxesDrawn);
+                    // the Log tab: the last line in Fg
+                    Log.Line("look test: the last line");
+                    ui.PressTab("log"); ui.Pump();
+                    Assert.Equal(Of("Fg"), ui.LastLogColour);
+                });
+        }
+
         [WindowsFact] public void The_question_and_settings_windows_are_dark_too()
         {
             using (new Scratch())

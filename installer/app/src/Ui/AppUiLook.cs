@@ -20,7 +20,9 @@ namespace DeepslateWorks
         Rectangle GroundTile, HeroShade;
         Border HeroStatus, LogoFallback, VoteBadge;
         Ellipse HeroDot;
-        TextBlock HeroLine, VoteBadgeText;
+        TextBlock HeroLine, VoteBadgeText, PlayChangedDetail;
+        string ChangedDetailText;   // the files a run changed, by name (Engine.ChangedDetail)
+        TextBlock lastLog;          // the Log tab's last line, drawn in Fg
 
         void WireLook()
         {
@@ -29,6 +31,7 @@ namespace DeepslateWorks
             Hero = F<Grid>("Hero"); HeroImage = F<Image>("HeroImage"); GroundTile = F<Rectangle>("GroundTile"); HeroShade = F<Rectangle>("HeroShade");
             HeroStatus = F<Border>("HeroStatus"); VoteBadge = F<Border>("VoteBadge");
             HeroDot = F<Ellipse>("HeroDot"); HeroLine = F<TextBlock>("HeroLine"); VoteBadgeText = F<TextBlock>("VoteBadgeText");
+            PlayChangedDetail = F<TextBlock>("PlayChangedDetail");
             HeroShade.Fill = Theme.HeroShade;
             LogoFallback.Background = Theme.LogoFace;
             var tile = AppWindow.Picture(Assets.PathOf(Env.AppHome, Assets.Tile));
@@ -68,6 +71,35 @@ namespace DeepslateWorks
             if (VoteBadge.Visibility != v) VoteBadge.Visibility = v;
         }
 
+        /// <summary>"Since last time" in its own card (docs/21 §4): what a run changed, and under it the files by name.</summary>
+        void ShowChanged()
+        {
+            if (string.IsNullOrEmpty(Changed)) return;
+            PlayChanged.Text = Changed; PlayChanged.Visibility = Visibility.Visible;
+            PlayChangedDetail.Text = ChangedDetailText ?? "";
+            PlayChangedDetail.Visibility = string.IsNullOrEmpty(ChangedDetailText) ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        /// <summary>A footer part (docs/21 §4): the label ("App", "Pack", "Server:") in Dim, the value in Muted, or the whole
+        /// value in Copper when the pack has an update.</summary>
+        static void FooterLine(TextBlock t, string text, string tone)
+        {
+            text = text ?? "";
+            var cut = text.IndexOf(' ');
+            t.Inlines.Clear();
+            if (cut < 0) { t.Inlines.Add(new System.Windows.Documents.Run(text) { Foreground = Theme.Brush("Muted") }); return; }
+            t.Inlines.Add(new System.Windows.Documents.Run(text.Substring(0, cut + 1)));
+            t.Inlines.Add(new System.Windows.Documents.Run(text.Substring(cut + 1)) { Foreground = Theme.Brush(tone == "Copper" ? "Copper" : "Muted") });
+        }
+
+        /// <summary>The Log tab (docs/21 §4): every line Muted, the last one Fg; error lines stay Red.</summary>
+        void MarkLastLog()
+        {
+            if (lastLog != null && !UiText.IsErrorLine(lastLog.Text)) lastLog.Foreground = Theme.Brush("Muted");
+            lastLog = LogList.Items.Count > 0 ? LogList.Items[LogList.Items.Count - 1] as TextBlock : null;
+            if (lastLog != null && !UiText.IsErrorLine(lastLog.Text)) lastLog.Foreground = Theme.Brush("Fg");
+        }
+
         /// <summary>A card's tone (docs/21 §3): no tinted boxes; the card stays a card and a 3 px stripe on its left says
         /// ok (GreenText), later (Amber), failed (Red) or a step (Blue). Null: the plain card with its 1 px Line.</summary>
         static void Stripe(Border b, string key)
@@ -87,7 +119,18 @@ namespace DeepslateWorks
         internal Color HeroDotColour => (HeroDot.Fill as SolidColorBrush)?.Color ?? Colors.Transparent;
         internal bool VoteBadgeShown => VoteBadge.Visibility == Visibility.Visible;
         internal string VoteBadgeNumber => VoteBadgeText.Text;
-        public void SimChanged(string text) { PlayChanged.Text = text; PlayChanged.Visibility = Visibility.Visible; }
+        public void SimChanged(string text, string detail = null) { Changed = text; ChangedDetailText = detail; ShowChanged(); }
+        internal int OptionBoxesDrawn
+        {
+            get
+            {
+                int n = 0;
+                foreach (var b in FindPicks(VoteBody)) if (ReferenceEquals(b.Style, Window.TryFindResource("PickBox"))) n++;
+                return n;
+            }
+        }
+        internal Color LastLogColour => (lastLog?.Foreground as SolidColorBrush)?.Color ?? Colors.Transparent;
+        internal string ChangedDetailNow => PlayChangedDetail.Visibility == Visibility.Visible ? PlayChangedDetail.Text : null;
         internal void SimSiteDown() { homeSim = true; SiteNow = null; SetHero(null); }
     }
 

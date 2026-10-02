@@ -68,6 +68,19 @@ namespace DeepslateWorks
           + BlockStyle("Plain", "Card2", "Disabled", "Panel", "Fg", null, @"<Setter Property=""Margin"" Value=""0,0,8,0""/>")
           + @"
     <Style TargetType=""Hyperlink""><Setter Property=""Foreground"" Value=""{DynamicResource Blue}""/></Style>
+    <Style TargetType=""ToggleButton"" x:Key=""PickBox"">
+      <Setter Property=""Cursor"" Value=""Hand""/>
+      <Setter Property=""Template""><Setter.Value>
+        <ControlTemplate TargetType=""ToggleButton"">
+          <Border Width=""16"" Height=""16"" Background=""{DynamicResource Shadow}"" BorderBrush=""{DynamicResource BoxLine}"" BorderThickness=""2"" SnapsToDevicePixels=""True"">
+            <TextBlock x:Name=""Tick"" Text=""✓"" FontSize=""11"" FontWeight=""Bold"" Foreground=""{DynamicResource CopperHi}"" HorizontalAlignment=""Center"" VerticalAlignment=""Center"" Margin=""0,-2,0,0"" Visibility=""Hidden""/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property=""IsChecked"" Value=""True""><Setter TargetName=""Tick"" Property=""Visibility"" Value=""Visible""/></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value></Setter>
+    </Style>
     <Style TargetType=""TabControl"" x:Key=""Strip"">
       <Setter Property=""Template""><Setter.Value>
         <ControlTemplate TargetType=""TabControl"">
@@ -98,13 +111,17 @@ namespace DeepslateWorks
       </Setter.Value></Setter>
     </Style>";
 
-        const string Ns = @"xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""";
+        const string Ns = @"xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"" xmlns:dw=""clr-namespace:DeepslateWorks;assembly=DeepslateWorks""";
 
         /// <summary>The main window: the banner, then the Play, (Vote,) Extras and Log tabs, then the footer.</summary>
         public static readonly string AppXaml = @"<Window " + Ns + @"
         Title=""Deepslate Works"" Width=""600"" Height=""740"" MinWidth=""560"" MinHeight=""560"" WindowStartupLocation=""CenterScreen""
         FontFamily=""Segoe UI"" FontSize=""13"" Background=""{DynamicResource Ground}"" Foreground=""{DynamicResource Fg}"">
   <Window.Resources>" + ThemeXaml + @"
+    <dw:MarkSplit x:Key=""MarkSplit""/>
+    <DataTemplate x:Key=""MarkedLabel"">
+      <TextBlock><Run Text=""{Binding Converter={StaticResource MarkSplit}, ConverterParameter=mark, Mode=OneWay}"" Foreground=""{DynamicResource Copper}""/><Run Text=""{Binding Converter={StaticResource MarkSplit}, ConverterParameter=rest, Mode=OneWay}""/></TextBlock>
+    </DataTemplate>
   </Window.Resources>
   <Grid>
   <Rectangle x:Name=""GroundTile"" Opacity=""0.35"" RenderOptions.BitmapScalingMode=""NearestNeighbor""/>
@@ -175,7 +192,10 @@ namespace DeepslateWorks
           </Border>
           <Border x:Name=""ChangedBox"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,8"" Margin=""0,10,0,0""
                   Visibility=""{Binding Visibility, ElementName=PlayChanged}"">
-            <TextBlock x:Name=""PlayChanged"" TextWrapping=""Wrap"" Foreground=""{DynamicResource GreenText}"" FontWeight=""SemiBold"" Visibility=""Collapsed""/>
+            <StackPanel>
+              <TextBlock x:Name=""PlayChanged"" TextWrapping=""Wrap"" Foreground=""{DynamicResource GreenText}"" FontWeight=""SemiBold"" Visibility=""Collapsed""/>
+              <TextBlock x:Name=""PlayChangedDetail"" TextWrapping=""Wrap"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Margin=""0,3,0,0"" Visibility=""Collapsed""/>
+            </StackPanel>
           </Border>
         </StackPanel>
         <DockPanel DockPanel.Dock=""Bottom"" Margin=""0,10,0,0"">
@@ -188,7 +208,7 @@ namespace DeepslateWorks
               <Button x:Name=""AllowAllButton"" Style=""{StaticResource Plain}"" Content=""Allow all"" Visibility=""Collapsed""/>
               <Button x:Name=""ResetButton"" Style=""{StaticResource Plain}"" Content=""Reset all"" Visibility=""Collapsed""/>
               <Button x:Name=""PlayButton"" Style=""{StaticResource PlayBlock}"" Content=""Play"" MinWidth=""190""/>
-              <Button x:Name=""UpdateButton"" Style=""{StaticResource Plain}"" Content=""Update"" MinWidth=""118"" Margin=""8,0,0,0"" Padding=""12,6,12,7""/>
+              <Button x:Name=""UpdateButton"" Style=""{StaticResource Plain}"" ContentTemplate=""{StaticResource MarkedLabel}"" Content=""Update"" MinWidth=""118"" Margin=""8,0,0,0"" Padding=""12,6,12,7""/>
             </StackPanel>
             <TextBlock x:Name=""PlayHint"" HorizontalAlignment=""Right"" Margin=""0,5,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
             <TextBlock x:Name=""UpdateLine"" HorizontalAlignment=""Right"" TextAlignment=""Right"" TextWrapping=""Wrap"" MaxWidth=""380"" Margin=""0,4,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
@@ -306,7 +326,7 @@ namespace DeepslateWorks
             "UpdateButton", "UpdateLine",   // 3.3.0
             // 3.4.0 (docs/21): the ground, the banner with the server pill, the drawn logo, the Vote tab's badge, the card
             // round "Since last time"
-            "ChangedBox", "GroundTile", "Hero", "HeroImage", "HeroShade", "HeroStatus", "HeroDot", "HeroLine", "LogoFallback", "VoteBadge", "VoteBadgeText",
+            "ChangedBox", "PlayChangedDetail", "GroundTile", "Hero", "HeroImage", "HeroShade", "HeroStatus", "HeroDot", "HeroLine", "LogoFallback", "VoteBadge", "VoteBadgeText",
         };
 
         /// <summary>Every name the settings window looks up in SettingsXaml.</summary>

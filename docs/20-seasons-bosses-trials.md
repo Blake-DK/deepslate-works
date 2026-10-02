@@ -162,6 +162,7 @@ The other half of Cataclysm is Season 2's ladder. The mod is in from the start; 
 1. **Mods and the check** (§3). Report: start time, errors, what Apothic Attributes changes, the LOW-tier numbers, the entity and structure ids, whether Multiplayer Bosses does anything to a Cataclysm boss. *This must land before the world is made again after the vote closes; it is the only step with a deadline.*
 2. **The Frontier for Season 1** (§5) without the wipe: dimension, waystones, pre-generation, map. It does not have to go in with the world reset: it opens with Season 1, a month after going live, and needs one restart of its own. Steps 2 to 5 are to be finished and tried a week before that date.
 3. **Season file, build, datapack, recording, `/season`** (§4, §7) with the sample season. Read-only for players.
+   It includes the app's season banner (§7, "In the app"): `GET /api/season/current`, the banner on the Play tab, the same line on Home, and an xUnit test for each banner state (none, upcoming, running, ended, site unreachable). The banner is not built before this step and does not go out with the app's Review permissions fix or the always-visible Vote tab; those two ship now in a version of their own.
 4. **Admin → Seasons**, start and end, the freeze, hall of fame.
 5. **Gateway trials**, if step 1 cleared the mod.
 6. **The wipe**, built and tried on a copy of the instance or a throwaway dimension before Season 1 ends.
@@ -174,7 +175,7 @@ The other half of Cataclysm is Season 2's ladder. The mod is in from the start; 
 - [ ] A trial added to the file reaches the game by Build, Sync and reload with nobody restarting or updating and shows on `/season` as open at its `opensAt`.
 - [ ] A kill made while the api was down appears on `/season` within 10 minutes of the api coming back.
 - [ ] Two equal titles, an unknown entity or a date outside the season fail the build with a line that says which.
-- [ ] The app's Play tab shows the season banner with the same words as Home, and nothing when no season has a date.
+- [ ] The app's Play tab shows the season banner with the same words as Home, and nothing when no season has a date; xUnit covers none, upcoming, running, ended and site unreachable (last answer greyed, no error).
 - [ ] End season freezes the board; a later kill of a Season 1 boss changes nothing in the hall of fame.
 - [ ] The wipe removes the Frontier's folder and nothing else, nobody is left inside it and the old map is still viewable.
 

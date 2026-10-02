@@ -7,6 +7,7 @@ import { env } from "@/env";
 import { ukShort } from "@/lib/uk-time";
 import { wakeLine } from "@/shared/server-state";
 import { VOTE_FIRST_BUTTON } from "@/shared/polls";
+import { dashedUuid } from "@/lib/heads";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,9 @@ export async function GET(req: Request) {
       admin,
       server,
       online: status.online.map((p) => p.name),
+      // 3.4.0 (docs/21 §7): the same players with their UUIDs, so the app can ask /api/app/head/<uuid>.png. A list of
+      // its own: apps before 3.4.0 read "online" as names and would show nobody if it became objects
+      players: status.online.map((p) => ({ name: p.name, uuid: dashedUuid(p.uuid) })),
       news: pinned ? { body: pinned.body, at: ukShort(pinned.createdAt), author: pinned.author, image: pinned.image ? `${site}${pinned.image}` : null } : null,
       votes: {
         polls: pending.polls.map(forClient).map((p) => ({ ...p, options: p.options.map((o) => ({ ...o, imageUrl: o.imageUrl ? `${site}${o.imageUrl}` : null })) })),

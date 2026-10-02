@@ -183,7 +183,10 @@ namespace DeepslateWorks
                 </StackPanel>
               </DockPanel>
               <TextBlock x:Name=""ServerHint"" TextWrapping=""Wrap"" Margin=""16,2,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
-              <TextBlock x:Name=""ServerOnline"" TextWrapping=""Wrap"" Margin=""16,2,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
+              <DockPanel Margin=""16,4,0,0"">
+                <StackPanel x:Name=""OnlineHeads"" DockPanel.Dock=""Left"" Orientation=""Horizontal"" VerticalAlignment=""Center"" Visibility=""Collapsed""/>
+                <TextBlock x:Name=""ServerOnline"" TextWrapping=""Wrap"" VerticalAlignment=""Center"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
+              </DockPanel>
               <Border x:Name=""NewsBox"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""0,1,0,0"" Margin=""0,8,0,0"" Padding=""0,7,0,0"" Visibility=""Collapsed"">
                 <StackPanel>
                   <TextBlock x:Name=""NewsText"" TextWrapping=""Wrap"" FontSize=""12.5""/>
@@ -328,7 +331,7 @@ namespace DeepslateWorks
             "UpdateButton", "UpdateLine",   // 3.3.0
             // 3.4.0 (docs/21): the ground, the banner with the server pill, the drawn logo, the Vote tab's badge, the card
             // round "Since last time"
-            "ChangedBox", "PlayChangedDetail", "GroundTile", "Hero", "HeroImage", "HeroShade", "HeroStatus", "HeroDot", "HeroLine", "LogoFallback", "VoteBadge", "VoteBadgeText",
+            "ChangedBox", "PlayChangedDetail", "OnlineHeads", "GroundTile", "Hero", "HeroImage", "HeroShade", "HeroStatus", "HeroDot", "HeroLine", "LogoFallback", "VoteBadge", "VoteBadgeText",
         };
 
         /// <summary>Every name the settings window looks up in SettingsXaml.</summary>

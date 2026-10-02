@@ -307,11 +307,11 @@ describe("via Discord (docs/22 §6)", () => {
 
 // ---- the two channels (docs/22 §13) ----------------------------------------------------------------------------------
 
-const SW: Switches = { deaths: true, joins: true, challenges: true, advancements: false, votes: true, mentionUnvoted: true, season: true, news: true, live: true, serverUpDown: true, pack: true, problems: true, firstJoin: true, paused: false, chatChannel: "700", updatesForum: "800", voteButtons: true, chatToDiscord: true, chatToGame: false, commands: true };
+const SW: Switches = { deaths: true, joins: true, challenges: true, advancements: false, votes: true, mentionUnvoted: true, season: true, news: true, live: true, serverUpDown: true, pack: true, problems: true, firstJoin: true, paused: false, chatChannel: "700", updatesForum: "800", adminChannel: "", voteButtons: true, chatToDiscord: true, chatToGame: false, commands: true };
 const FEED = "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz0123456789ABCD";
 const UPDATES = "https://discord.com/api/webhooks/323456789012345678/ubcdefghijklmnopqrstuvwxyz0123456789ABCD";
 
-function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean } = {}) {
+function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; adminChannel?: string } = {}) {
   const clock = Date.parse("2026-10-02T19:00:00Z");
   const calls: Array<{ method: string; url: string; body: Record<string, unknown> }> = [];
   let ids = 5000;
@@ -339,6 +339,8 @@ function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean } 
     createPost: async (...args) => { botCalls.push({ what: "post", args }); return { ok: true, threadId: "8800", messageId: "8800" }; },
     edit: async (...args) => { botCalls.push({ what: "edit", args }); return { ok: true, retry: false }; },
     tagFor: (_f, name) => (name === "Vote" ? ["t-vote"] : []),
+    sendTo: async (...args) => { botCalls.push({ what: "sendTo", args }); return { ok: true, id: "7700" }; },
+    channelName: (id) => (id === "900" ? "deepslate-admin" : null),
     components: (p, closed) => (closed ? [] : [{ type: 1, components: [{ type: 2, style: 1, label: "A", custom_id: `vote:${p.id}:o1` }] }]),
     pollShape: async (id) => ({ id, options: [{ id: "o1", text: "A" }], multiple: false }),
   };
@@ -358,7 +360,7 @@ function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean } 
     post: async (k) => posts.get(k) ?? null,
     savePost: async (r) => { posts.set(r.key, r); },
     addError: async () => {},
-    switches: async () => SW,
+    switches: async () => ({ ...SW, adminChannel: opts.adminChannel ?? "" }),
     brand: async () => ({ name: "Deepslate Works", accent: "#b8652c", avatar: null }),
   };
   const feedHook = hook(FEED);
@@ -473,5 +475,36 @@ describe("the bot joins the server (docs/22 §7)", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(registered).toEqual(["99/1:403", "99/1:ok"]);
     expect(bot.inGuild).toBe(true);
+  });
+});
+
+describe("the admin channel picked on the card (Alex, 2026-10-02)", () => {
+  it("a crash goes to the picked channel through the bot; the feed hears that Alex has been told", async () => {
+    const t = routed({ bot: true, adminChannel: "900" });
+    t.add({ kind: "CRASH" }, REAL.crash);
+    await t.a.round();
+    const sent = t.botCalls.filter((c) => c.what === "sendTo");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.args[0]).toBe("900");
+    expect((sent[0]!.args[1] as { content: string; allowed_mentions: unknown }).content).toMatch(/^The server crashed at \d\d:\d\d\. Open Admin → Server/);
+    expect((sent[0]!.args[1] as { allowed_mentions: unknown }).allowed_mentions).toEqual({ parse: [] });
+    expect(t.calls.map((c) => c.body.content)).toEqual(["The server fell over. Alex has been told."]);
+    expect((await t.a.overview()).admin).toEqual({ state: "ok", name: "the bot", channel: "deepslate-admin" });
+  });
+
+  it("no channel picked and no admin webhook: problems are not posted, the feed only hears that the server fell over", async () => {
+    const t = routed({ bot: true });
+    t.add({ kind: "CRASH" }, REAL.crash);
+    t.add({ kind: "ERROR", message: "Something broke", meta: {} });
+    await t.a.round();
+    expect(t.botCalls.filter((c) => c.what === "sendTo")).toHaveLength(0);
+    expect(t.calls.map((c) => c.body.content)).toEqual(["The server fell over."]);
+  });
+
+  it("Test the admin channel goes to the picked channel", async () => {
+    const t = routed({ bot: true, adminChannel: "900" });
+    expect(await t.a.test("admin")).toEqual({ ok: true });
+    expect(t.botCalls.at(-1)!.what).toBe("sendTo");
+    expect(t.botCalls.at(-1)!.args[0]).toBe("900");
   });
 });

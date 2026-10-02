@@ -138,6 +138,8 @@ export function votePoster(bot: Bot): VotePoster {
     createPost: (forum, title, message, tag) => bot.createPost(forum, title, message, tag),
     edit: (channel, id, message) => bot.edit(channel, id, message),
     tagFor: (forum, name) => bot.tagFor(forum, name),
+    sendTo: (channel, message) => bot.sendTo(channel, message),
+    channelName: (id) => bot.channelName(id),
     components: (poll, closed) => voteComponents(poll, closed),
     pollShape: (id) => db.poll.findUnique({ where: { id }, select: { id: true, options: true, multiple: true } }),
   };

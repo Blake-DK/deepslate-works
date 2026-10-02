@@ -77,7 +77,7 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
               <dt className="font-medium">season-updates</dt>
               <dd>{!overview.updates || overview.updates.state === "unset" ? <>No webhook set{overview.bot && overview.bot.state !== "unset" ? <>: votes, news and the season are not posted. Ask the VPS session to add <span className="font-mono">DISCORD_WEBHOOK_UPDATES</span>.</> : <> (optional): votes and news go to #game-chat as before.</>}</> : where(overview.updates, "DISCORD_WEBHOOK_UPDATES")}</dd>
               <dt className="font-medium">Admin channel</dt>
-              <dd>{overview.admin.state === "unset" ? <>None (optional). Crashes and problems are then not posted anywhere.</> : where(overview.admin, "DISCORD_WEBHOOK_ADMIN")}</dd>
+              <dd>{overview.admin.state === "unset" ? <>None. Pick a private channel as the admin channel in the Bot part below; crashes and problems are not posted until then.</> : where(overview.admin, "DISCORD_WEBHOOK_ADMIN")}</dd>
             </dl>
           )}
           <form action={testDiscordAction.bind(null, "feed")} className="flex flex-wrap gap-2">
@@ -116,6 +116,13 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
                     <option value="">None: votes without buttons</option>
                     {overview.bot.forums.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
+                </label>
+                <label className="text-sm sm:col-span-2"><span className="block font-medium">Admin channel</span>
+                  <select name="adminChannel" defaultValue={sw.adminChannel} className="mt-1 w-full rounded-lg border bg-background px-3 py-2">
+                    <option value="">None: crashes and problems are not posted</option>
+                    {overview.bot.textChannels.map((c) => <option key={c.id} value={c.id}>#{c.name}</option>)}
+                  </select>
+                  <span className="mt-1 block text-muted-foreground">Crashes and problems, for admins only: pick a private channel, and let Deepslate Works into it (Edit channel → Permissions → add the bot), or the test says it cannot write there.</span>
                 </label>
               </div>
               {!privacy.chat && <p className="text-sm text-muted-foreground">Chat relay is off because chat logging is off (Site settings → Privacy).</p>}

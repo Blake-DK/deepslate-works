@@ -348,8 +348,18 @@ export class Announcer {
     };
     this.adminChannel = (await this.d.store.switches().catch(() => null))?.adminChannel ?? this.adminChannel;
     const adminView = async () => (this.botAdmin() ? { state: "ok" as const, name: "the bot", channel: this.d.bot!.channelName(this.adminChannel) } : one("admin"));
+    // The card says what the last real send to each channel did (Alex, 2026-10-03: "ok" stood next to six refusals
+    // in a row, because "ok" only meant a webhook or the bot was set up). A refused last send turns "ok" into
+    // "failing", with Discord's words.
+    const log = this.st?.log ?? [];
+    const withLast = <V extends { state: string }>(ch: Channel, v: V) => {
+      const e = log.find((x) => x.channel === ch);
+      const last = e ? { at: e.at, what: e.what, ok: e.ok, ...(e.error ? { error: e.error } : {}) } : null;
+      if (v.state === "ok" && last && !last.ok) return { ...v, state: "failing" as const, error: last.error ?? "not taken", last };
+      return { ...v, last };
+    };
     const [feed, admin, updates] = await Promise.all([one("feed"), adminView(), one("updates")]);
-    return { feed, admin, updates, recent: this.st?.log ?? [] };
+    return { feed: withLast("feed", feed), admin: withLast("admin", admin), updates: withLast("updates", updates), recent: log };
   }
 
   // ---- §4: one event ------------------------------------------------------------------------------------------------

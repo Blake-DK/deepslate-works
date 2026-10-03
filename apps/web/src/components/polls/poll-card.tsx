@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PickBox } from "@/components/ui/pick-box";
+import { shortLabel } from "@/lib/blocks";
 import { Alert } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { DONT_MIND } from "@/shared/polls";
@@ -53,16 +55,19 @@ export function PollCard({ poll: initial, showVoters = false, refreshAfter = fal
   }
 
   const results = poll.results;
+  const voteLabel = busy ? "Saving…" : poll.mine ? "Save my vote" : "Vote";
   const choiceText = (ids: string[]) => poll.options.filter((o) => ids.includes(o.id)).map((o) => o.text).join(", ");
 
   return (
     <div className={cn("space-y-3", className)} data-testid="poll" data-poll={poll.id}>
+      {/* docs/23 §5: the step line, as the app's Vote tab has it */}
+      {poll.open && !poll.mine && <p className="text-xs font-semibold tracking-wide text-info uppercase" data-testid="poll-step">There&apos;s a new vote{poll.closes && <> · closes {poll.closes}</>}</p>}
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-base font-semibold">{poll.question}</h3>
+        <h3 className="text-2xl font-semibold">{poll.question}</h3>
         {poll.mustVote && poll.open && <Badge tone="warn">Before you play</Badge>}
         {!poll.open && <Badge>Closed</Badge>}
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         {poll.multiple ? "Pick as many as you like." : "Pick one."}
         {poll.open && poll.closes && <> Open until {poll.closes}.</>}
         {!poll.open && poll.closed && <> Closed {poll.closed}.</>}
@@ -70,18 +75,19 @@ export function PollCard({ poll: initial, showVoters = false, refreshAfter = fal
       </p>
 
       {editing ? (
-        <fieldset className="space-y-2" disabled={busy}>
+        <fieldset className="space-y-3" disabled={busy}>
           <legend className="sr-only">{poll.question}</legend>
+          <div className="grid gap-3 min-[760px]:grid-cols-2">
           {poll.options.map((o) => {
             const on = picked.includes(o.id);
             return (
-              <label key={o.id} className={cn("flex cursor-pointer gap-3 rounded-lg border p-3 text-sm transition-colors hover:bg-muted", on && "border-primary bg-primary/5", o.id === DONT_MIND.id && "border-dashed")}>
-                <input type={poll.multiple && o.id !== DONT_MIND.id ? "checkbox" : "radio"} name={`poll-${poll.id}`} checked={on} onChange={() => toggle(o.id)} className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]" />
+              <label key={o.id} className={cn("flex cursor-pointer gap-3 rounded-[4px] border bg-card p-3 text-sm hover:bg-card-2", on && "border-2 border-primary p-[11px]", o.id === DONT_MIND.id && !on && "border-dashed")}>
+                <PickBox on={on} type={poll.multiple && o.id !== DONT_MIND.id ? "checkbox" : "radio"} name={`poll-${poll.id}`} onChange={() => toggle(o.id)} />
                 {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded picture, served by our own route */}
-                {o.imageUrl && <img src={o.imageUrl} alt="" className="h-14 w-20 shrink-0 rounded-md border object-cover" />}
+                {o.imageUrl && <img src={o.imageUrl} alt="" className="h-9 w-9 shrink-0 border object-cover" />}
                 <span className="min-w-0 flex-1">
-                  <span className={cn("block font-medium", o.id === DONT_MIND.id && "text-muted-foreground")}>{o.text || o.mod?.name}</span>
-                  {o.mod && <span className="block text-xs text-muted-foreground">{o.mod.name}: {o.mod.description}</span>}
+                  <span className={cn("block font-semibold", o.id === DONT_MIND.id && "text-muted-foreground")}>{o.text || o.mod?.name}</span>
+                  {o.mod && <span className="block text-[13.5px] text-muted-foreground">{o.mod.name}: {o.mod.description}</span>}
                   {(o.link || o.mod) && (
                     <span className="mt-1 flex flex-wrap gap-3 text-xs">
                       {o.link && <a href={o.link} target="_blank" rel="noreferrer" className="underline" onClick={(e) => e.stopPropagation()}>Find out more</a>}
@@ -93,9 +99,12 @@ export function PollCard({ poll: initial, showVoters = false, refreshAfter = fal
               </label>
             );
           })}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <Button type="button" onClick={vote} disabled={busy || picked.length === 0} data-testid="poll-vote">{busy ? "Saving…" : poll.mine ? "Save my vote" : "Vote"}</Button>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
+            {poll.mustVote && !poll.mine && <span className="text-sm text-muted-foreground">Play opens as soon as you&apos;ve voted.</span>}
             {poll.mine && <Button type="button" variant="ghost" onClick={() => { setPicked(poll.mine ?? []); setEditing(false); }}>Cancel</Button>}
+            {/* the Vote block (docs/23 §5): the pixel face at 24 on Copper, text in --primary-foreground */}
+            <Button type="button" variant="copper" size="lg" onClick={vote} disabled={busy || picked.length === 0} data-testid="poll-vote" className={cn("min-w-[150px]", shortLabel(voteLabel) ? "font-display text-[24px] font-bold" : "text-[15px]")}>{voteLabel}</Button>
           </div>
           {error && <Alert tone="error">{error}</Alert>}
         </fieldset>
@@ -108,7 +117,7 @@ export function PollCard({ poll: initial, showVoters = false, refreshAfter = fal
                   <span className={cn(poll.mine?.includes(c.id) && "font-semibold", c.id === DONT_MIND.id && "text-muted-foreground")}>{c.text}{poll.mine?.includes(c.id) && " ✓"}</span>
                   <span className="tabular-nums text-muted-foreground">{c.votes} · {c.percent}%</span>
                 </div>
-                <div className="mt-0.5 h-2 overflow-hidden rounded-full bg-muted" aria-hidden><div className={cn("h-full rounded-full", c.id === DONT_MIND.id ? "bg-muted-foreground/40" : "bg-primary")} style={{ width: `${c.percent}%` }} /></div>
+                <div className="mt-0.5 h-2 overflow-hidden bg-panel" aria-hidden><div className={cn("h-full", c.id === DONT_MIND.id ? "bg-dim" : "bg-primary")} style={{ width: `${c.percent}%` }} /></div>
               </li>
             ))}
           </ul>

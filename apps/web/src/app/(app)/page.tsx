@@ -67,13 +67,13 @@ export default async function HomePage() {
               </CardContent>
             </Card>
           )}
-          <Card className={openVote ? "border-primary" : undefined}>
+          <Card className={openVote ? "border-2 border-primary" : undefined}>
             <CardHeader>
               <CardTitle>{openVote ? `Vote open: ${openVote.title}` : "The mod list"}</CardTitle>
               <CardDescription>{openVote ? `Tick the mods you want${openVote.closesAt ? ` before ${formatDate(openVote.closesAt)}` : ""}. Takes two minutes on a phone.` : "Read up on every mod, with videos and wiki links. The season vote will show up here when it opens."}</CardDescription>
             </CardHeader>
             <CardContent className="flex gap-2">
-              {openVote && <Link href="/pack?tab=vote" className={buttonClasses("primary", "sm")}>Vote now</Link>}
+              {openVote && <Link href="/pack?tab=vote" className={buttonClasses("copper", "sm")}>Vote now</Link>}
               <Link href="/pack" className={buttonClasses("secondary", "sm")}>Mod list</Link>
             </CardContent>
           </Card>
@@ -89,7 +89,7 @@ export default async function HomePage() {
                     <li key={n.id} className="text-sm">
                       <p className="whitespace-pre-line">{n.pinned && <Badge tone="warn" className="mr-2">Pinned</Badge>}{n.body}</p>
                       {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded picture, served by our own route */}
-                      {n.image && <a href={n.image} target="_blank" rel="noreferrer" className="mt-2 block"><img src={n.image} alt="" loading="lazy" className="max-h-72 w-full rounded-lg border object-cover" data-testid="news-image" /></a>}
+                      {n.image && <a href={n.image} target="_blank" rel="noreferrer" className="mt-2 block"><img src={n.image} alt="" loading="lazy" className="max-h-72 w-full rounded-[4px] border object-cover" data-testid="news-image" /></a>}
                       <p className="text-xs text-muted-foreground">{n.author} · {timeAgo(n.createdAt)}</p>
                     </li>
                   ))}

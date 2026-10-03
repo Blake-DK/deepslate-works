@@ -207,3 +207,42 @@ describe("the frame (docs/23 §4)", () => {
     expect(ground).toMatch(/image-rendering: pixelated/);
   });
 });
+
+// docs/23 §5 (step 3): Home, Votes, the poll card, the ballot's boxes, the Play block.
+import { shortLabel } from "@/lib/blocks";
+
+describe("the pages (docs/23 §5)", () => {
+  const read = (f: string) => readFileSync(path.join(SRC, f), "utf8");
+  it("a block keeps the pixel face for a short label and Segoe UI 15 for a long one, as the app does", () => {
+    expect(shortLabel("Play")).toBe(true);
+    expect(shortLabel("Starting…")).toBe(true);
+    expect(shortLabel("Save my vote")).toBe(true);
+    expect(shortLabel("Vote first, it takes ten seconds")).toBe(false);
+    expect(shortLabel("Download the new installer")).toBe(false);
+  });
+  it("the Play block: green, the face at 26 with the GreenLo shadow, at least 190 wide; vote-first is the same block", () => {
+    const play = read("components/server/play-button.tsx");
+    expect(play).toMatch(/buttonClasses\("primary", "lg", cn\("min-w-\[190px\]", shortLabel\(label\) \? "font-display text-\[26px\] font-bold \[text-shadow:2px_2px_0_var\(--play-lo\)\]" : "text-\[15px\]"/);
+    expect(play).toMatch(/data-testid="play-vote-first" className=\{playBlock\(VOTE_FIRST_BUTTON\)\}/);
+    expect(play).not.toMatch(/opacity-50/); // a shut block is grey, not faded
+  });
+  it("the Vote block: copper, the face at 24, at least 150 wide, with the line beside it", () => {
+    const poll = read("components/polls/poll-card.tsx");
+    expect(poll).toMatch(/variant="copper"[^>]*data-testid="poll-vote"[^>]*min-w-\[150px\]", shortLabel\(voteLabel\) \? "font-display text-\[24px\] font-bold" : "text-\[15px\]"/);
+    expect(poll).toContain("Play opens as soon as you&apos;ve voted.");
+    expect(poll).toMatch(/min-\[760px\]:grid-cols-2/);
+  });
+  it("polls and the ballot draw their own boxes; step 3's pages have no browser-drawn box, blur or round corners left", () => {
+    for (const f of ["components/polls/poll-card.tsx", "app/(app)/vote/ballot-form.tsx"]) expect([f, read(f).includes("<PickBox")]).toEqual([f, true]);
+    const box = read("components/ui/pick-box.tsx");
+    expect(box).toMatch(/h-4 w-4[^"]*border-2 border-edge bg-well[^"]*text-primary-hi/);
+    // step 3's pages; the other pages' leftovers are step 4
+    for (const f of ["components/polls/poll-card.tsx", "app/(app)/vote/ballot-form.tsx", "components/polls/vote-banner.tsx", "app/(app)/page.tsx", "components/server/status-card.tsx", "components/server/play-button.tsx"])
+      expect([f, /accent-\[|backdrop-blur|rounded-full|rounded-xl/.test(read(f))]).toEqual([f, false]);
+  });
+  it("a card that wants attention has the 2 px Copper edge; Vote now is copper", () => {
+    expect(read("components/polls/vote-banner.tsx")).toContain('className="scroll-mt-20 border-2 border-primary"');
+    expect(read("app/(app)/page.tsx")).toContain('openVote ? "border-2 border-primary"');
+    expect(read("app/(app)/page.tsx")).toContain('buttonClasses("copper", "sm")}>Vote now');
+  });
+});

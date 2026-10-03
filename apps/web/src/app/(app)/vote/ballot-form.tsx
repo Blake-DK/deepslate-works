@@ -4,6 +4,7 @@ import type { Load, Mod } from "modpack";
 import { estimateLoad } from "modpack/load";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PickBox } from "@/components/ui/pick-box";
 import { LoadChip } from "@/components/mods/load-chip";
 import { ModLinks } from "@/components/mods/mod-card";
 import { cn } from "@/lib/utils";
@@ -68,8 +69,8 @@ export function BallotForm({ voteId, sections, questions, initial, tier, closesA
             {s.mods.map((mod) => {
               const on = picked.has(mod.slug);
               return (
-                <label key={mod.slug} className={cn("flex cursor-pointer gap-3 rounded-xl border bg-card p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring", on && "border-primary bg-primary/5")}>
-                  <input type={mod.exclusiveGroup ? "radio" : "checkbox"} name={mod.exclusiveGroup ?? mod.slug} checked={on} onChange={() => toggle(mod)} onClick={mod.exclusiveGroup && on ? () => toggle(mod) : undefined} className="mt-1 h-5 w-5 shrink-0 accent-[var(--primary)]" />
+                <label key={mod.slug} className={cn("flex cursor-pointer gap-3 rounded-[4px] border bg-card p-4", on && "border-2 border-primary p-[15px]")}>
+                  <PickBox on={on} type={mod.exclusiveGroup ? "radio" : "checkbox"} name={mod.exclusiveGroup ?? mod.slug} onChange={() => toggle(mod)} onClick={mod.exclusiveGroup && on ? () => toggle(mod) : undefined} />
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold">{mod.name}</span>
@@ -96,12 +97,12 @@ export function BallotForm({ voteId, sections, questions, initial, tier, closesA
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {questions.map((q) => (
-              <fieldset key={q.id} className="rounded-xl border bg-card p-4">
+              <fieldset key={q.id} className="rounded-[4px] border bg-card p-4">
                 <legend className="px-1 font-semibold">{q.text}</legend>
                 <div className="mt-2 space-y-1.5">
                   {q.options.map((o) => (
                     <label key={o} className="flex cursor-pointer items-center gap-2 text-sm">
-                      <input type="radio" name={`q-${q.id}`} checked={answers[q.id] === o} onChange={() => { setDirty(true); setAnswers((a) => ({ ...a, [q.id]: o })); }} className="h-4 w-4 accent-[var(--primary)]" />
+                      <PickBox on={answers[q.id] === o} type="radio" name={`q-${q.id}`} onChange={() => { setDirty(true); setAnswers((a) => ({ ...a, [q.id]: o })); }} />
                       {o}
                     </label>
                   ))}
@@ -112,8 +113,8 @@ export function BallotForm({ voteId, sections, questions, initial, tier, closesA
         </section>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 border-t bg-card/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-sm">
+      <div className="fixed inset-x-0 bottom-0 border-t bg-panel">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-sm">
           <span><strong>{picked.size}</strong> picked</span>
           <span className="flex items-center gap-1">Load: <Badge tone={TONE[est.band]}>{est.label}</Badge></span>
           {heavyWarning && <span className="text-danger">That&apos;s a heavy set for your PC. Consider dropping a Heavy mod.</span>}
@@ -121,7 +122,7 @@ export function BallotForm({ voteId, sections, questions, initial, tier, closesA
             {result && !result.ok && <span className="text-danger">{result.error}</span>}
             {result?.ok && !dirty && <span className="text-accent">Saved{closesText ? ` · closes ${closesText}` : ""}</span>}
             {dirty && <span className="text-muted-foreground">Unsaved changes</span>}
-            <Button onClick={submit} disabled={pending} size="md">{pending ? "Saving…" : result?.ok ? "Save changes" : "Submit my vote"}</Button>
+            <Button onClick={submit} disabled={pending} size="md" variant="copper">{pending ? "Saving…" : result?.ok ? "Save changes" : "Submit my vote"}</Button>
           </span>
         </div>
       </div>

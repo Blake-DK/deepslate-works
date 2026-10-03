@@ -56,17 +56,123 @@ namespace DeepslateWorks.Tests
                 WithWindow(ui => { foreach (var n in AppWindow.Names) Assert.NotNull(ui.Window.FindName(n)); });
         }
 
-        [WindowsFact] public void The_ground_is_tiled_and_the_banner_shrinks_in_a_short_window()
+        [WindowsFact] public void The_ground_is_tiled_and_the_banner_is_128_at_any_size()
         {
             using (new Scratch())
                 WithWindow(ui =>
                 {
                     Assert.True(ui.GroundTiled);
                     Assert.True(ui.HeroPictured);
-                    Resize(ui, 600, 740); Assert.Equal(160, ui.HeroHeightNow);
-                    Resize(ui, 600, 600); Assert.Equal(110, ui.HeroHeightNow);
-                    Resize(ui, 560, 560); Assert.Equal(110, ui.HeroHeightNow);
-                    Resize(ui, 600, 740); Assert.Equal(160, ui.HeroHeightNow);
+                    Resize(ui, 980, 620); Assert.Equal(128, ui.HeroHeightNow);
+                    Resize(ui, 900, 560); Assert.Equal(128, ui.HeroHeightNow);
+                    Assert.Equal(900, ui.Window.ActualWidth, 0); Assert.Equal(560, ui.Window.ActualHeight, 0);
+                    Resize(ui, 600, 400); Assert.True(ui.Window.ActualWidth >= 900 && ui.Window.ActualHeight >= 560, "smaller than 900x560");
+                });
+        }
+
+        [WindowsFact] public void The_Play_tab_is_two_columns_with_the_row_under_both()
+        {
+            // 3.4.1 (docs/21 §11): the server on the left (340), the run on the right, Play along the bottom
+            using (new Scratch())
+                WithWindow(ui =>
+                {
+                    ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Up)), "ready");
+                    foreach (var size in new[] { new Size(980, 620), new Size(900, 560) })
+                    {
+                        Resize(ui, size.Width, size.Height);
+                        var w = ui.Window;
+                        FrameworkElement F(string n) => (FrameworkElement)w.FindName(n);
+                        Rect At(string n) { var e = F(n); return e.TransformToAncestor(w).TransformBounds(new Rect(0, 0, e.ActualWidth, e.ActualHeight)); }
+                        Assert.Equal(340, F("PlayLeft").ActualWidth, 0);
+                        Assert.True(At("PlayCard").Left >= At("PlayLeft").Right + 15, size + ": the card overlaps the left column");
+                        Assert.True(At("ServerBox").Width >= 330, size + ": the server card does not fill its column");
+                        Assert.True(At("PlayRow").Top >= At("PlayLeft").Bottom + 11 && At("PlayRow").Top >= At("PlayCard").Bottom + 11, size + ": the row is not under both columns");
+                        Assert.True(At("PlayButton").Right <= At("PlayRow").Right + 0.5, size + ": Play is cut off");
+                    }
+                });
+        }
+
+        /// <summary>Every element in the window's visual tree, depth first.</summary>
+        static IEnumerable<DependencyObject> Tree(DependencyObject root)
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var c = VisualTreeHelper.GetChild(root, i);
+                yield return c;
+                foreach (var d in Tree(c)) yield return d;
+            }
+        }
+
+        /// <summary>The place a pixel-face element belongs to: itself when it is named, else the nearest named Button or
+        /// TextBlock above it (a block's label belongs to its button).</summary>
+        static string Owner(DependencyObject d)
+        {
+            for (var p = d; p != null; p = VisualTreeHelper.GetParent(p))
+            {
+                if (p is System.Windows.Controls.Button b && !string.IsNullOrEmpty(b.Name)) return b.Name;
+                if (p is System.Windows.Controls.TextBlock t && !string.IsNullOrEmpty(t.Name)) return t.Name;
+            }
+            return "(unnamed)";
+        }
+
+        [WindowsFact] public void The_pixel_face_is_in_exactly_three_places()
+        {
+            // 3.4.1 (docs/21 §11): the name on the banner (with its drawn shadow), the Play block and the Vote block. A
+            // stand-in face makes it visible whether or not the real one could be written out on this machine.
+            var real = Theme.PixelFont;
+            Theme.PixelFont = new FontFamily("Deepslate Look Test Face");
+            try
+            {
+                using (new Scratch())
+                    WithWindow(ui =>
+                    {
+                        ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready"); ui.Pump();
+                        var owners = new HashSet<string>();
+                        foreach (var tab in new[] { "play", "vote", "extras", "log" })
+                        {
+                            ui.PressTab(tab); ui.Pump(); ui.Window.UpdateLayout();
+                            foreach (var d in Tree(ui.Window))
+                            {
+                                var f = (d as System.Windows.Controls.TextBlock)?.FontFamily ?? (d as System.Windows.Controls.Control)?.FontFamily;
+                                if (f != null && f.Source == "Deepslate Look Test Face") owners.Add(Owner(d));
+                            }
+                        }
+                        owners.Remove("BrandShade");   // the name's shadow is the name's place
+                        Assert.Equal(new[] { "BrandName", "PlayButton", "VoteButton" }, owners.OrderBy(o => o, StringComparer.Ordinal).ToArray());
+                    });
+            }
+            finally { Theme.PixelFont = real; }
+        }
+
+        [WindowsFact] public void A_long_block_label_is_Segoe_UI_and_a_short_one_keeps_the_face()
+        {
+            var real = Theme.PixelFont;
+            Theme.PixelFont = new FontFamily("Deepslate Look Test Face");
+            try
+            {
+                using (new Scratch())
+                    WithWindow(ui =>
+                    {
+                        var play = (System.Windows.Controls.Button)ui.Window.FindName("PlayButton");
+                        play.Content = "Play"; ui.Pump();
+                        Assert.Equal("Deepslate Look Test Face", play.FontFamily.Source);
+                        play.Content = "Vote first, it takes ten seconds"; ui.Pump();
+                        Assert.Equal("Segoe UI", play.FontFamily.Source); Assert.Equal(15, play.FontSize);
+                    });
+            }
+            finally { Theme.PixelFont = real; }
+        }
+
+        [WindowsFact] public void The_vote_options_are_two_to_a_row()
+        {
+            using (new Scratch())
+                WithWindow(ui =>
+                {
+                    ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready"); ui.PressTab("vote"); ui.Pump(); ui.Window.UpdateLayout();
+                    var body = (System.Windows.Controls.Panel)ui.Window.FindName("VoteBody");
+                    var grid = body.Children.OfType<System.Windows.Controls.Primitives.UniformGrid>().Single();
+                    Assert.Equal(2, grid.Columns);
+                    Assert.True(grid.Children.Count >= 2);
                 });
         }
 

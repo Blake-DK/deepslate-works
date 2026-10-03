@@ -2,6 +2,22 @@
 
 Last updated 2026-09-29, 19:00 UTC (the evening the first player who is not an admin got in). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
 
+## App 3.4.1: landscape, and clearer text (docs/21 §11, 2026-10-03)
+
+Built as §11 says, on Alex's "build app 3.4.1". **Window** 980×620, never under 900×560; the banner is 128 px at every size (`AppWindow.BannerHeight`; the 160/110 rule is gone). **Play tab** is a `Grid` (340 | 16 | *, rows * | 12 | Auto): left `ServerBox` (the server line as the title, SemiBold 14, wrapping; "Open the site" on its own line under it) and `ChangedBox`, scrolling only if they must; right `PlayTitle`, `PlayStatus` and `PlayBody` in a `Card` (`PlayCard`) filling the rest, so the question cards, guided setup and Review render there with the server kept on the left; along the bottom `ReviewLink` and `SettingsLink` side by side (gap 18) and Play + Update on the right. **Vote** options and **Extras** rows sit two to a row (`AppWindow.CardGrid`, a 2-column `UniformGrid` inside the existing panels). **Text:** the pixel face only on `BrandName` (32, with its drawn shadow), the Play block (24) and the Vote block (22), each `TextRenderingMode="Aliased"`; tabs Segoe UI SemiBold 14; Vote, Extras titles 20 and Checks 15 in Segoe UI SemiBold; every window `TextFormattingMode="Display"`, ClearType, `UseLayoutRounding`, `SnapsToDevicePixels`, body 14; `Fg` #F2F0EB, `Muted` #B5B2AA; pill text `Fg` 13, tagline 13. Version 3.4.1. Screenshots 22 to 27 are taken at the window's own size (980×620).
+
+**Tests:** ThemeTests (banner 128, the landscape window with crisp text, the face named only for the name and the two blocks and always aliased, nothing in code setting it), LookTests (banner 128 at 980×620 and 900×560 and the window never smaller, the two columns and the row under both at both sizes, **a walk of the tree on every tab finding the face in exactly three places** with a stand-in face, a long block label in Segoe UI 15, vote options two to a row), UiTests (screenshot names). The app and the tests compile in the capped `dotnet/sdk:8.0` container; the xUnit window tests and `windows-smoke-3.ps1` run only on CI's Windows job.
+
+**Deviations / readings of §11:**
+1. **The drawn logo tile's "D" is Segoe UI Bold 24**, no longer the pixel face: §11 allows the face in exactly three places, and the tile is not one of them. (The site's docs/23 keeps the face on its tile; the two differ here.)
+2. **The block rule stays, the title rule goes.** §11 drops the "keep the face up to N characters" rules but keeps short block labels in the face and long ones ("Vote first, it takes ten seconds") in Segoe UI SemiBold 15. That is 3.4.0's block rule (`BlockFaceMaxChars` 14), so it stays; `VoteTitleFaceMaxChars` and `FitVoteTitle` are removed.
+3. **Screenshot 28 is now `28-window-980x620`** (the whole window at its own size; it was `28-min-size-560x560`), and `29-min-size-900x560` is new.
+4. **Two columns always.** The window cannot be under 900 wide, so "two columns when 900 or wider" is simply two columns (`AppWindow.CardColumns`).
+5. **The Start button** (admins, server off) stays at the right of the server line in `ServerBox`; §11 does not place it.
+6. The question and Play-settings windows take the same crisp-text settings and body 14.
+
+**Not seen yet:** the look on a real Windows PC, at 980×620 and 900×560 (Alex). After merge: deploy, then Build `installer` so the download serves 3.4.1.
+
 ## The site's look · docs/23 (2026-10-03, planner; step 1 of §8)
 
 Alex asked for the site to look like the launcher. docs/23 is the planner's design, saved as given. **Order:** docs/23 sits after app 3.4.1 (docs/21 §11), which is designed but not started, so §8 step 1 went first as the planner allowed: it touches nothing outside the web's look. Steps 2 to 4 (the frame, Home/Votes/Play, the leftovers pass) wait for 3.4.1. The admin-channel picker came first as asked: it had been pushed after PR #54 merged and never reached main; it is PR #56 now.

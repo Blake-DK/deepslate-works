@@ -106,7 +106,7 @@ namespace DeepslateWorks
         internal void PressReview() => OpenReview();
         internal void PressPlay() => OnPlayButton();
         internal void PressAllowAll() => OnAllowAll();
-        internal void PressTab(string which) => Tabs.SelectedItem = which == "extras" ? ExtrasTab : which == "log" ? LogTab : PlayTab;
+        internal void PressTab(string which) => Tabs.SelectedItem = which == "extras" ? ExtrasTab : which == "log" ? LogTab : which == "vote" ? VoteTab : PlayTab;
         internal bool InReview => reviewing;
         internal string ModeNow => Mode;
         internal bool RunStarted => worker != null;

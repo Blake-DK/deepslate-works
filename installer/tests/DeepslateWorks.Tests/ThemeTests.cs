@@ -91,12 +91,41 @@ namespace DeepslateWorks.Tests
             Assert.Equal("Can't reach the site", SiteHome.HeroLine(null));
         }
 
-        [Fact] public void The_banner_is_160_tall_and_110_in_a_short_window()
+        [Fact] public void The_banner_is_128_tall_always()
         {
-            Assert.Equal(160, AppWindow.HeroHeight(740));
-            Assert.Equal(160, AppWindow.HeroHeight(660));
-            Assert.Equal(110, AppWindow.HeroHeight(600));
-            Assert.Equal(110, AppWindow.HeroHeight(560));
+            Assert.Equal(128, AppWindow.BannerHeight);
+            Assert.Contains("x:Name=\"Hero\" DockPanel.Dock=\"Top\" Height=\"128\"", AppWindow.AppXaml);
+        }
+
+        [Fact] public void The_window_is_landscape_with_crisp_text()
+        {
+            // 3.4.1 (docs/21 §11): 980x620, never under 900x560; Display formatting, ClearType, layout rounding
+            var x = AppWindow.AppXaml;
+            Assert.Contains("Width=\"980\" Height=\"620\" MinWidth=\"900\" MinHeight=\"560\"", x);
+            foreach (var w in new[] { AppWindow.AppXaml, AppWindow.AskXaml, AppWindow.SettingsXaml })
+            {
+                Assert.Contains("FontSize=\"14\"", w);
+                Assert.Contains("TextOptions.TextFormattingMode=\"Display\" TextOptions.TextRenderingMode=\"ClearType\" UseLayoutRounding=\"True\" SnapsToDevicePixels=\"True\"", w);
+            }
+        }
+
+        [Fact] public void The_pixel_face_is_named_only_for_the_name_Play_and_Vote_and_drawn_aliased()
+        {
+            // in the XAML: the name and its shadow, the PlayBlock and VoteBlock styles; each one aliased (square pixels)
+            var x = AppWindow.AppXaml;
+            var uses = Regex.Matches(x, @"\{DynamicResource PixelFont\}").Count;
+            Assert.Equal(4, uses);
+            foreach (Match m in Regex.Matches(x, @"\{DynamicResource PixelFont\}"))
+            {
+                var after = x.Substring(m.Index, Math.Min(120, x.Length - m.Index));
+                Assert.Matches(@"TextOptions\.TextRenderingMode""*( Value)?=""+Aliased", after);
+            }
+            foreach (var key in new[] { "x:Name=\"BrandName\"", "x:Name=\"BrandShade\"" })
+                Assert.Matches(new Regex(Regex.Escape(key) + @"[^>]*\{DynamicResource PixelFont\}"), x);
+            // nothing in code sets the face on anything
+            var code = Directory.GetFiles(Path.Combine(Src(), "Ui"), "*.cs").Where(f => !f.EndsWith("Theme.cs") && !f.EndsWith("UiXaml.cs") && !f.EndsWith("AppUiLook.cs"))
+                .Where(f => File.ReadAllText(f).Contains("PixelFont")).Select(Path.GetFileName).ToList();
+            Assert.True(code.Count == 0, "PixelFont used in: " + string.Join(", ", code));
         }
 
         [Fact] public void The_Update_buttons_mark_is_split_from_its_words()

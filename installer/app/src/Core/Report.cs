@@ -182,8 +182,10 @@ namespace DeepslateWorks
         {
             if (run.Reported) return;
             run.Reported = true;
+            LogBundle.Closed();
             if (run.DryRun) return;
             if (string.IsNullOrEmpty(run.Token)) { Log.Line("not signed in, so no install report was sent"); return; }
+            LogBundle.SendUnreported(run);   // 3.4.2: the run before this one, if it never got to report
             try
             {
                 var rep = New(run, outcome);

@@ -2,6 +2,23 @@
 
 Last updated 2026-09-29, 19:00 UTC (the evening the first player who is not an admin got in). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
 
+## App 3.4.2: Save log, Send to Alex, and logs that go by themselves (Alex, 2026-10-03)
+
+Alex, after a Play that errored and sent nothing: "a save log button on the launcher's log page … somewhere in the launcher I can upload the logs … or it should just every time you press play or update." What was already there: every run that **finishes** posts its report with the app's log (players who allowed "Send install reports"; username, paths, tokens and addresses taken out). What was missing: a run that dies part-way never reported, and the game's own `latest.log` never went anywhere.
+
+- **Log tab:** a bar under the log with **Save log** and **Send to Alex** (`Ui/AppUiLog.cs`, `Home/LogBundle.cs`).
+  - **Save log** writes `Deepslate Works logs <date time>.zip` to Downloads (Documents when there is none) and opens Explorer on it. The zip holds the app's log (its last 3000 lines), the game's `latest.log` (its last 4000 lines) and the newest crash report.
+  - **Send to Alex** uploads the same parts as one report of mode `log_sent`, shown under Admin → People → Installs as "Log sent". Pressing it is the consent, so it goes even when install reports are off.
+  - **What is taken out:** everything goes through `Report.Redact` (username, paths, tokens, e-mails, IP addresses), and every **chat line** of the game log is left out, with a count: chat can hold private messages.
+- **By itself, for players who allow install reports:**
+  - **Unfinished runs:** a run writes `run-open.json` in `%LOCALAPPDATA%\DeepslateWorks` when it starts. A run that reports, or is meant not to (a self-update hand-off, a permission question, opened without playing), removes it. If the window was closed or Windows stopped the app, the marker is still there next time, and that run's own lines from the app log are sent first, as mode `unfinished` (outcome failed). With reports off, only the fact goes, no log.
+  - **Failed game loads:** when the game fails to load (the game check is not ok), the game check carries the game's `latest.log`, made safe as above.
+- **Wording:** the generic failure line now says "Press Send to Alex on the Log tab and he'll sort it."
+- **Site:** modes `log_sent` and `unfinished` (`lib/install-report.ts`), event-log sentences (`shared/events.ts`, both copies), and no PC-tier measuring from them. No migration.
+- **Tests:** `LogBundleTests.cs` (chat left out and redacted, the zip's three parts, Send to Alex with reports off, an unfinished run sent with only its own lines, without its log when reports are off, nothing left behind after a report, the game check with the game log, a run's lines), a LookTests Save log press, and `apps/web/tests/log-modes.test.ts`. Version 3.4.2.
+
+**Not seen yet:** the buttons on a real PC. After merge: deploy, then Build `installer`.
+
 ## App 3.4.1: landscape, and clearer text (docs/21 §11, 2026-10-03)
 
 Built as §11 says, on Alex's "build app 3.4.1". **Window** 980×620, never under 900×560; the banner is 128 px at every size (`AppWindow.BannerHeight`; the 160/110 rule is gone). **Play tab** is a `Grid` (340 | 16 | *, rows * | 12 | Auto): left `ServerBox` (the server line as the title, SemiBold 14, wrapping; "Open the site" on its own line under it) and `ChangedBox`, scrolling only if they must; right `PlayTitle`, `PlayStatus` and `PlayBody` in a `Card` (`PlayCard`) filling the rest, so the question cards, guided setup and Review render there with the server kept on the left; along the bottom `ReviewLink` and `SettingsLink` side by side (gap 18) and Play + Update on the right. **Vote** options and **Extras** rows sit two to a row (`AppWindow.CardGrid`, a 2-column `UniformGrid` inside the existing panels). **Text:** the pixel face only on `BrandName` (32, with its drawn shadow), the Play block (24) and the Vote block (22), each `TextRenderingMode="Aliased"`; tabs Segoe UI SemiBold 14; Vote, Extras titles 20 and Checks 15 in Segoe UI SemiBold; every window `TextFormattingMode="Display"`, ClearType, `UseLayoutRounding`, `SnapsToDevicePixels`, body 14; `Fg` #F2F0EB, `Muted` #B5B2AA; pill text `Fg` 13, tagline 13. Version 3.4.1. Screenshots 22 to 27 are taken at the window's own size (980×620).

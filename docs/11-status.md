@@ -2,6 +2,35 @@
 
 Last updated 2026-10-03, 19:00 UTC (state of development checked against `main` `7d0e5be` and the running server: images `eff7eb5` deployed, pack `0.1.0+d7521da9`, app 3.4.2; docs/24 regen and pre-generation done; gaps and the order of work in `docs/10-roadmap.md` "Open items, by priority"). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
 
+## Spawn: open your own body, the block messages · docs/26 (2026-10-03, job `0c825297`)
+
+**What the keys are really called** (read from the live file and from `open-parties-and-claims-neoforge-1.21.1-0.31.6.jar`; §2 was written from memory):
+
+- The OPAC server config is **not** in `world/serverconfig/`. NeoForge 21.1 keeps it at the instance's **`config/openpartiesandclaims-server.toml`** (49.6 KB, every key with its comment). `world/serverconfig/` holds only OPAC's player configs (`-default-player-config`, `-server-claim-config`, `-expired-claim-config`, `-wilderness-config`). The header of the shipped `defaultconfigs/` file said otherwise; corrected.
+- The key is as expected: **`forcedEntityProtectionExceptionList`** under `[serverConfig.claims.protection]`, default `["minecraft:minecart"]`. A bare id = interaction "if the item in the used hand isn't blocking it"; prefixes are **`hand$`** (empty hand), **`break$`** (allows killing, not `kill$`) and **`anything$`** (any held item). Supports entity tags and `* ( ) |` patterns.
+
+**Corpse (§2), done.** Id checked on the running server first (19:23 UTC): `execute if entity @e[type=corpse:corpse]` answered "Test failed" (valid type, none present); controls `corpse:corpsex` and `corpsex:corpse` answered "Invalid or unknown entity type". Nobody online; stopped with `POST /server/stop` (runs `quiesce()`; Stopped after 10 s, all dimensions saved). The live file was unchanged since 10-01; one line edited, rsynced back over the deploy key: `forcedEntityProtectionExceptionList = ["minecraft:minecart", "corpse:corpse"]` (bare id, no `break$`; minecart kept because the list replaces OPAC's default). Original kept as `/root/docker/deepslate/backups/openpartiesandclaims-server.toml.before-docs26-20261003`. Started 19:32:59, up in 28 s. Read back after start: byte-identical to what was written, so NeoForge did not "correct" it. `latest.log` ERRORs: only the two known ones (`createdeco:placard`, Curios "example is not a registered slot type"). Shipped the same line in `modpack/server/defaultconfigs/openpartiesandclaims-server.toml` (only-what-differs manner kept). `dist/` and the instance's `defaultconfigs/` copy pick it up at the next Build all + Sync; that copy only matters for a missing `config/` file. Corpse's own rule is unchanged (`corpse-server.toml`: `only_owner = true`, `skeleton = true`, `skeleton_time = 36000` = 30 min).
+
+**Messages (§3): there is no OPAC setting. Nothing changed.**
+
+- Server config: the only message key is `claimWelcomeMessages` (entering a claim or the wilderness), not refusals. Player configs (default and server claims'): no message or notification option at all; the full player-configurable list is in `playerConfigurablePlayerConfigOptions` and has none. The jar has no client config for it either: the line is built on the server.
+- In the jar: `ChunkProtection` sends every refusal with `ServerPlayer.sendSystemMessage(Component)` as soon as a check returns `PROTECT`, with no config or player-option test in between. `sendSystemMessage` is a **chat** line, not the action bar. The text goes through OPAC's `AdaptiveLocalizer` (a translation key for clients that have OPAC, which every player does).
+- The lines and their keys (`assets/openpartiesandclaims/lang/en_us.json`):
+  - right-click or hit a block: `gui.xaero_claims_protection_interact_block` = "(%1$s) You are not allowed to interact with this block (%2$s)!" (`%1$s` = `gui.xaero_claims_protection_main_hand` "Main Hand" / `_off_hand` "Off Hand"), and `_interact_block_any` = "You are not allowed to interact with this block (%1$s)!"; follow-up `_interact_block_try_empty` = "(%1$s) It might work if you try again empty-handed."
+  - right-click an entity: `gui.xaero_claims_protection_interact_entity` = "(%1$s) You are not allowed to interact with this entity in this chunk (%2$s)!", `_interact_entity_any`, `_interact_entity_try_empty`.
+  - using or applying an item: `gui.xaero_claims_protection_use_item` / `_use_item_any`, `_interact_item_apply` / `_any` / `_too_close`; others: `_block_disabled`, `_entity_disabled`, `_item_disabled(_any)`, `_projectile_hit_block|entity|player`, `_interact_player(_any)`, `_chorus`.
+- **Not yet seen in game**: the reproduction as a non-admin needs a real account (I have none that is not an admin). Whether a left-click prints the block line (OPAC routes it through `onBlockInteraction`) and the exact block name in `%2$s` are for the first player at spawn to confirm. **Waiting on the planner** for the way (§3.4: most likely a language override in the client pack for these keys).
+
+| §4 acceptance | Seen |
+|---|---|
+| A player who dies in the spawn claim opens their own body | **Not yet seen**: needs a real account. The exception is live and loaded |
+| Another player cannot open it in its first 30 minutes | **Not yet seen**: needs two accounts. Corpse's `only_owner = true` is unchanged |
+| Nobody can break, place or open a chest in the spawn claim | **Not yet seen** in game; only the entity list changed, claim and block lists untouched |
+| The body cannot be destroyed by a player | **Not yet seen** in game; bare id only, no `break$` |
+| Hitting a block prints nothing, or the §3.4 report is here | **Report here**, waiting on the planner |
+| Shipped and live files say the same; no new ERROR at start | **Yes**: same line in both; only the two known ERRORs |
+| docs/11 says what the keys are called | **Yes**, top of this section |
+
 ## Fixes after the state-of-development check (2026-10-03 evening, Alex: one PR per item, merged and deployed on green)
 
 **1. The nightly database dump.** `deploy/docker-compose.yml`'s `backups` service ran `date +%%F`; compose escapes only `$`, so `date` got `%%F` and wrote the literal file `deepslate-%F.sql.gz`, the same file every night. Now `deepslate-$(date +%F).sql.gz` (one file per day), written as `.part` and renamed only when `pg_dump` and `gzip` both succeed (`set -o pipefail`), and retention keeps the newest **14** files matching `deepslate-20??-??-??.sql.gz`, so the `pre-*` migration dumps are neither counted nor removed. Tried before the PR in a throwaway `postgres:16-alpine` container with a stand-in `pg_dump`: 16 dated files plus `pre-0023-x` and `deepslate-%F` → 14 dated kept, the other two untouched; a failing dump left no file and no `.part`. The check on the server after the deploy is below.

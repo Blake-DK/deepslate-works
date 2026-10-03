@@ -100,7 +100,7 @@ describe("adventure mode in the spawn claim, in deepslate-tools (docs/27)", () =
     expect(tick.values).toEqual(expect.arrayContaining(["deepslate:kit/tick", "deepslate:spawn/tick"]));
     for (const name of ["tick", "enter", "leave"]) expect((await commands(name)).length).toBeGreaterThan(0);
   });
-  it("marks the area once, in the overworld, with the server claim's blocks for SPAWN_POS 107.5 126 87.5", async () => {
+  it("marks the area once, in the overworld: the server claim for SPAWN_POS 107.5 126 87.5, grown by 8 blocks each way", async () => {
     const tick = await commands("tick");
     const marks = tick.filter((c) => /\bdx=/.test(c));
     expect(marks).toHaveLength(1); // the coordinates are written once
@@ -108,15 +108,20 @@ describe("adventure mode in the spawn claim, in deepslate-tools (docs/27)", () =
     const v = Object.fromEntries(selector(marks[0]!).map((kv) => kv.split("=") as [string, string]));
     const { spawnClaimArea, parsePos } = await import("../../../apps/api/src/actions/registry");
     const a = spawnClaimArea(parsePos("107.5 126 87.5"));
+    // out of reach (about 5 blocks) of every claimed block: 8 more on each side (planner, docs/27 follow-up)
+    const grown = { x1: a.x1 - 8, z1: a.z1 - 8, x2: a.x2 + 8, z2: a.z2 + 8 };
+    expect(grown).toEqual({ x1: 24, z1: 8, x2: 167, z2: 151 });
     // a volume selector covers x to x + dx, both ends in, as block coordinates
-    expect({ x1: Number(v.x), z1: Number(v.z), x2: Number(v.x) + Number(v.dx), z2: Number(v.z) + Number(v.dz) }).toEqual(a);
+    expect({ x1: Number(v.x), z1: Number(v.z), x2: Number(v.x) + Number(v.dx), z2: Number(v.z) + Number(v.dz) }).toEqual(grown);
     expect(Number(v.y)).toBeLessThanOrEqual(-64); // every height
     expect(Number(v.y) + Number(v.dy)).toBeGreaterThanOrEqual(320);
   });
   it("puts only verified players in survival into adventure, and only gives survival back to verified players in adventure", async () => {
     const tick = await commands("tick");
     const enter = selector(tick.find((c) => c.includes("spawn/enter"))!);
-    expect(enter).toEqual(expect.arrayContaining(["tag=verified", "gamemode=survival", "tag=deepslate.spawn_area", "tag=!deepslate.spawn"]));
+    expect(enter).toEqual(expect.arrayContaining(["tag=verified", "gamemode=survival", "tag=deepslate.spawn_area"]));
+    // creative then survival inside the area: enter runs again for a player who still carries deepslate.spawn
+    expect(enter).not.toContain("tag=!deepslate.spawn");
     expect(await commands("enter")).toEqual(["gamemode adventure @s", "tag @s add deepslate.spawn"]);
     const leaving = selector(tick.find((c) => c.includes("spawn/leave"))!);
     expect(leaving).toEqual(expect.arrayContaining(["tag=deepslate.spawn", "tag=!deepslate.spawn_area"]));

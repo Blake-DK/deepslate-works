@@ -11,7 +11,7 @@ AMP's log showed, again and again, "SessionID passed in request body - this is d
 - **Checked against the live AMP before the change** (one-off script in `deepslate-api`, read-only, its own session, logged out after): `Core.GetModuleInfo` and `Core.GetStatus` with the Bearer header and nothing in the body both answered normally.
 - **Versions:** instance `DeepslateWorks01`: AMP **2.8.0.8**, build 20260927.1, API 2.8.0.8, "Proteus", Mainline. **Controller (ADS): not known.** It gives `webapp` (an instance user) an empty `GetModuleInfo`, and `ADSModule.GetInstances` is refused, so the other instances on the host cannot be listed from here either. Alex: ADS → Support/About, or `ampinstmgr --list` on the AMP host. Nothing in AMP was updated.
 - **Not yet verified:** that the warning is gone. AMP's own log is not reachable from the VPS (the file manager and the deploy key both stop at the instance's `Minecraft/` folder; ADS's log needs an ADS login). After the deploy, someone with the AMP dashboard open watches at least two polls (20 s+) for the warning. If it still shows, check whether it is logged by the ADS (the proxy) rather than the instance.
-- **Waits for** the backup fixes (docs/10 P0 1 and 2), as Alex asked. Timing of AMP calls (docs/10 P1 9) goes into the same `post()`; not in this branch.
+- **Waits for** the backup fixes, as Alex asked: the nightly dump (docs/10 P0 2) is done (PR #83); the backup route (P0 1) is not. PR #84. Timing of AMP calls (docs/10 P1 9) goes into the same `post()`; not in this branch.
 
 ## Fixes after the state-of-development check (2026-10-03 evening, Alex: one PR per item, merged and deployed on green)
 

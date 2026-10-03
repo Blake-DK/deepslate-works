@@ -22,12 +22,12 @@ export function Switch({ action, fields, on, label, why, disabled = false }: { a
         aria-label={label}
         disabled={disabled}
         className={cn(
-          "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          on ? "border-accent bg-accent" : "border-border bg-muted",
-          disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer",
+          "relative inline-flex h-6 w-11 shrink-0 items-center border-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+          on ? "border-play-lo bg-play" : "border-edge bg-well",
+          disabled ? "cursor-not-allowed border-border bg-disabled" : "cursor-pointer",
         )}
       >
-        <span aria-hidden className={cn("inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", on ? "translate-x-6" : "translate-x-1")} />
+        <span aria-hidden className={cn("inline-block h-3.5 w-3.5 bg-foreground transition-transform", on ? "translate-x-[22px]" : "translate-x-[3px]")} />
       </button>
     </form>
   );

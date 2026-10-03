@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, fieldClasses } from "@/components/ui/input";
 import { HowThisWorks } from "@/components/tabs";
 import { ConfirmSubmit } from "@/components/server/confirm-submit";
 import { mapProgress, modeText, pregenCost, progress, sleepText, type Pregen } from "@/lib/pregen";
@@ -16,6 +16,8 @@ import { DistanceForm } from "@/components/server/distance-form";
 import { msptTone, waiting, type Distance } from "@/lib/distance";
 import { clearingText, COUNTED, countTone, LABELS, planText, type Ground } from "@/lib/ground";
 import { announceAction, announcementChangeAction, announcementDatesAction, backupAction, cancelRestartAction, distanceAction, groundClearAction, groundPlanAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
+import { Check } from "@/components/ui/check";
+import { cn } from "@/lib/utils";
 
 // The cards of Admin → Server and Admin → News, and the ones the Control Room shares. Everything that was on the one
 // long Server page before docs/13 §11, word for word where it was a control; long explanations fold into
@@ -71,13 +73,13 @@ export function PowerCard({ status, players, back }: { status: LiveStatus; playe
       <CardContent className="space-y-3">
         <form action={serverOpAction.bind(null, "")} className="flex flex-wrap items-center gap-2">
           <Back to={back} />
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="sure" className="h-4 w-4" /> I&apos;m sure</label>
+          <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="sure" /> I&apos;m sure</label>
           <Button type="submit" formAction={serverOpAction.bind(null, "start")} size="sm" disabled={!startable}>Start</Button>
           <Button type="submit" formAction={serverOpAction.bind(null, "restart")} size="sm" variant="secondary" disabled={!running}>Restart now</Button>
           <Button type="submit" formAction={serverOpAction.bind(null, "stop")} size="sm" variant="danger" disabled={!running}>Stop</Button>
         </form>
         {stuck && (
-          <form action={killAction} className="space-y-2 rounded-lg border border-danger/40 bg-danger/10 p-3" data-testid="kill">
+          <form action={killAction} className="space-y-2 rounded-[4px] border border-l-[3px] border-l-danger bg-card p-3" data-testid="kill">
             <Back to={back} />
             <p className="text-sm">The server is stopping. That takes a minute at most; if it has been like this for several minutes it is stuck, and the only way out is to end its process. <strong>Whatever it had not saved is lost.</strong></p>
             <ConfirmSubmit question="End the server's process? Whatever it had not saved is lost. Only do this when the server has been stuck in Stopping for several minutes.">End the process</ConfirmSubmit>
@@ -107,7 +109,7 @@ export function RestartCard({ schedule, running, back }: { schedule: Schedule | 
           <form action={scheduleRestartAction} className="flex flex-wrap items-end gap-2">
             <Back to={back} />
             <div><Label htmlFor={`minutes${back ? "-cr" : ""}`}>In how many minutes</Label><Input id={`minutes${back ? "-cr" : ""}`} name="minutes" type="number" min={1} max={120} defaultValue={5} className="h-8 w-24 text-sm" required /></div>
-            <label className="flex items-center gap-2 pb-1.5 text-sm"><input type="checkbox" name="sure" className="h-4 w-4" /> I&apos;m sure</label>
+            <label className="flex items-center gap-2 pb-1.5 text-sm"><Check type="checkbox" name="sure" /> I&apos;m sure</label>
             <Button type="submit" size="sm" disabled={!running}>Plan restart</Button>
           </form>
         )}
@@ -154,7 +156,7 @@ export function DistanceCard({ distance, status, schedule }: { distance: Distanc
               </Alert>
             )}
             {pending.length > 0 && (
-              <div className="space-y-2 rounded-lg border p-3 text-sm" data-testid="distance-pending">
+              <div className="space-y-2 rounded-[4px] border p-3 text-sm" data-testid="distance-pending">
                 <p>
                   <Badge tone="warn">Waiting for a restart</Badge>{" "}
                   {pending.map((p) => `${p.what} ${p.now ?? "?"} → ${p.next}`).join(", ")}
@@ -189,7 +191,7 @@ export function BackupCard({ backup, back, list = true }: { backup: Backup | nul
       <CardContent className="space-y-3">
         <form action={backupAction} className="flex flex-wrap items-center gap-2">
           <Back to={back} />
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="sure" className="h-4 w-4" disabled={!backup?.allowed} /> I&apos;m sure</label>
+          <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="sure" disabled={!backup?.allowed} /> I&apos;m sure</label>
           <Button type="submit" size="sm" variant="secondary" disabled={!backup?.allowed}>Back up</Button>
         </form>
         {list && (backup?.canList ? (
@@ -227,12 +229,12 @@ export function PregenCard({ pregen }: { pregen: Pregen | null }) {
         <p className="text-sm" data-testid="pregen-mode">{mode.line}</p>
         <div data-testid="pregen-progress">
           <p className="text-sm">{pregen?.plan.area ? <>Radius {pregen.plan.area.radius} around {pregen.plan.area.x}, {pregen.plan.area.z}. </> : null}{renderOnly ? null : prog.line}</p>
-          {!renderOnly && prog.percent !== null && <span className="mt-1 block h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(prog.percent)}><span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(100, prog.percent)}%` }} /></span>}
+          {!renderOnly && prog.percent !== null && <span className="mt-1 block h-2 overflow-hidden border bg-panel" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(prog.percent)}><span className="block h-full bg-primary" style={{ width: `${Math.min(100, prog.percent)}%` }} /></span>}
         </div>
         {mapProg && (
           <div data-testid="pregen-map">
             <p className="text-sm">{mapProg.line}</p>
-            {mapProg.percent !== null && <span className="mt-1 block h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Map render" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(mapProg.percent)}><span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(100, mapProg.percent)}%` }} /></span>}
+            {mapProg.percent !== null && <span className="mt-1 block h-2 overflow-hidden border bg-panel" role="progressbar" aria-label="Map render" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(mapProg.percent)}><span className="block h-full bg-primary" style={{ width: `${Math.min(100, mapProg.percent)}%` }} /></span>}
           </div>
         )}
         {mode.on ? (
@@ -250,15 +252,15 @@ export function PregenCard({ pregen }: { pregen: Pregen | null }) {
             <p className="text-xs text-muted-foreground">Around {pregen?.plan.area?.x ?? 0}, {pregen?.plan.area?.z ?? 0} (spawn). Another radius calls the present area off and begins a new one; what is already made is passed over quickly. Roughly: {[1500, 3000, 5000, 10000].map((r) => { const c = pregenCost(r); return `${r} = ${c.hours < 1 ? `${Math.round(c.hours * 60)} min` : `${c.hours.toFixed(1)} h`}, ${c.gb < 1 ? c.gb.toFixed(1) : Math.round(c.gb)} GB`; }).join(" · ")}.</p>
             <fieldset className="space-y-1 text-sm">
               <legend className="mb-1 font-medium">What</legend>
-              <label className="flex items-center gap-2"><input type="radio" name="what" value="both" defaultChecked className="h-4 w-4" />Generate, then render the map</label>
-              <label className="flex items-center gap-2"><input type="radio" name="what" value="generate" className="h-4 w-4" />Generate only</label>
-              <label className="flex items-center gap-2"><input type="radio" name="what" value="render" className="h-4 w-4" />Render the map only</label>
+              <label className="flex items-center gap-2"><Check type="radio" name="what" value="both" defaultChecked />Generate, then render the map</label>
+              <label className="flex items-center gap-2"><Check type="radio" name="what" value="generate" />Generate only</label>
+              <label className="flex items-center gap-2"><Check type="radio" name="what" value="render" />Render the map only</label>
               <p className="text-xs text-muted-foreground">The map is BlueMap&apos;s, of the overworld, inside the radius. The server is kept awake until BlueMap says the map is up to date.</p>
             </fieldset>
             <fieldset className="space-y-2">
               <legend className="sr-only">Mode</legend>
-              <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
-                <input type="radio" name="mode" value="empty" defaultChecked className="mt-1 h-4 w-4" />
+              <label className="flex items-start gap-2 rounded-[4px] border p-3 text-sm">
+                <Check className="mt-1" type="radio" name="mode" value="empty" defaultChecked />
                 <span className="space-y-2">
                   <span className="block font-medium">When nobody&apos;s online</span>
                   <span className="block text-muted-foreground">Carries on whenever the server is empty and pauses as soon as anyone joins.</span>
@@ -269,8 +271,8 @@ export function PregenCard({ pregen }: { pregen: Pregen | null }) {
                   </span>
                 </span>
               </label>
-              <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
-                <input type="radio" name="mode" value="now" className="mt-1 h-4 w-4" />
+              <label className="flex items-start gap-2 rounded-[4px] border p-3 text-sm">
+                <Check className="mt-1" type="radio" name="mode" value="now" />
                 <span className="space-y-2">
                   <span className="block font-medium">Now</span>
                   <span className="block text-danger">Runs whoever is playing. It will lag anyone who is on. The map render waits while the server is slow for them; the generating does not.</span>
@@ -288,7 +290,7 @@ export function PregenCard({ pregen }: { pregen: Pregen | null }) {
         {!mode.on && pregen?.plan.area && (
           <form action={pregenAction}><input type="hidden" name="op" value="cancel" /><ConfirmSubmit variant="secondary" question="Call the area off? Chunky forgets where it got to; what has been generated stays in the world.">Cancel the area</ConfirmSubmit></form>
         )}
-        <div className={`rounded-lg border p-3 text-xs ${sleepy.ok ? "text-muted-foreground" : "border-danger/40 bg-danger/10"}`} data-testid="pregen-sleep">
+        <div className={`rounded-[4px] border p-3 text-xs ${sleepy.ok ? "text-muted-foreground" : "border-l-[3px] border-l-danger bg-card"}`} data-testid="pregen-sleep">
           <p>{sleepy.line}</p>
           {sleepy.grant && <p className="mt-1">To allow it: in the instance&apos;s own panel, give the role of the user <span className="font-mono">webapp</span> the permission Settings → MinecraftModule → Limits → SleepMode, <span className="font-mono">{sleepy.grant}</span>. The setting is <span className="font-mono">{pregen?.sleep.node}</span>.</p>}
         </div>
@@ -340,13 +342,13 @@ export function AnnounceCard({ running }: { running: boolean }) {
       <CardContent>
         <form action={announceAction} className="space-y-2">
           <Label htmlFor="body" className="sr-only">Announcement</Label>
-          <textarea id="body" name="body" maxLength={600} required rows={3} className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder="Server restarts at 8 for the new mods…" />
-          <div><Label htmlFor="newsimage">Picture (optional)</Label><input id="newsimage" name="image" type="file" accept="image/png,image/jpeg,image/webp" className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:bg-muted file:px-3 file:py-1.5 file:text-sm" /></div>
+          <textarea id="body" name="body" maxLength={600} required rows={3} className={cn("min-h-11 py-2", fieldClasses)} placeholder="Server restarts at 8 for the new mods…" />
+          <div><Label htmlFor="newsimage">Picture (optional)</Label><input id="newsimage" name="image" type="file" accept="image/png,image/jpeg,image/webp" className="block w-full text-sm file:mr-3 file:rounded-none file:border-2 file:border-edge file:bg-card-2 file:px-3 file:py-1.5 file:text-sm file:text-foreground" /></div>
           <div className="flex flex-wrap items-center gap-4 text-sm">
-            <label className="flex items-center gap-2"><input type="checkbox" name="pinned" className="h-4 w-4" /> Pin to the top</label>
+            <label className="flex items-center gap-2"><Check type="checkbox" name="pinned" /> Pin to the top</label>
             <label className="flex items-center gap-2">Pinned until <Input name="pinnedUntil" type="datetime-local" className="h-8 w-auto text-sm" /></label>
             <label className="flex items-center gap-2">Hide from <Input name="expiresAt" type="datetime-local" className="h-8 w-auto text-sm" /></label>
-            <label className="flex items-center gap-2"><input type="checkbox" name="say" className="h-4 w-4" disabled={!running} /> Also say it in game</label>
+            <label className="flex items-center gap-2"><Check type="checkbox" name="say" disabled={!running} /> Also say it in game</label>
             <Button type="submit" size="sm">Post</Button>
           </div>
           <HowThisWorks>A picture may be PNG, JPEG or WebP, 3 MB at most. &quot;Also say it in game&quot; says the first line (200 characters) in chat. Dates are UK time and optional: &quot;Pinned until&quot; pins it until then, &quot;Hide from&quot; takes it off the home page from then.</HowThisWorks>
@@ -423,7 +425,7 @@ export function EntityCountsCard({ ground }: { ground: Ground | null }) {
               const n = c?.values[what];
               const problem = c?.problems[what];
               return (
-                <div key={what} className="flex items-start justify-between gap-3 rounded-lg border p-2" data-testid={`count-${what}`}>
+                <div key={what} className="flex items-start justify-between gap-3 rounded-[4px] border p-2" data-testid={`count-${what}`}>
                   <div className="min-w-0">
                     <dt className="text-sm font-medium">{LABELS[what].name}</dt>
                     <dd className="text-xs text-muted-foreground">{problem ? (/tag|function/i.test(problem) ? "Needs a server restart after the next Sync (datapack)." : `No answer: ${problem}`) : LABELS[what].hint}</dd>
@@ -457,7 +459,7 @@ export function GroundClearCard({ ground }: { ground: Ground | null }) {
           <Alert tone="success" data-testid="ground-clearing">{clearingText(ground.clearing)}</Alert>
         ) : (
           <form action={groundClearAction} className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="sure" /> Yes, clear them</label>
+            <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="sure" /> Yes, clear them</label>
             <ConfirmSubmit variant="secondary" disabled={!ground?.running} question="Warn everyone and clear items on the ground in 60 seconds?">Clear ground items now</ConfirmSubmit>
             {!ground?.running && <span className="text-xs text-muted-foreground">Only while the server is running.</span>}
           </form>
@@ -468,11 +470,11 @@ export function GroundClearCard({ ground }: { ground: Ground | null }) {
             {last.problem ? <span className="text-danger">didn&apos;t work: {last.problem}</span> : <>{(last.removed ?? 0).toLocaleString("en-GB")} item{last.removed === 1 ? "" : "s"} removed{last.before !== null ? ` of ${last.before.toLocaleString("en-GB")} on the ground` : ""}.</>}
           </p>
         )}
-        <form action={groundPlanAction} className="space-y-2 rounded-lg border p-3" data-testid="ground-plan">
+        <form action={groundPlanAction} className="space-y-2 rounded-[4px] border p-3" data-testid="ground-plan">
           <p className="text-sm font-medium">Automatic</p>
           <p className="text-xs text-muted-foreground" data-testid="ground-plan-text">{planText(plan, ground?.checkEveryMin ?? 10)}</p>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="auto" defaultChecked={plan.auto} /> Clear by itself when there are too many</label>
+            <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="auto" defaultChecked={plan.auto} /> Clear by itself when there are too many</label>
             <div>
               <Label htmlFor="ground-threshold">More than (items)</Label>
               <Input id="ground-threshold" name="threshold" type="number" min={200} max={20000} step={100} defaultValue={plan.threshold} className="w-28" />

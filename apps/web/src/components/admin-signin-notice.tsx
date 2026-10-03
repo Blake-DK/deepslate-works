@@ -17,7 +17,7 @@ export async function AdminSignInNotice() {
   });
   if (rows.length === 0) return null;
   return (
-    <Alert tone="info" data-testid="admin-signin-notice" className="mb-4 border-primary/50">
+    <Alert tone="info" data-testid="admin-signin-notice" className="mb-4">
       <p className="font-medium">Password sign-in{rows.length > 1 ? "s" : ""} in the last {NOTICE_HOURS} hours</p>
       <ul className="mt-1 list-disc pl-5">{rows.map((r) => <li key={String(r.id)}>{r.message}, {timeAgo(r.at)}</li>)}</ul>
       <p className="mt-1">Not you, or not who you expected? Turn their password sign-in off in <Link href="/admin/people" className="underline">People</Link> and tell them.</p>

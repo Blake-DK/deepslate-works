@@ -59,7 +59,7 @@ export default async function PlayersPage() {
           </CardHeader>
           <CardContent>
             <ul className="flex flex-wrap gap-2">
-              {guests.map((g) => <li key={g.name} className="flex items-center gap-2 rounded-lg bg-muted py-1 pl-1 pr-3 text-sm"><PlayerHead uuid={g.uuid} name={g.name} size={24} /><span className="font-mono">{g.name}</span></li>)}
+              {guests.map((g) => <li key={g.name} className="flex items-center gap-2 rounded-[3px] border bg-card-2 py-1 pl-1 pr-3 text-sm"><PlayerHead uuid={g.uuid} name={g.name} size={24} /><span className="font-mono">{g.name}</span></li>)}
             </ul>
           </CardContent>
         </Card>

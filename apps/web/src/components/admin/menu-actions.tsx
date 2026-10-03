@@ -21,14 +21,14 @@ export function LinkByName({ action, id, who }: { action: Action; id: string; wh
   return (
     <>
       <button type="button" role="menuitem" className={menuItem} onClick={() => dialog.current?.showModal()}>Link by name…</button>
-      <dialog ref={dialog} className="m-auto w-[min(24rem,calc(100vw-2rem))] rounded-xl border bg-card p-5 text-foreground shadow-xl backdrop:bg-black/40" aria-label={`Link ${who} to a Minecraft account`}>
+      <dialog ref={dialog} className="m-auto w-[min(24rem,calc(100vw-2rem))] rounded-[4px] border bg-card p-5 text-foreground backdrop:bg-black/40" aria-label={`Link ${who} to a Minecraft account`}>
         <form action={action} className="space-y-3">
           <input type="hidden" name="id" value={id} />
           <h2 className="truncate text-lg font-semibold" title={who}>Link {who}</h2>
           <p className="text-sm text-muted-foreground">The name is checked with Mojang and linked by hand. Normally accounts link themselves in game.</p>
           <div>
             <label htmlFor={`mc-${id}`} className="mb-1 block text-sm font-medium">Minecraft name</label>
-            <input id={`mc-${id}`} name="mcUsername" autoFocus required pattern="[A-Za-z0-9_]{3,16}" maxLength={16} className="h-10 w-full rounded-lg border bg-background px-3 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input id={`mc-${id}`} name="mcUsername" autoFocus required pattern="[A-Za-z0-9_]{3,16}" maxLength={16} className="h-11 w-full rounded-none border-2 border-edge bg-panel px-3 font-mono text-sm focus-visible:border-primary focus-visible:outline-none" />
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" className={buttonClasses("ghost", "sm")} onClick={() => dialog.current?.close()}>Cancel</button>

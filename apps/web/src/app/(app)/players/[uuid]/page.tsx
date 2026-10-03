@@ -30,6 +30,7 @@ import { setEarlyAccessAction } from "../../admin/users/actions";
 import { Switch } from "@/components/admin/parts";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/server/api-client";
+import { stripLink } from "@/components/strip-link";
 
 type PartyView = { id: string; name: string | null; members: Array<{ uuid: string; name: string; rank: string; owner: boolean }>; allies: Array<{ id: string; name: string | null; owner: string | null }> };
 const RANK: Record<string, string> = { ADMIN: "admin", MODERATOR: "moderator" };
@@ -132,10 +133,10 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
         <Tile label="Last on" value={online ? "now" : rows[0] ? timeAgo(rows[0].leftAt ?? rows[0].joinedAt, now) : "never"} />
       </section>
 
-      <nav aria-label="About this player" className="-mx-1 flex gap-1 overflow-x-auto border-b px-1" data-testid="tabs">
+      <nav aria-label="About this player" className="flex overflow-x-auto whitespace-nowrap border-b" data-testid="tabs">
         {tabs.map((t) => (
-          <Link key={t.key} href={tabHref(base, tabs, t.key)} aria-current={t.key === tab ? "page" : undefined} className={cn("-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm", t.key === tab ? "border-primary font-semibold" : "border-transparent text-muted-foreground hover:text-foreground")}>
-            {t.label}{t.count != null && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{t.count}</span>}
+          <Link key={t.key} href={tabHref(base, tabs, t.key)} aria-current={t.key === tab ? "page" : undefined} className={cn("-mb-px", stripLink(t.key === tab))}>
+            {t.label}{t.count != null && <span className="text-xs font-normal text-dim">{t.count}</span>}
           </Link>
         ))}
       </nav>
@@ -165,7 +166,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
                 <ul className="flex flex-wrap gap-2" aria-label="Party members">
                   {party.members.map((m) => (
                     <li key={m.uuid}>
-                      <Link href={`/players/${m.uuid}`} className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 hover:bg-muted">
+                      <Link href={`/players/${m.uuid}`} className="inline-flex items-center gap-1.5 rounded-[3px] border bg-card-2 px-2 py-0.5 hover:text-foreground">
                         <PlayerHead uuid={m.uuid} name={m.name} size={16} />
                         <span className="font-mono">{m.name || m.uuid.slice(0, 8)}</span>
                         {m.owner ? <Badge>leader</Badge> : RANK[m.rank] ? <span className="text-xs text-muted-foreground">{RANK[m.rank]}</span> : null}

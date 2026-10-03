@@ -13,7 +13,7 @@ function Sizes({ src, pixel }: { src: string; pixel: boolean }) {
   return (
     <div className="grid grid-cols-2 gap-1.5">
       {(["#16171a", "#f6f5f2"] as const).map((bg) => (
-        <div key={bg} className="flex items-end justify-center gap-2 rounded-md p-2" style={{ background: bg }}>
+        <div key={bg} className="flex items-end justify-center gap-2 rounded-[3px] p-2" style={{ background: bg }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- a logo at exact pixel sizes */}
           {SMALL.map((s) => <img key={s} src={src} alt="" width={s} height={s} style={{ ...style, width: s, height: s }} />)}
         </div>
@@ -32,7 +32,7 @@ export function LogoPicker({ options, choice, ownUrl, ownPixel }: { options: Log
           const src = `/logo-options/${o.id}.svg`;
           const inUse = choice === `option:${o.id}`;
           return (
-            <li key={o.id} data-testid={`logo-${o.id}`} className={`space-y-2 rounded-xl border p-3 ${inUse ? "border-primary ring-2 ring-primary/40" : ""}`}>
+            <li key={o.id} data-testid={`logo-${o.id}`} className={`space-y-2 rounded-[4px] border p-3 ${inUse ? "border-2 border-primary p-[11px]" : ""}`}>
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">{o.title}</span>
                 {inUse && <Badge tone="good">In use</Badge>}
@@ -48,7 +48,7 @@ export function LogoPicker({ options, choice, ownUrl, ownPixel }: { options: Log
           );
         })}
       </ul>
-      <form action={uploadLogoAction} className="space-y-2 rounded-xl border p-3" data-testid="logo-upload">
+      <form action={uploadLogoAction} className="space-y-2 rounded-[4px] border p-3" data-testid="logo-upload">
         <div className="flex flex-wrap items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- the uploaded logo in use */}
           {ownUrl && <img src={ownUrl} alt="Your logo" width={64} height={64} className="h-16 w-16" style={ownPixel ? { imageRendering: "pixelated" } : undefined} />}

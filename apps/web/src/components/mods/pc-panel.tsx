@@ -11,17 +11,17 @@ const ROWS: Array<{ tier: PcTier; title: string; text: string }> = [
 
 export function PcPanel({ tier }: { tier: PcTier | null }) {
   return (
-    <section className="rounded-xl border bg-card p-4">
+    <section className="rounded-[4px] border bg-card p-4">
       <h2 className="font-semibold">Will my PC run it?</h2>
       <p className="mt-1 text-sm text-muted-foreground">Rough guide for the base pack plus a normal set of picks. The installer sets RAM automatically. Your row is highlighted; <Link href="/onboarding" className="underline">change it</Link> if it&apos;s wrong.</p>
       <ul className="mt-3 space-y-2">
         {ROWS.map((r) => (
-          <li key={r.tier} className={cn("rounded-lg border p-3 text-sm", tier === r.tier && "border-primary bg-primary/5")}>
+          <li key={r.tier} className={cn("rounded-[4px] border p-3 text-sm", tier === r.tier && "border-2 border-primary p-[11px]")}>
             <span className="font-medium">{r.title}</span>{tier === r.tier && <span className="ml-2 text-xs text-primary">you</span>}
             <span className="block text-muted-foreground">{r.text}</span>
           </li>
         ))}
-        <li className="rounded-lg border p-3 text-sm"><span className="font-medium">Older than 2016, or 4 GB RAM</span><span className="block text-muted-foreground">Tell Alex before the vote closes. A cut-down pack or an upgrade may be needed.</span></li>
+        <li className="rounded-[4px] border p-3 text-sm"><span className="font-medium">Older than 2016, or 4 GB RAM</span><span className="block text-muted-foreground">Tell Alex before the vote closes. A cut-down pack or an upgrade may be needed.</span></li>
       </ul>
       <div className="mt-3 flex flex-wrap gap-2 text-xs"><LoadChip load="L" withHint /><LoadChip load="M" withHint /><LoadChip load="H" withHint /></div>
     </section>

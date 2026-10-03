@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, fieldClasses } from "@/components/ui/input";
 import { MotdPreview } from "@/components/admin/motd-preview";
 import { visible } from "@/lib/motd";
+import { Check } from "@/components/ui/check";
+import { cn } from "@/lib/utils";
 
 export type BrandingValues = {
   name: string; tagline: string;
@@ -22,7 +24,7 @@ function Picture({ slot, label, hint, current, onPick }: { slot: string; label: 
       <Label htmlFor={slot}>{label}</Label>
       <input
         id={slot} name={slot} type="file" accept="image/png,image/webp,image/svg+xml,.png,.webp,.svg"
-        className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm"
+        className="block w-full text-sm file:mr-3 file:rounded-none file:border-2 file:border-edge file:bg-card-2 file:text-foreground file:px-3 file:py-2 file:text-sm"
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (!f) return onPick(null);
@@ -37,7 +39,7 @@ function Picture({ slot, label, hint, current, onPick }: { slot: string; label: 
       />
       <p className="text-xs text-muted-foreground">{hint} PNG, WebP or SVG, 2 MB at most.</p>
       {problem && <p className="text-xs text-danger" role="alert">{problem}</p>}
-      {current && <label className="flex items-center gap-2 text-xs"><input type="checkbox" name={`${slot}Remove`} className="h-3.5 w-3.5" /> Remove the current one</label>}
+      {current && <label className="flex items-center gap-2 text-xs"><Check type="checkbox" name={`${slot}Remove`} /> Remove the current one</label>}
     </div>
   );
 }
@@ -76,13 +78,13 @@ export function BrandingForm({ initial, action }: { initial: BrandingValues; act
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold">Rules page</legend>
           <Label htmlFor="rules" className="sr-only">Rules</Label>
-          <textarea id="rules" name="rules" value={v.rules} onChange={set("rules")} rows={10} maxLength={8000} className="w-full rounded-lg border bg-background px-3 py-2 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder={"# House rules\n\n- No griefing\n- Ask before borrowing\n\nChat is kept for 30 days so admins can sort out disputes."} />
+          <textarea id="rules" name="rules" value={v.rules} onChange={set("rules")} rows={10} maxLength={8000} className={cn("min-h-11 py-2 font-mono", fieldClasses)} placeholder={"# House rules\n\n- No griefing\n- Ask before borrowing\n\nChat is kept for 30 days so admins can sort out disputes."} />
           <p className="text-xs text-muted-foreground"><span className="font-mono"># Heading</span>, <span className="font-mono">- list</span>, <span className="font-mono">**bold**</span>, <span className="font-mono">*italic*</span>, <span className="font-mono">[words](https://link)</span>. The page also lists what the site keeps about players, from the settings.</p>
         </fieldset>
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold">Guide page</legend>
           <Label htmlFor="guide" className="sr-only">Guide</Label>
-          <textarea id="guide" name="guide" value={v.guide} onChange={set("guide")} rows={16} maxLength={20000} className="w-full rounded-lg border bg-background px-3 py-2 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <textarea id="guide" name="guide" value={v.guide} onChange={set("guide")} rows={16} maxLength={20000} className={cn("min-h-11 py-2 font-mono", fieldClasses)} />
           <p className="text-xs text-muted-foreground">{v.guideOwn ? "This is your own text." : "This is the guide as it ships; change it and save to make it yours."} Same Markdown as the rules. A heading, a list item or a paragraph that ends in <span className="font-mono">&lt;!-- mod: create --&gt;</span> is shown only while that mod is switched on in the mod list; the name is the one in the mod&apos;s address on the Mods page. The numbered steps under &quot;Getting in&quot; are also shown on the sign-in page. Empty the box and save to get the shipped guide back.</p>
         </fieldset>
         <Button type="submit">Save branding</Button>

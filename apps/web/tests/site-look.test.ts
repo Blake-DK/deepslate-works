@@ -236,7 +236,7 @@ describe("the pages (docs/23 §5)", () => {
     for (const f of ["components/polls/poll-card.tsx", "app/(app)/vote/ballot-form.tsx"]) expect([f, read(f).includes("<PickBox")]).toEqual([f, true]);
     const box = read("components/ui/pick-box.tsx");
     expect(box).toMatch(/h-4 w-4[^"]*border-2 border-edge bg-well[^"]*text-primary-hi/);
-    // step 3's pages; the other pages' leftovers are step 4
+    // step 3's pages; every page is checked by the step 4 block below
     for (const f of ["components/polls/poll-card.tsx", "app/(app)/vote/ballot-form.tsx", "components/polls/vote-banner.tsx", "app/(app)/page.tsx", "components/server/status-card.tsx", "components/server/play-button.tsx"])
       expect([f, /accent-\[|backdrop-blur|rounded-full|rounded-xl/.test(read(f))]).toEqual([f, false]);
   });
@@ -244,5 +244,46 @@ describe("the pages (docs/23 §5)", () => {
     expect(read("components/polls/vote-banner.tsx")).toContain('className="scroll-mt-20 border-2 border-primary"');
     expect(read("app/(app)/page.tsx")).toContain('openVote ? "border-2 border-primary"');
     expect(read("app/(app)/page.tsx")).toContain('buttonClasses("copper", "sm")}>Vote now');
+  });
+});
+
+describe("the leftovers (docs/23 §8 step 4): every page takes the parts", () => {
+  const files = filesUnder(SRC).filter((f) => /\.tsx?$/.test(f));
+  const hits = (re: RegExp, allowed: string[] = []) => files.map(rel).filter((f) => !allowed.includes(f) && re.test(readFileSync(path.join(SRC, f), "utf8")));
+  it("no rounded-md, -lg, -xl or -2xl corners: cards are 4 px, chips 3 px, fields and blocks square", () => {
+    expect(hits(/\brounded-(md|lg|xl|2xl|3xl)\b/)).toEqual([]);
+  });
+  it("rounded-full only for the status pill and the live dots", () => {
+    expect(hits(/\brounded-full\b/, ["components/nav.tsx", "components/server/live-console.tsx", "components/events/live-tail.tsx"])).toEqual([]);
+  });
+  it("no tinted boxes, no blur, no drop shadows", () => {
+    expect(hits(/\b(bg|border|ring)-(primary|danger|accent|info|warn|play)\/\d+/)).toEqual([]);
+    expect(hits(/backdrop-blur|className=["`{][^"`]*(?<=["'`\s])shadow(-(sm|md|lg|xl|2xl))?(?=["'`\s])/)).toEqual([]);
+  });
+  it("no browser-drawn checkbox or radio, no accent-[…]: boxes are Check or PickBox", () => {
+    expect(hits(/<input\b[^>]*type="(checkbox|radio)"/, ["components/ui/check.tsx", "components/ui/pick-box.tsx"])).toEqual([]);
+    expect(hits(/accent-\[/)).toEqual([]);
+    expect(readFileSync(path.join(SRC, "components/ui/check.tsx"), "utf8")).toMatch(/h-4 w-4[^"]*border-2 border-edge bg-well[^"]*text-transparent/);
+  });
+  it("every select and textarea has §5's field style", () => {
+    for (const f of files) {
+      const src = readFileSync(f, "utf8");
+      for (const m of src.matchAll(/<(select|textarea)\b[^>]*/g)) if (rel(f) !== "components/ui/input.tsx") expect([rel(f), m[0].includes("fieldClasses")]).toEqual([rel(f), true]);
+    }
+  });
+  it("tabs and filters inside a page are the strip's tab", () => {
+    for (const f of ["app/(app)/analytics/section.tsx", "app/(app)/admin/installs/section.tsx", "app/(app)/admin/users/section.tsx", "app/(app)/players/[uuid]/page.tsx"]) {
+      const src = readFileSync(path.join(SRC, f), "utf8");
+      expect([f, src.includes("stripLink("), /bg-card font-medium shadow-sm/.test(src)]).toEqual([f, true, false]);
+    }
+  });
+  it("charts: Copper for the main series, Blue for a second, Line for grid lines", () => {
+    for (const f of ["components/analytics/area-chart.tsx", "components/server/sparkline.tsx"]) {
+      const src = readFileSync(path.join(SRC, f), "utf8");
+      expect([f, src.includes("text-primary"), src.includes("stroke-border"), /strokeOpacity/.test(src)]).toEqual([f, true, true, false]);
+    }
+    const results = readFileSync(path.join(SRC, "app/(app)/vote/results/section.tsx"), "utf8");
+    expect(results).toContain('<div className="h-full bg-primary"');
+    expect(results).toContain('<div className="h-full bg-info"');
   });
 });

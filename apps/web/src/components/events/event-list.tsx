@@ -11,10 +11,10 @@ export function EventItem({ e, admin }: { e: EventRow; admin: boolean }) {
   const severity = SEVERITY[e.kind];
   const body = (
     <div className="flex items-start gap-3">
-      <div className="w-8 shrink-0 pt-0.5">{e.who?.mcName || e.who?.mcUuid ? <PlayerHead uuid={e.who.mcUuid} name={e.who.mcName} size={28} /> : <span className="block h-7 w-7 rounded-md bg-muted" aria-hidden />}</div>
+      <div className="w-8 shrink-0 pt-0.5">{e.who?.mcName || e.who?.mcUuid ? <PlayerHead uuid={e.who.mcUuid} name={e.who.mcName} size={28} /> : <span className="block h-7 w-7 bg-card-2" aria-hidden />}</div>
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
-          <Badge tone={TONE[severity]} className={severity === "admin" ? "border border-primary/40 text-primary" : undefined}>{KIND_LABEL[e.kind]}</Badge>
+          <Badge tone={TONE[severity]} className={severity === "admin" ? "text-primary" : undefined}>{KIND_LABEL[e.kind]}</Badge>
           <span className="min-w-0 break-words">{e.message}</span>
           {e.count > 1 && <span className="text-xs text-muted-foreground">×{e.count}</span>}
         </p>
@@ -32,8 +32,8 @@ export function EventItem({ e, admin }: { e: EventRow; admin: boolean }) {
       <details>
         <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">{body}</summary>
         <div className="ml-11 mt-2 space-y-2 text-xs">
-          {e.raw && <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-lg border bg-muted p-2">{e.raw}</pre>}
-          {e.meta != null && <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-lg border bg-muted p-2">{JSON.stringify(e.meta, null, 2)}</pre>}
+          {e.raw && <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-[4px] border bg-panel p-2">{e.raw}</pre>}
+          {e.meta != null && <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-[4px] border bg-panel p-2">{JSON.stringify(e.meta, null, 2)}</pre>}
         </div>
       </details>
     </li>

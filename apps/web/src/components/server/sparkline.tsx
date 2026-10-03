@@ -9,7 +9,7 @@ export function Sparkline({ values, label, width = 280, height = 48, unit = ["pl
   return (
     <figure className="space-y-1">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${label}. Peak ${peak} ${peak === 1 ? unit[0] : unit[1]}.`} className="h-12 w-full text-primary" preserveAspectRatio="none">
-        <line x1="0" y1={height - 2} x2={width} y2={height - 2} stroke="currentColor" strokeOpacity="0.2" strokeWidth="1" />
+        <line x1="0" y1={height - 2} x2={width} y2={height - 2} className="stroke-border" strokeWidth="1" />
         {segments.map((points, i) =>
           points.includes(" ") ? (
             <polyline key={i} points={points} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />

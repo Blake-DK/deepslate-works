@@ -5,9 +5,12 @@ import { ukShort } from "@/lib/uk-time";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { pauseDiscordAction, saveDiscordAction, saveDiscordBotAction, testDiscordAction } from "./actions";
 import { BOT_SWITCHES, SWITCHES, UPDATES } from "./switches";
+import { Check } from "@/components/ui/check";
+import { cn } from "@/lib/utils";
+import { fieldClasses } from "@/components/ui/input";
 
 type Hook = { state: "unset" } | { state: "refused" } | { state: "unreachable"; error: string } | { state: "ok"; name: string; channel: string | null };
 type Channel = { id: string; name: string };
@@ -100,25 +103,25 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
         <CardContent className="space-y-3">
           <p className="text-sm">{botLine(overview?.bot)}</p>
           {overview?.bot && "invite" in overview.bot && overview.bot.invite && !overview.bot.inGuild && (
-            <a href={overview.bot.invite} target="_blank" rel="noreferrer" className="inline-block rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted">Add the bot to the server</a>
+            <a href={overview.bot.invite} target="_blank" rel="noreferrer" className={buttonClasses("secondary", "sm")}>Add the bot to the server</a>
           )}
           {overview?.bot && "inGuild" in overview.bot && overview.bot.inGuild && (
             <form action={saveDiscordBotAction} className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="text-sm"><span className="block font-medium">Chat channel</span>
-                  <select name="chatChannel" defaultValue={sw.chatChannel} className="mt-1 w-full rounded-lg border bg-background px-3 py-2">
+                  <select name="chatChannel" defaultValue={sw.chatChannel} className={cn("mt-1 h-11", fieldClasses)}>
                     <option value="">None: no chat relay</option>
                     {overview.bot.textChannels.map((c) => <option key={c.id} value={c.id}>#{c.name}</option>)}
                   </select>
                 </label>
                 <label className="text-sm"><span className="block font-medium">Updates forum</span>
-                  <select name="updatesForum" defaultValue={sw.updatesForum} className="mt-1 w-full rounded-lg border bg-background px-3 py-2">
+                  <select name="updatesForum" defaultValue={sw.updatesForum} className={cn("mt-1 h-11", fieldClasses)}>
                     <option value="">None: votes without buttons</option>
                     {overview.bot.forums.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </label>
                 <label className="text-sm sm:col-span-2"><span className="block font-medium">Admin channel</span>
-                  <select name="adminChannel" defaultValue={sw.adminChannel} className="mt-1 w-full rounded-lg border bg-background px-3 py-2">
+                  <select name="adminChannel" defaultValue={sw.adminChannel} className={cn("mt-1 h-11", fieldClasses)}>
                     <option value="">None: crashes and problems are not posted</option>
                     {overview.bot.textChannels.map((c) => <option key={c.id} value={c.id}>#{c.name}</option>)}
                   </select>
@@ -127,8 +130,8 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
               </div>
               {!privacy.chat && <p className="text-sm text-muted-foreground">Chat relay is off because chat logging is off (Site settings → Privacy).</p>}
               {BOT_SWITCHES.map((s) => (
-                <label key={s.key} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
-                  <input type="checkbox" name={s.key} defaultChecked={sw[s.key]} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />
+                <label key={s.key} className="flex cursor-pointer items-start gap-3 rounded-[4px] border p-3">
+                  <Check className="mt-1" type="checkbox" name={s.key} defaultChecked={sw[s.key]} />
                   <span><span className="block font-medium">{s.title}</span><span className="block text-sm text-muted-foreground">{s.example}</span></span>
                 </label>
               ))}
@@ -145,8 +148,8 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
         <CardContent>
           <form action={saveDiscordAction} className="space-y-3">
             {SWITCHES.map((s) => (
-              <label key={s.key} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
-                <input type="checkbox" name={s.key} defaultChecked={sw[s.key]} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />
+              <label key={s.key} className="flex cursor-pointer items-start gap-3 rounded-[4px] border p-3">
+                <Check className="mt-1" type="checkbox" name={s.key} defaultChecked={sw[s.key]} />
                 <span><span className="block font-medium">{s.title} <span className="font-normal text-muted-foreground">{s.key === "problems" ? "· to the admin channel" : twoChannels && UPDATES.has(s.key) ? "· to season-updates" : "· to #game-chat"}</span></span><span className="block text-sm text-muted-foreground">{s.example}</span></span>
               </label>
             ))}

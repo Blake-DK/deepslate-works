@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Check } from "@/components/ui/check";
 
 type Live = { id: string; at: string; kind: string; label: string; tone: "neutral" | "good" | "warn" | "bad"; message: string; count: number };
 
@@ -30,11 +31,11 @@ export function LiveTail({ query, after, scope }: { query: string; after: string
   return (
     <div className="space-y-2">
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" className="h-4 w-4" checked={on} onChange={(e) => { setOn(e.target.checked); setState("connecting"); }} /> Live: show new events as they happen
+        <Check type="checkbox" checked={on} onChange={(e) => { setOn(e.target.checked); setState("connecting"); }} /> Live: show new events as they happen
         {on && <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className={`inline-block h-2 w-2 rounded-full ${state === "live" ? "bg-accent" : "bg-primary"}`} />{state === "live" ? "watching" : state === "connecting" ? "connecting…" : "reconnecting…"}</span>}
       </label>
       {on && (
-        <ul className="divide-y rounded-xl border bg-card" aria-live="polite">
+        <ul className="divide-y rounded-[4px] border bg-card" aria-live="polite">
           {rows.length === 0 && <li className="px-4 py-3 text-sm text-muted-foreground">Nothing new yet.</li>}
           {rows.map((e) => (
             <li key={e.id} className="flex flex-wrap items-baseline gap-x-2 px-4 py-2 text-sm">

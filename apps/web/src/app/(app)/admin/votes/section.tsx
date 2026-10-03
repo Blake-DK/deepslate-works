@@ -2,17 +2,18 @@ import Link from "next/link";
 import { db } from "@/server/db";
 import { DEFAULT_QUESTIONS } from "@/server/vote/tally";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { Input, Label, fieldClasses } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 import { ballotMustVoteAction, closePollAction, closeVoteAdminAction, createPollAction, createVoteAction, deletePollAction, deleteVoteAction, openVoteAction } from "./actions";
 import { Select } from "@/components/ui/input";
 import { PollCard } from "@/components/polls/poll-card";
 import { forClient, listPolls } from "@/server/polls";
 import { getManifest, votableMods } from "@/server/modpack/manifest";
 import { MAX_OPTIONS } from "@/shared/polls";
+import { Check } from "@/components/ui/check";
 
 const POLL_DONE: Record<string, string> = { opened: "Poll opened. It's on the news, and anyone playing got a chat line.", closed: "Poll closed. The result is on the news.", deleted: "Poll deleted." };
 
@@ -47,7 +48,7 @@ export default async function VotesAdminPage({ searchParams }: { searchParams: P
             <fieldset className="space-y-2">
               <legend className="mb-1 text-sm font-medium">Options <span className="font-normal text-muted-foreground">(2 to {MAX_OPTIONS}; a picture, a link or a mod from mods.json are optional)</span></legend>
               {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="grid gap-2 rounded-lg border p-2 sm:grid-cols-[1fr_1fr]" data-testid={`poll-option-${i}`}>
+                  <div key={i} className="grid gap-2 rounded-[4px] border p-2 sm:grid-cols-[1fr_1fr]" data-testid={`poll-option-${i}`}>
                     <Input name={`option${i}`} aria-label={`Option ${i}`} placeholder={i === 1 ? "Option 1, e.g. The Warden" : i === 2 ? "Option 2, e.g. A Lava Golem" : `Option ${i}`} maxLength={120} />
                     <Select name={`mod${i}`} aria-label={`Option ${i}: a mod's card`} defaultValue="">
                       <option value="">No mod card</option>
@@ -61,7 +62,7 @@ export default async function VotesAdminPage({ searchParams }: { searchParams: P
                 <summary className="cursor-pointer text-sm text-muted-foreground">More options (5 to {MAX_OPTIONS})</summary>
                 <div className="mt-2 space-y-2">
                   {Array.from({ length: MAX_OPTIONS - 4 }, (_, k) => k + 5).map((i) => (
-                    <div key={i} className="grid gap-2 rounded-lg border p-2 sm:grid-cols-[1fr_1fr]">
+                    <div key={i} className="grid gap-2 rounded-[4px] border p-2 sm:grid-cols-[1fr_1fr]">
                       <Input name={`option${i}`} aria-label={`Option ${i}`} placeholder={`Option ${i}`} maxLength={120} />
                       <Select name={`mod${i}`} aria-label={`Option ${i}: a mod's card`} defaultValue="">
                         <option value="">No mod card</option>
@@ -75,8 +76,8 @@ export default async function VotesAdminPage({ searchParams }: { searchParams: P
               </details>
             </fieldset>
             <div className="grid gap-3 sm:grid-cols-3">
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="multiple" className="h-4 w-4" /> Multiple choice</label>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="mustVote" defaultChecked className="h-4 w-4" /> Must vote before playing</label>
+              <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="multiple" /> Multiple choice</label>
+              <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="mustVote" defaultChecked /> Must vote before playing</label>
               <div><Label htmlFor="pollCloses">Closes (UK time, optional)</Label><Input id="pollCloses" name="closesAt" type="datetime-local" /></div>
             </div>
             <p className="text-xs text-muted-foreground">Must vote: members are asked in the app and on the site before Play, and the entrance room holds anyone who joins without voting. Somebody already playing is never kicked or held; it applies from their next join. Admins are asked too but never held.</p>
@@ -110,7 +111,7 @@ export default async function VotesAdminPage({ searchParams }: { searchParams: P
             </div>
             <div>
               <Label htmlFor="questions">Settings questions (JSON)</Label>
-              <textarea id="questions" name="questions" rows={10} className="w-full rounded-lg border bg-background p-2 font-mono text-xs" defaultValue={JSON.stringify(DEFAULT_QUESTIONS, null, 2)} />
+              <textarea id="questions" name="questions" rows={10} className={cn("min-h-11 py-2 font-mono", fieldClasses)} defaultValue={JSON.stringify(DEFAULT_QUESTIONS, null, 2)} />
             </div>
             <Button type="submit">Create draft</Button>
           </form>
@@ -127,7 +128,7 @@ export default async function VotesAdminPage({ searchParams }: { searchParams: P
                   {v.mustVote && <Badge tone="warn">must vote</Badge>}
                   <span className="text-muted-foreground">{v._count.ballots} ballot{v._count.ballots === 1 ? "" : "s"}{v.opensAt ? ` · opened ${formatDate(v.opensAt)}` : ""}{v.closesAt ? ` · closes ${formatDate(v.closesAt)}` : ""}</span>
                   <span className="ml-auto flex gap-2">
-                    {v.status !== "DRAFT" && <Link href="/pack?tab=results" className="rounded-lg px-3 py-1.5 text-sm hover:bg-muted">Results</Link>}
+                    {v.status !== "DRAFT" && <Link href="/pack?tab=results" className={buttonClasses("ghost", "sm")}>Results</Link>}
                     {v.status !== "CLOSED" && <form><Button type="submit" size="sm" variant="secondary" formAction={ballotMustVoteAction.bind(null, v.id, !v.mustVote)}>{v.mustVote ? "Make optional" : "Must vote before playing"}</Button></form>}
                     {v.status === "DRAFT" && <form action={openVoteAction}><input type="hidden" name="id" value={v.id} /><Button type="submit" size="sm">Open</Button></form>}
                     {v.status === "OPEN" && <form action={closeVoteAdminAction}><input type="hidden" name="id" value={v.id} /><Button type="submit" size="sm" variant="danger">Close</Button></form>}

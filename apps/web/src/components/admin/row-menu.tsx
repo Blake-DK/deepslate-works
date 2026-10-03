@@ -31,10 +31,10 @@ export function RowMenu({ label, children }: { label: string; children: React.Re
   }, []);
   return (
     <details ref={ref} data-row-menu className="relative inline-block text-left">
-      <summary aria-label={label} title={label} className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg text-lg leading-none hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+      <summary aria-label={label} title={label} className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-[4px] text-lg leading-none hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
         <span aria-hidden>…</span>
       </summary>
-      <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 rounded-lg border bg-card p-1 text-sm shadow-lg">
+      <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 rounded-[4px] border bg-card p-1 text-sm">
         {children}
       </div>
     </details>

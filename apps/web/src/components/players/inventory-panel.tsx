@@ -30,14 +30,14 @@ export async function InventoryPanel({ uuid, name, caller, fresh, refresh }: { u
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-        {live ? <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">Live</span> : <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">From the save file</span>}
+        {live ? <span className="rounded-[3px] border bg-card-2 px-2 py-0.5 text-xs font-semibold text-accent">Live</span> : <span className="rounded-[3px] border bg-card-2 px-2 py-0.5 text-xs font-semibold text-muted-foreground">From the save file</span>}
         {d.health !== null && <span>Health <strong>{Math.round(d.health * 10) / 10}</strong>/20</span>}
         {d.food !== null && <span>Food <strong>{d.food}</strong>/20</span>}
         {d.xpLevel !== null && <span>XP level <strong>{d.xpLevel}</strong></span>}
         {d.gameMode !== null && <span>{GAME_MODE[d.gameMode] ?? `Mode ${d.gameMode}`}</span>}
         {d.pos && <span className="font-mono text-xs">{DIMENSION[d.dimension ?? ""] ?? d.dimension ?? ""} {d.pos.map((p) => Math.floor(p)).join(" ")}</span>}
       </div>
-      {!live && <p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground" data-testid="inventory-offline">Player is offline. Changes can be made when they&apos;re next on.</p>}
+      {!live && <p className="rounded-[4px] border border-dashed bg-card px-3 py-2 text-sm text-muted-foreground" data-testid="inventory-offline">Player is offline. Changes can be made when they&apos;re next on.</p>}
       {/* The grid keeps its items in state, so a new player (or a fresh read) must start a new grid, not reuse the old one */}
       <InventoryGrid key={`${uuid}:${r.savedAt ?? ""}:${r.fresh}:${live}`} initial={{ inventory: d.inventory, ender: d.ender, selectedSlot: d.selectedSlot }} player={name} uuid={uuid} editable={live} />
       {!live && (

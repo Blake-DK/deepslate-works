@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { matches } from "@/lib/mods-guide";
+import { cn } from "@/lib/utils";
+import { fieldClasses } from "@/components/ui/input";
 
 // The Mods guide's search box (/mods): hides the cards that don't match and opens the folded "Behind the scenes"
 // while searching. A link to /mods#something inside the folded part opens it too.
@@ -38,7 +40,7 @@ export function ModsSearch() {
   }, [query]);
 
   return (
-    <div className="sticky top-0 z-10 -mx-1 bg-background/95 px-1 py-2 backdrop-blur">
+    <div className="sticky top-0 z-10 -mx-1 bg-background px-1 py-2">
       <label htmlFor="mods-search" className="sr-only">Search the mods</label>
       <input
         id="mods-search"
@@ -46,7 +48,7 @@ export function ModsSearch() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search: a mod, a key, “pipe”, “reload”…"
-        className="w-full rounded-lg border bg-card px-3 py-2 text-sm"
+        className={cn("h-11", fieldClasses)}
         data-testid="mods-search"
       />
     </div>

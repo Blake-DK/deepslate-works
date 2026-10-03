@@ -6,6 +6,7 @@ import { Alert } from "@/components/ui/alert";
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button";
 import { completeOnboarding } from "./actions";
+import { Check } from "@/components/ui/check";
 
 export const metadata: Metadata = { title: "Set up" };
 
@@ -48,8 +49,8 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
           </CardHeader>
           <CardContent className="space-y-2">
             {TIERS.map((t) => (
-              <label key={t.value} className="flex cursor-pointer gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                <input type="radio" name="pcTier" value={t.value} defaultChecked={user.pcTier === t.value || (!user.pcTier && t.value === "MID")} className="mt-1" required />
+              <label key={t.value} className="flex cursor-pointer gap-3 rounded-[4px] border bg-card p-3 has-[:checked]:border-2 has-[:checked]:border-primary has-[:checked]:p-[11px]">
+                <Check className="mt-1" type="radio" name="pcTier" value={t.value} defaultChecked={user.pcTier === t.value || (!user.pcTier && t.value === "MID")} required />
                 <span>
                   <span className="block font-medium">{t.title}</span>
                   <span className="block text-sm text-muted-foreground">{t.hint}</span>

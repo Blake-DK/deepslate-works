@@ -95,8 +95,8 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
           </CardHeader>
           <CardContent className="space-y-4">
             <ol className="space-y-3">
-              <li className="rounded-lg border p-3"><span className="font-medium">1. Install the normal Minecraft Launcher</span> from <a className="underline" href="https://www.minecraft.net/download" target="_blank" rel="noreferrer">minecraft.net</a> if you don&apos;t have it, and open it once (log in, let it update). Already have it? Skip this. <strong>Then close it completely</strong>: if its icon is still next to the clock, right-click the icon and choose Quit. While the launcher is open it throws the new profile away; Deepslate Works checks and tells you.</li>
-              <li className="rounded-lg border p-3">
+              <li className="rounded-[4px] border p-3"><span className="font-medium">1. Install the normal Minecraft Launcher</span> from <a className="underline" href="https://www.minecraft.net/download" target="_blank" rel="noreferrer">minecraft.net</a> if you don&apos;t have it, and open it once (log in, let it update). Already have it? Skip this. <strong>Then close it completely</strong>: if its icon is still next to the clock, right-click the icon and choose Quit. While the launcher is open it throws the new profile away; Deepslate Works checks and tells you.</li>
+              <li className="rounded-[4px] border p-3">
                 {exe
                   ? <><span className="font-medium">2. Download <span className="font-mono">{EXE}</span> and run it</span>. It puts itself in your AppData, adds &quot;{m.name}&quot; to your desktop and Start Menu, and opens its window: answer its questions (or press Allow all), then Play. Your browser opens to sign you in with Discord and asks &quot;is this you?&quot;: say yes. Everything is installed (about five minutes, most of it downloading) and the Minecraft Launcher opens on the &quot;{m.name}&quot; profile: press Play there. You can delete the download afterwards.</>
                   : <><span className="font-medium">2. Download, unzip, double-click <span className="font-mono">Setup.bat</span> once</span>. Your browser opens to sign you in with Discord and asks &quot;is this you?&quot;: say yes. A window installs everything (about five minutes, most of it downloading), puts &quot;{m.name}&quot; on your desktop and in the Start Menu, and opens the Minecraft Launcher on the &quot;{m.name}&quot; profile: press Play there. You can delete the zip afterwards.</>}
@@ -109,7 +109,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
               </li>
             </ol>
             {exe && (
-              <figure id="smartscreen" className="scroll-mt-20 space-y-2 rounded-lg border p-3">
+              <figure id="smartscreen" className="scroll-mt-20 space-y-2 rounded-[4px] border p-3">
                 <figcaption className="text-sm"><strong>&quot;Windows protected your PC&quot;?</strong> Click <strong>More info</strong>, then <strong>Run anyway</strong>. Windows says this about any new program that isn&apos;t signed yet; it only appears the first time.</figcaption>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/help/smartscreen.png" alt="The blue &quot;Windows protected your PC&quot; box: More info, then the Run anyway button" className="max-w-full rounded border" width={532} loading="lazy" />
@@ -122,7 +122,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       <Card>
         <CardHeader><CardTitle>Server address</CardTitle><CardDescription>The installer adds it to your server list; here it is in case you need it.</CardDescription></CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
-          <span className="rounded-lg border bg-muted px-3 py-2 font-mono">{m.server_address}</span>
+          <span className="rounded-[4px] border bg-panel px-3 py-2 font-mono">{m.server_address}</span>
           <CopyButton text={m.server_address} label="Copy address" />
           <Badge>Minecraft {m.minecraft} · NeoForge {lock?.neoforge ?? "?"}</Badge>
         </CardContent>

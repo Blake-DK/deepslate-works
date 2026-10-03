@@ -179,8 +179,8 @@ function FileView({ preview, expected, capMb }: { preview: Preview; expected: Re
               <table className="w-full text-sm">
                 <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1 pr-4 font-normal">Setting</th><th className="py-1 pr-4 font-normal">On the server</th><th className="py-1 font-normal">Expected</th></tr></thead>
                 <tbody className="divide-y">
-                  {props.rows.map((r) => <tr key={r.key} className={r.differs ? "bg-danger/10" : undefined}><td className="py-1 pr-4 font-mono">{r.key}</td><td className="py-1 pr-4 font-mono">{r.value === "" ? <span className="text-muted-foreground">(empty)</span> : r.key.includes("password") || r.key.includes("secret") ? "••••••" : r.value}</td><td className="py-1 font-mono text-muted-foreground">{r.expected ?? ""}{r.differs && <Badge tone="bad" className="ml-2 font-sans">differs</Badge>}</td></tr>)}
-                  {props.missing.map((m) => <tr key={m.key} className="bg-danger/10"><td className="py-1 pr-4 font-mono">{m.key}</td><td className="py-1 pr-4 text-muted-foreground">(not in the file)</td><td className="py-1 font-mono text-muted-foreground">{m.expected}<Badge tone="bad" className="ml-2 font-sans">missing</Badge></td></tr>)}
+                  {props.rows.map((r) => <tr key={r.key} className={r.differs ? "text-danger" : undefined}><td className="py-1 pr-4 font-mono">{r.key}</td><td className="py-1 pr-4 font-mono">{r.value === "" ? <span className="text-muted-foreground">(empty)</span> : r.key.includes("password") || r.key.includes("secret") ? "••••••" : r.value}</td><td className="py-1 font-mono text-muted-foreground">{r.expected ?? ""}{r.differs && <Badge tone="bad" className="ml-2 font-sans">differs</Badge>}</td></tr>)}
+                  {props.missing.map((m) => <tr key={m.key} className="text-danger"><td className="py-1 pr-4 font-mono">{m.key}</td><td className="py-1 pr-4 text-muted-foreground">(not in the file)</td><td className="py-1 font-mono text-muted-foreground">{m.expected}<Badge tone="bad" className="ml-2 font-sans">missing</Badge></td></tr>)}
                 </tbody>
               </table>
             </div>
@@ -197,7 +197,7 @@ function FileView({ preview, expected, capMb }: { preview: Preview; expected: Re
           )
         )}
         {!props && (
-          <div className="max-h-[36rem] overflow-auto rounded-lg border bg-muted" tabIndex={0} aria-label={`Contents of ${entry.name}`}>
+          <div className="max-h-[36rem] overflow-auto rounded-[4px] border bg-panel" tabIndex={0} aria-label={`Contents of ${entry.name}`}>
             <table className="w-full border-separate border-spacing-0 font-mono text-xs leading-relaxed">
               <tbody>
                 {lines.map((l, i) => (

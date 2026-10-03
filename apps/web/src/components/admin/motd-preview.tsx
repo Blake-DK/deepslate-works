@@ -10,7 +10,7 @@ export function MotdPreview({ name, line1, line2, icon, pixel }: { name: string;
     </p>
   );
   return (
-    <div data-testid="motd-preview" className="flex items-start gap-2 rounded-md border border-[#808080] p-1 font-mono text-[13px] leading-tight" style={{ background: "#2a2a2a" }}>
+    <div data-testid="motd-preview" className="flex items-start gap-2 rounded-[3px] border border-[#808080] p-1 font-mono text-[13px] leading-tight" style={{ background: "#2a2a2a" }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- the chosen logo, 64 px as the game shows it */}
       {icon ? <img src={icon} alt="" width={64} height={64} className="h-16 w-16 shrink-0" style={pixel ? { imageRendering: "pixelated" } : undefined} /> : <div className="h-16 w-16 shrink-0" style={{ background: "#555" }} aria-hidden />}
       <div className="min-w-0 flex-1 pt-0.5">

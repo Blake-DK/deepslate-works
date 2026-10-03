@@ -24,7 +24,7 @@ async function Enrol({ secret, username, confirm, cancel }: { secret: string; us
     <div className="space-y-3">
       <p className="text-sm">Scan this with an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Bitwarden, Aegis…), then type the 6-digit code it shows.</p>
       {/* eslint-disable-next-line @next/next/no-img-element -- a data: address made on the server */}
-      <img src={qr} alt="QR code for your authenticator app" width={220} height={220} className="rounded-lg border bg-white p-2" data-testid="totp-qr" />
+      <img src={qr} alt="QR code for your authenticator app" width={220} height={220} className="border bg-white p-2" data-testid="totp-qr" />
       <p className="text-sm">Can&apos;t scan it? Enter this key by hand (time-based, 6 digits):</p>
       <p className="break-all rounded bg-muted px-2 py-1 font-mono text-sm" data-testid="totp-key">{secret.match(/.{1,4}/g)?.join(" ")}</p>
       <StateForm action={confirm} fields={[CODE]} submit="Confirm" testId="totp-confirm" />

@@ -26,7 +26,11 @@ export async function applyResultsAction(formData: FormData) {
   const t = await tallyVote(vote);
   const decisions = decide(votableMods(manifest), t, threshold);
   const changes = decisions.filter((d) => d.from !== d.to);
-  if (changes.length === 0) redirect("/pack?tab=results&applied=nothing");
+  if (changes.length === 0) {
+    // leave a trace: "applied, nothing to change" must not look the same as "never applied" (2026-10-03)
+    await audit({ userId: admin.id, action: "vote.apply", params: { voteId, threshold, changes: "none" }, result: "OK" });
+    redirect("/pack?tab=results&applied=nothing");
+  }
   const to = new Map(changes.map((d) => [d.slug, d.to]));
   const next = { ...manifest, mods: manifest.mods.map((m) => (to.has(m.slug) ? { ...m, enabled: to.get(m.slug)! } : m)) };
   await writeManifest(next);

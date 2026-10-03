@@ -18,7 +18,7 @@ export default async function VotesPage() {
         <h1 className="text-2xl font-semibold">Votes</h1>
         <p className="text-muted-foreground">Quick questions for everyone on the server. The results show once you&apos;ve voted; you can change your vote until a poll closes. The season&apos;s mod vote is under <Link href="/pack?tab=vote" className="underline">Mods &amp; vote</Link>.</p>
       </div>
-      <Card>
+      <Card className={polls.open.length > 0 ? "border-2 border-primary" : undefined}>
         <CardHeader><CardTitle>Open</CardTitle>{polls.open.length === 0 && <CardDescription>Nothing to vote on right now.</CardDescription>}</CardHeader>
         {polls.open.length > 0 && <CardContent className="space-y-6">{polls.open.map((p) => <PollCard key={p.id} poll={forClient(p)} refreshAfter className="border-b pb-6 last:border-b-0 last:pb-0" />)}</CardContent>}
       </Card>

@@ -12,7 +12,7 @@ export function VoteBanner({ pending }: { pending: Awaited<ReturnType<typeof pen
   if (pending.list.length === 0) return null;
   const many = pending.list.length > 1;
   return (
-    <Card id="vote" className="scroll-mt-20 border-primary" data-testid="vote-banner">
+    <Card id="vote" className="scroll-mt-20 border-2 border-primary" data-testid="vote-banner">
       <CardHeader>
         <CardTitle>{many ? `${pending.list.length} new votes` : "There's a new vote"}</CardTitle>
         <CardDescription>Answer before you play: it takes ten seconds. {many ? "One after another, oldest first." : ""} You can change your vote until it closes.</CardDescription>
@@ -24,7 +24,7 @@ export function VoteBanner({ pending }: { pending: Awaited<ReturnType<typeof pen
               <div key={item.id} className="space-y-2">
                 <p className="font-semibold">{item.title}</p>
                 <p className="text-sm text-muted-foreground">The season&apos;s mod vote: tick the mods you want. It takes two minutes on a phone.</p>
-                <Link href="/pack?tab=vote" className={buttonClasses("primary", "sm")}>Vote on the mods</Link>
+                <Link href="/pack?tab=vote" className={buttonClasses("copper", "sm")}>Vote on the mods</Link>
               </div>
             );
           }

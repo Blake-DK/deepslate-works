@@ -20,9 +20,9 @@ export function StatusCard({ status, series, address, admin = false }: { status:
     <Card>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2">
-          Server <Badge tone={a.tone} data-testid="status-pill">{a.label}</Badge>
+          Server <Badge tone={a.state === "waking" ? "waking" : a.tone} data-testid="status-pill">{a.label}</Badge>
         </CardTitle>
-        <p className="font-medium" data-testid="status-line">{a.line}</p>
+        <p className="font-semibold" data-testid="status-line">{a.line}</p>
         <CardDescription>{a.hint}{a.reason && <> {a.reason}</>}{address && !["off", "crashed", "unreachable"].includes(a.state) && <> Address: <span className="font-mono text-foreground">{address}</span></>}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -39,7 +39,7 @@ export function StatusCard({ status, series, address, admin = false }: { status:
             {status.online.length > 0 ? (
               <ul className="flex flex-wrap gap-2" aria-label="Players online">
                 {status.online.map((p) => (
-                  <li key={p.name} className="flex items-center gap-2 rounded-lg bg-muted py-1 pl-1 pr-3 text-sm">
+                  <li key={p.name} className="flex items-center gap-2 rounded-[3px] border bg-card-2 py-1 pl-1 pr-3 text-sm">
                     <PlayerHead uuid={p.uuid} name={p.name} size={24} /> <span className="font-mono">{p.name}</span>
                     {p.ping !== null && <Badge tone={pingTone(p.ping)} title="Ping: how long the server takes to answer this player. Lower is better." data-testid="ping">{p.ping} ms</Badge>}
                   </li>
@@ -57,7 +57,7 @@ export function StatusCard({ status, series, address, admin = false }: { status:
                 <dt className="text-xs text-muted-foreground">Memory</dt>
                 <dd>
                   {status.memMb != null ? <>{(status.memMb / 1024).toFixed(1)}{status.memMaxMb ? ` of ${(status.memMaxMb / 1024).toFixed(0)}` : ""} GB</> : <span className="text-muted-foreground">no reading</span>}
-                  {memPct != null && <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-muted" role="presentation"><span className="block h-full rounded-full bg-primary" style={{ width: `${memPct}%` }} /></span>}
+                  {memPct != null && <span className="mt-1 block h-1.5 overflow-hidden border bg-panel" role="presentation"><span className="block h-full bg-primary" style={{ width: `${memPct}%` }} /></span>}
                 </dd>
               </div>
               <div>
@@ -67,7 +67,7 @@ export function StatusCard({ status, series, address, admin = false }: { status:
             </dl>
           </>
         )}
-        <Sparkline values={series} label="Players, last 24 h" />
+        <div className="rounded-[4px] border bg-panel px-3 py-2"><Sparkline values={series} label="Players, last 24 h" /></div>
       </CardContent>
     </Card>
   );

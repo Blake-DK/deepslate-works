@@ -8,6 +8,12 @@ import { PLAY_LINK, PLAY_WAIT_MS, nothingHappened } from "@/lib/play";
 import { JOINABLE, WAKE_TIMEOUT_MS, wakeLine, type ServerState } from "@/shared/server-state";
 import type { WakeView } from "@/server/status";
 import { VOTE_FIRST_BUTTON } from "@/shared/polls";
+import { shortLabel } from "@/lib/blocks";
+import { cn } from "@/lib/utils";
+
+/** The Play block (docs/23 §5): the pixel face at 26 with a GreenLo shadow for a short label, Segoe UI 15 for a long one. */
+const playBlock = (label: string, ready = true) =>
+  buttonClasses("primary", "lg", cn("min-w-[190px]", shortLabel(label) ? "font-display text-[26px] font-bold [text-shadow:2px_2px_0_var(--play-lo)]" : "text-[15px]", !ready && "pointer-events-none"));
 
 type Props = {
   name: string;
@@ -123,10 +129,10 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
     <div className="space-y-3" data-testid="play">
       <div className="flex flex-wrap items-center gap-3">
         {voteFirst && !tooOld
-          ? <a href="#vote" data-testid="play-vote-first" className={buttonClasses("secondary", "lg")}>{VOTE_FIRST_BUTTON}</a>
+          ? <a href="#vote" data-testid="play-vote-first" className={playBlock(VOTE_FIRST_BUTTON)}>{VOTE_FIRST_BUTTON}</a>
           : tooOld
-          ? <a href={`/downloads/${download ?? "installer.zip"}`} onClick={(e) => { if (!ready) e.preventDefault(); }} aria-disabled={!ready} data-testid="play-download" className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")}>Download the new installer</a>
-          : <a href={PLAY_LINK} onClick={clicked} aria-disabled={!ready} className={buttonClasses("primary", "lg", ready ? undefined : "pointer-events-none opacity-50")}>
+          ? <a href={`/downloads/${download ?? "installer.zip"}`} onClick={(e) => { if (!ready) e.preventDefault(); }} aria-disabled={!ready} data-testid="play-download" className={playBlock("Download the new installer", ready)}>Download the new installer</a>
+          : <a href={PLAY_LINK} onClick={clicked} aria-disabled={!ready} className={playBlock(state === "waiting" ? "Starting…" : "Play", ready)}>
               {state === "waiting" ? "Starting…" : "Play"}
             </a>}
         <div className="text-sm text-muted-foreground">

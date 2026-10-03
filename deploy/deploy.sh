@@ -10,6 +10,10 @@
 set -euo pipefail
 
 cd "$(dirname "$(readlink -f "$0")")/.."
+# one deploy, build or sync at a time on this host (deploy/ops-lock.sh); a second caller is told who holds it
+. deploy/ops-lock.sh
+ops_lock deploy || exit 75
+echo "deploy by $(ops_caller)"
 COMPOSE=(docker compose -f deploy/docker-compose.yml --env-file deploy/.env)
 MIN_FREE_MB=600
 HEALTH_URL=${HEALTH_URL:-http://127.0.0.1:3000/api/health}

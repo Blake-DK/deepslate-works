@@ -14,19 +14,20 @@ export function TabbedPage({ title, intro, base, tabs, current, children }: { ti
         {intro && <p className="text-muted-foreground">{intro}</p>}
       </div>
       {tabs.length > 1 && (
-        <nav aria-label={`${title}: sections`} className="-mx-1 flex gap-1 overflow-x-auto border-b px-1" data-testid="tabs">
+        <nav aria-label={`${title}: sections`} className="flex overflow-x-auto whitespace-nowrap border-b" data-testid="tabs">
           {tabs.map((t) => (
             <Link
               key={t.key}
               href={tabHref(base, tabs, t.key)}
               aria-current={t.key === current ? "page" : undefined}
               className={cn(
-                "-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm",
-                t.key === current ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+                // the strip's tab (docs/23 §4: components/tabs.tsx takes the same style)
+                "-mb-px inline-flex shrink-0 items-center whitespace-nowrap border-b-[3px] px-[14px] pt-[13px] pb-[10px] text-[15px] font-semibold",
+                t.key === current ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
               {t.label}
-              {t.count != null && t.count !== "" && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{t.count}</span>}
+              {t.count != null && t.count !== "" && <span className="ml-1.5 text-xs font-normal text-dim">{t.count}</span>}
             </Link>
           ))}
         </nav>

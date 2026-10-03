@@ -31,15 +31,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const [brand, steps] = await Promise.all([getBranding(), getGettingIn()]);
 
   return (
-    <div className="mx-auto max-w-sm space-y-4 pt-6">
-      {/* eslint-disable-next-line @next/next/no-img-element -- uploaded banner; the optimiser does not handle SVG */}
-      {brand.bannerUrl && <img src={brand.bannerUrl} alt="" className="max-h-40 w-full rounded-xl border object-cover" />}
-      <div className="text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element -- uploaded logo */}
-        {brand.logoUrl && <img src={brand.logoUrl} alt="" className="mx-auto mb-2 h-16 w-auto max-w-40 object-contain" style={brand.generated?.pixel ? { imageRendering: "pixelated" } : undefined} />}
-        <h1 className="text-2xl font-semibold">{brand.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground" data-testid="tagline">{brand.tagline || "A private Minecraft server for friends."}</p>
-      </div>
+    // docs/23 §4: the banner above (260 px here) carries the picture, the logo, the name and the tagline
+    <div className="mx-auto max-w-[440px] space-y-4">
+      <h1 className="sr-only">Sign in to {brand.name}</h1>
       {message && <Alert tone="error">{message}</Alert>}
       <Card>
         <CardHeader>
@@ -49,7 +43,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <CardContent className="space-y-4">
           <form action={discordLogin}>
             <input type="hidden" name="next" value={next ?? "/"} />
-            <Button type="submit" size="lg" className="w-full" disabled={!env.discordEnabled}>Continue with Discord</Button>
+            <Button type="submit" size="lg" className="w-full text-base!" disabled={!env.discordEnabled}>Continue with Discord</Button>
           </form>
           <details className="text-sm">
             <summary className="cursor-pointer text-muted-foreground">Sign in with email</summary>
@@ -76,7 +70,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <CardContent className="text-sm"><Markdown text={steps} /></CardContent>
         </Card>
       )}
-      <p className="text-center text-xs text-muted-foreground">New here? Ask Alex for an invite link.</p>
+      <p className="text-center text-sm text-muted-foreground">Not in the group yet? You need an invite link from Alex.</p>
       <p className="text-center text-xs"><Link href={next ? `/login/admin?next=${encodeURIComponent(next)}` : "/login/admin"} className="text-muted-foreground underline" data-testid="admin-signin-link">Admin sign-in</Link></p>
     </div>
   );

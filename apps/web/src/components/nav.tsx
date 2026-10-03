@@ -3,119 +3,114 @@ import { signOut } from "@/auth";
 import { loadCurrentUser } from "@/server/auth/session";
 import { getBranding } from "@/server/branding";
 import { getStatus } from "@/server/status";
-import { statusText } from "@/lib/server-status";
+import { pillFor, statusText } from "@/lib/server-status";
 import { getOpenVote } from "@/server/vote/votes";
 import { pendingFor } from "@/server/polls";
 import { getSection } from "@/server/site-settings";
-import { MobileMenu, NavLink } from "./nav-link";
+import { AdminStrip, BannerBox, NavLink, Strip, TabBadge, stripLink } from "./nav-link";
 
-const DOT = { good: "bg-accent", info: "bg-info", warn: "bg-primary", bad: "bg-danger", neutral: "bg-muted-foreground" } as const;
+const DOT = { up: "bg-play-hi", waking: "bg-primary", asleep: "bg-dim", down: "bg-danger" } as const;
 
-function Group({ label, children }: { label: string; children: React.ReactNode }) {
+/** The drawn logo when none is uploaded (docs/23 §4): a slate tile with a Copper "D". Its colours are the brand's own. */
+function LogoTile() {
   return (
-    <div className="space-y-0.5">
-      <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      {children}
-    </div>
+    <span
+      aria-hidden
+      className="flex h-12 w-12 shrink-0 items-center justify-center border-2 border-[#565C66] font-display text-2xl font-bold text-primary"
+      style={{ background: "linear-gradient(135deg, #3E444D, #23272D)", boxShadow: "inset 0 0 0 2px #1C1F24" }}
+    >
+      D
+    </span>
   );
 }
 
 /**
- * The page frame (docs/13 §11 layout). Signed-in members get the sidebar in four groups (Play, Community, You, and
- * for admins Run the server); under 1024 px it is a drawer behind a Menu button. Everyone else gets a plain header.
+ * The page frame (docs/23 §4): the deepslate ground (globals.css), the banner with the name and the server's pill, the
+ * tab strip (and the admin strip on admin pages), the page, the footer. Signed out, or not yet onboarded: the banner
+ * and the footer only.
  */
 export async function AppFrame({ children, footer }: { children: React.ReactNode; footer: React.ReactNode }) {
   const [user, brand] = await Promise.all([loadCurrentUser(), getBranding()]);
+  const member = !!user?.pcTier;
+  const admin = member && user!.role === "ADMIN";
+  const [status, vote, privacy, pending] = member
+    ? await Promise.all([getStatus(), getOpenVote(), getSection("privacy"), pendingFor({ id: user!.id, role: user!.role }).catch(() => null)])
+    : [null, null, null, null];
+
   const signOutForm = user && (
-    <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}>
-      <button className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm hover:bg-muted" title={user.displayName}>Sign out</button>
+    <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }} className="contents">
+      <button className={stripLink(false)} title={user.displayName}>Sign out</button>
     </form>
   );
-  const brandBlock = (
-    <Link href="/" className="flex min-w-0 items-center gap-2 font-semibold tracking-tight">
-      {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded logo, already sized; the optimiser does not handle SVG */}
-      {brand.logoUrl && <img src={brand.logoUrl} alt="" className="h-7 w-auto max-w-32 object-contain" style={brand.generated?.pixel ? { imageRendering: "pixelated" } : undefined} />}
-      <span className="truncate">{brand.name}</span>
-    </Link>
+
+  let pill: React.ReactNode = null;
+  if (status) {
+    const a = statusText(status, admin);
+    const p = pillFor(status);
+    pill = (
+      <span className="inline-flex max-w-full items-center gap-2 rounded-full border bg-[rgba(12,13,16,.8)] px-3 py-1 text-[13px] font-semibold text-foreground" data-testid="nav-status" title={`${a.line}. ${a.hint}`}>
+        <span className={`inline-block h-[9px] w-[9px] shrink-0 rounded-full ${DOT[p.dot]}`} aria-hidden />
+        <span className="truncate">{p.line}</span>
+      </span>
+    );
+  } else if (user) {
+    // not yet onboarded: no server line (as before), but a way out
+    pill = <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}><button className="rounded-full border bg-[rgba(12,13,16,.8)] px-3 py-1 text-[13px] font-semibold text-foreground" title={user.displayName}>Sign out</button></form>;
+  }
+
+  const banner = (
+    <BannerBox>
+      {/* eslint-disable-next-line @next/next/no-img-element -- pixel art at its own size; the optimiser would smooth it */}
+      <img src={brand.bannerUrl ?? "/brand/hero.png"} alt="" className="absolute inset-0 h-full w-full object-cover [image-rendering:pixelated]" style={{ objectPosition: "center 70%" }} />
+      <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 35%, rgba(10,12,16,.85))" }} aria-hidden />
+      <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-between px-5 pt-3 pb-4">
+        <div className="flex min-h-8 justify-end">{pill}</div>
+        <Link href="/" className="flex min-w-0 items-end gap-3">
+          {brand.logoUrl
+            /* eslint-disable-next-line @next/next/no-img-element -- an uploaded logo, already sized; the optimiser does not handle SVG */
+            ? <img src={brand.logoUrl} alt="" className="h-12 w-12 shrink-0 object-contain" style={brand.generated?.pixel ? { imageRendering: "pixelated" } : undefined} />
+            : <LogoTile />}
+          <span className="min-w-0">
+            <span className="block truncate font-display text-[26px] leading-none font-bold text-white sm:text-[34px]" style={{ textShadow: "3px 3px 0 #1C1F24" }} data-testid="brand-name">{brand.name}</span>
+            <span className="mt-1.5 block truncate text-[13px] text-primary-hi" data-testid={member ? undefined : "tagline"}>{brand.tagline || "A private Minecraft server for friends."}</span>
+          </span>
+        </Link>
+      </div>
+    </BannerBox>
   );
 
-  if (!user?.pcTier) {
+  if (!member) {
     return (
       <>
-        <header className="border-b bg-card">
-          <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3">
-            {brandBlock}
-            <div className="ml-auto flex items-center gap-2">{signOutForm}</div>
-          </div>
-        </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+        {banner}
+        <main className="mx-auto w-full max-w-6xl flex-1 px-5 pt-[26px] pb-[34px]">{children}</main>
         {footer}
       </>
     );
   }
 
-  const admin = user.role === "ADMIN";
-  const [status, vote, privacy, pending] = await Promise.all([getStatus(), getOpenVote(), getSection("privacy"), pendingFor({ id: user.id, role: user.role }).catch(() => null)]);
   const polls = pending?.polls.length ?? 0;
-  const stats = admin || privacy.analyticsForPlayers;
-  const a = statusText(status, admin);
-  const statusLine = (
-    <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground" data-testid="nav-status" title={`${a.line}. ${a.hint}`}>
-      <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${DOT[a.tone]}`} aria-hidden />
-      <span className="truncate">{a.line}</span>
-    </span>
-  );
-  const nav = (
-    <nav aria-label="Main" className="space-y-4">
-      <Group label="Play">
+  const stats = admin || privacy!.analyticsForPlayers;
+  return (
+    <>
+      {banner}
+      <Strip label="Main">
         <NavLink href="/" exact>Home</NavLink>
         <NavLink href="/map">Map</NavLink>
         <NavLink href="/help">Getting started</NavLink>
         <NavLink href="/mods">Mods guide</NavLink>
-      </Group>
-      <Group label="Community">
         <NavLink href="/players">{stats ? "Players & stats" : "Players"}</NavLink>
-        <NavLink href="/pack" badge={vote ? <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">vote</span> : null}>Mods &amp; vote</NavLink>
-        <NavLink href="/votes" badge={polls ? <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">{polls === 1 ? "new" : polls}</span> : null}>Votes</NavLink>
+        <NavLink href="/pack" badge={vote ? <TabBadge>vote</TabBadge> : null}>Mods &amp; vote</NavLink>
+        <NavLink href="/votes" badge={polls ? <TabBadge>{polls === 1 ? "new" : polls}</TabBadge> : null}>Votes</NavLink>
         <NavLink href="/activity">Activity</NavLink>
-      </Group>
-      <Group label="You">
+        <span className="min-w-4 flex-1" aria-hidden />
+        {admin && <NavLink href="/admin" copper>Control Room</NavLink>}
         <NavLink href="/me">Me</NavLink>
-      </Group>
-      {admin && (
-        <Group label="Run the server">
-          <NavLink href="/admin" exact>Control Room</NavLink>
-          <NavLink href="/admin/server">Server</NavLink>
-          <NavLink href="/admin/pack">Pack</NavLink>
-          <NavLink href="/admin/people" also={["/admin/installs"]}>People</NavLink>
-          <NavLink href="/admin/news">News</NavLink>
-          <NavLink href="/admin/site">Site settings</NavLink>
-        </Group>
-      )}
-    </nav>
-  );
-  const foot = (
-    <div className="mt-auto flex items-center gap-1 border-t pt-3">
-      <span className="min-w-0 flex-1 truncate px-2 text-sm text-muted-foreground">{user.displayName}</span>
-      {signOutForm}
-    </div>
-  );
-
-  return (
-    <div className="flex min-h-dvh">
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-4 overflow-y-auto border-r bg-card p-3 lg:flex" aria-label="Sidebar">
-        <div className="space-y-1 px-2 pt-1">{brandBlock}{statusLine}</div>
-        {nav}
-        {foot}
-      </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <MobileMenu brand={brand.name} status={statusLine}>
-          <div className="space-y-4">{nav}</div>
-          <div className="mt-4">{foot}</div>
-        </MobileMenu>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
-        {footer}
-      </div>
-    </div>
+        {signOutForm}
+      </Strip>
+      {admin && <AdminStrip />}
+      <main className="mx-auto w-full max-w-6xl flex-1 px-5 pt-[26px] pb-[34px]">{children}</main>
+      {footer}
+    </>
   );
 }

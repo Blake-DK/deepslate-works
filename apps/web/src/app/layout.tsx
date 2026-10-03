@@ -38,9 +38,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-dvh flex flex-col">
         <AppFrame
           footer={
-            <footer className="space-y-1 px-4 py-4 text-center text-xs text-muted-foreground">
-              <p>{b.tagline}</p>
-              <VersionFooter admin={user?.role === "ADMIN"} />
+            <footer className="space-y-1 border-t bg-panel px-5 py-3 text-center text-[12.5px] text-dim">
+              <VersionFooter admin={user?.role === "ADMIN"} member={!!user?.pcTier} />
               {(b.footer || b.discordInvite) && <p>{b.footer}{b.footer && b.discordInvite ? " · " : ""}{b.discordInvite && <a href={b.discordInvite} className="underline" target="_blank" rel="noreferrer noopener">Discord</a>}</p>}
             </footer>
           }

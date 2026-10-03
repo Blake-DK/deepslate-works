@@ -164,3 +164,46 @@ describe("the art (docs/23 §2)", () => {
     }
   });
 });
+
+// docs/23 §4 (step 2): the frame.
+import { pillFor } from "@/lib/server-status";
+
+describe("the frame (docs/23 §4)", () => {
+  const nav = readFileSync(path.join(SRC, "components", "nav.tsx"), "utf8");
+  const links = readFileSync(path.join(SRC, "components", "nav-link.tsx"), "utf8");
+  const hrefs = (src: string) => [...src.matchAll(/<NavLink href="([^"]+)"/g)].map((m) => m[1]);
+
+  it("the pill says the app's short line, with its dot", () => {
+    const s = (server: string, online = 0, leftS: number | null = null) => ({ server, online: Array(online).fill({}), sleepInMin: null, reason: null, wake: { leftS } }) as Parameters<typeof pillFor>[0];
+    expect(pillFor(s("online", 2))).toEqual({ line: "Server is up · 2 playing", dot: "up" });
+    expect(pillFor(s("online"))).toEqual({ line: "Server is up", dot: "up" });
+    expect(pillFor(s("asleep"))).toEqual({ line: "Server is asleep", dot: "asleep" });
+    expect(pillFor(s("waking"))).toEqual({ line: "Waking, about 30 s", dot: "waking" });
+    expect(pillFor(s("waking", 0, 12))).toEqual({ line: "Waking, about 12 s", dot: "waking" });
+    expect(pillFor(s("unreachable"))).toEqual({ line: "Can't reach the server", dot: "down" });
+    expect(pillFor(s("crashed")).dot).toBe("down");
+    expect(pillFor(s("off")).dot).toBe("asleep");
+  });
+  it("the tab strip holds every link the sidebar held, in its order, and nothing of the sidebar is left", () => {
+    expect(hrefs(nav)).toEqual(["/", "/map", "/help", "/mods", "/players", "/pack", "/votes", "/activity", "/admin", "/me"]);
+    expect(nav).toContain('<Strip label="Main">');
+    expect(nav + links).not.toMatch(/MobileMenu|aria-label="Sidebar"|>Menu</);
+    expect(links).toMatch(/overflow-x-auto whitespace-nowrap/);
+  });
+  it("admin pages get the admin strip with the six admin pages", () => {
+    expect(hrefs(links.slice(links.indexOf("export function AdminStrip")))).toEqual(["/admin", "/admin/server", "/admin/pack", "/admin/people", "/admin/news", "/admin/site"]);
+    expect(nav).toContain("{admin && <AdminStrip />}");
+  });
+  it("the display face is on the banner's name and the drawn logo tile only", () => {
+    expect((nav.match(/\bfont-display\b/g) ?? []).length).toBe(2);
+    expect(nav).toMatch(/font-display[^"]*"[^>]*data-testid="brand-name"/);
+  });
+  it("the ground is the tile at 48 px, 35 %, fixed and out of the way", () => {
+    const ground = /body::before\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(ground).toMatch(/deepslate-tile@3x\.png"\) 0 0 \/ 48px 48px repeat/);
+    expect(ground).toMatch(/opacity: 0\.35/);
+    expect(ground).toMatch(/position: fixed/);
+    expect(ground).toMatch(/pointer-events: none/);
+    expect(ground).toMatch(/image-rendering: pixelated/);
+  });
+});

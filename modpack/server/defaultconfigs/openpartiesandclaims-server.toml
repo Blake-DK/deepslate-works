@@ -1,6 +1,7 @@
 # Open Parties and Claims 0.31.6, settings shipped with the pack (planner, 2026-10-01). Only what differs from
-# OPAC's defaults is here; OPAC fills in the rest. NeoForge copies this file into <world>/serverconfig/ the first
-# time the server starts with OPAC. After that the world's copy counts: change it there, with the server stopped.
+# OPAC's defaults is here; OPAC fills in the rest. NeoForge 21.1 keeps this server config in the instance's
+# config/openpartiesandclaims-server.toml (not <world>/serverconfig/, which only holds OPAC's player configs) and
+# copies this file there only when that file is missing. After that config/ counts: change it there, server stopped.
 
 [serverConfig]
 
@@ -25,5 +26,8 @@
 		[serverConfig.claims.protection]
 			# usable in every claim, including the spawn area: waystones and sharestones
 			forcedBlockProtectionExceptionList = ["minecraft:crafting_table", "#waystones:waystones", "#waystones:sharestones"]
+			# right-click a body (Corpse) in any claim, spawn included; Corpse's own rule still decides whose body opens.
+			# Interaction only: no break$ prefix, so nobody can destroy a body. minecraft:minecart is OPAC's default.
+			forcedEntityProtectionExceptionList = ["minecraft:minecart", "corpse:corpse"]
 			# a backpack in your hand opens anywhere
 			itemUseProtectionExceptionList = ["minecraft:firework_rocket", "sophisticatedbackpacks:backpack", "sophisticatedbackpacks:copper_backpack", "sophisticatedbackpacks:iron_backpack", "sophisticatedbackpacks:gold_backpack", "sophisticatedbackpacks:diamond_backpack", "sophisticatedbackpacks:netherite_backpack"]

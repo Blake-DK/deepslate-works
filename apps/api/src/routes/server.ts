@@ -6,6 +6,7 @@ import type { ConsoleEntry, ConsoleEvent, ConsoleTail } from "../amp/console.js"
 import { requireAdmin } from "../auth.js";
 import { audit } from "../audit.js";
 import type { RestartSchedule } from "../status/restart.js";
+import { BackupBusy, type BackupWatch } from "../status/backup-watch.js";
 
 // As AMP names them (Core.GetPermissionsSpec on the live instance, 2026-09-29). The plugin is called
 // LocalFileBackupPlugin, its permissions live under LocalFileBackup. Delete and Restore sit next to
@@ -68,7 +69,7 @@ export async function* consoleStream(tail: ConsoleTail, since: number, opts: { m
   }
 }
 
-export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, restarts: RestartSchedule) {
+export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, restarts: RestartSchedule, backups: BackupWatch) {
   app.get("/server/schedule", async (req, reply) => {
     if (!requireAdmin(req, reply)) return;
     return { restart: restarts.current };
@@ -93,7 +94,7 @@ export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
     const [allowed, canList] = await Promise.all([has(BACKUP_PERMISSION), has(BACKUP_LIST_PERMISSION)]);
     const stops = canList ? await amp.call<unknown>("LocalFileBackupPlugin", "BackupWillStopServer").catch(() => null) : null;
     const list = canList ? await amp.call<unknown>("LocalFileBackupPlugin", "GetBackups").catch(() => null) : null;
-    return { allowed, canList, stopsServer: typeof stops === "boolean" ? stops : null, permission: BACKUP_PERMISSION, listPermission: BACKUP_LIST_PERMISSION, backups: readBackups(list) };
+    return { allowed, canList, stopsServer: typeof stops === "boolean" ? stops : null, permission: BACKUP_PERMISSION, listPermission: BACKUP_LIST_PERMISSION, backups: readBackups(list), job: backups.job };
   });
 
   app.post("/server/backup", async (req, reply) => {
@@ -103,15 +104,12 @@ export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
       await audit({ userId: req.caller.userId, action: "server.backup", params: {}, result: "DENIED", detail: "AMP permission missing" });
       return reply.code(403).send({ error: { code: "forbidden", message: `AMP's webapp user may not take backups. Grant it "${BACKUP_PERMISSION}" in AMP, or use AMP's own backup schedule.` } });
     }
-    const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+    // The answer is the job, not the backup: it counts once AMP lists it (status/backup-watch.ts).
     try {
-      const r = await amp.call<{ Status?: boolean; Reason?: string }>("LocalFileBackupPlugin", "TakeBackup", {
-        Title: `Portal backup ${stamp}`, Description: "Requested from the Deepslate Works portal", Sticky: false, Local: true, S3: false, WasCreatedAutomatically: false, DirtyOnly: false, BackupWhileRunning: null,
-      });
-      const ok = r?.Status !== false;
-      await audit({ userId: req.caller.userId, action: "server.backup", params: {}, result: ok ? "OK" : "FAILED", detail: r?.Reason ?? null });
-      return ok ? { ok: true } : reply.code(502).send({ error: { code: "amp_error", message: r?.Reason ?? "AMP refused the backup" } });
+      const job = await backups.start(req.caller.userId);
+      return reply.code(job.phase === "failed" ? 502 : 202).send(job.phase === "failed" ? { error: { code: "amp_error", message: job.reason }, job } : { job });
     } catch (e) {
+      if (e instanceof BackupBusy) return reply.code(409).send({ error: { code: "busy", message: e.message }, job: backups.job });
       const detail = e instanceof Error ? e.message : String(e);
       await audit({ userId: req.caller.userId, action: "server.backup", params: {}, result: "FAILED", detail });
       return reply.code(502).send({ error: { code: "amp_error", message: detail } });

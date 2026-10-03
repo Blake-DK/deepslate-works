@@ -45,7 +45,8 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
       </div>
     );
   } else if (tab === "backups") {
-    body = <BackupCard backup={await loadBackup(caller)} />;
+    const backup = await loadBackup(caller);
+    body = <>{backup?.job?.phase === "waiting" && <AutoRefresh seconds={30} />}<BackupCard backup={backup} /></>;
   } else if (tab === "pregen") {
     body = <PregenCard pregen={await loadPregen(caller)} />;
   } else if (tab === "room") {

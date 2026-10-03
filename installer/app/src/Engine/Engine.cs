@@ -39,6 +39,7 @@ namespace DeepslateWorks
                 Report.Send(run, "skipped");
                 throw new AlreadyRunning();
             }
+            LogBundle.Opened(run);   // 3.4.2: a run that never reports is sent with the next one
             try
             {
                 return Steps(run, ref mutex);
@@ -46,12 +47,13 @@ namespace DeepslateWorks
             catch (Exception e) when (!IsControl(e))
             {
                 Log.Line(e.ToString());
-                throw run.Fail("Something went wrong. Send Alex the log file and he'll sort it.");
+                throw run.Fail("Something went wrong. Press Send to Alex on the Log tab and he'll sort it.");
             }
             finally
             {
                 // Reached without a report having gone: the window was closed or the run was stopped part-way.
                 if (!run.Reported) { Log.Line("stopped before the end"); Report.Send(run, "cancelled"); }
+                LogBundle.Closed();   // reported, or not to be (a self-update's hand-off, a question waiting): never "unfinished"
                 ExitLock(ref mutex);
             }
         }

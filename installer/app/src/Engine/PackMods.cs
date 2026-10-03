@@ -184,7 +184,7 @@ namespace DeepslateWorks
             if (string.IsNullOrEmpty(Http.Token)) return;
             var line = "game check: " + (c.Ok ? string.Format("all {0} mods loaded", c.Checked) : MissingText(c));
             var rep = J.O("packVersion", string.IsNullOrEmpty(pack) ? "unknown" : pack, "installerVersion", Env.Version, "mode", "game_check", "outcome", c.Ok ? "ok" : "failed",
-                          "durationSec", 0, "log", reportsOff ? "" : line, "system", null, "minimal", reportsOff, "mods", c.ToJson());
+                          "durationSec", 0, "log", LogBundle.GameCheckLog(line, c.Ok, reportsOff), "system", null, "minimal", reportsOff, "mods", c.ToJson());
             try { Http.PostJson(Env.ReportUrl, rep, 20); Log.Line("game check sent to the site"); }
             catch (Exception e) { Log.Line("game check not sent: " + e.Message); }
         }

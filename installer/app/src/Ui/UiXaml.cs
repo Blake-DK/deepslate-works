@@ -284,7 +284,18 @@ namespace DeepslateWorks
       </DockPanel>
     </TabItem>
     <TabItem Header=""Log"" x:Name=""LogTab"">
-      <ListBox x:Name=""LogList"" Margin=""0"" Padding=""10,6"" FontFamily=""Consolas"" FontSize=""12"" BorderThickness=""0"" Background=""{DynamicResource Panel}"" Foreground=""{DynamicResource Muted}""/>
+      <DockPanel>
+        <!-- 3.4.2: the logs, made safe, saved to Downloads or sent to Alex (Home/LogBundle.cs) -->
+        <Border DockPanel.Dock=""Bottom"" Background=""{DynamicResource Panel}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""0,1,0,0"" Padding=""16,10,16,8"">
+          <DockPanel>
+            <Button x:Name=""SendLogButton"" DockPanel.Dock=""Right"" Style=""{StaticResource Primary}"" Content=""Send to Alex"" Margin=""8,0,0,0""/>
+            <Button x:Name=""SaveLogButton"" DockPanel.Dock=""Right"" Style=""{StaticResource Plain}"" Content=""Save log"" Margin=""0""/>
+            <TextBlock x:Name=""LogStatus"" TextWrapping=""Wrap"" VerticalAlignment=""Center"" Margin=""0,0,12,0"" FontSize=""12.5"" Foreground=""{DynamicResource Muted}""
+                       Text=""Save log puts this log and the game's in a zip in Downloads. Send to Alex sends the same to the site. Your username, file paths and chat are taken out first.""/>
+          </DockPanel>
+        </Border>
+        <ListBox x:Name=""LogList"" Margin=""0"" Padding=""10,6"" FontFamily=""Consolas"" FontSize=""12"" BorderThickness=""0"" Background=""{DynamicResource Panel}"" Foreground=""{DynamicResource Muted}""/>
+      </DockPanel>
     </TabItem>
   </TabControl>
   </DockPanel>
@@ -343,6 +354,8 @@ namespace DeepslateWorks
             "ChangedBox", "PlayChangedDetail", "OnlineHeads", "GroundTile", "Hero", "HeroImage", "HeroShade", "HeroStatus", "HeroDot", "HeroLine", "LogoFallback", "VoteBadge", "VoteBadgeText",
             // 3.4.1 (docs/21 §11): the landscape Play tab, and the name's shadow (one of the pixel face's three places)
             "PlayGrid", "PlayLeft", "PlayRight", "PlayCard", "PlayRow", "BrandShade",
+            // 3.4.2: Save log and Send to Alex on the Log tab
+            "SaveLogButton", "SendLogButton", "LogStatus",
         };
 
         /// <summary>Every name the settings window looks up in SettingsXaml.</summary>

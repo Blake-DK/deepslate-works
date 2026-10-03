@@ -166,6 +166,7 @@ namespace DeepslateWorks
             WireHome();   // 3.2.0: the server on the Play tab, and the Vote tab
             WireUpdate(); // 3.3.0: the Update button
             WireLook();   // 3.4.0: the ground, the banner, the badge (docs/21)
+            WireLogButtons();   // 3.4.2: Save log, Send to Alex
             WireHeads();  // 3.4.0: the players' heads (docs/21 §7)
         }
 

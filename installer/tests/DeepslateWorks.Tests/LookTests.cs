@@ -282,6 +282,21 @@ namespace DeepslateWorks.Tests
                 });
         }
 
+        [WindowsFact] public void Save_log_on_the_Log_tab_writes_the_zip_and_says_where()
+        {
+            // 3.4.2 (Alex, 2026-10-03)
+            using (var s = new Scratch())
+                WithWindow(ui =>
+                {
+                    Log.Line("look test: a line to save");
+                    ui.PressTab("log"); ui.Pump();
+                    Assert.NotNull(ui.Window.FindName("SendLogButton"));
+                    var path = ui.SaveLog(s.P("Downloads"), false);
+                    Assert.True(File.Exists(path), "no zip at " + path);
+                    Assert.StartsWith("Saved to ", ui.LogStatusText);
+                });
+        }
+
         [WindowsFact] public void The_question_and_settings_windows_are_dark_too()
         {
             using (new Scratch())

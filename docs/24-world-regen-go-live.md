@@ -93,3 +93,33 @@ Each step ends with what was seen, in the report. Every console command goes thr
 - [ ] Distances to a Cataclysm structure, a Mowzie's structure and the village reported.
 - [ ] A real account has come through the entrance room to spawn (Alex's part).
 - [ ] docs/11, docs/09 and `ROADMAP.md` say what happened.
+
+## 7. Amendment (Alex, 2026-10-03)
+
+Alex changed the plan during the run, relayed by the planner and confirmed by Alex in his own words. **This replaces steps B to F and the planner's earlier rulings on B.1.** Steps A, G, H and I and the hard rules of section 5 stand, except as said here.
+
+**Why.** Step B.1's backup could not be made: AMP accepted three requests (10:56:55, 16:29:05 with Alex online, 16:37:34) and listed none of them. Rather than wait, Alex chose to keep the world.
+
+**What was done instead**
+1. **The same world and seed are kept**, with everything already generated and rendered. Only the area around spawn is generated again, and every player starts from nothing.
+2. **No backup of the old world**, on Alex's word. The first hard rule of section 5 (nothing deleted before its copy is compared by checksum) is waived for the files named in point 4 only.
+3. **The reset area is ±3072 blocks** (Alex's change from the relayed ±1024): region files X and Z from −6 to 5 in `world/region/`, `world/entities/` and `world/poi/`, 144 each, 432 in all. Nothing in `world/dimensions/`, the nether or the end is touched, so the room in `deepslate:limbo` stays. Beyond 3072 blocks the old terrain stays without the new mods' ores and structures; Alex accepted that.
+4. **Deleted with the server stopped**, each after a dry run that listed exactly these and nothing else:
+   - The 432 region files of point 3.
+   - Everything in `world/playerdata/`, `world/advancements/` and `world/stats/`.
+   - The saved data of four mods:
+     - Open Parties and Claims: `world/data/openpartiesandclaims/`, not `world/serverconfig/`.
+     - Sophisticated Backpacks: `world/data/sophisticatedbackpacks.dat`.
+     - Waystones: `world/data/waystones.dat`.
+     - Corpse: `world/deaths/`.
+
+   Every other file in `world/data/` stays, `level.dat` included.
+5. **Start and checks.** Seed `-3899835130120818196`, the spawn in `level.dat`, `world.standable` at `SPAWN_POS`, both datapacks listed, the room intact. No Sync or room rebuild unless one of those fails. `opac.serverClaims` is re-run, because the server claims were in the deleted Open Parties and Claims data.
+6. **Pre-generation:** `POST /pregen/on` with `{ "mode": "now", "what": "both", "purge": false, "area": { "x": 0, "z": 0, "radius": 3072 }, "window": null, "capHours": null }`, 148,225 chunks. Chunky skips chunks that exist, so only the deleted area is made. The map is not purged: BlueMap brings the changed area up to date and keeps the rest. The pre-generation rules of docs/11 stand.
+7. **New spawn.** Alex set the world spawn to **107 126 87** (`setworldspawn`). After the pre-generation reaches 100% and before step H:
+   - Confirm `level.dat` and `world.standable` at 107.5 126 87.5.
+   - Move the overworld server claim to blocks 32 16 to 159 143 (chunks x 2 to 9, z 1 to 8), one command at a time, through the admin console route.
+   - Set `SPAWN_POS=107.5 126 87.5` and redeploy. The pre-generation stays centred on 0, 0, which still covers the new spawn with about 2,900 blocks to spare.
+8. **Step G** measures the locate distances from the new spawn and says whether the seam at 3072 blocks shows on the map. **Step H** takes its backup while sleep is still off or straight after 100%, waits up to 15 minutes for AMP to list it, and if it is not listed, reports and carries on.
+
+**Unchanged:** only the files named here are deleted; stop and report if a step does not show what it should; "We're live" and the news item are Alex's.

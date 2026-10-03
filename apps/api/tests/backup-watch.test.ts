@@ -10,7 +10,7 @@ import { BackupWatch, type BackupJob } from "../src/status/backup-watch.js";
 // A backup counts once AMP lists it (Alex, 2026-10-03): AMP said yes to three backups over its size limit and
 // kept none of them; the one that went through showed in GetBackups about 17 minutes later.
 
-function setup(opts: { takeBackup?: { Status?: boolean; Reason?: string } | null; listed?: () => Array<Record<string, unknown>>; saved?: BackupJob | null } = {}) {
+function setup(opts: { takeBackup?: { Status?: boolean; Reason?: string } | null; listed?: () => Array<Record<string, unknown>>; unreadable?: () => boolean; takeGate?: Promise<void>; takeThrows?: () => boolean; saved?: BackupJob | null } = {}) {
   let clock = new Date("2026-10-03T18:39:28Z");
   const calls: string[] = [];
   const audits: Array<{ result: string; detail: string | null }> = [];
@@ -18,8 +18,15 @@ function setup(opts: { takeBackup?: { Status?: boolean; Reason?: string } | null
     override async call<T>(_m?: string, method?: string): Promise<T> {
       calls.push(String(method));
       if (method === "CurrentSessionHasPermission") return true as T;
-      if (method === "TakeBackup") return (opts.takeBackup === undefined ? { Status: true } : opts.takeBackup) as T;
-      if (method === "GetBackups") return (opts.listed ? opts.listed() : []) as T;
+      if (method === "TakeBackup") {
+        if (opts.takeGate) await opts.takeGate;
+        if (opts.takeThrows?.()) throw new Error("AMP timed out");
+        return (opts.takeBackup === undefined ? { Status: true } : opts.takeBackup) as T;
+      }
+      if (method === "GetBackups") {
+        if (opts.unreadable?.()) throw new Error("fetch failed");
+        return (opts.listed ? opts.listed() : []) as T;
+      }
       return null as T;
     }
   })();
@@ -102,5 +109,76 @@ describe("backups count once AMP lists them", () => {
     const r = await f.inject({ method: "POST", url: "/server/backup", headers: as("PLAYER"), payload: {} });
     expect(r.statusCode).toBe(403);
     expect(calls).not.toContain("TakeBackup");
+  });
+
+  it("a check that could not read the list is not a look at it: no failure at the deadline on such a check", async () => {
+    let down = false;
+    let list: Array<Record<string, unknown>> = [];
+    const { f, watch, as, later } = setup({ unreadable: () => down, listed: () => list });
+    await f.inject({ method: "POST", url: "/server/backup", headers: as("ADMIN"), payload: {} });
+    later(10);
+    expect((await watch.check())?.listReadAt).toBeTruthy();
+    down = true;
+    later(40); // 50 min: past the deadline, but the list could not be read
+    expect((await watch.check())?.phase).toBe("waiting");
+    down = false;
+    list = [{ Name: "Portal backup 2026-10-03 18:39:28", TotalSizeBytes: 19_082_222_291 }];
+    later(1);
+    expect(await watch.check()).toMatchObject({ phase: "listed", sizeBytes: 19_082_222_291 });
+  });
+
+  it("past the deadline it fails on a check that read the list without the title, with the size-limit reason", async () => {
+    let down = true;
+    const { f, watch, as, later } = setup({ unreadable: () => down, listed: () => [] });
+    await f.inject({ method: "POST", url: "/server/backup", headers: as("ADMIN"), payload: {} });
+    later(46);
+    expect((await watch.check())?.phase).toBe("waiting");
+    down = false;
+    later(1);
+    const job = await watch.check();
+    expect(job?.phase).toBe("failed");
+    expect(job?.reason).toContain("backup size limit");
+  });
+
+  it("AMP out of reach for 15 minutes past the deadline: fails as unreachable, not with the size-limit text", async () => {
+    let down = false;
+    const { f, watch, as, later, audits } = setup({ unreadable: () => down });
+    await f.inject({ method: "POST", url: "/server/backup", headers: as("ADMIN"), payload: {} });
+    later(5);
+    await watch.check(); // read at 18:44
+    down = true;
+    later(54); // 59 min: deadline + 14
+    expect((await watch.check())?.phase).toBe("waiting");
+    later(1); // deadline + 15
+    const job = await watch.check();
+    expect(job?.phase).toBe("failed");
+    expect(job?.reason).toContain("could not be reached");
+    expect(job?.reason).toContain("since 18:44 UTC");
+    expect(job?.reason).not.toContain("size limit");
+    expect(audits.at(-1)?.result).toBe("FAILED");
+  });
+
+  it("a second request while TakeBackup is still awaited is busy (409), and AMP is asked once", async () => {
+    let open!: () => void;
+    const takeGate = new Promise<void>((r) => { open = r; });
+    const { f, watch, as, calls } = setup({ takeGate });
+    const first = f.inject({ method: "POST", url: "/server/backup", headers: as("ADMIN"), payload: {} });
+    await new Promise((r) => setTimeout(r, 20)); // the first is now inside TakeBackup
+    const second = await f.inject({ method: "POST", url: "/server/backup", headers: as("ADMIN"), payload: {} });
+    expect(second.statusCode).toBe(409);
+    open();
+    expect((await first).statusCode).toBe(202);
+    expect(calls.filter((c) => c === "TakeBackup")).toHaveLength(1);
+    watch.stop();
+  });
+
+  it("after TakeBackup throws, the next request is not stuck busy", async () => {
+    let throws = true;
+    const { f, watch, as, calls } = setup({ takeThrows: () => throws });
+    expect((await f.inject({ method: "POST", url: "/server/backup", headers: as("ADMIN"), payload: {} })).statusCode).toBe(502);
+    throws = false;
+    expect((await f.inject({ method: "POST", url: "/server/backup", headers: as("ADMIN"), payload: {} })).statusCode).toBe(202);
+    expect(calls.filter((c) => c === "TakeBackup")).toHaveLength(2);
+    watch.stop();
   });
 });

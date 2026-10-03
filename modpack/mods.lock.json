@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-02T18:29:11.338Z",
+  "generatedAt": "2026-10-03T09:37:40.091Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "72931447f8d2b9d70c73e9a0ab0aa9952de4a0339445db947ec578f31c124f48",
+  "hash": "c99f2aaed319200701c148bf8ce1da5ec90ec9d8f03f151e35623c60bbe8e32c",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -21,8 +21,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "alternate-current",
@@ -41,8 +40,7 @@
       "modrinth": {
         "client": "unsupported",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "appleskin",
@@ -61,8 +59,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "async-locator-refined",
@@ -81,8 +78,7 @@
       "modrinth": {
         "client": "unsupported",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "badoptimizations",
@@ -101,8 +97,7 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "balm",
@@ -123,8 +118,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "bettertabinfo",
@@ -143,8 +137,7 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "bluemap",
@@ -163,8 +156,7 @@
       "modrinth": {
         "client": "unsupported",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "chunky",
@@ -183,8 +175,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "clumps",
@@ -203,8 +194,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "copycats",
@@ -223,8 +213,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "corpse",
@@ -243,8 +232,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "craft-config",
@@ -265,8 +253,7 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "create",
@@ -287,8 +274,7 @@
       "modrinth": {
         "client": "optional",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "create-deco",
@@ -307,8 +293,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "createaddition",
@@ -327,8 +312,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "curios",
@@ -349,8 +333,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "custom-window-title",
@@ -369,8 +352,7 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "dynamic-fps",
@@ -389,8 +371,7 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "edf-remastered",
@@ -409,8 +390,7 @@
       "modrinth": {
         "client": "optional",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "entityculling",
@@ -429,8 +409,7 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "fallingtree",
@@ -449,8 +428,7 @@
       "modrinth": {
         "client": "optional",
         "server": "required"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "farmers-delight",
@@ -469,8 +447,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "fastfurnace",
@@ -489,8 +466,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "fastworkbench",
@@ -509,8 +485,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "ferrite-core",
@@ -529,8 +504,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "flw-vanillin",
@@ -549,8 +523,7 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "geckolib",
@@ -571,8 +544,7 @@
       "modrinth": {
         "client": "required",
         "server": "optional"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "get-it-together-drops",
@@ -591,8 +563,7 @@
       "modrinth": {
         "client": "unsupported",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "handcrafted",
@@ -611,8 +582,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "immediatelyfast",
@@ -631,8 +601,7 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "jade",
@@ -651,8 +620,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "jei",
@@ -671,8 +639,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "kotlin-lang-forge",
@@ -693,8 +660,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "l_enders-cataclysm",
@@ -713,8 +679,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "lionfish-api",
@@ -735,8 +700,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "lithium",
@@ -755,8 +719,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "macaws-doors",
@@ -775,8 +738,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "macaws-roofs",
@@ -795,8 +757,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "macaws-windows",
@@ -815,8 +776,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "modernfix",
@@ -835,8 +795,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "mouse-tweaks",
@@ -855,8 +814,7 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "mowzies-mobs",
@@ -875,8 +833,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "noisium",
@@ -895,8 +852,7 @@
       "modrinth": {
         "client": "unsupported",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "open-parties-and-claims",
@@ -915,8 +871,7 @@
       "modrinth": {
         "client": "optional",
         "server": "required"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "pipez",
@@ -935,8 +890,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "placebo",
@@ -958,8 +912,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "resourceful-lib",
@@ -980,8 +933,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "scalable-cats-force",
@@ -1002,8 +954,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "servercore",
@@ -1022,8 +973,7 @@
       "modrinth": {
         "client": "unsupported",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "simple-voice-chat",
@@ -1042,8 +992,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "sodium",
@@ -1062,8 +1011,7 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "sophisticated-backpacks",
@@ -1082,8 +1030,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "sophisticated-core",
@@ -1104,8 +1051,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "spark",
@@ -1124,8 +1070,7 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "tacz-1.21.1",
@@ -1144,8 +1089,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "required"
+      }
     },
     {
       "slug": "veinminer",
@@ -1164,8 +1108,7 @@
       "modrinth": {
         "client": "optional",
         "server": "required"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "waystones",
@@ -1184,8 +1127,7 @@
       "modrinth": {
         "client": "required",
         "server": "required"
-      },
-      "channels": "none"
+      }
     },
     {
       "slug": "xaeros-minimap",
@@ -1204,8 +1146,7 @@
       "modrinth": {
         "client": "required",
         "server": "optional"
-      },
-      "channels": "optional"
+      }
     },
     {
       "slug": "xaeros-world-map",
@@ -1224,14 +1165,13 @@
       "modrinth": {
         "client": "required",
         "server": "optional"
-      },
-      "channels": "optional"
+      }
     }
   ],
   "configs": [
     {
       "path": "config/customwindowtitle-client.toml",
-      "sha256": "cf2767c8bcab9fcef94f775bbb6b84db2e64ca948f0cf7b98694238e3b3ca110"
+      "sha256": "025ebfa9df9a09900ab5deb8a667470dfcb4d8e378641c1380f40704e3523bc2"
     },
     {
       "path": "config/fallingtree.json",

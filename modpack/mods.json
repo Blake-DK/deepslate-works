@@ -1916,7 +1916,7 @@
       "name": "Rechiseled: Create",
       "category": "building",
       "side": "both",
-      "enabled": true,
+      "enabled": false,
       "load": "L",
       "recommended": false,
       "hidden": false,

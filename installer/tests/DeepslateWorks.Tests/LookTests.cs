@@ -118,14 +118,13 @@ namespace DeepslateWorks.Tests
         [WindowsFact] public void The_pixel_face_is_in_exactly_three_places()
         {
             // 3.4.1 (docs/21 §11): the name on the banner (with its drawn shadow), the Play block and the Vote block. A
-            // stand-in face makes it visible whether or not the real one could be written out on this machine.
-            var real = Theme.PixelFont;
-            Theme.PixelFont = new FontFamily("Deepslate Look Test Face");
-            try
+            // stand-in face (swapped into the window's resources, which every use reaches as a DynamicResource) makes it
+            // visible whether or not the real one could be written out on this machine.
             {
                 using (new Scratch())
                     WithWindow(ui =>
                     {
+                        ui.Window.Resources["PixelFont"] = new FontFamily("Deepslate Look Test Face");
                         ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready"); ui.Pump();
                         var owners = new HashSet<string>();
                         foreach (var tab in new[] { "play", "vote", "extras", "log" })
@@ -141,18 +140,15 @@ namespace DeepslateWorks.Tests
                         Assert.Equal(new[] { "BrandName", "PlayButton", "VoteButton" }, owners.OrderBy(o => o, StringComparer.Ordinal).ToArray());
                     });
             }
-            finally { Theme.PixelFont = real; }
         }
 
         [WindowsFact] public void A_long_block_label_is_Segoe_UI_and_a_short_one_keeps_the_face()
         {
-            var real = Theme.PixelFont;
-            Theme.PixelFont = new FontFamily("Deepslate Look Test Face");
-            try
             {
                 using (new Scratch())
                     WithWindow(ui =>
                     {
+                        ui.Window.Resources["PixelFont"] = new FontFamily("Deepslate Look Test Face");
                         var play = (System.Windows.Controls.Button)ui.Window.FindName("PlayButton");
                         play.Content = "Play"; ui.Pump();
                         Assert.Equal("Deepslate Look Test Face", play.FontFamily.Source);
@@ -160,7 +156,6 @@ namespace DeepslateWorks.Tests
                         Assert.Equal("Segoe UI", play.FontFamily.Source); Assert.Equal(15, play.FontSize);
                     });
             }
-            finally { Theme.PixelFont = real; }
         }
 
         [WindowsFact] public void The_vote_options_are_two_to_a_row()

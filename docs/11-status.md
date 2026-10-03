@@ -108,7 +108,7 @@ Alex's "go" at about 10:56 UTC. Option 1 of his answer stands: docs/24 as writte
 | `SPAWN_POS` | `deploy/.env` `SPAWN_POS=107.5 126 87.5` (was `0.5 105 0.5`; backup `.env.bak-20261003T180459Z-spawnpos`), deployed by `825effe7` at about 18:17 (images `eff7eb5`); the api reports it. The pre-generation stays centred on 0, 0 with radius 3072, which covers the new spawn with about 2,900 blocks to spare on the nearest side |
 | G. Locate, from 107 87 | See the table below. No seam shows on the map at 3072 blocks (low-resolution tiles x6/z0 and x6/z−1: rivers and forest run straight across) |
 | G. ERRORs | Three, all accepted as known (planner): `createdeco:placard` (recipe, at every start), `example is not a registered slot type!` (Industrial Foregoing's Curios file names a slot `example`, at every start), and during the generation once `Block-attached entity at invalid position: BlockPos{x=-67, y=5, z=289}` (a hanging entity a generated structure placed without its supporting block; the game discards it). Not added to NOISE: if the last shows up in ordinary play, report it. No "Can't keep up" warnings |
-| H. Backup | **Not listed.** With Alex online: requests at 18:31:05 and, after Alex raised a backup size limit in AMP, at **18:39:28**; both `200 {"ok":true}` and "System started a backup", neither in AMP's list after 15 minutes (18:54:46; `allowed` and `canList` true, the list still only the two of 2026-09-29). Reported and carried on, per the planner |
+| H. Backup | **Listed after Alex raised AMP's backup size limit:** "Portal backup 2026-10-03 18:39", **36,682,932,831 bytes (36.7 GB)**, requested 18:39:28 with Alex online, in AMP's list by 18:56:52 (about 17 minutes; the 15-minute watch had ended at 18:54:46). The request at 18:31:05, made before the limit was raised, was never listed. This is what going live can fall back to |
 
 | Step G (from the new spawn 107 87) | Nearest | Distance |
 |---|---|---|
@@ -1012,7 +1012,7 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 
 ## Suggested plan updates for the next session
 
-- **The backup route** (`POST /server/backup`) should hold the server awake until AMP lists the backup, and should take a title (docs/24 B.1, 2026-10-03: AMP said yes three times and listed nothing).
+- **The backup route** (`POST /server/backup`) should hold the server awake until AMP lists the backup, and should take a title (docs/24 B.1, 2026-10-03: AMP said yes three times and listed nothing). **Cause found that evening:** AMP's backup size limit. The instance is now about 36.7 GB, against 1.2 to 1.4 GB on 2026-09-29, and AMP accepted backups over the limit without saying so. After Alex raised it, a backup took about 17 minutes to appear; the route should also allow that long.)
 
 - **Wait for the planner's specs** of the evening's list (above, "Handed over by the planner") before building any of it.
 - **The other CRASH row**, event 127 at 11:14:07 UTC, `state: Stopping` like 17:02: during the world reset, when a stop hung at "Saving worlds" and was ended with Kill. Left as it is; the planner named only 17:02.

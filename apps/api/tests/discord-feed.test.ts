@@ -55,7 +55,7 @@ function setup(opts: { events?: FeedEvent[]; feed?: string | null; admin?: strin
     savePost: async (row) => { posts.set(row.key, row); },
     addError: async (message) => { errors.push(message); },
     switches: async () => sw,
-    brand: async () => ({ name: "Deepslate Works", accent: "#b8652c", avatar: null }),
+    brand: async () => ({ name: "Deepslate Works", avatar: null }),
   };
   const a = new Announcer({ store, feed: feedHook, admin: adminHook, portal: "https://deepslate.dsw.test", log: () => {}, now: () => new Date(clock) });
   let next = 10_000n;

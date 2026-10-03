@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-03T10:52:24.961Z",
+  "generatedAt": "2026-10-03T21:51:29.260Z",
   "minecraft": "1.21.1",
-  "neoforge": "21.1.252",
-  "hash": "d7521da9cf20ac829f50c8a4c5d1ae46df63abdccb4618bd73d679eca848ef17",
+  "neoforge": "21.1.253",
+  "hash": "0d33a46292c91d99aef33a0edd19d2feeb3c837530b545fc15fc8c0c49849dc7",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -1454,5 +1454,6 @@
       "path": "config/tacz-common.toml",
       "sha256": "11b62242f5accc0b1dfc2541c58d393f52b9d69232b9036ec442849d66acbf5e"
     }
-  ]
+  ],
+  "resourcepack": "9c0d9cc45d64d28ddef41bc4b4292fc929ca3c2f9574599ce695538dde61a77a"
 }

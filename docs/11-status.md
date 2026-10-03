@@ -17,6 +17,8 @@ At 20:10 UTC seven entries in `/home/ladm/Minecraft-site/.git` were root's and a
 - `/root/.config/deepslate/wait-ci.sh` runs `git -C … rev-parse HEAD` as root, and `update143-test.sh` runs `git show` as root. Both only read and write nothing in `.git`; left as they are. Changing them to `runuser -u ladm` would make them follow the rule to the letter (one line each). Say if wanted.
 - So the cause is ad-hoc commands from tooling sessions running as root, not a script.
 
+**Follow-up (planner, accepted 18bd0d7), done:** the the working rules rule now says every git command runs as `ladm`, read-only ones included; `/root/.config/deepslate/wait-ci.sh` (`rev-parse`) and `update143-test.sh` (`git show` ×2) now call `runuser -u ladm -- git` (backups `*.bak-20261003-rootgit`).
+
 **Ownership now:** `find .git \( -not -user ladm -o -not -group ladm \)` lists **nothing**. The seven entries were fixed at 20:10 with `find .git -not -user ladm -exec chown ladm:ladm {} +`: only the entries found, inside `.git`, no `-R`. `/home/ladm/.config/deepslate/git-credentials` is `ladm:ladm` 600 (its directory `ladm:ladm` 700).
 
 ## AMP session id in a Bearer header (Alex, 2026-10-03 evening; branch `amp-bearer-session`, not deployed)

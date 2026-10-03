@@ -16,6 +16,8 @@ export type LockFile = {
   hash: string;
   files: LockEntry[];
   configs: Array<{ path: string; sha256: string }>;
+  /** sha256 over modpack/resourcepack/ (the Deepslate texture pack in config.zip); absent when there is none. */
+  resourcepack?: string;
 };
 
 export type LockEntry = {
@@ -89,7 +91,15 @@ async function hashConfigs(configDir: string): Promise<LockFile["configs"]> {
   return out;
 }
 
-export async function buildLock(m: Manifest, opts: { configDir: string; onProgress?: (msg: string) => void; /** The NeoForge of the lock in hand: kept when the maven cannot be read. */ previousNeoForge?: string; /** 2.1.0: where jars are kept, so each can be looked into for network channels. */ jarCache?: string }): Promise<{ lock: LockFile; warnings: LockWarning[] }> {
+/** One hash over every file of modpack/resourcepack/ (path + content), or undefined without a pack.mcmeta. */
+export async function hashResourcePack(dir: string | undefined): Promise<string | undefined> {
+  if (!dir) return undefined;
+  const files = await hashConfigs(dir);
+  if (!files.some((c) => c.path === "config/pack.mcmeta")) return undefined;
+  return createHash("sha256").update(files.map((c) => `${c.path}@${c.sha256}`).join("\n")).digest("hex");
+}
+
+export async function buildLock(m: Manifest, opts: { configDir: string; onProgress?: (msg: string) => void; /** The NeoForge of the lock in hand: kept when the maven cannot be read. */ previousNeoForge?: string; /** modpack/resourcepack/, hashed into the pack. */ resourcepackDir?: string; /** 2.1.0: where jars are kept, so each can be looked into for network channels. */ jarCache?: string }): Promise<{ lock: LockFile; warnings: LockWarning[] }> {
   const warnings: LockWarning[] = [];
   const warn = (w: string) => warnings.push(w);
   const log = opts.onProgress ?? (() => {});
@@ -152,7 +162,8 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
     return opts.previousNeoForge;
   });
   const configs = await hashConfigs(opts.configDir);
-  const lock: LockFile = { generatedAt: new Date().toISOString(), minecraft: m.minecraft, neoforge, hash: packHash(neoforge, files, configs), files, configs };
+  const resourcepack = await hashResourcePack(opts.resourcepackDir);
+  const lock: LockFile = { generatedAt: new Date().toISOString(), minecraft: m.minecraft, neoforge, hash: packHash(neoforge, files, configs, resourcepack), files, configs, ...(resourcepack ? { resourcepack } : {}) };
   return { lock, warnings };
 }
 
@@ -161,8 +172,8 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
  * not, a change of settings alone left the lock "unchanged" and its list of settings empty, and no PC was sent
  * them. A pack without settings has the hash it always had.
  */
-export function packHash(neoforge: string, files: Array<Pick<LockEntry, "slug" | "versionId">>, configs: LockFile["configs"]): string {
-  return createHash("sha256").update([neoforge, ...files.map((f) => `${f.slug}@${f.versionId}`), ...configs.map((c) => `config:${c.path}@${c.sha256}`)].join("\n")).digest("hex");
+export function packHash(neoforge: string, files: Array<Pick<LockEntry, "slug" | "versionId">>, configs: LockFile["configs"], resourcepack?: string): string {
+  return createHash("sha256").update([neoforge, ...files.map((f) => `${f.slug}@${f.versionId}`), ...configs.map((c) => `config:${c.path}@${c.sha256}`), ...(resourcepack ? [`resourcepack@${resourcepack}`] : [])].join("\n")).digest("hex");
 }
 
 export type LockDiff = { added: LockEntry[]; removed: LockEntry[]; changed: Array<{ slug: string; from: string; to: string }>; neoforge?: { from: string; to: string }; /** Settings files that are new, gone or other than they were. */ configs: string[] };
@@ -175,6 +186,8 @@ export function diffLocks(prev: LockFile | null, next: LockFile): LockDiff {
   const nc = new Map(next.configs.map((c) => [c.path, c.sha256]));
   for (const [file, sum] of nc) if (pc.get(file) !== sum) d.configs.push(file);
   for (const file of pc.keys()) if (!nc.has(file)) d.configs.push(file);
+  // the texture pack counts as a settings change: Lock writes it, Build puts it into config.zip
+  if ((prev?.resourcepack ?? null) !== (next.resourcepack ?? null)) d.configs.push("resourcepack");
   d.configs.sort();
   for (const [slug, f] of n) {
     const old = p.get(slug);

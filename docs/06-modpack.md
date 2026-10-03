@@ -132,7 +132,7 @@ The first plan's list had FTB Essentials, FTB Ultimine, Advanced Mining Dimensio
 | `verify-links` | asks for every `wiki` and `videos[].url`, reports the ones that fail |
 | `lock` | for each mod in the pack: `GET /v2/project/{slug}/version?loaders=["neoforge"]&game_versions=["1.21.1"]`, takes the pinned id or the newest `release` (a `beta` with a warning when there is none); adds required dependencies, and theirs; resolves `neoforge: latest` from the NeoForged maven (highest `21.1.*` without `-beta`); takes the checksums of the files under `modpack/config/`; writes the lock. **Fails, and writes nothing, when a mod has no build for NeoForge 1.21.1.** Says "unchanged" and writes nothing when neither a mod nor a settings file has changed; `lock --force` writes all the same |
 | `build server` | downloads the files for the server into `dist/server/mods/`, checks each against its checksum, copies `modpack/server/*`, `modpack/config/*` and `modpack/datapacks/*` |
-| `build config` | `dist/config.zip` from `modpack/config/`, for the installer |
+| `build config` | `dist/config.zip` from `modpack/config/`, for the installer; with `modpack/resourcepack/` (when it has a `pack.mcmeta`) zipped in as `resourcepacks/deepslate-textures.zip` |
 | `build installer` | zips `installer/` with the site's address and the pack's version stamped into `install.ps1`; writes `dist/installer.json` (the installer's version, the zip's SHA-256 and size) |
 | `build`, `build all` | the three |
 
@@ -219,3 +219,9 @@ The player guide has a "Building" section tagged with all six suggested slugs (s
 
 For the admin's inventory editor (docs/13 §13): `dist/items/catalogue.json` (id, name, mod, stack size, icon) and `dist/items/icons/<namespace>/<path>.png`. Vanilla: every item and its stack size from the game's own data report (`modpack/items/vanilla-1.21.1.json`, made once with the 1.21.1 server jar's `--reports`), names, item models and textures from the client jar (downloaded from Mojang into `dist/cache`, SHA-1 checked). Mods: the item models, `en_us` names and textures in each jar of `dist/server/mods` (block items follow their model to the block texture); their stack size is not in the jar and is left empty (the server's answer tells). 2026-09-30: 2,550 items (1,332 Minecraft, 1,218 from mods), 2,524 with a picture, 11 MB. Run it after a Build of the server: Admin → Pack → Build, or `POST /modpack/build {target:"items"}`.
 
+
+## The Deepslate texture pack (`modpack/resourcepack/`, 2026-10-03)
+
+A resource pack built from the repo, not from Modrinth: vanilla texture overrides (first one: the villager skin, with the biome and profession overlays blanked so every villager looks the same). `build config` zips the folder (without its README) into `config.zip` as `resourcepacks/deepslate-textures.zip`; the installer already unpacks `config.zip` into the game folder on every Play, so the file lands in `resourcepacks\`. Lock hashes the folder into `lock.resourcepack` and the pack hash (`~ settings resourcepack`); a pack without it keeps the hash it had. Workflow: replace the PNG, push, Lock, Build. No Sync: PCs only. See `modpack/resourcepack/README.md`.
+
+**Not switched on yet.** Nothing adds `file/deepslate-textures.zip` to the player's `options.txt` `resourcePacks` list: that needs an installer change (call `Extras.SetResourcePackList` after `config.zip` is unpacked) and a new installer version. Until then each player switches it on once in Options → Resource Packs. Check it with Fresh Animations (an extra) on: that pack re-models villagers and sits above.

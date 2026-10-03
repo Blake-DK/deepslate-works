@@ -63,7 +63,7 @@ async function main() {
     case "lock": {
       const manifest = await loadManifest();
       const prev = await loadLock();
-      const { lock, warnings } = await buildLock(manifest, { configDir: P.config, onProgress: log, previousNeoForge: prev?.neoforge, jarCache: path.join(P.dist, "cache", "lock-jars") });
+      const { lock, warnings } = await buildLock(manifest, { configDir: P.config, resourcepackDir: P.resourcepack, onProgress: log, previousNeoForge: prev?.neoforge, jarCache: path.join(P.dist, "cache", "lock-jars") });
       for (const w of warnings) log(`WARN  ${w}`);
       const d = diffLocks(prev, lock);
       const changed = d.added.length + d.removed.length + d.changed.length + d.configs.length + (d.neoforge ? 1 : 0);

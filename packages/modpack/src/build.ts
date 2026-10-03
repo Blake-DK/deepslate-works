@@ -91,28 +91,53 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
   return out;
 }
 
-/** config.zip: the config overrides for the Windows installer. */
-export async function buildConfigZip(paths: { dist: string; config: string }, log: (s: string) => void): Promise<string | null> {
+/** The texture pack everyone gets (villager skin etc.), as it sits in config.zip; the installer unpacks it into resourcepacks/. */
+export const RESOURCE_PACK_ZIP = "deepslate-textures.zip";
+
+/** config.zip: the config overrides for the Windows installer, plus resourcepacks/deepslate-textures.zip when modpack/resourcepack/ has a pack.mcmeta. */
+export async function buildConfigZip(paths: { dist: string; config: string; resourcepack?: string }, log: (s: string) => void): Promise<string | null> {
   if (!(await exists(paths.config))) return null;
   const out = path.join(paths.dist, "config.zip");
+  const stage = path.join(paths.dist, ".config-stage");
+  await rm(stage, { recursive: true, force: true });
+  const entries: Array<{ dir?: string; file?: string; name: string }> = [];
+  const notes: string[] = [];
   // The chosen logo becomes the game window's icon (Custom Window Title reads config/customwindowtitle/icon.png;
   // a power-of-two PNG with transparency). Without a logo the toml keeps icon = '' and Minecraft's own icon shows.
   const icon = path.join(paths.dist, "branding", "logo-64.png");
-  if (!(await exists(icon))) {
-    await zipDir([{ dir: paths.config, name: "config" }], out);
-    log("config.zip from modpack/config");
-    return out;
+  if (await exists(icon)) {
+    const cfg = path.join(stage, "config");
+    await cp(paths.config, cfg, { recursive: true });
+    await mkdir(path.join(cfg, "customwindowtitle"), { recursive: true });
+    await cp(icon, path.join(cfg, "customwindowtitle", "icon.png"));
+    const toml = path.join(cfg, "customwindowtitle-client.toml");
+    if (await exists(toml)) await writeFile(toml, windowIcon(await readFile(toml, "utf8"), "customwindowtitle/icon.png"));
+    entries.push({ dir: cfg, name: "config" });
+    notes.push("the logo as the window icon");
+  } else entries.push({ dir: paths.config, name: "config" });
+  if (paths.resourcepack && (await exists(path.join(paths.resourcepack, "pack.mcmeta")))) {
+    await mkdir(stage, { recursive: true });
+    const pack = path.join(stage, RESOURCE_PACK_ZIP);
+    // README.md in the folder is for whoever drops textures in, not for the game
+    const files = await listFiles(paths.resourcepack);
+    await zipDir(files.filter((f) => f !== "README.md").map((f) => ({ file: path.join(paths.resourcepack!, f), name: f })), pack);
+    entries.push({ file: pack, name: `resourcepacks/${RESOURCE_PACK_ZIP}` });
+    notes.push(`resourcepacks/${RESOURCE_PACK_ZIP} (${files.filter((f) => f.endsWith(".png")).length} textures)`);
   }
-  const stage = path.join(paths.dist, ".config-stage");
+  await zipDir(entries, out);
   await rm(stage, { recursive: true, force: true });
-  await cp(paths.config, stage, { recursive: true });
-  await mkdir(path.join(stage, "customwindowtitle"), { recursive: true });
-  await cp(icon, path.join(stage, "customwindowtitle", "icon.png"));
-  const toml = path.join(stage, "customwindowtitle-client.toml");
-  if (await exists(toml)) await writeFile(toml, windowIcon(await readFile(toml, "utf8"), "customwindowtitle/icon.png"));
-  await zipDir([{ dir: stage, name: "config" }], out);
-  await rm(stage, { recursive: true, force: true });
-  log("config.zip from modpack/config, with the logo as the window icon");
+  log(`config.zip from modpack/config${notes.length ? `, with ${notes.join(" and ")}` : ""}`);
+  return out;
+}
+
+/** Every file under dir, as forward-slash paths relative to it, sorted. */
+async function listFiles(dir: string, rel = ""): Promise<string[]> {
+  const out: string[] = [];
+  for (const name of (await readdir(path.join(dir, rel))).sort()) {
+    const r = rel ? `${rel}/${name}` : name;
+    if ((await stat(path.join(dir, r))).isDirectory()) out.push(...(await listFiles(dir, r)));
+    else out.push(r);
+  }
   return out;
 }
 

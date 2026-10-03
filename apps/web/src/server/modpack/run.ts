@@ -23,7 +23,7 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
       const m = await getManifest();
       const prev = await getLock();
       const lines: string[] = [];
-      const { lock, warnings } = await buildLock(m, { configDir: P.config, onProgress: (s) => lines.push(s), previousNeoForge: prev?.neoforge });
+      const { lock, warnings } = await buildLock(m, { configDir: P.config, resourcepackDir: P.resourcepack, onProgress: (s) => lines.push(s), previousNeoForge: prev?.neoforge });
       for (const l of lines) yield l;
       for (const w of warnings) yield `WARN ${w}`;
       const d = diffLocks(prev, lock);

@@ -30,7 +30,7 @@ export async function VersionFooter({ admin }: { admin: boolean }) {
   if (v.server) items.push(<a key="nf" href="https://neoforged.net/" className="hover:underline" target="_blank" rel="noreferrer noopener" data-testid="v-neoforge" title={`Minecraft ${v.server.minecraft}`}>NeoForge {v.server.neoforge}{v.server.from === "pack" ? " (from the pack)" : ""}</a>);
   if (admin && web.startedAt) items.push(<span key="deploy" data-testid="v-deployed">deployed {ukShort(new Date(web.startedAt))}</span>);
   return (
-    <p className="flex flex-wrap justify-center gap-x-1.5 gap-y-0.5" data-testid="versions">
+    <p className="flex flex-wrap justify-center gap-x-1.5 gap-y-0.5" data-testid="versions" title="Pixel lettering: Pixelify Sans, SIL Open Font License (/brand/fonts/OFL-PixelifySans.txt)">
       {items.map((it, i) => (
         <span key={i}>{i > 0 && <span aria-hidden> · </span>}{it}</span>
       ))}

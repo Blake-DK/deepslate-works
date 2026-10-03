@@ -40,7 +40,7 @@ export default async function BrandingPage({ searchParams }: { searchParams: Pro
           <CardDescription>The preview on the right follows what you type. Used by the top bar, the sign-in and invite pages, the page titles, the rules page and the welcome line in game.</CardDescription>
         </CardHeader>
         <CardContent>
-          <BrandingForm action={saveBrandingAction} initial={{ name: b.name, tagline: b.tagline, accent: b.accent, accentDark: b.accentDark, defaultTheme: b.defaultTheme, discordInvite: b.discordInvite, footer: b.footer, rules: b.rules, guide: guide.text, guideOwn: guide.own, motd: b.motd, motd2: b.motd2, logoUrl: b.logoUrl, faviconUrl: b.faviconUrl, bannerUrl: b.bannerUrl, logoPixel: b.generated?.pixel ?? false, icon64: b.generated ? b.generated.url(64) : null, motdAllowed: motd?.allowed ?? null, motdPermission: motd?.permission ?? "Settings.MinecraftModule.Minecraft.ServerMOTD" }} />
+          <BrandingForm action={saveBrandingAction} initial={{ name: b.name, tagline: b.tagline, discordInvite: b.discordInvite, footer: b.footer, rules: b.rules, guide: guide.text, guideOwn: guide.own, motd: b.motd, motd2: b.motd2, logoUrl: b.logoUrl, faviconUrl: b.faviconUrl, bannerUrl: b.bannerUrl, logoPixel: b.generated?.pixel ?? false, icon64: b.generated ? b.generated.url(64) : null, motdAllowed: motd?.allowed ?? null, motdPermission: motd?.permission ?? "Settings.MinecraftModule.Minecraft.ServerMOTD" }} />
         </CardContent>
       </Card>
     </div>

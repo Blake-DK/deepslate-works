@@ -1,14 +1,16 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+// docs/23 §5: a Card2 chip on a 1 px Line, the tone in the text.
 const tones = {
-  neutral: "bg-muted text-muted-foreground",
-  good: "bg-accent/15 text-accent",
-  warn: "bg-primary/15 text-primary",
-  bad: "bg-danger/15 text-danger",
-  info: "bg-info/15 text-info",
+  neutral: "text-muted-foreground",
+  good: "text-accent",
+  warn: "text-warn",
+  bad: "text-danger",
+  info: "text-info",
+  waking: "text-primary",
 } as const;
 
 export function Badge({ tone = "neutral", className, ...props }: React.HTMLAttributes<HTMLSpanElement> & { tone?: keyof typeof tones }) {
-  return <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", tones[tone], className)} {...props} />;
+  return <span className={cn("inline-flex items-center rounded-[3px] border bg-card-2 px-2 py-px text-[13px] font-semibold", tones[tone], className)} {...props} />;
 }

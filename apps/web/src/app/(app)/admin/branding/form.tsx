@@ -1,28 +1,19 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { MotdPreview } from "@/components/admin/motd-preview";
 import { visible } from "@/lib/motd";
 
 export type BrandingValues = {
-  name: string; tagline: string; accent: string; accentDark: string; defaultTheme: "light" | "dark" | "system";
+  name: string; tagline: string;
   discordInvite: string; footer: string; rules: string; guide: string; guideOwn: boolean; motd: string; motd2: string;
   logoUrl: string | null; faviconUrl: string | null; bannerUrl: string | null; logoPixel: boolean; icon64: string | null;
   /** AMP's own MOTD setting may be changed by the site (permission), and what it holds now */
   motdAllowed: boolean | null; motdPermission: string;
 };
 
-const HEX = /^#[0-9a-fA-F]{6}$/;
 const MAX = 2 * 1024 * 1024;
-
-/** Contrast of white (or near-black) text on the colour, as WCAG works it out. */
-function contrast(hex: string, on: "light" | "dark"): number {
-  const ch = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-  const l = 0.2126 * ch[0]! + 0.7152 * ch[1]! + 0.0722 * ch[2]!;
-  const text = on === "light" ? 1 : 0.0086; // white on the light theme's button, #16171a on the dark theme's
-  return (Math.max(l, text) + 0.05) / (Math.min(l, text) + 0.05);
-}
 
 function Picture({ slot, label, hint, current, onPick }: { slot: string; label: string; hint: string; current: string | null; onPick: (url: string | null) => void }) {
   const [problem, setProblem] = useState<string | null>(null);
@@ -54,15 +45,9 @@ function Picture({ slot, label, hint, current, onPick }: { slot: string; label: 
 export function BrandingForm({ initial, action }: { initial: BrandingValues; action: (f: FormData) => Promise<void> }) {
   const [v, setV] = useState(initial);
   const [pics, setPics] = useState<{ logo: string | null; banner: string | null }>({ logo: null, banner: null });
-  const [look, setLook] = useState<"light" | "dark">("light");
-  useEffect(() => setLook(document.documentElement.dataset.theme === "dark" ? "dark" : "light"), []);
   const set = (k: keyof BrandingValues) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setV((s) => ({ ...s, [k]: e.target.value }));
-  const accent = look === "dark" ? v.accentDark : v.accent;
-  const okAccent = HEX.test(accent) ? accent : look === "dark" ? "#d9823f" : "#b8652c";
-  const ratio = useMemo(() => contrast(okAccent, look), [okAccent, look]);
   const logo = pics.logo ?? v.logoUrl;
   const banner = pics.banner ?? v.bannerUrl;
-  const palette = look === "dark" ? { bg: "#16171a", card: "#202226", fg: "#ebe9e4", muted: "#a09d95", border: "#33363c", on: "#16171a" } : { bg: "#f6f5f2", card: "#ffffff", fg: "#1c1b19", muted: "#6b6862", border: "#dedbd3", on: "#ffffff" };
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -80,24 +65,6 @@ export function BrandingForm({ initial, action }: { initial: BrandingValues; act
             <MotdPreview name={v.name} line1={v.motd} line2={v.motd2} icon={v.icon64} pixel={v.logoPixel} />
             {[v.motd, v.motd2].some((l) => visible(l).length > 45) && <p className="text-xs text-primary">A line longer than about 45 characters is cut off in the game.</p>}
             <p className="text-xs text-muted-foreground">Colours with Minecraft&apos;s codes: <span className="font-mono">§8</span> dark grey, <span className="font-mono">§7</span> grey, <span className="font-mono">§6</span> orange, <span className="font-mono">§f</span> white, <span className="font-mono">§l</span> bold, <span className="font-mono">§r</span> back to normal. Saving sends it to AMP, which puts it on the server at the <strong>next server start</strong>.{v.motdAllowed === false && <> AMP does not let the site change it yet: give the AMP user <span className="font-mono">webapp</span> the permission <span className="font-mono">{v.motdPermission}</span>.</>}</p>
-          </div>
-        </fieldset>
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold">Colours</legend>
-          <div className="grid grid-cols-2 gap-3">
-            {(["accent", "accentDark"] as const).map((k) => (
-              <div key={k}>
-                <Label htmlFor={k}>{k === "accent" ? "Accent, light theme" : "Accent, dark theme"}</Label>
-                <div className="flex gap-2">
-                  <input type="color" aria-label={`${k === "accent" ? "Light" : "Dark"} theme accent, colour picker`} value={HEX.test(v[k]) ? v[k] : "#000000"} onChange={set(k)} className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border bg-background p-1" />
-                  <Input id={k} name={k} value={v[k]} onChange={set(k)} pattern="#[0-9a-fA-F]{6}" maxLength={7} required className="font-mono" />
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="max-w-xs"><Label htmlFor="defaultTheme">Theme for a first visit</Label>
-            <Select id="defaultTheme" name="defaultTheme" value={v.defaultTheme} onChange={set("defaultTheme")}><option value="system">Follow their device</option><option value="light">Light</option><option value="dark">Dark</option></Select>
-            <p className="mt-1 text-xs text-muted-foreground">Once someone uses the ☾ switch, their choice wins.</p>
           </div>
         </fieldset>
         <fieldset className="space-y-3">
@@ -122,35 +89,27 @@ export function BrandingForm({ initial, action }: { initial: BrandingValues; act
       </form>
 
       <aside aria-label="Preview" className="space-y-3 lg:sticky lg:top-4 lg:self-start">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Preview</h2>
-          <div className="flex gap-1 rounded-lg bg-muted p-1 text-xs">
-            {(["light", "dark"] as const).map((t) => <button key={t} type="button" onClick={() => setLook(t)} aria-pressed={look === t} className={`rounded-md px-2 py-1 ${look === t ? "bg-card font-medium shadow-sm" : ""}`}>{t === "light" ? "Light" : "Dark"}</button>)}
-          </div>
-        </div>
-        <div className="overflow-hidden rounded-xl border text-sm" style={{ background: palette.bg, color: palette.fg, borderColor: palette.border }}>
-          <div className="flex items-center gap-2 border-b px-3 py-2" style={{ background: palette.card, borderColor: palette.border }}>
+        <h2 className="text-sm font-semibold">Preview</h2>
+        <div className="overflow-hidden rounded-[4px] border bg-background text-sm text-foreground">
+          <div className="flex items-center gap-2 border-b bg-panel px-3 py-2">
             {/* eslint-disable-next-line @next/next/no-img-element -- a preview of the picked file */}
             {logo && <img src={logo} alt="" className="h-6 w-auto max-w-24 object-contain" />}
             <span className="font-semibold">{v.name || "…"}</span>
-            <span className="ml-3 text-xs" style={{ color: palette.muted }}>Home · Mods · Map</span>
-            <span className="ml-auto text-xs" style={{ color: okAccent }}>Admin</span>
+            <span className="ml-3 text-xs text-muted-foreground">Home · Mods · Map</span>
+            <span className="ml-auto text-xs text-primary-hi">Admin</span>
           </div>
           <div className="space-y-3 p-4">
             {/* eslint-disable-next-line @next/next/no-img-element -- a preview of the picked file */}
-            {banner && <img src={banner} alt="" className="max-h-28 w-full rounded-lg border object-cover" style={{ borderColor: palette.border }} />}
-            <div className="rounded-lg border p-3" style={{ background: palette.card, borderColor: palette.border }}>
+            {banner && <img src={banner} alt="" className="max-h-28 w-full border object-cover" />}
+            <div className="rounded-[4px] border bg-card p-3">
               <p className="font-semibold">Sign in</p>
-              <p className="text-xs" style={{ color: palette.muted }}>Already in the group? Continue with the account you joined with.</p>
-              <span className="mt-2 inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium" style={{ background: okAccent, color: palette.on }}>Continue with Discord</span>
-              <span className="ml-2 rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ background: `${okAccent}26`, color: okAccent }}>Pinned</span>
+              <p className="text-xs text-muted-foreground">Already in the group? Continue with the account you joined with.</p>
+              <span className="block-btn block-play mt-2 inline-flex h-9 items-center text-sm font-semibold [--px:16px]">Continue with Discord</span>
+              <span className="ml-2 rounded-[3px] border bg-card-2 px-2 py-px text-[13px] font-semibold text-warn">Pinned</span>
             </div>
-            <p className="text-center text-xs" style={{ color: palette.muted }}>{v.tagline}{(v.footer || v.discordInvite) && <><br />{v.footer}{v.footer && v.discordInvite ? " · " : ""}{v.discordInvite && <span className="underline">Discord</span>}</>}</p>
+            <p className="text-center text-xs text-muted-foreground">{v.tagline}{(v.footer || v.discordInvite) && <><br />{v.footer}{v.footer && v.discordInvite ? " · " : ""}{v.discordInvite && <span className="underline">Discord</span>}</>}</p>
           </div>
         </div>
-        <p className={`text-xs ${ratio < 3 ? "text-danger" : "text-muted-foreground"}`} role={ratio < 3 ? "alert" : undefined}>
-          Button text on this colour: contrast {ratio.toFixed(1)} to 1. {ratio < 3 ? "Hard to read. Pick a darker colour for the light theme, or a lighter one for the dark theme." : ratio < 4.5 ? "Fine for buttons; a little low for small text." : "Easy to read."}
-        </p>
         <p className="text-xs text-muted-foreground">In game, the first line on joining reads: <span className="font-mono">{v.name || "…"}{v.tagline ? ` · ${v.tagline}` : ""}</span></p>
       </aside>
     </div>

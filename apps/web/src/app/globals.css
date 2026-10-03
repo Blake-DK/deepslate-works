@@ -1,63 +1,128 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
-
-/* Deepslate palette: slate greys with a copper accent. Light and dark share the tokens. */
-:root {
-  --background: #f6f5f2;
-  --foreground: #1c1b19;
-  --card: #ffffff;
-  --card-foreground: #1c1b19;
-  --muted: #eceae4;
-  --muted-foreground: #6b6862;
-  --border: #dedbd3;
-  --primary: #b8652c;
-  --primary-foreground: #ffffff;
-  --accent: #2e7d5b;
-  --info: #2f6db0;
-  --danger: #b3261e;
-  --ring: #b8652c;
+/* Pixelify Sans Bold (SIL Open Font License, public/brand/fonts/OFL-PixelifySans.txt), self-hosted, weight 700 only.
+   Used in exactly four places (docs/23 §5): the banner name, the logo tile, the Play block and the Vote block. */
+@font-face {
+  font-family: "Pixelify Sans";
+  src: url("/brand/fonts/PixelifySans-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
 
-:root[data-theme="dark"] {
-  --background: #16171a;
-  --foreground: #ebe9e4;
+/* One theme, the launcher's (docs/23 §3, keys from docs/21). tests/site-look.test.ts checks every hex here. */
+:root {
+  color-scheme: dark;
+  --background: #16171A;
+  --panel: #121316;
   --card: #202226;
-  --card-foreground: #ebe9e4;
-  --muted: #2a2c31;
-  --muted-foreground: #a09d95;
-  --border: #33363c;
-  --primary: #d9823f;
-  --primary-foreground: #16171a;
-  --accent: #57b688;
-  --info: #6aa7e6;
-  --danger: #e5484d;
-  --ring: #d9823f;
+  --card-2: #262930;
+  --muted: #262930;
+  --border: #33363C;
+  --foreground: #F2F0EB;
+  --card-foreground: #F2F0EB;
+  --muted-foreground: #B5B2AA;
+  --dim: #908D85;
+  --primary: #E8833A;
+  --ring: #E8833A;
+  --primary-hi: #FFB26B;
+  --primary-lo: #B8652C;
+  --primary-foreground: #16171A;
+  --play: #2E7D5B;
+  --play-hi: #3A9A70;
+  --play-lo: #1F5C42;
+  --accent: #8FD4B3;
+  --info: #6AA7E6;
+  --warn: #F2B35C;
+  --danger: #F06A6E;
+  --disabled: #3E444D;
+  --disabled-foreground: #BDBAB3;
+  /* the parts' own edges and bevels (docs/23 §4, §5), kept here so no component holds a colour */
+  --edge: #565C66;
+  --well: #1C1F24;
+  --danger-hi: #F7A3A5;
+  --danger-lo: #B3383C;
+  --block-edge: #000000;
+  --on-play: #FFFFFF;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-panel: var(--panel);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-card-2: var(--card-2);
   --color-card-foreground: var(--card-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-dim: var(--dim);
   --color-border: var(--border);
   --color-primary: var(--primary);
+  --color-primary-hi: var(--primary-hi);
+  --color-primary-lo: var(--primary-lo);
   --color-primary-foreground: var(--primary-foreground);
+  --color-play: var(--play);
+  --color-play-hi: var(--play-hi);
+  --color-play-lo: var(--play-lo);
   --color-accent: var(--accent);
   --color-info: var(--info);
+  --color-warn: var(--warn);
   --color-danger: var(--danger);
+  --color-disabled: var(--disabled);
+  --color-disabled-foreground: var(--disabled-foreground);
+  --color-edge: var(--edge);
+  --color-well: var(--well);
   --color-ring: var(--ring);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: "Pixelify Sans", "Segoe UI", sans-serif;
+  --font-mono: Consolas, ui-monospace, monospace;
 }
-
-html { color-scheme: light; }
-html[data-theme="dark"] { color-scheme: dark; }
 
 body {
   @apply bg-background text-foreground font-sans antialiased;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 * { border-color: var(--border); }
+
+/* The block button (docs/23 §5): a 2 px black edge, a light bevel top-left, a dark one bottom-right, a 3 px drop.
+   Each variant sets --face, --hi, --lo and --on; components/ui/button.tsx picks the variant and sets --px. */
+@layer components {
+  .block-btn {
+    --face: var(--card-2);
+    --hi: var(--disabled);
+    --lo: var(--panel);
+    --on: var(--foreground);
+    --lift: 6%;
+    background: var(--face);
+    color: var(--on);
+    border: 2px solid var(--block-edge);
+    border-radius: 0;
+    margin-bottom: 3px;
+    padding-left: var(--px);
+    padding-right: var(--px);
+    box-shadow: inset 2px 2px 0 var(--hi), inset -2px -3px 0 var(--lo), 0 3px 0 var(--block-edge);
+  }
+  .block-btn:hover:not(:disabled):not([aria-disabled="true"]) { background: color-mix(in srgb, var(--face), white var(--lift)); }
+  .block-btn:active:not(:disabled):not([aria-disabled="true"]) {
+    box-shadow: inset 2px 2px 0 var(--lo), inset -2px -3px 0 var(--hi), 0 3px 0 var(--block-edge);
+    padding-top: 2px;
+    padding-left: calc(var(--px) + 1px);
+    padding-right: calc(var(--px) - 1px);
+  }
+  .block-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  /* 4 % on green: white on a 6 % lighter green is 4.4:1 */
+  .block-play { --face: var(--play); --hi: var(--play-hi); --lo: var(--play-lo); --on: var(--on-play); --lift: 4%; }
+  .block-copper { --face: var(--primary); --hi: var(--primary-hi); --lo: var(--primary-lo); --on: var(--primary-foreground); }
+  .block-secondary { --face: var(--card-2); --hi: var(--disabled); --lo: var(--panel); --on: var(--foreground); }
+  .block-danger { --face: var(--danger); --hi: var(--danger-hi); --lo: var(--danger-lo); --on: var(--primary-foreground); }
+  /* after the variants, so a disabled block of any variant is the same grey */
+  .block-btn:disabled, .block-btn[aria-disabled="true"] {
+    --face: var(--disabled);
+    --hi: var(--border);
+    --lo: var(--border);
+    --on: var(--disabled-foreground);
+    cursor: not-allowed;
+  }
+}

@@ -103,16 +103,17 @@ namespace DeepslateWorks.Tests
             }
         }
 
-        /// <summary>The place a pixel-face element belongs to: itself when it is named, else the nearest named Button or
-        /// TextBlock above it (a block's label belongs to its button).</summary>
+        /// <summary>The place a pixel-face element belongs to: the nearest named Button above it (a block's label and its
+        /// drawn shadow, "Shade" in the template, belong to the button), else the nearest named TextBlock.</summary>
         static string Owner(DependencyObject d)
         {
+            string text = null;
             for (var p = d; p != null; p = VisualTreeHelper.GetParent(p))
             {
                 if (p is System.Windows.Controls.Button b && !string.IsNullOrEmpty(b.Name)) return b.Name;
-                if (p is System.Windows.Controls.TextBlock t && !string.IsNullOrEmpty(t.Name)) return t.Name;
+                if (text == null && p is System.Windows.Controls.TextBlock t && !string.IsNullOrEmpty(t.Name)) text = t.Name;
             }
-            return "(unnamed)";
+            return text ?? "(unnamed)";
         }
 
         [WindowsFact] public void The_pixel_face_is_in_exactly_three_places()

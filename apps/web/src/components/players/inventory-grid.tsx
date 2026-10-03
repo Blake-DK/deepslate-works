@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { enchantLabel, itemHue, itemInitials, itemMod, itemName } from "@/lib/items";
 import { clampCount, slotName } from "@/shared/slots";
 import { cn } from "@/lib/utils";
+import { buttonClasses } from "@/components/ui/button";
+import { fieldClasses } from "@/components/ui/input";
 
 export type Item = { slot: number; id: string; count: number; name?: string; damage?: number; enchantments?: Record<string, number>; contents?: Item[]; extra?: string[] };
 export type Inv = { inventory: Item[]; ender: Item[]; selectedSlot: number };
@@ -41,9 +43,9 @@ function tooltip(item: Item, names: Map<string, CatalogueItem>) {
 function Slot({ item, label, picked, hotbar, onPick, names }: { item?: Item; label: string; picked: boolean; hotbar?: boolean; onPick: () => void; names: Map<string, CatalogueItem> }) {
   return (
     <button type="button" onClick={onPick} title={item ? tooltip(item, names) : `${label}: empty`} aria-label={item ? `${label}: ${tooltip(item, names)}` : `${label}: empty`}
-      className={cn("relative grid aspect-square place-items-center rounded-sm border-2 border-border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", hotbar && "border-primary/40", picked && "ring-2 ring-primary")}>
+      className={cn("relative grid aspect-square place-items-center rounded-sm border-2 border-border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", hotbar && "border-primary-lo", picked && "ring-2 ring-primary")}>
       {item && <Icon id={item.id} />}
-      {item?.enchantments && <span className="pointer-events-none absolute inset-0 rounded-sm bg-gradient-to-br from-transparent via-fuchsia-400/30 to-transparent" />}
+      {item?.enchantments && <span className="pointer-events-none absolute inset-0 rounded-sm bg-gradient-to-br from-transparent via-info/30 to-transparent" />}
       {item && item.count > 1 && <span className="absolute bottom-0 right-0.5 font-mono text-[10px] font-bold text-white [text-shadow:1px_1px_0_#000] sm:text-xs">{item.count}</span>}
       {item?.damage ? <span className="absolute left-1 right-1 top-0.5 h-0.5 rounded bg-danger" aria-hidden /> : null}
     </button>
@@ -71,13 +73,13 @@ function Picker({ title, initial, onSubmit, onCancel, busy }: { title: string; i
   }, [all, q]);
   const max = chosen?.maxStack ?? 64;
   return (
-    <div className="space-y-2 rounded-lg border bg-background p-3" data-testid="item-picker">
+    <div className="space-y-2 rounded-[4px] border bg-panel p-3" data-testid="item-picker">
       <p className="text-sm font-semibold">{title}</p>
-      <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={all ? `Search ${all.length} items by name, id or mod` : "Loading the items…"} aria-label="Search items" className="h-9 w-full rounded-lg border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+      <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={all ? `Search ${all.length} items by name, id or mod` : "Loading the items…"} aria-label="Search items" className={cn("h-11", fieldClasses)} />
       <ul className="grid max-h-56 grid-cols-1 gap-0.5 overflow-y-auto sm:grid-cols-2" role="listbox" aria-label="Items">
         {found.map((i) => (
           <li key={i.id}>
-            <button type="button" role="option" aria-selected={chosen?.id === i.id} onClick={() => { setChosen(i); setCount((c) => clampCount(c, i.maxStack)); }} className={cn("flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-muted", chosen?.id === i.id && "bg-primary/10")}>
+            <button type="button" role="option" aria-selected={chosen?.id === i.id} onClick={() => { setChosen(i); setCount((c) => clampCount(c, i.maxStack)); }} className={cn("flex w-full items-center gap-2 rounded-[3px] px-2 py-1 text-left text-sm hover:bg-card-2", chosen?.id === i.id && "bg-card-2 text-foreground shadow-[inset_3px_0_0_var(--primary)]")}>
               <span className="grid h-6 w-6 shrink-0 place-items-center"><Icon id={i.id} /></span>
               <span className="min-w-0 flex-1 truncate">{i.name}</span>
               <span className="shrink-0 truncate text-xs text-muted-foreground">{i.mod}</span>
@@ -88,17 +90,17 @@ function Picker({ title, initial, onSubmit, onCancel, busy }: { title: string; i
       </ul>
       <div className="flex flex-wrap items-end gap-2">
         <p className="min-w-0 flex-1 truncate text-sm">{chosen ? <><strong>{chosen.name}</strong> <span className="font-mono text-xs text-muted-foreground">{chosen.id}</span></> : <span className="text-muted-foreground">Pick an item.</span>}</p>
-        <label className="text-sm">Count <input type="number" min={1} max={max} value={count} onChange={(e) => setCount(clampCount(Number(e.target.value), chosen?.maxStack))} className="ml-1 h-8 w-20 rounded-lg border bg-background px-2 text-sm" /> <span className="text-xs text-muted-foreground">of {max}{chosen && chosen.maxStack == null ? "?" : ""}</span></label>
+        <label className="text-sm">Count <input type="number" min={1} max={max} value={count} onChange={(e) => setCount(clampCount(Number(e.target.value), chosen?.maxStack))} className={cn("ml-1 h-11 w-24", fieldClasses.replace("w-full ", ""))} /> <span className="text-xs text-muted-foreground">of {max}{chosen && chosen.maxStack == null ? "?" : ""}</span></label>
       </div>
       <button type="button" className="text-xs text-primary underline" onClick={() => setAdvanced((a) => !a)}>{advanced ? "Hide advanced" : "Advanced"}</button>
       {advanced && (
         <label className="block text-xs text-muted-foreground">Components, 1.21 syntax (the server checks them; nothing changes if it says no)
-          <input value={components} onChange={(e) => setComponents(e.target.value)} placeholder='[minecraft:enchantments={levels:{"minecraft:sharpness":5}}]' className="mt-1 h-8 w-full rounded-lg border bg-background px-2 font-mono text-xs" />
+          <input value={components} onChange={(e) => setComponents(e.target.value)} placeholder='[minecraft:enchantments={levels:{"minecraft:sharpness":5}}]' className={cn("mt-1 h-11 font-mono", fieldClasses)} />
         </label>
       )}
       <div className="flex gap-2">
-        <button type="button" disabled={!chosen || busy} onClick={() => chosen && onSubmit({ item: chosen.id, count, components: components.trim() })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? "Waiting for the server…" : "Done"}</button>
-        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-1.5 text-sm hover:bg-muted">Cancel</button>
+        <button type="button" disabled={!chosen || busy} onClick={() => chosen && onSubmit({ item: chosen.id, count, components: components.trim() })} className="rounded-[4px] bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? "Waiting for the server…" : "Done"}</button>
+        <button type="button" onClick={onCancel} className={buttonClasses("ghost", "sm")}>Cancel</button>
       </div>
     </div>
   );
@@ -182,20 +184,20 @@ export function InventoryGrid({ initial, player, uuid, editable = false }: { ini
 
       {editable && (
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => { setMode("give"); setPicked(null); setSaid(null); }} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground">Give…</button>
-          <button type="button" onClick={() => void readAgain()} className="rounded-lg px-3 py-1.5 text-sm hover:bg-muted">Read again</button>
+          <button type="button" onClick={() => { setMode("give"); setPicked(null); setSaid(null); }} className={buttonClasses("primary", "sm")}>Give…</button>
+          <button type="button" onClick={() => void readAgain()} className={buttonClasses("ghost", "sm")}>Read again</button>
         </div>
       )}
 
       {picked && (
-        <div className="space-y-2 rounded-lg bg-muted p-3 text-sm" data-testid="item-details">
+        <div className="space-y-2 rounded-[4px] border bg-card-2 p-3 text-sm" data-testid="item-details">
           <p className="font-semibold"><span className="font-mono text-xs text-muted-foreground">{target}</span> {itemAt ? tooltip(itemAt, names) : "empty"}</p>
           {itemAt?.contents && <p>Inside: {itemAt.contents.map((c) => `${c.name ?? itemName(c.id)}${c.count > 1 ? ` × ${c.count}` : ""}`).join(", ")}</p>}
           {itemAt?.extra && <p className="text-xs text-muted-foreground">Other data on it: <span className="font-mono">{itemAt.extra.join(", ")}</span></p>}
           {editable && mode === "menu" && (
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setMode("set")} className="rounded-lg bg-background px-3 py-1.5 font-medium hover:bg-card">Set item…</button>
-              {itemAt && <button type="button" disabled={busy} onClick={() => void send({ op: "clear", slot: target })} className="rounded-lg bg-background px-3 py-1.5 font-medium text-danger hover:bg-card">{busy ? "Waiting…" : "Clear slot"}</button>}
+              <button type="button" onClick={() => setMode("set")} className={buttonClasses("secondary", "sm")}>Set item…</button>
+              {itemAt && <button type="button" disabled={busy} onClick={() => void send({ op: "clear", slot: target })} className="rounded-[4px] bg-background px-3 py-1.5 font-medium text-danger hover:bg-card">{busy ? "Waiting…" : "Clear slot"}</button>}
             </div>
           )}
         </div>

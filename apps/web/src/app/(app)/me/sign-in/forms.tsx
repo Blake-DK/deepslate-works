@@ -41,7 +41,7 @@ export function StateForm({ action, fields, submit, danger = false, testId }: { 
 
 export function RecoveryCodes({ codes, note }: { codes: string[]; note?: string }) {
   return (
-    <div className="space-y-2 rounded-lg border border-accent p-3" data-testid="recovery-codes">
+    <div className="space-y-2 rounded-[4px] border border-l-[3px] border-l-accent bg-card p-3" data-testid="recovery-codes">
       {note && <p className="text-sm font-medium">{note}</p>}
       <p className="text-sm">Your recovery codes. <strong>They are shown this once.</strong> Keep them somewhere safe (your password manager). Each one works once, in place of a code from the app.</p>
       <ul className="grid grid-cols-2 gap-1 font-mono text-sm">{codes.map((c) => <li key={c}>{c}</li>)}</ul>

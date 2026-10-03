@@ -17,7 +17,7 @@ export function AreaChart({ points, unit, height = 160 }: { points: Array<{ labe
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${unit[1]} over time. Highest ${max}.`} className="w-full text-primary">
       {[0, 0.5, 1].map((f) => (
         <g key={f}>
-          <line x1={padL} x2={width} y1={y(top * f)} y2={y(top * f)} stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" />
+          <line x1={padL} x2={width} y1={y(top * f)} y2={y(top * f)} className="stroke-border" strokeWidth="1" />
           <text x={padL - 6} y={y(top * f) + 3} textAnchor="end" className="fill-muted-foreground" fontSize="10">{Math.round(top * f)}</text>
         </g>
       ))}

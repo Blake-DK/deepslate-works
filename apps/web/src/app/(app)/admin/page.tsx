@@ -55,7 +55,7 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
         {rows.map((r) => (
           <li key={r.key}>
             {r.uuid ? (
-              <Link href={`/admin?p=${r.uuid}`} aria-current={picked === r.uuid ? "true" : undefined} className={cn("flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted", picked === r.uuid && "bg-primary/10")}>
+              <Link href={`/admin?p=${r.uuid}`} aria-current={picked === r.uuid ? "true" : undefined} className={cn("flex items-center gap-2 rounded-[4px] px-2 py-1.5 text-sm hover:bg-muted", picked === r.uuid && "bg-card-2 text-foreground shadow-[inset_3px_0_0_var(--primary)]")}>
                 <PlayerHead uuid={r.uuid} name={r.name} size={24} />
                 <span className="min-w-0 flex-1"><span className="block truncate font-mono">{r.name}</span><span className="block truncate text-xs text-muted-foreground">{r.sub}</span></span>
                 {r.ping != null && <Badge tone={pingTone(r.ping)}>{r.ping} ms</Badge>}
@@ -126,8 +126,8 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
       </div>
       <Flash msg={typeof q.msg === "string" ? q.msg : undefined} detail={typeof q.detail === "string" ? q.detail : undefined} />
       <div className="grid gap-3 xl:grid-cols-[13rem_minmax(0,1fr)]">
-        <section aria-label="Players" className="rounded-xl border bg-card p-2 xl:max-h-[75vh] xl:overflow-y-auto">
-          <Link href="/admin" aria-current={!who ? "true" : undefined} className={cn("flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-muted", !who && "bg-primary/10")}>
+        <section aria-label="Players" className="rounded-[4px] border bg-card p-2 xl:max-h-[75vh] xl:overflow-y-auto">
+          <Link href="/admin" aria-current={!who ? "true" : undefined} className={cn("flex items-center gap-2 rounded-[4px] px-2 py-1.5 text-sm font-medium hover:bg-muted", !who && "bg-card-2 text-foreground shadow-[inset_3px_0_0_var(--primary)]")}>
             <span className="grid h-6 w-6 place-items-center rounded bg-primary text-xs text-primary-foreground" aria-hidden>S</span> Server
           </Link>
           {group("Online", onlineRows, "Nobody is playing.")}
@@ -137,14 +137,14 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
         </section>
         <div className="min-w-0 space-y-3">
           {/* docs/13 §13: the console itself (output and command line) is on Admin → Server → Console only */}
-          <section aria-label="Last console lines" className="rounded-xl border bg-card p-3" data-testid="console-preview">
+          <section aria-label="Last console lines" className="rounded-[4px] border bg-card p-3" data-testid="console-preview">
             <div className="mb-2 flex items-center justify-between gap-2">
               <h2 className="text-sm font-semibold">Last 5 console lines</h2>
               <Link href="/admin/server?tab=console" className="text-sm text-primary underline">Open console</Link>
             </div>
-            <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-2 font-mono text-xs leading-relaxed">{consoleLines(tail).slice(-5).map((l) => l.text).join("\n") || "(nothing yet)"}</pre>
+            <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-[4px] border bg-panel p-2 font-mono text-xs leading-relaxed">{consoleLines(tail).slice(-5).map((l) => l.text).join("\n") || "(nothing yet)"}</pre>
           </section>
-          <section aria-label="Details" className="rounded-xl border bg-card p-3">{inspector}</section>
+          <section aria-label="Details" className="rounded-[4px] border bg-card p-3">{inspector}</section>
         </div>
       </div>
     </div>

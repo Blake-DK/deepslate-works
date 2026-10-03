@@ -35,7 +35,7 @@ export default async function VotePage() {
       <div>
         <h2 className="text-xl font-semibold">{vote.title}</h2>
         <p className="mt-1 max-w-2xl text-muted-foreground">Tick what you want. Suggested mods are pre-ticked. You can change your vote until it closes.</p>
-        <div className="mt-3 rounded-xl border bg-card p-4 text-sm">
+        <div className="mt-3 rounded-[4px] border bg-card p-4 text-sm">
           <p className="font-medium">Rule of thumb</p>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
             <li>Pick one gun mod, not both. They do the same job and double the load.</li>

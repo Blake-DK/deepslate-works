@@ -78,7 +78,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
                     </div>
                     <div className="text-right tabular-nums"><strong>{r?.yes ?? 0}</strong> yes · {pct}%</div>
                     <div className="sm:col-span-2">
-                      <div className="h-2 w-full overflow-hidden rounded bg-muted"><div className="h-full bg-primary" style={{ width: `${pct}%` }} /></div>
+                      <div className="h-2 w-full overflow-hidden bg-panel"><div className="h-full bg-primary" style={{ width: `${pct}%` }} /></div>
                       <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
                         {TIER_KEYS.filter((k) => (r?.byTier[k].total ?? 0) > 0).map((k) => <span key={k}>{TIER_LABEL[k]}: {r!.byTier[k].yes}/{r!.byTier[k].total}</span>)}
                       </div>
@@ -102,7 +102,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
                   {q.options.map((o) => (
                     <li key={o.option} className="flex items-center gap-2">
                       <span className="w-8 text-right tabular-nums">{o.count}</span>
-                      <div className="h-2 flex-1 overflow-hidden rounded bg-muted"><div className="h-full bg-accent" style={{ width: `${q.answered ? (o.count / q.answered) * 100 : 0}%` }} /></div>
+                      <div className="h-2 flex-1 overflow-hidden bg-panel"><div className="h-full bg-info" style={{ width: `${q.answered ? (o.count / q.answered) * 100 : 0}%` }} /></div>
                       <span className="w-2/5 truncate">{o.option}</span>
                     </li>
                   ))}

@@ -7,6 +7,7 @@ import { filterToQuery, type EventFilter } from "@/lib/event-query";
 import type { EventRow } from "@/server/event-log";
 import { EventItem } from "./event-list";
 import { LiveTail } from "./live-tail";
+import { Check } from "@/components/ui/check";
 
 /** The event log at /activity: everything for admins, trimmed for players. */
 export function EventPage({ base, admin, filter, rows, more, newest }: { base: string; admin: boolean; filter: EventFilter; rows: EventRow[]; more: boolean; newest: string }) {
@@ -26,7 +27,7 @@ export function EventPage({ base, admin, filter, rows, more, newest }: { base: s
               <legend className="mb-1 text-sm font-medium">Show</legend>
               <div className="flex flex-wrap gap-x-4 gap-y-1">
                 {kinds.map((k) => (
-                  <label key={k} className="flex items-center gap-1.5 text-sm"><input type="checkbox" name="kind" value={k} defaultChecked={filter.kinds.includes(k)} className="h-4 w-4" /> {KIND_LABEL[k]}</label>
+                  <label key={k} className="flex items-center gap-1.5 text-sm"><Check type="checkbox" name="kind" value={k} defaultChecked={filter.kinds.includes(k)} /> {KIND_LABEL[k]}</label>
                 ))}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">Nothing ticked means everything.</p>

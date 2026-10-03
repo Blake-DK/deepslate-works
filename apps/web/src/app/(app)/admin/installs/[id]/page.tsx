@@ -27,7 +27,7 @@ export const metadata: Metadata = { title: "Install report" };
 const TONE = { ok: "good", failed: "bad", cancelled: "warn", skipped: "neutral" } as const;
 const LABEL = { ok: "All good", failed: "Failed", cancelled: "Stopped", skipped: "Already running" } as const;
 const TIER: Record<string, string> = { LOW: "Older PC", MID: "Decent PC", HIGH: "Gaming PC" };
-const MARK = { step: "bg-primary/15 font-semibold", after: "bg-primary/5", fail: "bg-danger/15 font-semibold text-danger" } as const;
+const MARK = { step: "bg-card-2 font-semibold text-primary-hi", after: "bg-card", fail: "bg-card-2 font-semibold text-danger" } as const;
 const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 
 export default async function InstallReportPage({ params }: { params: Promise<{ id: string }> }) {
@@ -79,7 +79,7 @@ export default async function InstallReportPage({ params }: { params: Promise<{ 
       <Card>
         <CardHeader><CardTitle>Log</CardTitle><CardDescription>As the installer wrote it, with names in paths, tokens and addresses taken out ({lines.length} lines).</CardDescription></CardHeader>
         <CardContent>
-          <div className="max-h-[40rem] overflow-auto rounded-lg border bg-muted" tabIndex={0} aria-label="Install log">
+          <div className="max-h-[40rem] overflow-auto rounded-[4px] border bg-panel" tabIndex={0} aria-label="Install log">
             <table className="w-full border-separate border-spacing-0 font-mono text-xs leading-relaxed">
               <tbody>
                 {lines.map((l) => (

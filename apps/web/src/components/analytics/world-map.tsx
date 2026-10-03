@@ -9,8 +9,8 @@ export function WorldMap({ rows }: { rows: CountryRow[] }) {
     .filter((d): d is { r: CountryRow; c: readonly [string, number, number] } => Boolean(d.c))
     .sort((a, b) => b.r.playMs - a.r.playMs);
   return (
-    <svg viewBox={WORLD_VIEWBOX} role="img" aria-label={`World map. ${dots.map((d) => `${d.c[0]}: ${hours(d.r.playMs)}`).join(". ") || "No countries yet"}.`} className="w-full rounded-lg bg-muted text-muted-foreground">
-      <path d={LAND_PATH} fill="currentColor" fillOpacity="0.35" />
+    <svg viewBox={WORLD_VIEWBOX} role="img" aria-label={`World map. ${dots.map((d) => `${d.c[0]}: ${hours(d.r.playMs)}`).join(". ") || "No countries yet"}.`} className="w-full rounded-[4px] border bg-panel text-dim">
+      <path d={LAND_PATH} fill="currentColor" fillOpacity="0.5" />
       {dots.map(({ r, c }) => {
         const radius = 1.5 + 5 * Math.sqrt(r.playMs / max);
         return (

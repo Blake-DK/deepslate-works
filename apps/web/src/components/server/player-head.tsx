@@ -13,7 +13,7 @@ export function PlayerHead({ uuid, name, size = 32, className }: { uuid?: string
       loading="lazy"
       decoding="async"
       referrerPolicy="no-referrer"
-      className={cn("rounded-md bg-muted [image-rendering:pixelated]", className)}
+      className={cn("bg-card-2 [image-rendering:pixelated]", className)}
     />
   );
 }

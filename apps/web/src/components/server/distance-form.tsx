@@ -22,7 +22,7 @@ export function DistanceForm({ view, sim, limits, running, allowed, applyNow, ap
           <span>View distance</span>
           <span className="font-mono" data-testid="view-value">{v} chunks</span>
         </label>
-        <input id="view" name="view" type="range" min={limits.view.min} max={limits.view.max} step={1} value={v} onChange={(e) => setV(Number(e.target.value))} disabled={!allowed} className="w-full accent-[var(--primary)]" />
+        <input id="view" name="view" type="range" min={limits.view.min} max={limits.view.max} step={1} value={v} onChange={(e) => setV(Number(e.target.value))} disabled={!allowed} className="w-full accent-primary" />
         <p className="text-sm text-muted-foreground">{words.view}</p>
       </div>
       <div className="space-y-1">
@@ -30,7 +30,7 @@ export function DistanceForm({ view, sim, limits, running, allowed, applyNow, ap
           <span>Simulation distance</span>
           <span className="font-mono" data-testid="sim-value">{s} chunks</span>
         </label>
-        <input id="sim" name="sim" type="range" min={limits.sim.min} max={limits.sim.max} step={1} value={s} onChange={(e) => setS(Number(e.target.value))} disabled={!allowed} className="w-full accent-[var(--primary)]" />
+        <input id="sim" name="sim" type="range" min={limits.sim.min} max={limits.sim.max} step={1} value={s} onChange={(e) => setS(Number(e.target.value))} disabled={!allowed} className="w-full accent-primary" />
         <p className="text-sm text-muted-foreground">{words.sim}</p>
       </div>
       {words.note && <p className="text-sm text-primary" data-testid="distance-note">{words.note}</p>}

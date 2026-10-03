@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { Check } from "@/components/ui/check";
 
 type Line = { seq: number; text: string; mine?: "sent" | "refused" };
 const KEEP = 300;
@@ -87,20 +88,20 @@ export function LiveConsole({ initial, input = true, height = "max-h-96", compac
           <span className={`inline-block h-2 w-2 rounded-full ${live === "live" ? "bg-accent" : "bg-primary"}`} />
           {live === "live" ? "Live" : live === "connecting" ? "Connecting…" : "Reconnecting…"}
         </span>
-        <label className="flex items-center gap-1.5"><input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} className="h-3.5 w-3.5" /> Follow new lines</label>
+        <label className="flex items-center gap-1.5"><Check type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> Follow new lines</label>
         <span>{lines.filter((l) => !l.mine).length} lines</span>
       </div>
-      <pre ref={box} className={`${compact ? "min-h-0 flex-1" : height} overflow-auto whitespace-pre-wrap break-words rounded-lg border bg-muted p-3 font-mono text-xs leading-relaxed`} tabIndex={0} aria-label="Server console">
+      <pre ref={box} className={`${compact ? "min-h-0 flex-1" : height} overflow-auto whitespace-pre-wrap break-words rounded-[4px] border bg-panel p-3 font-mono text-xs leading-relaxed`} tabIndex={0} aria-label="Server console">
         {lines.length
           ? lines.map((l) => <span key={l.seq} className={l.mine === "sent" ? "block font-semibold text-primary" : l.mine === "refused" ? "block text-danger" : "block"}>{l.text}</span>)
           : "(nothing yet: the console is followed from the moment the site's backend started)"}
       </pre>
       {input && (
-        <form onSubmit={send} className="flex items-center gap-2 rounded-lg border bg-background px-3 py-1.5 font-mono text-sm focus-within:ring-2 focus-within:ring-ring" data-testid="console-input">
+        <form onSubmit={send} className="flex h-11 items-center gap-2 border-2 border-edge bg-panel px-3 font-mono text-sm focus-within:border-primary" data-testid="console-input">
           <span className="text-primary" aria-hidden>&gt;</span>
           <label htmlFor="console-command" className="sr-only">Command for the Minecraft console</label>
           <input id="console-command" value={command} onChange={(e) => setCommand(e.target.value)} onKeyDown={keys} maxLength={1000} autoComplete="off" spellCheck={false} placeholder="A command for the Minecraft console, e.g. list or say hello" className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground" />
-          <button type="submit" disabled={busy || !command.trim()} className="rounded-md px-2 py-0.5 text-xs font-sans font-medium hover:bg-muted disabled:opacity-50">Send</button>
+          <button type="submit" disabled={busy || !command.trim()} className="rounded-[3px] px-2 py-0.5 font-sans text-xs font-semibold hover:bg-card-2 disabled:text-disabled-foreground">Send</button>
         </form>
       )}
       {input && !compact && <p className="text-xs text-muted-foreground">Goes to the server as you type it and into the event log under your name. The Minecraft console only: no shell. ↑ ↓ for earlier commands.</p>}

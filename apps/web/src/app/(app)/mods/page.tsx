@@ -32,14 +32,14 @@ async function extrasAndPictures(): Promise<{ extras: ExtraEntry[]; pictures: Re
 function Icon({ card }: { card: GuideCard }) {
   if (card.icon) {
     // eslint-disable-next-line @next/next/no-img-element -- a Modrinth CDN icon or our own data: PNG, 40 px
-    return <img src={card.icon} alt="" width={40} height={40} loading="lazy" referrerPolicy="no-referrer" className="h-10 w-10 shrink-0 rounded-md bg-muted object-cover" />;
+    return <img src={card.icon} alt="" width={40} height={40} loading="lazy" referrerPolicy="no-referrer" className="h-10 w-10 shrink-0 rounded-[3px] bg-muted object-cover" />;
   }
-  return <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted text-lg font-semibold text-muted-foreground">{card.name.charAt(0)}</span>;
+  return <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[3px] bg-muted text-lg font-semibold text-muted-foreground">{card.name.charAt(0)}</span>;
 }
 
 function Card({ card }: { card: GuideCard }) {
   return (
-    <article id={card.id} data-mod-card data-search={searchText(card)} className="scroll-mt-20 rounded-xl border bg-card p-4 target:ring-2 target:ring-primary" data-testid={`mod-${card.id}`}>
+    <article id={card.id} data-mod-card data-search={searchText(card)} className="scroll-mt-20 rounded-[4px] border bg-card p-4 target:ring-2 target:ring-primary" data-testid={`mod-${card.id}`}>
       <header className="flex items-start gap-3">
         <Icon card={card} />
         <div className="min-w-0 flex-1">
@@ -76,7 +76,7 @@ function Card({ card }: { card: GuideCard }) {
 /** "Behind the scenes": one line each, folded away. */
 function Line({ card }: { card: GuideCard }) {
   return (
-    <li id={card.id} data-mod-card data-search={searchText(card)} className="scroll-mt-20 py-1.5 text-sm target:bg-primary/10" data-testid={`mod-${card.id}`}>
+    <li id={card.id} data-mod-card data-search={searchText(card)} className="scroll-mt-20 py-1.5 text-sm target:bg-card-2" data-testid={`mod-${card.id}`}>
       <strong>{card.name}</strong>
       {card.where === "server" && <span className="text-muted-foreground"> (server)</span>}: <span className="text-muted-foreground">{card.description}</span>
     </li>
@@ -93,7 +93,7 @@ function Part({ part }: { part: GuidePart }) {
   if (part.collapsed) {
     return (
       <section data-mod-part aria-label={part.title} className="space-y-2" data-testid={`part-${part.key}`}>
-        <details className="rounded-xl border bg-card p-4">
+        <details className="rounded-[4px] border bg-card p-4">
           <summary className="cursor-pointer select-none">{heading}</summary>
           <ul className="mt-2 divide-y">{part.cards.map((c) => <Line key={c.id} card={c} />)}</ul>
         </details>

@@ -21,6 +21,8 @@ import { heldAtTheDoor, pingByPlayer, tpsLow } from "@/server/ping";
 import { GATE_TEXT, type BlockReason } from "@/shared/join-gate";
 import { pingTone, worstPing } from "@/lib/ping";
 import { tpsTone } from "@/lib/series";
+import { cn } from "@/lib/utils";
+import { stripLink } from "@/components/strip-link";
 
 const TIER: Record<string, string> = { LOW: "Older PC", MID: "Decent PC", HIGH: "Gaming PC" };
 type Query = { range?: string; show?: string; view?: string; sort?: string; dir?: string };
@@ -67,8 +69,8 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           <h2 className="text-xl font-semibold">Stats</h2>
           <p className="text-muted-foreground">Who has been playing, when, and for how long. Times are UK time.</p>
         </div>
-        <nav className="flex gap-1 rounded-lg bg-muted p-1" aria-label="Period">
-          {RANGES.map((r) => <Link key={r.key} href={href({ range: r.key })} aria-current={r.key === range.key ? "page" : undefined} className={`rounded-md px-3 py-1.5 text-sm ${r.key === range.key ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{r.label}</Link>)}
+        <nav className="flex max-w-full overflow-x-auto whitespace-nowrap border-b" aria-label="Period">
+          {RANGES.map((r) => <Link key={r.key} href={href({ range: r.key })} aria-current={r.key === range.key ? "page" : undefined} className={cn("-mb-px", stripLink(r.key === range.key))}>{r.label}</Link>)}
         </nav>
       </div>
       {!admin && !privacy.analyticsForPlayers ? null : t.sessions === 0 && <Alert>Nobody has played in this period yet. The numbers fill in from the first time someone joins the server.</Alert>}

@@ -6,7 +6,7 @@ import { youtubeId } from "@/lib/youtube";
 const SIDE_NOTE: Record<Mod["side"], string> = { both: "on your PC and the server", client: "on your PC only", server: "server only, nothing to install" };
 
 export function ModLinks({ mod, compact = false }: { mod: Mod; compact?: boolean }) {
-  const cls = "rounded-md border px-2.5 py-1 text-xs hover:bg-muted";
+  const cls = "rounded-[3px] border px-2.5 py-1 text-xs hover:bg-muted";
   const search = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${mod.name} minecraft mod`)}`;
   return (
     <div className="flex flex-wrap gap-2">
@@ -31,7 +31,7 @@ export function ModVideos({ mod }: { mod: Mod }) {
               {id && (
                 // Thumbnails only, never an embedded player (weak PCs, privacy): docs/05.
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={`https://i.ytimg.com/vi/${id}/mqdefault.jpg`} alt="" loading="lazy" width={320} height={180} className="aspect-video w-full rounded-md object-cover" />
+                <img src={`https://i.ytimg.com/vi/${id}/mqdefault.jpg`} alt="" loading="lazy" width={320} height={180} className="aspect-video w-full rounded-[3px] object-cover" />
               )}
               <span className="mt-1 line-clamp-2 block text-xs text-muted-foreground group-hover:text-foreground">{v.title}</span>
             </a>
@@ -44,7 +44,7 @@ export function ModVideos({ mod }: { mod: Mod }) {
 
 export function ModCard({ mod, children }: { mod: Mod; children?: React.ReactNode }) {
   return (
-    <article className="rounded-xl border bg-card p-4">
+    <article className="rounded-[4px] border bg-card p-4">
       <div className="flex flex-wrap items-start gap-2">
         <h3 className="text-base font-semibold leading-tight">{mod.name}</h3>
         <LoadChip load={mod.load} />

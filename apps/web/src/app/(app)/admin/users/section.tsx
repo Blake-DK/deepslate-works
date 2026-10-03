@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { buttonClasses } from "@/components/ui/button";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, cn } from "@/lib/utils";
 import { memberRows, SHOW, type Show } from "@/lib/admin-lists";
 import { cell, Clip, Field, FixedTable, menuCell, Switch } from "@/components/admin/parts";
 import { getInstaller } from "@/server/modpack/lock";
@@ -15,6 +15,8 @@ import { isOutdated } from "@/lib/installer-version";
 import { InstallerVersion } from "@/components/admin/installer-version";
 import { setEarlyAccessAction } from "./actions";
 import { MemberMenu } from "./member-menu";
+import { stripLink } from "@/components/strip-link";
+import { fieldClasses } from "@/components/ui/input";
 
 const ERRORS: Record<string, string> = {
   name: "Minecraft names are 3 to 16 letters, numbers or underscores.",
@@ -81,12 +83,12 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       </div>
       {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
       <div className="flex flex-wrap items-center gap-3">
-        <nav className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-sm" aria-label="Filter the players">
-          {(Object.keys(SHOW) as Show[]).map((k) => <Link key={k} href={href(k)} aria-current={only === k ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${only === k ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{SHOW[k]} ({count[k]})</Link>)}
+        <nav className="flex max-w-full overflow-x-auto whitespace-nowrap border-b" aria-label="Filter the players">
+          {(Object.keys(SHOW) as Show[]).map((k) => <Link key={k} href={href(k)} aria-current={only === k ? "page" : undefined} className={cn("-mb-px", stripLink(only === k))}>{SHOW[k]} ({count[k]})</Link>)}
         </nav>
         <form method="get" action="/admin/people" className="flex min-w-0 flex-1 items-center gap-2" role="search">
           {only !== "all" && <input type="hidden" name="show" value={only} />}
-          <input name="q" type="search" defaultValue={query} placeholder="Search by name" aria-label="Search by name" className="h-9 min-w-0 flex-1 rounded-lg border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[800px]:max-w-xs" />
+          <input name="q" type="search" defaultValue={query} placeholder="Search by name" aria-label="Search by name" className={cn("h-11 min-w-0 flex-1 min-[800px]:max-w-xs", fieldClasses.replace("w-full ", ""))} />
           <button type="submit" className={buttonClasses("secondary", "sm")}>Search</button>
           {query && <Link href={href(only).replace(/[?&]q=[^&]*/, "").replace(/\?$/, "")} className="whitespace-nowrap text-sm underline">Clear</Link>}
         </form>

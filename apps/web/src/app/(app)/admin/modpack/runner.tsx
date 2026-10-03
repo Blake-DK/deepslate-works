@@ -50,7 +50,7 @@ export function Runner({ canBuild, canSync }: { canBuild: boolean; canSync: bool
         <Button onClick={() => run("sync-dry")} disabled={!!busy || !canSync} variant="secondary">{busy === "sync-dry" ? "Checking…" : "Sync (dry run)"}</Button>
         <Button onClick={() => run("sync")} disabled={!!busy || !canSync} variant="danger">{busy === "sync" ? "Syncing…" : "Sync server"}</Button>
       </div>
-      {lines.length > 0 && <pre ref={box} className="max-h-80 overflow-auto rounded-lg border bg-muted p-3 text-xs leading-relaxed">{lines.join("\n")}</pre>}
+      {lines.length > 0 && <pre ref={box} className="max-h-80 overflow-auto rounded-[4px] border bg-panel p-3 text-xs leading-relaxed">{lines.join("\n")}</pre>}
     </div>
   );
 }

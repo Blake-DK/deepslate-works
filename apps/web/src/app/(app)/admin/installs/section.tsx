@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getExtraNames } from "@/server/modpack/lock";
 import { extrasLine, extrasReportSchema } from "@/lib/extras-line";
 import { Prisma } from "@prisma/client";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { MODE_LABEL, OUTCOMES, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
@@ -13,6 +13,7 @@ import { cell, Clip, Field, FixedTable } from "@/components/admin/parts";
 import { getInstaller } from "@/server/modpack/lock";
 import { isOutdated } from "@/lib/installer-version";
 import { InstallerVersion } from "@/components/admin/installer-version";
+import { stripLink } from "@/components/strip-link";
 
 const TONE = { ok: "good", failed: "bad", cancelled: "warn", skipped: "neutral" } as const;
 const LABEL = { ok: "All good", failed: "Failed", cancelled: "Stopped", skipped: "Already running" } as const;
@@ -106,7 +107,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
                 {latest.map((l) => {
                   const p = pc(l);
                   return (
-                    <li key={l.id} data-row className="rounded-lg border p-3">
+                    <li key={l.id} data-row className="rounded-[4px] border p-3">
                       <div className="flex min-w-0 items-center gap-2">{p.who}<span className="ml-auto shrink-0">{p.tier}</span></div>
                       <dl className="mt-1 divide-y text-sm">
                         <Field name="Processor">{p.cpu}</Field>
@@ -131,9 +132,9 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
         </Card>
       )}
       <h2 className="pt-2 text-lg font-semibold">Every run</h2>
-      <nav className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-sm" aria-label="Filter by outcome">
-        <Link href="/admin/people?tab=installs" aria-current={!only ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${!only ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>All ({total})</Link>
-        {OUTCOMES.map((o) => <Link key={o} href={`/admin/people?tab=installs&outcome=${o}`} aria-current={only === o ? "page" : undefined} className={`whitespace-nowrap rounded-md px-3 py-1.5 ${only === o ? "bg-card font-medium shadow-sm" : "hover:bg-card"}`}>{LABEL[o]} ({n(o)})</Link>)}
+      <nav className="flex max-w-full overflow-x-auto whitespace-nowrap border-b" aria-label="Filter by outcome">
+        <Link href="/admin/people?tab=installs" aria-current={!only ? "page" : undefined} className={cn("-mb-px", stripLink(!only))}>All ({total})</Link>
+        {OUTCOMES.map((o) => <Link key={o} href={`/admin/people?tab=installs&outcome=${o}`} aria-current={only === o ? "page" : undefined} className={cn("-mb-px", stripLink(only === o))}>{LABEL[o]} ({n(o)})</Link>)}
       </nav>
       {rows.length === 0 ? (
         <Card><CardContent className="p-4 text-sm text-muted-foreground">{only ? "No reports with that outcome." : "No reports yet. They arrive when someone runs the installer."}</CardContent></Card>

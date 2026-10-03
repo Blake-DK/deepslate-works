@@ -104,6 +104,21 @@ Unverified until Alex opens it at 1360 and 390 px.
 17. **Option pictures are 36 px squares** (§5). They were 80×56, so a wide picture is cropped more than before.
 18. **The leftover check is limited to step 3's pages for now:** no browser-drawn box, blur, `rounded-full` or `rounded-xl`. Four other pages still use browser-drawn controls (admin settings, Discord settings, the Mods guide search, the view-distance form); those are step 4.
 
+**Step 4, built (2026-10-03, branch `site-look-leftovers`): the leftovers pass** over every page steps 1 to 3 did not touch: Map, Getting started, Mods guide, Players and a player's page, Mods & vote, Activity, Me, the join and onboarding pages, and every admin page (Control Room, Server and its tabs, Pack, People, Installs, News, Site settings).
+- **Corners:** every `rounded-xl` and `rounded-lg` box is 4 px, every `rounded-md` chip 3 px; fields, blocks, progress tracks and the switch are square. `rounded-full` is left only on the status pill and the live dots.
+- **Tinted boxes gone:** the kill form, "the server sleeps while you generate" and the 2FA codes are cards with a 3 px stripe (Red, Red, GreenText), the launch and early-access banners a card with the Copper edge or a plain Alert, a picked onboarding answer, PC tier or logo the 2 px Copper edge, a picked row (Control Room players, the item picker) Card2 with a 3 px Copper inner edge, the install log's step and failure lines Card2 with CopperHi or Red text, and the settings-file rows that differ Red text.
+- **Fields:** every select, textarea and text field takes §5's field (`fieldClasses`: 44 px, Panel, 2 px edge, Copper on focus): Discord's three channel pickers, the news, rules, guide, denied-files and poll-questions boxes, the Mods guide search, the People search, the item picker's three fields, the link-account dialog and the console line. File pickers have a Card2 button with the 2 px edge.
+- **Boxes:** a new `components/ui/check.tsx`, PickBox's box for forms that keep their own state (`defaultChecked`): all 23 browser-drawn checkboxes and radios (Server cards, Site settings, Discord, the poll editor, branding, onboarding, the event filter, Live and Follow). The view-distance sliders stay browser-drawn, coloured with `accent-primary`.
+- **Tabs inside a page** are the strip's tab (`stripLink`): a player's page, the Stats period, the People filter and the Installs filter. They were grey pills.
+- **Charts:** grid lines in Line (they were Copper at 15 %), the main series Copper, the poll results' second series Blue (it was GreenText); the world map on a Panel box.
+- **Smaller:** the enchantment glint on an inventory slot is Blue, not fuchsia; the switch (early access) is a square well with a green face when on; menus, the dialog and the map's floating buttons lose their drop shadows; the Mods guide's search bar loses its blur; the QR code keeps its white ground (scanners need it) but is square.
+- **Tests:** a step 4 block in `site-look.test.ts` scans every file: no `rounded-md/lg/xl`, `rounded-full` only in the pill and the two live dots, no tinted box, no blur or shadow class, no browser-drawn checkbox or radio outside `components/ui/`, every select and textarea on `fieldClasses`, the four in-page tab rows on `stripLink`, the charts' colours. §7's hex scan and display-face scan pass with their allowlists unchanged. web typecheck, lint and 429 tests pass.
+
+**Deviation (step 4):**
+19. **Range sliders** (view and simulation distance) are not redrawn: §5 names no slider, and drawing one would need a script or a vendor pseudo-element per browser. They take Copper through `accent-primary`.
+
+Unverified until Alex opens it at 1360 and 390 px.
+
 ## The Discord bot · docs/22 §10 steps 1 to 6 (2026-10-02, built against a stand-in)
 
 Built in §10's order: the gateway and the card, slash commands, vote buttons, chat game → Discord, the two channels (§13), chat Discord → game. **Nothing has met the real Discord yet**: there is no token and there are no webhooks for #game-chat and season-updates. Everything is tested against a stand-in (a fake gateway socket, a fake Discord REST and webhooks in `apps/api/tests/discord-bot.test.ts`). With no `DISCORD_BOT_TOKEN` nothing changes: no bot is made, `/health` says `discordBot: "off"`, and docs/21's feed routes as before unless `DISCORD_WEBHOOK_UPDATES` is set.

@@ -46,7 +46,9 @@ Alex asked for the site to look like the launcher. docs/23 is the planner's desi
 13. **Login:** the page's own logo, name and banner picture are gone (the banner carries them), and a screen-reader-only heading keeps one h1. "New here? Ask Alex for an invite link." is now §4's "Not in the group yet? You need an invite link from Alex."
 14. **No existing test looked for the sidebar or the Menu button**, so none moved; the new frame test checks the strip instead.
 
-Unverified until Alex opens it at 1360 and 390 px. Buttons that were copper (old primary) are green until step 3 gives Vote its copper block.
+Unverified until Alex opens it at 1360 and 390 px.
+
+**Step 2 broke every signed-in page (2026-10-03, deployed 036340e).** "Application error: a server-side exception" (digest 838626918) on every signed-in page: `nav.tsx` (rendered on the server) called `stripLink()` for the Sign out button, but `stripLink` was exported from `nav-link.tsx`, a `"use client"` module. Next throws "Attempted to call stripLink() from the server but stripLink is on the client". The signed-out pages have no Sign out button, so the check after deploy (/login only) and CI's `next build` both passed. **Rolled back** to d2ceba1 (app 3.4.1, old frame) with `IMAGE_TAG` within minutes of Alex's report. **Fix:** `stripLink` moved to `components/strip-link.ts`, a plain module. A new test, `tests/client-boundary.test.ts`, fails when a server file imports anything but a component (a PascalCase name) from a `"use client"` file. On its first run it also caught an older case of the same kind: `admin/users/member-menu.tsx` took the `menuItem` class string from `row-menu.tsx` (client), and a value imported that way is a client reference, not the string. Those strings now live in `components/admin/menu-item.ts`. **After every deploy:** `/root/.config/deepslate/frame-test.sh` signs in a throwaway admin, fetches every page of both strips, and fails on an error page or a new `⨯` line in web's log. Buttons that were copper (old primary) are green until step 3 gives Vote its copper block.
 
 ## The Discord bot · docs/22 §10 steps 1 to 6 (2026-10-02, built against a stand-in)
 

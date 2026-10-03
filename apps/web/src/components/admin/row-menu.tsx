@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { menuItem, menuItemDanger } from "./menu-item";
+
+export { menuItem, menuItemDanger };
 
 /**
  * The "…" at the end of a row: what can be done with it, in one place. A <details>, so it opens without any script;
@@ -39,5 +42,3 @@ export function RowMenu({ label, children }: { label: string; children: React.Re
 }
 
 /** How an entry of the menu looks: a button over the whole width. */
-export const menuItem = "flex w-full items-center whitespace-nowrap rounded-md px-3 py-1.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
-export const menuItemDanger = `${menuItem} text-danger`;

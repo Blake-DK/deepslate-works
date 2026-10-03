@@ -1,4 +1,5 @@
-import { RowMenu, menuItem } from "@/components/admin/row-menu";
+import { RowMenu } from "@/components/admin/row-menu";
+import { menuItem } from "@/components/admin/menu-item";
 import { ConfirmItem, LinkByName } from "@/components/admin/menu-actions";
 import Link from "next/link";
 import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setMinecraftNameAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";

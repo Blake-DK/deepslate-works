@@ -2,15 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-
-/** A strip's tab (docs/23 §4): semibold 15, Muted, a 3 px bottom edge that is Copper on the page it names (and the
- *  pages under it, `also`). */
-export const stripLink = (on: boolean, copper = false) =>
-  cn(
-    "inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-[3px] px-[14px] pt-[13px] pb-[10px] text-[15px] font-semibold",
-    on ? "border-primary" : "border-transparent hover:text-foreground",
-    copper ? "text-primary-hi" : on ? "text-foreground" : "text-muted-foreground",
-  );
+import { stripLink } from "./strip-link";
 
 export function NavLink({ href, also = [], exact = false, badge, copper = false, children }: { href: string; also?: string[]; exact?: boolean; badge?: React.ReactNode; copper?: boolean; children: React.ReactNode }) {
   const path = usePathname();

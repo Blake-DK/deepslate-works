@@ -2,6 +2,19 @@
 
 Last updated 2026-10-03, 17:00 UTC (main `6ebfc26` deployed with the signed-in check, app 3.4.2 published, docs/24 still stopped at B.1). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
 
+## Main fell behind the server's pack (2026-10-03), and what now stops it
+
+**The pack's history that morning.** "Season 1 mods" closed at 09:37:07 UTC. Its results were applied at **40%** (fa37b30, 10:32): Create Big Cannons, Immersive Engineering, Industrial Foregoing, AE2, the Macaw's set, Another Furniture and Rechiseled: Create came in. **rechiseled-create** went off again at 10:45 (0ce2f06): it pulls in Rechiseled, which needs Fusion, a client-only mod, so the Lock refused it. At 10:49 an Apply results from the portal at 50% took the 13 building mods out (66501b7, locked as 848f0789). That was not meant, and at 10:51 they were put back by reverting it (4c18fa0). The final lock, **0.1.0+d7521da9** (10:52:25), was built and synced, and the server has run it since. It reaches main through PR #71.
+
+**Why those six commits were never pushed.** Admin → Lock and Apply results commit inside the web container (`commitManifest`, `server/modpack/manifest.ts`) into the deploy checkout. By design they never push: web holds no git credentials. A session is meant to take such commits to main in a PR, as `feb470c` (lock c99f2aae) went in PR #65. That PR was merged at 10:30:21 with `feb470c` as its head. The two commits made by hand after it (fa37b30, 0ce2f06) were pushed to #65's branch after the merge, so they went nowhere. The portal's apply, its two locks and the revert were never pushed at all. `deploy.sh`'s `git pull --ff-only` passes when the checkout is only *ahead* of origin, so nothing complained. It failed only when main also moved, and then the commits were rebased by hand.
+
+**What now stops it** (PR on branch `pack-drift`):
+- **`deploy.sh` refuses** to deploy when the checkout has commits that are not on origin/main. It fetches first, lists each commit (short sha and subject), says how to push them as a branch, and stops before any image is pulled.
+- **`/api/health` has `pack`**: `{ server, main, same, unpushed }`. `server` is the pack last synced (api's Setting `_packSynced`), `main` is the pack in origin/main as of the checkout's last fetch, and `unpushed` is the number of commits on the checkout that are not on main. It is reported, not required: `ok` does not change.
+- **Admin → Pack** shows a warning above the pack when the server runs a pack main does not have, or when commits on the checkout are not on main, naming them.
+
+So after every Lock or Apply results in the portal, the warning stays up and the next deploy refuses until a PR with those commits is merged.
+
 ## Deploy and publish, 2026-10-03 evening (planner)
 
 **1. Deploy main.** CI green on `main`'s head `6ebfc26` (api 446, web 422, modpack 67 tests). The deploy checkout's `main` held six commits that never reached origin (the 40% vote apply and lock `d7521da9`, made 10:4x to 10:52 UTC after PR #65 was merged at `feb470c`), so `git pull --ff-only` could not have run. They were pushed to branch `lock-d7521da9` and rebased onto `origin/main` (no conflicts: they touch `modpack/` only). Deployed with `IMAGE_TAG=6ebfc266… deploy/deploy.sh` at **16:54 UTC**; web and api both report `PORTAL_COMMIT` 6ebfc26; `/api/health` ok (tunnel, AMP, rsync, Discord feed and bot on). **Signed-in check** (`frame-test.sh`, from now on part of every deploy): Home, Map, Help, Mods, Players, Pack, Mods & vote, Votes, Activity, Me and the 6 admin pages all 200 with the banner and the tab strip, none with "Application error", no ⨯ in web's log; `/login` 200. No rollback needed (last good image before it: `e2ceb98`).

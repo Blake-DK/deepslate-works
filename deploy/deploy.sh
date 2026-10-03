@@ -34,6 +34,14 @@ echo "memory: ${avail} MB available, ${swap} MB swap"
 [ "$avail" -ge "$MIN_FREE_MB" ] || die "only ${avail} MB available (need ${MIN_FREE_MB}); see what is using it: docker stats --no-stream"
 
 step "git pull"
+# Commits made here (Admin -> Lock and Apply results commit inside web, and never push) must reach origin/main
+# through a PR first. On 2026-10-03 six of them sat here unpushed, so main fell behind the pack the server ran;
+# a refused deploy beats a rebase done by hand.
+as_owner git fetch -q origin main
+unpushed=$(as_owner git log --format='  %h %s' origin/main..HEAD)
+[ -z "$unpushed" ] || die "the checkout has commits that are not on origin/main:
+$unpushed
+Push them as a branch (runuser -u $owner -- git push origin HEAD:refs/heads/<name>), open a PR, merge it, then deploy again. Nothing was deployed."
 as_owner git pull --ff-only
 echo "at $(as_owner git log -1 --format='%h %s')"
 

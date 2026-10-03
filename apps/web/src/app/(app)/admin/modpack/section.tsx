@@ -5,14 +5,19 @@ import { Badge } from "@/components/ui/badge";
 import { LoadChip } from "@/components/mods/load-chip";
 import { formatDate } from "@/lib/utils";
 import { Runner } from "./runner";
+import { Alert } from "@/components/ui/alert";
+import { getPackDrift } from "@/server/modpack/drift";
+import { driftLine } from "@/lib/pack-drift";
 
 export default async function ModpackAdminPage() {
   const { manifest, lock, issues, rows } = await modpackStatus();
-  const installer = await distFile("installer.zip");
+  const [installer, drift] = await Promise.all([distFile("installer.zip"), getPackDrift()]);
+  const driftSays = driftLine(drift);
   const tone = (s: string) => (s === "ok" ? "good" : s === "off" ? "neutral" : s === "beta" || s === "alpha" ? "warn" : "bad");
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">Modpack</h2>
+      {driftSays && <Alert tone="warn" data-testid="pack-drift">{driftSays}</Alert>}
       <Card>
         <CardHeader>
           <CardTitle>Pack {manifest.version}{lock ? `+${lock.hash.slice(0, 8)}` : ""}</CardTitle>

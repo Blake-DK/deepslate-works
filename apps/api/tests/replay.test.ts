@@ -104,6 +104,33 @@ describe("the health check", () => {
   });
 });
 
+describe("the session id", () => {
+  it("goes in an Authorization: Bearer header and never in the body (AMP 2.8 logs a deprecation for the body)", async () => {
+    const seen: { path: string; auth: string | null; body: Record<string, unknown> }[] = [];
+    const real = globalThis.fetch;
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      const path = String(url).replace(/^.*\/API\//, "");
+      seen.push({ path, auth: new Headers(init?.headers).get("authorization"), body: JSON.parse(String(init?.body ?? "{}")) });
+      return new Response(JSON.stringify(path.endsWith("Core/Login") ? { success: true, sessionID: "s1" } : { State: 20 }), { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      const amp = new AmpClient({ url: "http://amp.invalid", username: "webapp", password: "x", instanceId: "0a1b2c3d-test" });
+      await amp.getStatus();
+      await amp.call("FileManagerPlugin", "GetDirectoryListing", { Dir: "" });
+      const [login, ...rest] = seen;
+      expect(login.path.endsWith("Core/Login")).toBe(true);
+      expect(login.auth).toBeNull();
+      expect(login.body.username).toBe("webapp"); // login keeps its body, as AMP requires
+      expect(rest.length).toBe(3);
+      for (const c of rest) expect(c.auth).toBe("Bearer s1");
+      for (const c of seen) expect(Object.keys(c.body).some((k) => k.toLowerCase() === "sessionid")).toBe(false);
+      expect(rest[2].body).toEqual({ Dir: "" });
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});
+
 describe("the wait room", () => {
   it("takes the two lines of one join for one join, and old lines for none", async () => {
     const { Limbo } = await import("../src/players/limbo.js");
@@ -139,10 +166,10 @@ describe("a session AMP has forgotten", () => {
     globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
       const u = String(url).replace(/^.*\/API\//, "");
       calls.push(u);
-      const body = JSON.parse(String(init?.body ?? "{}")) as { SESSIONID?: string };
+      const sid = new Headers(init?.headers).get("authorization")?.replace(/^Bearer /, "");
       let answer: unknown;
       if (u.endsWith("Core/Login")) answer = { success: true, sessionID: `s${++logins}` };
-      else if (body.SESSIONID === "s1") answer = { Status: false, Reason: "This method requires the Session.Exists permission." };
+      else if (sid === "s1") answer = { Status: false, Reason: "This method requires the Session.Exists permission." };
       else answer = { State: 20 };
       return new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } });
     }) as typeof fetch;
@@ -167,13 +194,13 @@ describe("a permission granted while the portal was logged in", () => {
     let grantedNow = false;
     globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
       const u = String(url).replace(/^.*\/API\//, "");
-      const body = JSON.parse(String(init?.body ?? "{}")) as { SESSIONID?: string };
+      const sid = new Headers(init?.headers).get("authorization")?.replace(/^Bearer /, "");
       let answer: unknown = {};
       if (u.endsWith("Core/Login")) {
         const id = `s${++logins}`;
         if (grantedNow) granted.add(id);
         answer = { success: true, sessionID: id };
-      } else if (u.endsWith("Core/CurrentSessionHasPermission")) answer = granted.has(String(body.SESSIONID));
+      } else if (u.endsWith("Core/CurrentSessionHasPermission")) answer = granted.has(String(sid));
       return new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } });
     }) as typeof fetch;
     try {

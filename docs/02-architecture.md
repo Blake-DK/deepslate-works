@@ -115,7 +115,7 @@ The images are built by GitHub Actions and pulled; **the VPS never builds** (doc
 
 ## AMP integration (docs/13 §4)
 
-- AMP lives on the homelab; every instance binds its API to `127.0.0.1`, only the ADS listens on `0.0.0.0:8080`. We therefore talk to the **ADS** at `AMP_URL=http://10.77.0.2:8080` and address the instance through the proxy path `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>` with the same JSON body and `SESSIONID` as a direct call. Login is `POST /API/Core/Login` against the ADS.
+- AMP lives on the homelab; every instance binds its API to `127.0.0.1`, only the ADS listens on `0.0.0.0:8080`. We therefore talk to the **ADS** at `AMP_URL=http://10.77.0.2:8080` and address the instance through the proxy path `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>` with the same JSON body as a direct call, the session in an `Authorization: Bearer` header (not `SESSIONID` in the body, deprecated in AMP 2.8). Login is `POST /API/Core/Login` against the ADS.
 - `webapp` is a user of the instance `DeepslateWorks01` and of nothing else (the instance is unmanaged and has users of its own, docs/13 §10): console read and write, start, stop, restart, file manager read, taking and listing backups, and one setting, sleep mode. Never an admin account.
 - The wrapper (`apps/api/src/amp/`) re-logs once on `401`/`Unauthorized`, times out at 10 s, and has a mock (`AMP_MOCK=1`) so everything runs before the instance exists.
 - The methods in use, as the instance answers them, are in docs/08 "AMP methods used".

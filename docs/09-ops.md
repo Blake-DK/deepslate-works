@@ -11,7 +11,7 @@
 /home/ladm/Minecraft-site/data/screenshots/                     git-ignored: pictures taken while testing
 /home/ladm/Minecraft-site/dist/                                 git-ignored: what a modpack build makes; owner uid 1000
 /home/ladm/.config/deepslate/git-credentials                    ladm's, mode 600: the token git uses for GitHub
-/root/docker/deepslate/postgres, /root/docker/deepslate/backups  the database; its nightly dumps (seven kept), the dumps taken
+/root/docker/deepslate/postgres, /root/docker/deepslate/backups  the database; its nightly dumps (`deepslate-YYYY-MM-DD.sql.gz`, fourteen kept), the dumps taken
                                                                  before each migration, the old world of 2026-09-29
 /data/stacks/deepslate/                                         Dockhand's mirror of the stack (made by deploy.sh)
 /root/.config/deepslate/                                        root only: helper and test scripts of the building sessions
@@ -108,7 +108,7 @@ See `deploy/.env.example` (kept current; every variable commented). Notables: `A
 - Everything that ends up in a console command is checked against a strict pattern or a list, in one file (`apps/api/src/actions/registry.ts`). There is no path from free text to a command, for players or for admins, except `server.say`, which says it in chat.
 - CSRF: Auth.js handles its routes; app POSTs use same-site cookies + origin check in middleware.
 - Dependencies pinned by the lockfile. CI runs lint, typecheck and tests; it does not run `pnpm audit`.
-- Backups: Postgres `pg_dump` nightly to `/root/docker/deepslate/backups` (7 kept) by the `backups` container. The world: AMP's backup tool, by hand from Admin → Server ("Back up") or in AMP; whether AMP takes one every night is set in AMP and not known here. Restoring either is in "Runbook" below.
+- Backups: Postgres `pg_dump` nightly to `/root/docker/deepslate/backups` (7 kept) by the `backups` container, as `deepslate-YYYY-MM-DD.sql.gz`, the newest 14 kept (the `pre-*` migration dumps are not counted and not removed). Until 2026-10-03 a `%%F` in the compose file wrote one file, `deepslate-%F.sql.gz`, every night over the last. The world: AMP's backup tool, by hand from Admin → Server ("Back up") or in AMP; whether AMP takes one every night is set in AMP and not known here. Restoring either is in "Runbook" below.
 
 ## Observability
 

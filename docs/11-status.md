@@ -51,10 +51,12 @@ Tests: the area test now expects `spawnClaimArea(parsePos("107.5 126 87.5"))` gr
 
 Also: seven root-owned entries in the deploy checkout's `.git` (objects `ee/`, `57/`, `72/2e2c…` from 17:23, `index` from 20:09, an old worktree `ORIG_HEAD`) stopped ladm's commit ("insufficient permission for adding an object"). They were chowned back to ladm. Some session runs git there as root.
 
+**Ring shrunk to 5 blocks** (planner, after Alex's check; main `b2bbd7c`): the area is `spawnClaimArea(SPAWN_POS)` grown by 5 each way, `tag @a[x=27,y=-2048,z=11,dx=137,dy=4096,dz=137]` = blocks x 27 to 164, z 11 to 148, every height, overworld only, the smallest ring that covers a survival player's 4.5-block reach. Only the area line and its comment changed; the test expects `spawnClaimArea(107.5 126 87.5)` grown by 5 (modpack 69/69 tests pass locally, `branding.test.ts` again not loadable there for want of `sharp`; CI runs it). Build (server), Sync, `reload` 20:31:03 UTC with nobody online; `world.datapacks` lists `deepslate-limbo` and `deepslate-tools`; `function deepslate:spawn/tick` runs; the instance's `tick.mcfunction` has the new line; after the reload only the two known ERRORs (`createdeco:placard`, Curios "example").
+
 | Added to the docs/27 §3 in-game checklist | Seen |
 |---|---|
-| Walking in from outside: no refusal line at any point on the way | **Not yet seen** |
-| A block just outside the claim but inside the 8-block ring cannot be broken (expected) | **Not yet seen** |
+| Walking in from outside: no refusal line at any point on the way | **Yes**, seen by Alex on 2026-10-03 with the 8-block ring. **Needs seeing again with 5.** If a line shows at the edge: report where he stood; the ring is not widened without the planner |
+| A block in the 5-block ring outside the claim can't be broken, which is expected | **Not yet seen** |
 | Creative, then survival, inside spawn: adventure again within a tick | **Not yet seen** |
 
 If the lines still appear with the player inside the area and in adventure mode: report the exact text, his mode and his tags here. No mod.

@@ -1,6 +1,6 @@
 # 11 · Status and handover
 
-Last updated 2026-10-03, 17:00 UTC (main `6ebfc26` deployed with the signed-in check, app 3.4.2 published, docs/24 still stopped at B.1). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
+Last updated 2026-10-03, 17:00 UTC (main `6ebfc26` deployed with the signed-in check, app 3.4.2 published, docs/24 running as amended by Alex: world kept, ±3072 made again, pre-generation at 94% at 17:58). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
 
 ## Main fell behind the server's pack (2026-10-03), and what now stops it
 
@@ -27,7 +27,26 @@ So after every Lock or Apply results in the portal, the warning stays up and the
 
 **Not this session's:** between 17:37:49 and 17:38:17 UTC, api took a second Build and four Sync calls from another caller using the VPS service identity (`vps-session`). Two of the Syncs answered ok with "restarted false"; the log does not say whether they were dry runs. So #74's starter-kit datapack may already be on the server: either one of them copied it, or the dry run does not report datapacks. Whoever ran them should say which.
 
-## World made again · docs/24 run (2026-10-03, stopped at B.1)
+## World made again · docs/24 run (2026-10-03: stopped at B.1, then run as amended by Alex)
+
+**Correction (planner, 2026-10-03 evening):** the lines here and elsewhere in this file that say docs/24 had not started, or stood at B.1, were out of date. **Alex amended docs/24 at 16:45–16:48 UTC**: the world and its seed are kept, the backup is skipped, the area around spawn is made again, every inventory is emptied, and spawn moves to 107 126 87 with spawn protection around it. **Job `a85915aa`** runs it. The amendment is not in `docs/24-world-regen-go-live.md` yet; `a85915aa` has been asked to add it as an amendment section, not a rewrite.
+
+**Checked read-only at 17:5x UTC** by the deploy session, against the amendment:
+
+| What | Seen | What shows it |
+|---|---|---|
+| Area made again | **±3072 blocks around 0, 0**, not 800. Alex's word at 16:48 changed the first plan's 1024 to 3072 ("region files X and Z from −6 to 5 … the pre-generation radius is 3072"); no "50 chunks / 800 blocks" figure appears in the run | 432 region, entity and poi files from −6 to 5 deleted at 16:49 (`a85915aa`'s dry run and delete). Today all 144 overworld region files from −6 to 5 have new dates (13 in the 16:00 hour, 131 after 17:00), and the 1,894 regions beyond them still have their 2026-10-01/02 dates (`rsync --list-only`) |
+| Pre-generation | radius **3072** (148,225 chunks), generate then render the map; 94% at 17:58 | `/pregen` |
+| Inventories emptied | **yes** | `playerdata/`, `advancements/`, `stats/`, the corpses and the backpacks', waystones' and claims' saved data deleted at 16:49. Now one player file only, `c50f3e2a…`, made at 16:59:30 after the delete: 0 items in the inventory, 0 in the ender chest (its NBT, read from a copy) |
+| Spawn 107 126 87 | **yes** | `level.dat` (saved 17:55:23): SpawnX 107, SpawnY 126, SpawnZ 87. The one player stands at 107.3 126.0 87.5 |
+| Spawn protection around it | **not yet** | The overworld server claim is still chunks (−4, −4) to (3, 3), blocks −64 to 63 around 0, 0, re-made at 16:51. 107 87 is in chunk (6, 5), outside it. `server.properties` has no `spawn-protection` line. Moving the claim (blocks 32 16 to 159 143), `SPAWN_POS=107.5 126 87.5` and its deploy wait for pre-generation to reach 100%, per the planner's 16:59 note to `a85915aa` |
+
+**Who owns what tonight (planner):** three tooling sessions are live on the VPS.
+- **`825effe7`, "deploy main branch":** the deploys and the site's look.
+- **`437560c9`, "starter kit backpack build":** the starter kit (docs/25). It holds its server restart until generate and render are both done, then restarts once and confirms the datapack is on.
+- **`a85915aa`, "site look implementation" (the name is old):** the docs/24 run.
+
+Until PR #76 (the ops lock) is deployed, no session runs `deploy.sh`, Build or Sync without saying so first. "We're live" stays Alex's click, after he has stood in the world.
 
 Alex's "go" at about 10:56 UTC. Option 1 of his answer stands: docs/24 as written, but pre-generation at **radius 25 chunks** (400 blocks, 2,601 chunks) instead of 100. Before the go: the vote was applied at 40% (commits fa37b30, 0ce2f06 and 4c18fa0, with Mekanism Tools and Rechiseled: Create kept off; the Apply page's Recalculate bug is PR #66). Pack **0.1.0+d7521da9** was locked, built and synced, and started once at 10:53:32. Its only ERRORs were the known `createdeco:placard` and a new Curios one, `example is not a registered slot type!`. That one comes from `industrialforegoing-1.21-3.6.27.jar`, whose `data/industrialforegoing/curios/entities/entities.json` names a slot `example`; it is harmless and Alex accepted it as known.
 
@@ -304,8 +323,8 @@ Two kinds of row. **Seen tonight**: checked from the VPS on 2026-10-03 between 1
 | The site | **Seen tonight:** up, `/login` and the signed-in pages render; the Discord gate is on. **Last recorded 2026-10-03:** not live yet (going live is docs/24's last step). Vote "Season 1 mods" closed 09:37:07 UTC and applied at 40% (10:4x UTC). **Last recorded 2026-09-29:** 4 members, 2 of them admins, 2 linked to a Minecraft account, 1 with early access (Pabulum). Admin → People has the current figures |
 | The pack | **Seen 2026-10-03 17:4x UTC:** `0.1.0+d7521da9` on the server, on `main` (PR #71), in `/api/version` and in the build: Build all at 17:37 made `dist/server` `0.1.0+d7521da9` (62 server mods, datapacks deepslate-limbo and deepslate-tools), and a Sync dry run said "mods: up to date … nothing to do". 71 mods in the catalogue (plus 12 hidden libraries), 61 on; 74 files in the lock: 62 on the server (53 both sides, 9 server only), 65 on a PC (12 client only); 3 settings files. NeoForge 21.1.252. `modpack/server-loaded.json` is the start of 2026-10-03 16:50 UTC (67 files) |
 | The app | **Seen 2026-10-03 17:4x UTC:** `DeepslateWorks.exe` 3.4.2 with the lantern icon (#68): sha256 `df83e52672494fc973f4b3daf1174a2ba0fe897c064bf422ab88caa85272fce7`, 718,336 bytes, in `dist/` since 17:16 UTC and kept by Build all at 17:37. It replaced the 16:54 build of the same version (`12ed0671…`, 675,328 bytes). `GET /api/version` answers `"app":"3.4.2"`. The PowerShell bridge is 2.2.0 (zip `571b4a9d…`) |
-| The server | **Seen tonight, 16:52 UTC:** Running (up 2 min 22 s), nobody online, TPS 20, 4,950 MB of 10,240 MB; Minecraft 1.21.1, NeoForge 21.1.252, pack `d7521da9`. **Last recorded 2026-10-03:** still the world of 2026-09-29, seed `-3899835130120818196`: the docs/24 run stopped at B.1 (AMP accepts backups and lists none; the newest listed is 2026-09-29 15:29). Known ERRORs at start: `createdeco:placard`, and Curios "`example` is not a registered slot type!" (Industrial Foregoing). `pvp=false`, whitelist off |
-| The map | **Last recorded 2026-09-29:** emptied at 18:36:33 UTC on Alex's word. 2026-10-03 10:56 UTC: the old pre-generation put away (docs/24 step A). Nothing in this file says it was rendered again |
+| The server | **Seen 2026-10-03 17:5x UTC:** Running since 16:50:00 (`a85915aa` stopped it at 16:48:50 and started it at 16:49:58), nobody online, pack `0.1.0+d7521da9`. World kept with its seed `-3899835130120818196`; ±3072 blocks made again; spawn 107 126 87 in `level.dat`; the spawn claim still around 0, 0 (see the docs/24 section). The starter-kit datapack is in `world/datapacks` (Sync 17:38) but loads at the next start. `pvp=false`, whitelist off |
+| The map | **Seen 2026-10-03 17:58 UTC:** being pre-generated to radius 3072, then rendered (`what: both`, started 16:52:29 by `a85915aa`): generation at 94%, the render not begun |
 | Played | **Last recorded 2026-09-29:** 10 sessions, two players (bramble09, samoyedx). Since then: Alex in the game 2026-10-03 16:29; Pabulum's Play failed 10:52:46 (installer 1.5.6). Admin → Players has the current figures |
 
 **Phases, against docs/10** (a box is ticked there only with what shows it):

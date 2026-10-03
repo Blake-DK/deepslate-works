@@ -93,8 +93,8 @@ Never build images on the VPS; push, let CI build, then deploy/deploy.sh.
 ## 9. Acceptance
 
 - [ ] Home, Votes and Sign in match the planner's design by eye at 1360 px and at 390 px (Alex).
-- [ ] One theme; no toggle; no hex literal outside globals.css and the brand components.
-- [ ] The display face in exactly the places §5 names.
-- [ ] The tab strip holds every link the sidebar held, scrolls sideways on a phone and never wraps to two rows.
-- [ ] Every pair in the contrast table passes.
-- [ ] Every existing data-testid still resolves.
+- [x] One theme; no toggle; no hex literal outside globals.css and the brand components. *(2026-10-03: `site-look.test.ts` "no light theme, no dark variant and no toggle left" and the hex scan, with the exceptions listed in docs/11 deviation 4, unchanged through step 4.)*
+- [x] The display face in exactly the places §5 names. *(2026-10-03: the display-face scan: nav.tsx, play-button.tsx, poll-card.tsx only.)*
+- [x] The tab strip holds every link the sidebar held, scrolls sideways on a phone and never wraps to two rows. *(2026-10-03: the frame test checks the links and their order, `overflow-x-auto whitespace-nowrap`; frame-test.sh on the live site: all 16 strip pages render with it. Scrolling on a real phone is part of Alex's look by eye.)*
+- [x] Every pair in the contrast table passes. *(2026-10-03: the contrast table in `site-look.test.ts`, every pair at 4.5:1 or better, hover faces included.)*
+- [x] Every existing data-testid still resolves. *(2026-10-03: all 113 `data-testid` values in apps/web/src before step 1 (a678655^) are still in the source after step 4; frame-test.sh finds the frame's on every page.)*

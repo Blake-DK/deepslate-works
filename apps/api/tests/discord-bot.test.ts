@@ -311,7 +311,7 @@ const SW: Switches = { deaths: true, joins: true, challenges: true, advancements
 const FEED = "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz0123456789ABCD";
 const UPDATES = "https://discord.com/api/webhooks/323456789012345678/ubcdefghijklmnopqrstuvwxyz0123456789ABCD";
 
-function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; adminChannel?: string } = {}) {
+function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; adminChannel?: string; botRefuses?: string } = {}) {
   const clock = Date.parse("2026-10-02T19:00:00Z");
   const calls: Array<{ method: string; url: string; body: Record<string, unknown> }> = [];
   let ids = 5000;
@@ -339,7 +339,7 @@ function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; a
     createPost: async (...args) => { botCalls.push({ what: "post", args }); return { ok: true, threadId: "8800", messageId: "8800" }; },
     edit: async (...args) => { botCalls.push({ what: "edit", args }); return { ok: true, retry: false }; },
     tagFor: (_f, name) => (name === "Vote" ? ["t-vote"] : []),
-    sendTo: async (...args) => { botCalls.push({ what: "sendTo", args }); return { ok: true, id: "7700" }; },
+    sendTo: async (...args) => { botCalls.push({ what: "sendTo", args }); return opts.botRefuses ? { ok: false, retry: false, error: opts.botRefuses } : { ok: true, id: "7700" }; },
     channelName: (id) => (id === "900" ? "deepslate-admin" : null),
     components: (p, closed) => (closed ? [] : [{ type: 1, components: [{ type: 2, style: 1, label: "A", custom_id: `vote:${p.id}:o1` }] }]),
     pollShape: async (id) => ({ id, options: [{ id: "o1", text: "A" }], multiple: false }),
@@ -489,7 +489,16 @@ describe("the admin channel picked on the card (Alex, 2026-10-02)", () => {
     expect((sent[0]!.args[1] as { content: string; allowed_mentions: unknown }).content).toMatch(/^The server crashed at \d\d:\d\d\. Open Admin → Server/);
     expect((sent[0]!.args[1] as { allowed_mentions: unknown }).allowed_mentions).toEqual({ parse: [] });
     expect(t.calls.map((c) => c.body.content)).toEqual(["The server fell over. Alex has been told."]);
-    expect((await t.a.overview()).admin).toEqual({ state: "ok", name: "the bot", channel: "deepslate-admin" });
+    expect((await t.a.overview()).admin).toMatchObject({ state: "ok", name: "the bot", channel: "deepslate-admin", last: { ok: true } });
+  });
+
+  it("the card shows the last real send: a refused one is \"failing\" with Discord's words, not ok (Alex, 2026-10-03)", async () => {
+    const refused = "the bot cannot write in that channel: add Deepslate Works to the channel's permissions";
+    const t = routed({ bot: true, adminChannel: "900", botRefuses: refused });
+    expect((await t.a.overview()).admin).toMatchObject({ state: "ok", last: null });
+    t.add({ kind: "CRASH" }, REAL.crash);
+    await t.a.round();
+    expect((await t.a.overview()).admin).toMatchObject({ state: "failing", name: "the bot", channel: "deepslate-admin", error: refused, last: { ok: false, error: refused } });
   });
 
   it("no channel picked and no admin webhook: problems are not posted, the feed only hears that the server fell over", async () => {

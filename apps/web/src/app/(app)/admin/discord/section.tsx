@@ -12,7 +12,8 @@ import { Check } from "@/components/ui/check";
 import { cn } from "@/lib/utils";
 import { fieldClasses } from "@/components/ui/input";
 
-type Hook = { state: "unset" } | { state: "refused" } | { state: "unreachable"; error: string } | { state: "ok"; name: string; channel: string | null };
+type LastSend = { at: string; what: string; ok: boolean; error?: string } | null;
+type Hook = ({ state: "unset" } | { state: "refused" } | { state: "unreachable"; error: string } | { state: "ok"; name: string; channel: string | null } | { state: "failing"; name: string; channel: string | null; error: string }) & { last?: LastSend };
 type Channel = { id: string; name: string };
 type BotView =
   | { state: "unset" | "no_guild" }
@@ -37,7 +38,9 @@ function where(h: Hook, env: string): React.ReactNode {
     case "unreachable":
       return <>Discord could not be asked just now ({h.error}).</>;
     case "ok":
-      return h.channel ? <>Posting to #{h.channel}</> : <>Posting through the webhook &quot;{h.name}&quot;</>;
+      return <>{h.channel ? <>Posting to #{h.channel}</> : <>Posting through the webhook &quot;{h.name}&quot;</>}{h.last ? <span className="text-muted-foreground">. Last post {ukShort(new Date(h.last.at))} ({h.last.what}): taken</span> : null}</>;
+    case "failing":
+      return <span className="text-danger" data-testid="discord-failing">The last post {h.channel ? <>to #{h.channel} </> : null}did not go through{h.last ? <> ({ukShort(new Date(h.last.at))}, {h.last.what})</> : null}: {h.error}</span>;
   }
 }
 
@@ -64,7 +67,7 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            Discord {sw.paused ? <Badge tone="warn">paused</Badge> : overview?.feed.state === "ok" ? <Badge tone="good">on</Badge> : <Badge>off</Badge>}
+            Discord {sw.paused ? <Badge tone="warn">paused</Badge> : overview?.feed.state === "ok" ? <Badge tone="good">on</Badge> : overview?.feed.state === "failing" ? <Badge tone="warn">failing</Badge> : <Badge>off</Badge>}
           </CardTitle>
           <CardDescription>
             The server&apos;s life in one Discord channel: votes, deaths, joins, news and the season. It only posts, one way; nobody is pinged except by the vote reminder. Changes take effect within half a minute.

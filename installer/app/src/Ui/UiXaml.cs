@@ -3,7 +3,7 @@ namespace DeepslateWorks
     public static partial class AppWindow
     {
         // The windows' layout, loaded at run time with XamlReader.Parse (no XAML compilation; AppWindow.Load). 3.4.0
-        // (docs/21): the dark look. No colour is written here: every brush is a {DynamicResource Key} from Theme, which
+        // (docs/21): the dark look; 3.4.1 (§11): landscape, crisp text, the pixel face only in the name, Play and Vote. No colour is written here: every brush is a {DynamicResource Key} from Theme, which
         // Load puts into the window's resources; the shared styles (ThemeXaml) go into all three windows.
 
         // A block (docs/21 §4): a black outline with a 3 px drop under it, the face, a 2 px highlight top and left, a 2 px
@@ -62,9 +62,9 @@ namespace DeepslateWorks
         public static readonly string ThemeXaml =
             BlockStyle("Primary", "Green", "GreenHi", "GreenLo", "White", null, "")
           + BlockStyle("PlayBlock", "Green", "GreenHi", "GreenLo", "White", "GreenLo",
-                @"<Setter Property=""FontFamily"" Value=""{DynamicResource PixelFont}""/><Setter Property=""FontSize"" Value=""24""/><Setter Property=""FontWeight"" Value=""Bold""/><Setter Property=""Padding"" Value=""20,5,20,7""/>")
+                @"<Setter Property=""FontFamily"" Value=""{DynamicResource PixelFont}""/><Setter Property=""TextOptions.TextRenderingMode"" Value=""Aliased""/><Setter Property=""FontSize"" Value=""24""/><Setter Property=""FontWeight"" Value=""Bold""/><Setter Property=""Padding"" Value=""20,5,20,7""/>")
           + BlockStyle("VoteBlock", "Copper", "CopperHi", "CopperLo", "OnCopper", "CopperHi",
-                @"<Setter Property=""FontFamily"" Value=""{DynamicResource PixelFont}""/><Setter Property=""FontSize"" Value=""20""/><Setter Property=""FontWeight"" Value=""Bold""/><Setter Property=""Padding"" Value=""20,5,20,7""/>")
+                @"<Setter Property=""FontFamily"" Value=""{DynamicResource PixelFont}""/><Setter Property=""TextOptions.TextRenderingMode"" Value=""Aliased""/><Setter Property=""FontSize"" Value=""22""/><Setter Property=""FontWeight"" Value=""Bold""/><Setter Property=""Padding"" Value=""20,5,20,7""/>")
           + BlockStyle("Plain", "Card2", "Disabled", "Panel", "Fg", null, @"<Setter Property=""Margin"" Value=""0,0,8,0""/>")
           + @"
     <Style TargetType=""Hyperlink""><Setter Property=""Foreground"" Value=""{DynamicResource Blue}""/></Style>
@@ -100,7 +100,7 @@ namespace DeepslateWorks
       <Setter Property=""Template""><Setter.Value>
         <ControlTemplate TargetType=""TabItem"">
           <Border x:Name=""Under"" Background=""Transparent"" BorderBrush=""Transparent"" BorderThickness=""0,0,0,3"" Padding=""14,10,14,8"" Margin=""0,0,2,0"">
-            <ContentPresenter x:Name=""Head"" ContentSource=""Header"" RecognizesAccessKey=""False"" TextElement.FontFamily=""{DynamicResource PixelFont}"" TextElement.FontSize=""16"" TextElement.FontWeight=""Bold"" TextElement.Foreground=""{DynamicResource Muted}""/>
+            <ContentPresenter x:Name=""Head"" ContentSource=""Header"" RecognizesAccessKey=""False"" TextElement.FontFamily=""Segoe UI"" TextElement.FontSize=""14"" TextElement.FontWeight=""SemiBold"" TextElement.Foreground=""{DynamicResource Muted}""/>
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property=""IsSelected"" Value=""True"">
@@ -117,8 +117,8 @@ namespace DeepslateWorks
 
         /// <summary>The main window: the banner, then the Play, (Vote,) Extras and Log tabs, then the footer.</summary>
         public static readonly string AppXaml = @"<Window " + Ns + @"
-        Title=""Deepslate Works"" Width=""600"" Height=""740"" MinWidth=""560"" MinHeight=""560"" WindowStartupLocation=""CenterScreen""
-        FontFamily=""Segoe UI"" FontSize=""13"" Background=""{DynamicResource Ground}"" Foreground=""{DynamicResource Fg}"">
+        Title=""Deepslate Works"" Width=""980"" Height=""620"" MinWidth=""900"" MinHeight=""560"" WindowStartupLocation=""CenterScreen""
+        FontFamily=""Segoe UI"" FontSize=""14"" TextOptions.TextFormattingMode=""Display"" TextOptions.TextRenderingMode=""ClearType"" UseLayoutRounding=""True"" SnapsToDevicePixels=""True"" Background=""{DynamicResource Ground}"" Foreground=""{DynamicResource Fg}"">
   <Window.Resources>" + ThemeXaml + @"
     <dw:MarkSplit x:Key=""MarkSplit""/>
     <DataTemplate x:Key=""MarkedLabel"">
@@ -128,7 +128,7 @@ namespace DeepslateWorks
   <Grid>
   <Rectangle x:Name=""GroundTile"" Opacity=""0.35"" RenderOptions.BitmapScalingMode=""NearestNeighbor""/>
   <DockPanel>
-  <Grid x:Name=""Hero"" DockPanel.Dock=""Top"" Height=""160"" ClipToBounds=""True"">
+  <Grid x:Name=""Hero"" DockPanel.Dock=""Top"" Height=""128"" ClipToBounds=""True"">
     <Rectangle Fill=""{DynamicResource Panel}""/>
     <Image x:Name=""HeroImage"" Stretch=""UniformToFill"" StretchDirection=""Both"" VerticalAlignment=""Bottom"" HorizontalAlignment=""Center"" RenderOptions.BitmapScalingMode=""NearestNeighbor""/>
     <Rectangle x:Name=""HeroShade""/>
@@ -136,23 +136,23 @@ namespace DeepslateWorks
     <StackPanel x:Name=""BrandBar"" Orientation=""Horizontal"" HorizontalAlignment=""Left"" VerticalAlignment=""Bottom"" Margin=""18,0,0,14"">
       <Grid Width=""48"" Height=""48"" Margin=""0,0,12,0"" VerticalAlignment=""Bottom"">
         <Border x:Name=""LogoFallback"" BorderBrush=""{DynamicResource BoxLine}"" BorderThickness=""2"">
-          <TextBlock Text=""D"" FontFamily=""{DynamicResource PixelFont}"" FontWeight=""Bold"" FontSize=""22"" Foreground=""{DynamicResource Copper}"" HorizontalAlignment=""Center"" VerticalAlignment=""Center""/>
+          <TextBlock Text=""D"" FontFamily=""Segoe UI"" FontWeight=""Bold"" FontSize=""24"" Foreground=""{DynamicResource Copper}"" HorizontalAlignment=""Center"" VerticalAlignment=""Center""/>
         </Border>
         <Image x:Name=""BrandLogo"" Width=""48"" Height=""48"" Visibility=""Collapsed""/>
       </Grid>
       <StackPanel VerticalAlignment=""Bottom"">
         <Grid>
-          <TextBlock Text=""{Binding Text, ElementName=BrandName}"" Margin=""3,3,-3,-3"" FontFamily=""{DynamicResource PixelFont}"" FontWeight=""Bold"" FontSize=""30"" Foreground=""{DynamicResource Shadow}""/>
-          <TextBlock x:Name=""BrandName"" Text=""Deepslate Works"" FontFamily=""{DynamicResource PixelFont}"" FontWeight=""Bold"" FontSize=""30"" Foreground=""{DynamicResource White}""/>
+          <TextBlock x:Name=""BrandShade"" Text=""{Binding Text, ElementName=BrandName}"" Margin=""3,3,-3,-3"" FontFamily=""{DynamicResource PixelFont}"" TextOptions.TextRenderingMode=""Aliased"" FontWeight=""Bold"" FontSize=""32"" Foreground=""{DynamicResource Shadow}""/>
+          <TextBlock x:Name=""BrandName"" Text=""Deepslate Works"" FontFamily=""{DynamicResource PixelFont}"" TextOptions.TextRenderingMode=""Aliased"" FontWeight=""Bold"" FontSize=""32"" Foreground=""{DynamicResource White}""/>
         </Grid>
-        <TextBlock x:Name=""BrandTagline"" FontSize=""12.5"" Margin=""0,5,0,0"" Foreground=""{DynamicResource CopperHi}""/>
+        <TextBlock x:Name=""BrandTagline"" FontSize=""13"" Margin=""0,5,0,0"" Foreground=""{DynamicResource CopperHi}""/>
       </StackPanel>
     </StackPanel>
     <Border x:Name=""HeroStatus"" HorizontalAlignment=""Right"" VerticalAlignment=""Top"" Margin=""0,14,16,0"" CornerRadius=""999"" Padding=""9,5,11,5""
             Background=""{DynamicResource Pill}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"">
       <StackPanel Orientation=""Horizontal"">
         <Ellipse x:Name=""HeroDot"" Width=""9"" Height=""9"" Margin=""0,0,7,0"" VerticalAlignment=""Center"" Fill=""{DynamicResource Dim}""/>
-        <TextBlock x:Name=""HeroLine"" FontSize=""12"" FontWeight=""SemiBold"" Text=""Asking the site...""/>
+        <TextBlock x:Name=""HeroLine"" FontSize=""13"" FontWeight=""SemiBold"" Foreground=""{DynamicResource Fg}"" Text=""Asking the site...""/>
       </StackPanel>
     </Border>
   </Grid>
@@ -167,21 +167,20 @@ namespace DeepslateWorks
   </Border>
   <TabControl x:Name=""Tabs"" Style=""{StaticResource Strip}"" Background=""Transparent"" BorderThickness=""0"" Padding=""0"" Margin=""0"">
     <TabItem Header=""Play"" x:Name=""PlayTab"">
-      <DockPanel Margin=""16,14,16,12"">
-        <StackPanel DockPanel.Dock=""Top"" Margin=""0,0,0,10"">
-          <TextBlock x:Name=""StepLabel"" Foreground=""{DynamicResource Blue}"" FontWeight=""SemiBold"" Margin=""0,0,0,2"" Visibility=""Collapsed""/>
-          <TextBlock x:Name=""PlayTitle"" FontSize=""20"" FontWeight=""SemiBold"" Text=""Deepslate Works""/>
-          <TextBlock x:Name=""PlayStatus"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""{DynamicResource Muted}""/>
-          <Border x:Name=""ServerBox"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"" Margin=""0,10,0,0"">
+      <!-- 3.4.1 (docs/21 §11): two columns, the server on the left, the run on the right, the buttons along the bottom -->
+      <Grid x:Name=""PlayGrid"" Margin=""16,14,16,12"">
+        <Grid.ColumnDefinitions><ColumnDefinition Width=""340""/><ColumnDefinition Width=""16""/><ColumnDefinition Width=""*""/></Grid.ColumnDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height=""*""/><RowDefinition Height=""12""/><RowDefinition Height=""Auto""/></Grid.RowDefinitions>
+        <ScrollViewer x:Name=""PlayLeft"" Grid.Column=""0"" Grid.Row=""0"" VerticalScrollBarVisibility=""Auto"">
+          <StackPanel>
+          <Border x:Name=""ServerBox"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
             <StackPanel>
               <DockPanel>
-                <Button x:Name=""StartButton"" DockPanel.Dock=""Right"" Style=""{StaticResource Primary}"" Padding=""12,3,12,4"" Content=""Start"" Visibility=""Collapsed""/>
-                <TextBlock x:Name=""SiteLinkLine"" DockPanel.Dock=""Right"" VerticalAlignment=""Center"" Margin=""10,0,10,0""><Hyperlink x:Name=""SiteLink"">Open the site</Hyperlink></TextBlock>
-                <StackPanel Orientation=""Horizontal"" VerticalAlignment=""Center"">
-                  <Ellipse x:Name=""ServerDot"" Width=""9"" Height=""9"" Fill=""{DynamicResource Dim}"" Margin=""0,0,7,0"" VerticalAlignment=""Center""/>
-                  <TextBlock x:Name=""ServerLine"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Text=""Asking the site how the server is...""/>
-                </StackPanel>
+                <Button x:Name=""StartButton"" DockPanel.Dock=""Right"" Style=""{StaticResource Primary}"" Padding=""12,3,12,4"" Margin=""10,0,0,0"" VerticalAlignment=""Top"" Content=""Start"" Visibility=""Collapsed""/>
+                <Ellipse x:Name=""ServerDot"" DockPanel.Dock=""Left"" Width=""9"" Height=""9"" Fill=""{DynamicResource Dim}"" Margin=""0,6,7,0"" VerticalAlignment=""Top""/>
+                <TextBlock x:Name=""ServerLine"" FontSize=""14"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Text=""Asking the site how the server is...""/>
               </DockPanel>
+              <TextBlock x:Name=""SiteLinkLine"" Margin=""16,3,0,0""><Hyperlink x:Name=""SiteLink"">Open the site</Hyperlink></TextBlock>
               <TextBlock x:Name=""ServerHint"" TextWrapping=""Wrap"" Margin=""16,2,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
               <DockPanel Margin=""16,4,0,0"">
                 <StackPanel x:Name=""OnlineHeads"" DockPanel.Dock=""Left"" Orientation=""Horizontal"" VerticalAlignment=""Center"" Visibility=""Collapsed""/>
@@ -202,11 +201,22 @@ namespace DeepslateWorks
               <TextBlock x:Name=""PlayChangedDetail"" TextWrapping=""Wrap"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Margin=""0,3,0,0"" Visibility=""Collapsed""/>
             </StackPanel>
           </Border>
-        </StackPanel>
-        <DockPanel DockPanel.Dock=""Bottom"" Margin=""0,10,0,0"">
-          <StackPanel DockPanel.Dock=""Left"" VerticalAlignment=""Center"" TextElement.FontSize=""12.5"">
+          </StackPanel>
+        </ScrollViewer>
+        <DockPanel x:Name=""PlayRight"" Grid.Column=""2"" Grid.Row=""0"">
+          <StackPanel DockPanel.Dock=""Top"" Margin=""0,0,0,10"">
+            <TextBlock x:Name=""StepLabel"" Foreground=""{DynamicResource Blue}"" FontWeight=""SemiBold"" Margin=""0,0,0,2"" Visibility=""Collapsed""/>
+            <TextBlock x:Name=""PlayTitle"" FontSize=""20"" FontWeight=""SemiBold"" Text=""Deepslate Works""/>
+            <TextBlock x:Name=""PlayStatus"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""{DynamicResource Muted}""/>
+          </StackPanel>
+          <Border x:Name=""PlayCard"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
+            <ScrollViewer VerticalScrollBarVisibility=""Auto""><StackPanel x:Name=""PlayBody""/></ScrollViewer>
+          </Border>
+        </DockPanel>
+        <DockPanel x:Name=""PlayRow"" Grid.Column=""0"" Grid.ColumnSpan=""3"" Grid.Row=""2"">
+          <StackPanel DockPanel.Dock=""Left"" Orientation=""Horizontal"" VerticalAlignment=""Center"" TextElement.FontSize=""12.5"">
             <TextBlock><Hyperlink x:Name=""ReviewLink"">Review permissions</Hyperlink></TextBlock>
-            <TextBlock Margin=""0,5,0,0""><Hyperlink x:Name=""SettingsLink"">Play settings</Hyperlink></TextBlock>
+            <TextBlock Margin=""18,0,0,0""><Hyperlink x:Name=""SettingsLink"">Play settings</Hyperlink></TextBlock>
           </StackPanel>
           <StackPanel DockPanel.Dock=""Right"" HorizontalAlignment=""Right"">
             <StackPanel Orientation=""Horizontal"" HorizontalAlignment=""Right"">
@@ -219,8 +229,7 @@ namespace DeepslateWorks
             <TextBlock x:Name=""UpdateLine"" HorizontalAlignment=""Right"" TextAlignment=""Right"" TextWrapping=""Wrap"" MaxWidth=""380"" Margin=""0,4,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
           </StackPanel>
         </DockPanel>
-        <ScrollViewer VerticalScrollBarVisibility=""Auto""><StackPanel x:Name=""PlayBody""/></ScrollViewer>
-      </DockPanel>
+      </Grid>
     </TabItem>
     <TabItem x:Name=""VoteTab"" Visibility=""Collapsed"">
       <TabItem.Header>
@@ -247,7 +256,7 @@ namespace DeepslateWorks
     <TabItem Header=""Extras"" x:Name=""ExtrasTab"">
       <DockPanel Margin=""16,14,16,12"">
         <StackPanel DockPanel.Dock=""Top"" Margin=""0,0,0,8"">
-          <TextBlock FontSize=""20"" FontFamily=""{DynamicResource PixelFont}"" FontWeight=""Bold"" Text=""Extras""/>
+          <TextBlock FontSize=""20"" FontWeight=""SemiBold"" Text=""Extras""/>
           <TextBlock TextWrapping=""Wrap"" Margin=""0,2,0,8"" Foreground=""{DynamicResource Muted}"" Text=""Only on this PC, never voted on. Other players don't need them: you can play together either way.""/>
           <Border x:Name=""HeadlineBox"" Background=""{DynamicResource Card2}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
             <DockPanel>
@@ -268,7 +277,7 @@ namespace DeepslateWorks
         <ScrollViewer VerticalScrollBarVisibility=""Auto"">
           <StackPanel>
             <StackPanel x:Name=""ExtrasBody""/>
-            <TextBlock x:Name=""ChecksTitle"" Text=""Checks"" FontSize=""15"" FontFamily=""{DynamicResource PixelFont}"" FontWeight=""Bold"" Margin=""0,10,0,4"" Visibility=""Collapsed""/>
+            <TextBlock x:Name=""ChecksTitle"" Text=""Checks"" FontSize=""15"" FontWeight=""SemiBold"" Margin=""0,10,0,4"" Visibility=""Collapsed""/>
             <StackPanel x:Name=""ChecksBody""/>
           </StackPanel>
         </ScrollViewer>
@@ -286,7 +295,7 @@ namespace DeepslateWorks
         /// says what it will remember, so nothing is hidden behind it.</summary>
         public static readonly string AskXaml = @"<Window " + Ns + @"
         Title=""Deepslate Works"" Width=""440"" SizeToContent=""Height"" ResizeMode=""NoResize"" WindowStartupLocation=""CenterOwner""
-        FontFamily=""Segoe UI"" FontSize=""13"" Background=""{DynamicResource Card}"" Foreground=""{DynamicResource Fg}"">
+        FontFamily=""Segoe UI"" FontSize=""14"" TextOptions.TextFormattingMode=""Display"" TextOptions.TextRenderingMode=""ClearType"" UseLayoutRounding=""True"" SnapsToDevicePixels=""True"" Background=""{DynamicResource Card}"" Foreground=""{DynamicResource Fg}"">
   <Window.Resources>" + ThemeXaml + @"
   </Window.Resources>
   <StackPanel Margin=""18"">
@@ -304,7 +313,7 @@ namespace DeepslateWorks
         /// <summary>3.1.0: the cog on the Play tab, "When I press Play on the website". A change is saved at once.</summary>
         public static readonly string SettingsXaml = @"<Window " + Ns + @"
         Title=""Play settings"" Width=""400"" SizeToContent=""Height"" ResizeMode=""NoResize"" WindowStartupLocation=""CenterOwner""
-        FontFamily=""Segoe UI"" FontSize=""13"" Background=""{DynamicResource Card}"" Foreground=""{DynamicResource Fg}"">
+        FontFamily=""Segoe UI"" FontSize=""14"" TextOptions.TextFormattingMode=""Display"" TextOptions.TextRenderingMode=""ClearType"" UseLayoutRounding=""True"" SnapsToDevicePixels=""True"" Background=""{DynamicResource Card}"" Foreground=""{DynamicResource Fg}"">
   <Window.Resources>" + ThemeXaml + @"
   </Window.Resources>
   <StackPanel Margin=""18"">
@@ -332,6 +341,8 @@ namespace DeepslateWorks
             // 3.4.0 (docs/21): the ground, the banner with the server pill, the drawn logo, the Vote tab's badge, the card
             // round "Since last time"
             "ChangedBox", "PlayChangedDetail", "OnlineHeads", "GroundTile", "Hero", "HeroImage", "HeroShade", "HeroStatus", "HeroDot", "HeroLine", "LogoFallback", "VoteBadge", "VoteBadgeText",
+            // 3.4.1 (docs/21 §11): the landscape Play tab, and the name's shadow (one of the pixel face's three places)
+            "PlayGrid", "PlayLeft", "PlayRight", "PlayCard", "PlayRow", "BrandShade",
         };
 
         /// <summary>Every name the settings window looks up in SettingsXaml.</summary>

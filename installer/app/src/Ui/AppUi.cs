@@ -790,6 +790,8 @@ namespace DeepslateWorks
             XShader = new Dictionary<string, RadioButton>(StringComparer.OrdinalIgnoreCase);
             XStatus = new Dictionary<string, StatusRow>(StringComparer.OrdinalIgnoreCase);
             var chosen = o.Chosen;
+            var rows = AppWindow.CardGrid();   // 3.4.1: two to a row (docs/21 §11)
+            ExtrasBody.Children.Add(rows);
             foreach (var x in o.Switches)
             {
                 var card = NewCard();
@@ -851,7 +853,7 @@ namespace DeepslateWorks
                     outer.Children.Add(srow);
                 }
                 card.Child = outer;
-                ExtrasBody.Children.Add(card);
+                rows.Children.Add(AppWindow.InGrid(card));
             }
             XRendered = true;
             UpdateExtrasRows(o.Statuses);

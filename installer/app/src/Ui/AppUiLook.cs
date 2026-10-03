@@ -37,7 +37,6 @@ namespace DeepslateWorks
             var tile = AppWindow.Picture(Assets.PathOf(Env.AppHome, Assets.Tile));
             if (tile != null) GroundTile.Fill = new ImageBrush(tile) { TileMode = TileMode.Tile, Viewport = new Rect(0, 0, 48, 48), ViewportUnits = BrushMappingMode.Absolute, Stretch = Stretch.Fill };
             HeroImage.Source = AppWindow.Picture(Assets.PathOf(Env.AppHome, Assets.Hero));
-            w.SizeChanged += (s, e) => Hero.Height = AppWindow.HeroHeight(e.NewSize.Height);
             // Play and Vote in the display face; a long label ("Vote first, it takes ten seconds") in Segoe UI so the row fits
             var content = DependencyPropertyDescriptor.FromProperty(ContentControl.ContentProperty, typeof(Button));
             foreach (var b in new[] { PlayButton, VoteButton }) { var btn = b; content.AddValueChanged(btn, (s, e) => FitBlock(btn)); FitBlock(btn); }
@@ -144,8 +143,21 @@ namespace DeepslateWorks
             return w;
         }
 
-        /// <summary>The banner's height: 160, or 110 when the window is under 660 px tall.</summary>
-        public static double HeroHeight(double windowHeight) => windowHeight < 660 ? 110 : 160;
+        /// <summary>The banner's height, always (3.4.1, docs/21 §11: the 160/110 rule went with the landscape window).</summary>
+        public const double BannerHeight = 128;
+
+        /// <summary>The Vote tab's options and the Extras tab's rows, two to a row (docs/21 §11: the window is never under
+        /// 900 wide). Cards keep their 8 px gap under them and get 8 px on the right; the grid hands that back.</summary>
+        public const int CardColumns = 2;
+
+        public static System.Windows.Controls.Primitives.UniformGrid CardGrid()
+            => new System.Windows.Controls.Primitives.UniformGrid { Columns = CardColumns, Margin = new Thickness(0, 0, -8, 0) };
+
+        public static T InGrid<T>(T card) where T : FrameworkElement
+        {
+            var m = card.Margin; card.Margin = new Thickness(m.Left, m.Top, 8, m.Bottom);
+            return card;
+        }
 
         /// <summary>The pictures and the display face from &lt;home&gt;\assets\ (docs/21 §5), written there first when needed. When
         /// they cannot be, the window uses Segoe UI and says so once in the log; nothing else changes.</summary>

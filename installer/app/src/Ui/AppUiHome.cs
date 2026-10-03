@@ -235,10 +235,11 @@ namespace DeepslateWorks
             {
                 var p = item.Poll;
                 VoteTitle.Text = p.Question;
-                FitVoteTitle();
                 VoteNote.Text = SiteHome.PickNote(p);
                 var group = "poll-" + p.Id;
-                foreach (var o in p.Options) VoteBody.Children.Add(NewOptionCard(p, o, group));
+                var grid = AppWindow.CardGrid();
+                foreach (var o in p.Options) grid.Children.Add(AppWindow.InGrid(NewOptionCard(p, o, group)));
+                VoteBody.Children.Add(grid);
                 VoteButton.Content = UiText.VoteButton;
                 VoteButton.IsEnabled = VotePicked.Count > 0;
             }
@@ -246,19 +247,12 @@ namespace DeepslateWorks
             {
                 var b = item.Ballot;
                 VoteTitle.Text = b.Title;
-                FitVoteTitle();
                 VoteNote.Text = UiText.BallotNote;
                 VoteButton.Content = UiText.BallotOpen;
                 VoteButton.IsEnabled = true;
             }
             Log.Line("window: a vote to answer before playing: " + (item.Poll?.Question ?? item.Ballot?.Title));
             if (select && Mode != "asking") Tabs.SelectedItem = VoteTab;
-        }
-
-        void FitVoteTitle()
-        {
-            if ((VoteTitle.Text ?? "").Length <= VoteTitleFaceMaxChars) { VoteTitle.FontFamily = Theme.PixelFont; VoteTitle.FontSize = 22; VoteTitle.FontWeight = FontWeights.Bold; }
-            else { VoteTitle.FontFamily = new FontFamily("Segoe UI"); VoteTitle.FontSize = 20; VoteTitle.FontWeight = FontWeights.SemiBold; }
         }
 
         Border NewOptionCard(PollInfo p, PollOptionInfo o, string group)
@@ -341,10 +335,6 @@ namespace DeepslateWorks
             card.BorderThickness = new Thickness(on ? 2 : 1);
             card.Padding = on ? new Thickness(11, 9, 11, 9) : new Thickness(12, 10, 12, 10);
         }
-
-        /// <summary>The question in the display face up to this long (about three lines at 22 px); longer ones in Segoe UI
-        /// SemiBold 20 so they stay readable.</summary>
-        public const int VoteTitleFaceMaxChars = 90;
 
         static IEnumerable<ToggleButton> FindPicks(DependencyObject root)
         {

@@ -24,8 +24,8 @@ namespace DeepslateWorks
             new[] { "Card", "#202226" },        // every box
             new[] { "Card2", "#262930" },       // the Plain buttons' face, raised cards, badges
             new[] { "Line", "#33363C" },        // borders, dividers
-            new[] { "Fg", "#EBE9E4" },          // body text
-            new[] { "Muted", "#A09D95" },       // secondary text, hints
+            new[] { "Fg", "#F2F0EB" },          // body text (3.4.1, docs/21 §11: was #EBE9E4)
+            new[] { "Muted", "#B5B2AA" },       // secondary text, hints (3.4.1: was #A09D95; 8.6:1 on Card)
             new[] { "Dim", "#908D85" },         // footer, timestamps
             new[] { "Copper", "#E8833A" },      // tagline, tab underline, Vote, badge, "update available"
             new[] { "CopperHi", "#FFB26B" },

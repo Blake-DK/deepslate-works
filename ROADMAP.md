@@ -75,9 +75,9 @@ Last updated 2026-10-03, 18:00 UTC: the site looks like the launcher, the Season
 - **The map**: deleted on 2026-09-29 evening to be rendered clean from Admin → Server ("Render the map only"), about an hour.
 - **Waiting on a person**: Play first with a friend who is not an admin; the mods tried in the game (guns, quarry, vein mining, trees by hand); a five-minute planned restart watched through; whether someone who has just linked should also be held for Play first.
 - **Vote close**: the "Season 1 mods" vote closed 2026-10-03 and was applied at 40% (Create Big Cannons, Immersive Engineering, Industrial Foregoing, AE2, the Macaw's set, Another Furniture). Pack 0.1.0+d7521da9 is locked, built, on the server and on `main`. Left: the world made again, which is under way as Alex amended it (world and seed kept, ±3072 blocks made again, every inventory emptied, spawn at 107 126 87), and flipping "We're live", Alex's click once he has stood in the world.
-- **Seasons, bosses and trials (docs/20)**: step 1 done 2026-10-02 (Cataclysm, Mowzie's Mobs and the Ender Dragon remaster in a new non-votable "Bosses & trials" category, started once; Gateways and Multiplayer Bosses held for the planner; report in docs/11). Must land before the world is made again after the vote closes. Steps 2 to 6 wait for the planner.
+- **Seasons, bosses and trials (docs/20)**: step 1 done 2026-10-02 (Cataclysm, Mowzie's Mobs and the Ender Dragon remaster in a new non-votable "Bosses & trials" category, started once; Gateways and Multiplayer Bosses held for the planner; report in docs/11). They were in the pack when ±3072 blocks around spawn were made again (2026-10-03); beyond that their structures are 11,600+ blocks out until Season 1's Frontier (docs/20 §5). Steps 2 to 6 wait for the planner.
 - **Bedrock** through NetherNet (TCP 19132 + UDP 19134–19153): forwards set, external join not yet tested.
-- **World terrain**: spawn's 1500 blocks were pre-generated before Create, Farmer's Delight and the rest went on, so their ores and crops only appear beyond that. One more reset after the vote closes is the clean fix.
+- ~~**World terrain**~~: done 2026-10-03 (docs/24 §7): ±3072 blocks around 0, 0 made again with the Season 1 pack and pre-generated; spawn 107 126 87. Beyond 3072 blocks the old terrain stays, without the newer mods' ores and structures.
 
 ## Next
 

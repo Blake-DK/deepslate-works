@@ -73,7 +73,7 @@ So after every Lock or Apply results in the portal, the warning stays up and the
 | Pre-generation | radius **3072** (148,225 chunks), generate then render the map; 94% at 17:58 | `/pregen` |
 | Inventories emptied | **yes** | `playerdata/`, `advancements/`, `stats/`, the corpses and the backpacks', waystones' and claims' saved data deleted at 16:49. Now one player file only, `c50f3e2a…`, made at 16:59:30 after the delete: 0 items in the inventory, 0 in the ender chest (its NBT, read from a copy) |
 | Spawn 107 126 87 | **yes** | `level.dat` (saved 17:55:23): SpawnX 107, SpawnY 126, SpawnZ 87. The one player stands at 107.3 126.0 87.5 |
-| Spawn protection around it | **not yet** | The overworld server claim is still chunks (−4, −4) to (3, 3), blocks −64 to 63 around 0, 0, re-made at 16:51. 107 87 is in chunk (6, 5), outside it. `server.properties` has no `spawn-protection` line. Moving the claim (blocks 32 16 to 159 143), `SPAWN_POS=107.5 126 87.5` and its deploy wait for pre-generation to reach 100%, per the planner's 16:59 note to `a85915aa` |
+| Spawn protection around it | **not yet** at 17:5x; **moved at 18:0x** to chunks x 2..9, z 1..8 (below, "Spawn claim moved") | The overworld server claim is still chunks (−4, −4) to (3, 3), blocks −64 to 63 around 0, 0, re-made at 16:51. 107 87 is in chunk (6, 5), outside it. `server.properties` has no `spawn-protection` line. Moving the claim (blocks 32 16 to 159 143), `SPAWN_POS=107.5 126 87.5` and its deploy wait for pre-generation to reach 100%, per the planner's 16:59 note to `a85915aa` |
 
 **Who owns what tonight (planner):** three tooling sessions are live on the VPS.
 - **`825effe7`, "deploy main branch":** the deploys and the site's look.
@@ -92,6 +92,36 @@ Alex's "go" at about 10:56 UTC. Option 1 of his answer stands: docs/24 as writte
 | B.2 to I | **Not started**, by the ruling: step H depends on the same backup working, so the planner decides. Nothing was stopped by hand, copied or deleted; the world is the old one |
 
 **Difference from the doc:** the backup's name is the route's fixed "Portal backup <date time>", not "Before the go-live reset". The planner accepted that for B.1 and step H.
+
+**Then run as amended by Alex (16:45 to 18:55 UTC, job `a85915aa`).** Alex confirmed the amendment in his own words: keep the world and seed, no backup of the old world, regenerate ±3072 blocks, empty player data and four mods' saved data, re-make the server claims. It is now docs/24 §7.
+
+| Step | What was seen |
+|---|---|
+| 1. Report | The overworld had **2,038 region files out to about ±14,000 blocks** (X −28 to 25, Z −28 to 28), not just chunky's 1500. About 1,600 outer regions (~17 GB) were last written in one run, 2026-10-01 17:00 to 10-02 05:00 UTC, and 473 lightly at 10-02 18:00. That is before Cataclysm, Mowzie's and EDF (10-02 evening) and before today's IE, AE2, Industrial Foregoing, Big Cannons and Titanium. Corpse keeps its data in `world/deaths/`, which the amendment's "Corpse" covers |
+| 2. Stop | `POST /server/stop` (`beforeStop()` pauses chunky and waits for the save) at 16:48:46; AMP state 0 at 16:48:50, nobody online |
+| 3. Delete, after dry runs that listed exactly these | **16:49**, over the rsync link from inside the api container, `rsync -r --delete` from an empty folder. Region files `r.X.Z.mca` with X and Z from −6 to 5: **144 each in `region/`, `entities/`, `poi/` (432)**; afterwards none left inside −6..5, and 1,894 / 1,456 / 1,456 files beyond. `playerdata/` 8 files (4 players), `advancements/` 4, `stats/` 4, `deaths/` 6 files and 2 folders, `data/openpartiesandclaims/` 11 entries, `data/waystones.dat`, `data/sophisticatedbackpacks.dat`. Kept: `level.dat`, `scoreboard.dat`, `TitaniumReward.dat`, `chunks.dat`, `raids.dat`, `random_sequences.dat`, `neoforge_data_attachments.dat`, `ritchiesprojectilelib_chunk_manager.dat`, `dimensions/`, the nether, the end |
+| 4. Start | `POST /server/start` 16:49:59, online **16:50:23**. Seed `-3899835130120818196`. `level.dat` spawn 0 105 0 (read from a copy over the link; the portal refuses to serve world files). Both datapacks listed. The room: three block tests in `deepslate:limbo` passed (sea lantern 0 64 0, air 0 65 0, glass 0 70 0). `world.standable` at 0 105 0 answered "That position is not loaded": nothing keeps spawn loaded (`spawnChunkRadius 0`). Tested later with chunk 0, 0 force-loaded for the test and released straight after: ground at 104, air at 105 and 106 |
+| 4. Server claims | `opac.serverClaims` re-run 16:51: the spawn claim took, **the room's was refused** ("You have an over-area claim action task currently in progress"); the action sends its two claims too close together. The room's claim was then sent alone through `POST /console/send` and took |
+| 5. Pre-generation | `POST /pregen/on` (`now`, `both`, no purge, 0, 0, radius 3072): **16:52:29 to 18:03:32**, **148,225 chunks**, chunky 17.5 then **28 to 38 chunks/s**. Generation reached 100% before 18:02:36; the render brought the map up to date ("Pre-generation finished and the map rendered (radius 3072)", 18:03:32). AMP's sleep was off for the run and given back to on. Nobody had to be stopped |
+| New spawn | Alex set the world spawn to **107 126 87**. After 100%: `level.dat` SpawnX 107, SpawnY 126, SpawnZ 87; `world.standable` at 107 126 87 with chunk (6, 5) force-loaded for the test: ground at 125, air at 126 and 127 |
+| Spawn claim moved | Syntax read from the running server (`help oclaims server unclaim`). One command at a time, through `/console/send`: `oclaims server unclaim in minecraft:overworld -64 -64 31 63 anyway` and `… 32 -64 63 15 anyway` (both "Successfully unclaimed"), then `oclaims server claim in minecraft:overworld 32 16 159 143 anyway` ("already claimed" for the overlap, "Successfully claimed" for the rest). The server's saved claims (read from a copy) are exactly chunks x 2..9, z 1..8 in the overworld and −1..0 in `deepslate:limbo` |
+| `SPAWN_POS` | `deploy/.env` `SPAWN_POS=107.5 126 87.5` (was `0.5 105 0.5`; backup `.env.bak-20261003T180459Z-spawnpos`), deployed by `825effe7` at about 18:17 (images `eff7eb5`); the api reports it. The pre-generation stays centred on 0, 0 with radius 3072, which covers the new spawn with about 2,900 blocks to spare on the nearest side |
+| G. Locate, from 107 87 | See the table below. No seam shows on the map at 3072 blocks (low-resolution tiles x6/z0 and x6/z−1: rivers and forest run straight across) |
+| G. ERRORs | Three, all accepted as known (planner): `createdeco:placard` (recipe, at every start), `example is not a registered slot type!` (Industrial Foregoing's Curios file names a slot `example`, at every start), and during the generation once `Block-attached entity at invalid position: BlockPos{x=-67, y=5, z=289}` (a hanging entity a generated structure placed without its supporting block; the game discards it). Not added to NOISE: if the last shows up in ordinary play, report it. No "Can't keep up" warnings |
+| H. Backup | **Not listed.** With Alex online: requests at 18:31:05 and, after Alex raised a backup size limit in AMP, at **18:39:28**; both `200 {"ok":true}` and "System started a backup", neither in AMP's list after 15 minutes (18:54:46; `allowed` and `canList` true, the list still only the two of 2026-09-29). Reported and carried on, per the planner |
+
+| Step G (from the new spawn 107 87) | Nearest | Distance |
+|---|---|---|
+| Cataclysm | `ancient_factory` at 2112, 608 | **2,071 blocks** |
+| | `cursed_pyramid` / `abandoned_village` / `acropolis` | 11,605 / 14,331 / 14,715 |
+| | `soul_black_smith` | none found (a nether structure) |
+| Mowzie's | `wrought_chamber` at −144, 112 / `umvuthana_grove` / `monastery` | **252** / 464 / 2,497 |
+| Plains village | at −144, −144 | **341** (the village of 2026-09-29, 204 from 0, 0) |
+| Cherry grove (biome) | at −181, −201 | 412 (the grove of 2026-09-29, 270 from 0, 0) |
+
+**What it means:** within 3072 blocks there is one Cataclysm structure (the ancient factory, 2,071 blocks) and three Mowzie's structures. The other Cataclysm structures are 11,600 to 14,700 blocks out, because the terrain between 3072 and about 14,000 blocks was generated before those mods. Season 1's Frontier (docs/20 §5) is where they become reachable. The same holds for today's ores (IE, AE2): only within 3072 blocks.
+
+**Differences from docs/24:** the backup's name (accepted); no backup of the old world and none of the new one listed (above); `world.standable` needs the chunk loaded, so the tests force-load one chunk and release it; the room's claim had to be sent by itself. Not done, by design: "We're live" and the news item are Alex's.
 
 ## App 3.4.2: Save log, Send to Alex, and logs that go by themselves (Alex, 2026-10-03)
 
@@ -358,7 +388,7 @@ Two kinds of row. **Seen tonight**: checked from the VPS on 2026-10-03 between 1
 | The pack | **Seen 2026-10-03 17:4x UTC:** `0.1.0+d7521da9` on the server, on `main` (PR #71), in `/api/version` and in the build: Build all at 17:37 made `dist/server` `0.1.0+d7521da9` (62 server mods, datapacks deepslate-limbo and deepslate-tools), and a Sync dry run said "mods: up to date … nothing to do". 71 mods in the catalogue (plus 12 hidden libraries), 61 on; 74 files in the lock: 62 on the server (53 both sides, 9 server only), 65 on a PC (12 client only); 3 settings files. NeoForge 21.1.252. `modpack/server-loaded.json` is the start of 2026-10-03 16:50 UTC (67 files) |
 | The app | **Seen 2026-10-03 17:4x UTC:** `DeepslateWorks.exe` 3.4.2 with the lantern icon (#68): sha256 `df83e52672494fc973f4b3daf1174a2ba0fe897c064bf422ab88caa85272fce7`, 718,336 bytes, in `dist/` since 17:16 UTC and kept by Build all at 17:37. It replaced the 16:54 build of the same version (`12ed0671…`, 675,328 bytes). `GET /api/version` answers `"app":"3.4.2"`. The PowerShell bridge is 2.2.0 (zip `571b4a9d…`) |
 | The server | **Seen 2026-10-03 17:5x UTC:** Running since 16:50:00 (`a85915aa` stopped it at 16:48:50 and started it at 16:49:58), nobody online, pack `0.1.0+d7521da9`. World kept with its seed `-3899835130120818196`; ±3072 blocks made again; spawn 107 126 87 in `level.dat`; the spawn claim still around 0, 0 (see the docs/24 section). The starter-kit datapack is in `world/datapacks` (Sync 17:38) but loads at the next start. `pvp=false`, whitelist off |
-| The map | **Seen 2026-10-03 17:58 UTC:** being pre-generated to radius 3072, then rendered (`what: both`, started 16:52:29 by `a85915aa`): generation at 94%, the render not begun |
+| The map | **Seen 2026-10-03 18:03 UTC:** pre-generated to radius 3072 around 0, 0 (148,225 chunks, 16:52:29 to 18:03:32) and rendered; not purged, so the map beyond 3072 is the old one, and no seam shows at 3072. Spawn 107 126 87 |
 | Played | **Last recorded 2026-09-29:** 10 sessions, two players (bramble09, samoyedx). Since then: Alex in the game 2026-10-03 16:29; Pabulum's Play failed 10:52:46 (installer 1.5.6). Admin → Players has the current figures |
 
 **Phases, against docs/10** (a box is ticked there only with what shows it):
@@ -925,8 +955,8 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 5. **Look at Home while somebody is on:** their ping should be next to their name within half a minute. No ping had ever been read from a real player before 17:45 UTC (spark writes a colon the pattern did not expect), and nobody has looked since.
 6. **Play first with a member who is not an admin** (docs/14): join without having pressed Play (and without a run of Setup.bat in the last 30 minutes), and they should be held with "Press Play on deepslate.dsw.test to join". The same after linking in the room since 2026-09-29 evening.
 7. ~~Correct the 17:02 row.~~ Done 2026-09-29 19:4x UTC: event 298 is now SERVER_STOP "The server went to sleep (nobody on)", the old wording in `meta.corrected`.
-8. ~~Say whether the world is to be made again.~~ Planner: once, after the vote closes.
-9. **Close the vote** when it has run its course: Apply results, Lock, Build, Sync, then "We're live" in Admin → Settings. "Apply results" has never run on a closed vote; do it when there is time to look at the diff.
+8. ~~Say whether the world is to be made again.~~ Planner: once, after the vote closes. Done 2026-10-03 as amended by Alex (docs/24 §7): ±3072 blocks made again around 0, 0, spawn 107 126 87.
+9. ~~Close the vote~~ (closed 09:37:07 and applied at 40%, locked, built, synced, 2026-10-03). **Left: "We're live"** in Admin → Settings, after standing in the world. The rest of the old line: Apply results, Lock, Build, Sync, then "We're live" in Admin → Settings. "Apply results" has never run on a closed vote; do it when there is time to look at the diff.
 10. **Revoke the old GitHub token** on GitHub (Settings → Developer settings → Fine-grained tokens). The one in use expires 2026-11-28.
 11. **`DISCORD_BOT_TOKEN`**, if leaving the Discord server is to bite within five minutes and not at the next sign-in. Optional.
 12. **`ASSISTANT_API_KEY`**, when the admin assistant (docs/19) is to be built.

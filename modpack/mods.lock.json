@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-03T09:37:40.091Z",
+  "generatedAt": "2026-10-03T10:52:24.961Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "c99f2aaed319200701c148bf8ce1da5ec90ec9d8f03f151e35623c60bbe8e32c",
+  "hash": "d7521da9cf20ac829f50c8a4c5d1ae46df63abdccb4618bd73d679eca848ef17",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -16,6 +16,25 @@
       "sha512": "be439e2c789d52dcc830397496c2a7c707819014252162f1564cad831306f41c40a65fa63b83aaafee8553f1100c7d820391541e31ae87cb04a7477f193ea9d2",
       "sha1": "17debf7846d5d3b287a2920449154d85e5b9541e",
       "size": 733289,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "ae2",
+      "name": "Applied Energistics 2",
+      "projectId": "XxWD5pD3",
+      "versionId": "KDnFUmMm",
+      "versionNumber": "19.2.18",
+      "versionType": "release",
+      "filename": "appliedenergistics2-19.2.18.jar",
+      "url": "https://cdn.modrinth.com/data/XxWD5pD3/versions/KDnFUmMm/appliedenergistics2-19.2.18.jar",
+      "sha512": "39bc4cf733a4321631e2637a1a6dfd3527135fdac1b572534e6fd1f9eab7a6dd92d56c5fa066263c95149c9b20cabdd1fd3dff80bea515381b1d2d754cad26c3",
+      "sha1": "bcd04bc7f181b2ffa314625f284c8eca6fee7fe4",
+      "size": 8236552,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
@@ -39,6 +58,25 @@
       "requiredBy": [],
       "modrinth": {
         "client": "unsupported",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "another-furniture",
+      "name": "Another Furniture",
+      "projectId": "ulloLmqG",
+      "versionId": "cugGiMKt",
+      "versionNumber": "4.0.3",
+      "versionType": "release",
+      "filename": "another_furniture-neoforge-4.0.3.jar",
+      "url": "https://cdn.modrinth.com/data/ulloLmqG/versions/cugGiMKt/another_furniture-neoforge-4.0.3.jar",
+      "sha512": "790a07c354b4e729553150cdc8e7129ca7ab1260d5db5b46ced852edf284789ab69e125071bf78a3214d05c09909bea4a780a5b5b477598af78eca37c4c6c033",
+      "sha1": "36e2b147d86c31262bf8f7c571aeea683d71173d",
+      "size": 2422436,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
         "server": "required"
       }
     },
@@ -269,10 +307,30 @@
       "size": 19123767,
       "side": "both",
       "requiredBy": [
+        "create-big-cannons",
         "copycats"
       ],
       "modrinth": {
         "client": "optional",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "create-big-cannons",
+      "name": "Create Big Cannons",
+      "projectId": "GWp4jCJj",
+      "versionId": "bOiDu0LS",
+      "versionNumber": "5.11.7",
+      "versionType": "release",
+      "filename": "createbigcannons-5.11.7+mc.1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/GWp4jCJj/versions/bOiDu0LS/createbigcannons-5.11.7%2Bmc.1.21.1.jar",
+      "sha512": "24f414dfbb973a0f4d9c9b2aa059edc7bed4d23b4f39eb1f7d23a1d6b437e3b5d64cca6e4b85ff7eb2815743fa711d54ad652bffe96d1eb1234544716006440d",
+      "sha1": "c90ee0b2142e2c58d233e150cb3a24c7cb07eb2d",
+      "size": 3771506,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
         "server": "required"
       }
     },
@@ -566,6 +624,27 @@
       }
     },
     {
+      "slug": "guideme",
+      "name": "GuideME",
+      "projectId": "Ck4E7v7R",
+      "versionId": "hFpGwC6q",
+      "versionNumber": "21.1.19",
+      "versionType": "release",
+      "filename": "guideme-21.1.19.jar",
+      "url": "https://cdn.modrinth.com/data/Ck4E7v7R/versions/hFpGwC6q/guideme-21.1.19.jar",
+      "sha512": "4dfa132e5cfd69a86c958867067f1c5ab39bb69ae35b2a62c24bb9924e9c688f1a4930ab75d335b22378d9f98cd7fceae8d030812b8f90c9aa282de8ea129f5a",
+      "sha1": "e85cd4c266f974dd360c46e8dad7ecf4c7ee96c6",
+      "size": 9311992,
+      "side": "both",
+      "requiredBy": [
+        "ae2"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
       "slug": "handcrafted",
       "name": "Handcrafted",
       "projectId": "pJmCFF0p",
@@ -601,6 +680,44 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
+      }
+    },
+    {
+      "slug": "immersiveengineering",
+      "name": "Immersive Engineering",
+      "projectId": "tIm2nV03",
+      "versionId": "uNRARSH2",
+      "versionNumber": "12.4.2-194",
+      "versionType": "release",
+      "filename": "ImmersiveEngineering-1.21.1-12.4.2-194.jar",
+      "url": "https://cdn.modrinth.com/data/tIm2nV03/versions/uNRARSH2/ImmersiveEngineering-1.21.1-12.4.2-194.jar",
+      "sha512": "862523e84747a8b7eaa65f9b3c337fa832ef9efd0545c27f68e350e01f482c7a1242d0e4bdc2caff3d7eb033508b43a353fcd7150c9b544d0c05765ca2a551b3",
+      "sha1": "a4e90c2df8009040f6d022433c5d76635944dd59",
+      "size": 14232121,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "industrial-foregoing",
+      "name": "Industrial Foregoing",
+      "projectId": "lWxpUd04",
+      "versionId": "erRsRPki",
+      "versionNumber": "1.21-3.6.27",
+      "versionType": "release",
+      "filename": "industrialforegoing-1.21-3.6.27.jar",
+      "url": "https://cdn.modrinth.com/data/lWxpUd04/versions/erRsRPki/industrialforegoing-1.21-3.6.27.jar",
+      "sha512": "2bbf101c323a71623ec48e745a2b798d83baf1b5d0c146a1816e6d1ecf4dd4299791d2a54a60a70ee8c0293c14029b7c5f1c40bf36e2838f38ff8bffa3326f04",
+      "sha1": "88ff21e4fa6e5c4cfb7cd5626cbcfdf424e704b5",
+      "size": 4747295,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
       }
     },
     {
@@ -722,6 +839,25 @@
       }
     },
     {
+      "slug": "macaws-bridges",
+      "name": "Macaw's Bridges",
+      "projectId": "GURcjz8O",
+      "versionId": "aQ7rY7ng",
+      "versionNumber": "3.1.2",
+      "versionType": "release",
+      "filename": "mcw-bridges-3.1.2-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/GURcjz8O/versions/aQ7rY7ng/mcw-bridges-3.1.2-mc1.21.1neoforge.jar",
+      "sha512": "e98e476324229564132288f0a59bfcc897cff4cda7d12fe218563ca48d382d880662375687c69d1b4619144262ae09cbef130f4330474d8eacd37a21e8e9afb4",
+      "sha1": "71ece28129789a2123cf07e79938f488d8675bb2",
+      "size": 661387,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
       "slug": "macaws-doors",
       "name": "Macaw's Doors",
       "projectId": "kNxa8z3e",
@@ -741,6 +877,82 @@
       }
     },
     {
+      "slug": "macaws-fences-and-walls",
+      "name": "Macaw's Fences and Walls",
+      "projectId": "GmwLse2I",
+      "versionId": "jVdb0r4W",
+      "versionNumber": "1.2.1",
+      "versionType": "release",
+      "filename": "mcw-mcwfences-1.2.1-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/GmwLse2I/versions/jVdb0r4W/mcw-mcwfences-1.2.1-mc1.21.1neoforge.jar",
+      "sha512": "9bf496a8db8c6074ab32374042ae15e87fe87d897e21de29d459556fa8d7d0e73f2718f28a0236181cfb3c1bc66c776b4d079f0a7084696ad490275ab1b9eb6e",
+      "sha1": "b5580c3fc521ed8bf4db3e407bd590efc317f74d",
+      "size": 673871,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-furniture",
+      "name": "Macaw's Furniture",
+      "projectId": "dtWC90iB",
+      "versionId": "Z5V3Ps7S",
+      "versionNumber": "3.4.1",
+      "versionType": "release",
+      "filename": "mcw-furniture-3.4.1-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/dtWC90iB/versions/Z5V3Ps7S/mcw-furniture-3.4.1-mc1.21.1neoforge.jar",
+      "sha512": "93103f868a6a7b4fa613dbe908bcf83c4aaabf4719057d484d1636c98e6e3defa00d550a8988ff91d4d0a090463c25b898336e675da52c19bd3bd0ce37e053e4",
+      "sha1": "3dccc819f14bcc60b3683edd82ca8c5e64964229",
+      "size": 2080436,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-lights-and-lamps",
+      "name": "Macaw's Lights and Lamps",
+      "projectId": "w4an97C2",
+      "versionId": "5U2kQZIL",
+      "versionNumber": "1.1.5",
+      "versionType": "release",
+      "filename": "mcw-lights-1.1.5-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/w4an97C2/versions/5U2kQZIL/mcw-lights-1.1.5-mc1.21.1neoforge.jar",
+      "sha512": "a6e1c4419b70a3f9225ad03daafca22c8a7da432ec4939b8029455927e3b44683a20e89a3299da78f124d0438e188dad3735d2018a931ad4d553ec9d3b83a9ca",
+      "sha1": "13c1107caf26b2c60d8626b3658b26cc7f634b38",
+      "size": 525744,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-paths-and-pavings",
+      "name": "Macaw's Paths and Pavings",
+      "projectId": "VRLhWB91",
+      "versionId": "tlymsxUG",
+      "versionNumber": "1.1.1",
+      "versionType": "release",
+      "filename": "mcw-mcwpaths-1.1.1-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/VRLhWB91/versions/tlymsxUG/mcw-mcwpaths-1.1.1-mc1.21.1neoforge.jar",
+      "sha512": "8a7bc0100e57369fdcfbb65164fdf97cd7f6a931882d0f63aae15fd3db8975a78cc8734f34f640a5790dddaca5883d8e97117e7966dab50de479b1a8f3662678",
+      "sha1": "4bb7e1d28eef19f87438881b0f582a15297b95ae",
+      "size": 777742,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
       "slug": "macaws-roofs",
       "name": "Macaw's Roofs",
       "projectId": "B8jaH3P1",
@@ -752,6 +964,25 @@
       "sha512": "c0e82a3d0a3ab2f2fac5fb0bdd7c7c228f084feaa816540d3d9524f341c8b108c3bb1afecadae2e8118e6c93f0e73280c62da1af4349aca87b6aa337e5e22ae4",
       "sha1": "05806ff152fab56f7c1b4b215d772ea73611283d",
       "size": 1784829,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-stairs",
+      "name": "Macaw's Stairs",
+      "projectId": "iP3wH1ha",
+      "versionId": "4t8L0dGP",
+      "versionNumber": "1.0.2",
+      "versionType": "release",
+      "filename": "mcw-mcwstairs-1.0.2-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/iP3wH1ha/versions/4t8L0dGP/mcw-mcwstairs-1.0.2-mc1.21.1neoforge.jar",
+      "sha512": "51533899b5e64610a642ee9e9d89eb9f193d0877a8cba16d3bfa262789334c864128b01757bff9d3db2718bd3df1fc177f9b2d45b84f06fc0a6ee15474af2fac",
+      "sha1": "1ee43d693c821efc955a74e551f94372af90a140",
+      "size": 529082,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
@@ -936,6 +1167,27 @@
       }
     },
     {
+      "slug": "rpl",
+      "name": "Ritchie's Projectile Library",
+      "projectId": "B3pb093D",
+      "versionId": "hZ6B2Z0x",
+      "versionNumber": "2.1.2",
+      "versionType": "release",
+      "filename": "ritchiesprojectilelib-2.1.2+mc.1.21.1-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/B3pb093D/versions/hZ6B2Z0x/ritchiesprojectilelib-2.1.2%2Bmc.1.21.1-neoforge.jar",
+      "sha512": "6d64c84505a5a8fbb96d106603065465c5a2314ec09636900c5c1a31014c12fa68f1a41e758313cbf0d6f95d9a1f53bd67339020f7d8db0e184c23f66aee0330",
+      "sha1": "ec2e4996f8bee8714173e603e379fef8a6901765",
+      "size": 76369,
+      "side": "both",
+      "requiredBy": [
+        "create-big-cannons"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
       "slug": "scalable-cats-force",
       "name": "scalable-cats-force",
       "projectId": "zr0QMQMo",
@@ -1086,6 +1338,27 @@
       "size": 57247579,
       "side": "both",
       "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "titanium",
+      "name": "Titanium",
+      "projectId": "1Ro7m06l",
+      "versionId": "zCzYA9mW",
+      "versionNumber": "1.21-4.0.50",
+      "versionType": "beta",
+      "filename": "titanium-1.21-4.0.50.jar",
+      "url": "https://cdn.modrinth.com/data/1Ro7m06l/versions/zCzYA9mW/titanium-1.21-4.0.50.jar",
+      "sha512": "8569e4d3331ba8a23f67bf46b0697d6a5a325deed696823cede68d8d4fef119669f1086767077af76013211617fef6c0cede310c5b7dfc1b3f9a7f37bf843908",
+      "sha1": "c57a545f81104c5ee87bf1e0af55a6e87598573b",
+      "size": 607012,
+      "side": "both",
+      "requiredBy": [
+        "industrial-foregoing"
+      ],
       "modrinth": {
         "client": "required",
         "server": "required"

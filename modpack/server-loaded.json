@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-01T19:37:52.901Z",
+  "at": "2026-10-03T19:33:34.314Z",
   "source": "logs/latest.log",
   "files": [
     {
@@ -19,7 +19,15 @@
       "nested": false
     },
     {
+      "filename": "another_furniture-neoforge-4.0.3.jar",
+      "nested": false
+    },
+    {
       "filename": "appleskin-neoforge-mc1.21-3.0.9.jar",
+      "nested": false
+    },
+    {
+      "filename": "appliedenergistics2-19.2.18.jar",
       "nested": false
     },
     {
@@ -59,7 +67,19 @@
       "nested": false
     },
     {
+      "filename": "createbigcannons-5.11.7+mc.1.21.1.jar",
+      "nested": false
+    },
+    {
       "filename": "createdeco-2.1.3.jar",
+      "nested": false
+    },
+    {
+      "filename": "curios-neoforge-9.5.1+1.21.1.jar",
+      "nested": false
+    },
+    {
+      "filename": "edf-remastered-5.0.2.jar",
       "nested": false
     },
     {
@@ -83,11 +103,27 @@
       "nested": false
     },
     {
+      "filename": "geckolib-neoforge-1.21.1-4.9.3.jar",
+      "nested": false
+    },
+    {
       "filename": "getittogetherdrops-neoforge-1.21.5-1.4.jar",
       "nested": false
     },
     {
+      "filename": "guideme-21.1.19.jar",
+      "nested": false
+    },
+    {
       "filename": "handcrafted-neoforge-1.21.1-4.0.3.jar",
+      "nested": false
+    },
+    {
+      "filename": "ImmersiveEngineering-1.21.1-12.4.2-194.jar",
+      "nested": false
+    },
+    {
+      "filename": "industrialforegoing-1.21-3.6.27.jar",
       "nested": false
     },
     {
@@ -99,11 +135,43 @@
       "nested": false
     },
     {
+      "filename": "L_Ender's Cataclysm 1.21.1-3.33.jar",
+      "nested": false
+    },
+    {
+      "filename": "lionfishapi-3.1.jar",
+      "nested": false
+    },
+    {
       "filename": "lithium-neoforge-0.15.4+mc1.21.1.jar",
       "nested": false
     },
     {
+      "filename": "mcw-bridges-3.1.2-mc1.21.1neoforge.jar",
+      "nested": false
+    },
+    {
       "filename": "mcw-doors-1.1.5-mc1.21.1neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "mcw-furniture-3.4.1-mc1.21.1neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "mcw-lights-1.1.5-mc1.21.1neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "mcw-mcwfences-1.2.1-mc1.21.1neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "mcw-mcwpaths-1.1.1-mc1.21.1neoforge.jar",
+      "nested": false
+    },
+    {
+      "filename": "mcw-mcwstairs-1.0.2-mc1.21.1neoforge.jar",
       "nested": false
     },
     {
@@ -116,6 +184,10 @@
     },
     {
       "filename": "modernfix-neoforge-5.27.24+mc1.21.1.jar",
+      "nested": false
+    },
+    {
+      "filename": "mowziesmobs-1.21.1-1.8.2.jar",
       "nested": false
     },
     {
@@ -139,6 +211,10 @@
       "nested": false
     },
     {
+      "filename": "ritchiesprojectilelib-2.1.2+mc.1.21.1-neoforge.jar",
+      "nested": false
+    },
+    {
       "filename": "servercore-neoforge-1.5.19+1.21.1.jar",
       "nested": false
     },
@@ -156,6 +232,10 @@
     },
     {
       "filename": "tacz-neoforge-1.21.1-1.1.8-hotfix-r7.jar",
+      "nested": false
+    },
+    {
+      "filename": "titanium-1.21-4.0.50.jar",
       "nested": false
     },
     {

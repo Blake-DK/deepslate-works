@@ -2,7 +2,7 @@
 
 A private modded Minecraft server (1.21.1, NeoForge) for a group of friends, with a portal at **deepslate.dsw.test** that handles voting, installing, joining and running the server. Players sign in with Discord; nobody types a Minecraft username or asks for a whitelist.
 
-Last updated 2026-09-29, 19:00 UTC: the first friend is in, and the recommended mods are on. Detail per feature is in `docs/`; where the build actually is lives in `docs/11-status.md`.
+Last updated 2026-10-03, 18:00 UTC: the site looks like the launcher, the Season 1 vote is in the pack, and the world waits to be made again. Detail per feature is in `docs/`; where the build actually is lives in `docs/11-status.md`.
 
 ## What's live
 
@@ -58,6 +58,9 @@ Last updated 2026-09-29, 19:00 UTC: the first friend is in, and the recommended 
 - Settings: geo lookup, chat logging, retention, download caps, "We're live", Play first.
 - Admin lists (Players, Installs, Invites) are fixed-column tables with a per-row menu; cards below 800 px.
 
+### The site's look (docs/23)
+- One dark theme, the launcher's: the deepslate ground, the pixel banner with the name, a Copper line, a tab strip in place of the sidebar, cards on the ground, a bevelled green Play block and a Copper Vote block. All four steps are live (2026-10-03): the tokens and parts, the frame, Home and Votes, and a pass over every other page. Tests keep colours in one file, the pixel face in its four places and every text pair at 4.5:1. Looked at by eye at 1360 and 390 px: still Alex's.
+
 ### Infrastructure
 - Portal on the VPS (Next.js frontend, Fastify API), AMP and the Minecraft server on the homelab, joined by a WireGuard tunnel confined to Docker so the internet-facing app has no route home. Players reach the game by a direct port forward to mc-router on the homelab, which routes `mc.dsw.test`, `boys.dsw.test` and `vanilla.dsw.test` to their servers on one port.
 - The AMP instance is unmanaged (its own users), so it is opened directly at its LAN address rather than through the AMP panel.
@@ -68,10 +71,10 @@ Last updated 2026-09-29, 19:00 UTC: the first friend is in, and the recommended 
 
 - **Specified by the planner on the evening of 2026-09-29, not started**: Better Tab Info in the base pack (ping per player and TPS in Tab, where TabTPS could not go); installer version on every report with an "outdated" badge and a nudge on the Me page; full logs on every run plus the previous game session's log and crash reports; the white room prompt repeated every 15 s with an on-screen title and a short join code usable at deepslate.dsw.test/join from a phone.
 - **Admin assistant** (docs/19): a read-only chat in Admin that can look at status, console, events, reports and container health and explain what went wrong. Needs an API key; never acts.
-- **The launcher's look** (docs/21): the Windows app goes dark with a pixel banner of spawn, a pixel display face and blocky Play and Vote buttons, everything drawn fresh in `branding/launcher/`. Not begun.
+- **The launcher's look** (docs/21): done. App 3.4.2 (dark, pixel banner, blocky Play and Vote, the lantern icon, Save log and Send to Alex) is what the site hands out.
 - **The map**: deleted on 2026-09-29 evening to be rendered clean from Admin → Server ("Render the map only"), about an hour.
 - **Waiting on a person**: Play first with a friend who is not an admin; the mods tried in the game (guns, quarry, vein mining, trees by hand); a five-minute planned restart watched through; whether someone who has just linked should also be held for Play first.
-- **Vote close**: apply results, lock, build, sync, flip "We're live".
+- **Vote close**: the "Season 1 mods" vote closed 2026-10-03 and was applied at 40% (Create Big Cannons, Immersive Engineering, Industrial Foregoing, AE2, the Macaw's set, Another Furniture). Pack 0.1.0+d7521da9 is locked, built, on the server and on `main`. Left: the world made again (docs/24, stopped at its first backup) and flipping "We're live".
 - **Seasons, bosses and trials (docs/20)**: step 1 done 2026-10-02 (Cataclysm, Mowzie's Mobs and the Ender Dragon remaster in a new non-votable "Bosses & trials" category, started once; Gateways and Multiplayer Bosses held for the planner; report in docs/11). Must land before the world is made again after the vote closes. Steps 2 to 6 wait for the planner.
 - **Bedrock** through NetherNet (TCP 19132 + UDP 19134–19153): forwards set, external join not yet tested.
 - **World terrain**: spawn's 1500 blocks were pre-generated before Create, Farmer's Delight and the rest went on, so their ores and crops only appear beyond that. One more reset after the vote closes is the clean fix.

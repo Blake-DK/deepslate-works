@@ -91,7 +91,7 @@ A Minecraft name is `^[A-Za-z0-9_]{3,16}$` wherever one is taken; a dimension, a
 
 ## AMP methods used (recorded from the live instance, 2026-09-28 and 29)
 
-All calls go to the ADS (`AMP_URL=http://10.77.0.2:8080`) at `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>`, JSON body, `SESSIONID` in the body. `webapp` is a user **of the instance**, so `Core.Login` also goes through that path (a login against the ADS's own `/API/Core/Login` answers `result: 0, success: false`). The instance's modules (`Core.GetAPISpec`): `Core, MinecraftModule, FileManagerPlugin, LocalFileBackupPlugin, EmailSenderPlugin, WebhookPlugin, CommonCorePlugin, AnalyticsPlugin, StorePlugin`.
+All calls go to the ADS (`AMP_URL=http://10.77.0.2:8080`) at `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>`, JSON body, the session in an `Authorization: Bearer <sessionID>` header (until 2026-10-03 it was `SESSIONID` in the body, which AMP 2.8 logs as deprecated on every call; `Core.Login` has no session and keeps its body). `webapp` is a user **of the instance**, so `Core.Login` also goes through that path (a login against the ADS's own `/API/Core/Login` answers `result: 0, success: false`). The instance's modules (`Core.GetAPISpec`): `Core, MinecraftModule, FileManagerPlugin, LocalFileBackupPlugin, EmailSenderPlugin, WebhookPlugin, CommonCorePlugin, AnalyticsPlugin, StorePlugin`.
 
 | Method | Args | What comes back, and what it is used for |
 |---|---|---|

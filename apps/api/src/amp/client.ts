@@ -67,10 +67,16 @@ export class AmpClient implements Amp {
   sessions = 0;
   constructor(private readonly o: Opts) {}
 
-  private async post<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  /**
+   * The session goes in `Authorization: Bearer`, never in the body: AMP 2.8 logs "SessionID passed in request body -
+   * this is deprecated" for every call that sends `SESSIONID` (seen 2026-10-03, once per poll). Login has no session.
+   */
+  private async post<T>(path: string, body: Record<string, unknown>, sessionId?: string | null): Promise<T> {
+    const headers: Record<string, string> = { "content-type": "application/json", accept: "application/json" };
+    if (sessionId) headers.authorization = `Bearer ${sessionId}`;
     const res = await fetch(`${this.o.url}${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
+      headers,
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(this.o.timeoutMs ?? 10_000),
     });
@@ -94,14 +100,14 @@ export class AmpClient implements Amp {
     const path = instancePath(this.o.instanceId, module, method);
     let answer: T;
     try {
-      answer = await this.post<T>(path, { ...params, SESSIONID: this.sessionId });
+      answer = await this.post<T>(path, params, this.sessionId);
       if (!sessionGone(answer)) return answer;
     } catch (e) {
       if (!(e instanceof Error) || !UNAUTHORIZED.test(e.message)) throw e;
     }
     this.sessionId = null; // expired, or AMP has forgotten it; one retry
     await this.login();
-    answer = await this.post<T>(path, { ...params, SESSIONID: this.sessionId });
+    answer = await this.post<T>(path, params, this.sessionId);
     if (sessionGone(answer)) throw new Error("AMP does not accept the session it has just given out");
     return answer;
   }

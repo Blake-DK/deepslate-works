@@ -1,7 +1,9 @@
 // AMP smoke test through the ADS instance proxy, run inside deepslate-api (the only container with a route).
 const { AMP_URL, AMP_USERNAME, AMP_PASSWORD, AMP_INSTANCE_ID } = process.env;
-const post = async (path, body) => {
-  const res = await fetch(`${AMP_URL}${path}`, { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+// The session goes in an Authorization: Bearer header; SESSIONID in the body is deprecated (AMP 2.8 logs a warning).
+const post = async (path, body, sid) => {
+  const headers = { "content-type": "application/json", accept: "application/json", ...(sid ? { authorization: `Bearer ${sid}` } : {}) };
+  const res = await fetch(`${AMP_URL}${path}`, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
   const text = await res.text(); let json = null; try { json = JSON.parse(text); } catch {}
   return { status: res.status, json, text: text.slice(0, 300) };
 };
@@ -11,7 +13,7 @@ const login = await inst0("Core", "Login", { username: AMP_USERNAME, password: A
 console.log("1. Login:", login.status, "success=" + login.json?.success, "reason=" + (login.json?.resultReason ?? ""), "sessionID=" + (login.json?.sessionID ? "yes" : "no"));
 const sid = login.json?.sessionID;
 if (!sid) process.exit(1);
-const inst = (m, method, p = {}) => post(`/API/ADSModule/Servers/${AMP_INSTANCE_ID}/API/${m}/${method}`, { ...p, SESSIONID: sid });
+const inst = (m, method, p = {}) => post(`/API/ADSModule/Servers/${AMP_INSTANCE_ID}/API/${m}/${method}`, p, sid);
 const st = await inst("Core", "GetStatus");
 console.log("2. GetStatus:", st.status, "State=" + st.json?.State, "Metrics=" + Object.keys(st.json?.Metrics ?? {}).join(","), "Uptime=" + st.json?.Uptime);
 if (st.status !== 200 || st.json?.State === undefined) console.log("   raw:", st.text);

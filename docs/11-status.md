@@ -13,6 +13,10 @@ AMP's log showed, again and again, "SessionID passed in request body - this is d
 - **Not yet verified:** that the warning is gone. AMP's own log is not reachable from the VPS (the file manager and the deploy key both stop at the instance's `Minecraft/` folder; ADS's log needs an ADS login). After the deploy, someone with the AMP dashboard open watches at least two polls (20 s+) for the warning. If it still shows, check whether it is logged by the ADS (the proxy) rather than the instance.
 - **Waits for** the backup fixes (docs/10 P0 1 and 2), as Alex asked. Timing of AMP calls (docs/10 P1 9) goes into the same `post()`; not in this branch.
 
+## Fixes after the state-of-development check (2026-10-03 evening, Alex: one PR per item, merged and deployed on green)
+
+**1. The nightly database dump.** `deploy/docker-compose.yml`'s `backups` service ran `date +%%F`; compose escapes only `$`, so `date` got `%%F` and wrote the literal file `deepslate-%F.sql.gz`, the same file every night. Now `deepslate-$(date +%F).sql.gz` (one file per day), written as `.part` and renamed only when `pg_dump` and `gzip` both succeed (`set -o pipefail`), and retention keeps the newest **14** files matching `deepslate-20??-??-??.sql.gz`, so the `pre-*` migration dumps are neither counted nor removed. Tried before the PR in a throwaway `postgres:16-alpine` container with a stand-in `pg_dump`: 16 dated files plus `pre-0023-x` and `deepslate-%F` → 14 dated kept, the other two untouched; a failing dump left no file and no `.part`. The check on the server after the deploy is below.
+
 ## The starter kit · docs/25 (2026-10-03, job `437560c9`)
 
 **The backpack's id, checked on the running server first** (pack `0.1.0+d7521da9`, 17:2x UTC): `give @a[name=kitcheck_nobody] sophisticatedbackpacks:backpack 1` answered "No player was found", so the id parses; the control `give … sophisticatedbackpacks:nosuch_backpack 1` answered "Unknown item 'sophisticatedbackpacks:nosuch_backpack'". **`sophisticatedbackpacks:backpack` is the basic backpack's id** in the build the server runs.

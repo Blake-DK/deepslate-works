@@ -149,9 +149,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # Nightly pg_dump, keep 7. Simple loop; no cron package needed.
+    # Nightly pg_dump to deepslate-YYYY-MM-DD.sql.gz, keep the newest 14 of those. Simple loop; no cron package
+    # needed. Only $ is escaped for compose ($$); a % goes to date as written (%%F made the literal file
+    # "deepslate-%F.sql.gz" until 2026-10-03). A failed dump is not kept (pipefail, .part renamed only on
+    # success), so it never pushes a good copy out. Retention counts nightly dumps only, never pre-* dumps.
     command: >
-      sh -c 'while true; do
-        pg_dump -h postgres -U deepslate deepslate | gzip > /backups/deepslate-$$(date +%%F).sql.gz;
-        ls -1t /backups/*.sql.gz 2>/dev/null | tail -n +8 | xargs -r rm -f;
+      sh -c 'set -o pipefail; while true; do
+        f=/backups/deepslate-$$(date +%F).sql.gz;
+        if pg_dump -h postgres -U deepslate deepslate | gzip > $$f.part; then mv $$f.part $$f; else rm -f $$f.part; echo "pg_dump failed"; fi;
+        ls -1t /backups/deepslate-20??-??-??.sql.gz 2>/dev/null | tail -n +15 | xargs -r rm -f;
         sleep 86400; done'

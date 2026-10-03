@@ -13,6 +13,32 @@ AMP's log showed, again and again, "SessionID passed in request body - this is d
 - **Not yet verified:** that the warning is gone. AMP's own log is not reachable from the VPS (the file manager and the deploy key both stop at the instance's `Minecraft/` folder; ADS's log needs an ADS login). After the deploy, someone with the AMP dashboard open watches at least two polls (20 s+) for the warning. If it still shows, check whether it is logged by the ADS (the proxy) rather than the instance.
 - **Waits for** the backup fixes, as Alex asked: the nightly dump (docs/10 P0 2) is done (PR #83); the backup route (P0 1) is not. PR #84. Timing of AMP calls (docs/10 P1 9) goes into the same `post()`; not in this branch.
 
+## Spawn is adventure mode · docs/27 (2026-10-03, job `0c825297`; the ruling on docs/26 §3.4)
+
+**Built as written** (main `1f69851`, straight to main). In `deepslate-tools`, `tags/function/tick.json` = `["deepslate:kit/tick", "deepslate:spawn/tick"]`.
+
+- `spawn/tick`: `tag @a remove deepslate.spawn_area`, then `execute in minecraft:overworld run tag @a[x=32,y=-2048,z=16,dx=127,dy=4096,dz=127] add deepslate.spawn_area`. That is the only place the coordinates appear, with a comment naming `spawnClaimArea(SPAWN_POS)` in `apps/api/src/actions/registry.ts`. A volume selector under `execute in` looks in that dimension only, so the nether and the end never match. Then `execute as @a[tag=verified,gamemode=survival,tag=deepslate.spawn_area,tag=!deepslate.spawn] run function deepslate:spawn/enter` and `execute as @a[tag=deepslate.spawn,tag=!deepslate.spawn_area] run function deepslate:spawn/leave`.
+- `spawn/enter`: `gamemode adventure @s`, `tag @s add deepslate.spawn`.
+- `spawn/leave`: `tag @s remove deepslate.spawn`, `execute if entity @s[tag=verified,gamemode=adventure] run gamemode survival @s`. A revoked or held player loses the tag and keeps adventure; an admin who went creative keeps creative.
+- **Why it should be silent:** `gamemode` on the command's own entity sends only `commands.gamemode.success.self` to the command source, and a tick function's source has its output suppressed (nothing reaches chat or the ops). The "Your game mode has been updated" line goes only to a player changed by someone else, which never happens here. The api's console showed nothing per tick after the start. Still to be seen in game.
+- **Edge:** a volume selector tests the player's hitbox (0.6 wide), not their feet, so the area reaches 0.3 blocks past the claim's edge on every side. A player standing with their feet just outside the line is still in adventure until they take one more step.
+- Tests (`packages/modpack/tests/datapack.test.ts`, 4 new, 13/13 pass): the tick tag lists both; exactly one line carries the area, in the overworld, and it equals `spawnClaimArea(parsePos("107.5 126 87.5"))` = x 32..159, z 16..143, every height (checked by import from registry.ts; changing `dx` to 128 fails it); enter only for `verified` + `survival`, survival back only for `verified` + `adventure`; no creative or spectator anywhere, and every `gamemode` is `… @s`. Guide test 15/15 with a new assertion. ESLint clean.
+- Guide: "Spawn is protected: you can't break or build there." after the "Your first hour" list in docs/18 and `guide-default.ts`. It is not in "Home, spawn and getting unstuck", because that section is tagged `feature: actions` and hidden until the Me page buttons exist. The running web is `2455d29`, which does not include `1f69851`, so `/guide` shows the line after the next web deploy from main.
+
+**On the server** (19:50–19:52 UTC, nobody online). Build (server) ok, "datapacks: deepslate-limbo, deepslate-tools". Sync: mods up to date, config 7, defaultconfigs 2 (this also brings docs/26's `defaultconfigs/openpartiesandclaims-server.toml` onto the instance), datapacks 18 files, no restart from Sync. Live `config/openpartiesandclaims-server.toml` still has the corpse line. The server was asleep; started 19:51:31, up in 28 s. `world.datapacks`: "There are 6 data pack(s) enabled: … [file/deepslate-limbo (world)], [file/deepslate-tools (world)]". `function deepslate:spawn/tick` from the console: "Running function deepslate:spawn/tick". `latest.log` ERRORs: only the two known ones (`createdeco:placard`, Curios "example").
+
+| §3 in game (first player on; Alex counts unless OPAC admin mode is on) | Seen |
+|---|---|
+| Walk into spawn: adventure, no chat line. Hit a block: no chat line | **Not yet seen**: needs a player |
+| Walk out: survival, no chat line. Break a block outside: works | **Not yet seen** |
+| Waystone out of spawn and into spawn: the mode follows | **Not yet seen** |
+| Log out inside spawn, log in: still adventure, survival on leaving | **Not yet seen** (the tag and the mode are saved in player data) |
+| Creative inside spawn stays creative | **Not yet seen** (enter selects `gamemode=survival` only) |
+| Fresh join via the entrance room: released at spawn in adventure, survival outside | **Not yet seen** (release sets survival and then `verified`; the next tick puts them in adventure) |
+| docs/26 §4: own body opens at spawn; another's does not in 30 min; a body cannot be destroyed | **Not yet seen** |
+
+If a hit in adventure or the mode change itself prints a line, the rule is to stop and report the text here. No mod.
+
 ## Spawn: open your own body, the block messages · docs/26 (2026-10-03, job `0c825297`)
 
 **What the keys are really called** (read from the live file and from `open-parties-and-claims-neoforge-1.21.1-0.31.6.jar`; §2 was written from memory):

@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { AmpClient, MockAmp, type Amp } from "./amp/client.js";
+import { BACKUP_JOB_KEY, BackupWatch, type BackupJob } from "./status/backup-watch.js";
 import { serviceAuth } from "./auth.js";
 import type { Env } from "./env.js";
 import { health, tcpReachable } from "./health.js";
@@ -119,7 +120,14 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const polls = new PollWatch(log);
   pollRoutes(app, ampClient, tail, () => limbo.actionCtx);
   playerRoutes(app, ampClient, tail, limbo, () => pregen.quiesce());
-  serverRoutes(app, ampClient, tail, restarts);
+  const backups = new BackupWatch(ampClient, {
+    load: async () => ((await db.setting.findUnique({ where: { key: BACKUP_JOB_KEY } }))?.value as BackupJob | undefined) ?? null,
+    save: async (j) => {
+      await db.setting.upsert({ where: { key: BACKUP_JOB_KEY }, create: { key: BACKUP_JOB_KEY, value: j }, update: { value: j } });
+    },
+  }, (a) => audit(a), { log });
+  void backups.init();
+  serverRoutes(app, ampClient, tail, restarts, backups);
   brandingRoutes(app, env, ampClient, deps.build);
   const serverVersions = new ServerVersions(ampClient, tail);
   versionRoutes(app, serverVersions);

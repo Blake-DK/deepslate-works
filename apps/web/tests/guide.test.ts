@@ -108,7 +108,7 @@ describe("the guide as it ships", () => {
     // Apply results writes `enabled: true` into mods.json; the guide reads mods.json again whenever the file changes.
     const before = filterGuide(DEFAULT_GUIDE, { mods: on });
     const votable: Array<[string, string[]]> = [
-      ["sophisticated-backpacks", ["**Backpacks**", "Craft a backpack as soon as you have leather or wool."]],
+      ["sophisticated-backpacks", ["**Backpacks**", "Open your backpack: you start with one, with tools, bread, torches and a bed."]],
       ["waystones", ["**Waystones**", "Find a waystone or build one so you can always get home."]],
       ["veinminer", ["**VeinMiner**"]],
       ["fallingtree", ["**FallingTree**"]],
@@ -125,7 +125,7 @@ describe("the guide as it ships", () => {
       for (const l of others) expect([slug, l, after.includes(l)]).toEqual([slug, l, false]);
     }
     const all = filterGuide(DEFAULT_GUIDE, { mods: new Set([...on, ...votable.map(([s]) => s)]) });
-    expect(all).toMatch(/1\. Punch a tree[^\n]*\n2\. Craft a backpack[^\n]*\n3\. Find a waystone[^\n]*\n4\. Pick a spot/);
+    expect(all).toMatch(/1\. Punch a tree[^\n]*\n2\. Open your backpack[^\n]*\n3\. Find a waystone[^\n]*\n4\. Pick a spot/);
   });
   it("fits in the settings, and reads as Markdown", () => {
     expect(DEFAULT_GUIDE.length).toBeLessThan(20000);

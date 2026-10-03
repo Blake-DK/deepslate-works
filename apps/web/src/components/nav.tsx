@@ -7,7 +7,8 @@ import { pillFor, statusText } from "@/lib/server-status";
 import { getOpenVote } from "@/server/vote/votes";
 import { pendingFor } from "@/server/polls";
 import { getSection } from "@/server/site-settings";
-import { AdminStrip, BannerBox, NavLink, Strip, TabBadge, stripLink } from "./nav-link";
+import { AdminStrip, BannerBox, NavLink, Strip, TabBadge } from "./nav-link";
+import { stripLink } from "./strip-link";
 
 const DOT = { up: "bg-play-hi", waking: "bg-primary", asleep: "bg-dim", down: "bg-danger" } as const;
 

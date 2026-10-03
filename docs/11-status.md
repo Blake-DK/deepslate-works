@@ -33,7 +33,20 @@ Alex asked for the site to look like the launcher. docs/23 is the planner's desi
 6. **The font's licence line names "Pixelify Sans"** in the version footer's title (§2), so the display-face test allows that one name there. `font-display` itself is allowed only in nav.tsx, play-button.tsx and poll-card.tsx.
 7. **`/brand/fonts/*.ttf|.txt` are public** in middleware.ts, so the sign-in page can load the face. The PNGs were already public by extension.
 
-**Unverified until Alex opens it:** no screenshot run on the VPS (§7). Between step 1 and step 2 the sidebar frame stays and draws with the new tokens. Buttons that were copper (old primary) are green until step 3 gives Vote its copper block.
+**Unverified until Alex opens it:** no screenshot run on the VPS (§7). Between step 1 and step 2 the sidebar frame stays and draws with the new tokens.
+
+**Step 2, built (2026-10-03, branch `site-look-frame`), after app 3.4.1 went out:** the frame of §4. The ground is `body::before` in globals.css (the tile at 48 px, 35 %, fixed, pixelated, no pointer events). The banner (`components/nav.tsx` with `BannerBox` in `nav-link.tsx`) is 176 px, 150 under 640, and 260 on /login. It shows hero.png (or the uploaded banner) covering, at center 70 %, pixelated, the gradient, and a 3 px Copper edge. Bottom left are the logo (uploaded, or the drawn tile with a Copper "D" in the display face), the name in the display face at 34/26 px with its 3 px shadow, and the tagline in CopperHi. Top right is the pill (`nav-status`, `pillFor` in `lib/server-status.ts`, the full line and hint as its title). The tab strip (`Strip label="Main"`) replaces the sidebar and the Menu drawer: Home … Activity, a spacer, then Control Room (admins, CopperHi), Me and Sign out, with the Copper chips for "vote" and polls. The admin strip comes next, then the page (max-w-6xl, 26 20 34), then the footer on Panel. `components/tabs.tsx` uses the strip's tab. The login page is a 440 px column under the 260 px banner. Tests: five more in `site-look.test.ts` (pill lines, the strip's links in order with nothing of the sidebar left, the admin strip, the display face on the name and tile only, the ground). web typecheck, lint and 412 tests pass.
+
+**Deviations (step 2):**
+8. **The admin strip is put there by AppFrame**, not `admin/layout.tsx`: it has to sit under the main strip, outside the page's padding. `AdminStrip` (client) shows on /admin and below, admins only. In the main strip, Control Room is marked on every admin page.
+9. **The pill on the site says "Can't reach the server"** when AMP cannot be reached. The app's "Can't reach the site" means the site itself is down, which the site cannot say about itself. Starting and restarting are "Server: Starting" or "Server: Restarting" with the Copper dot. Off and stopping get the Dim dot.
+10. **Footer:** Site <short commit> (now shown to everyone; before, the commit was for admins), Pack, App, and **Server <state>, for signed-in members only** (signed-out visitors never saw the server's state). NeoForge is kept at the end so `v-neoforge` still resolves, and admins keep api and "deployed". The tagline moved from the footer into the banner, which shows it on every page; the footer text and Discord link stay.
+11. **Not yet onboarded:** the banner and footer with no tab strip; a Sign out button sits where the pill would be, as the old header had it.
+12. **`data-testid="tagline"`** is on the banner's tagline only on the signed-out frame (login, join), where the login page's own was. Home keeps its own. When no tagline is set, the banner shows the login page's old fallback, "A private Minecraft server for friends."
+13. **Login:** the page's own logo, name and banner picture are gone (the banner carries them), and a screen-reader-only heading keeps one h1. "New here? Ask Alex for an invite link." is now §4's "Not in the group yet? You need an invite link from Alex."
+14. **No existing test looked for the sidebar or the Menu button**, so none moved; the new frame test checks the strip instead.
+
+Unverified until Alex opens it at 1360 and 390 px. Buttons that were copper (old primary) are green until step 3 gives Vote its copper block.
 
 ## The Discord bot · docs/22 §10 steps 1 to 6 (2026-10-02, built against a stand-in)
 

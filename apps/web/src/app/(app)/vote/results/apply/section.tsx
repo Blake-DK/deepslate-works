@@ -28,7 +28,9 @@ export default async function ApplyPage({ searchParams }: { searchParams: Promis
           <CardDescription>Mods at or above the threshold get enabled, the rest disabled; in a &quot;pick one&quot; group only the winner stays. Confirming writes the file and commits it to git.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* a GET form replaces the whole query: without tab=apply, Recalculate landed on Build & sync (2026-10-03) */}
           <form method="get" className="flex items-end gap-2">
+            <input type="hidden" name="tab" value="apply" />
             <div className="w-32"><Label htmlFor="threshold">Threshold %</Label><Input id="threshold" name="threshold" type="number" min={1} max={100} defaultValue={threshold} /></div>
             <Button type="submit" variant="secondary">Recalculate</Button>
           </form>

@@ -87,3 +87,50 @@ describe("the starter kit in deepslate-tools (docs/25)", () => {
     expect(mods.find((m) => m.slug === "sophisticated-backpacks")?.enabled).toBe(true);
   });
 });
+
+describe("adventure mode in the spawn claim, in deepslate-tools (docs/27)", () => {
+  const TOOLS = path.join(__dirname, "../../../modpack/datapacks/deepslate-tools");
+  const commands = async (name: string) =>
+    (await readFile(path.join(TOOLS, "data/deepslate/function/spawn", `${name}.mcfunction`), "utf8")).split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
+  // the arguments of a command's first @a[...] selector
+  const selector = (cmd: string) => /@a\[([^\]]*)\]/.exec(cmd)?.[1]?.split(",").map((s) => s.trim()) ?? [];
+
+  it("runs deepslate:spawn/tick every tick beside the kit, and has enter and leave", async () => {
+    const tick = JSON.parse(await readFile(path.join(TOOLS, "data/minecraft/tags/function/tick.json"), "utf8")) as { values: string[] };
+    expect(tick.values).toEqual(expect.arrayContaining(["deepslate:kit/tick", "deepslate:spawn/tick"]));
+    for (const name of ["tick", "enter", "leave"]) expect((await commands(name)).length).toBeGreaterThan(0);
+  });
+  it("marks the area once, in the overworld, with the server claim's blocks for SPAWN_POS 107.5 126 87.5", async () => {
+    const tick = await commands("tick");
+    const marks = tick.filter((c) => /\bdx=/.test(c));
+    expect(marks).toHaveLength(1); // the coordinates are written once
+    expect(marks[0]).toMatch(/^execute in minecraft:overworld run tag @a\[/);
+    const v = Object.fromEntries(selector(marks[0]!).map((kv) => kv.split("=") as [string, string]));
+    const { spawnClaimArea, parsePos } = await import("../../../apps/api/src/actions/registry");
+    const a = spawnClaimArea(parsePos("107.5 126 87.5"));
+    // a volume selector covers x to x + dx, both ends in, as block coordinates
+    expect({ x1: Number(v.x), z1: Number(v.z), x2: Number(v.x) + Number(v.dx), z2: Number(v.z) + Number(v.dz) }).toEqual(a);
+    expect(Number(v.y)).toBeLessThanOrEqual(-64); // every height
+    expect(Number(v.y) + Number(v.dy)).toBeGreaterThanOrEqual(320);
+  });
+  it("puts only verified players in survival into adventure, and only gives survival back to verified players in adventure", async () => {
+    const tick = await commands("tick");
+    const enter = selector(tick.find((c) => c.includes("spawn/enter"))!);
+    expect(enter).toEqual(expect.arrayContaining(["tag=verified", "gamemode=survival", "tag=deepslate.spawn_area", "tag=!deepslate.spawn"]));
+    expect(await commands("enter")).toEqual(["gamemode adventure @s", "tag @s add deepslate.spawn"]);
+    const leaving = selector(tick.find((c) => c.includes("spawn/leave"))!);
+    expect(leaving).toEqual(expect.arrayContaining(["tag=deepslate.spawn", "tag=!deepslate.spawn_area"]));
+    const leave = await commands("leave");
+    expect(leave).toContain("tag @s remove deepslate.spawn");
+    const back = leave.filter((c) => /gamemode/.test(c));
+    expect(back).toEqual(["execute if entity @s[tag=verified,gamemode=adventure] run gamemode survival @s"]);
+  });
+  it("never selects creative or spectator, and changes a mode only as the player on themselves (silent)", async () => {
+    for (const name of ["tick", "enter", "leave"]) {
+      for (const c of await commands(name)) {
+        expect(c).not.toMatch(/gamemode=(creative|spectator)|gamemode (creative|spectator)/);
+        if (/(^|run )gamemode /.test(c)) expect(c).toMatch(/gamemode (adventure|survival) @s$/);
+      }
+    }
+  });
+});

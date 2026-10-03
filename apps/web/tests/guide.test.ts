@@ -89,6 +89,7 @@ describe("the guide as it ships", () => {
     expect(out.includes("**FallingTree**")).toBe(on.has("fallingtree"));
     expect(out).not.toMatch(/<!--/);
     expect(out).not.toContain("Take me to spawn"); // the buttons on the Me page are not built yet
+    expect(out).toContain("Spawn is protected: you can't break or build there."); // docs/27, whatever the mod list
   });
   it("shows Building only while all the suggested building mods are on (planner, 2026-09-30)", () => {
     const building = ["create-deco", "copycats", "macaws-roofs", "macaws-windows", "macaws-doors", "handcrafted"];

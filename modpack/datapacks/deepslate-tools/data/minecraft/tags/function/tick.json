@@ -1,1 +1,1 @@
-{ "values": ["deepslate:kit/tick"] }
+{ "values": ["deepslate:kit/tick", "deepslate:spawn/tick"] }

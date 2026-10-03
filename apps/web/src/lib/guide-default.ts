@@ -55,6 +55,8 @@ export const DEFAULT_GUIDE = [
   "3. Find a waystone or build one so you can always get home. <!-- mod: waystones -->",
   "4. Pick a spot for your base away from spawn and other people; use a waypoint (B) to mark it.",
   "",
+  "Spawn is protected: you can't break or build there.",
+  "",
   "## Power and machines <!-- mod: create -->",
   "",
   "Create is the factory mod: everything runs on rotation, from water wheels to steam engines and trains. How to start, and the Ponder animations: [Create in the Mods guide](/mods#create).",

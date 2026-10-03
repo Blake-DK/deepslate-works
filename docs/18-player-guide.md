@@ -43,6 +43,8 @@ The first time you join you'll be in a small room. Click the link in chat, sign 
 3. Find a waystone or build one so you can always get home.
 4. Pick a spot for your base away from spawn and other people; use a waypoint (B) to mark it.
 
+Spawn is protected: you can't break or build there.
+
 ## Power and machines <!-- mod: create -->
 
 Create is the factory mod. Everything runs on rotation from **water wheels** and **windmills** to start with. Rough order:

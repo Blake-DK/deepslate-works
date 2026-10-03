@@ -6,7 +6,7 @@ import {
 
 import { REAL } from "./fixtures/discord-events.js";
 
-const brand = { name: "Deepslate Works", accent: "#b8652c", avatar: null };
+const brand = { name: "Deepslate Works", avatar: null };
 
 describe("Discord lines (docs/21 §4)", () => {
   it("a death is the game's sentence, as the player with their head", () => {
@@ -81,7 +81,7 @@ describe("Discord votes (docs/21 §5)", () => {
     expect(e.description).toContain("You need to vote before you can play");
     expect(e.description).toContain("[Vote](https://deepslate.dsw.test/votes)");
     expect(e.footer?.text).toBe("0 of 6 have voted");
-    expect(e.color).toBe(0xb8652c);
+    expect(e.color).toBe(0xe8833a); // Copper, docs/23 §3
     expect(m.allowed_mentions).toEqual({ parse: [] });
     const later = voteMessage(brand, { ...open, voters: 3 }, "https://deepslate.dsw.test").embeds![0]!;
     expect(later.footer?.text).toBe("3 of 6 have voted");

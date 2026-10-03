@@ -361,7 +361,7 @@ function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; a
     savePost: async (r) => { posts.set(r.key, r); },
     addError: async () => {},
     switches: async () => ({ ...SW, adminChannel: opts.adminChannel ?? "" }),
-    brand: async () => ({ name: "Deepslate Works", accent: "#b8652c", avatar: null }),
+    brand: async () => ({ name: "Deepslate Works", avatar: null }),
   };
   const feedHook = hook(FEED);
   const updatesHook = hook(UPDATES);

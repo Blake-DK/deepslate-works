@@ -146,7 +146,7 @@ export function prismaFeedStore(portal: string): FeedStore {
     },
     async brand() {
       const b = await getSection("branding");
-      return { name: b.name, accent: b.accent, avatar: b.logoChoice ? `${portal}/brand/logo-256.png?v=${encodeURIComponent(b.logo || b.logoChoice)}` : null };
+      return { name: b.name, avatar: b.logoChoice ? `${portal}/brand/logo-256.png?v=${encodeURIComponent(b.logo || b.logoChoice)}` : null };
     },
   };
 }

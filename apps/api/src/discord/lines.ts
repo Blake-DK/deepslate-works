@@ -5,7 +5,7 @@ import { DONT_MIND } from "../shared/polls.js";
 import { SUPPRESS_EMBEDS, type Message } from "./webhook.js";
 
 export type Switches = Section<"discord">;
-export type Brand = { name: string; accent: string; avatar: string | null };
+export type Brand = { name: string; avatar: string | null };
 export type Channel = "feed" | "admin" | "updates"; // updates: the forum season-updates (docs/22 §13)
 
 /** An `Event` row as the Announcer reads it. */
@@ -78,9 +78,8 @@ function embedMsg(brand: Brand, embed: NonNullable<Message["embeds"]>[number], c
   return { ...(content ? { content } : {}), embeds: [embed], username: brand.name.slice(0, 80), ...(brand.avatar ? { avatar_url: brand.avatar } : {}), allowed_mentions: NO_MENTIONS };
 }
 
-export function colour(hex: string): number {
-  return /^#[0-9a-f]{6}$/i.test(hex) ? parseInt(hex.slice(1), 16) : 0xb8652c;
-}
+/** Every embed's edge is the site's Copper (docs/23 §3), whatever the branding row once held as an accent. */
+export const COPPER = 0xe8833a;
 
 // ---- times, in the UK ------------------------------------------------------------------------------------------------
 
@@ -146,7 +145,7 @@ export const TEST_TEXT = "This is a test from Deepslate Works. If you can read i
 
 /** A news item: its text and picture, as the server. The text is the admin's own, so it is not escaped (no one is pinged). */
 export function newsMessage(brand: Brand, body: string, picture: string | null): Message {
-  return embedMsg(brand, { description: body.slice(0, 4000), color: colour(brand.accent), ...(picture ? { image: { url: `attachment://${picture}` } } : {}) });
+  return embedMsg(brand, { description: body.slice(0, 4000), color: COPPER, ...(picture ? { image: { url: `attachment://${picture}` } } : {}) });
 }
 
 // ---- §5: votes -------------------------------------------------------------------------------------------------------
@@ -201,7 +200,7 @@ export function voteMessage(brand: Brand, v: PollView, portal: string): Message 
     title: v.title.slice(0, 250),
     description: lines.join("\n").slice(0, 4000),
     url: link,
-    color: colour(brand.accent),
+    color: COPPER,
     footer: { text: votedLine(v) },
   });
 }

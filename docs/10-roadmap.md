@@ -2,7 +2,7 @@
 
 Work top to bottom. A phase is done when every box in its "Done when" list is true and Alex has clicked through it on the VPS. Then commit a tag `phase-N`.
 
-**State on 2026-09-29, 19:00 UTC.** A box is ticked only with what shows it, in italics after it. `phase-0` is tagged. Phases 1 to 3 are built and in daily use, each with one or two boxes that need a person to click through; the planner's additions (docs/14 joining, docs/16 analytics and event log, docs/17 mc-router, docs/18 guide) are built too. Phase 4 has not begun, apart from what the entrance room brought forward. The detail, and what came in between, is in `docs/11-status.md`; the same for people who are not building it in `ROADMAP.md`.
+**State on 2026-10-03, 19:00 UTC** (checked against `main` `7d0e5be` and the running server; the full check is "Where the build stands" in `docs/11-status.md`). A box is ticked only with what shows it, in italics after it. `phase-0` is the only tag. Phases 0 to 3 are built and in daily use, each with boxes that need a person to click through. The planner's additions are built: docs/14 joining, docs/16 analytics and event log, docs/17 mc-router, docs/18 guide, docs/21 launcher look and Discord feed (steps 1 to 3), docs/22 Discord bot (steps 1 to 6), docs/23 site look (all four steps), docs/25 starter kit. Started: docs/20 seasons (step 1 of 6) and docs/24 world regen (run as Alex amended it). Not begun: Phase 4 and docs/19. Going live is the next milestone; "Open items, by priority" at the end of this file is the order of work.
 
 ## Phase 0 · Foundation
 
@@ -30,7 +30,7 @@ Done when:
 - [ ] A player can submit a ballot on a phone in under two minutes and edit it later. *Four ballots are in; whether any came from a phone is not known.*
 - [x] Exclusive group (guns) allows one choice; load estimate updates live and warns LOW-tier users about Heavy sets.
 - [x] Results page shows per-mod yes % and per-tier breakdown; closing freezes results.
-- [ ] "Apply results" produces a diff of `mods.json` and commits it on confirm. *Built; never run on a closed vote. The vote is still open; the recommended mods were switched on by hand on 2026-09-29, and applying the result will be the first real run.*
+- [x] "Apply results" produces a diff of `mods.json` and commits it on confirm. *First real run 2026-10-03 on the closed "Season 1 mods" vote, at 40% (`fa37b30`). The commits stay on the deploy checkout by design and reach `main` by PR (lock `d7521da9`, PR #71); `deploy.sh` now refuses while any are unpushed (PR #73).*
 
 ## Phase 2 · Modpack and installer
 
@@ -50,10 +50,10 @@ Build: AMP wrapper + poller + `ServerSnapshot`, home page, `/map` with BlueMap b
 
 Done when:
 - [x] Home shows Online/Offline correctly within 20 s of a real change, player names with heads, TPS and memory. *Poll every 10 s, page every 10 s; watched through starts, sleeps and stops on 2026-09-29.*
-- [x] The map loads at `map.<domain>` only when logged in; logged out redirects to login and back. *302 to `/login?next=…` without a session (checked 2026-09-29 18:4x UTC). The map itself is empty since 18:36 UTC and is to be rendered again from Admin → Server.*
+- [x] The map loads at `map.<domain>` only when logged in; logged out redirects to login and back. *302 to `/login?next=…` without a session (checked again 2026-10-03 18:5x UTC). The map was rendered again with the ±3072 pre-generation, finished 18:03 UTC on 2026-10-03.*
 - [ ] Admin restart with a 5-minute countdown warns in game every minute and restarts on time. *One with one minute ran on 2026-09-29 18:26 to 18:27 UTC, on time; the five-minute one has not.*
 - [x] Console tail streams live for admins; players cannot reach it. *403 for a player, checked by the smoke test.*
-- [ ] `/api/health` is green and monitored. *Green; whether anything outside watches it is for Alex to say.*
+- [ ] `/api/health` is green and monitored. *Green on 2026-10-03 18:5x UTC (db, tunnel, AMP, rsync, Discord feed and bot, pack same). Whether anything outside watches it is still for Alex to say.*
 
 ## Phase 4 · Player self-service
 
@@ -69,7 +69,7 @@ Done when:
 The planner's additions, each with its own acceptance list (state in docs/11-status.md): docs/14 joining (the entrance room, Play first, early access), docs/16 analytics, file browser, event log, branding, docs/17 mc-router (the homelab's), docs/18 player guide, docs/19 admin assistant (not begun).
 
 ## Phase 5 · Later
-Discord bot (status, join/leave, chat relay, `/whitelist`), events page, season archive. Design when Phase 4 has been live for a couple of weeks and the group has opinions.
+Partly brought forward: the Discord feed (docs/21) and bot (docs/22) post status, joins and leaves and relay chat both ways (built 2026-10-02; the bot is not yet fully set up in the Discord server, docs/22a). Still to come: `/whitelist`-style admin commands, events page, season archive. Design when Phase 4 has been live for a couple of weeks and the group has opinions.
 
 ## Open questions for Alex (answer before Phase 2)
 
@@ -79,3 +79,32 @@ Discord bot (status, join/leave, chat relay, `/whitelist`), events page, season 
 4. ~~Season 1 world settings~~ Answered (docs/12): from the vote; defaults Normal difficulty, Corpse keeps items (keepInventory off), PvP off.
 5. Does anyone not have Discord? If nobody, skip the credentials provider entirely. **Pending.** (The provider is built and costs nothing to keep.)
 6. ~~`server_address` for the manifest~~ Answered: `mc.dsw.test`, no port, by mc-router on the homelab (docs/17); Pangolin is no longer part of it.
+
+## Open items, by priority (2026-10-03, 19:00 UTC)
+
+Collected from a check of every spec in `docs/` against the code on `main` `7d0e5be`, the running server, and the installer's logs. Each item names where it comes from. **P0** blocks going live or puts data at risk; **P1** is the next build work; **P2** can wait. "Person" marks a step only Alex or a player can do. Done items stay in the phase lists above or in `docs/11-status.md`.
+
+### P0 · before "We're live"
+
+1. **The backup route.** A world backup now exists: "Portal backup 2026-10-03 18:39", 36.7 GB, listed in AMP at 18:56 after Alex raised AMP's backup size limit (the world grew from 1.4 GB to 36.7 GB; AMP accepted the three earlier requests over the limit and silently dropped them). `POST /server/backup` (`apps/api/src/routes/server.ts`) still takes no title, does not keep the server awake and does not wait (about 17 minutes now) for the backup to show in `GetBackups`; it should, and should fail loudly if it never does. Nightly world backups in AMP itself: not checked. *docs/24 §5 B.1 and H; docs/09 runbook; docs/11 "Suggested plan updates".*
+2. **The nightly database dump overwrites itself.** The `deepslate-backups` service runs `date +%%F`, which writes the literal file `deepslate-%F.sql.gz` (one file, replaced each night), and its retention line counts the `pre-*` migration dumps among the seven it keeps. Use `$$(date +%F)` in `deploy/docker-compose.yml` and keep only `deepslate-*.sql.gz` by count. *docs/09 "Backups".*
+3. **`modpack/server-loaded.json` on `main` is the 2026-10-01 19:37 start, not the 2026-10-03 16:50 one** that docs/11 says PR #71 brought; the newer file is only on branch `lock-d7521da9` (`17649f4`). CI's `check-sides` compares the lock with the older list. Take the file from that branch to `main` (one-file change). *docs/07 "mod check"; docs/11 "Deploy and publish".*
+4. **Pabulum cannot get in.** His last run (2026-10-03 10:52:44 UTC, installer 1.5.6) was refused by `/api/modpack/manifest` with `not_live` ("Not launched yet", seen in the proxy log), so early access does not let him through today, and a 1.5.x copy updates itself only after the manifest answers, so he stays on 1.5.6. Check his early-access flag in Admin → People; after go-live, or with the flag, one Play moves him to 2.2.0 and the app. Consider answering an old script's manifest call with the update even when the gate is shut. *docs/13 §9 early access; docs/07 "The installer updates itself".*
+5. **The Discord bot cannot write in the admin channel** ("add Deepslate Works to the channel's permissions", six times 18:05 to 18:30 UTC on 2026-10-03), while `/discord` still shows the admin channel as `ok`. Person: give the bot the channel permission; code: show a refused channel as not ok. *docs/22 §8, docs/22a.*
+6. **Go live.** docs/24 steps 1 to 5, G and H are done and written up in docs/11 (spawn claim moved, 36.7 GB backup). Left, Person: Alex stands in the world and checks the starter kit on his first release (docs/25 §7; he was online from 18:30 UTC), flips "We're live", and the news item goes out. *docs/24 §4, §7; docs/25 §7.*
+
+### P1 · next build work
+
+7. **Phase 4 · player self-service** (this file, Phase 4): player actions spawn / home / set home / where am I / unstick with rate limits and the offline message; a homes mod on the server; `/me` quick actions; "My stats" reader (docs/12 §4); `/admin/actions`. None built; the registry has no PLAYER actions. *docs/05 Phase 4; docs/18 "Home, spawn and getting unstuck".*
+8. **docs/20 seasons, steps 2 to 6** (frontier, season file and `/season`, Admin → Seasons with `Season`/`SeasonClear`, trials, wipe), waiting for the planner and for Alex's answers in §11; Gateways, Apothic Attributes and Multiplayer Bosses held for the planner. Unblocks docs/21 feed §10 steps 4 and 5 and docs/22 §13 season posts.
+9. **Small code gaps against the specs:** AMP calls not timed and slow calls not warned (docs/09 "Observability"); no origin check in `middleware.ts`, only per route (docs/09 "Security"); `window.confirm` on kill, purge, distance and menu actions (docs/05 "Admin server" says in-page); Admin → Pack status column thinner than docs/05 and no enable toggle (by decision, docs/02 data flow still says UI toggles); BACKUP event only on the button (docs/16 §1).
+10. **docs/21 launcher §12 step 2**: stamp the chosen logo into the exe at Build (not built). **AMP grants** for view/simulation distance and the MOTD (`Settings.MinecraftModule.Minecraft.{ViewDistance,SimulationDistance,ServerMOTD}`), Person in AMP. *docs/15 §4; docs/21 §12.*
+11. **CI hygiene** from the installer workflow's logs: `actions/checkout`, `upload-artifact`, `download-artifact` v4 run on deprecated Node 20 (move to the Node 24 majors); xUnit2029 in `UiTests.cs:42,44` and xUnit2031 in `AssetsTests.cs:130`.
+
+### P2 · later, or waiting on a person
+
+12. **docs/19 admin assistant**: not begun; needs `ASSISTANT_API_KEY` from Alex.
+13. **Docs out of date**: docs/02 repo layout (installer, `deploy/ops-lock.sh`, `apps/api/src/discord/`), docs/03 tables and migrations (0023; `AdminLogin`, `OneTimeLogin`, `Poll`, `PollAnswer`, `DiscordPost`), docs/04 (the bot exists), docs/05 page list (v6 layout), docs/06 catalogue (83 entries, lock `d7521da9`), `ROADMAP.md` "In progress" (still lists the 2026-09-29 planner items, Better Tab Info, the outdated badge, fuller logs and the join code, as not started; they are built). `AuditLog_migrated_20260929` table never dropped.
+14. **Phases 1 to 3 tags**: only `phase-0` is tagged; tag each phase once its person-boxes are clicked through.
+15. **Person checks still open**: invite for a second account and refusal of a third; email fallback through an invite; a ballot on a phone; a rerun replacing exactly one jar; a five-minute planned restart; external monitoring of `/api/health`; Play first with a non-admin; leaving Discord sends a player back to the room; docs/16 figures against AMP's; docs/20 LOW-tier PC in a Cataclysm dungeon; docs/22 chat relay checks; docs/23 §9 look by eye; the app's lantern and window sizes (docs/21); read Alex's three install reports without a measured tier (2026-10-03 18:26, 18:29, 18:33 UTC, app 3.4.2) in Admin → Installs: likely `game_check` or `unfinished` reports, not readable from here.
+16. **Smaller polish**: `/install` without a screenshot per step or a "what changed"; 13 visible mods without a video; Sophisticated Backpacks' `howTo` still says "Craft a backpack" (docs/25, a `mods.json` change); unsigned exe (docs/07 "Signing", pending a decision); stale remote branches `branding-logo`, `version-footer`, `report-quiet`, `lock-c99f2aae` (delete only on Alex's yes).

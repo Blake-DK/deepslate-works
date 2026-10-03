@@ -2,6 +2,19 @@
 
 Last updated 2026-09-29, 19:00 UTC (the evening the first player who is not an admin got in). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
 
+## World made again · docs/24 run (2026-10-03, stopped at B.1)
+
+Alex's "go" at about 10:56 UTC. Option 1 of his answer stands: docs/24 as written, but pre-generation at **radius 25 chunks** (400 blocks, 2,601 chunks) instead of 100. Before the go: the vote was applied at 40% (commits fa37b30, 0ce2f06 and 4c18fa0, with Mekanism Tools and Rechiseled: Create kept off; the Apply page's Recalculate bug is PR #66). Pack **0.1.0+d7521da9** was locked, built and synced, and started once at 10:53:32. Its only ERRORs were the known `createdeco:placard` and a new Curios one, `example is not a registered slot type!`. That one comes from `industrialforegoing-1.21-3.6.27.jar`, whose `data/industrialforegoing/curios/entities/entities.json` names a slot `example`; it is harmless and Alex accepted it as known.
+
+| Step | What was seen |
+|---|---|
+| A. Old pre-generation put away | 10:56: `/pregen/off` and `/pregen/cancel` answered 200, `/pregen` shows mode off, area null, nothing in hand |
+| B.1 Backup, first request | `POST /server/backup` accepted at **10:56:55** ("System started a backup"). The server slept at **10:58:01** (nobody on). **Never listed** in AMP's list (checked to 11:05:28 and again at 16:22). Cause not known |
+| B.1 Backup, per the planner's ruling | Alex in the game from 16:29:02 (out 16:29:43 to 16:30:17), so the server stayed awake. `POST /server/backup` at **16:29:05**: `200 {"ok":true}`, event "System started a backup". A second one, by Alex from the portal at 16:37:34: event "Bramble09 started a backup". **Neither listed** after 15 minutes (16:44:14). The list still holds only "Portal backup 2026-09-29 15:29" (1,378,751,393 bytes) and "Portal backup 2026-09-29 13:28" (1,202,347,705 bytes); `allowed` and `canList` are true |
+| B.2 to I | **Not started**, by the ruling: step H depends on the same backup working, so the planner decides. Nothing was stopped by hand, copied or deleted; the world is the old one |
+
+**Difference from the doc:** the backup's name is the route's fixed "Portal backup <date time>", not "Before the go-live reset". The planner accepted that for B.1 and step H.
+
 ## App 3.4.2: Save log, Send to Alex, and logs that go by themselves (Alex, 2026-10-03)
 
 Alex, after a Play that errored and sent nothing: "a save log button on the launcher's log page … somewhere in the launcher I can upload the logs … or it should just every time you press play or update." What was already there: every run that **finishes** posts its report with the app's log (players who allowed "Send install reports"; username, paths, tokens and addresses taken out). What was missing: a run that dies part-way never reported, and the game's own `latest.log` never went anywhere.
@@ -875,6 +888,8 @@ Alex logged in with Discord and opened the vote; `phase-0` tagged at `0399eb0`. 
 - **2026-09-28 late** · Planner docs 12 and 13 applied: doc edits (00/02/04/08/09/10, the working rules); `COOKIE_DOMAIN=.deepslate.dsw.test`; map host Caddy block; `wireguard` + `api` + two map relays in compose; VPS WireGuard keys and deploy key generated (public halves above); `api` skeleton with tests; web `api-client.ts`, health now reports the tunnel; Discord server gate. Firewall line left for Alex (permission refused). Tunnel `down` until the homelab enables its peer. Map-host 401→login redirect verified. Admin email account created via `scripts/admin.mjs`. Alex added the Discord app values and the server id (auto-join on) and restarted `web`; OAuth redirect verified.
 
 ## Suggested plan updates for the next session
+
+- **The backup route** (`POST /server/backup`) should hold the server awake until AMP lists the backup, and should take a title (docs/24 B.1, 2026-10-03: AMP said yes three times and listed nothing).
 
 - **Wait for the planner's specs** of the evening's list (above, "Handed over by the planner") before building any of it.
 - **The other CRASH row**, event 127 at 11:14:07 UTC, `state: Stopping` like 17:02: during the world reset, when a stop hung at "Saving worlds" and was ended with Kill. Left as it is; the planner named only 17:02.

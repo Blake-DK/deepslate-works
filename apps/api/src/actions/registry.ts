@@ -13,6 +13,13 @@ const POS = /^(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)$/;
 const DIMENSION = /^[a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64}$/;
 
 export type Pos = { x: number; y: number; z: number };
+
+/** The spawn claim (docs/24 §7): 8 by 8 chunks, 128 by 128 blocks, the spawn's chunk the fifth from the west and the
+ *  north, on chunk edges. No SPAWN_POS: around 0, 0 (blocks -64 to 63), as before. Block coordinates, both ends in. */
+export function spawnClaimArea(spawn: Pos | null): { x1: number; z1: number; x2: number; z2: number } {
+  const cx = Math.floor((spawn?.x ?? 0) / 16), cz = Math.floor((spawn?.z ?? 0) / 16);
+  return { x1: (cx - 4) * 16, z1: (cz - 4) * 16, x2: (cx + 4) * 16 - 1, z2: (cz + 4) * 16 - 1 };
+}
 export function parsePos(s: string): Pos {
   const m = POS.exec(s);
   if (!m) throw new Error(`bad position "${s}"`);
@@ -37,6 +44,8 @@ export type Action<I> = {
   build: (ctx: ActionCtx, input: I) => string[];
   /** What the event log keeps of the input, when not all of it (docs/22: chat from Discord keeps who and how long). */
   audit?: (input: I) => object;
+  /** Milliseconds to wait between the commands, when the server refuses a command sent straight after the one before. */
+  gapMs?: number;
 };
 
 const define = <I,>(a: Action<I>) => a;
@@ -579,7 +588,14 @@ export const actions = {
     name: "opac.serverClaims",
     role: "ADMIN",
     input: z.object({}),
-    build: () => ["oclaims server claim in minecraft:overworld -64 -64 63 63 anyway", "oclaims server claim in deepslate:limbo -16 -16 15 15 anyway"],
+    // 2026-10-03: the spawn claim follows SPAWN_POS (128 by 128 blocks around it, on chunk edges), and the two claims go
+    // 10 s apart: Open Parties and Claims refuses a claim while the one before it is still working ("You have an
+    // over-area claim action task currently in progress!").
+    gapMs: 10_000,
+    build: (ctx) => {
+      const a = spawnClaimArea(ctx.spawn);
+      return [`oclaims server claim in minecraft:overworld ${a.x1} ${a.z1} ${a.x2} ${a.z2} anyway`, "oclaims server claim in deepslate:limbo -16 -16 15 15 anyway"];
+    },
   }),
   // ---- the world (docs/09 "A new world")
   "world.seed": define({ name: "world.seed", role: "ADMIN", input: z.object({}), build: () => ["seed"] }),

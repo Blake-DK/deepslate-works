@@ -27,17 +27,17 @@
     "pvp": "false"
   },
   "render_by_tier": {
-    "LOW": {
-      "render": 8,
-      "simulation": 6
+    "HIGH": {
+      "render": 12,
+      "simulation": 8
     },
     "MID": {
       "render": 10,
       "simulation": 8
     },
-    "HIGH": {
-      "render": 12,
-      "simulation": 8
+    "LOW": {
+      "render": 8,
+      "simulation": 6
     }
   },
   "categories": [
@@ -667,7 +667,7 @@
       "version": "qqNx1Yjm",
       "requires": [],
       "guide": "game",
-      "howTo": "Press **V** the first time: it asks whether you want **push to talk** or **voice activation** and lets you pick and test your microphone. People near you hear you, quieter with distance. Push to talk has no key until you set one in Options → Controls → Simple Voice Chat. **Groups** (G) let you talk to friends anywhere on the map.",
+      "howTo": "Press **V** the first time: it asks whether you want **push to talk** or **voice activation** and lets you pick and test your microphone. People near you hear you, quieter with distance. Push to talk has no key until you set one in Options \u2192 Controls \u2192 Simple Voice Chat. **Groups** (G) let you talk to friends anywhere on the map.",
       "keys": [
         {
           "key": "V",
@@ -687,7 +687,7 @@
         },
         {
           "key": "(unbound)",
-          "does": "Push to talk: set it in Options → Controls"
+          "does": "Push to talk: set it in Options \u2192 Controls"
         }
       ]
     },
@@ -855,11 +855,11 @@
       "hidden": false,
       "exclusiveGroup": null,
       "description": "Draws chests, minecarts and other block entities through Flywheel (which Create already brings), for more FPS in busy bases.",
-      "note": "Uses Create's Flywheel",
       "wiki": "https://modrinth.com/mod/flw-vanillin",
       "videos": [],
       "version": "latest",
       "requires": [],
+      "note": "Uses Create's Flywheel",
       "guide": "behind"
     },
     {
@@ -1003,7 +1003,7 @@
       "wiki": "https://ftbwiki.org/Immersive_Engineering",
       "videos": [
         {
-          "title": "IMMERSIVE ENGINEERING MOD – Part 1: Getting Started (1.21+)",
+          "title": "IMMERSIVE ENGINEERING MOD \u2013 Part 1: Getting Started (1.21+)",
           "url": "https://www.youtube.com/watch?v=8mRaO_q1GSE"
         },
         {
@@ -1322,7 +1322,7 @@
       "version": "latest",
       "requires": [],
       "guide": "game",
-      "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Watch out: several of TaCZ's keys are also used by other mods (V, G, H, C, Z); change them in Options → Controls if something clashes.",
+      "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Watch out: several of TaCZ's keys are also used by other mods (V, G, H, C, Z); change them in Options \u2192 Controls if something clashes.",
       "keys": [
         {
           "key": "Left click",
@@ -1408,7 +1408,7 @@
           "url": "https://www.youtube.com/watch?v=3QyMGvhHPFI"
         },
         {
-          "title": "The Ultimate Minecraft Travel Mod – Waystones Showcase",
+          "title": "The Ultimate Minecraft Travel Mod \u2013 Waystones Showcase",
           "url": "https://www.youtube.com/watch?v=7pnl0apon74"
         },
         {
@@ -1488,7 +1488,7 @@
       "name": "Create Deco",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": true,
       "hidden": false,
@@ -1514,7 +1514,7 @@
       "name": "Create: Copycats+",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": true,
       "hidden": false,
@@ -1533,7 +1533,7 @@
         "create"
       ],
       "guide": "game",
-      "howTo": "Place a copycat block (slope, step, panel, stair…), then right-click it with any block to make it take on that block's look. Right-click with a wrench to change its shape.",
+      "howTo": "Place a copycat block (slope, step, panel, stair\u2026), then right-click it with any block to make it take on that block's look. Right-click with a wrench to change its shape.",
       "keys": [
         {
           "key": "Left Alt",
@@ -1546,7 +1546,7 @@
       "name": "Macaw's Roofs",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": true,
       "hidden": false,
@@ -1573,7 +1573,7 @@
       "name": "Macaw's Windows",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": true,
       "hidden": false,
@@ -1600,7 +1600,7 @@
       "name": "Macaw's Doors",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": true,
       "hidden": false,
@@ -1627,7 +1627,7 @@
       "name": "Handcrafted",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": true,
       "hidden": false,
@@ -1656,7 +1656,7 @@
       "name": "Macaw's Furniture",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -1683,7 +1683,7 @@
       "name": "Macaw's Fences and Walls",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -1710,7 +1710,7 @@
       "name": "Macaw's Bridges",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -1737,7 +1737,7 @@
       "name": "Macaw's Paths and Pavings",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -1760,7 +1760,7 @@
       "name": "Macaw's Lights and Lamps",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -1810,7 +1810,7 @@
       "name": "Macaw's Stairs",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -1833,7 +1833,7 @@
       "name": "Another Furniture",
       "category": "building",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -2263,7 +2263,6 @@
       "hidden": false,
       "exclusiveGroup": null,
       "description": "Trials as wave fights: open a gateway, beat the waves, take the reward.",
-      "note": "Held: Apothic Attributes changes combat (docs/20 §3), waiting for the planner",
       "wiki": "https://github.com/Shadows-of-Fire/GatewaysToEternity",
       "videos": [
         {
@@ -2278,7 +2277,8 @@
       "version": "latest",
       "requires": [],
       "guide": "game",
-      "howTo": "A gateway is an item: use it on open ground and a portal opens that sends **waves** of monsters at you. Beat every wave before the timer runs out and it pays out its reward. Walk too far away and it fails. Season trials come as gateways."
+      "howTo": "A gateway is an item: use it on open ground and a portal opens that sends **waves** of monsters at you. Beat every wave before the timer runs out and it pays out its reward. Walk too far away and it fails. Season trials come as gateways.",
+      "note": "Held: Apothic Attributes changes combat (docs/20 \u00a73), waiting for the planner"
     },
     {
       "slug": "edf-remastered",

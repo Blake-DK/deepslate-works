@@ -157,3 +157,25 @@ Screenshots (`-Screenshots`): 22 to 28 are retaken at 980×620; add `29-min-size
 3. *Contrast.* Body text goes from 13 to 14 px and the greys come up: `Fg` `#F2F0EB` (was `#EBE9E4`), `Muted` `#B5B2AA` (was `#A09D95`; 8.6:1 on Card), `Dim` stays `#908D85` (3.4.0's measured value). The status pill's text is `Fg`. `ThemeTests`' contrast table takes the new values.
 
 Nothing else changes: the words, the order of the steps, the tests' names. Version 3.4.1. Acceptance: the window matches the updated mock-up by eye at 980×620 and 900×560 (Alex); every text/background pair passes 4.5:1; the pixel face appears in exactly three places (a `LookTests` check walks the tree); `windows-smoke-3.ps1` still passes.
+
+## 12. The exe's own icon, and the server list's message (planner, 2026-10-03, after Alex's second look)
+
+Two things Alex saw on 2026-10-03 evening: the exe still carries the old four-squares icon, and the Multiplayer list still says "Deepslate Works" under the lantern.
+
+**The icon.** The lantern (`6-lantern`) is picked in Admin → Branding, and 2.1.1's mechanism does what it was built to do: `logo.ico` in the home folder is the window's and taskbar's icon and the shortcuts' icon (`Brand.IconFile`). What it cannot touch is the icon **inside** `DeepslateWorks.exe`: Explorer shows that for the file itself, and so does anything that points at the exe rather than at a shortcut (a tile pinned from the exe, Open-with lists, the Start Menu's "recently added"). That icon is `installer/DeepslateWorks.ico`, baked in at build time by `<ApplicationIcon>`, and until now it was the 2.0.x four-squares tile from `installer/tools/make-icon.py`.
+
+Two steps:
+
+1. **Now (in this PR):** `installer/DeepslateWorks.ico` is the lantern, drawn by `installer/tools/make-lantern-icon.py` (Pillow, the shapes of `6-lantern.svg`, 9 sizes from 16 to 256, PNG frames). The next exe CI builds carries it, the self-update brings it to every PC, and the embedded manifest resource the window falls back on (`AppUi` "2.0.3: the Deepslate icon, never the host program's") is the lantern too. `make-icon.py` stays as the record of the old tile; nothing runs it.
+2. **Then, so a future logo change follows without a commit:** `Build (installer)` in the api re-stamps the exe's icon group with the chosen logo's `logo.ico` before publishing it. Pure JavaScript, no Windows tool: `resedit` (jet2jet/resedit-js, MIT, in `packages/modpack`; reason for the PR description: PE resource editing is not a few lines of code). `NtExecutable.from(bytes)` → `NtExecutableResource.from(exe)` → `Resource.IconGroupEntry.replaceIconsForResource(res.entries, <the single icon group's id>, 1033, Data.IconFile.from(logoIco).icons.map(i => i.data))` → `res.outputResource(exe)` → `exe.generate()`. The exe is not signed, so nothing breaks. Build checks that the result still starts with `MZ`, is within 10 % of the input size, and that `dist/ci`'s original is kept next to it as `DeepslateWorks.unstamped.exe` for one Build back. The modpack test for it reads the icon group back from the stamped bytes and finds the 16 px frame's bytes equal to `logo.ico`'s. When no logo is picked, the exe is published as CI built it.
+
+A PC that has already run 3.4.x shows the new icon after the self-update; if Explorer still shows the old one it is the icon cache, and `ie4uinit.exe -show` (Windows 10 and 11) or a sign-out refreshes it. Not worth automating: nobody but Alex has seen the old icon next to the new one.
+
+**The server list's message (MOTD).** This is not the app and not a build: `server.properties` is written by AMP from the instance's own `MinecraftModule.Minecraft.ServerMOTD` at every start (docs/15), and the mod list's `motd` line only seeds a fresh install. Admin → Branding → "Message for the server list" sends the two lines to that AMP setting (`POST /branding/motd`, 2026-10-01), and it needs two things that have not happened yet:
+
+1. The `webapp` AMP user's role needs the permission `Settings.MinecraftModule.Minecraft.ServerMOTD` in the instance's own panel (http://10.0.10.8:8083 as `deepslate-adm`, Configuration → Role Management → the role → Settings → Minecraft → Server MOTD). Without it the Save in Admin → Branding says exactly this and stores the text on the site only.
+2. A server restart after the Save (Admin → Server → Restart), since AMP writes the file at start.
+
+How AMP writes a two-line value into `server.properties` is still unverified (docs/11, 2026-10-01). If the second line does not show in the Multiplayer list after the restart, the fix is in `apps/api/src/routes/branding.ts` `motdValue`: try `\n` as two characters (backslash, n) rather than a line break, which is what Java's Properties reads as a newline; `GET /branding/motd` shows what AMP holds. The server icon already shows the lantern, so the Sync side is fine.
+
+Acceptance: Explorer shows the lantern on `DeepslateWorks.exe` after the self-update (Alex); the Multiplayer list shows both lines of the message after a restart (Alex); the Build re-stamp test passes; `GET /branding/motd` returns the saved text with `allowed: true`.

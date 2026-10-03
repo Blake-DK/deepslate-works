@@ -14,6 +14,31 @@ AMP's log showed, again and again, "SessionID passed in request body - this is d
 - **Deployed 2026-10-03 20:05 UTC** in `main` `1d3cb5f` (with #83, #85, #86). **On the wire after the deploy** (30 s capture of api → AMP on port 8080 at ~20:15 UTC, counts only): 22 requests (`GetStatus`, `GetUpdates`, `GetUserList`), all with `Authorization: Bearer`, **none** with `SESSIONID` in the body. AMP still showed the warning afterwards (Alex pasted its full text: "If you received this warning via an AMP login you need to update all servers and instances. If you received this warning via a custom client you need to contact the client's developer"). The portal is no longer a sender, so the source is on the AMP side: most likely the controller (ADS) and the instance on different versions (instance 2.8.0.8; the controller's version cannot be read from here), or another client of AMP on the homelab. For Alex: the controller's version, and whether the log line names a user or source address. AMP not updated by us.
 - **Waits for** the backup fixes, as Alex asked: the nightly dump (docs/10 P0 2) is done (PR #83); the backup route (P0 1) is not. PR #84. Timing of AMP calls (docs/10 P1 9) goes into the same `post()`; not in this branch.
 
+## Spawn adventure mode, follow-up · docs/27 (2026-10-03 evening, job `0c825297`)
+
+Alex in game: the first time into spawn it worked, on leaving he could break blocks, on coming back in OPAC's refusal lines were back.
+
+**Diagnosis not made.** Bramble09 was not online when the console checks were due (20:08 UTC, server up since 20:04, nobody on), so `data get entity … Pos`, `playerGameType` and `tag … list` were not read where the lines appear. As a side check, his saved player data (`world/playerdata/c50f3e2a-….dat`, written at logout 20:06:32) shows Pos `152.41 71.0 83.39` in the overworld (inside the old area, 7 blocks from its east edge), `playerGameType 2` (adventure), Tags `deepslate.spawn`, `deepslate.spawn_area`, `deepslate.kit`, `verified`. That is the intended state inside, not "inside and in survival", so both fixes went ahead as written.
+
+**Fixes** (main `87e90a5`, straight to main), in `spawn/tick.mcfunction` only (`spawn/enter`, `spawn/leave` and the leave line unchanged):
+
+1. **Edge:** the area is now `spawnClaimArea(SPAWN_POS)` grown by 8 blocks each way: `execute in minecraft:overworld run tag @a[x=24,y=-2048,z=8,dx=143,dy=4096,dz=143] add deepslate.spawn_area` = blocks x 24 to 167, z 8 to 151, every height, overworld only. A survival player reaches about 5 blocks, so before this, someone standing just outside x 32..159 / z 16..143 was in survival and hit claimed blocks. The comment above says so. The claim does not change.
+2. **Creative:** the enter line is now `execute as @a[tag=verified,gamemode=survival,tag=deepslate.spawn_area] run function deepslate:spawn/enter`, without `tag=!deepslate.spawn`, so creative then survival inside gets adventure back on the next tick. Enter is safe to repeat; it only matches players in survival.
+
+Tests: the area test now expects `spawnClaimArea(parsePos("107.5 126 87.5"))` grown by 8 = x 24..167, z 8..151 (still importing it from registry.ts), and the enter test asserts the selector has no `tag=!deepslate.spawn`. In a container with the deploy checkout's `node_modules`: modpack 69/69 tests pass. `branding.test.ts` does not load there because `sharp` is not installed in that checkout, which has nothing to do with this change; CI runs the whole suite. ESLint is clean.
+
+**Server** (20:09–20:10 UTC, nobody online): Build (server) ok, Sync (datapacks 18 files, no restart), then `reload` with the server running and empty. `world.datapacks`: "… [file/deepslate-limbo (world)], [file/deepslate-tools (world)]". `function deepslate:spawn/tick`: "Running function deepslate:spawn/tick". `latest.log` around the reload has only the two known ERRORs again (`createdeco:placard`, Curios "example"), with no function parse errors.
+
+Also: seven root-owned entries in the deploy checkout's `.git` (objects `ee/`, `57/`, `72/2e2c…` from 17:23, `index` from 20:09, an old worktree `ORIG_HEAD`) stopped ladm's commit ("insufficient permission for adding an object"). They were chowned back to ladm. Some session runs git there as root.
+
+| Added to the docs/27 §3 in-game checklist | Seen |
+|---|---|
+| Walking in from outside: no refusal line at any point on the way | **Not yet seen** |
+| A block just outside the claim but inside the 8-block ring cannot be broken (expected) | **Not yet seen** |
+| Creative, then survival, inside spawn: adventure again within a tick | **Not yet seen** |
+
+If the lines still appear with the player inside the area and in adventure mode: report the exact text, his mode and his tags here. No mod.
+
 ## Spawn is adventure mode · docs/27 (2026-10-03, job `0c825297`; the ruling on docs/26 §3.4)
 
 **Built as written** (main `1f69851`, straight to main). In `deepslate-tools`, `tags/function/tick.json` = `["deepslate:kit/tick", "deepslate:spawn/tick"]`.

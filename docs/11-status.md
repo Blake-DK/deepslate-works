@@ -2,6 +2,23 @@
 
 Last updated 2026-10-03, 19:00 UTC (state of development checked against `main` `7d0e5be` and the running server: images `eff7eb5` deployed, pack `0.1.0+d7521da9`, app 3.4.2; docs/24 regen and pre-generation done; gaps and the order of work in `docs/10-roadmap.md` "Open items, by priority"). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes; `ROADMAP.md` is the same for people who are not building it.
 
+## Git as root in the deploy checkout (planner note, 2026-10-03 evening; checked by job `0c825297`)
+
+At 20:10 UTC seven entries in `/home/ladm/Minecraft-site/.git` were root's and a commit by ladm failed. Where they came from, from the tooling transcripts in `/root/.tooling/projects/-root/*.jsonl`:
+
+- **Objects `ee/`, `57/`, `72/2e2c…` (17:23):** job `437560c9` (starter kit) ran `cd /home/ladm/Minecraft-site; git fetch -q` as root at 17:23:07 to check PRs #71–#73. A fetch writes the objects it receives as the user who runs it.
+- **`.git/index` (20:09):** this job (`0c825297`). I ran `git status -sb` as root in the deploy checkout at 19:15:28, 19:50:11, 19:50:50 and 20:09:40. `git status` refreshes the index and rewrites `.git/index` (lockfile + rename, so the new file is the caller's) when the stat data changed. The 20:09:40 call is the root-owned index; the earlier ones were overwritten by ladm's pulls right after them. My other root git calls there (`log`, `merge-base`, `branch -r --contains`) only read. My root `git status`/`git diff` in my own worktrees (`/home/ladm/deepslate-d26`, `-d27`, `-d27b`) wrote only those worktrees' index files under `.git/worktrees/<name>/`, and those worktrees are removed. Every git network operation and commit of mine ran as ladm (`sudo -u ladm git …`). From now on every git command of this job, read-only ones included, runs as `runuser -u ladm -- git …`.
+- **`.git/worktrees/deepslate-combined/ORIG_HEAD` (2026-10-01 19:50):** an older root rebase in that worktree; not traced further.
+
+**Nothing else runs git there as root:**
+- `deploy/deploy.sh`: every git call goes through `as_owner` (`runuser -u <owner of the checkout>` when run as root): `fetch`, `log`, `pull --ff-only`. `check.sh`, `ops-lock.sh` and `server-mods.sh` run no git.
+- Web container (`commitManifest` for Apply results and Lock extras): mounts `.git` and `modpack/` read-write but runs as `app` uid 1009, which is ladm's uid, so its objects are ladm's. The api container mounts no `.git` (`modpack/` read-only; it writes `dist/`).
+- No cron entry (root's crontab has only the wazuh and seo-audit jobs; ladm has none; nothing in `/etc/cron*`) and no systemd unit or timer names the checkout.
+- `/root/.config/deepslate/wait-ci.sh` runs `git -C … rev-parse HEAD` as root, and `update143-test.sh` runs `git show` as root. Both only read and write nothing in `.git`; left as they are. Changing them to `runuser -u ladm` would make them follow the rule to the letter (one line each). Say if wanted.
+- So the cause is ad-hoc commands from tooling sessions running as root, not a script.
+
+**Ownership now:** `find .git \( -not -user ladm -o -not -group ladm \)` lists **nothing**. The seven entries were fixed at 20:10 with `find .git -not -user ladm -exec chown ladm:ladm {} +`: only the entries found, inside `.git`, no `-R`. `/home/ladm/.config/deepslate/git-credentials` is `ladm:ladm` 600 (its directory `ladm:ladm` 700).
+
 ## AMP session id in a Bearer header (Alex, 2026-10-03 evening; branch `amp-bearer-session`, not deployed)
 
 AMP's log showed, again and again, "SessionID passed in request body - this is deprecated, please pass session ID in the Authorization header as a Bearer token".

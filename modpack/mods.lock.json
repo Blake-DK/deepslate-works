@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-03T09:37:40.091Z",
+  "generatedAt": "2026-10-03T10:50:55.735Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "c99f2aaed319200701c148bf8ce1da5ec90ec9d8f03f151e35623c60bbe8e32c",
+  "hash": "848f07893f7e1425a4e8c66d14b759aac620add21058a9fb0a1bba91900691eb",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -16,6 +16,25 @@
       "sha512": "be439e2c789d52dcc830397496c2a7c707819014252162f1564cad831306f41c40a65fa63b83aaafee8553f1100c7d820391541e31ae87cb04a7477f193ea9d2",
       "sha1": "17debf7846d5d3b287a2920449154d85e5b9541e",
       "size": 733289,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "ae2",
+      "name": "Applied Energistics 2",
+      "projectId": "XxWD5pD3",
+      "versionId": "KDnFUmMm",
+      "versionNumber": "19.2.18",
+      "versionType": "release",
+      "filename": "appliedenergistics2-19.2.18.jar",
+      "url": "https://cdn.modrinth.com/data/XxWD5pD3/versions/KDnFUmMm/appliedenergistics2-19.2.18.jar",
+      "sha512": "39bc4cf733a4321631e2637a1a6dfd3527135fdac1b572534e6fd1f9eab7a6dd92d56c5fa066263c95149c9b20cabdd1fd3dff80bea515381b1d2d754cad26c3",
+      "sha1": "bcd04bc7f181b2ffa314625f284c8eca6fee7fe4",
+      "size": 8236552,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
@@ -197,25 +216,6 @@
       }
     },
     {
-      "slug": "copycats",
-      "name": "Create: Copycats+",
-      "projectId": "UT2M39wf",
-      "versionId": "bPYeUWZx",
-      "versionNumber": "3.0.9+mc.1.21.1-neoforge",
-      "versionType": "release",
-      "filename": "copycats-3.0.9+mc.1.21.1-neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/UT2M39wf/versions/bPYeUWZx/copycats-3.0.9%2Bmc.1.21.1-neoforge.jar",
-      "sha512": "432b5cde473976476b0729172710d32805576d0c3a5fd66d21f882d96cef0c4eef1b85e4e3a1a316e2adc473784b11e156b0265b0f62bcfd5b035a6ff7dfcc6e",
-      "sha1": "74de17876c43f5f780bac478b9f9eb11e687b8d7",
-      "size": 1799381,
-      "side": "both",
-      "requiredBy": [],
-      "modrinth": {
-        "client": "required",
-        "server": "required"
-      }
-    },
-    {
       "slug": "corpse",
       "name": "Corpse",
       "projectId": "WrpuIfhw",
@@ -269,7 +269,7 @@
       "size": 19123767,
       "side": "both",
       "requiredBy": [
-        "copycats"
+        "create-big-cannons"
       ],
       "modrinth": {
         "client": "optional",
@@ -277,17 +277,17 @@
       }
     },
     {
-      "slug": "create-deco",
-      "name": "Create Deco",
-      "projectId": "sMvUb4Rb",
-      "versionId": "qrcMVoBD",
-      "versionNumber": "2.1.3",
+      "slug": "create-big-cannons",
+      "name": "Create Big Cannons",
+      "projectId": "GWp4jCJj",
+      "versionId": "bOiDu0LS",
+      "versionNumber": "5.11.7",
       "versionType": "release",
-      "filename": "createdeco-2.1.3.jar",
-      "url": "https://cdn.modrinth.com/data/sMvUb4Rb/versions/qrcMVoBD/createdeco-2.1.3.jar",
-      "sha512": "c536662f9d47ad57a37419165ded14835b23ad6c3e82a920298ecd7ee074244b0b6062ef9cc7ea4501ddd35919a840faccd7fc64e43eb8df31e12076681c3c0d",
-      "sha1": "93d9eff58b46c6953e907d071e6be4e3ce07be38",
-      "size": 3328498,
+      "filename": "createbigcannons-5.11.7+mc.1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/GWp4jCJj/versions/bOiDu0LS/createbigcannons-5.11.7%2Bmc.1.21.1.jar",
+      "sha512": "24f414dfbb973a0f4d9c9b2aa059edc7bed4d23b4f39eb1f7d23a1d6b437e3b5d64cca6e4b85ff7eb2815743fa711d54ad652bffe96d1eb1234544716006440d",
+      "sha1": "c90ee0b2142e2c58d233e150cb3a24c7cb07eb2d",
+      "size": 3771506,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
@@ -566,19 +566,21 @@
       }
     },
     {
-      "slug": "handcrafted",
-      "name": "Handcrafted",
-      "projectId": "pJmCFF0p",
-      "versionId": "JfqnpP2Z",
-      "versionNumber": "4.0.3",
+      "slug": "guideme",
+      "name": "GuideME",
+      "projectId": "Ck4E7v7R",
+      "versionId": "hFpGwC6q",
+      "versionNumber": "21.1.19",
       "versionType": "release",
-      "filename": "handcrafted-neoforge-1.21.1-4.0.3.jar",
-      "url": "https://cdn.modrinth.com/data/pJmCFF0p/versions/JfqnpP2Z/handcrafted-neoforge-1.21.1-4.0.3.jar",
-      "sha512": "4ff5fb2aa9582b886d03f647fe9b8c12a828d29a1787e9c9b463be18192ea798e6a4ac83479623042791bce0bacbf6e3e2c2e9ef086640aeeb6970d3404e7ee4",
-      "sha1": "8ecd27f1d66f9b742cfae3c8ffa773765f574b52",
-      "size": 7132842,
+      "filename": "guideme-21.1.19.jar",
+      "url": "https://cdn.modrinth.com/data/Ck4E7v7R/versions/hFpGwC6q/guideme-21.1.19.jar",
+      "sha512": "4dfa132e5cfd69a86c958867067f1c5ab39bb69ae35b2a62c24bb9924e9c688f1a4930ab75d335b22378d9f98cd7fceae8d030812b8f90c9aa282de8ea129f5a",
+      "sha1": "e85cd4c266f974dd360c46e8dad7ecf4c7ee96c6",
+      "size": 9311992,
       "side": "both",
-      "requiredBy": [],
+      "requiredBy": [
+        "ae2"
+      ],
       "modrinth": {
         "client": "required",
         "server": "required"
@@ -601,6 +603,44 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
+      }
+    },
+    {
+      "slug": "immersiveengineering",
+      "name": "Immersive Engineering",
+      "projectId": "tIm2nV03",
+      "versionId": "uNRARSH2",
+      "versionNumber": "12.4.2-194",
+      "versionType": "release",
+      "filename": "ImmersiveEngineering-1.21.1-12.4.2-194.jar",
+      "url": "https://cdn.modrinth.com/data/tIm2nV03/versions/uNRARSH2/ImmersiveEngineering-1.21.1-12.4.2-194.jar",
+      "sha512": "862523e84747a8b7eaa65f9b3c337fa832ef9efd0545c27f68e350e01f482c7a1242d0e4bdc2caff3d7eb033508b43a353fcd7150c9b544d0c05765ca2a551b3",
+      "sha1": "a4e90c2df8009040f6d022433c5d76635944dd59",
+      "size": 14232121,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "industrial-foregoing",
+      "name": "Industrial Foregoing",
+      "projectId": "lWxpUd04",
+      "versionId": "erRsRPki",
+      "versionNumber": "1.21-3.6.27",
+      "versionType": "release",
+      "filename": "industrialforegoing-1.21-3.6.27.jar",
+      "url": "https://cdn.modrinth.com/data/lWxpUd04/versions/erRsRPki/industrialforegoing-1.21-3.6.27.jar",
+      "sha512": "2bbf101c323a71623ec48e745a2b798d83baf1b5d0c146a1816e6d1ecf4dd4299791d2a54a60a70ee8c0293c14029b7c5f1c40bf36e2838f38ff8bffa3326f04",
+      "sha1": "88ff21e4fa6e5c4cfb7cd5626cbcfdf424e704b5",
+      "size": 4747295,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
       }
     },
     {
@@ -719,63 +759,6 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      }
-    },
-    {
-      "slug": "macaws-doors",
-      "name": "Macaw's Doors",
-      "projectId": "kNxa8z3e",
-      "versionId": "u7BRX44F",
-      "versionNumber": "1.1.5",
-      "versionType": "release",
-      "filename": "mcw-doors-1.1.5-mc1.21.1neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/kNxa8z3e/versions/u7BRX44F/mcw-doors-1.1.5-mc1.21.1neoforge.jar",
-      "sha512": "43ddf00be46af91c009a95392a094f05017155214c46c7980042cbcf871864dc792416497019e688eb558897c87848bd70c282ec4a6d7b268e1ba30389ba987a",
-      "sha1": "c127904f23db1a641dd9e065ec51c5c177cb4cd7",
-      "size": 1190404,
-      "side": "both",
-      "requiredBy": [],
-      "modrinth": {
-        "client": "required",
-        "server": "required"
-      }
-    },
-    {
-      "slug": "macaws-roofs",
-      "name": "Macaw's Roofs",
-      "projectId": "B8jaH3P1",
-      "versionId": "jiXRXiSt",
-      "versionNumber": "2.3.2",
-      "versionType": "release",
-      "filename": "mcw-roofs-2.3.2-mc1.21.1neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/B8jaH3P1/versions/jiXRXiSt/mcw-roofs-2.3.2-mc1.21.1neoforge.jar",
-      "sha512": "c0e82a3d0a3ab2f2fac5fb0bdd7c7c228f084feaa816540d3d9524f341c8b108c3bb1afecadae2e8118e6c93f0e73280c62da1af4349aca87b6aa337e5e22ae4",
-      "sha1": "05806ff152fab56f7c1b4b215d772ea73611283d",
-      "size": 1784829,
-      "side": "both",
-      "requiredBy": [],
-      "modrinth": {
-        "client": "required",
-        "server": "required"
-      }
-    },
-    {
-      "slug": "macaws-windows",
-      "name": "Macaw's Windows",
-      "projectId": "C7I0BCni",
-      "versionId": "rQUE4LCz",
-      "versionNumber": "2.4.2",
-      "versionType": "release",
-      "filename": "mcw-mcwwindows-2.4.2-mc1.21.1neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/C7I0BCni/versions/rQUE4LCz/mcw-mcwwindows-2.4.2-mc1.21.1neoforge.jar",
-      "sha512": "7628aa390a689a211013e5856cca1c695729b1faa7e20da16fa1f8a3822d5b569631829e91222caa8f1b27c4a7d28ab49110502551551216de2fb471b6f2549f",
-      "sha1": "eb1d3c118acb450cc2fe14c2ce7ce247a1bca60c",
-      "size": 1261268,
-      "side": "both",
-      "requiredBy": [],
-      "modrinth": {
-        "client": "required",
-        "server": "required"
       }
     },
     {
@@ -927,8 +910,27 @@
       "sha1": "24389c8e48ff0e8594e4686b750c494c66a5f8df",
       "size": 484332,
       "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "rpl",
+      "name": "Ritchie's Projectile Library",
+      "projectId": "B3pb093D",
+      "versionId": "hZ6B2Z0x",
+      "versionNumber": "2.1.2",
+      "versionType": "release",
+      "filename": "ritchiesprojectilelib-2.1.2+mc.1.21.1-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/B3pb093D/versions/hZ6B2Z0x/ritchiesprojectilelib-2.1.2%2Bmc.1.21.1-neoforge.jar",
+      "sha512": "6d64c84505a5a8fbb96d106603065465c5a2314ec09636900c5c1a31014c12fa68f1a41e758313cbf0d6f95d9a1f53bd67339020f7d8db0e184c23f66aee0330",
+      "sha1": "ec2e4996f8bee8714173e603e379fef8a6901765",
+      "size": 76369,
+      "side": "both",
       "requiredBy": [
-        "handcrafted"
+        "create-big-cannons"
       ],
       "modrinth": {
         "client": "required",
@@ -1086,6 +1088,27 @@
       "size": 57247579,
       "side": "both",
       "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "titanium",
+      "name": "Titanium",
+      "projectId": "1Ro7m06l",
+      "versionId": "zCzYA9mW",
+      "versionNumber": "1.21-4.0.50",
+      "versionType": "beta",
+      "filename": "titanium-1.21-4.0.50.jar",
+      "url": "https://cdn.modrinth.com/data/1Ro7m06l/versions/zCzYA9mW/titanium-1.21-4.0.50.jar",
+      "sha512": "8569e4d3331ba8a23f67bf46b0697d6a5a325deed696823cede68d8d4fef119669f1086767077af76013211617fef6c0cede310c5b7dfc1b3f9a7f37bf843908",
+      "sha1": "c57a545f81104c5ee87bf1e0af55a6e87598573b",
+      "size": 607012,
+      "side": "both",
+      "requiredBy": [
+        "industrial-foregoing"
+      ],
       "modrinth": {
         "client": "required",
         "server": "required"

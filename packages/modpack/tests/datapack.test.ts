@@ -54,3 +54,36 @@ describe("buildServer", () => {
     expect((await readdir(path.join(out, "config"))).sort()).toEqual(["bluemap", "fallingtree.json"]);
   });
 });
+
+describe("the starter kit in deepslate-tools (docs/25)", () => {
+  const TOOLS = path.join(__dirname, "../../../modpack/datapacks/deepslate-tools");
+  const ROOT = path.join(__dirname, "../../..");
+  const fn = (name: string) => readFile(path.join(TOOLS, "data/deepslate/function/kit", `${name}.mcfunction`), "utf8");
+  // the commands of a function: no blank lines, no comments
+  const commands = async (name: string) => (await fn(name)).split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
+
+  it("runs deepslate:kit/tick every tick, and has its three functions", async () => {
+    const tick = JSON.parse(await readFile(path.join(TOOLS, "data/minecraft/tags/function/tick.json"), "utf8")) as { values: string[] };
+    expect(tick.values).toContain("deepslate:kit/tick");
+    for (const name of ["tick", "give", "backpack"]) expect((await commands(name)).length).toBeGreaterThan(0);
+  });
+  it("gives only vanilla items the 1.21.1 server knows", async () => {
+    const known = (JSON.parse(await readFile(path.join(ROOT, "modpack/items/vanilla-1.21.1.json"), "utf8")) as { items: Record<string, number> }).items;
+    const ids = (await commands("give")).flatMap((c) => [...c.matchAll(/\bminecraft:([a-z0-9_]+)/g)].map((m) => m[1]!));
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) expect([id, id in known]).toEqual([id, true]);
+  });
+  it("marks the player last, and only gives to verified players without the mark", async () => {
+    expect((await commands("give")).at(-1)).toBe("tag @s add deepslate.kit");
+    const [tick, ...rest] = await commands("tick");
+    expect(rest).toEqual([]);
+    const selector = /@a\[([^\]]*)\]/.exec(tick!)?.[1]?.split(",").map((s) => s.trim()) ?? [];
+    expect(selector).toEqual(expect.arrayContaining(["tag=verified", "tag=!deepslate.kit"]));
+  });
+  it("keeps the backpack in a file of its own, while Sophisticated Backpacks is in the pack", async () => {
+    expect(await commands("backpack")).toEqual(["give @s sophisticatedbackpacks:backpack 1"]);
+    const mods = (JSON.parse(await readFile(path.join(ROOT, "modpack/mods.json"), "utf8")) as { mods: Array<{ slug: string; enabled: boolean }> }).mods;
+    // a vote that takes the mod out fails here, and somebody decides what the kit holds instead (docs/25 §5)
+    expect(mods.find((m) => m.slug === "sophisticated-backpacks")?.enabled).toBe(true);
+  });
+});

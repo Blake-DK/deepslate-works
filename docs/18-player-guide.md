@@ -31,7 +31,7 @@ The first time you join you'll be in a small room. Click the link in chat, sign 
 - **Minimap**: corner of the screen. M opens the big map. Press B to drop a waypoint where you stand.
 - **Tab**: press Tab: who's on, everyone's ping, and the server's TPS (20 is perfect). <!-- mod: bettertabinfo -->
 - **Corpse**: when you die, your stuff stays in a body where you fell. Only you can loot it for the first while. It shows on the map.
-- **Backpacks**: craft one early. Upgrade it later with a magnet so it picks things up for you.
+- **Backpacks**: you start with one in your inventory. A magnet upgrade comes later, so it picks things up for you.
 - **Waystones**: find or build one, click it, and you can teleport between any you've discovered.
 - **VeinMiner**: hold the grave key (` under Esc) while breaking ore or a log and the whole vein or tree comes out. Costs hunger, so bring food.
 - **FallingTree**: break the bottom log and the whole tree falls, no axe needed. <!-- mod: fallingtree -->
@@ -39,7 +39,7 @@ The first time you join you'll be in a small room. Click the link in chat, sign 
 ## Your first hour
 
 1. Punch a tree, make a crafting table, make a wooden then stone pickaxe as usual.
-2. Craft a backpack as soon as you have leather or wool.
+2. Open your backpack: you start with one, with tools, bread, torches and a bed.
 3. Find a waystone or build one so you can always get home.
 4. Pick a spot for your base away from spawn and other people; use a waypoint (B) to mark it.
 

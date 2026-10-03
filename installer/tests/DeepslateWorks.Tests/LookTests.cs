@@ -126,17 +126,25 @@ namespace DeepslateWorks.Tests
                     WithWindow(ui =>
                     {
                         ui.Window.Resources["PixelFont"] = new FontFamily("Deepslate Look Test Face");
-                        ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready"); ui.Pump();
                         var owners = new HashSet<string>();
-                        foreach (var tab in new[] { "play", "vote", "extras", "log" })
+                        void Walk(params string[] tabs)
                         {
-                            ui.PressTab(tab); ui.Pump(); ui.Window.UpdateLayout();
-                            foreach (var d in Tree(ui.Window))
+                            foreach (var tab in tabs)
                             {
-                                var f = (d as System.Windows.Controls.TextBlock)?.FontFamily ?? (d as System.Windows.Controls.Control)?.FontFamily;
-                                if (f != null && f.Source == "Deepslate Look Test Face") owners.Add(Owner(d));
+                                ui.PressTab(tab); ui.Pump(); ui.Window.UpdateLayout();
+                                foreach (var d in Tree(ui.Window))
+                                {
+                                    var f = (d as System.Windows.Controls.TextBlock)?.FontFamily ?? (d as System.Windows.Controls.Control)?.FontFamily;
+                                    if (f != null && f.Source == "Deepslate Look Test Face") owners.Add(Owner(d));
+                                }
                             }
                         }
+                        // ready with nothing to vote on: Play's label is the short "Play"
+                        ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Up)), "ready"); ui.Pump();
+                        Walk("play", "extras", "log");
+                        // two votes waiting: the Vote tab and its block (Play's label is then long, so Segoe UI)
+                        ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready"); ui.Pump();
+                        Walk("play", "vote");
                         owners.Remove("BrandShade");   // the name's shadow is the name's place
                         Assert.Equal(new[] { "BrandName", "PlayButton", "VoteButton" }, owners.OrderBy(o => o, StringComparer.Ordinal).ToArray());
                     });

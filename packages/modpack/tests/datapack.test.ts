@@ -100,7 +100,7 @@ describe("adventure mode in the spawn claim, in deepslate-tools (docs/27)", () =
     expect(tick.values).toEqual(expect.arrayContaining(["deepslate:kit/tick", "deepslate:spawn/tick"]));
     for (const name of ["tick", "enter", "leave"]) expect((await commands(name)).length).toBeGreaterThan(0);
   });
-  it("marks the area once, in the overworld: the server claim for SPAWN_POS 107.5 126 87.5, grown by 8 blocks each way", async () => {
+  it("marks the area once, in the overworld: the server claim for SPAWN_POS 107.5 126 87.5, grown by 5 blocks each way", async () => {
     const tick = await commands("tick");
     const marks = tick.filter((c) => /\bdx=/.test(c));
     expect(marks).toHaveLength(1); // the coordinates are written once
@@ -108,9 +108,9 @@ describe("adventure mode in the spawn claim, in deepslate-tools (docs/27)", () =
     const v = Object.fromEntries(selector(marks[0]!).map((kv) => kv.split("=") as [string, string]));
     const { spawnClaimArea, parsePos } = await import("../../../apps/api/src/actions/registry");
     const a = spawnClaimArea(parsePos("107.5 126 87.5"));
-    // out of reach (about 5 blocks) of every claimed block: 8 more on each side (planner, docs/27 follow-up)
-    const grown = { x1: a.x1 - 8, z1: a.z1 - 8, x2: a.x2 + 8, z2: a.z2 + 8 };
-    expect(grown).toEqual({ x1: 24, z1: 8, x2: 167, z2: 151 });
+    // out of a survival player's reach (4.5 blocks) of every claimed block: 5 more on each side (planner, docs/27 follow-up)
+    const grown = { x1: a.x1 - 5, z1: a.z1 - 5, x2: a.x2 + 5, z2: a.z2 + 5 };
+    expect(grown).toEqual({ x1: 27, z1: 11, x2: 164, z2: 148 });
     // a volume selector covers x to x + dx, both ends in, as block coordinates
     expect({ x1: Number(v.x), z1: Number(v.z), x2: Number(v.x) + Number(v.dx), z2: Number(v.z) + Number(v.dz) }).toEqual(grown);
     expect(Number(v.y)).toBeLessThanOrEqual(-64); // every height

@@ -26,7 +26,8 @@ import { cn } from "@/lib/utils";
 export type Players = { state: number; online: Array<{ name: string; uuid: string | null; held: boolean }>; held: Array<{ name: string; since: string }> };
 export type Tail = { state: number; lines: string[]; entries?: Array<{ seq: number; text: string }> };
 export type Schedule = { restart: { at: string; minutes: number } | null };
-export type Backup = { allowed: boolean; canList?: boolean; stopsServer: boolean | null; permission: string; listPermission?: string; backups?: Array<{ id: string | null; name: string; at: string | null; sizeBytes: number | null; sticky: boolean; automatic: boolean }> };
+export type BackupJob = { title: string; requestedAt: string; by: string | null; phase: "waiting" | "listed" | "failed"; checkedAt: string | null; doneAt: string | null; sizeBytes: number | null; reason: string | null };
+export type Backup = { allowed: boolean; canList?: boolean; stopsServer: boolean | null; permission: string; listPermission?: string; backups?: Array<{ id: string | null; name: string; at: string | null; sizeBytes: number | null; sticky: boolean; automatic: boolean }>; job?: BackupJob | null };
 type Caller = { id: string; role: "ADMIN" };
 
 export const loadPlayers = (caller: Caller) => apiFetch<Players>("/players", { caller }).catch(() => null);
@@ -43,7 +44,7 @@ const MSG: Record<string, string> = {
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
   groundClear: "Players have been warned in chat; items on the ground are cleared in 60 seconds.", groundPlan: "Saved.",
   distanceNow: "Saved. The server restarts in 1 minute; players have been warned.", distanceNext: "Saved. It takes effect at the next restart.",
-  error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup started in AMP.", announced: "Announcement posted",
+  error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup asked of AMP. It counts once AMP lists it; a big world takes a quarter of an hour or more.", announced: "Announcement posted",
 };
 
 /** The line an action leaves behind (`?msg=…&detail=…`). */
@@ -179,6 +180,18 @@ export function DistanceCard({ distance, status, schedule }: { distance: Distanc
   );
 }
 
+/** The last backup asked for from the portal: it counts only once AMP lists it (api status/backup-watch.ts). */
+export function BackupJobLine({ job }: { job: BackupJob }) {
+  const at = (iso: string | null) => (iso && !Number.isNaN(Date.parse(iso)) ? ukShort(new Date(iso)) : "");
+  if (job.phase === "waiting") {
+    return <Alert tone="warn" data-testid="backup-job" data-phase="waiting">Waiting for AMP to list <span className="font-mono">{job.title}</span> (asked {at(job.requestedAt)}{job.checkedAt ? `, last looked ${at(job.checkedAt)}` : ""}). Not kept until it shows in the list below.</Alert>;
+  }
+  if (job.phase === "listed") {
+    return <Alert tone="success" data-testid="backup-job" data-phase="listed">Kept: <span className="font-mono">{job.title}</span>, listed by AMP {at(job.doneAt)}{job.sizeBytes ? `, ${(job.sizeBytes / 1e9).toFixed(1)} GB` : ""}.</Alert>;
+  }
+  return <Alert tone="error" role="alert" data-testid="backup-job" data-phase="failed">Not kept: <span className="font-mono">{job.title}</span>. {job.reason}</Alert>;
+}
+
 export function BackupCard({ backup, back, list = true }: { backup: Backup | null; back?: "/admin"; list?: boolean }) {
   return (
     <Card data-testid="backup">
@@ -194,6 +207,7 @@ export function BackupCard({ backup, back, list = true }: { backup: Backup | nul
           <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="sure" disabled={!backup?.allowed} /> I&apos;m sure</label>
           <Button type="submit" size="sm" variant="secondary" disabled={!backup?.allowed}>Back up</Button>
         </form>
+        {backup?.job && <BackupJobLine job={backup.job} />}
         {list && (backup?.canList ? (
           backup.backups?.length ? (
             <ul className="divide-y text-sm" aria-label="Backups AMP holds">

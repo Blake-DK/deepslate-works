@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-03T10:50:55.735Z",
+  "generatedAt": "2026-10-03T10:52:24.961Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.252",
-  "hash": "848f07893f7e1425a4e8c66d14b759aac620add21058a9fb0a1bba91900691eb",
+  "hash": "d7521da9cf20ac829f50c8a4c5d1ae46df63abdccb4618bd73d679eca848ef17",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -58,6 +58,25 @@
       "requiredBy": [],
       "modrinth": {
         "client": "unsupported",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "another-furniture",
+      "name": "Another Furniture",
+      "projectId": "ulloLmqG",
+      "versionId": "cugGiMKt",
+      "versionNumber": "4.0.3",
+      "versionType": "release",
+      "filename": "another_furniture-neoforge-4.0.3.jar",
+      "url": "https://cdn.modrinth.com/data/ulloLmqG/versions/cugGiMKt/another_furniture-neoforge-4.0.3.jar",
+      "sha512": "790a07c354b4e729553150cdc8e7129ca7ab1260d5db5b46ced852edf284789ab69e125071bf78a3214d05c09909bea4a780a5b5b477598af78eca37c4c6c033",
+      "sha1": "36e2b147d86c31262bf8f7c571aeea683d71173d",
+      "size": 2422436,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
         "server": "required"
       }
     },
@@ -216,6 +235,25 @@
       }
     },
     {
+      "slug": "copycats",
+      "name": "Create: Copycats+",
+      "projectId": "UT2M39wf",
+      "versionId": "bPYeUWZx",
+      "versionNumber": "3.0.9+mc.1.21.1-neoforge",
+      "versionType": "release",
+      "filename": "copycats-3.0.9+mc.1.21.1-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/UT2M39wf/versions/bPYeUWZx/copycats-3.0.9%2Bmc.1.21.1-neoforge.jar",
+      "sha512": "432b5cde473976476b0729172710d32805576d0c3a5fd66d21f882d96cef0c4eef1b85e4e3a1a316e2adc473784b11e156b0265b0f62bcfd5b035a6ff7dfcc6e",
+      "sha1": "74de17876c43f5f780bac478b9f9eb11e687b8d7",
+      "size": 1799381,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
       "slug": "corpse",
       "name": "Corpse",
       "projectId": "WrpuIfhw",
@@ -269,7 +307,8 @@
       "size": 19123767,
       "side": "both",
       "requiredBy": [
-        "create-big-cannons"
+        "create-big-cannons",
+        "copycats"
       ],
       "modrinth": {
         "client": "optional",
@@ -288,6 +327,25 @@
       "sha512": "24f414dfbb973a0f4d9c9b2aa059edc7bed4d23b4f39eb1f7d23a1d6b437e3b5d64cca6e4b85ff7eb2815743fa711d54ad652bffe96d1eb1234544716006440d",
       "sha1": "c90ee0b2142e2c58d233e150cb3a24c7cb07eb2d",
       "size": 3771506,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "create-deco",
+      "name": "Create Deco",
+      "projectId": "sMvUb4Rb",
+      "versionId": "qrcMVoBD",
+      "versionNumber": "2.1.3",
+      "versionType": "release",
+      "filename": "createdeco-2.1.3.jar",
+      "url": "https://cdn.modrinth.com/data/sMvUb4Rb/versions/qrcMVoBD/createdeco-2.1.3.jar",
+      "sha512": "c536662f9d47ad57a37419165ded14835b23ad6c3e82a920298ecd7ee074244b0b6062ef9cc7ea4501ddd35919a840faccd7fc64e43eb8df31e12076681c3c0d",
+      "sha1": "93d9eff58b46c6953e907d071e6be4e3ce07be38",
+      "size": 3328498,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
@@ -587,6 +645,25 @@
       }
     },
     {
+      "slug": "handcrafted",
+      "name": "Handcrafted",
+      "projectId": "pJmCFF0p",
+      "versionId": "JfqnpP2Z",
+      "versionNumber": "4.0.3",
+      "versionType": "release",
+      "filename": "handcrafted-neoforge-1.21.1-4.0.3.jar",
+      "url": "https://cdn.modrinth.com/data/pJmCFF0p/versions/JfqnpP2Z/handcrafted-neoforge-1.21.1-4.0.3.jar",
+      "sha512": "4ff5fb2aa9582b886d03f647fe9b8c12a828d29a1787e9c9b463be18192ea798e6a4ac83479623042791bce0bacbf6e3e2c2e9ef086640aeeb6970d3404e7ee4",
+      "sha1": "8ecd27f1d66f9b742cfae3c8ffa773765f574b52",
+      "size": 7132842,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
       "slug": "immediatelyfast",
       "name": "ImmediatelyFast",
       "projectId": "5ZwdcRci",
@@ -762,6 +839,177 @@
       }
     },
     {
+      "slug": "macaws-bridges",
+      "name": "Macaw's Bridges",
+      "projectId": "GURcjz8O",
+      "versionId": "aQ7rY7ng",
+      "versionNumber": "3.1.2",
+      "versionType": "release",
+      "filename": "mcw-bridges-3.1.2-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/GURcjz8O/versions/aQ7rY7ng/mcw-bridges-3.1.2-mc1.21.1neoforge.jar",
+      "sha512": "e98e476324229564132288f0a59bfcc897cff4cda7d12fe218563ca48d382d880662375687c69d1b4619144262ae09cbef130f4330474d8eacd37a21e8e9afb4",
+      "sha1": "71ece28129789a2123cf07e79938f488d8675bb2",
+      "size": 661387,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-doors",
+      "name": "Macaw's Doors",
+      "projectId": "kNxa8z3e",
+      "versionId": "u7BRX44F",
+      "versionNumber": "1.1.5",
+      "versionType": "release",
+      "filename": "mcw-doors-1.1.5-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/kNxa8z3e/versions/u7BRX44F/mcw-doors-1.1.5-mc1.21.1neoforge.jar",
+      "sha512": "43ddf00be46af91c009a95392a094f05017155214c46c7980042cbcf871864dc792416497019e688eb558897c87848bd70c282ec4a6d7b268e1ba30389ba987a",
+      "sha1": "c127904f23db1a641dd9e065ec51c5c177cb4cd7",
+      "size": 1190404,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-fences-and-walls",
+      "name": "Macaw's Fences and Walls",
+      "projectId": "GmwLse2I",
+      "versionId": "jVdb0r4W",
+      "versionNumber": "1.2.1",
+      "versionType": "release",
+      "filename": "mcw-mcwfences-1.2.1-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/GmwLse2I/versions/jVdb0r4W/mcw-mcwfences-1.2.1-mc1.21.1neoforge.jar",
+      "sha512": "9bf496a8db8c6074ab32374042ae15e87fe87d897e21de29d459556fa8d7d0e73f2718f28a0236181cfb3c1bc66c776b4d079f0a7084696ad490275ab1b9eb6e",
+      "sha1": "b5580c3fc521ed8bf4db3e407bd590efc317f74d",
+      "size": 673871,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-furniture",
+      "name": "Macaw's Furniture",
+      "projectId": "dtWC90iB",
+      "versionId": "Z5V3Ps7S",
+      "versionNumber": "3.4.1",
+      "versionType": "release",
+      "filename": "mcw-furniture-3.4.1-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/dtWC90iB/versions/Z5V3Ps7S/mcw-furniture-3.4.1-mc1.21.1neoforge.jar",
+      "sha512": "93103f868a6a7b4fa613dbe908bcf83c4aaabf4719057d484d1636c98e6e3defa00d550a8988ff91d4d0a090463c25b898336e675da52c19bd3bd0ce37e053e4",
+      "sha1": "3dccc819f14bcc60b3683edd82ca8c5e64964229",
+      "size": 2080436,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-lights-and-lamps",
+      "name": "Macaw's Lights and Lamps",
+      "projectId": "w4an97C2",
+      "versionId": "5U2kQZIL",
+      "versionNumber": "1.1.5",
+      "versionType": "release",
+      "filename": "mcw-lights-1.1.5-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/w4an97C2/versions/5U2kQZIL/mcw-lights-1.1.5-mc1.21.1neoforge.jar",
+      "sha512": "a6e1c4419b70a3f9225ad03daafca22c8a7da432ec4939b8029455927e3b44683a20e89a3299da78f124d0438e188dad3735d2018a931ad4d553ec9d3b83a9ca",
+      "sha1": "13c1107caf26b2c60d8626b3658b26cc7f634b38",
+      "size": 525744,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-paths-and-pavings",
+      "name": "Macaw's Paths and Pavings",
+      "projectId": "VRLhWB91",
+      "versionId": "tlymsxUG",
+      "versionNumber": "1.1.1",
+      "versionType": "release",
+      "filename": "mcw-mcwpaths-1.1.1-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/VRLhWB91/versions/tlymsxUG/mcw-mcwpaths-1.1.1-mc1.21.1neoforge.jar",
+      "sha512": "8a7bc0100e57369fdcfbb65164fdf97cd7f6a931882d0f63aae15fd3db8975a78cc8734f34f640a5790dddaca5883d8e97117e7966dab50de479b1a8f3662678",
+      "sha1": "4bb7e1d28eef19f87438881b0f582a15297b95ae",
+      "size": 777742,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-roofs",
+      "name": "Macaw's Roofs",
+      "projectId": "B8jaH3P1",
+      "versionId": "jiXRXiSt",
+      "versionNumber": "2.3.2",
+      "versionType": "release",
+      "filename": "mcw-roofs-2.3.2-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/B8jaH3P1/versions/jiXRXiSt/mcw-roofs-2.3.2-mc1.21.1neoforge.jar",
+      "sha512": "c0e82a3d0a3ab2f2fac5fb0bdd7c7c228f084feaa816540d3d9524f341c8b108c3bb1afecadae2e8118e6c93f0e73280c62da1af4349aca87b6aa337e5e22ae4",
+      "sha1": "05806ff152fab56f7c1b4b215d772ea73611283d",
+      "size": 1784829,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-stairs",
+      "name": "Macaw's Stairs",
+      "projectId": "iP3wH1ha",
+      "versionId": "4t8L0dGP",
+      "versionNumber": "1.0.2",
+      "versionType": "release",
+      "filename": "mcw-mcwstairs-1.0.2-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/iP3wH1ha/versions/4t8L0dGP/mcw-mcwstairs-1.0.2-mc1.21.1neoforge.jar",
+      "sha512": "51533899b5e64610a642ee9e9d89eb9f193d0877a8cba16d3bfa262789334c864128b01757bff9d3db2718bd3df1fc177f9b2d45b84f06fc0a6ee15474af2fac",
+      "sha1": "1ee43d693c821efc955a74e551f94372af90a140",
+      "size": 529082,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "macaws-windows",
+      "name": "Macaw's Windows",
+      "projectId": "C7I0BCni",
+      "versionId": "rQUE4LCz",
+      "versionNumber": "2.4.2",
+      "versionType": "release",
+      "filename": "mcw-mcwwindows-2.4.2-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/C7I0BCni/versions/rQUE4LCz/mcw-mcwwindows-2.4.2-mc1.21.1neoforge.jar",
+      "sha512": "7628aa390a689a211013e5856cca1c695729b1faa7e20da16fa1f8a3822d5b569631829e91222caa8f1b27c4a7d28ab49110502551551216de2fb471b6f2549f",
+      "sha1": "eb1d3c118acb450cc2fe14c2ce7ce247a1bca60c",
+      "size": 1261268,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
       "slug": "modernfix",
       "name": "ModernFix",
       "projectId": "nmDcB62a",
@@ -910,7 +1158,9 @@
       "sha1": "24389c8e48ff0e8594e4686b750c494c66a5f8df",
       "size": 484332,
       "side": "both",
-      "requiredBy": [],
+      "requiredBy": [
+        "handcrafted"
+      ],
       "modrinth": {
         "client": "required",
         "server": "required"

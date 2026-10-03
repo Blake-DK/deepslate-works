@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { AmpClient, MockAmp, type Amp } from "./amp/client.js";
+import { installRoutes } from "./routes/installs.js";
 import { BACKUP_JOB_KEY, BackupWatch, type BackupJob } from "./status/backup-watch.js";
 import { serviceAuth } from "./auth.js";
 import type { Env } from "./env.js";
@@ -114,6 +115,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), portal, log: (o, m) => app.log.info(o, m),
   });
   discordRoutes(app, feed, bot, env);
+  installRoutes(app);
   poller.stateName = (live) => (wake.waking && live.stateCode !== 20 ? "Waking" : live.state);
   statusRoutes(app, ampClient, poller, tail, () => pings.current(), view);
   wakeRoutes(app, wake, view);

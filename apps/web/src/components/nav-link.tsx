@@ -41,6 +41,7 @@ export function AdminStrip() {
       <NavLink href="/admin" exact>Control Room</NavLink>
       <NavLink href="/admin/server">Server</NavLink>
       <NavLink href="/admin/pack">Pack</NavLink>
+      <NavLink href="/admin/seasons">Seasons</NavLink>
       <NavLink href="/admin/people" also={["/admin/installs"]}>People</NavLink>
       <NavLink href="/admin/news">News</NavLink>
       <NavLink href="/admin/site">Site settings</NavLink>

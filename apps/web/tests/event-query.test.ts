@@ -33,7 +33,7 @@ describe("what a player may see", () => {
     // a filter built for an admin and replayed as a player is cut down again
     const forged = readFilter({ kind: "CHAT,ADMIN_ACTION" }, true);
     expect(eventWhere(forged, false, null).kind.in).toEqual([...PLAYER_KINDS]);
-    expect(eventWhere(readFilter({}, false), false, null).kind.in).toEqual(["JOIN", "LEAVE", "DEATH", "ADVANCEMENT", "SERVER_START", "SERVER_STOP"]);
+    expect(eventWhere(readFilter({}, false), false, null).kind.in).toEqual(["JOIN", "LEAVE", "DEATH", "ADVANCEMENT", "SEASON", "SERVER_START", "SERVER_STOP"]);
   });
   it("admins get everything by default", () => {
     expect(eventWhere(readFilter({}, true), true, null).kind.in).toHaveLength(20);

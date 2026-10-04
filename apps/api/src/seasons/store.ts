@@ -1,11 +1,12 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { db } from "../db.js";
 import type { Clear, ClearKind, SeasonState } from "../shared/season.js";
 
 // docs/34 §4: the Season and SeasonClear tables, behind an interface so the recorder is tested without a database.
 
 /** What the clock has already said, so nothing is said twice (and a restart of api says nothing again). */
-export type Marks = { done?: string[]; leader?: string | null; leaderAt?: string | null };
+export type Marks = { done?: string[]; leader?: string | null; leaderAt?: string | null; /** ticks an admin took back, "<kind>:<item>:<uuid>": the safety net leaves them alone */ revoked?: string[] };
+export const clearKey = (kind: ClearKind, itemId: string, mcUuid: string) => `${kind}:${itemId}:${mcUuid}`;
 export type SeasonRow = { id: string; name: string; startsAt: Date; endsAt: Date; state: SeasonState; marks: Marks; result: unknown };
 export type ClearSource = "console" | "file" | "admin";
 export type NewClear = { kind: ClearKind; itemId: string; mcUuid: string; mcName: string; userId: string | null; at: Date; early: boolean; source: ClearSource };
@@ -25,6 +26,18 @@ export interface SeasonStore {
   /** Linked members: whose advancement files are read. */
   linked(): Promise<Array<{ mcUuid: string; mcName: string; userId: string }>>;
   userIdByUuid(uuid: string): Promise<string | null>;
+  // ---- Admin → Seasons (W1.4)
+  /** Makes the season's row, "upcoming". False when it is there already. */
+  create(s: { id: string; name: string; startsAt: Date; endsAt: Date }): Promise<boolean>;
+  setState(id: string, state: SeasonState): Promise<void>;
+  /** The id of a season that is running, other than this one; null when there is none. */
+  runningOther(id: string): Promise<string | null>;
+  /** Ends the season and freezes its result. The result is written once: false when there is one already. */
+  end(id: string, result: unknown): Promise<boolean>;
+  /** Takes a tick back, and remembers that it was (the safety net would otherwise put it back from the game's file). */
+  removeClear(seasonId: string, kind: ClearKind, itemId: string, mcUuid: string): Promise<boolean>;
+  /** Forgets that a tick was taken back: an admin has given it again. */
+  unrevoke(seasonId: string, key: string): Promise<void>;
 }
 
 const STATES = ["upcoming", "running", "ended"];
@@ -80,6 +93,42 @@ export const prismaSeasonStore: SeasonStore = {
       await tx.season.update({ where: { id: seasonId }, data: { marks: { ...marksOf(row.marks), leader: mcUuid, leaderAt: at.toISOString() } as Prisma.InputJsonValue } });
     });
   },
+  async create(s) {
+    if (await db.season.findUnique({ where: { id: s.id }, select: { id: true } })) return false;
+    await db.season.create({ data: { id: s.id, name: s.name, startsAt: s.startsAt, endsAt: s.endsAt, state: "upcoming" } });
+    return true;
+  },
+  async setState(id, state) {
+    await db.season.update({ where: { id }, data: { state } });
+  },
+  async runningOther(id) {
+    return (await db.season.findFirst({ where: { state: "running", NOT: { id } }, select: { id: true } }))?.id ?? null;
+  },
+  async end(id, result) {
+    const done = await db.season.updateMany({ where: { id, resultJson: { equals: Prisma.AnyNull } }, data: { state: "ended", resultJson: result as Prisma.InputJsonValue } });
+    return done.count === 1;
+  },
+  async removeClear(seasonId, kind, itemId, mcUuid) {
+    return db.$transaction(async (tx) => {
+      await lock(tx, `season:${seasonId}:marks`);
+      const gone = await tx.seasonClear.deleteMany({ where: { seasonId, kind, itemId, mcUuid } });
+      const row = await tx.season.findUnique({ where: { id: seasonId }, select: { marks: true } });
+      if (!row) return false;
+      const marks = marksOf(row.marks);
+      const key = clearKey(kind, itemId, mcUuid);
+      if (!marks.revoked?.includes(key)) await tx.season.update({ where: { id: seasonId }, data: { marks: { ...marks, revoked: [...(marks.revoked ?? []), key] } as Prisma.InputJsonValue } });
+      return gone.count > 0;
+    });
+  },
+  async unrevoke(seasonId, key) {
+    await db.$transaction(async (tx) => {
+      await lock(tx, `season:${seasonId}:marks`);
+      const row = await tx.season.findUnique({ where: { id: seasonId }, select: { marks: true } });
+      const marks = marksOf(row?.marks);
+      if (!row || !marks.revoked?.includes(key)) return;
+      await tx.season.update({ where: { id: seasonId }, data: { marks: { ...marks, revoked: marks.revoked.filter((k) => k !== key) } as Prisma.InputJsonValue } });
+    });
+  },
   async linked() {
     const users = await db.user.findMany({ where: { mcUuid: { not: null } }, select: { id: true, mcUuid: true, mcUsername: true } });
     return users.flatMap((u) => (u.mcUuid ? [{ mcUuid: u.mcUuid, mcName: u.mcUsername ?? u.mcUuid, userId: u.id }] : []));
@@ -121,6 +170,36 @@ export function memorySeasonStore(seasons: SeasonRow[] = [], members: Array<{ mc
     },
     linked: async () => members,
     userIdByUuid: async (uuid) => members.find((m) => m.mcUuid === uuid)?.userId ?? null,
+    async create(s) {
+      if (seasons.some((x) => x.id === s.id)) return false;
+      seasons.push({ ...s, state: "upcoming", marks: {}, result: null });
+      return true;
+    },
+    async setState(id, state) {
+      const s = seasons.find((x) => x.id === id);
+      if (s) s.state = state;
+    },
+    runningOther: async (id) => seasons.find((x) => x.state === "running" && x.id !== id)?.id ?? null,
+    async end(id, result) {
+      const s = seasons.find((x) => x.id === id);
+      if (!s || s.result) return false;
+      s.state = "ended";
+      s.result = result;
+      return true;
+    },
+    async removeClear(seasonId, kind, itemId, mcUuid) {
+      const s = seasons.find((x) => x.id === seasonId);
+      if (!s) return false;
+      const at = rows.findIndex((r) => r.seasonId === seasonId && r.kind === kind && r.itemId === itemId && r.mcUuid === mcUuid);
+      if (at >= 0) rows.splice(at, 1);
+      const key = clearKey(kind, itemId, mcUuid);
+      if (!s.marks.revoked?.includes(key)) s.marks = { ...s.marks, revoked: [...(s.marks.revoked ?? []), key] };
+      return at >= 0;
+    },
+    async unrevoke(seasonId, key) {
+      const s = seasons.find((x) => x.id === seasonId);
+      if (s?.marks.revoked) s.marks = { ...s.marks, revoked: s.marks.revoked.filter((k) => k !== key) };
+    },
   };
   return Object.assign(store, { rows, seasons });
 }

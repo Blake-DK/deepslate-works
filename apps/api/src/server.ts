@@ -58,6 +58,7 @@ import { currentSeason } from "./seasons/files.js";
 import { SeasonRecorder } from "./seasons/recorder.js";
 import { prismaSeasonStore } from "./seasons/store.js";
 import { listAdvancementFiles, readAdvancements } from "./seasons/advancements.js";
+import { seasonRoutes } from "./routes/seasons.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
@@ -175,8 +176,10 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   });
   // docs/34 §4 (W1.3): the season's clears and what a season says, from the same console lines. It does nothing
   // until a Season row says "running" (Admin → Seasons, W1.4).
+  const seasonFile = currentSeason(env.REPO_DIR, log);
+  seasonRoutes(app, { amp: ampClient, tail, ctx: () => limbo.actionCtx, file: seasonFile, store: prismaSeasonStore, addEvent: (e) => prismaRecorderStore.addEvent(e) });
   const seasons = new SeasonRecorder({
-    file: currentSeason(env.REPO_DIR, log),
+    file: seasonFile,
     store: prismaSeasonStore,
     uuidOf: async (name) => tail.uuidByName.get(name)?.toLowerCase() ?? (await prismaRecorderStore.uuidByName(name)),
     addEvent: (e) => prismaRecorderStore.addEvent(e),

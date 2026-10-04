@@ -132,6 +132,13 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "limbo.adminRelease": (p) => (p.refused ? `could not let ${s(p.name)} in from the entrance room: they have not linked` : `let ${s(p.name)} in from the entrance room${p.back ? ", back to where they were" : ""}`),
   "limbo.kickIdle": (p) => `${s(p.name)} waited too long in the entrance room and was disconnected`,
   "limbo.build": "built the entrance room",
+  // docs/34 §6 (W1.4): Admin → Seasons
+  "season.announce": (p) => `announced ${s(p.name, "the season")}`,
+  "season.start": (p) => `started ${s(p.name, "the season")}`,
+  "season.end": (p) => `ended ${s(p.name, "the season")}: its result is frozen`,
+  "season.reload": "had the server read its datapacks again (reload)",
+  "season.grant": (p) => (p.already ? `gave ${s(p.member)} the tick for ${s(p.title)} again (they had it)` : `gave ${s(p.member)} the tick for ${s(p.title)}${p.inGame ? "" : " on the site only: they are not on the server"}`),
+  "season.revoke": (p) => (p.had ? `took the tick for ${s(p.title)} back from ${s(p.member)}${p.inGame ? "" : " on the site only: they are not on the server"}` : `took the tick for ${s(p.title)} back from ${s(p.member)} (they did not have it)`),
   "opac.serverClaims": "made the spawn area and the entrance room server claims",
   "player.revoke": (p) => `kicked ${s(p.name)} and took them off the whitelist`,
   "site.settings": "changed the launch settings",

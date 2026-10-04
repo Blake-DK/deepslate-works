@@ -194,6 +194,7 @@ export class SeasonRecorder {
       if (!live || !read) return;
       const { file } = live;
       const start = Date.parse(file.startsAt);
+      const revoked = new Set(live.row.marks.revoked ?? []); // an admin took these back: the game's file does not put them back
       const have = new Set((await this.d.store.clears(file.id)).map((c) => `${c.kind}:${c.itemId}:${c.mcUuid}`));
       const found = new Map<string, Pending>();
       const items: Array<{ kind: ClearKind; id: string; title: string; opens: Date }> = [
@@ -208,6 +209,7 @@ export class SeasonRecorder {
           if (have.has(`${i.kind}:${i.id}:${m.mcUuid}`)) continue;
           const done = doneAt(data, advancementKey(file.id, i.kind, i.id));
           if (!done || done.getTime() < start) continue; // before the season: nothing is recorded
+          if (revoked.has(`${i.kind}:${i.id}:${m.mcUuid}`)) continue;
           const key = `${i.kind}:${i.id}`;
           const batch = found.get(key) ?? { kind: i.kind, itemId: i.id, title: i.title, clears: [] };
           batch.clears.push({ kind: i.kind, itemId: i.id, mcUuid: m.mcUuid, mcName: m.mcName, userId: m.userId, at: done, early: done < i.opens, source: "file" });

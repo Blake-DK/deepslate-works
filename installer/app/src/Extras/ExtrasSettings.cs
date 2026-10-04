@@ -23,13 +23,13 @@ namespace DeepslateWorks
 
         static readonly UTF8Encoding Utf8 = new UTF8Encoding(false);
 
-        /// <summary>Written to .new, then moved over the file (Move-Item -Force).</summary>
+        /// <summary>Written to .new, then moved over the file (Move-Item -Force). 3.5.1 (docs/31 B-63): replaced in one step,
+        /// never deleted first, so a stop half-way cannot lose options.txt and its keybinds.</summary>
         static void WriteOver(string path, string text)
         {
             var tmp = path + ".new";
             File.WriteAllText(tmp, text, Utf8);
-            if (File.Exists(path)) File.Delete(path);
-            File.Move(tmp, path);
+            Engine.MoveOver(tmp, path);
         }
 
         /// <summary>A JSON list read the way @((ConvertFrom-Json $t) | % { [string]$_ }) read it; throws when it is not JSON.</summary>

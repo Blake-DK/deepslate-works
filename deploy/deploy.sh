@@ -168,7 +168,19 @@ if [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]; then
 fi
 
 # with the service token as the key, web's health gives the detail (tunnel, amp, rsync); without it, yes or no only
-health=$(docker exec -e HEALTH_URL="$HEALTH_URL" deepslate-web sh -c 'wget -qO- --header "x-health-key: $API_SERVICE_TOKEN" "$HEALTH_URL"' || true)
+read_health() { docker exec -e HEALTH_URL="$HEALTH_URL" deepslate-web sh -c 'wget -qO- --header "x-health-key: $API_SERVICE_TOKEN" "$HEALTH_URL"' || true; }
+health=$(read_health)
+# When the tunnel's container was recreated, the AMP host has to shake hands again, and it is the side that starts
+# it: on 2026-10-04 that took about three minutes, and this check, six seconds after `up`, called a good deploy
+# failed. So a tunnel that is down is waited for, up to four minutes, before anything is said about it.
+if ! printf '%s' "$health" | grep -q '"api":{"ok":true' && [ "${ALLOW_API_DOWN:-0}" != 1 ]; then
+  echo "api does not reach the AMP host yet; waiting for the tunnel (up to 4 minutes)"
+  for i in $(seq 1 24); do
+    sleep 10
+    health=$(read_health)
+    printf '%s' "$health" | grep -q '"api":{"ok":true' && { echo "the tunnel is up after $((i * 10)) s"; break; }
+  done
+fi
 echo "$health"
 echo
 docker ps --filter name=deepslate- --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'

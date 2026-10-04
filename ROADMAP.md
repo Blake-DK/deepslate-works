@@ -2,7 +2,7 @@
 
 A private modded Minecraft server (1.21.1, NeoForge) for a group of friends, with a portal at **deepslate.dsw.test** that handles voting, installing, joining and running the server. Players sign in with Discord; nobody types a Minecraft username or asks for a whitelist.
 
-Last updated 2026-10-03, 18:00 UTC: the site looks like the launcher, the Season 1 vote is in the pack, and the world waits to be made again. Detail per feature is in `docs/`; where the build actually is lives in `docs/11-status.md`.
+Last updated 2026-10-04: the server went live, the first review was done and its main fixes are running, and the plan for Seasons 1 to 4 is set. Detail per feature is in `docs/`; where the build actually is lives in `docs/11-status.md`.
 
 ## What's live
 
@@ -67,42 +67,68 @@ Last updated 2026-10-03, 18:00 UTC: the site looks like the launcher, the Season
 - The API is the only thing that talks to AMP, through a least-privilege AMP user that can start, stop, restart, read the console, read files, take and list backups and flip the sleep setting, nothing else. End-process (kill) exists for admins only while the server is stuck in "Stopping".
 - Images built by GitHub Actions and pulled by the VPS; the VPS never builds. Memory limits, swap and earlyoom after one OOM incident.
 
+## Since going live (4 October 2026)
+
+- **"We're live" was pressed on 2026-10-04.** The world is the old seed with ±3,072 blocks around spawn made again for the Season 1 pack; spawn is at 107 126 87 and is an adventure-mode claim. Every new player gets a starter kit.
+- **Deepslate Works 3.5.1** is the app the site hands out: the launcher's look, a Settings tab (memory, graphics, the villager skins), logs sent to Alex on request.
+- **A review of everything** (docs/31, 65 findings) and its fixes, all running since the same day:
+  - the site hands out the pack the server runs, and says so in its health;
+  - the entrance room remembers who it holds and where they stood, across leaves and restarts; Control Room shows who is in it and why, with Release;
+  - a link from the room asks "Link <name> to <you>?" before it links; leaving the Discord server ends access for good; "Remove and block";
+  - deploys run the commit's own images, check the api and take a dump before a migration; logs are capped; the tunnel's images are pinned;
+  - the database dump leaves the VPS every night, and one has been restored as a test.
+- **A health watch**: every ten minutes the portal looks at the database dump, its copy on the AMP host, the newest world backup, the pack on the site against the server's, and the last wake. What goes wrong is posted to the admin channel in Discord and shown in Control Room.
+- **Activity** shows everything first with chips to narrow it, and says what was written from Discord into the game.
+
 ## In progress
 
-- **Specified by the planner on the evening of 2026-09-29, not started**: Better Tab Info in the base pack (ping per player and TPS in Tab, where TabTPS could not go); installer version on every report with an "outdated" badge and a nudge on the Me page; full logs on every run plus the previous game session's log and crash reports; the white room prompt repeated every 15 s with an on-screen title and a short join code usable at deepslate.dsw.test/join from a phone.
-- **Admin assistant** (docs/19): a read-only chat in Admin that can look at status, console, events, reports and container health and explain what went wrong. Needs an API key; never acts.
-- **The launcher's look** (docs/21): done. App 3.4.2 (dark, pixel banner, blocky Play and Vote, the lantern icon, Save log and Send to Alex) is what the site hands out.
-- **The map**: deleted on 2026-09-29 evening to be rendered clean from Admin → Server ("Render the map only"), about an hour.
-- **Waiting on a person**: Play first with a friend who is not an admin; the mods tried in the game (guns, quarry, vein mining, trees by hand); a five-minute planned restart watched through; whether someone who has just linked should also be held for Play first.
-- **Vote close**: the "Season 1 mods" vote closed 2026-10-03 and was applied at 40% (Create Big Cannons, Immersive Engineering, Industrial Foregoing, AE2, the Macaw's set, Another Furniture). Pack 0.1.0+d7521da9 is locked, built, on the server and on `main`. Left: the world made again, which is under way as Alex amended it (world and seed kept, ±3072 blocks made again, every inventory emptied, spawn at 107 126 87), and flipping "We're live", Alex's click once he has stood in the world.
-- **Seasons, bosses and trials (docs/20)**: step 1 done 2026-10-02 (Cataclysm, Mowzie's Mobs and the Ender Dragon remaster in a new non-votable "Bosses & trials" category, started once; Gateways and Multiplayer Bosses held for the planner; report in docs/11). They were in the pack when ±3072 blocks around spawn were made again (2026-10-03); beyond that their structures are 11,600+ blocks out until Season 1's Frontier (docs/20 §5). Steps 2 to 6 wait for the planner.
-- **Bedrock** through NetherNet (TCP 19132 + UDP 19134–19153): forwards set, external join not yet tested.
-- ~~**World terrain**~~: done 2026-10-03 (docs/24 §7): ±3072 blocks around 0, 0 made again with the Season 1 pack and pre-generated; spawn 107 126 87. Beyond 3072 blocks the old terrain stays, without the newer mods' ores and structures.
+- **Season 1's build** (docs/34): the season file and its datapack, the recording, the Season page, the Frontier, the Discord moments, Admin → Seasons. Rehearsal on the server on 28 October; opening on 4 November.
+- **The Lock night** (docs/31, PR E): the two Sophisticated mods to their fixed versions, NeoForge pinned. One quiet evening, after a backup.
+- **Backups** (docs/28): the portal's own backup runs and the Admin → Backups page are on a branch; a world restore from the NAS and from S3 has not been tried yet.
+- **Waiting on a person**: a weak PC in a Cataclysm dungeon (it decides whether Cataclysm's bosses count in Season 1); why the first wake after a deploy failed on 4 October (AMP's log); an outside monitor on `/api/health`.
+- **Deferred from the review until Season 1 is built**: the launcher's batch (a failed download retried, "Ready" going stale, a safer self-update), the Discord feed surviving a restart without repeats, a test database in CI.
+- **Admin assistant** (docs/19): not begun.
+- **Bedrock** through NetherNet: forwards set, an outside join not yet tested.
 
 ## Next
 
 ### Seasons 1 to 4 (4 Nov 2026 to 21 Apr 2027)
-- Four six-week seasons, each with a boss ladder, a trial every week, a zone off the main world that is reset at the end, and a finale evening. The main world is never reset.
-- Season 1 "First Blood" (4 Nov to 16 Dec 2026), Season 2 "The Drowned and the Frozen" (to 27 Jan 2027), Season 3 "Fire and Iron" (to 10 Mar), Season 4 "The Otherside" (to 21 Apr). Working names and dates.
-- The full plan, the mods, the work and the decisions waiting for Alex: `docs/32-seasons-1-to-4-roadmap.md`. The mechanism behind it: `docs/20-seasons-bosses-trials.md`.
-- Before any of it: the bug list of 2026-10-04, `docs/31-review-and-bug-list.md`.
-- The AMP host's answers to that list's check list (read-only, 2026-10-04): `docs/33-amp-host-check-2026-10-04.md`.
+
+Six weeks each. A boss ladder, a trial every Friday at 19:00 UK, a zone off the main world that is reset at the end, a finale on the last Saturday at 20:00 UK, changeover on Wednesdays. The main world is never reset. Rewards are trophies, titles and points.
+
+| Season | Dates | Theme | Bosses | New in the pack | The zone |
+|---|---|---|---|---|---|
+| 1 · First Blood | 4 Nov to 16 Dec 2026 | The overworld; alone or in pairs | Elder Guardian, Frostmaw, Ferrous Wroughtnaut, Umvuthi, the Warden, the Wither, Cataclysm's lesser guardians; finale: the remastered Ender Dragon | nothing | The Frontier: a second overworld with every boss dungeon in fresh ground |
+| 2 · The Drowned and the Frozen | 16 Dec to 27 Jan 2027 | Oceans and ice; two or three per boss | The Sculptor, Captain Cornelia, the Ancient Remnant, Scylla, Maledictus; finale: the Leviathan | Aquamirae | The Frozen Frontier, on a coast |
+| 3 · Fire and Iron | 27 Jan to 10 Mar 2027 | The Nether and the factories; a group | The Night Lich, the Harbinger, the Nether Gauntlet, the Netherite Monstrosity; finale: Ignis | Bosses of Mass Destruction | The Furnace: a second Nether, with an arena of waves |
+| 4 · The Otherside | 10 Mar to 21 Apr 2027 | The deep dark and the End; the hardest fights | Three Wardens in a night, the Stalker, the Ender Guardian; finale: the Rush (Wither, Ender Guardian, Dragon in 45 minutes) | Deeper and Darker | The Otherside, the mod's own dimension |
+
+- **Every season:** a Season page with the ladder, the trials, the scoreboard and a goal everybody adds to; a line in the app; posts in season-updates for the season, each boss and each trial; "has awoken" and "has fallen" in game chat and Discord.
+- **What stays on the main world:** trophies, titles, the Hall of Fame at spawn (one alcove per season, the top three as heads), and the old zone's map.
+- **What leaves a zone:** whatever you carry. Builds, chests, beds and corpses left there are lost at the reset, said plainly a week before.
+- **Each new mod** goes in only after the server has started with it and a weak PC has stood in its content. If it fails, the season runs on what the pack already has.
+- The plan in full: `docs/32-seasons-1-to-4-roadmap.md`. The mechanism: `docs/20-seasons-bosses-trials.md`. How Season 1 is being built: `docs/34-season-1-build-plan.md`.
+
+### Around the seasons
+
+- **Backups you can see and trust** (docs/28): four runs a day by the portal, a page that says whether the last one is whole and where it is, and a restore that has been tried.
+- **Alerts beyond the portal**: an outside monitor on the site's health, so the portal being down is noticed too.
+- **The launcher's next release**: a failed download tried again with a plain message, Play that never starts an out-of-date pack, an update that can always be taken back.
+- **Tests against a real database** in CI, after the Activity page showed nothing for four days and no test saw it.
 
 ### Phase 4 · player self-service
 - `/me` quick actions: take me to spawn, take me home, set home, where am I, unstick me. Each rate-limited and audited. The action registry is there; it has no player actions yet.
 - Whitelist self-service is already covered by the white room; this phase adds the in-game conveniences via a homes mod or equivalent on the server (FTB Essentials was the first idea and is not in the catalogue).
 - Admin action log with per-action enable/disable and rate-limit editing.
 
-### Phase 5 · Discord bridge
-- Bot posts server status, joins and leaves to a channel; two-way chat relay.
-- `/whitelist`-style slash commands for admins.
-- Scheduled events page (build nights, resets) with Discord reminders.
+### Discord, what is left
+- Built and running: server status, joins, leaves and deaths in #game-chat, chat both ways, votes with buttons, slash commands, news and "We're live" in season-updates.
+- Still to come: the season moments above, and a scheduled events page (build nights, resets) with reminders.
 
 ### Later ideas (not committed)
 - Season archive: old worlds kept browsable on BlueMap under a different name.
 - Player-visible analytics opt-in per player.
 - Mod update notifications when a locked mod has a newer Modrinth release.
-- Automated world backups to off-site storage with restore from the portal.
 
 ## Principles (unchanged since day one)
 1. One click, or it doesn't ship.

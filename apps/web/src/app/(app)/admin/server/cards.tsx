@@ -15,9 +15,10 @@ import type { getAnnouncements } from "@/server/announcements";
 import { DistanceForm } from "@/components/server/distance-form";
 import { msptTone, waiting, type Distance } from "@/lib/distance";
 import { clearingText, COUNTED, countTone, LABELS, planText, type Ground } from "@/lib/ground";
-import { announceAction, announcementChangeAction, announcementDatesAction, backupAction, cancelRestartAction, distanceAction, groundClearAction, groundPlanAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
+import { releaseHeldAction, announceAction, announcementChangeAction, announcementDatesAction, backupAction, cancelRestartAction, distanceAction, groundClearAction, groundPlanAction, killAction, pregenAction, runActionAction, scheduleRestartAction, serverOpAction } from "./actions";
 import { Check } from "@/components/ui/check";
 import { cn } from "@/lib/utils";
+import { GATE_TEXT, type BlockReason } from "@/shared/join-gate";
 
 // The cards of Admin → Server and Admin → News, and the ones the Control Room shares. Everything that was on the one
 // long Server page before docs/13 §11, word for word where it was a control; long explanations fold into
@@ -31,6 +32,8 @@ export type Backup = { allowed: boolean; canList?: boolean; stopsServer: boolean
 type Caller = { id: string; role: "ADMIN" };
 
 export const loadPlayers = (caller: Caller) => apiFetch<Players>("/players", { caller }).catch(() => null);
+export type HeldEntry = { name: string; uuid: string | null; kind: "link" | "play" | "closed" | "old" | "mods" | "vote"; reason: string | null; since: string; member: boolean; back: boolean };
+export const loadHeld = (caller: Caller) => apiFetch<{ state: number; held: HeldEntry[] }>("/held", { caller }).catch(() => null);
 export const loadTail = (caller: Caller) => apiFetch<Tail>("/console/tail?lines=200", { caller }).catch(() => null);
 export const loadSchedule = (caller: Caller) => apiFetch<Schedule>("/server/schedule", { caller }).catch(() => null);
 export const loadBackup = (caller: Caller) => apiFetch<Backup>("/server/backup", { caller }).catch(() => null);
@@ -44,7 +47,7 @@ const MSG: Record<string, string> = {
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
   groundClear: "Players have been warned in chat; items on the ground are cleared in 60 seconds.", groundPlan: "Saved.",
   distanceNow: "Saved. The server restarts in 1 minute; players have been warned.", distanceNext: "Saved. It takes effect at the next restart.",
-  error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup asked of AMP. It counts once AMP lists it; a big world takes a quarter of an hour or more.", announced: "Announcement posted",
+  released: "Let in:", error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup asked of AMP. It counts once AMP lists it; a big world takes a quarter of an hour or more.", announced: "Announcement posted",
 };
 
 /** The line an action leaves behind (`?msg=…&detail=…`). */
@@ -55,6 +58,49 @@ export function Flash({ msg, detail }: { msg?: string; detail?: string }) {
 
 /** A hidden field that sends the admin back to the Control Room after the action, when the card sits there. */
 const Back = ({ to }: { to?: "/admin" }) => (to ? <input type="hidden" name="back" value={to} /> : null);
+
+/** Why somebody is in the entrance room, in the words the event log uses. */
+export function heldWhy(h: HeldEntry): string {
+  if (h.kind === "link") return h.reason === "left the discord server" ? "left the Discord server; has to sign in and link again" : "has not linked their Minecraft account yet";
+  const known = h.reason && h.reason in GATE_TEXT ? GATE_TEXT[h.reason as BlockReason] : null;
+  return known ?? "has to press Play on the site";
+}
+
+/**
+ * docs/32 §7 item 10 (the small part): who is in the entrance room and why, and Release for a linked member, so an
+ * admin does not need the console to see why a friend cannot get in. Shown only while somebody is held.
+ */
+export function HeldCard({ held, back }: { held: HeldEntry[] | null; back?: "/admin" }) {
+  if (!held || held.length === 0) return null;
+  return (
+    <Card data-testid="held">
+      <CardHeader>
+        <CardTitle>In the entrance room · {held.length}</CardTitle>
+        <CardDescription>The door lets each of them in by itself within seconds of what it waits for. Release lets a linked member in now, whatever the door says.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y text-sm">
+          {held.map((h) => (
+            <li key={h.name} className="flex flex-wrap items-center gap-2 py-1.5" data-testid={`held-${h.name}`}>
+              <span className="min-w-0 flex-1">
+                <span className="font-mono">{h.name}</span> <span className="text-muted-foreground">{heldWhy(h)} · {timeAgo(new Date(h.since))}{h.member ? (h.back ? " · goes back to where they stood" : " · goes to spawn") : ""}</span>
+              </span>
+              {h.member && h.kind !== "link" ? (
+                <form action={releaseHeldAction}>
+                  <Back to={back} />
+                  <input type="hidden" name="name" value={h.name} />
+                  <Button type="submit" size="sm" variant="secondary">Release</Button>
+                </form>
+              ) : (
+                <span className="text-xs text-muted-foreground">links on the site</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function PowerCard({ status, players, back }: { status: LiveStatus; players: Players | null; back?: "/admin" }) {
   const a = statusText(status, true);

@@ -167,6 +167,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     if (env.AMP_MOCK === "1") return;
     await recorder.init().catch((err) => log({ err: String(err) }, "could not load open sessions"));
     tail.on(recorder.onConsole);
+    tail.onResync(() => recorder.reconcileNext());
     poller.onStatus(recorder.onStatus);
     poller.onStatus((next) => {
       view.observe(next);

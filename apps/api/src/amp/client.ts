@@ -44,6 +44,11 @@ export interface Amp {
   getStatus(): Promise<AmpStatus>;
   /** Any instance call. Console commands must only be built by the action registry. */
   call<T = unknown>(module: string, method: string, params?: Record<string, unknown>): Promise<T>;
+  /**
+   * The same call, with the login it was answered under (the value `sessions` had when the request went out).
+   * The console tail needs it: `sessions` read after the call may already count a login made by another caller.
+   */
+  callTagged?<T = unknown>(module: string, method: string, params?: Record<string, unknown>): Promise<{ answer: T; session: number }>;
 }
 
 type Opts = { url: string; username: string; password: string; instanceId: string; timeoutMs?: number };
@@ -86,7 +91,19 @@ export class AmpClient implements Amp {
   }
 
   /** `webapp` is an instance-local user, so even Login goes through the ADS proxy path (docs/13 §4, corrected 2026-09-28). */
-  async login(): Promise<void> {
+  private loggingIn: Promise<void> | null = null;
+
+  /**
+   * One login at a time (docs/31 B-41). Two callers that met a dead session at once each used to log in for
+   * themselves; the second login made AMP hand out its last console lines again under a session the tail did not
+   * know it was on, and old joins were acted on as new. Whoever asks while a login is under way waits for that one.
+   */
+  login(): Promise<void> {
+    this.loggingIn ??= this.logInOnce().finally(() => { this.loggingIn = null; });
+    return this.loggingIn;
+  }
+
+  private async logInOnce(): Promise<void> {
     const r = await this.post<{ success?: boolean; sessionID?: string; resultReason?: string }>(instancePath(this.o.instanceId, "Core", "Login"), {
       username: this.o.username, password: this.o.password, token: "", rememberMe: false,
     });
@@ -96,20 +113,28 @@ export class AmpClient implements Amp {
   }
 
   async call<T = unknown>(module: string, method: string, params: Record<string, unknown> = {}): Promise<T> {
+    return (await this.callTagged<T>(module, method, params)).answer;
+  }
+
+  async callTagged<T = unknown>(module: string, method: string, params: Record<string, unknown> = {}): Promise<{ answer: T; session: number }> {
     if (!this.sessionId) await this.login();
     const path = instancePath(this.o.instanceId, module, method);
+    const used = this.sessionId;
+    let session = this.sessions;
     let answer: T;
     try {
-      answer = await this.post<T>(path, params, this.sessionId);
-      if (!sessionGone(answer)) return answer;
+      answer = await this.post<T>(path, params, used);
+      if (!sessionGone(answer)) return { answer, session };
     } catch (e) {
       if (!(e instanceof Error) || !UNAUTHORIZED.test(e.message)) throw e;
     }
-    this.sessionId = null; // expired, or AMP has forgotten it; one retry
-    await this.login();
+    // expired, or AMP has forgotten it; one retry. If another caller has logged in again meanwhile, that session is used.
+    if (this.sessionId === used) this.sessionId = null;
+    if (!this.sessionId) await this.login();
+    session = this.sessions;
     answer = await this.post<T>(path, params, this.sessionId);
     if (sessionGone(answer)) throw new Error("AMP does not accept the session it has just given out");
-    return answer;
+    return { answer, session };
   }
 
   private lastFresh = 0;

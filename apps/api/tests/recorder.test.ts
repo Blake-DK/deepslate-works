@@ -352,3 +352,23 @@ describe("shared files", () => {
     }
   });
 });
+
+// docs/31 B-43: a leave while api was restarting is in no line api reads again; the session stayed open until the
+// server went down. The first live `list` answer after old lines were read closes it. Any other `list` answer still
+// changes nothing (the planner's rule of 2026-09-30, tested above).
+describe("Recorder: who left while api was restarting", () => {
+  it("is closed by the first live list answer after a resync, and only by that one", async () => {
+    const t = setup();
+    await t.say(L(`UUID of player Bramble09 is ${UUID}`));
+    await t.say(L("Bramble09 joined the game"));
+    await t.say(L("m1_owl joined the game"));
+    t.tick(600);
+    t.rec.reconcileNext(); // api has read old lines again; m1_owl left meanwhile
+    await t.say(L("There are 1 of a max of 20 players online: Bramble09"));
+    expect(t.sessions.find((s) => s.mcName === "m1_owl")?.leftAt?.toISOString()).toBe("2026-09-29T10:10:00.000Z");
+    expect(t.sessions.find((s) => s.mcName === "Bramble09")?.leftAt).toBeNull();
+    expect(t.events.at(-1)).toMatchObject({ kind: "LEAVE", meta: { name: "m1_owl", inferred: true } });
+    await t.say(L("There are 0 of a max of 20 players online: ")); // a later answer, with no resync before it
+    expect(t.sessions.find((s) => s.mcName === "Bramble09")?.leftAt).toBeNull();
+  });
+});

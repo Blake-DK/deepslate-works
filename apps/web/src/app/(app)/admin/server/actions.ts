@@ -116,6 +116,22 @@ export async function distanceAction(apply: string, formData: FormData) {
 }
 
 /** Ends the server's process. Only offered, and only accepted by api, while the server is stuck in "Stopping". */
+/** Admin → Control Room, "In the entrance room": lets a held, linked member in now (api `POST /held/release`, audited there). */
+export async function releaseHeldAction(formData: FormData) {
+  const to = place(formData, "power");
+  const admin = await requireAdmin();
+  const name = z.string().regex(/^[A-Za-z0-9_]{3,16}$/).safeParse(formData.get("name"));
+  if (!name.success) redirect(to("error", "Unknown player"));
+  try {
+    await apiFetch("/held/release", { method: "POST", body: { name: name.data }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin");
+  redirect(to("released", name.data));
+}
+
 export async function killAction(formData?: FormData) {
   const to = place(formData, "power");
   const admin = await requireAdmin();

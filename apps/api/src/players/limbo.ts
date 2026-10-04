@@ -13,6 +13,7 @@ import { modsMissingFor } from "./mods.js";
 import { unvotedFor } from "./polls.js";
 import { doorRule, type Member } from "../shared/access.js";
 import { CODE_TTL_MS, makeCode } from "../shared/join-code.js";
+import { prismaHeldStore, type HeldRow, type HeldStore } from "./held-store.js";
 
 // docs/14: the white room. Unlinked joins are held in the room with a clickable link; linking releases them.
 
@@ -31,7 +32,8 @@ export type Back = { dimension: string; x: number; y: number; z: number };
 /** "closed": a member for whom the server is not open yet (not live, no early access; docs/13 §9). */
 /** `lastReminder`: when the prompt last went to them (docs/14 "The prompt"). */
 /** "old": their last run was from an installer below Settings → Joining "Minimum installer version". */
-type Held = { uuid: string; code: string; since: number; lastReminder: number; kind: "link" | HeldFor; userId?: string; back?: Back | null };
+/** `reason`: the door's word for it, as it is kept in HeldPlayer (docs/31 B-02). */
+export type Held = { uuid: string; code: string; since: number; lastReminder: number; kind: "link" | HeldFor; userId?: string; back?: Back | null; reason?: string };
 /** "vote": an open must-vote poll they have not answered (planner 2026-10-02). */
 type HeldFor = "play" | "closed" | "old" | "mods" | "vote";
 /** Which wait a reason at the door is. */
@@ -41,6 +43,8 @@ const REMIND = { play: "limbo.remindPlay", closed: "limbo.remindClosed", old: "l
 const KICK = { link: "limbo.kickIdle", play: "limbo.kickIdlePlay", closed: "limbo.kickIdleClosed", old: "limbo.kickIdleOld", mods: "limbo.kickIdleMods", vote: "limbo.kickIdleVote" } as const;
 /** What a wait was, in the event log's words ("join.ready" `was`). */
 const WAS: Record<HeldFor, string> = { closed: "not live", old: "old installer", mods: "missing mods", vote: "vote", play: "play" };
+/** The reasons someone who has to link is held for (`decideJoin`); every other reason in HeldPlayer is the door's. */
+const LINK_REASONS = new Set(["unknown uuid", "not linked", "left the discord server"]);
 type Known = Member & { id: string };
 
 export type JoinDecision = { action: "release" | "hold"; reason: string };
@@ -78,8 +82,12 @@ export class Limbo {
   private readonly lastDim = new Map<string, { dimension: string; at: number }>();
   private ctx: ActionCtx;
   private timers: NodeJS.Timeout[] = [];
+  /** Old lines have been read; the room is put right when the server's live answer to `list` arrives. */
+  private resyncDue = false;
+  private readonly store: HeldStore;
 
-  constructor(private readonly env: Env, private readonly amp: Amp, private readonly tail: ConsoleTail, private readonly log: (o: unknown, m: string) => void) {
+  constructor(private readonly env: Env, private readonly amp: Amp, private readonly tail: ConsoleTail, private readonly log: (o: unknown, m: string) => void, store?: HeldStore) {
+    this.store = store ?? prismaHeldStore(log);
     this.ctx = { limbo: parsePlace(env.LIMBO_POS), spawn: env.SPAWN_POS ? parsePos(env.SPAWN_POS) : null, portalUrl: env.PORTAL_URL };
   }
 
@@ -89,7 +97,9 @@ export class Limbo {
 
   start() {
     this.tail.on((e, info) => void this.onEvent(e, info).catch((err) => this.log({ err: String(err) }, "limbo event failed")));
-    this.tail.onResync(() => void this.resync().catch((err) => this.log({ err: String(err) }, "limbo resync failed")));
+    // docs/31 B-03: nothing is done on the old lines themselves. They only say that the room has to be looked at;
+    // the look happens on the server's live answer to `list`, which the online watch asks for at every resync.
+    this.tail.onResync(() => { this.resyncDue = true; });
     this.timers.push(setInterval(() => void this.tick().catch((err) => this.log({ err: String(err) }, "limbo tick failed")), 5000));
     this.timers.push(setInterval(() => void this.promptRound().catch((err) => this.log({ err: String(err) }, "limbo prompt failed")), 1000));
     // Admin → Branding's name and tagline for the room's sign and the welcome line, kept fresh once a minute
@@ -120,27 +130,64 @@ export class Limbo {
     }
     if (e.type === "refused" && !info.replay) await this.onRefused(e);
     if (e.type === "leave") {
+      // What is kept in HeldPlayer stays: it is what puts a member back where they stood when they come again
+      // (docs/31 B-02). Only someone who was to link and has no place to go back to leaves nothing worth keeping.
+      const h = this.held.get(e.name);
+      if (h?.kind === "link" && h.uuid && !h.back) await this.store.remove(h.uuid);
       this.held.delete(e.name);
       this.lastJoin.delete(e.name);
       this.lastPos.delete(e.name);
       this.lastDim.delete(e.name);
     }
-    if (e.type === "list") for (const name of [...this.held.keys()]) if (!e.names.includes(name)) this.held.delete(name);
+    if (e.type === "list") {
+      for (const name of [...this.held.keys()]) if (!e.names.includes(name)) this.held.delete(name);
+      if (!info.replay && this.resyncDue) {
+        this.resyncDue = false;
+        await this.resync(e.names);
+      }
+    }
   }
 
   /**
-   * After old lines have been read (api restarted, or AMP gave out a new session): whoever is online and should be
-   * in the room but is not held is held. Members are left exactly where they are.
+   * After old lines have been read (api restarted, or AMP gave out a new session), on the server's live answer to
+   * `list` (`names`): whoever was being held is held again, with what HeldPlayer kept; whoever is online, should be
+   * in the room and is not, is held. Members are left exactly where they are.
+   *
+   * docs/31 B-03, B-04. A name with no UUID in memory is looked up among the members by its name; a name nobody
+   * knows is left alone and said so in the log. It used to be held "by name only", with a code that did not exist,
+   * and after a restart that was every member who was playing.
    */
-  async resync() {
-    for (const name of this.tail.online) {
+  async resync(names: readonly string[] = [...this.tail.online]) {
+    for (const name of names) {
       if (this.held.has(name)) continue;
-      const uuid = this.tail.uuidByName.get(name);
-      const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select: { verifiedAt: true, guildMember: true } }) : null;
+      let uuid = this.tail.uuidByName.get(name) ?? null;
+      const select = { id: true, verifiedAt: true, guildMember: true, mcUuid: true } as const;
+      const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select }) : await db.user.findFirst({ where: { mcUsername: name }, select });
+      if (!uuid && user?.mcUuid) uuid = user.mcUuid;
+      const row = uuid ? await this.store.get(uuid) : await this.store.byName(name);
+      if (row) {
+        if (!uuid) uuid = row.mcUuid;
+        this.tail.uuidByName.set(name, uuid);
+        this.adopt(name, row, user && user.verifiedAt && user.guildMember ? user.id : undefined);
+        this.log({ name, uuid, reason: row.reason, back: Boolean(row.back) }, "resync: was being held, held again");
+        continue;
+      }
+      if (!uuid) {
+        this.log({ name }, "resync: online, no UUID in memory and no member of that name: left alone");
+        continue;
+      }
+      this.tail.uuidByName.set(name, uuid);
       const decision = decideJoin(user);
       this.log({ name, uuid, decision }, "resync");
-      if (decision.action === "hold") await this.hold(name, uuid ?? "", decision.reason);
+      if (decision.action === "hold") await this.hold(name, uuid, decision.reason);
     }
+  }
+
+  /** Someone HeldPlayer says was in the room: in memory again as they were. They are not moved; the next round does the rest. */
+  private adopt(name: string, row: HeldRow, memberId: string | undefined) {
+    const kind = memberId && !LINK_REASONS.has(row.reason) ? waitFor(row.reason as BlockReason) : memberId ? "play" : "link";
+    // `lastReminder: 0`: the prompt goes at once. For a link it also looks the code up again and hands out the book if it changed.
+    this.held.set(name, { uuid: row.mcUuid, code: kind === "link" ? (row.codeId ?? "") : "", since: Date.now(), lastReminder: 0, kind, userId: memberId, back: row.back, reason: row.reason });
   }
 
   async onJoin(name: string) {
@@ -154,9 +201,6 @@ export class Limbo {
       await new Promise((r) => setTimeout(r, 400));
       uuid = this.tail.uuidByName.get(name);
     }
-    if (!uuid) {
-      this.log({ name }, "join without uuid: holding by name only");
-    }
     const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, verifiedAt: true, guildMember: true, mcUsername: true, role: true, earlyAccess: true } }) : null;
     const decision = decideJoin(user);
     this.log({ name, uuid, decision }, "join");
@@ -169,10 +213,26 @@ export class Limbo {
         await this.holdMember(name, uuid ?? "", user!.id, blocked);
         return;
       }
+      // docs/31 B-02: they were being held when they left, so they stand in the room without their tag. With a
+      // place kept for them they go back to it; `link.release` would send them to spawn, and before that the room
+      // itself was taken for where they stood and they were sealed in it.
+      const kept = uuid ? await this.store.get(uuid) : null;
+      if (kept?.back) {
+        await this.releaseBack(name, { uuid: kept.mcUuid, code: "", since: Date.now(), lastReminder: Date.now(), kind: "play", userId: user?.id, back: kept.back, reason: kept.reason });
+        return;
+      }
+      if (kept) await this.store.remove(kept.mcUuid);
       await runAction(this.amp, this.ctx, "link.release", { name }, null);
       return;
     }
-    await this.hold(name, uuid ?? "", decision.reason);
+    if (!uuid) {
+      // docs/31 B-03: nobody is held by name alone. Without the UUID line there is no code to give them and no
+      // way to tell a member from a stranger; the next `list` round or their next join sees them again.
+      this.log({ name }, "join without uuid: not held");
+      await audit({ action: "limbo.held", params: { name, uuid: null, reason: "no uuid" }, result: "FAILED", detail: "the server's UUID line for this join was not read; not held" });
+      return;
+    }
+    await this.hold(name, uuid, decision.reason);
   }
 
   private liveSeen: { at: number; live: boolean } | null = null;
@@ -213,7 +273,7 @@ export class Limbo {
   }
 
   /** Asks the server where they are and waits for the answer; null when none comes. */
-  private async where(name: string): Promise<Back | null> {
+  protected async where(name: string): Promise<Back | null> {
     const asked = Date.now();
     const r = await runAction(this.amp, this.ctx, "player.where", { name }, null);
     if (!r.ok) return null;
@@ -230,10 +290,16 @@ export class Limbo {
 
   /** A linked member who may not come in yet. `inRoom`: they are in the room already (they have just linked). */
   protected async holdMember(name: string, uuid: string, userId: string, reason: BlockReason, inRoom = false) {
-    const back = inRoom ? null : await this.where(name); // before they are moved
+    const kept = uuid ? await this.store.get(uuid) : null;
+    let back = inRoom ? null : await this.where(name); // before they are moved
     if (!this.tail.online.has(name)) return; // gone while we asked
+    // The room is never a place to go back to (docs/31 B-02): they logged out while being held. What was kept
+    // from the first hold stands; with nothing kept they go to spawn when the door opens.
+    if (back && back.dimension === this.ctx.limbo.dimension) back = null;
+    back = back ?? kept?.back ?? null;
     const kind = waitFor(reason);
-    this.held.set(name, { uuid, code: "", since: Date.now(), lastReminder: Date.now(), kind, userId, back });
+    this.held.set(name, { uuid, code: "", since: Date.now(), lastReminder: Date.now(), kind, userId, back, reason });
+    if (uuid) await this.store.put({ mcUuid: uuid, mcUsername: name, since: new Date(), reason, codeId: null, back });
     await runAction(this.amp, this.ctx, HOLD[kind], { name }, null);
     await audit({ userId, action: "join.blocked", params: { name, uuid, reason, back: Boolean(back) }, result: "OK" });
   }
@@ -241,6 +307,7 @@ export class Limbo {
   private async releaseBack(name: string, h: Held) {
     this.held.delete(name);
     const r = await runAction(this.amp, this.ctx, "limbo.releaseBack", { name, back: h.back ?? null }, null);
+    if (r.ok && h.uuid) await this.store.remove(h.uuid); // kept when the command did not go through: the next join or round tries again
     await audit({ userId: h.userId ?? null, action: "join.ready", params: { name, uuid: h.uuid, back: Boolean(h.back), was: WAS[h.kind === "link" ? "play" : h.kind] }, result: r.ok ? "OK" : "FAILED", detail: r.detail ?? null });
   }
 
@@ -248,7 +315,9 @@ export class Limbo {
     const brand = await getSection("branding");
     Object.assign(this.ctx, { siteName: brand.name, tagline: brand.tagline }); // Admin → Branding; read again for every newcomer
     const code = uuid ? await this.codeFor(uuid, name, true) : codeGen(); // a new code for every join
-    this.held.set(name, { uuid, code, since: Date.now(), lastReminder: Date.now(), kind: "link" });
+    const kept = uuid ? await this.store.get(uuid) : null; // a member who left the Discord server while held keeps their place
+    this.held.set(name, { uuid, code, since: Date.now(), lastReminder: Date.now(), kind: "link", back: kept?.back ?? null, reason });
+    if (uuid) await this.store.put({ mcUuid: uuid, mcUsername: name, since: new Date(), reason, codeId: code, back: kept?.back ?? null });
     await runAction(this.amp, this.ctx, "limbo.hold", { name, code }, null);
     await audit({ action: "limbo.held", params: { name, uuid, reason }, result: "OK" });
   }
@@ -308,7 +377,7 @@ export class Limbo {
     for (const [name, h] of this.held) {
       if (now - h.since > IDLE_KICK_MS) {
         await runAction(this.amp, this.ctx, KICK[h.kind], { name }, null);
-        this.held.delete(name);
+        this.held.delete(name); // HeldPlayer keeps them: they come back to the room, and later to where they stood
         continue;
       }
       if (h.kind !== "link") {
@@ -347,9 +416,39 @@ export class Limbo {
       await this.holdMember(name, uuid, user.id, blocked, true);
       return { released: false, name };
     }
+    if (was?.back) {
+      // linked again after leaving the Discord server while a place was kept for them: back to it, not to spawn
+      await this.releaseBack(name, { ...was, userId: user?.id });
+      return { released: true, name };
+    }
     this.held.delete(name);
     const r = await this.letIn(name);
+    if (r.ok) await this.store.remove(uuid);
     return { released: r.ok, name };
+  }
+
+  /** Who is in the room and why, for Admin → Control Room (docs/32 §7 item 10). */
+  heldList(): Array<{ name: string; uuid: string | null; kind: Held["kind"]; reason: string | null; since: string; member: boolean; back: boolean }> {
+    return [...this.held.entries()].map(([name, h]) => ({ name, uuid: h.uuid || null, kind: h.kind, reason: h.reason ?? null, since: new Date(h.since).toISOString(), member: Boolean(h.userId), back: Boolean(h.back) }));
+  }
+
+  /**
+   * An admin lets a held member in whatever the door says (Play first, the vote, not live). Only a linked member:
+   * someone who has to link is not let in by a button, they link. Audited with the admin's id.
+   */
+  async adminRelease(name: string, adminId: string | null): Promise<{ ok: boolean; code?: "not_held" | "not_linked" | "failed" }> {
+    const h = this.held.get(name);
+    if (!h) return { ok: false, code: "not_held" };
+    if (h.kind === "link" || !h.userId) {
+      await audit({ userId: adminId, action: "limbo.adminRelease", params: { name, uuid: h.uuid, refused: "not linked" }, result: "DENIED" });
+      return { ok: false, code: "not_linked" };
+    }
+    this.held.delete(name);
+    const r = await runAction(this.amp, this.ctx, "limbo.releaseBack", { name, back: h.back ?? null }, null);
+    if (r.ok && h.uuid) await this.store.remove(h.uuid);
+    if (!r.ok) this.held.set(name, h);
+    await audit({ userId: adminId, action: "limbo.adminRelease", params: { name, uuid: h.uuid, was: h.reason ?? WAS[h.kind], back: Boolean(h.back) }, result: r.ok ? "OK" : "FAILED", detail: r.detail ?? null });
+    return r.ok ? { ok: true } : { ok: false, code: "failed" };
   }
 
   protected memberByUuid(uuid: string): Promise<Known | null> {

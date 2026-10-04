@@ -14,6 +14,19 @@ VPS session, 2026-10-04, 12:30 to 14:30 UTC, against `main` `21df993`. Review on
 - **Modrinth and the NeoForged maven** were queried on 2026-10-04 for every file in the lock.
 - **PR #91** (app 3.5.0, the Settings tab) was open while the review ran and was merged at 12:35 UTC (`bfd2030`), before this file was pushed. Its findings are marked "PR 3.5.0" and now apply to `main`. The findings marked "app 3.4.2" were read on 3.4.2 and were not read again on 3.5.0.
 
+## Where each finding stands (planner's reply and addendum, 2026-10-04)
+
+The rows below are kept as written on the day. This section is the state; update it, not the rows.
+
+- **Fixed:** B-01 (PR #92, `5c93e3e`, deployed 2026-10-04: the site hands out `0.1.0+0d33a462`, the pack the server runs; the PR also corrects the pack-hash test, which left the resource pack out). B-62, B-63, S-14 (PR #93, app 3.5.1, another session).
+- **PR B · deploy and ops, next:** B-08, B-09, B-19, B-21, B-22, B-18, B-17 (short form: git without hooks, fsmonitor or sshCommand), B-20, B-23, B-24 (the `.env.bak-*` files listed for Alex, not deleted; `dockhand-sync.py` to https or without the copy). With it, from B-07: the newest database dump copied to the AMP host over the tunnel after each nightly dump, and the health fields of docs/32 §7 item 3.
+- **PR C · the door:** B-02, B-03, B-04, B-41, B-43, and the Control Room card "who is held and why" with Release. Table `HeldPlayer`, as the planner ruled.
+- **PR D · the link:** B-05, B-06, B-15, B-16, B-37, B-33, B-34, B-35, B-36, B-39.
+- **PR E · the lock** (after PR C is deployed; one Lock, then Build and Sync on a quiet night with a backup first): B-10, B-25 (pin `"neoforge": "21.1.253"`, the lock's value, so the hash does not move; the server stays on 21.1.252 until the Season 1 changeover; no Sync for the pin alone), B-26, B-28, B-30.
+- **B-07** is not a PR: the restore rehearsal needs root and is Alex's. docs/33 §6 confirms the gap: the last complete world from before the reset is one zip on the NAS, and no database dump has ever left the VPS.
+- **Deferred** until Season 1's W1.1 to W1.5 are in, not dropped: B-11, B-54 to B-61 (the launcher; one release with B-55, B-57, B-59 first), B-12 (noted: the instance has no `PACK_VERSION`, docs/33 §1, so the recorded pack is only the VPS's own record), B-13, B-14, B-27, B-29, B-31, B-32, B-38, B-40, B-42, B-44, B-45, B-46 to B-53, B-64, B-65, and every S- item not named above. S-10's entity ids go in with W1.1 (ServerCore excludes only ghast, warden and hopper_minecart, docs/33 §11).
+- **Deferred, new:** **B-17b**, rsync into `Minecraft/_incoming` and a host-side apply step, planner spec to follow (the deploy key can delete: rrsync without `-ro` over `Minecraft/`, docs/33 §7, §10). The proper form of B-17 (web proposes, something else commits, `.git` read-only) is also a planner spec, not before Season 1.
+
 ## Critical: reported to Alex during the session
 
 **B-01. The site hands out a pack the server does not accept, so Play first holds every non-admin at the door.** Details in the table. Not proven from here: that Play first is on today (its default is on) and that somebody has actually been held.
@@ -157,6 +170,7 @@ The failed installer run on PR #91 (`37201702406`) was a test fault, not a produ
 | S-12 | low | bot | A double click on a vote button can throw a unique-key error ("Something went wrong") though the vote is stored; a result edit in an archived forum post may be refused | `apps/api/src/shared/polls.ts:147`; `announcer.ts:606-613` | Live Discord | Catch the conflict; reply first, then edit | S |
 | S-13 | low | api | A crash followed by AMP's own restart is recorded as a restart, so no CRASH row | `apps/api/src/events/recorder.ts` | AMP's auto-restart setting, and a crash | Read the crash line before settling | S |
 | S-14 | low | PR 3.5.0 | One out-of-range value in the settings block makes the server reject the whole report, including the "ok" that Play first counts | PR #91, `settingsSchema` | An unusual `options.txt` | `.catch(null)` on the block | S |
+| S-15 | low | world | 87 "Block-attached entity at invalid position" lines on 2026-10-04 at (-67,5,289), (-245,5,155), (-103,5,298): item frames or paintings in a generated structure. Logged, not fixed | docs/33 §2 | Read the game log | Alex can kill them from the admin console if the spam grows | S |
 
 ## Looked at and found sound
 

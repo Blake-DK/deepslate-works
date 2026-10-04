@@ -184,3 +184,12 @@ The other half of Cataclysm is Season 2's ladder. The mod is in from the start; 
 1. The season's day and hour for weekly openings and the finale (a time most of the group can make).
 2. Names: "the Frontier" and "Season 1 · First Blood" are placeholders.
 3. ~~When the first season starts.~~ Answered 2026-10-02: one month after the server goes live (§2, decision 5).
+
+## 12. Amendments (planner, 2026-10-04)
+
+- Gateways to Eternity and Multiplayer Bosses are out for Seasons 1 to 4 (docs/32 §1). Wave trials are a datapack arena (Season 3).
+- A Hall of Fame building at spawn, filled by hall.update from SeasonClear at End season (docs/32 §1).
+- The wipe takes the zone's dimension folder from the season file, not from a fixed deepslate/frontier_<id> path (docs/32 §5, W4.2).
+- Later zones use renamed-noise settings, with large_biomes and a 20,000-block offset as the fallback (docs/32 §1).
+- Decision 6 bends once, for Season 4's Otherside loot (docs/32 §5).
+- Decision 1 of docs/32 §8 answers §11 question 1: Friday 19:00 UK, finale Saturday 20:00 UK, changeover Wednesday. Names in §11 question 2 are kept as working names.

@@ -304,16 +304,22 @@ try {
     Shot-Window "4a-settings.png"
     $auto = Find-Id $root "RamAuto"; $slider = Find-Id $root "RamSlider"; $save = Find-Id $root "SettingsSave"
     Check "the memory card and Save are on it" ($auto -and $slider -and $save)
+    # the slider's own bottom: on any PC that has a choice (8 GB and up) Deepslate Works itself would pick more, so the
+    # profile can only get this from the choice (the runner has 8 GB: 3 to 4 GB)
+    $want = 0
     if ($auto -and $slider -and $save) {
       $auto.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern).Toggle(); Start-Sleep -Milliseconds 500
-      $slider.GetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern).SetValue(8); Start-Sleep -Milliseconds 500
+      $range = $slider.GetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern)
+      $want = [int]$range.Current.Minimum
+      Write-Host ("  the slider goes from {0} to {1} GB; choosing {0}" -f $range.Current.Minimum, $range.Current.Maximum)
+      $range.SetValue($want); Start-Sleep -Milliseconds 500
       $save.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Seconds 1
       Shot-Window "4b-settings-saved.png"
       $status = Find-Id $root "SettingsStatus"
-      Check ("it says so: " + $status.Current.Name) ($status -and $status.Current.Name -eq "Saved. The game gets 8 GB from the next time you press Play.")
+      Check ("it says so: " + $status.Current.Name) ($status -and $status.Current.Name -eq "Saved. The game gets $want GB from the next time you press Play.")
     }
     $st = Get-Content -Raw (Join-Path $sHome "settings.json") -ErrorAction SilentlyContinue | ConvertFrom-Json
-    Check ("settings.json has the choice: ramGb " + $st.ramGb + ", version " + $st.version) ($st.ramGb -eq 8 -and $st.version -eq 2)
+    Check ("settings.json has the choice: ramGb " + $st.ramGb + ", version " + $st.version) ($want -gt 0 -and $st.ramGb -eq $want -and $st.version -eq 2)
     try { (Get-Ours)[0].CloseMainWindow() | Out-Null } catch {}
     for ($i = 0; $i -lt 15 -and (Get-Ours).Count -gt 0; $i++) { Start-Sleep -Seconds 1 }
   }
@@ -321,11 +327,11 @@ try {
   $p = Start-Process -FilePath $Exe -ArgumentList @("-Root", ('"{0}"' -f $sRoot), "-Console", "-NoLaunch") -Wait -PassThru
   Check ("the engine run ended well (exit {0})" -f $p.ExitCode) ($p.ExitCode -eq 0)
   $prof = (Get-Content -Raw (Join-Path $sMc "launcher_profiles.json") | ConvertFrom-Json).profiles.'deepslate-works'
-  Check ("the launcher profile's javaArgs: " + $prof.javaArgs) ($prof.javaArgs -match '^-Xmx8G ')
+  Check ("the launcher profile's javaArgs: " + $prof.javaArgs) ($prof.javaArgs -match "^-Xmx${want}G ")
   $t = $(if (Test-Path $log) { Get-Content -Raw $log } else { "" })
-  Check "the log says it was chosen in Settings" ($t -match "with 8 GB of RAM \(chosen in Settings; your PC has \d+ GB\)")
+  Check "the log says it was chosen in Settings" ($t -match "with $want GB of RAM \(chosen in Settings; your PC has \d+ GB\)")
   $last = @(Get-Content $reports -ErrorAction SilentlyContinue | Where-Object { $_ -match '"settings"' })[-1]
-  Check "the install report says what the game got" ($last -match '"settings":\{"ramGb":8,"xmxGb":8,"renderDistance":10,"villagers":false\}')
+  Check "the install report says what the game got" ($last -match ('"settings":\{"ramGb":' + $want + ',"xmxGb":' + $want + ',"renderDistance":10,"villagers":false\}'))
 } finally {
   $env:PATH = $savedPath
   Remove-Item Env:\DEEPSLATE_PORTAL_URL -ErrorAction SilentlyContinue

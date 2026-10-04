@@ -14,6 +14,9 @@ import { BotRest } from "./rest.js";
 import type { CommandDeps, Member } from "./commands.js";
 import { pressVote, voteComponents } from "./votes.js";
 import type { VotePoster } from "./announcer.js";
+import { currentSeason } from "../seasons/files.js";
+import { prismaSeasonStore } from "../seasons/store.js";
+import { scoreboard, seasonCurrent, seasonLine } from "../shared/season.js";
 
 export type BotWiring = {
   app: FastifyInstance;
@@ -53,10 +56,27 @@ export function makeBot(w: BotWiring): Bot | null {
     const u = await db.user.findUnique({ where: { discordId }, select: { id: true, role: true, mcUsername: true } });
     return u ? { id: u.id, role: u.role === "ADMIN" ? "ADMIN" : "PLAYER", mcUsername: u.mcUsername } : null;
   };
+  const seasonFile = currentSeason(w.env.REPO_DIR, w.log);
+  const ukDayTime = (iso: string) => {
+    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(iso));
+    const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+    return `${get("weekday")} ${get("day")} ${get("month")}, ${get("hour") === "24" ? "00" : get("hour")}:${get("minute")}`;
+  };
   const commands: CommandDeps = {
     host,
     portal,
     member,
+    // docs/20 §7: /season, the same line as the site's Home, and where the member stands
+    async season(userId) {
+      const file = await seasonFile();
+      const row = file ? await prismaSeasonStore.season(file.id) : null;
+      if (!file || !row) return { line: null, mine: null };
+      const line = seasonLine(seasonCurrent(file, row.state, new Date()), ukDayTime);
+      const uuid = userId ? (await db.user.findUnique({ where: { id: userId }, select: { mcUuid: true } }))?.mcUuid : null;
+      const board = uuid && row.state !== "upcoming" ? scoreboard(file, await prismaSeasonStore.clears(file.id)) : [];
+      const at = board.findIndex((r) => r.mcUuid === uuid);
+      return { line, mine: at >= 0 ? { place: at + 1, points: board[at]!.points } : null };
+    },
     server: w.server,
     pack: serverPack,
     async openVotes(userId) {

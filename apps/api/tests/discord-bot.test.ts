@@ -248,6 +248,10 @@ describe("slash commands (docs/22 §6)", () => {
     expect(calls[0]).toMatchObject({ url: "/server/wake", body: { via: "discord" } });
     expect((await runCommand(d, "me", undefined, "200")).content).toContain("App: 3.3.0 (current is 3.3.1)");
     expect((await runCommand(d, "season", undefined, "200")).content).toBe("No season is running yet.");
+    const withSeason = { ...d, season: async (userId: string | null) => ({ line: "Season 1 · week 2 of 4, 20 days left.", mine: userId ? { place: 2, points: 35 } : null }) };
+    const answer = (await runCommand(withSeason, "season", undefined, "200")).content;
+    expect(answer).toContain("Season 1 · week 2 of 4, 20 days left.");
+    expect(answer).toMatch(/\/season$/);
   });
 });
 

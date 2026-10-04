@@ -32,6 +32,9 @@ const STALE_MS = 24 * 3_600_000;
 const LEADER_QUIET_MS = 24 * 3_600_000;
 const WEEK_MS = 7 * 86_400_000;
 
+/** "20:00", UK time. */
+const ukClock = (d: Date) => d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
+
 type Pending = { kind: ClearKind; itemId: string; title: string; clears: NewClear[] };
 
 export class SeasonRecorder {
@@ -151,7 +154,8 @@ export class SeasonRecorder {
   }
 
   /**
-   * The clock, once a minute: a trial or a boss that has just opened, a week to go, the finale. Each is said once
+   * The clock, once a minute: a trial or a boss that has just opened, a week and a day to go, the finale an hour
+   * before it (docs/21 §6). Each is said once
    * (Season.marks), and not at all when its moment passed more than a day ago.
    */
   tick(): Promise<void> {
@@ -175,9 +179,10 @@ export class SeasonRecorder {
         await due(`boss:${b.id}`, Date.parse(b.opensAt), () => this.event(file, at, null, `${b.title} joins the ladder${b.where ? `. ${b.where}` : ""}`, { what: "boss_open", id: b.id, title: b.title }));
       }
       await due("week_to_go", Date.parse(file.endsAt) - WEEK_MS, () => this.event(file, at, null, `A week to go in ${file.name}`, { what: "week_to_go" }));
+      await due("day_to_go", Date.parse(file.endsAt) - 86_400_000, () => this.event(file, at, null, `${file.name} ends tomorrow at ${ukClock(new Date(file.endsAt))} UK`, { what: "day_to_go" }));
       if (file.finale) {
         const f = file.finale;
-        await due("finale", Date.parse(f.at), () => this.event(file, at, null, `The finale begins: ${f.title}`, { what: "finale", title: f.title, boss: f.boss }));
+        await due("finale", Date.parse(f.at) - 3_600_000, () => this.event(file, at, null, `${f.title}: tonight at ${ukClock(new Date(f.at))} UK`, { what: "finale", title: f.title, boss: f.boss }));
       }
     });
     return this.chain;

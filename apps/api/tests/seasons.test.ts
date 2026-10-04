@@ -208,9 +208,9 @@ describe("the season's clock", () => {
   it("says a trial and a boss that have just opened once, and nothing that opened long ago", async () => {
     const t = await setup("running", "2026-11-23T19:00:30Z");
     await t.rec.tick();
-    expect(t.events.map((e) => e.message).sort()).toEqual(["A new trial is open: Rehearsal: The Bed. Sleep in a bed.", "The Rehearsal Golem joins the ladder. Any village, or summoned"].sort());
+    expect(t.events.map((e) => e.message).sort()).toEqual(["A new trial is open: Rehearsal: The Bed. Sleep in a bed.", "The Rehearsal Golem joins the ladder. Any village, or summoned", "The Rehearsal Golem, together: tonight at 20:00 UK"].sort());
     await t.rec.tick();
-    expect(t.events).toHaveLength(2); // the table trial opened a week ago: marked, not said
+    expect(t.events).toHaveLength(3); // the table trial opened a week ago: marked, not said
     expect(t.store.seasons[0]!.marks.done).toEqual(expect.arrayContaining(["trial:rehearsal_table", "trial:rehearsal_bed", "boss:rehearsal_golem", "week_to_go"]));
   });
 

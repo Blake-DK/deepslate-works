@@ -39,6 +39,8 @@ export type CommandDeps = {
   /** An api route, in-process, as this member, with "via Discord" on what it audits. */
   route(member: Member, method: "POST" | "DELETE", url: string, body?: unknown): Promise<Routed>;
   setPaused(paused: boolean, member: Member): Promise<void>;
+  /** The season in the site's one line, and this member's place on the scoreboard; null line: no season to speak of. */
+  season?(userId: string | null): Promise<{ line: string | null; mine: { place: number; points: number } | null }>;
 };
 
 export type Reply = { content: string; ephemeral: boolean };
@@ -47,6 +49,13 @@ type Option = { name: string; type: number; value?: unknown; options?: Option[] 
 const say = (content: string, ephemeral = true): Reply => ({ content, ephemeral });
 const ADMIN_ONLY = "Only the portal's admins can do that.";
 const refusal = (r: Routed, fallback: string) => r.body?.error?.message ?? fallback;
+
+/** 1st, 2nd, 3rd, 4th, 11th, 21st. */
+export function ordinal(n: number): string {
+  const tens = n % 100;
+  const last = n % 10;
+  return `${n}${tens >= 11 && tens <= 13 ? "th" : last === 1 ? "st" : last === 2 ? "nd" : last === 3 ? "rd" : "th"}`;
+}
 
 function uk(d: Date): string {
   return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(d);
@@ -76,8 +85,13 @@ export async function runCommand(d: CommandDeps, name: string, options: Option[]
       if (list.length === 0) return say("There is no open vote.");
       return say(list.map((v) => `• ${v.link ? `[${escapeText(v.title)}](${v.link})` : escapeText(v.title)}${v.answered === false ? " · you have not voted yet" : v.answered ? " · you have voted" : ""}`).join("\n"));
     }
-    case "season":
-      return say("No season is running yet.");
+    case "season": {
+      const m = await d.member(discordId);
+      const s = await d.season?.(m?.id ?? null);
+      if (!s?.line) return say("No season is running yet.");
+      const mine = s.mine ? `\nYou are ${ordinal(s.mine.place)} with ${s.mine.points} ${s.mine.points === 1 ? "point" : "points"}.` : m ? "\nYou have no points yet." : "";
+      return say(`${escapeText(s.line)}${mine}\n${d.portal}/season`);
+    }
   }
   // from here on: members of the portal only
   const m = await d.member(discordId);

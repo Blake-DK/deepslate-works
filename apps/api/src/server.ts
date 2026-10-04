@@ -127,7 +127,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const hook = (url: string | undefined) => (url ? new Webhook(url, { botToken: env.DISCORD_BOT_TOKEN }) : null);
   const portal = env.PORTAL_URL.replace(/\/+$/, "");
   const feed = new Announcer({
-    store: prismaFeedStore(portal), feed: hook(env.DISCORD_WEBHOOK_FEED), admin: hook(env.DISCORD_WEBHOOK_ADMIN), updates: hook(env.DISCORD_WEBHOOK_UPDATES),
+    store: prismaFeedStore(portal, env.REPO_DIR), feed: hook(env.DISCORD_WEBHOOK_FEED), admin: hook(env.DISCORD_WEBHOOK_ADMIN), updates: hook(env.DISCORD_WEBHOOK_UPDATES),
     bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), portal, log: (o, m) => app.log.info(o, m),
   });
   discordRoutes(app, feed, bot, env);

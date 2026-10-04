@@ -8,8 +8,8 @@ import type { BotMessage, Component } from "./rest.js";
 import {
   actionOf, advancementText, asPlayer, asServer, backText, chatText, crashAdminText, crashFeedText, deathRun, deathText, isStale,
   joinText, leaveText, LIVE_TITLE, liveText, metaOf, newsMessage, packText, paramsOf, postTitle, problemText, refusedText, reminderMessage,
-  restartText, resultOf, stopText, TEST_TEXT, voteClosedText, voteMessage, welcomeText,
-  type Brand, type Channel, type FeedEvent, type PollView, type Switches,
+  restartText, resultOf, seasonPost, seasonReply, stopText, TEST_TEXT, voteClosedText, voteMessage, welcomeText,
+  type Brand, type Channel, type FeedEvent, type PollView, type SeasonInfo, type Switches,
 } from "./lines.js";
 
 export type PostRow = { key: string; channel: Channel; messageId: string; postedAt: Date; editedAt: Date | null; via?: "webhook" | "bot"; threadId?: string | null };
@@ -50,6 +50,10 @@ export type FeedStore = {
   addError(message: string, meta: Record<string, unknown>): Promise<void>;
   switches(): Promise<Switches>;
   brand(): Promise<Brand>;
+  /** A season's file by its id (docs/21 §6); absent or null: season moments are not posted. */
+  season?(id: string): Promise<SeasonInfo | null>;
+  /** Is this advancement title a boss, a trial or a wake of the current season? Those have lines of their own. */
+  seasonTitle?(title: string): Promise<boolean>;
 };
 
 type Deps = {
@@ -415,7 +419,13 @@ export class Announcer {
         const how = String(meta.how ?? "");
         if (!(how === "challenge" ? sw.challenges || sw.advancements : sw.advancements)) return true;
         if (!e.actor || !(await this.d.store.member(e.actor))) return true;
+        // docs/21 §6: a season's titles are taken out of the plain advancement lines; they are season moments
+        if (await this.d.store.seasonTitle?.(String(meta.title ?? "")).catch(() => false)) return true;
         return ok(await this.send(e, 0, "feed", "advancement", asPlayer(brand, name, e.actor, advancementText(how, String(meta.title ?? "")))));
+      }
+      case "SEASON": {
+        if (!sw.season) return true;
+        return this.season(e, sw, brand, now);
       }
       case "SERVER_START": {
         if (!sw.serverUpDown || this.downPostedAt === null || now.getTime() - this.downPostedAt > BACK_MS) return true;
@@ -615,6 +625,41 @@ export class Announcer {
     }
     const r = await this.replyToVote(e, 1, kind, id, `${kind} closed`, asServer(brand, voteClosedText(v, this.d.portal)), brand, sw, now);
     return r.ok || !r.retry;
+  }
+
+  // ---- docs/21 §6, docs/22 §13: season moments, a forum post per boss, per trial and per season ----------------------
+
+  /**
+   * One season moment: its post is made the first time something happens to that boss, trial or season, and the
+   * moment is a reply in it. Without the forum's webhook nothing is posted (§13: no falling back to #game-chat).
+   */
+  private async season(e: FeedEvent, sw: Switches, brand: Brand, now: Date): Promise<boolean> {
+    if (!this.usable("updates")) return true;
+    const info = await this.d.store.season?.(String(metaOf(e).season ?? "")).catch(() => null);
+    if (!info) return true;
+    const post = seasonPost(e, info, this.d.portal);
+    if (!post) return true;
+    const open = async (n: number): Promise<Outcome> => {
+      const r = await this.send(e, n, "updates", `${post.tag.toLowerCase()} post`, asServer(brand, post.opener), undefined, { threadName: post.title, tags: this.tags(sw, post.tag) });
+      if (r.ok && r.channelId) await this.d.store.savePost({ key: post.key, channel: "updates", messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId: r.channelId });
+      return r;
+    };
+    let threadId = (await this.d.store.post(post.key))?.threadId ?? null;
+    if (!threadId) {
+      const r = await open(0);
+      if (!r.ok) return !r.retry;
+      threadId = r.channelId || ((await this.d.store.post(post.key))?.threadId ?? null);
+      if (!threadId) return true; // Discord took it but gave no post id: not a forum
+    }
+    const text = seasonReply(e, info, this.d.portal);
+    if (!text) return true;
+    const r = await this.send(e, 1, "updates", String(metaOf(e).what ?? "season"), asServer(brand, text), undefined, { threadId });
+    if (r.ok || !r.gone) return r.ok || !r.retry;
+    // the post was deleted by hand in Discord: made again once, and the reply goes into the new one
+    const again = await open(2);
+    if (!again.ok || !again.channelId) return !again.ok && again.retry ? false : true;
+    const second = await this.send(e, 3, "updates", String(metaOf(e).what ?? "season"), asServer(brand, text), undefined, { threadId: again.channelId });
+    return second.ok || !second.retry;
   }
 
   // ---- what happens with time, not with an event ---------------------------------------------------------------------

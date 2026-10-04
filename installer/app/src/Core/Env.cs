@@ -40,6 +40,10 @@ namespace DeepslateWorks
             get
             {
                 if (_portal != null) return _portal;
+                // 3.5.0: windows-smoke-3.ps1's engine run talks to a stand-in site on this PC, never the real one; only a
+                // test run (-Root) reads it, and only an address on 127.0.0.1
+                var test = CustomRoot ? Environment.GetEnvironmentVariable("DEEPSLATE_PORTAL_URL") : null;
+                if (!string.IsNullOrEmpty(test) && System.Text.RegularExpressions.Regex.IsMatch(test, @"^http://127\.0\.0\.1:\d{2,5}/?$")) return test.TrimEnd('/');
                 var a = typeof(Env).Assembly.GetCustomAttribute<BuildInfoAttribute>();
                 return a != null && !string.IsNullOrEmpty(a.PortalUrl) ? a.PortalUrl.TrimEnd('/') : "https://deepslate.dsw.test";
             }

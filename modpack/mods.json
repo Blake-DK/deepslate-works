@@ -12,7 +12,8 @@
   },
   "ram": {
     "min_gb": 3,
-    "max_gb": 6
+    "max_gb": 6,
+    "user_max_gb": 12
   },
   "server_properties": {
     "online-mode": "true",

@@ -128,6 +128,12 @@ namespace DeepslateWorks
             return "";
         }
 
+        /// <summary>3.5.0: the profile's javaArgs as launcher_profiles.json holds them now; null when it can't say.</summary>
+        public static string ProfileJavaArgs(string path, string id)
+        {
+            try { return File.Exists(path) ? J.Str(J.Obj(J.Obj(ReadJson(path), "profiles"), id), "javaArgs") : null; } catch { return null; }
+        }
+
         /// <summary>For the report: which launcher (classic, store), its version, the profile file's format.</summary>
         public static JObj GetLauncherFacts()
         {

@@ -55,7 +55,7 @@ namespace DeepslateWorks
         public const string NewExtrasStatus = "New visual extras have been added: have a look on the Extras tab. Press Play when you're ready.";
         public const string QueuedExtrasStatus = "Your extras changes are waiting to install. Press Play when you're ready.";
         public const string WaitingForPlayStep = "Waiting for you to press Play";
-        public const string SettingsLink = "\u2699 Play settings";
+        public const string SettingsLink = "\u2699 Settings";   // 3.5.0: selects the Settings tab (docs/30 §3)
         public const string SettingsQuestion = "When I press Play on the website";
         public static readonly KeyValuePair<string, string>[] WebsitePlayLabels =
         {
@@ -64,6 +64,56 @@ namespace DeepslateWorks
             new KeyValuePair<string, string>(AppSettings.Now, "Start straight away"),
         };
         public const string SettingsNote = "Opening Deepslate Works from the desktop or the Start Menu never starts the game by itself.";
+
+        // ---- the Settings tab (3.5.0, docs/30) ---------------------------------------------------------------------
+        public const string SettingsBusy = "Wait for the update to finish";
+        public const string MemoryTitle = "Memory";
+        public const string RamAuto = "Let Deepslate Works choose (recommended)";
+        public const string RamTip = "How much of your PC's memory Minecraft may use. Leave it to Deepslate Works unless the game runs out.";
+        public static string RamNote(int totalGb, int autoGb) => string.Format("Your PC has {0} GB. Deepslate Works would pick {1} GB.", totalGb, autoGb);
+        public static string RamFixed(int totalGb, int gb) => string.Format("Your PC has {0} GB, so the game gets {1} GB. That's the most it can safely have.", totalGb, gb);
+        public const string RamWarnHalf = "That's more than half your PC's memory. Windows, Discord and your browser need some too.";
+        public const string RamWarnStutter = "More isn't faster: past 8 GB the game can stutter when it tidies up its memory.";
+        public static string GbText(int gb) => gb + " GB";
+        public const string GraphicsTitle = "Graphics and sound";
+        public const string GraphicsBeforeFirstPlay = "These appear after your first Play.";
+        public static string SetInGame(string what) => string.Format("(set in game: {0})", what);
+        public static string ServerShows(int chunks) => string.Format("The server shows {0} chunks. Higher than that costs frames and you see nothing more.", chunks);
+        public const string WeakStruggle = "This PC may struggle with this.";
+        public const string RenderTip = "How far you can see, in chunks (16 blocks each). The biggest thing you can change for a smoother game.";
+        public const string EntityTip = "How far away animals, monsters and other players are drawn.";
+        public const string Unlimited = "Unlimited";
+        public const string VillagerTitle = "Villagers";
+        public const string VillagerSwitch = "Prisoner villagers";
+        public const string VillagerNote = "Every villager wears the prison outfit. Only you see it, and you can switch it off again here.";
+        public const string VillagerMissing = "Press Play once to download it.";
+        public const string WebsiteTitle = "The Play button on the website";
+        public const string BackToRecommended = "Back to recommended";
+        public const string SettingsGameOpen = "Minecraft is open, so these apply the next time you press Play. To change them right now, use Options in the game.";
+        public static string SettingsSaved(int? ramGb, int xmxGb) => ramGb.HasValue
+            ? string.Format("Saved. The game gets {0} GB from the next time you press Play.", xmxGb)
+            : "Saved.";
+        public const string SettingsSavedAuto = "Saved. Deepslate Works chooses the memory again from the next time you press Play.";
+        public const string SettingsNotSaved = "That didn't save: {0}";
+        /// <summary>The tab's labels for each options.txt key (docs/30 §4.2), in the tab's order.</summary>
+        public static readonly KeyValuePair<string, string>[] GraphicsLabels =
+        {
+            new KeyValuePair<string, string>("renderDistance", "Render distance"),
+            new KeyValuePair<string, string>("entityDistanceScaling", "Entity distance"),
+            new KeyValuePair<string, string>("maxFps", "Frame rate limit"),
+            new KeyValuePair<string, string>("enableVsync", "VSync"),
+            new KeyValuePair<string, string>("fullscreen", "Full screen"),
+            new KeyValuePair<string, string>("graphicsMode", "Graphics"),
+            new KeyValuePair<string, string>("renderClouds", "Clouds"),
+            new KeyValuePair<string, string>("particles", "Particles"),
+            new KeyValuePair<string, string>("ao", "Smooth lighting"),
+            new KeyValuePair<string, string>("entityShadows", "Entity shadows"),
+            new KeyValuePair<string, string>("fov", "Field of view"),
+            new KeyValuePair<string, string>("gamma", "Brightness"),
+            new KeyValuePair<string, string>("guiScale", "Menu and text size"),
+            new KeyValuePair<string, string>("soundCategory_master", "Volume: everything"),
+            new KeyValuePair<string, string>("soundCategory_music", "Volume: music"),
+        };
 
         // ---- the app as the front door, votes before play (3.2.0, planner 2026-10-02) ------------------------------
         public const string OpenedStatus = "Signing in, checking for updates and waking the server. Press Play when it's ready.";

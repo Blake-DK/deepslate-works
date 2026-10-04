@@ -39,6 +39,7 @@ namespace DeepslateWorks
         public readonly List<JObj> SetupProblems = new List<JObj>();
         public bool SetupChecked;
         public readonly JObj Facts = J.O("java", null, "neoforge", null, "launcher", null);
+        public JObj Settings;                       // 3.5.0 (docs/30 §6): the report's settings block (memory, render distance, villagers)
         public bool ReportsOff;
         public bool DryRun;
         public bool AllowAll;                       // tests and --console: every permission taken as given

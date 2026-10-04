@@ -1,5 +1,5 @@
 import { getManifest } from "@/server/modpack/manifest";
-import { distancesFor } from "modpack/schema";
+import { distancesFor, serverViewDistance } from "modpack/schema";
 import { getInstaller, getLock } from "@/server/modpack/lock";
 import { installerFor } from "@/lib/installer-info";
 import { getSection } from "@/server/site-settings";
@@ -52,6 +52,9 @@ export async function GET(req: Request) {
     ram: m.ram,
     render_distance: dist.render,
     simulation_distance: dist.simulation,
+    // docs/30 §4.2: the server's own view distance as mods.json expects it, so the app's Settings tab can say "the server
+    // shows 12 chunks"; null when mods.json does not say
+    server_view_distance: serverViewDistance(m.server_properties),
     tier: tier ?? null,
     config_url: lock.configs.length ? `${env.AUTH_URL}/downloads/config.zip${k}` : null,
     files: lock.files.map((f) => ({ slug: f.slug, name: f.name, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size, side: f.side })),

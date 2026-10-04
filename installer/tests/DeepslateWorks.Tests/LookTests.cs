@@ -141,7 +141,7 @@ namespace DeepslateWorks.Tests
                         }
                         // ready with nothing to vote on: Play's label is the short "Play"
                         ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Up)), "ready"); ui.Pump();
-                        Walk("play", "extras", "log");
+                        Walk("play", "extras", "settings", "log");
                         // two votes waiting: the Vote tab and its block (Play's label is then long, so Segoe UI)
                         ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready"); ui.Pump();
                         Walk("play", "vote");
@@ -297,12 +297,13 @@ namespace DeepslateWorks.Tests
                 });
         }
 
-        [WindowsFact] public void The_question_and_settings_windows_are_dark_too()
+        [WindowsFact] public void The_question_window_is_dark_too()
         {
+            // 3.5.0: the Play settings window went (its choice is on the Settings tab); the question window is the other
             using (new Scratch())
                 WithWindow(ui =>
                 {
-                    foreach (var d in new[] { ui.MakeAsk("Q", "Why", "All"), ui.MakeSettings() })
+                    foreach (var d in new[] { ui.MakeAsk("Q", "Why", "All") })
                     {
                         Assert.Equal(Of("Card"), ((SolidColorBrush)d.Background).Color);
                         Assert.NotNull(d.TryFindResource("Primary"));

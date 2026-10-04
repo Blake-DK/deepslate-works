@@ -232,6 +232,8 @@ namespace DeepslateWorks
                 }
                 current = null;
                 var r = SetResourcePackList(paths.Options, want.ResourcePacks, want.Known["resourcepacks"]);
+                // 3.5.0 (docs/30 §4.3): the prisoner villagers stay on top of Fresh Animations (a no-op when they are off)
+                if (GameOptions.KeepOnTop(paths.Options, GameSettings.VillagerId)) XLog("apply: options.txt: " + GameSettings.VillagerPack + " kept on top");
                 var rpLine = File.Exists(paths.Options) ? Regex.Match(File.ReadAllText(paths.Options), @"(?m)^resourcePacks:.*?(?=\r?$)").Value : "";
                 XLog("apply: options.txt " + (r.Status == "changed" ? "written: " + rpLine : "unchanged (" + r.Text + ")"));
                 if (state.On("iris"))

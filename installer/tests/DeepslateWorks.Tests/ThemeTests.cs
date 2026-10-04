@@ -59,6 +59,9 @@ namespace DeepslateWorks.Tests
             new[] { "Copper", "Panel" }, new[] { "Copper", "Card" }, new[] { "CopperHi", "Ground" },
             new[] { "White", "Green" }, new[] { "White", "Panel" }, new[] { "OnCopper", "Copper" },
             new[] { "DisabledText", "Disabled" },
+            // 3.5.0 (docs/30): the Settings tab's words are pairs above (Fg, Muted, Copper and Dim on Card; Muted, GreenText
+            // and Red on Ground for the status line); new are the tick and the dot of a switch and a choice
+            new[] { "CopperHi", "Shadow" },
         };
 
         [Fact] public void Every_text_and_background_pair_is_at_least_4_5_to_1()
@@ -102,7 +105,7 @@ namespace DeepslateWorks.Tests
             // 3.4.1 (docs/21 §11): 980x620, never under 900x560; Display formatting, ClearType, layout rounding
             var x = AppWindow.AppXaml;
             Assert.Contains("Width=\"980\" Height=\"620\" MinWidth=\"900\" MinHeight=\"560\"", x);
-            foreach (var w in new[] { AppWindow.AppXaml, AppWindow.AskXaml, AppWindow.SettingsXaml })
+            foreach (var w in new[] { AppWindow.AppXaml, AppWindow.AskXaml })
             {
                 Assert.Contains("FontSize=\"14\"", w);
                 Assert.Contains("TextOptions.TextFormattingMode=\"Display\" TextOptions.TextRenderingMode=\"ClearType\" UseLayoutRounding=\"True\" SnapsToDevicePixels=\"True\"", w);
@@ -147,7 +150,7 @@ namespace DeepslateWorks.Tests
 
         [Fact] public void Every_window_carries_the_shared_styles_and_no_colour()
         {
-            foreach (var x in new[] { AppWindow.AppXaml, AppWindow.AskXaml, AppWindow.SettingsXaml })
+            foreach (var x in new[] { AppWindow.AppXaml, AppWindow.AskXaml })
             {
                 Assert.Contains("x:Key=\"Primary\"", x);
                 Assert.Contains("x:Key=\"Plain\"", x);
@@ -156,6 +159,8 @@ namespace DeepslateWorks.Tests
             Assert.Contains("Style=\"{StaticResource PlayBlock}\"", AppWindow.AppXaml);
             Assert.Contains("Style=\"{StaticResource VoteBlock}\"", AppWindow.AppXaml);
             Assert.Contains("x:Key=\"PickBox\"", AppWindow.AppXaml);
+            // 3.5.0: the Settings tab's slider, switch and choice are drawn by the theme, not by Windows
+            foreach (var k in new[] { "x:Key=\"Switch\"", "x:Key=\"Choice\"", "x:Key=\"SliderThumb\"", "<Style TargetType=\"Slider\">" }) Assert.Contains(k, AppWindow.AppXaml);
             Assert.Contains("ContentTemplate=\"{StaticResource MarkedLabel}\"", AppWindow.AppXaml);
         }
     }

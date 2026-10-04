@@ -4,7 +4,7 @@ namespace DeepslateWorks
     {
         // The windows' layout, loaded at run time with XamlReader.Parse (no XAML compilation; AppWindow.Load). 3.4.0
         // (docs/21): the dark look; 3.4.1 (§11): landscape, crisp text, the pixel face only in the name, Play and Vote. No colour is written here: every brush is a {DynamicResource Key} from Theme, which
-        // Load puts into the window's resources; the shared styles (ThemeXaml) go into all three windows.
+        // Load puts into the window's resources; the shared styles (ThemeXaml) go into both windows (3.5.0: the settings window went).
 
         // A block (docs/21 §4): a black outline with a 3 px drop under it, the face, a 2 px highlight top and left, a 2 px
         // shade right and bottom. Pressed: highlight and shade swap and the text moves 1,1. Disabled: a grey face. No
@@ -81,6 +81,84 @@ namespace DeepslateWorks
         </ControlTemplate>
       </Setter.Value></Setter>
     </Style>
+    <!-- 3.5.0 (docs/30): the Settings tab's controls in the window's look: a slider with a copper block, a switch that
+         is the vote's check box, a choice that is a round one -->
+    <Style TargetType=""RepeatButton"" x:Key=""SliderFill"">
+      <Setter Property=""Focusable"" Value=""False""/><Setter Property=""IsTabStop"" Value=""False""/>
+      <Setter Property=""Template""><Setter.Value>
+        <ControlTemplate TargetType=""RepeatButton""><Grid Background=""Transparent""><Border x:Name=""Bar"" Height=""4"" VerticalAlignment=""Center"" Background=""{DynamicResource Copper}""/></Grid>
+          <ControlTemplate.Triggers><Trigger Property=""IsEnabled"" Value=""False""><Setter TargetName=""Bar"" Property=""Background"" Value=""{DynamicResource Disabled}""/></Trigger></ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value></Setter>
+    </Style>
+    <Style TargetType=""RepeatButton"" x:Key=""SliderGap"">
+      <Setter Property=""Focusable"" Value=""False""/><Setter Property=""IsTabStop"" Value=""False""/>
+      <Setter Property=""Template""><Setter.Value>
+        <ControlTemplate TargetType=""RepeatButton""><Grid Background=""Transparent""><Border Height=""4"" VerticalAlignment=""Center"" Background=""{DynamicResource Line}""/></Grid></ControlTemplate>
+      </Setter.Value></Setter>
+    </Style>
+    <Style TargetType=""Thumb"" x:Key=""SliderThumb"">
+      <Setter Property=""Template""><Setter.Value>
+        <ControlTemplate TargetType=""Thumb"">
+          <Border x:Name=""Knob"" Width=""12"" Height=""20"" Background=""{DynamicResource Copper}"" BorderBrush=""{DynamicResource Black}"" BorderThickness=""2"" SnapsToDevicePixels=""True""/>
+          <ControlTemplate.Triggers>
+            <Trigger Property=""IsMouseOver"" Value=""True""><Setter TargetName=""Knob"" Property=""Background"" Value=""{DynamicResource CopperHi}""/></Trigger>
+            <Trigger Property=""IsEnabled"" Value=""False""><Setter TargetName=""Knob"" Property=""Background"" Value=""{DynamicResource Disabled}""/></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value></Setter>
+    </Style>
+    <Style TargetType=""Slider"">
+      <Setter Property=""Cursor"" Value=""Hand""/><Setter Property=""IsMoveToPointEnabled"" Value=""True""/><Setter Property=""IsSnapToTickEnabled"" Value=""True""/><Setter Property=""VerticalAlignment"" Value=""Center""/>
+      <Setter Property=""Template""><Setter.Value>
+        <ControlTemplate TargetType=""Slider"">
+          <Grid Height=""24"" Background=""Transparent"">
+            <Track x:Name=""PART_Track"">
+              <Track.DecreaseRepeatButton><RepeatButton Style=""{StaticResource SliderFill}"" Command=""{x:Static Slider.DecreaseLarge}""/></Track.DecreaseRepeatButton>
+              <Track.IncreaseRepeatButton><RepeatButton Style=""{StaticResource SliderGap}"" Command=""{x:Static Slider.IncreaseLarge}""/></Track.IncreaseRepeatButton>
+              <Track.Thumb><Thumb Style=""{StaticResource SliderThumb}""/></Track.Thumb>
+            </Track>
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value></Setter>
+    </Style>
+    <Style TargetType=""CheckBox"" x:Key=""Switch"">
+      <Setter Property=""Cursor"" Value=""Hand""/><Setter Property=""Foreground"" Value=""{DynamicResource Fg}""/><Setter Property=""FocusVisualStyle"" Value=""{x:Null}""/>
+      <Setter Property=""Template""><Setter.Value>
+        <ControlTemplate TargetType=""CheckBox"">
+          <DockPanel Background=""Transparent"">
+            <Border x:Name=""Box"" DockPanel.Dock=""Left"" Width=""16"" Height=""16"" Margin=""0,2,0,0"" VerticalAlignment=""Top"" Background=""{DynamicResource Shadow}"" BorderBrush=""{DynamicResource BoxLine}"" BorderThickness=""2"" SnapsToDevicePixels=""True"">
+              <TextBlock x:Name=""Tick"" Text=""✓"" FontSize=""11"" FontWeight=""Bold"" Foreground=""{DynamicResource CopperHi}"" HorizontalAlignment=""Center"" VerticalAlignment=""Center"" Margin=""0,-2,0,0"" Visibility=""Hidden""/>
+            </Border>
+            <ContentPresenter Margin=""8,0,0,0"" VerticalAlignment=""Center"" RecognizesAccessKey=""False""/>
+          </DockPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property=""IsChecked"" Value=""True""><Setter TargetName=""Tick"" Property=""Visibility"" Value=""Visible""/></Trigger>
+            <Trigger Property=""IsMouseOver"" Value=""True""><Setter TargetName=""Box"" Property=""BorderBrush"" Value=""{DynamicResource Copper}""/></Trigger>
+            <Trigger Property=""IsEnabled"" Value=""False""><Setter Property=""Foreground"" Value=""{DynamicResource Dim}""/><Setter TargetName=""Box"" Property=""BorderBrush"" Value=""{DynamicResource Line}""/><Setter TargetName=""Tick"" Property=""Foreground"" Value=""{DynamicResource Dim}""/></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value></Setter>
+    </Style>
+    <Style TargetType=""RadioButton"" x:Key=""Choice"">
+      <Setter Property=""Cursor"" Value=""Hand""/><Setter Property=""Foreground"" Value=""{DynamicResource Fg}""/><Setter Property=""FocusVisualStyle"" Value=""{x:Null}""/><Setter Property=""Margin"" Value=""0,0,14,0""/>
+      <Setter Property=""Template""><Setter.Value>
+        <ControlTemplate TargetType=""RadioButton"">
+          <StackPanel Orientation=""Horizontal"" Background=""Transparent"">
+            <Grid Width=""16"" Height=""16"" VerticalAlignment=""Center"">
+              <Ellipse x:Name=""Ring"" Fill=""{DynamicResource Shadow}"" Stroke=""{DynamicResource BoxLine}"" StrokeThickness=""2""/>
+              <Ellipse x:Name=""Dot"" Width=""6"" Height=""6"" Fill=""{DynamicResource CopperHi}"" Visibility=""Hidden""/>
+            </Grid>
+            <ContentPresenter Margin=""6,0,0,0"" VerticalAlignment=""Center"" RecognizesAccessKey=""False""/>
+          </StackPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property=""IsChecked"" Value=""True""><Setter TargetName=""Dot"" Property=""Visibility"" Value=""Visible""/></Trigger>
+            <Trigger Property=""IsMouseOver"" Value=""True""><Setter TargetName=""Ring"" Property=""Stroke"" Value=""{DynamicResource Copper}""/></Trigger>
+            <Trigger Property=""IsEnabled"" Value=""False""><Setter Property=""Foreground"" Value=""{DynamicResource Dim}""/><Setter TargetName=""Ring"" Property=""Stroke"" Value=""{DynamicResource Line}""/></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value></Setter>
+    </Style>
     <Style TargetType=""TabControl"" x:Key=""Strip"">
       <Setter Property=""Template""><Setter.Value>
         <ControlTemplate TargetType=""TabControl"">
@@ -115,7 +193,7 @@ namespace DeepslateWorks
 
         const string Ns = @"xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"" xmlns:dw=""clr-namespace:DeepslateWorks;assembly=DeepslateWorks""";
 
-        /// <summary>The main window: the banner, then the Play, (Vote,) Extras and Log tabs, then the footer.</summary>
+        /// <summary>The main window: the banner, then the Play, (Vote,) Extras, Settings and Log tabs, then the footer.</summary>
         public static readonly string AppXaml = @"<Window " + Ns + @"
         Title=""Deepslate Works"" Width=""980"" Height=""620"" MinWidth=""900"" MinHeight=""560"" WindowStartupLocation=""CenterScreen""
         FontFamily=""Segoe UI"" FontSize=""14"" TextOptions.TextFormattingMode=""Display"" TextOptions.TextRenderingMode=""ClearType"" UseLayoutRounding=""True"" SnapsToDevicePixels=""True"" Background=""{DynamicResource Ground}"" Foreground=""{DynamicResource Fg}"">
@@ -216,7 +294,7 @@ namespace DeepslateWorks
         <DockPanel x:Name=""PlayRow"" Grid.Column=""0"" Grid.ColumnSpan=""3"" Grid.Row=""2"">
           <StackPanel DockPanel.Dock=""Left"" Orientation=""Horizontal"" VerticalAlignment=""Center"" TextElement.FontSize=""12.5"">
             <TextBlock><Hyperlink x:Name=""ReviewLink"">Review permissions</Hyperlink></TextBlock>
-            <TextBlock Margin=""18,0,0,0""><Hyperlink x:Name=""SettingsLink"">Play settings</Hyperlink></TextBlock>
+            <TextBlock Margin=""18,0,0,0""><Hyperlink x:Name=""SettingsLink"">Settings</Hyperlink></TextBlock>
           </StackPanel>
           <StackPanel DockPanel.Dock=""Right"" HorizontalAlignment=""Right"">
             <StackPanel Orientation=""Horizontal"" HorizontalAlignment=""Right"">
@@ -283,6 +361,62 @@ namespace DeepslateWorks
         </ScrollViewer>
       </DockPanel>
     </TabItem>
+    <TabItem Header=""Settings"" x:Name=""SettingsTab"" ToolTipService.ShowOnDisabled=""True"">
+      <!-- 3.5.0 (docs/30 §3): memory, villagers and the website's Play on the left, graphics and sound on the right, the
+           status and the buttons along the bottom. Nothing is written until Save, but the website's Play choice. -->
+      <DockPanel x:Name=""SettingsPanel"" Margin=""16,14,16,12"">
+        <DockPanel x:Name=""SettingsRow"" DockPanel.Dock=""Bottom"" Margin=""0,10,0,0"">
+          <Button x:Name=""SettingsSave"" DockPanel.Dock=""Right"" Style=""{StaticResource Primary}"" Content=""Save"" MinWidth=""120"" IsEnabled=""False""/>
+          <Button x:Name=""SettingsRecommended"" DockPanel.Dock=""Right"" Style=""{StaticResource Plain}"" Content=""Back to recommended""/>
+          <TextBlock x:Name=""SettingsStatus"" TextWrapping=""Wrap"" VerticalAlignment=""Center"" Margin=""0,0,12,0"" FontSize=""12.5"" Foreground=""{DynamicResource Muted}""/>
+        </DockPanel>
+        <ScrollViewer x:Name=""SettingsScroll"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Disabled"">
+          <Grid x:Name=""SettingsGrid"">
+            <Grid.ColumnDefinitions><ColumnDefinition Width=""340""/><ColumnDefinition Width=""16""/><ColumnDefinition Width=""*""/></Grid.ColumnDefinitions>
+            <StackPanel x:Name=""SettingsLeft"" Grid.Column=""0"">
+              <Border x:Name=""MemoryCard"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"" Margin=""0,0,0,10"">
+                <StackPanel>
+                  <TextBlock x:Name=""MemoryTitle"" FontFamily=""Segoe UI"" FontSize=""15"" FontWeight=""SemiBold"" Text=""Memory"" Margin=""0,0,0,6""/>
+                  <CheckBox x:Name=""RamAuto"" Style=""{StaticResource Switch}"" IsChecked=""True""><TextBlock x:Name=""RamAutoText"" TextWrapping=""Wrap"" Text=""Let Deepslate Works choose (recommended)""/></CheckBox>
+                  <DockPanel Margin=""0,8,0,0"">
+                    <TextBlock x:Name=""RamValue"" DockPanel.Dock=""Right"" FontWeight=""SemiBold"" Width=""52"" TextAlignment=""Right"" VerticalAlignment=""Center"" Text=""6 GB""/>
+                    <Slider x:Name=""RamSlider"" Minimum=""3"" Maximum=""8"" TickFrequency=""1"" SmallChange=""1"" LargeChange=""1"" IsEnabled=""False""/>
+                  </DockPanel>
+                  <TextBlock x:Name=""RamNote"" TextWrapping=""Wrap"" Margin=""0,6,0,0"" FontSize=""12.5"" Foreground=""{DynamicResource Muted}""/>
+                  <TextBlock x:Name=""RamWarn"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" FontSize=""12.5"" Foreground=""{DynamicResource Copper}"" Visibility=""Collapsed""/>
+                </StackPanel>
+              </Border>
+              <Border x:Name=""VillagerCard"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"" Margin=""0,0,0,10"">
+                <DockPanel>
+                  <Image x:Name=""VillagerPreview"" DockPanel.Dock=""Left"" Width=""40"" Height=""50"" Margin=""0,2,12,0"" VerticalAlignment=""Top"" RenderOptions.BitmapScalingMode=""NearestNeighbor"" Visibility=""Collapsed""/>
+                  <StackPanel>
+                    <TextBlock x:Name=""VillagerTitle"" FontFamily=""Segoe UI"" FontSize=""15"" FontWeight=""SemiBold"" Text=""Villagers"" Margin=""0,0,0,6""/>
+                    <CheckBox x:Name=""VillagerSwitch"" Style=""{StaticResource Switch}"" Content=""Prisoner villagers""/>
+                    <TextBlock x:Name=""VillagerNote"" TextWrapping=""Wrap"" Margin=""0,6,0,0"" FontSize=""12.5"" Foreground=""{DynamicResource Muted}""/>
+                    <TextBlock x:Name=""VillagerMissing"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" FontSize=""12.5"" Foreground=""{DynamicResource Copper}"" Visibility=""Collapsed""/>
+                  </StackPanel>
+                </DockPanel>
+              </Border>
+              <Border x:Name=""WebsiteCard"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
+                <StackPanel>
+                  <TextBlock x:Name=""WebsiteTitle"" FontFamily=""Segoe UI"" FontSize=""15"" FontWeight=""SemiBold"" Text=""The Play button on the website"" TextWrapping=""Wrap"" Margin=""0,0,0,6""/>
+                  <TextBlock x:Name=""WebsiteQuestion"" TextWrapping=""Wrap"" Margin=""0,0,0,6"" Foreground=""{DynamicResource Muted}""/>
+                  <StackPanel x:Name=""WebsiteChoices""/>
+                  <TextBlock x:Name=""WebsiteNote"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" FontSize=""12"" Foreground=""{DynamicResource Muted}""/>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+            <Border x:Name=""GraphicsCard"" Grid.Column=""2"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"" VerticalAlignment=""Top"">
+              <StackPanel>
+                <TextBlock x:Name=""GraphicsTitle"" FontFamily=""Segoe UI"" FontSize=""15"" FontWeight=""SemiBold"" Text=""Graphics and sound"" Margin=""0,0,0,6""/>
+                <TextBlock x:Name=""GraphicsEmpty"" TextWrapping=""Wrap"" Foreground=""{DynamicResource Muted}"" Visibility=""Collapsed""/>
+                <Grid x:Name=""GraphicsBody""/>
+              </StackPanel>
+            </Border>
+          </Grid>
+        </ScrollViewer>
+      </DockPanel>
+    </TabItem>
     <TabItem Header=""Log"" x:Name=""LogTab"">
       <DockPanel>
         <!-- 3.4.2: the logs, made safe, saved to Downloads or sent to Alex (Home/LogBundle.cs) -->
@@ -321,20 +455,6 @@ namespace DeepslateWorks
   </StackPanel>
 </Window>";
 
-        /// <summary>3.1.0: the cog on the Play tab, "When I press Play on the website". A change is saved at once.</summary>
-        public static readonly string SettingsXaml = @"<Window " + Ns + @"
-        Title=""Play settings"" Width=""400"" SizeToContent=""Height"" ResizeMode=""NoResize"" WindowStartupLocation=""CenterOwner""
-        FontFamily=""Segoe UI"" FontSize=""14"" TextOptions.TextFormattingMode=""Display"" TextOptions.TextRenderingMode=""ClearType"" UseLayoutRounding=""True"" SnapsToDevicePixels=""True"" Background=""{DynamicResource Card}"" Foreground=""{DynamicResource Fg}"">
-  <Window.Resources>" + ThemeXaml + @"
-  </Window.Resources>
-  <StackPanel Margin=""18"">
-    <TextBlock x:Name=""SQ"" FontSize=""16"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Margin=""0,0,0,10""/>
-    <StackPanel x:Name=""SChoices""/>
-    <TextBlock x:Name=""SNote"" TextWrapping=""Wrap"" Margin=""0,10,0,14"" Foreground=""{DynamicResource Muted}"" FontSize=""12""/>
-    <Button x:Name=""SDone"" Style=""{StaticResource Primary}"" Content=""Done"" HorizontalAlignment=""Right""/>
-  </StackPanel>
-</Window>";
-
         /// <summary>The restart question uses the same window (the self test and the screenshots refer to it).</summary>
         public static readonly string RestartXaml = AskXaml;
 
@@ -356,10 +476,13 @@ namespace DeepslateWorks
             "PlayGrid", "PlayLeft", "PlayRight", "PlayCard", "PlayRow", "BrandShade",
             // 3.4.2: Save log and Send to Alex on the Log tab
             "SaveLogButton", "SendLogButton", "LogStatus",
+            // 3.5.0 (docs/30): the Settings tab
+            "SettingsTab", "SettingsPanel", "SettingsRow", "SettingsSave", "SettingsRecommended", "SettingsStatus", "SettingsScroll", "SettingsGrid", "SettingsLeft",
+            "MemoryCard", "MemoryTitle", "RamAuto", "RamAutoText", "RamValue", "RamSlider", "RamNote", "RamWarn",
+            "VillagerCard", "VillagerPreview", "VillagerTitle", "VillagerSwitch", "VillagerNote", "VillagerMissing",
+            "WebsiteCard", "WebsiteTitle", "WebsiteQuestion", "WebsiteChoices", "WebsiteNote",
+            "GraphicsCard", "GraphicsTitle", "GraphicsEmpty", "GraphicsBody",
         };
-
-        /// <summary>Every name the settings window looks up in SettingsXaml.</summary>
-        public static readonly string[] SettingsNames = { "SQ", "SChoices", "SNote", "SDone" };
 
         /// <summary>Every name the question window looks up in AskXaml.</summary>
         public static readonly string[] AskNames = { "Q", "Why", "AllNote", "Later", "All", "Yes" };

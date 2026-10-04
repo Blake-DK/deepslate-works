@@ -169,6 +169,7 @@ namespace DeepslateWorks
                 "setupProblems", run.SetupChecked ? (object)run.SetupProblems.Cast<object>().ToList() : null,
                 "extras", extras,
                 "mods", ModsBlock(run),
+                "settings", run.Settings,   // 3.5.0: not in the minimal ping
                 "mode", run.ReportMode,
                 "outcome", outcome,
                 "failedStep", failed,

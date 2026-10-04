@@ -1,8 +1,8 @@
 {
   "id": "sample",
   "name": "Sample Season · Dress Rehearsal",
-  "startsAt": "2026-10-26T00:00:00Z",
-  "endsAt": "2026-11-03T00:00:00Z",
+  "startsAt": "2026-11-16T00:00:00Z",
+  "endsAt": "2026-11-29T00:00:00Z",
   "icon": "minecraft:wooden_sword",
   "groupRadius": 48,
   "bosses": [
@@ -25,7 +25,7 @@
       "entity": "minecraft:iron_golem",
       "tier": 2,
       "points": 15,
-      "opensAt": "2026-10-28T19:00:00Z",
+      "opensAt": "2026-11-23T19:00:00Z",
       "where": "Any village, or summoned",
       "hint": "Hit it once to see the wake line, then finish it.",
       "trophy": {
@@ -38,7 +38,7 @@
     {
       "id": "rehearsal_table",
       "title": "Rehearsal: The Table",
-      "opensAt": "2026-10-26T00:00:00Z",
+      "opensAt": "2026-11-16T00:00:00Z",
       "points": 5,
       "solo": true,
       "hint": "Hold a crafting table.",
@@ -57,7 +57,7 @@
     {
       "id": "rehearsal_bed",
       "title": "Rehearsal: The Bed",
-      "opensAt": "2026-10-28T19:00:00Z",
+      "opensAt": "2026-11-23T19:00:00Z",
       "points": 5,
       "solo": true,
       "hint": "Sleep in a bed.",
@@ -74,7 +74,7 @@
     "target": 3
   },
   "finale": {
-    "at": "2026-10-28T20:00:00Z",
+    "at": "2026-11-23T20:00:00Z",
     "title": "The Rehearsal Golem, together",
     "boss": "rehearsal_golem"
   }

@@ -2,7 +2,35 @@
 
 VPS session, 2026-10-04 (review and planning; nothing built, nothing changed on the server). It builds on `docs/20-seasons-bosses-trials.md` (the mechanism: season file, Frontier, recording, `/season`), `docs/21-discord-feed.md` §6 and `docs/22-discord-bot.md` §13 (the Discord moments). Where this file and docs/20 differ, docs/20 is the mechanism and this file is the content and the calendar. The bug list that goes with it is `docs/31-review-and-bug-list.md`.
 
-## 0. What is fixed, and the calendar
+## Amendment, 2026-10-04 (Alex): a season is a month, from the last Monday to the last Monday
+
+This replaces the six-week seasons and the Wednesday changeovers of §0, and every date in §2 to §5. The content of each season (theme, bosses, mods, trials, zone, what persists, the work, the risks) stands as written below.
+
+| Season | Opens (Monday, 19:00 UK) | Finale (Saturday, 20:00 UK) | Ends, zone reset (Monday) | Weeks |
+|---|---|---|---|---|
+| 1 · First Blood | 30 Nov 2026 | 26 Dec 2026 | 28 Dec 2026 | 4 |
+| 2 · The Drowned and the Frozen | 28 Dec 2026 | 23 Jan 2027 | 25 Jan 2027 | 4 |
+| 3 · Fire and Iron | 25 Jan 2027 | 20 Feb 2027 | 22 Feb 2027 | 4 |
+| 4 · The Otherside | 22 Feb 2027 | 27 Mar 2027 | 29 Mar 2027 | 5 |
+
+Then every month the same way: 29 Mar, 26 Apr, 31 May 2027, and so on.
+
+- **The rule:** a season opens at 19:00 UK on the last Monday of a month and ends when the next one opens, on the last Monday of the next month. Four weeks, sometimes five. The lint in `packages/modpack` holds every numbered season file to it.
+- **Rhythm inside a season** (Alex, same day): unchanged. A new trial every Friday at 19:00 UK, the finale on the last Saturday at 20:00 UK, which is two days before the next season opens. The opening Monday carries the first trial.
+- **October and November 2026 are plain play.** Season 1 opens eight weeks after going live, not four.
+- **Each six-week plan below is played in four weeks.** Nothing is dropped; the weekly drops are closer together:
+  - week 1 (the opening Monday): the zone, tier 1, the first trial;
+  - Friday of week 1: the second trial;
+  - Friday of week 2: the third trial, tier 2;
+  - Friday of week 3: the fourth trial, the late bosses;
+  - week 4: the fifth trial, then the finale on Saturday.
+  Season 4 has a fifth week, which goes to rehearsing the Rush.
+- **Season 1 now runs over Christmas** (the light weeks of §3 were written for Season 2). Its fifth trial opens on Wednesday 23 December instead of Friday the 25th, and its finale by the rule is **Saturday 26 December, Boxing Day**. That is a decision for Alex: the 26th as the rule gives it, or Saturday the 19th with the last week left for stragglers. `modpack/seasons/s1.json` has the 26th.
+- **Season 2's holiday weeks are gone:** it opens on 28 December and runs through January; its "moved drops" in §3 no longer apply.
+- **Mods still change only at a changeover**, now a Monday. Each new mod's server start and LOW-tier check falls in the third week of the season before: about 14 Dec 2026 for Aquamirae (Season 2), 11 Jan 2027 for Bosses of Mass Destruction (Season 3) and 8 Feb for Deeper and Darker (Season 4).
+- **docs/20 decisions 4 and 5** (six weeks; Season 1 one month after going live) are the planner's and are overtaken by this. docs/20 is not edited here; this is for the planner to take into its section 12.
+
+## 0. What is fixed, and the calendar (as first written; the dates are replaced by the amendment above)
 
 Decided by Alex, not reopened here:
 

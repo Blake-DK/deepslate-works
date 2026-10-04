@@ -21,18 +21,18 @@ Your regular Minecraft is not touched. Weak PCs are welcome: the pack is built p
 
 ## What is coming
 
-The first month is plain play: settle in, build a base, meet the bosses with nothing counted. Then the seasons start.
+October and November are plain play: settle in, build a base, meet the bosses with nothing counted. Then the seasons start.
 
-**A season is six weeks.** Each has a ladder of bosses, a new trial every Friday at 19:00 UK, a zone away from the main world to explore and strip-mine, a scoreboard, and a finale on the last Saturday at 20:00 UK. When it ends, the scoreboard is frozen into the hall of fame, the zone is reset, and the next season opens. **The main world is never reset.** Rewards are trophies, titles and points, so nobody who joins late is left behind.
+**A season is a month.** It opens on the last Monday of the month at 19:00 UK and runs until the last Monday of the next. Each has a ladder of bosses, a new trial every Friday at 19:00 UK, a zone away from the main world to explore and strip-mine, a scoreboard, and a finale on the last Saturday at 20:00 UK. When it ends, the scoreboard is frozen into the hall of fame, the zone is reset, and the next season opens. **The main world is never reset.** Rewards are trophies, titles and points, so nobody who joins late is left behind.
 
 | Season | Dates | What it is |
 |---|---|---|
-| **1 · First Blood** | 4 Nov to 16 Dec 2026 | The overworld. Frostmaw, the Ferrous Wroughtnaut, the Warden, the Wither and friends, alone or in pairs. A new zone, the Frontier, with every boss dungeon in fresh ground. Finale: the remastered Ender Dragon, everybody together |
-| **2 · The Drowned and the Frozen** | 16 Dec 2026 to 27 Jan 2027 | Oceans and ice. The Leviathan, Scylla, Maledictus and a ghost ship in an ice maze. Light weeks over Christmas and New Year |
-| **3 · Fire and Iron** | 27 Jan to 10 Mar 2027 | The Nether and your factories. Ignis, the Netherite Monstrosity, four new set-piece bosses, and an arena with waves that asks for a real group |
-| **4 · The Otherside** | 10 Mar to 21 Apr 2027 | The deep dark and the End. A door under the ancient cities, the Ender Guardian, and a boss rush to close the year |
+| **1 · First Blood** | 30 Nov to 28 Dec 2026 | The overworld. Frostmaw, the Ferrous Wroughtnaut, the Warden, the Wither and friends, alone or in pairs. A new zone, the Frontier, with every boss dungeon in fresh ground. Finale: the remastered Ender Dragon, everybody together |
+| **2 · The Drowned and the Frozen** | 28 Dec 2026 to 25 Jan 2027 | Oceans and ice. The Leviathan, Scylla, Maledictus and a ghost ship in an ice maze. |
+| **3 · Fire and Iron** | 25 Jan to 22 Feb 2027 | The Nether and your factories. Ignis, the Netherite Monstrosity, four new set-piece bosses, and an arena with waves that asks for a real group |
+| **4 · The Otherside** | 22 Feb to 29 Mar 2027 | The deep dark and the End. A door under the ancient cities, the Ender Guardian, and a boss rush to close the year |
 
-Season names and the mods for Seasons 2 to 4 are working choices: each new mod goes in only after it has been started on the server and tried on a weak PC. The full plan is [docs/32](docs/32-seasons-1-to-4-roadmap.md).
+After that a new season opens on the last Monday of every month. Season names and the mods for Seasons 2 to 4 are working choices: each new mod goes in only after it has been started on the server and tried on a weak PC. The full plan is [docs/32](docs/32-seasons-1-to-4-roadmap.md).
 
 Also on the way:
 

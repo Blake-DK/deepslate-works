@@ -82,7 +82,7 @@ Last updated 2026-10-04: the server went live, the first review was done and its
 
 ## In progress
 
-- **Season 1's build** (docs/34): the season file and its datapack, the recording, the Season page, the Frontier, the Discord moments, Admin → Seasons. Rehearsal on the server on 28 October; opening on 4 November.
+- **Season 1's build** (docs/34): the season file and its datapack, the recording, the Season page, the Frontier, the Discord moments, Admin → Seasons. The season files and their datapack builder are done. Rehearsal on the server on Monday 23 November; opening on Monday 30 November.
 - **The Lock night** (docs/31, PR E): the two Sophisticated mods to their fixed versions, NeoForge pinned. One quiet evening, after a backup.
 - **Backups** (docs/28): the portal's own backup runs and the Admin → Backups page are on a branch; a world restore from the NAS and from S3 has not been tried yet.
 - **Waiting on a person**: a weak PC in a Cataclysm dungeon (it decides whether Cataclysm's bosses count in Season 1); why the first wake after a deploy failed on 4 October (AMP's log); an outside monitor on `/api/health`.
@@ -92,16 +92,16 @@ Last updated 2026-10-04: the server went live, the first review was done and its
 
 ## Next
 
-### Seasons 1 to 4 (4 Nov 2026 to 21 Apr 2027)
+### Seasons 1 to 4 (30 Nov 2026 to 29 Mar 2027), and one every month after
 
-Six weeks each. A boss ladder, a trial every Friday at 19:00 UK, a zone off the main world that is reset at the end, a finale on the last Saturday at 20:00 UK, changeover on Wednesdays. The main world is never reset. Rewards are trophies, titles and points.
+A season is a month: it opens at 19:00 UK on the last Monday of a month and ends on the last Monday of the next (Alex, 2026-10-04). A boss ladder, a trial every Friday at 19:00 UK, a zone off the main world that is reset at the end, a finale on the last Saturday at 20:00 UK. The main world is never reset. Rewards are trophies, titles and points.
 
 | Season | Dates | Theme | Bosses | New in the pack | The zone |
 |---|---|---|---|---|---|
-| 1 · First Blood | 4 Nov to 16 Dec 2026 | The overworld; alone or in pairs | Elder Guardian, Frostmaw, Ferrous Wroughtnaut, Umvuthi, the Warden, the Wither, Cataclysm's lesser guardians; finale: the remastered Ender Dragon | nothing | The Frontier: a second overworld with every boss dungeon in fresh ground |
-| 2 · The Drowned and the Frozen | 16 Dec to 27 Jan 2027 | Oceans and ice; two or three per boss | The Sculptor, Captain Cornelia, the Ancient Remnant, Scylla, Maledictus; finale: the Leviathan | Aquamirae | The Frozen Frontier, on a coast |
-| 3 · Fire and Iron | 27 Jan to 10 Mar 2027 | The Nether and the factories; a group | The Night Lich, the Harbinger, the Nether Gauntlet, the Netherite Monstrosity; finale: Ignis | Bosses of Mass Destruction | The Furnace: a second Nether, with an arena of waves |
-| 4 · The Otherside | 10 Mar to 21 Apr 2027 | The deep dark and the End; the hardest fights | Three Wardens in a night, the Stalker, the Ender Guardian; finale: the Rush (Wither, Ender Guardian, Dragon in 45 minutes) | Deeper and Darker | The Otherside, the mod's own dimension |
+| 1 · First Blood | 30 Nov to 28 Dec 2026 | The overworld; alone or in pairs | Elder Guardian, Frostmaw, Ferrous Wroughtnaut, Umvuthi, the Warden, the Wither, Cataclysm's lesser guardians; finale: the remastered Ender Dragon | nothing | The Frontier: a second overworld with every boss dungeon in fresh ground |
+| 2 · The Drowned and the Frozen | 28 Dec 2026 to 25 Jan 2027 | Oceans and ice; two or three per boss | The Sculptor, Captain Cornelia, the Ancient Remnant, Scylla, Maledictus; finale: the Leviathan | Aquamirae | The Frozen Frontier, on a coast |
+| 3 · Fire and Iron | 25 Jan to 22 Feb 2027 | The Nether and the factories; a group | The Night Lich, the Harbinger, the Nether Gauntlet, the Netherite Monstrosity; finale: Ignis | Bosses of Mass Destruction | The Furnace: a second Nether, with an arena of waves |
+| 4 · The Otherside | 22 Feb to 29 Mar 2027 | The deep dark and the End; the hardest fights | Three Wardens in a night, the Stalker, the Ender Guardian; finale: the Rush (Wither, Ender Guardian, Dragon in 45 minutes) | Deeper and Darker | The Otherside, the mod's own dimension |
 
 - **Every season:** a Season page with the ladder, the trials, the scoreboard and a goal everybody adds to; a line in the app; posts in season-updates for the season, each boss and each trial; "has awoken" and "has fallen" in game chat and Discord.
 - **What stays on the main world:** trophies, titles, the Hall of Fame at spawn (one alcove per season, the top three as heads), and the old zone's map.

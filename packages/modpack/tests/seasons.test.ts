@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildSeasons, lintSeasons, loadSeasons, seasonDatapack, seasonSchema, TRIGGERS_1_21_1, wakeTitle, type Season } from "../src/seasons";
+import { buildSeasons, isLastMondayOfItsMonth, lastMonday, lintSeasons, loadSeasons, seasonDatapack, seasonSchema, TRIGGERS_1_21_1, wakeTitle, type Season } from "../src/seasons";
 
 // docs/20 §4, docs/34 §2 and §3 (W1.1): the season files, their lint, and the datapack built from one.
 
@@ -37,14 +37,32 @@ describe("the season files in the repo", () => {
     if (Date.now() < Date.parse(s1.startsAt)) expect(index.ship).not.toContain("s1");
   });
 
-  it("Season 1 is docs/32 §2: ten bosses on three tiers, a trial for each of the first five weeks, the Dragon for everybody", async () => {
+  it("Season 1 is docs/32 §2 in a month: ten bosses on three tiers, five trials, the Dragon for everybody; last Monday to last Monday", async () => {
     const s1 = (await loadSeasons(SEASONS)).seasons.find((s) => s.id === "s1")!;
-    expect(s1.startsAt).toBe("2026-11-04T19:00:00Z");
-    expect(s1.endsAt).toBe("2026-12-16T19:00:00Z");
+    expect(s1.startsAt).toBe("2026-11-30T19:00:00Z"); // the last Monday of November, 19:00 UK
+    expect(s1.endsAt).toBe("2026-12-28T19:00:00Z"); // the last Monday of December
     expect(s1.bosses.map((b) => b.tier).sort()).toEqual([1, 1, 1, 2, 2, 2, 2, 2, 2, 3]);
-    expect(s1.trials.map((t) => t.opensAt)).toEqual(["2026-11-04T19:00:00Z", "2026-11-13T19:00:00Z", "2026-11-20T19:00:00Z", "2026-11-27T19:00:00Z", "2026-12-04T19:00:00Z"]);
+    // opening Monday, three Fridays, and the Christmas one moved from Friday the 25th to Wednesday the 23rd
+    expect(s1.trials.map((t) => t.opensAt)).toEqual(["2026-11-30T19:00:00Z", "2026-12-04T19:00:00Z", "2026-12-11T19:00:00Z", "2026-12-18T19:00:00Z", "2026-12-23T19:00:00Z"]);
     expect(s1.bosses.find((b) => b.id === "ender_dragon")).toMatchObject({ tier: 3, points: 30, groupRadius: 0 });
-    expect(s1.finale).toMatchObject({ at: "2026-12-12T20:00:00Z", boss: "ender_dragon" });
+    expect(s1.finale).toMatchObject({ at: "2026-12-26T20:00:00Z", boss: "ender_dragon" }); // the last Saturday, 20:00 UK
+  });
+});
+
+describe("a season runs from the last Monday of a month to the last Monday of the next (Alex, 2026-10-04)", () => {
+  it("the last Mondays of the coming months", () => {
+    expect([[2026, 10], [2026, 11], [2026, 12], [2027, 1], [2027, 2], [2027, 3], [2027, 4]].map(([y, m]) => lastMonday(y!, m!))).toEqual([26, 30, 28, 25, 22, 29, 26]);
+    expect(isLastMondayOfItsMonth("2026-11-30T19:00:00Z")).toBe(true);
+    expect(isLastMondayOfItsMonth("2026-11-23T19:00:00Z")).toBe(false); // a Monday, not the last
+    expect(isLastMondayOfItsMonth("2026-12-01T19:00:00Z")).toBe(false); // a Tuesday
+    expect(isLastMondayOfItsMonth("2027-03-29T18:00:00Z")).toBe(true); // summer time: 19:00 UK is 18:00 UTC
+  });
+  it("lint holds the numbered seasons to it, and leaves the sample alone", () => {
+    const s = (over: Record<string, unknown>) => ({ ...base({ trials: [], ...over }), id: "s7" }) as Season;
+    expect(messages([s({ startsAt: "2026-11-30T19:00:00Z", endsAt: "2026-12-28T19:00:00Z" })])).toEqual([]);
+    expect(messages([s({ startsAt: "2026-11-04T19:00:00Z", endsAt: "2026-12-28T19:00:00Z" })])[0]).toMatch(/startsAt 2026-11-04T19:00:00Z is not the last Monday of its month/);
+    expect(messages([s({ startsAt: "2026-11-30T19:00:00Z", endsAt: "2027-01-25T19:00:00Z" })])[0]).toMatch(/spans 2 month/);
+    expect(messages([base()])).toEqual([]); // t1 is not a numbered season
   });
 });
 

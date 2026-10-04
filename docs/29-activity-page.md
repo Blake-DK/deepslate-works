@@ -6,6 +6,10 @@ Planner, 2026-10-04. Alex: "the activity page needs to show everything and then 
 
 `/activity` opens on a form: a card of tick boxes (19 for an admin), four inputs and a Filter button, with "Nothing ticked means everything" under it. The log is below that and the live rows sit in a second list behind a tick box that starts off. The page already returns everything when nothing is ticked, but it reads as a search form you have to fill in.
 
+**Correction (planner, 2026-10-04, after the build):** "already returns everything" was wrong. Since `7062d40` (2026-09-30) the superseded-rows clause hid every row, so the page and its CSV were empty; that is what Alex was looking at. Fixed in `bf5e9d3` (report in docs/11). I read the query and did not run it.
+
+**Accepted:** Live does not run on an Older page, so new rows never land on top of page 2.
+
 ## 2. Rulings
 
 1. **The log is the page.** Heading, one line of words, one row of chips, then the list. Everything the viewer may see is there on arrival, newest first.

@@ -534,6 +534,13 @@ Tests: api `tests/votes-before-play.test.ts` (door table rows, held and released
 
 **Backups, 2026-10-03 21:30 UTC (docs/28, the VPS session):** docs/27-backups is now `docs/28-backups.md` on `main` (it clashed with docs/27-spawn-adventure-mode), with the planner's "Amendments 2026-10-04". AMP's backup folder moved to the NAS at 20:02:50 UTC, so the 18:39 backup is no longer listed and the go-live fallback is the 20:14 "Host check" backup (rows below corrected). PR #89 (`49bf0ea`, merged as `ac2bfe4`) answers an unreadable `GetBackups` and two `TakeBackup` calls at once; it is **not** about the 20:02 list switch, which emptied AMP's list of the older backups by moving the folder, not by anything the portal read. AMP's own hourly trigger: off at 19:43:05 UTC, running as an interim nightly backup at 03:00 UTC until two good days of portal runs. §4.1 checks: in progress, written up in their own section when done.
 
+**Backups, 2026-10-04 midday (planner's points 11 to 15 of docs/28's amendments; the AMP host's second round, as relayed by the planner):**
+- **The interim trigger's time: the move to 01:00 UTC is unconfirmed.** docs/28 amendment 12 puts it at 01:00 UTC, but the interim run of 2026-10-04 started at **03:00:00 UTC**. The AMP host session has been asked to move it; it counts as moved only when that session reports it, and this line is changed then. §9 step 4 (the portal's schedule) is **not switched on** before it is confirmed.
+- **The interim trigger as set:** enabled at **2026-10-03 21:11:20 UTC** for 03:00 UTC; options Local, S3, `BackupWhileRunning` true, `Sticky` false. Its runs are titled "Scheduled Backup" and taken by SYSTEM.
+- **AMP's limits:** `Limits.MaxTotalSizeMB` **700000** since **2026-10-03 21:11:05 UTC** (`limits.maxTotalBytes` 734003200000 in `status.json`). `Cloud.S3MaxBackupCount` **40**, `Cloud.S3MaxTotalSizeMB` **800000**.
+- **Kept in the backup:** `logs/` (2.7 MB) and `crash-reports/` (108 KB), as amendment 6 says.
+- **The NAS-down boot test (amendment 10): planned, not run.** Alex is asked to run it after Admin → Backups is live, and to record what Admin → Server, the backups page and a press of Start show during it. The page is ready for it once §9 step 5 is deployed; this file says so, with the time, on the day it is.
+
 Refreshed on 2026-10-03 between 21:20 and 21:30 UTC against `main` `bc12ef3` and the running server. **Seen** rows were checked then, read-only (GETs, `docker inspect`, git, CI); **Last recorded** rows are the newest dated fact in this file, not checked again. **Not read:** the database directly (members, ballots, sessions, the event log); install reports are now readable through api (`GET /installs`).
 
 | | |

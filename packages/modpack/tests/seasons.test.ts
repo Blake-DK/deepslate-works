@@ -71,8 +71,8 @@ describe("lint: each mistake with a line that says which", () => {
     expect(messages([base({ finale: { at: "2026-12-12T20:00:00Z", title: "x", boss: "nobody" } })])[0]).toMatch(/the finale names the boss nobody/);
   });
   it("a trigger the game does not have, and a mod's own trigger", () => {
-    expect(messages([base({ trials: [{ id: "a", title: "A", opensAt: "2026-11-06T19:00:00Z", points: 5, criteria: { trigger: "minecraft:rode_a_train" } }] })])[0]).toMatch(/minecraft:rode_a_train .* is not an advancement trigger of Minecraft 1\.21\.1/);
-    expect(messages([base({ trials: [{ id: "a", title: "A", opensAt: "2026-11-06T19:00:00Z", points: 5, criteria: { trigger: "create:train_ridden" } }] })])[0]).toMatch(/a mod's own/);
+    expect(messages([base({ trials: [{ id: "a", title: "Ride It", opensAt: "2026-11-06T19:00:00Z", points: 5, criteria: { trigger: "minecraft:rode_a_train" } }] })])[0]).toMatch(/minecraft:rode_a_train .* is not an advancement trigger of Minecraft 1\.21\.1/);
+    expect(messages([base({ trials: [{ id: "a", title: "Ride It", opensAt: "2026-11-06T19:00:00Z", points: 5, criteria: { trigger: "create:train_ridden" } }] })])[0]).toMatch(/a mod's own/);
     expect(TRIGGERS_1_21_1.has("player_killed_entity") && TRIGGERS_1_21_1.has("player_hurt_entity")).toBe(true);
   });
   it("the schema refuses a time without Z, a title with brackets, an id with capitals", () => {

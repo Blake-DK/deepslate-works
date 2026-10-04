@@ -167,7 +167,8 @@ if [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]; then
   echo "web and api both run $IMAGE_TAG"
 fi
 
-health=$(docker exec deepslate-web wget -qO- "$HEALTH_URL" || true)
+# with the service token as the key, web's health gives the detail (tunnel, amp, rsync); without it, yes or no only
+health=$(docker exec -e HEALTH_URL="$HEALTH_URL" deepslate-web sh -c 'wget -qO- --header "x-health-key: $API_SERVICE_TOKEN" "$HEALTH_URL"' || true)
 echo "$health"
 echo
 docker ps --filter name=deepslate- --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'

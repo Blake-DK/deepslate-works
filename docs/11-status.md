@@ -2,6 +2,10 @@
 
 Last updated 2026-10-04 evening: We're live pressed 2026-10-04, PR A (B-01) deployed, the planner's fix order (first section below). Before that: 2026-10-04, 12:50 UTC for the review and the seasons roadmap (docs/31, docs/32; docs only, first section below). Before that: 2026-10-04, about 12:00 UTC: app 3.5.0, the Settings tab, is on its branch, not merged (its section is the first below). Before that: 2026-10-04, 11:10 UTC for the Activity page (docs/29: `main` `bf5e9d3` deployed, section below). Before that: 2026-10-03, 21:30 UTC (`main` `bc12ef3`, images `ac2bfe4` deployed with the signed-in check; pack `0.1.0+d7521da9`, app 3.4.2; the five fixes after the state-of-development check and their follow-ups are live: dated nightly dumps, a backup counts once AMP lists it, the Discord card shows the last real send, install reports readable through api, `server-loaded.json` from the 19:33 start). Read "Where the build stands" first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes, with "Open items, by priority" at its end; `ROADMAP.md` is the same for people who are not building it.
 
+## Architecture diagram (2026-10-04, docs only)
+
+`docs/architecture.mmd`: one Mermaid flowchart of the whole system (player's PC, VPS containers, the WireGuard namespace, the homelab, GitHub and CI), drawn from docs/00, docs/02, the compose file and `apps/api/src`. Nothing changed on the stack or the server. Not checked against code: where the installer downloads mods from, and what the Discord integration does.
+
 ## After the planner's reply to the review (2026-10-04 evening)
 
 - **We're live pressed 2026-10-04.** The calendar in docs/32 §0 stands: Season 1 opens Wednesday 4 Nov 2026.

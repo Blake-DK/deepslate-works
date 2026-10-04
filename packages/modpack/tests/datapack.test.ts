@@ -139,3 +139,22 @@ describe("adventure mode in the spawn claim, in deepslate-tools (docs/27)", () =
     }
   });
 });
+
+describe("the createdeco:placard fix, in deepslate-tools", () => {
+  // Create Deco 2.1.3 (latest for 1.21.1) ships this recipe with the dye as {"id": ...}, which 1.21.1 cannot read
+  // ("Parsing error loading recipe createdeco:placard", on every start). The world's datapack replaces it.
+  const RECIPE = path.join(__dirname, "../../../modpack/datapacks/deepslate-tools/data/createdeco/recipe/placard.json");
+  type Recipe = { "neoforge:conditions": unknown; ingredients: Array<Record<string, string>>; result: unknown };
+  const recipe = async () => JSON.parse(await readFile(RECIPE, "utf8")) as Recipe;
+
+  it("names every ingredient by item or tag, the 1.21.1 way", async () => {
+    const { ingredients } = await recipe();
+    expect(ingredients).toEqual([{ tag: "createdeco:placards" }, { item: "minecraft:white_dye" }]);
+    for (const i of ingredients) expect(Object.keys(i)).toEqual([expect.stringMatching(/^(item|tag)$/)]);
+  });
+  it("still makes a white Create placard, and only while Create Deco is in the pack", async () => {
+    const r = await recipe();
+    expect(r.result).toEqual({ count: 1, id: "create:placard" });
+    expect(r["neoforge:conditions"]).toEqual([{ type: "neoforge:mod_loaded", modid: "createdeco" }]);
+  });
+});

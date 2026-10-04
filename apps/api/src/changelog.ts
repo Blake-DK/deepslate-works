@@ -17,6 +17,11 @@ export const CHANGES: Change[] = [
       "This post is new too: what changes on the site and the server is written here after every update.",
     ],
   },
+  {
+    id: "2026-10-04-placard-recipe",
+    date: "2026-10-04",
+    lines: ["A coloured placard can be made plain again: craft it with white dye. That recipe was broken until now."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

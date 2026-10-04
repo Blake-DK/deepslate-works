@@ -29,7 +29,7 @@ describe("the Play ping with reports declined", () => {
 describe("extras and the join check", () => {
   it("the pack's version comes from mods.lock.json alone: the extras' files are not in it", () => {
     const lock = read("mods.lock.json") as LockFile;
-    expect(packHash(lock.neoforge, lock.files, lock.configs)).toBe(lock.hash);
+    expect(packHash(lock.neoforge, lock.files, lock.configs, lock.resourcepack)).toBe(lock.hash);
     const extras = read("extras.lock.json") as { extras: Array<{ files: Array<{ slug: string }> }> };
     const inPack = new Set(lock.files.map((f) => f.slug));
     for (const x of extras.extras) for (const f of x.files) expect(inPack.has(f.slug)).toBe(false);

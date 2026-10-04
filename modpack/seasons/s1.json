@@ -6,6 +6,11 @@
   "accent": "#b8652c",
   "icon": "minecraft:netherite_sword",
   "groupRadius": 48,
+  "frontier": {
+    "dimension": "deepslate:frontier_s1",
+    "noise": "minecraft:large_biomes",
+    "radius": 3000
+  },
   "bosses": [
     {
       "id": "elder_guardian",

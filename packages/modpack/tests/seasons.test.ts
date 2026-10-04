@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildSeasons, isLastMondayOfItsMonth, lastMonday, lintSeasons, loadSeasons, seasonDatapack, seasonSchema, TRIGGERS_1_21_1, wakeTitle, type Season } from "../src/seasons";
+import { buildSeasons, frontierDatapack, isLastMondayOfItsMonth, lastMonday, lintSeasons, loadSeasons, seasonDatapack, seasonSchema, TRIGGERS_1_21_1, wakeTitle, type Season } from "../src/seasons";
 
 // docs/20 §4, docs/34 §2 and §3 (W1.1): the season files, their lint, and the datapack built from one.
 
@@ -207,7 +207,8 @@ describe("build seasons", () => {
     const p = await repo(["sample"]);
     expect(await buildSeasons(p, () => undefined)).toEqual(["sample"]);
     const out = path.join(p.dist, "server", "datapacks");
-    expect(await readdir(out)).toEqual(["deepslate-season-sample"]);
+    expect((await readdir(out)).sort()).toEqual(["deepslate-frontier-sample", "deepslate-season-sample"]);
+    expect(JSON.parse(await readFile(path.join(out, "deepslate-frontier-sample", "data/deepslate/dimension/frontier_sample.json"), "utf8"))).toMatchObject({ type: "minecraft:overworld", generator: { settings: "minecraft:large_biomes" } });
     expect(JSON.parse(await readFile(path.join(out, "deepslate-season-sample", "pack.mcmeta"), "utf8"))).toMatchObject({ pack: { pack_format: 48 } });
     await mkdir(path.join(out, "deepslate-tools")); // another datapack of the pack is never touched
     await writeFile(path.join(p.seasons, "index.json"), JSON.stringify({ current: "s1", ship: [] }));
@@ -226,5 +227,40 @@ describe("build seasons", () => {
   it("`ship` naming a season that does not exist is an error", async () => {
     const p = await repo(["s9"]);
     await expect(buildSeasons(p, () => undefined)).rejects.toThrow(/ship names s9/);
+  });
+});
+
+describe("the Frontier (docs/20 §5)", () => {
+  const frontier = { dimension: "deepslate:frontier_t1", noise: "minecraft:large_biomes", radius: 3000 };
+
+  it("is a datapack of its own with one dimension: an overworld on the season's noise settings", () => {
+    const files = frontierDatapack(base({ frontier }))!;
+    expect([...files.keys()].sort()).toEqual(["data/deepslate/dimension/frontier_t1.json", "pack.mcmeta"]);
+    expect(JSON.parse(files.get("pack.mcmeta")!)).toMatchObject({ pack: { pack_format: 48 } });
+    expect(JSON.parse(files.get("data/deepslate/dimension/frontier_t1.json")!)).toEqual({
+      type: "minecraft:overworld",
+      generator: { type: "minecraft:noise", settings: "minecraft:large_biomes", biome_source: { type: "minecraft:multi_noise", preset: "minecraft:overworld" } },
+    });
+    expect(frontierDatapack(base())).toBeNull();
+    // the season's own datapack holds no dimension: the wipe takes the Frontier's off and leaves the advancements
+    expect([...seasonDatapack(base({ frontier })).keys()].some((k) => k.includes("/dimension/"))).toBe(false);
+  });
+
+  it("lint: not a copy of the main world, not amplified, not the entrance room, and no two seasons on one dimension", () => {
+    expect(messages([base({ frontier })])).toEqual([]);
+    expect(messages([base({ frontier: { ...frontier, noise: "minecraft:overworld" } })])[0]).toMatch(/copy of the main world/);
+    expect(messages([base({ frontier: { ...frontier, noise: "minecraft:amplified" } })])[0]).toMatch(/is not one of minecraft:large_biomes/);
+    expect(messages([base({ frontier: { ...frontier, dimension: "deepslate:limbo" } })])[0]).toMatch(/entrance room/);
+    const second = base({ id: "t2", name: "Second Test Season", frontier, bosses: [], trials: [] });
+    expect(messages([base({ frontier }), second]).join("\n")).toMatch(/deepslate:frontier_t1 is season t1's already/);
+    expect(seasonSchema.safeParse({ ...base(), frontier: { ...frontier, dimension: "minecraft:overworld" } }).success).toBe(false);
+    expect(seasonSchema.safeParse({ ...base(), frontier: { ...frontier, radius: 50_000 } }).success).toBe(false);
+  });
+
+  it("Season 1's is deepslate:frontier_s1 on large_biomes, radius 3,000 (docs/32 §2), and its first-steps trial names it", async () => {
+    const { seasons } = await loadSeasons(SEASONS);
+    const s1 = seasons.find((s) => s.id === "s1")!;
+    expect(s1.frontier).toEqual({ dimension: "deepslate:frontier_s1", noise: "minecraft:large_biomes", radius: 3000 });
+    expect(JSON.stringify(s1.trials)).toContain('"to":"deepslate:frontier_s1"');
   });
 });

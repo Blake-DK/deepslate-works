@@ -5,6 +5,11 @@
   "endsAt": "2026-11-29T00:00:00Z",
   "icon": "minecraft:wooden_sword",
   "groupRadius": 48,
+  "frontier": {
+    "dimension": "deepslate:frontier_sample",
+    "noise": "minecraft:large_biomes",
+    "radius": 500
+  },
   "bosses": [
     {
       "id": "rehearsal_ravager",

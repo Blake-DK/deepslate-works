@@ -57,8 +57,17 @@ export const seasonSchema = z.object({
   trials: z.array(trial).max(40),
   goal: z.object({ title: z.string().max(80), count: z.literal("boss_kills"), target: z.number().int().min(1) }).optional(),
   finale: z.object({ at: when, title: z.string().max(80), boss: z.string().regex(ID) }).optional(),
+  /** docs/20 §5: the season's own dimension, wiped at its end. `noise`: the noise settings its terrain is made with. */
+  frontier: z.object({ dimension: z.string().regex(/^deepslate:[a-z0-9_]{1,40}$/), noise: z.string().regex(RESOURCE), radius: z.number().int().min(500).max(10_000) }).optional(),
 });
 export type Season = z.infer<typeof seasonSchema>;
+
+/**
+ * Noise settings a Frontier may use. A dimension file cannot carry a seed of its own in 1.21.1, so with
+ * minecraft:overworld the Frontier would be a copy of the main world, and minecraft:amplified is too heavy for the
+ * weak PCs (docs/20 §5). Settings of our own (a later season) are added here when their file is in the datapack.
+ */
+export const FRONTIER_NOISE = new Set(["minecraft:large_biomes"]);
 export type SeasonBoss = Season["bosses"][number];
 export type SeasonTrial = Season["trials"][number];
 
@@ -113,6 +122,7 @@ const criteriaOf = (t: SeasonTrial): Record<string, z.infer<typeof criterion>> =
 export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>): SeasonIssue[] {
   const issues: SeasonIssue[] = [];
   const titles = new Map<string, string>(); // title (lower case) → where it was first used
+  const frontiers = new Map<string, string>(); // dimension → the season it belongs to
   const seen = new Set<string>();
   for (const s of seasons) {
     const err = (message: string) => issues.push({ season: s.id, message });
@@ -162,6 +172,15 @@ export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>): S
     if (s.finale) {
       if (!s.bosses.some((b) => b.id === s.finale!.boss)) err(`the finale names the boss ${s.finale.boss}, which is not on the ladder`);
       if (!inside(s.finale.at)) err(`the finale (${s.finale.at}) is outside the season`);
+    }
+    if (s.frontier) {
+      const f = s.frontier;
+      if (f.dimension === "deepslate:limbo") err("the Frontier cannot be the entrance room's dimension");
+      const other = frontiers.get(f.dimension);
+      if (other) err(`the Frontier ${f.dimension} is season ${other}'s already: each season has a dimension of its own, or the wipe would take another season's ground`);
+      else frontiers.set(f.dimension, s.id);
+      if (f.noise === "minecraft:overworld") err("the Frontier's noise is minecraft:overworld: that would be a copy of the main world (a dimension has no seed of its own in 1.21.1)");
+      else if (!FRONTIER_NOISE.has(f.noise)) err(`the Frontier's noise ${f.noise} is not one of ${[...FRONTIER_NOISE].join(", ")}`);
     }
   }
   return issues;
@@ -330,6 +349,34 @@ export function seasonDatapack(s: Season): Map<string, string> {
 }
 
 export const seasonPackName = (id: string) => `deepslate-season-${id}`;
+export const frontierPackName = (id: string) => `deepslate-frontier-${id}`;
+
+/**
+ * docs/20 §5: the Frontier's datapack, one dimension: an overworld (the vanilla dimension type and biomes) on the
+ * season's noise settings. A datapack of its own, so that the wipe takes it off without touching the season's
+ * advancements. A new dimension counts from the server's next start, not from a reload.
+ */
+export function frontierDatapack(s: Season): Map<string, string> | null {
+  if (!s.frontier) return null;
+  const files = new Map<string, string>();
+  const json = (p: string, v: unknown) => files.set(p, `${JSON.stringify(v, null, 2)}\n`);
+  const name = s.frontier.dimension.split(":")[1]!;
+  json("pack.mcmeta", { pack: { pack_format: PACK_FORMAT_1_21_1, description: `Deepslate Works: the Frontier of ${s.name}` } });
+  json(`data/deepslate/dimension/${name}.json`, {
+    type: "minecraft:overworld",
+    generator: { type: "minecraft:noise", settings: s.frontier.noise, biome_source: { type: "minecraft:multi_noise", preset: "minecraft:overworld" } },
+  });
+  return files;
+}
+
+async function writePack(root: string, files: Map<string, string>): Promise<void> {
+  await rm(root, { recursive: true, force: true });
+  for (const [rel, body] of files) {
+    const file = path.join(root, rel);
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, body);
+  }
+}
 
 /** Writes one season's datapack under `outDir/deepslate-season-<id>/`, made afresh. */
 export async function writeSeasonDatapack(s: Season, outDir: string): Promise<string> {
@@ -355,12 +402,20 @@ export async function buildSeasons(paths: { seasons: string; dist: string }, log
   const out = path.join(paths.dist, "server", "datapacks");
   await mkdir(out, { recursive: true });
   // a season taken out of `ship` leaves dist/, so the next Sync does not carry it on
-  for (const name of await readdir(out)) if (name.startsWith("deepslate-season-") && !index.ship.includes(name.slice("deepslate-season-".length))) await rm(path.join(out, name), { recursive: true, force: true });
+  for (const name of await readdir(out)) {
+    const id = /^deepslate-(?:season|frontier)-(.+)$/.exec(name)?.[1];
+    if (id !== undefined && !index.ship.includes(id)) await rm(path.join(out, name), { recursive: true, force: true });
+  }
   const built: string[] = [];
   for (const s of seasons.filter((x) => index.ship.includes(x.id))) {
     await writeSeasonDatapack(s, out);
     built.push(s.id);
     log(`season datapack ${seasonPackName(s.id)}: ${s.bosses.length} bosses, ${s.trials.length} trials`);
+    const frontier = frontierDatapack(s);
+    if (frontier && s.frontier) {
+      await writePack(path.join(out, frontierPackName(s.id)), frontier);
+      log(`frontier datapack ${frontierPackName(s.id)}: ${s.frontier.dimension} on ${s.frontier.noise} (it counts from the server's next start)`);
+    } else await rm(path.join(out, frontierPackName(s.id)), { recursive: true, force: true });
   }
   if (built.length === 0) log(`seasons: ${seasons.length} file(s) lint clean, none in "ship", no season datapack built`);
   return built;

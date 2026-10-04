@@ -29,7 +29,7 @@ vi.mock("@/server/events", () => ({ audit: async (a: { action: string; params: R
 vi.mock("@/server/api-client", () => ({ apiFetch: async (_p: string, o: { body: { uuid: string } }) => { state.released.push(o.body.uuid); return { released: true }; } }));
 
 import { checkCode, guesses, linkWithCode } from "@/server/link";
-import { publicHealth } from "@/lib/health";
+import { holdsKey, publicHealth } from "@/lib/health";
 import { parseBlocked } from "@/server/auth/blocked";
 import { describeAction } from "@/shared/events";
 
@@ -127,6 +127,16 @@ describe("the small ones", () => {
     expect(pub).toEqual({ ok: true, db: true, api: { ok: false }, pack: { same: false } });
     expect(JSON.stringify(pub)).not.toMatch(/tunnel|rsync|AUTH_SECRET|0d33a462|unpushed/);
     expect(JSON.stringify(publicHealth({ ...full, api: { ok: true } }))).toContain('"api":{"ok":true}'); // what deploy.sh and a monitor look for
+  });
+
+  it("B-39: the detail on the host needs the service token as the key; a wrong, short or missing one gets nothing", () => {
+    const key = "k".repeat(40);
+    expect(holdsKey(key, key)).toBe(true);
+    expect(holdsKey("k".repeat(39) + "x", key)).toBe(false);
+    expect(holdsKey("k".repeat(41), key)).toBe(false);
+    expect(holdsKey(null, key)).toBe(false);
+    expect(holdsKey("", "")).toBe(false); // an unset token opens nothing
+    expect(holdsKey("short", "short")).toBe(false);
   });
 
   it("B-37: the blocked list takes only Discord ids, and the event log says who was blocked", () => {

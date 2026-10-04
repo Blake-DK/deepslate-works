@@ -60,7 +60,11 @@ export const manifestSchema = z.object({
   neoforge: z.string().default("latest"),
   server_address: z.string().min(1),
   profile: z.object({ id: z.string(), dir: z.string(), icon: z.string() }),
-  ram: z.object({ min_gb: z.number().int().min(2), max_gb: z.number().int().max(16) }),
+  // min_gb/max_gb: what the app picks by itself (docs/07). user_max_gb (docs/30 §4.1): the most a player may choose on the
+  // app's Settings tab (never more than the PC's memory less 4 GB); optional, the app reads a missing one as 8.
+  ram: z
+    .object({ min_gb: z.number().int().min(2), max_gb: z.number().int().max(16), user_max_gb: z.number().int().max(64).optional() })
+    .refine((r) => r.user_max_gb === undefined || r.user_max_gb >= r.max_gb, { message: "user_max_gb must be at least max_gb", path: ["user_max_gb"] }),
   // What server.properties is expected to hold. Not pushed anywhere (AMP writes that file from its own
   // settings on every start); Admin → Files shows where the live file differs.
   server_properties: z.record(z.string().regex(/^[a-z0-9._-]+$/), z.string().max(200)).default({}),
@@ -81,6 +85,13 @@ export type Video = z.infer<typeof videoSchema>;
 /** The render and simulation distance for a member's PC tier. No tier known: the weak PC's, which is safe anywhere. */
 export function distancesFor(m: Pick<Manifest, "render_by_tier">, tier: string | null | undefined): { render: number; simulation: number } {
   return (TIERS as readonly string[]).includes(tier ?? "") ? m.render_by_tier[tier as Tier] : m.render_by_tier.LOW;
+}
+
+/** docs/30 §4.2: the view-distance mods.json expects in server.properties, as a whole number of chunks; null when it
+ * gives none (or something that is not 2 to 32). */
+export function serverViewDistance(props: Record<string, string> | undefined): number | null {
+  const v = Number(props?.["view-distance"]);
+  return Number.isInteger(v) && v >= 2 && v <= 32 ? v : null;
 }
 
 /** On the Mods guide's first three parts, and so needs a howTo: switched on, not a dependency, and something a player uses. */

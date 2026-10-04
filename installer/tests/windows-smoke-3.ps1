@@ -243,6 +243,96 @@ Check "it carried on at Permissions (handover.json said moved)" ($text -match 't
 Stop-Ours
 Copy-Item $log (Join-Path $Out "deepslate-works.log") -ErrorAction SilentlyContinue
 
+Write-Host "The Settings tab (3.5.0, docs/30): a memory choice saved there, then the launcher profile after an engine run"
+# A test run (-Root): folders of its own, and a stand-in site on 127.0.0.1 that hands out a mod list with no mods (the
+# app reads DEEPSLATE_PORTAL_URL only in a test run, and only on 127.0.0.1: the real site is never asked). Java 21 is
+# the runner's own, first on PATH.
+$sRoot = Join-Path $env:TEMP "settings-check"
+Remove-Item $sRoot -Recurse -Force -ErrorAction SilentlyContinue
+$sHome = Join-Path $sRoot "LocalAppData\DeepslateWorks"
+$sGame = Join-Path $sRoot ".minecraft-deepslate-works"
+$sMc = Join-Path $sRoot ".minecraft"
+foreach ($d in @($sHome, $sGame, (Join-Path $sMc "versions\neoforge-21.1.252"))) { [void][IO.Directory]::CreateDirectory($d) }
+[IO.File]::WriteAllText((Join-Path $sMc "launcher_profiles.json"), '{"profiles":{},"settings":{},"version":3}')
+[IO.File]::WriteAllText((Join-Path $sGame "launcher.json"), '{"token":"smoke-test-token","savedAt":"2026-10-04T12:00:00"}')
+$sSteps = [ordered]@{}; foreach ($s in @("signin", "launcher", "java", "neoforge", "mods", "profile", "shortcuts", "reports", "extras")) { $sSteps[$s] = [ordered]@{ answer = "allow"; level = 2; at = "2026-10-04T12:00:00" } }
+[IO.File]::WriteAllText((Join-Path $sHome "consent.json"), (ConvertTo-Json -InputObject ([ordered]@{ version = 1; steps = $sSteps }) -Depth 4))
+$port = 47000 + (Get-Random -Maximum 2000)
+$site = "http://127.0.0.1:$port/"
+$reports = Join-Path $sRoot "reports.txt"
+$modList = ConvertTo-Json -Depth 5 -InputObject ([ordered]@{
+  name = "Deepslate Works"; version = "0.1.0+smoke"; hash = "smoke"; minecraft = "1.21.1"; neoforge = "21.1.252"; server_address = "127.0.0.1"
+  profile = [ordered]@{ id = "deepslate-works"; dir = ".minecraft-deepslate-works"; icon = "Furnace" }
+  ram = [ordered]@{ min_gb = 3; max_gb = 6; user_max_gb = 12 }; render_distance = 10; simulation_distance = 8; server_view_distance = 12; tier = "MID"
+  config_url = $null; files = @(); configs = @(); installer = $null; branding = $null })
+$siteJob = Start-Job -ArgumentList $site, $modList, $reports -ScriptBlock {
+  param($prefix, $modList, $reports)
+  $l = New-Object Net.HttpListener; $l.Prefixes.Add($prefix); $l.Start()
+  while ($true) {
+    $c = $l.GetContext(); $p = $c.Request.Url.AbsolutePath; $code = 404; $body = '{"error":{"code":"not_here"}}'
+    if ($p -eq "/api/modpack/manifest") { $code = 200; $body = $modList }
+    elseif ($p -eq "/api/installer/report") {
+      $r = New-Object IO.StreamReader($c.Request.InputStream, [Text.Encoding]::UTF8); [IO.File]::AppendAllText($reports, $r.ReadToEnd() + "`n"); $code = 200; $body = '{"ok":true}'
+    }
+    $b = [Text.Encoding]::UTF8.GetBytes($body)
+    $c.Response.StatusCode = $code; $c.Response.ContentType = "application/json"; $c.Response.OutputStream.Write($b, 0, $b.Length); $c.Response.Close()
+  }
+}
+Start-Sleep -Seconds 3
+$savedPath = $env:PATH
+$java21 = $env:JAVA_HOME_21_X64
+if ($java21) { $env:PATH = (Join-Path $java21 "bin") + ";" + $env:PATH }
+$env:DEEPSLATE_PORTAL_URL = $site.TrimEnd('/')
+function Find-Id($root, [string]$id) { return $root.FindFirst([Windows.Automation.TreeScope]::Descendants, (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::AutomationIdProperty, $id))) }
+try {
+  $logStart = $(if (Test-Path $log) { (Get-Item $log).Length } else { 0 })
+  $up = Wait-Up
+  Start-Process -FilePath $Exe -ArgumentList @("-Root", ('"{0}"' -f $sRoot), "-From", "desktop")
+  Check "the window opened (a test run)" ($up.WaitOne(60000))
+  $ready = $false
+  for ($i = 0; $i -lt 120 -and -not $ready; $i++) {
+    Start-Sleep -Seconds 1
+    if (Test-Path $log) { $fs = [IO.File]::Open($log, 'Open', 'Read', 'ReadWrite'); $fs.Seek($logStart, 'Begin') | Out-Null; $t = (New-Object IO.StreamReader($fs)).ReadToEnd(); $fs.Close(); $ready = $t -match 'ready: waiting for the window to start the game' }
+  }
+  Check "the run at open got the game ready from the stand-in site" $ready
+  $w = Main-Window | Select-Object -First 1
+  if ($w) {
+    $root = [Windows.Automation.AutomationElement]::FromHandle($w.handle)
+    $tab = Find-Id $root "SettingsTab"
+    Check "the Settings tab is there" ($null -ne $tab)
+    if ($tab) { $tab.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Seconds 2 }
+    Shot-Window "4a-settings.png"
+    $auto = Find-Id $root "RamAuto"; $slider = Find-Id $root "RamSlider"; $save = Find-Id $root "SettingsSave"
+    Check "the memory card and Save are on it" ($auto -and $slider -and $save)
+    if ($auto -and $slider -and $save) {
+      $auto.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern).Toggle(); Start-Sleep -Milliseconds 500
+      $slider.GetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern).SetValue(8); Start-Sleep -Milliseconds 500
+      $save.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Seconds 1
+      Shot-Window "4b-settings-saved.png"
+      $status = Find-Id $root "SettingsStatus"
+      Check ("it says so: " + $status.Current.Name) ($status -and $status.Current.Name -eq "Saved. The game gets 8 GB from the next time you press Play.")
+    }
+    $st = Get-Content -Raw (Join-Path $sHome "settings.json") -ErrorAction SilentlyContinue | ConvertFrom-Json
+    Check ("settings.json has the choice: ramGb " + $st.ramGb + ", version " + $st.version) ($st.ramGb -eq 8 -and $st.version -eq 2)
+    try { (Get-Ours)[0].CloseMainWindow() | Out-Null } catch {}
+    for ($i = 0; $i -lt 15 -and (Get-Ours).Count -gt 0; $i++) { Start-Sleep -Seconds 1 }
+  }
+  Stop-Ours
+  $p = Start-Process -FilePath $Exe -ArgumentList @("-Root", ('"{0}"' -f $sRoot), "-Console", "-NoLaunch") -Wait -PassThru
+  Check ("the engine run ended well (exit {0})" -f $p.ExitCode) ($p.ExitCode -eq 0)
+  $prof = (Get-Content -Raw (Join-Path $sMc "launcher_profiles.json") | ConvertFrom-Json).profiles.'deepslate-works'
+  Check ("the launcher profile's javaArgs: " + $prof.javaArgs) ($prof.javaArgs -match '^-Xmx8G ')
+  $t = $(if (Test-Path $log) { Get-Content -Raw $log } else { "" })
+  Check "the log says it was chosen in Settings" ($t -match "with 8 GB of RAM \(chosen in Settings; your PC has \d+ GB\)")
+  $last = @(Get-Content $reports -ErrorAction SilentlyContinue | Where-Object { $_ -match '"settings"' })[-1]
+  Check "the install report says what the game got" ($last -match '"settings":\{"ramGb":8,"xmxGb":8,"renderDistance":10,"villagers":false\}')
+} finally {
+  $env:PATH = $savedPath
+  Remove-Item Env:\DEEPSLATE_PORTAL_URL -ErrorAction SilentlyContinue
+  Stop-Job $siteJob -ErrorAction SilentlyContinue; Remove-Job $siteJob -Force -ErrorAction SilentlyContinue
+  Stop-Ours
+}
+
 Write-Host "Uninstall (Settings -> Apps' command, without the question)"
 $p = Start-Process -FilePath $homeExe -ArgumentList @("-Uninstall", "-Yes", "-From", "apps") -Wait -PassThru
 Start-Sleep -Seconds 8   # the folder with the running exe goes a few seconds after it exits

@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Management;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -289,6 +288,12 @@ namespace DeepslateWorks
                 finally { Log.RemoveTemp(cz); }
             }
             var options = Path.Combine(gameDir, "options.txt");
+            // 3.5.0 (docs/30 §4.2): what the Settings tab kept for this Play (saved while Minecraft was open), first
+            if (!run.DryRun)
+            {
+                try { var applied = GameSettings.ApplyPending(options, GameRunningNow()); if (applied != null) run.Tick(applied); }
+                catch (Exception e) { run.Note("Your settings from the Settings tab could not be applied this time: " + e.Message); }
+            }
             int rd = 8, sd = 6;
             try
             {
@@ -345,20 +350,13 @@ namespace DeepslateWorks
 
             // ---- the launcher profile ---------------------------------------------------------------------------------
             run.Step("Adding the launcher profile");
-            double totalGb = 8;
-            try
-            {
-                using (var q = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem"))
-                    foreach (ManagementBaseObject c in q.Get()) { totalGb = Math.Round(Convert.ToDouble(c["TotalPhysicalMemory"], Inv) / (1024.0 * 1024 * 1024)); break; }
-            }
-            catch { }
-            double xmx = 3;
-            if (totalGb >= 16) xmx = 6; else if (totalGb >= 12) xmx = 5; else if (totalGb >= 8) xmx = 4;
-            // the mod list's bounds; one it does not give is no bound (PowerShell would have read it as 0)
-            var maxGb = J.Num(manifest, "ram.max_gb");
-            var minGb = J.Num(manifest, "ram.min_gb");
-            if (maxGb.HasValue) xmx = Math.Min(maxGb.Value, xmx);
-            if (minGb.HasValue) xmx = Math.Max(minGb.Value, xmx);
+            // 3.5.0 (docs/30 §4.1): the memory chosen on the Settings tab, kept within what this PC may give; automatic
+            // otherwise. Memory works the bounds out for the tab's slider too.
+            var totalGb = Memory.TotalGb();
+            var ram = Memory.FromManifest(manifest, totalGb);
+            var ramChosen = AppSettings.RamGb();
+            var xmx = Memory.Xmx(ramChosen, ram, out var ramClamped);
+            if (ramClamped) run.Note(string.Format("You chose {0} GB in Settings; this PC can give the game {1} GB at most, so it gets {1} GB.", ramChosen, xmx));
             var xmxText = xmx.ToString(Inv);
             var javaArgs = "-Xmx" + xmxText + "G -Xms1G -XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:MaxGCPauseMillis=50 -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20";
             var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", Inv);
@@ -366,9 +364,10 @@ namespace DeepslateWorks
             var entry = J.O("name", Env.PackName, "type", "custom", "lastVersionId", versionId, "gameDir", gameDir, "javaArgs", javaArgs,
                             "javaDir", java, "icon", Brand.ProfileIcon(branding, J.Get(profile, "icon")), "created", now, "lastUsed", now);   // 2.1.1: the logo
             bool profileLeft = false;
-            if (!run.DryRun && FindLauncher(run).Count > 0 && TestLauncherProfile(Env.Profiles, profileId, versionId) == "")
+            if (!run.DryRun && FindLauncher(run).Count > 0 && TestLauncherProfile(Env.Profiles, profileId, versionId) == "" && ProfileJavaArgs(Env.Profiles, profileId) == javaArgs)
             {
-                // Launcher open, profile already there and pointing at the right NeoForge: nothing to write.
+                // Launcher open, profile already there, pointing at the right NeoForge and with this memory (3.5.0: a
+                // memory chosen in Settings is a change to write, so the launcher has to be closed for it): nothing to write.
                 profileLeft = true;
                 Log.Line("the launcher is open and the profile is right: launcher_profiles.json left as it is");
             }
@@ -399,7 +398,8 @@ namespace DeepslateWorks
                 }
             }
             if (profileLeft) run.Tick(string.Format("Profile '{0}' is already in the launcher", Env.PackName));
-            else run.Tick(string.Format("Profile '{0}' with {1} GB of RAM (your PC has {2} GB), saved and checked", Env.PackName, xmxText, totalGb.ToString(Inv)));
+            else run.Tick(string.Format("Profile '{0}' with {1} GB of RAM ({2}your PC has {3} GB), saved and checked", Env.PackName, xmxText, ramChosen.HasValue ? "chosen in Settings; " : "", totalGb.ToString(Inv)));
+            if (!run.DryRun) { try { run.Settings = GameSettings.ReportBlock(ramChosen, xmx, options); } catch (Exception e) { Log.Line("settings: not in the report: " + e.Message); } }
 
             // ---- the Play link and the shortcuts: put right when missing (setup made them; this keeps them) ------
             if (!run.DryRun && !Env.CustomRoot && Env.OnWindows && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LOCALAPPDATA")))

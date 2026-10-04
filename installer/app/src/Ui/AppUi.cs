@@ -145,7 +145,7 @@ namespace DeepslateWorks
             CheckButton.Click += (s, e) => OnCheck();
             HeadlineButton.Click += (s, e) => OnHeadline();
             DetailsLink.Click += (s, e) => ShowLogDetails();
-            SettingsLink.Click += (s, e) => ShowSettings();
+            SettingsLink.Click += (s, e) => OpenSettingsTab();   // 3.5.0: the Settings tab (docs/30 §3)
             // 3.1.0: any click anywhere, any key, a tab switch or a setting stops the countdown, for good (planner B3).
             // The click that stops it does nothing else (it never reaches the Play button under it).
             w.PreviewMouseDown += (s, e) => { if (CancelCountdown("a click")) e.Handled = true; };
@@ -156,6 +156,7 @@ namespace DeepslateWorks
                 CancelCountdown("a tab switch");
                 if (reviewing && Tabs.SelectedItem != PlayTab) CloseReview("another tab");   // 3.3.1: answers not saved
                 if (Tabs.SelectedItem == ExtrasTab) ShowExtras();
+                else if (Tabs.SelectedItem == SettingsTab) ShowSettingsTab();
                 else if (Tabs.SelectedItem == LogTab) UpdateLogBox();
             };
             // a handler that throws never ends the window (a PowerShell script block's error did not either)
@@ -168,6 +169,7 @@ namespace DeepslateWorks
             WireLook();   // 3.4.0: the ground, the banner, the badge (docs/21)
             WireLogButtons();   // 3.4.2: Save log, Send to Alex
             WireHeads();  // 3.4.0: the players' heads (docs/21 §7)
+            WireSettings();   // 3.5.0: the Settings tab (docs/30)
         }
 
         /// <summary>Show-App's ending: on screen until closed.</summary>
@@ -688,6 +690,7 @@ namespace DeepslateWorks
                 }
             }
             GatePlay();   // 3.2.0: Play stays shut while a vote waits
+            SyncSettingsTab();   // 3.5.0: shut while the install steps run
             UpdateTick(); // 3.3.0: an Update waiting for the game finishes when it closes
             SyncUpdateRow(); // 3.3.1: the Update button and its line only in the Play view
             if (Flow != null) { StepFlow(); return; }
@@ -1127,37 +1130,6 @@ namespace DeepslateWorks
             PlayHint.Visibility = Visibility.Collapsed;
         }
 
-        /// <summary>The cog: "When I press Play on the website". A change is saved at once and stops a countdown.</summary>
-        void ShowSettings()
-        {
-            CancelCountdown("a setting");
-            var d = MakeSettings();
-            d.ShowDialog();
-        }
-
-        public Window MakeSettings()
-        {
-            var d = AppWindow.Load(AppWindow.SettingsXaml);
-            try { if (Window.IsVisible) d.Owner = Window; } catch { }
-            ((TextBlock)d.FindName("SQ")).Text = UiText.SettingsQuestion;
-            ((TextBlock)d.FindName("SNote")).Text = UiText.SettingsNote;
-            var box = (StackPanel)d.FindName("SChoices");
-            var now = AppSettings.WebsitePlay();
-            foreach (var kv in UiText.WebsitePlayLabels)
-            {
-                var r = new RadioButton { Content = kv.Value, GroupName = "websitePlay", Margin = new Thickness(0, 0, 0, 6), IsChecked = kv.Key == now };
-                var v = kv.Key;
-                r.Checked += (s, e) =>
-                {
-                    try { AppSettings.SetWebsitePlay(v); Log.Line("settings: when Play is pressed on the website: " + v); }
-                    catch (Exception x) { Log.Line("settings: could not be saved: " + x.Message); }
-                };
-                box.Children.Add(r);
-            }
-            ((Button)d.FindName("SDone")).Click += (s, e) => d.Close();
-            return d;
-        }
-
         // ---- the guided setup after the old launcher (3.1.0, planner A3) ----------------------------------------------
         // Step 1 Welcome, 2 Move over (each line ticks; Retry), 3 Permissions (only what is new; what was answered stays),
         // 4 Extras (the Extras tab, as on any first run). Then the Play tab: nothing starts until Play is pressed.
@@ -1182,6 +1154,7 @@ namespace DeepslateWorks
             StepLabel.Visibility = Visibility.Visible;
             ReviewLink.IsEnabled = false;   // the Permissions step is step 3
             ExtrasTab.IsEnabled = n == 4;
+            SettingsTab.IsEnabled = false;   // 3.5.0: as Extras until step 4, and through it
             PlayButton.IsEnabled = true;
             if (n != 4) Tabs.SelectedItem = PlayTab;
             switch (n)
@@ -1326,6 +1299,7 @@ namespace DeepslateWorks
             Guided = 0;
             StepLabel.Visibility = Visibility.Collapsed;
             ExtrasTab.IsEnabled = true;
+            SettingsTab.IsEnabled = true;
             ReviewLink.IsEnabled = true;
             Tabs.SelectedItem = PlayTab;
             ShowIdle(UiText.DoneStatus);
@@ -1347,7 +1321,7 @@ namespace DeepslateWorks
 
         public void SimReady(bool countdown, int left = AppSettings.CountdownSeconds)
         {
-            Guided = 0; StepLabel.Visibility = Visibility.Collapsed; ExtrasTab.IsEnabled = true;
+            Guided = 0; StepLabel.Visibility = Visibility.Collapsed; ExtrasTab.IsEnabled = true; SettingsTab.IsEnabled = true;
             ClearPlayBody(); SetPromptButtons(false, false);
             Tabs.SelectedItem = PlayTab;
             AddPlayLine("Checking for updates", "Muted");

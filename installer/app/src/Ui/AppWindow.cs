@@ -105,7 +105,7 @@ namespace DeepslateWorks
                 }
                 else Log.Line("No extras on this PC yet: press Play once with extras allowed, then take the Extras screenshots.");
 
-                // 3.1.0: the guided setup after the old launcher, the countdown, the countdown stopped, the Play settings
+                // 3.1.0: the guided setup after the old launcher, the countdown, the countdown stopped
                 var real3 = ui.Consent;
                 ui.ShowGuidedStep(1);
                 ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "5-guided-1-welcome.png")));
@@ -135,12 +135,7 @@ namespace DeepslateWorks
                 ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "9b-countdown-3.png")));
                 ui.SimReady(false);
                 ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "10-countdown-stopped.png")));
-                var sd = ui.MakeSettings();
-                sd.WindowStartupLocation = WindowStartupLocation.Manual; sd.Left = -20000; sd.Top = 0; sd.ShowInTaskbar = false;
-                sd.Show(); ui.Pump();
-                files.Add(SavePng(sd.Content as FrameworkElement, Path.Combine(dir, "11-play-settings.png")));
-                sd.Close();
-                ui.Guided = 0;
+                ui.Guided = 0;   // 3.5.0: the Play settings window (11) went; its choice is on the Settings tab (30)
 
                 // 3.2.0 (planner 2026-10-02): the server on the Play tab while a wake runs; switched off, with an admin's
                 // Start; a vote before play (Play shut), and its results
@@ -212,6 +207,24 @@ namespace DeepslateWorks
                 var tall = w.Height; w.Width = w.MinWidth; w.Height = w.MinHeight;
                 ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "29-min-size-900x560.png")));
                 w.Width = wide; w.Height = tall;
+
+                // 3.5.0 (docs/30 §8): the Settings tab at its own size and at its smallest, then with the game open (the
+                // changes wait for the next Play). Drawn from samples in a folder of their own, never this PC's files.
+                var sample = Path.Combine(Env.Temp, "deepslate-settings-sample");
+                try
+                {
+                    Directory.CreateDirectory(sample);
+                    var zip = Path.Combine(sample, GameSettings.VillagerPack);
+                    if (!File.Exists(zip)) using (System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create)) { }
+                    ui.SimSettings(sample, SettingsSamples.Options, SettingsSamples.Settings, SettingsSamples.PackList, 16, false, false);
+                    ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "30-settings.png")));
+                    w.Width = w.MinWidth; w.Height = w.MinHeight;
+                    ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "31-settings-min-900x560.png")));
+                    w.Width = wide; w.Height = tall;
+                    ui.SimSettings(sample, SettingsSamples.Options, SettingsSamples.SettingsPending, SettingsSamples.PackList, 16, false, true);
+                    ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "32-settings-game-open.png")));
+                }
+                finally { ui.SimSettingsOff(); try { Directory.Delete(sample, true); } catch { } }
             }
             finally { w.Close(); }
             return files;

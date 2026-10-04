@@ -79,6 +79,33 @@ export function missingLine(m: ModsCheck | null | undefined): string | null {
   return names.length === 1 ? names[0]! : `${names[0]} and ${names.length - 1} more`;
 }
 
+/**
+ * 3.5.0 (docs/30 §6): the app's Settings tab on that PC: the memory chosen (null: automatic), what the launcher profile
+ * got, the render distance in options.txt, and whether the prisoner villagers are on. Not in the minimal ping.
+ */
+export const settingsSchema = z
+  .object({
+    ramGb: z.number().int().min(1).max(64).nullish().transform((v) => v ?? null),
+    xmxGb: z.number().int().min(1).max(64).nullish().transform((v) => v ?? null),
+    renderDistance: z.number().int().min(2).max(64).nullish().transform((v) => v ?? null),
+    villagers: z.boolean().nullish().transform((v) => v ?? false),
+  })
+  .strip();
+export type SettingsReport = z.infer<typeof settingsSchema>;
+
+/** "6 GB for the game (chosen)" / "(automatic)": Admin → Installs, the PC's line. Null when the report does not say. */
+export function memoryLine(s: SettingsReport | null | undefined): string | null {
+  if (!s || s.xmxGb == null) return null;
+  return `${s.xmxGb} GB for the game (${s.ramGb != null ? "chosen" : "automatic"})`;
+}
+
+/** The report page's line: "Settings: 8 GB for the game (chosen), render distance 14, prisoner villagers on". */
+export function settingsText(s: SettingsReport | null | undefined): string | null {
+  if (!s) return null;
+  const parts = [memoryLine(s), s.renderDistance != null ? `render distance ${s.renderDistance}` : null, `prisoner villagers ${s.villagers ? "on" : "off"}`].filter(Boolean);
+  return `Settings: ${parts.join(", ")}`;
+}
+
 export const reportSchema = z
   .object({
     packVersion: short(60),
@@ -99,6 +126,8 @@ export const reportSchema = z
     extras: extrasReportSchema.nullish().transform((v) => v ?? null),
     // 2.1.0: the pack's mods before the game started / in the game that started
     mods: modsSchema.nullish().transform((v) => v ?? null),
+    // 3.5.0: the Settings tab (docs/30 §6)
+    settings: settingsSchema.nullish().transform((v) => v ?? null),
   })
   .strip();
 export type Report = z.infer<typeof reportSchema>;

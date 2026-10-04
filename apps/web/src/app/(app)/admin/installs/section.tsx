@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { formatDate, cn } from "@/lib/utils";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { MODE_LABEL, OUTCOMES, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
+import { MODE_LABEL, OUTCOMES, memoryLine, settingsSchema, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
 import { timeAgo } from "@/lib/series";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +38,14 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   const total = counts.reduce((a, c) => a + c._count._all, 0);
   const now = new Date();
   // The group's PCs: each member's latest report, whatever the filter above says.
-  const latest = await db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, at: true, system: true, tierMeasured: true, mode: true, outcome: true, extras: true, user: { select: { displayName: true, mcUuid: true } } } });
+  const latest = await db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, userId: true, at: true, system: true, tierMeasured: true, mode: true, outcome: true, extras: true, user: { select: { displayName: true, mcUuid: true } } } });
+  // 3.5.0 (docs/30 §6): the memory the game got on each member's PC, and whether they chose it, from their latest report
+  // that says (a ping, a game check and apps before 3.5.0 do not)
+  const memory = new Map(
+    (await db.installReport.findMany({ where: { settings: { not: Prisma.DbNull } }, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { userId: true, settings: true } }))
+      .map((r) => [r.userId, memoryLine(settingsSchema.safeParse(r.settings).data ?? null)] as const)
+      .filter((e): e is readonly [string, string] => e[1] !== null),
+  );
   // 2.0.1: the Extras tab on each member's PC, from their latest report that says (older installers do not)
   const extraNames = await getExtraNames();
   const extrasRows = (await db.installReport.findMany({ where: { extras: { not: Prisma.DbNull } }, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, at: true, extras: true, user: { select: { displayName: true } } } }))
@@ -50,6 +57,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   // One line for each thing; what does not fit is cut with an ellipsis and whole on hover.
   const pc = (l: (typeof latest)[number]) => ({
     s: summary(l.system as SystemInfo),
+    game: memory.get(l.userId) ?? null,
     who: <Link href={`/admin/installs/${l.id}`} className="block min-w-0 font-medium hover:underline"><Clip text={l.user.displayName} /></Link>,
     cpu: <Short full={summary(l.system as SystemInfo).cpu} short={shortCpu(summary(l.system as SystemInfo).cpu)} />,
     gpu: <Short full={summary(l.system as SystemInfo).gpu} short={shortGpu(summary(l.system as SystemInfo).gpu)} />,
@@ -95,7 +103,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
                         <td className={cell}>{p.who}</td>
                         <td className={cell}>{p.tier}</td>
                         <td className={cell}>{p.cpu}</td>
-                        <td className={`${cell} text-right tabular-nums`}>{p.s.ram}</td>
+                        <td className={`${cell} text-right tabular-nums`}><span title={p.game ? `${p.s.ram}, ${p.game}` : undefined} data-testid="pc-memory">{p.s.ram}{p.game ? <span className="block truncate text-xs text-muted-foreground">{p.game}</span> : null}</span></td>
                         <td className={cell}>{p.gpu}</td>
                         <td className={`${cell} text-right text-muted-foreground`}>{p.when}</td>
                       </tr>
@@ -112,6 +120,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
                       <dl className="mt-1 divide-y text-sm">
                         <Field name="Processor">{p.cpu}</Field>
                         <Field name="Memory"><span className="tabular-nums">{p.s.ram}</span></Field>
+                        {p.game ? <Field name="For the game"><span className="tabular-nums">{p.game}</span></Field> : null}
                         <Field name="Graphics">{p.gpu}</Field>
                         <Field name="Measured"><span className="text-muted-foreground">{p.when}</span></Field>
                       </dl>

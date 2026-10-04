@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { markLog, suggestTier, summary, type SystemInfo } from "@/lib/install-report";
+import { markLog, settingsSchema, settingsText, suggestTier, summary, type SystemInfo } from "@/lib/install-report";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
@@ -63,6 +63,7 @@ export default async function InstallReportPage({ params }: { params: Promise<{ 
         {r.outcome === "ok" ? "The installer ran through." : r.outcome === "skipped" ? "Another copy was already running on this PC, so this one did nothing." : r.failedStep ? <>Stopped at the step &quot;{r.failedStep}&quot;. It is marked in the log below.</> : "Stopped before the first step."}
       </Alert>
       {r.extras ? <p className="text-sm" data-testid="report-extras">{extrasLine(extrasReportSchema.safeParse(r.extras).data ?? null, await getExtraNames())}</p> : null}
+      {r.settings ? <p className="text-sm" data-testid="report-settings">{settingsText(settingsSchema.safeParse(r.settings).data ?? null)}</p> : null}
       <Card>
         <CardHeader>
           <CardTitle>The PC</CardTitle>

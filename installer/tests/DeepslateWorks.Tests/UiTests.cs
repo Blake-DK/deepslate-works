@@ -237,8 +237,9 @@ namespace DeepslateWorks.Tests
             }
         }
 
-        // 3.1.0: the guided setup (with a failed Move over), the countdown, the countdown stopped, Play settings
-        static readonly string[] NewShots = { "5-guided-1-welcome.png", "6-guided-2-move-over.png", "6b-guided-2-retry.png", "7-guided-3-permissions.png", "8-guided-4-extras.png", "9-countdown.png", "9b-countdown-3.png", "10-countdown-stopped.png", "11-play-settings.png",
+        // 3.1.0: the guided setup (with a failed Move over), the countdown, the countdown stopped (3.5.0: the Play settings
+        // window, 11, went with it: its choice is on the Settings tab)
+        static readonly string[] NewShots = { "5-guided-1-welcome.png", "6-guided-2-move-over.png", "6b-guided-2-retry.png", "7-guided-3-permissions.png", "8-guided-4-extras.png", "9-countdown.png", "9b-countdown-3.png", "10-countdown-stopped.png",
             // 3.2.0: the server on the Play tab (a wake; switched off with an admin's Start), the Vote tab, Play shut, the results
             "12-play-server-waking.png", "13-play-switched-off-admin.png", "14-vote.png", "14b-play-vote-first.png", "15-vote-results.png",
             // 3.3.0: the Update button: waiting, mid-update, up to date, the game running
@@ -248,7 +249,9 @@ namespace DeepslateWorks.Tests
             // 3.4.0: the look (docs/21 §8)
             "22-play-ready.png", "23-play-updating.png", "24-play-server-asleep.png", "25-vote.png", "26-extras.png", "27-question-card.png",
             // 3.4.1: the landscape window at its own size and at its smallest (docs/21 §11)
-            "28-window-980x620.png", "29-min-size-900x560.png" };
+            "28-window-980x620.png", "29-min-size-900x560.png",
+            // 3.5.0: the Settings tab at its own size, at its smallest, and with the game open (docs/30 §8)
+            "30-settings.png", "31-settings-min-900x560.png", "32-settings-game-open.png" };
 
         [WindowsFact] public void With_the_extras_list_it_draws_the_Extras_tab_too()
         {

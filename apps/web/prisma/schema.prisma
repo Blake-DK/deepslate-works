@@ -280,6 +280,7 @@ model InstallReport {
   minimal         Boolean  @default(false) // 2.0.0: reports declined in the app: "pressed Play, pack version" only, no log, no PC details
   extras          Json?    // 2.0.1: the Extras tab on that PC: switched on, last Apply, checks, in game (lib/extras-line.ts)
   mods            Json?    // 2.1.0: the pack's mods on that PC before the game started, or in the game it started (lib/install-report.ts modsSchema)
+  settings        Json?    // 3.5.0: the app's Settings tab on that PC: memory chosen and given, render distance, villagers (lib/install-report.ts settingsSchema)
 
   @@index([at])
   @@index([userId, at])

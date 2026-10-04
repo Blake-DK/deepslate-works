@@ -47,7 +47,11 @@ namespace DeepslateWorks
             var files = PackFiles(manifest).Select(f => (object)J.O("slug", J.Str(f, "slug") ?? "", "name", ModLabel(f), "filename", J.Str(f, "filename") ?? "", "sha512", J.Str(f, "sha512") ?? "")).ToList();
             // 3.3.0: the pack's hash and its settings files too, so the Update button can say what changed without the mod list
             var configs = J.Arr(manifest, "configs").Select(c => (object)J.O("path", J.Str(c, "path") ?? "", "sha256", J.Str(c, "sha256") ?? "")).ToList();
-            Json.WriteFile(path, J.O("version", J.Str(manifest, "version") ?? "", "hash", J.Str(manifest, "hash") ?? "", "server", J.Str(manifest, "server_address") ?? "", "savedAt", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), "files", files, "configs", configs));
+            // 3.5.0: what the Settings tab needs from the mod list between runs: the tier's render distance, the memory
+            // limits and the server's view distance (docs/30 §4)
+            var settings = J.O("tier", J.Str(manifest, "tier"), "renderDistance", J.Long(manifest, "render_distance"), "serverViewDistance", J.Long(manifest, "server_view_distance"),
+                               "ram", J.O("min_gb", J.Num(manifest, "ram.min_gb"), "max_gb", J.Num(manifest, "ram.max_gb"), "user_max_gb", J.Num(manifest, "ram.user_max_gb")));
+            Json.WriteFile(path, J.O("version", J.Str(manifest, "version") ?? "", "hash", J.Str(manifest, "hash") ?? "", "server", J.Str(manifest, "server_address") ?? "", "savedAt", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), "files", files, "configs", configs, "settings", settings));
         }
 
         public static object ReadPackList(string path)

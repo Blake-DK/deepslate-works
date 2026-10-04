@@ -82,7 +82,7 @@ Last updated 2026-10-04: the server went live, the first review was done and its
 
 ## In progress
 
-- **Season 1's build** (docs/34): the season file and its datapack, the recording, the Season page, the Frontier, the Discord moments, Admin → Seasons. The season files and their datapack builder are done. Rehearsal on the server on Monday 23 November; opening on Monday 30 November.
+- **Season 1's build** (docs/34): built and waiting for a deploy: the season file and its datapack, the recording of boss kills and trials, the Season page with its scoreboard, Admin → Seasons (announce, start, end), the season's posts in Discord, the Frontier's dimension as a datapack. Still to build: the way into the Frontier (waystones, pre-generation, its map), the app's banner, the wipe at the season's end, the guide's Season section. The rehearsal on the real server is Monday 23 November.
 - **The Lock night** (docs/31, PR E): the two Sophisticated mods to their fixed versions, NeoForge pinned. One quiet evening, after a backup.
 - **Backups** (docs/28): the portal's own backup runs and the Admin → Backups page are on a branch; a world restore from the NAS and from S3 has not been tried yet.
 - **Waiting on a person**: a weak PC in a Cataclysm dungeon (it decides whether Cataclysm's bosses count in Season 1); why the first wake after a deploy failed on 4 October (AMP's log); an outside monitor on `/api/health`.

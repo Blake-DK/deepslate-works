@@ -21,6 +21,7 @@ Work lands on `dev` (the working rules "Branches"); `main` moves when Alex wants
 | When | What |
 |---|---|
 | done 2026-10-04 | W1.1: the season files, lint, `build seasons` (on `dev`) |
+| done 2026-10-04 | W1.3 recording and `/season`; W1.4 Admin → Seasons (announce, start, end, a tick given or taken back); W1.5 Discord moments; W1.2's datapack (on `dev`, docs/11 first section) |
 | to 25 Oct | W1.3 |
 | 26 Oct to 8 Nov | W1.2 and W1.5 |
 | 9 to 15 Nov | W1.4 Start; the sample season end to end on `dev`; W1.11 the guide's Season section |

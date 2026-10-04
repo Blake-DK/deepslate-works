@@ -1,6 +1,6 @@
 {
   "pack": {
     "pack_format": 48,
-    "description": "Deepslate Works: clearing items on the ground, entity counts, server gamerules and the starter kit"
+    "description": "Deepslate Works: clearing items on the ground, entity counts, server gamerules, the starter kit and a fix for a Create Deco recipe"
   }
 }

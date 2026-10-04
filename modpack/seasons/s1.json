@@ -1,0 +1,275 @@
+{
+  "id": "s1",
+  "name": "Season 1 · First Blood",
+  "startsAt": "2026-11-04T19:00:00Z",
+  "endsAt": "2026-12-16T19:00:00Z",
+  "accent": "#b8652c",
+  "icon": "minecraft:netherite_sword",
+  "groupRadius": 48,
+  "bosses": [
+    {
+      "id": "elder_guardian",
+      "title": "The Elder Guardian",
+      "entity": "minecraft:elder_guardian",
+      "tier": 1,
+      "points": 10,
+      "opensAt": "2026-11-04T19:00:00Z",
+      "where": "Ocean monument",
+      "hint": "Bring milk for the mining fatigue, and a door to breathe behind.",
+      "trophy": {
+        "item": "minecraft:prismarine_crystals",
+        "name": "The Elder's Eye"
+      }
+    },
+    {
+      "id": "frostmaw",
+      "title": "Frostmaw",
+      "entity": "mowziesmobs:frostmaw",
+      "tier": 1,
+      "points": 10,
+      "opensAt": "2026-11-04T19:00:00Z",
+      "where": "Snowy biomes",
+      "hint": "It sleeps until you come close. Bring a shield and a friend.",
+      "trophy": {
+        "item": "minecraft:blue_ice",
+        "name": "Frostmaw's Tooth"
+      }
+    },
+    {
+      "id": "ferrous_wroughtnaut",
+      "title": "The Ferrous Wroughtnaut",
+      "entity": "mowziesmobs:ferrous_wroughtnaut",
+      "tier": 1,
+      "points": 10,
+      "opensAt": "2026-11-04T19:00:00Z",
+      "where": "A wrought chamber, underground",
+      "hint": "It can only be hurt from behind, after it swings.",
+      "trophy": {
+        "item": "minecraft:iron_block",
+        "name": "Wroughtnaut's Rivet"
+      }
+    },
+    {
+      "id": "umvuthi",
+      "title": "Umvuthi, the Sunbird",
+      "entity": "mowziesmobs:umvuthi",
+      "tier": 2,
+      "points": 15,
+      "opensAt": "2026-11-20T19:00:00Z",
+      "where": "An Umvuthana grove, in the savanna",
+      "hint": "His followers come first. Do not stand in the sun beam.",
+      "trophy": {
+        "item": "minecraft:sunflower",
+        "name": "The Sunbird's Feather"
+      }
+    },
+    {
+      "id": "warden",
+      "title": "The Warden",
+      "entity": "minecraft:warden",
+      "tier": 2,
+      "points": 15,
+      "opensAt": "2026-11-20T19:00:00Z",
+      "where": "An ancient city, deep underground",
+      "hint": "It hears you. Fight it in the open, never in a tunnel.",
+      "trophy": {
+        "item": "minecraft:sculk_catalyst",
+        "name": "The Warden's Heart"
+      }
+    },
+    {
+      "id": "wither",
+      "title": "The Wither",
+      "entity": "minecraft:wither",
+      "tier": 2,
+      "points": 15,
+      "opensAt": "2026-11-20T19:00:00Z",
+      "where": "Wherever you summon it",
+      "hint": "Summon it somewhere you do not mind losing.",
+      "trophy": {
+        "item": "minecraft:wither_rose",
+        "name": "The Wither's Rose"
+      }
+    },
+    {
+      "id": "amethyst_crab",
+      "title": "The Amethyst Crab",
+      "entity": "cataclysm:amethyst_crab",
+      "tier": 2,
+      "points": 10,
+      "opensAt": "2026-11-27T19:00:00Z",
+      "where": "An amethyst nest",
+      "hint": "Its shell turns blows; wait for it to open.",
+      "trophy": {
+        "item": "minecraft:amethyst_cluster",
+        "name": "Crab's Crystal"
+      }
+    },
+    {
+      "id": "coralssus",
+      "title": "Coralssus",
+      "entity": "cataclysm:coralssus",
+      "tier": 2,
+      "points": 10,
+      "opensAt": "2026-11-27T19:00:00Z",
+      "where": "The sunken city",
+      "hint": "Bring water breathing for the whole group.",
+      "trophy": {
+        "item": "minecraft:brain_coral_block",
+        "name": "Coralssus's Reef"
+      }
+    },
+    {
+      "id": "kobolediator",
+      "title": "The Kobolediator",
+      "entity": "cataclysm:kobolediator",
+      "tier": 2,
+      "points": 10,
+      "opensAt": "2026-11-27T19:00:00Z",
+      "where": "The cursed pyramid, in the desert",
+      "hint": "Keep moving: it charges in a straight line.",
+      "trophy": {
+        "item": "minecraft:chiseled_sandstone",
+        "name": "The Kobolediator's Seal"
+      }
+    },
+    {
+      "id": "ender_dragon",
+      "title": "The Ender Dragon",
+      "entity": "minecraft:ender_dragon",
+      "tier": 3,
+      "points": 30,
+      "opensAt": "2026-11-04T19:00:00Z",
+      "where": "The End",
+      "hint": "The finale: Saturday 12 December, 20:00 UK, everybody together.",
+      "trophy": {
+        "item": "minecraft:dragon_egg",
+        "name": "First Blood: the Dragon's Scale"
+      },
+      "groupRadius": 0
+    }
+  ],
+  "trials": [
+    {
+      "id": "iron_week",
+      "title": "Iron Week",
+      "opensAt": "2026-11-04T19:00:00Z",
+      "points": 5,
+      "solo": true,
+      "hint": "Have a full set of iron armour and a shield on you.",
+      "icon": "minecraft:iron_chestplate",
+      "criteria": {
+        "trigger": "minecraft:inventory_changed",
+        "conditions": {
+          "items": [
+            {
+              "items": "minecraft:iron_helmet"
+            },
+            {
+              "items": "minecraft:iron_chestplate"
+            },
+            {
+              "items": "minecraft:iron_leggings"
+            },
+            {
+              "items": "minecraft:iron_boots"
+            },
+            {
+              "items": "minecraft:shield"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "first_steps_out",
+      "title": "First Steps Out",
+      "opensAt": "2026-11-13T19:00:00Z",
+      "points": 5,
+      "solo": true,
+      "hint": "Take the waystone at spawn to the Frontier.",
+      "icon": "minecraft:compass",
+      "criteria": {
+        "trigger": "minecraft:changed_dimension",
+        "conditions": {
+          "to": "deepslate:frontier_s1"
+        }
+      }
+    },
+    {
+      "id": "the_engineer",
+      "title": "The Engineer",
+      "opensAt": "2026-11-20T19:00:00Z",
+      "points": 10,
+      "solo": true,
+      "hint": "Make a Precision Mechanism with Create.",
+      "icon": "minecraft:clock",
+      "criteria": {
+        "trigger": "minecraft:inventory_changed",
+        "conditions": {
+          "items": [
+            {
+              "items": "create:precision_mechanism"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ominous",
+      "title": "Ominous",
+      "opensAt": "2026-11-27T19:00:00Z",
+      "points": 15,
+      "solo": false,
+      "hint": "Open an ominous vault in a trial chamber. Two or three of you.",
+      "icon": "minecraft:ominous_trial_key",
+      "criteria": {
+        "trigger": "minecraft:item_used_on_block",
+        "conditions": {
+          "location": [
+            {
+              "condition": "minecraft:location_check",
+              "predicate": {
+                "block": {
+                  "blocks": "minecraft:vault",
+                  "state": {
+                    "ominous": "true"
+                  }
+                }
+              }
+            },
+            {
+              "condition": "minecraft:match_tool",
+              "predicate": {
+                "items": "minecraft:ominous_trial_key"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "hero_of_the_village",
+      "title": "Hero of the Village, Together",
+      "opensAt": "2026-12-04T19:00:00Z",
+      "points": 15,
+      "solo": false,
+      "hint": "Win a raid.",
+      "icon": "minecraft:emerald",
+      "criteria": {
+        "trigger": "minecraft:hero_of_the_village",
+        "conditions": {}
+      }
+    }
+  ],
+  "goal": {
+    "title": "50 boss kills between us",
+    "count": "boss_kills",
+    "target": 50
+  },
+  "finale": {
+    "at": "2026-12-12T20:00:00Z",
+    "title": "The Dragon, together",
+    "boss": "ender_dragon"
+  }
+}

@@ -16,6 +16,7 @@ export function modpackPaths(modpackDir = process.env.MODPACK_DIR ?? path.join(p
     server: path.join(root, "server"),
     items: path.join(root, "items", "vanilla-1.21.1.json"), // docs/13 §13: every vanilla item, from the game's own report
     datapacks: path.join(root, "datapacks"), // go into the world: Minecraft/world/datapacks/ (docs/14)
+    seasons: path.join(root, "seasons"), // docs/20: one file per season; `build seasons` makes their datapacks
     dist: process.env.DIST_DIR ?? path.join(repo, "dist"),
     installer: path.join(repo, "installer"),
   };

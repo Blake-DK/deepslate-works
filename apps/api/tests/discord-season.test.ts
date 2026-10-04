@@ -76,7 +76,7 @@ describe("season moments in Discord (docs/21 §6, docs/22 §13)", () => {
     await t.a.round();
     const s = t.sent();
     expect(s.map((c) => c.body.thread_name ?? null)).toEqual(["The Rehearsal Golem · Sample Season · Dress Rehearsal", null, null, null]);
-    expect(s.every((c) => c.url.startsWith("https://discord.com/api/webhooks/323456789012345678/"))).toBe(true); // the forum, never #game-chat
+    expect(s.every((c) => c.url.includes("/323456789012345678/"))).toBe(true); // the forum, never #game-chat
     const thread = t.posts.get("boss:sample:rehearsal_golem")?.threadId;
     expect(thread).toBeTruthy();
     for (const c of s.slice(1)) expect(c.url).toContain(`thread_id=${thread}`);

@@ -40,6 +40,7 @@ enum EventKind {
   INSTALL
   JOIN_BLOCKED
   DOWNLOAD
+  SEASON
 }
 
 enum VoteStatus {
@@ -204,6 +205,40 @@ model HeldPlayer {
 }
 
 // One row ("site"): the launch switch. Until `live`, players see a launch page, no address, no downloads.
+// docs/20 §7, docs/34 §4: a season the portal knows of. Its content is the file modpack/seasons/<id>.json; this row
+// says whether it is running, and keeps what the clock has already said (`marks`) and, once ended, the frozen result.
+model Season {
+  id         String        @id // the file's id: "s1", "sample"
+  name       String
+  startsAt   DateTime
+  endsAt     DateTime
+  state      String        @default("upcoming") // upcoming | running | ended
+  marks      Json          @default("{}") // what has been announced already: trials opened, goal marks, the leader
+  resultJson Json? // written once by End season: the scoreboard as it stood
+  createdAt  DateTime      @default(now())
+  clears     SeasonClear[]
+}
+
+// One player's tick on one boss or trial of one season. `first`: among the first on the server (a group shares it).
+model SeasonClear {
+  id       String   @id @default(cuid())
+  seasonId String
+  season   Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  kind     String // boss | trial
+  itemId   String // the boss's or trial's id in the season file
+  mcUuid   String
+  mcName   String // as it was then: shown for a member who has since been removed
+  userId   String?
+  at       DateTime
+  first    Boolean  @default(false)
+  early    Boolean  @default(false) // done before it opened: "found early"
+  source   String   @default("console") // console | file | admin
+
+  @@unique([seasonId, kind, itemId, mcUuid])
+  @@index([seasonId, at])
+  @@index([mcUuid])
+}
+
 model SiteSettings {
   id          String    @id @default("site")
   live        Boolean   @default(false)

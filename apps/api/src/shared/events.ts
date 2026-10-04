@@ -4,23 +4,23 @@
 // docs/16 §4: what an audit entry becomes in the event log. Portal actions are ADMIN_ACTION or
 // PLAYER_ACTION rows with the action's name, parameters and result in `meta`; a few have a kind of their own.
 
-export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP", "INSTALL", "JOIN_BLOCKED", "DOWNLOAD"] as const;
+export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP", "INSTALL", "JOIN_BLOCKED", "DOWNLOAD", "SEASON"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 /** What players may see at /events. Everything else is for admins. */
-export const PLAYER_KINDS: readonly EventKind[] = ["JOIN", "LEAVE", "DEATH", "ADVANCEMENT", "SERVER_START", "SERVER_STOP"];
+export const PLAYER_KINDS: readonly EventKind[] = ["JOIN", "LEAVE", "DEATH", "ADVANCEMENT", "SEASON", "SERVER_START", "SERVER_STOP"];
 
 export type Severity = "info" | "player" | "warning" | "error" | "admin";
 export const SEVERITY: Record<EventKind, Severity> = {
   JOIN: "player", LEAVE: "player", DEATH: "player", CHAT: "player", ADVANCEMENT: "player",
   SERVER_START: "info", SERVER_STOP: "info", CRASH: "error", WARN: "warning", ERROR: "error",
-  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin", INSTALL: "player", JOIN_BLOCKED: "warning", DOWNLOAD: "player",
+  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin", INSTALL: "player", JOIN_BLOCKED: "warning", DOWNLOAD: "player", SEASON: "player",
 };
 
 export const KIND_LABEL: Record<EventKind, string> = {
   JOIN: "Joined", LEAVE: "Left", DEATH: "Death", CHAT: "Chat", ADVANCEMENT: "Advancement",
   SERVER_START: "Server started", SERVER_STOP: "Server stopped", CRASH: "Crash", WARN: "Warning", ERROR: "Error",
-  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup", INSTALL: "Install", JOIN_BLOCKED: "Held at the door", DOWNLOAD: "Download",
+  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup", INSTALL: "Install", JOIN_BLOCKED: "Held at the door", DOWNLOAD: "Download", SEASON: "Season",
 };
 
 export type AuditResult = "OK" | "DENIED" | "FAILED" | "TIMEOUT";

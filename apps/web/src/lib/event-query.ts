@@ -37,13 +37,14 @@ export function filterToQuery(f: EventFilter, extra: Record<string, string> = {}
 }
 
 // docs/29 §3: the chips of the Activity page. A group is only a set of kinds; the URL stays `kind=` (rule 8).
-// Every kind in EVENT_KINDS is in exactly one group; the first four are exactly PLAYER_KINDS.
+// Every kind in EVENT_KINDS is in exactly one group; the first five are exactly PLAYER_KINDS.
 export type EventGroup = { key: string; label: string; words: string; kinds: readonly EventKind[]; admin: boolean };
 
 export const EVENT_GROUPS: readonly EventGroup[] = [
   { key: "joins", label: "Joins and leaves", words: "joins and leaves", kinds: ["JOIN", "LEAVE"], admin: false },
   { key: "deaths", label: "Deaths", words: "deaths", kinds: ["DEATH"], admin: false },
   { key: "advancements", label: "Advancements", words: "advancements", kinds: ["ADVANCEMENT"], admin: false },
+  { key: "season", label: "Season", words: "the season", kinds: ["SEASON"], admin: false },
   { key: "server", label: "Server", words: "server starts and stops", kinds: ["SERVER_START", "SERVER_STOP"], admin: false },
   { key: "chat", label: "Chat", words: "chat", kinds: ["CHAT"], admin: true },
   { key: "problems", label: "Problems", words: "problems", kinds: ["CRASH", "WARN", "ERROR"], admin: true },
@@ -58,7 +59,7 @@ export const EVENT_GROUPS: readonly EventGroup[] = [
 const KIND_WORDS: Record<EventKind, string> = {
   JOIN: "joins", LEAVE: "leaves", DEATH: "deaths", CHAT: "chat", ADVANCEMENT: "advancements",
   SERVER_START: "server starts", SERVER_STOP: "server stops", CRASH: "crashes", WARN: "warnings", ERROR: "errors",
-  ADMIN_ACTION: "admin actions", PLAYER_ACTION: "player actions", LINK: "links", REVOKE: "removals", SYNC: "mod syncs", BACKUP: "backups", INSTALL: "installs", JOIN_BLOCKED: "held at the door", DOWNLOAD: "downloads",
+  ADMIN_ACTION: "admin actions", PLAYER_ACTION: "player actions", LINK: "links", REVOKE: "removals", SYNC: "mod syncs", BACKUP: "backups", INSTALL: "installs", JOIN_BLOCKED: "held at the door", DOWNLOAD: "downloads", SEASON: "the season",
 };
 
 export function groupsFor(admin: boolean): EventGroup[] {

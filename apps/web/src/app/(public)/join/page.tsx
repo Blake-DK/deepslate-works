@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireOnboardedUser } from "@/server/auth/session";
-import { linkWithCode } from "@/server/link";
+import { checkCode, linkedOutcome } from "@/server/link";
+import { LinkConfirm } from "@/components/link-confirm";
 import { readCode } from "@/shared/join-code";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
@@ -16,18 +17,22 @@ export const metadata: Metadata = { title: "Join code" };
 // screen in the game, and it does what the link does. A plain form that sends GET; the box adds the hyphen as the
 // code is typed (code-input.tsx), and without script it still takes the code with or without one.
 // /join/<8 characters> is an invite (the folder next to this one); a room code typed there comes here.
-export default async function JoinCodePage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
-  const { code: raw } = await searchParams;
+// Typing the code links nothing either (docs/31 B-06): the page then asks "Link <name> to <you>?" and the button does it.
+export default async function JoinCodePage({ searchParams }: { searchParams: Promise<{ code?: string; done?: string }> }) {
+  const { code: raw, done: flag } = await searchParams;
   const code = readCode(raw ?? "");
   const user = await requireOnboardedUser(code ? `/join?code=${code}` : "/join");
-  const outcome = code ? await linkWithCode(user, code, "join") : null;
+  const check = code ? await checkCode(user, code, "join") : null;
+  const outcome = check ? (check.ok ? (check.already ? linkedOutcome(check.mcUsername, flag === "1") : null) : check.outcome) : null;
+  const asking = check?.ok && !check.already ? check : null;
   const done = outcome?.tone === "success";
 
   return (
     <div className="mx-auto max-w-sm space-y-4 px-4 pt-6">
       <h1 className="text-2xl font-semibold">Enter your join code</h1>
       {outcome && <Alert tone={outcome.tone}><strong>{outcome.title}.</strong> {outcome.text}</Alert>}
-      {!done && (
+      {asking && <LinkConfirm code={asking.code} mcUsername={asking.mcUsername} displayName={user.displayName} via="join" />}
+      {!done && !asking && (
         <Card>
           <CardHeader>
             <CardTitle>The code on your screen</CardTitle>

@@ -474,8 +474,17 @@ export class Limbo {
   async memberChanged(discordId: string, inGuild: boolean) {
     const u = await db.user.findUnique({ where: { discordId }, select: { id: true, mcUuid: true, guildMember: true } });
     if (!u) return;
-    if (u.guildMember !== inGuild) await db.user.update({ where: { id: u.id }, data: { guildMember: inGuild } });
+    if (u.guildMember !== inGuild) await this.setGuildMember(u.id, inGuild);
     if (!inGuild && u.mcUuid) await this.revoke(u.mcUuid, null);
+  }
+
+  /**
+   * The Discord server flag. docs/31 B-05: when it goes false, every portal session they have ends
+   * (`sessionVersion`) and the installer's tokens are refused, so an old cookie cannot link them back in.
+   */
+  private async setGuildMember(userId: string, member: boolean) {
+    await db.user.update({ where: { id: userId }, data: member ? { guildMember: true } : { guildMember: false, sessionVersion: { increment: 1 } } });
+    if (!member) await db.launcherAuth.updateMany({ where: { userId, status: "approved" }, data: { status: "denied" } }).catch((err) => this.log({ err: String(err) }, "could not end the installer's tokens"));
   }
 
   /** With a bot token: re-check guild membership of online, linked players every 5 min. Without one: rely on login-time checks. */
@@ -488,7 +497,7 @@ export class Limbo {
       if (!res) continue;
       const member = res.status === 200;
       if (res.status !== 200 && res.status !== 404) continue; // rate limit or outage: leave as is
-      if (member !== u.guildMember) await db.user.update({ where: { id: u.id }, data: { guildMember: member } });
+      if (member !== u.guildMember) await this.setGuildMember(u.id, member);
       if (!member && u.mcUuid) await this.revoke(u.mcUuid, null);
     }
   }

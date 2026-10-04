@@ -31,8 +31,9 @@ export async function createVoteAction(formData: FormData) {
     redirect("/admin/pack?tab=votes&error=json");
   }
   const clean = parseQuestions(questions);
-  const closesAt = parsed.data.closesAt ? new Date(parsed.data.closesAt) : null;
-  if (closesAt && Number.isNaN(closesAt.getTime())) redirect("/admin/pack?tab=votes&error=form");
+  // typed as UK time, like a poll's and a news item's dates (docs/31 B-34: it was read as UTC, an hour late in summer)
+  const closesAt = parsed.data.closesAt ? ukLocalToDate(parsed.data.closesAt) : null;
+  if (parsed.data.closesAt && (!closesAt || Number.isNaN(closesAt.getTime()))) redirect("/admin/pack?tab=votes&error=form");
   const vote = await db.vote.create({ data: { title: parsed.data.title, questions: clean as unknown as Prisma.InputJsonValue, closesAt } });
   await audit({ userId: admin.id, action: "vote.create", params: { voteId: vote.id, title: vote.title }, result: "OK" });
   revalidatePath("/admin/pack");

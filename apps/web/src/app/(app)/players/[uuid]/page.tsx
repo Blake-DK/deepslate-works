@@ -1,3 +1,4 @@
+import { getSection } from "@/server/site-settings";
 import type { Metadata } from "next";
 import { getExtraNames } from "@/server/modpack/lock";
 import { extrasLine, extrasReportSchema } from "@/lib/extras-line";
@@ -84,11 +85,14 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   const extrasText = extrasRun ? extrasLine(extrasReportSchema.safeParse(extrasRun.extras).data ?? null, await getExtraNames()) : null;
   const pc = install ? summary(install.system as SystemInfo) : null;
   const guess = install ? suggestTier(install.system as SystemInfo) : null;
-  const countries = [...new Set(sessions.map((s) => s.country).filter((c): c is string => Boolean(c)))];
+  // docs/31 B-36: "Players can see the Stats tab" off means a member does not see where and when another member
+  // played here either. Admins always do; a member always sees their own.
+  const stats = admin || member?.id === viewer.id || (await getSection("privacy")).analyticsForPlayers;
+  const countries = stats ? [...new Set(sessions.map((s) => s.country).filter((c): c is string => Boolean(c)))] : [];
   const addresses = admin ? rows.filter((r) => r.ip).slice(0, 40) : [];
   const tabs = [
     { key: "overview", label: "Overview" },
-    { key: "sessions", label: "Sessions", count: rows.length || null },
+    ...(stats ? [{ key: "sessions", label: "Sessions", count: rows.length || null }] : []),
     { key: "activity", label: "Activity" },
     ...(admin && !id.startsWith("name:") ? [{ key: "inventory", label: "Inventory" }] : []),
     ...(admin ? [{ key: "pc", label: "PC & access" }] : []),

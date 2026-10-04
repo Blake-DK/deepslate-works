@@ -16,6 +16,7 @@ export const metadata: Metadata = { title: "Sign in" };
 
 const ERRORS: Record<string, string> = {
   "no-invite": "That Discord account isn't in the group yet. You need an invite link from Alex.",
+  blocked: "This Discord account has been removed from the group. Talk to Alex.",
   "not-in-server": "You need to be in the group's Discord server to sign in. Ask Alex for the server invite first.",
   credentials: "Wrong email or password.",
   "rate-limited": "Too many attempts. Wait a minute and try again.",

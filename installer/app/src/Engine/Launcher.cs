@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
 namespace DeepslateWorks
@@ -86,8 +88,9 @@ namespace DeepslateWorks
             MoveOver(tmp, path);
         }
 
-        /// <summary>Move-Item -Force: the file takes the place of the one there, in one step where Windows can.</summary>
-        static void MoveOver(string from, string to)
+        /// <summary>Move-Item -Force: the file takes the place of the one there, in one step where Windows can. 3.5.1: also
+        /// what options.txt is written with (docs/31 B-63), so a stop half-way never leaves the game without it.</summary>
+        internal static void MoveOver(string from, string to)
         {
             if (!File.Exists(to)) { File.Move(from, to); return; }
             try { File.Replace(from, to, null, true); }
@@ -132,6 +135,25 @@ namespace DeepslateWorks
         public static string ProfileJavaArgs(string path, string id)
         {
             try { return File.Exists(path) ? J.Str(J.Obj(J.Obj(ReadJson(path), "profiles"), id), "javaArgs") : null; } catch { return null; }
+        }
+
+        /// <summary>
+        /// 3.5.1 (docs/31 B-62): what the profile step does. "write" (the launcher is closed, or the profile is missing or
+        /// points elsewhere: the launcher has to be closed for it, as always); "leave" (the launcher is open and the profile
+        /// is right); "leave, memory waits" (the same, but its memory is not the one this Play would give: the game still
+        /// starts, and the window says the choice needs a Play with the launcher closed).
+        /// </summary>
+        public static string ProfileDecision(bool launcherOpen, string profileProblem, string currentArgs, string wantArgs)
+        {
+            if (!launcherOpen || profileProblem != "") return "write";
+            return currentArgs == wantArgs ? "leave" : "leave, memory waits";
+        }
+
+        /// <summary>The -Xmx of a javaArgs line in whole GB ("-Xmx6G ..." gives 6); null when it has none in G.</summary>
+        public static int? XmxOf(string javaArgs)
+        {
+            var m = Regex.Match(javaArgs ?? "", @"(?:^|\s)-Xmx(\d{1,3})[gG](?:\s|$)");
+            return m.Success ? int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture) : (int?)null;
         }
 
         /// <summary>For the report: which launcher (classic, store), its version, the profile file's format.</summary>

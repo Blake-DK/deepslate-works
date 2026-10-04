@@ -210,8 +210,7 @@ namespace DeepslateWorks
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             var tmp = path + ".new";
             File.WriteAllText(tmp, text, new UTF8Encoding(false));
-            if (File.Exists(path)) File.Delete(path);
-            File.Move(tmp, path);
+            Engine.MoveOver(tmp, path);   // 3.5.1 (docs/31 B-63): replaced in one step, never deleted first
         }
 
         // ---- the resource pack list -------------------------------------------------------------------------------------

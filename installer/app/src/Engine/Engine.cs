@@ -364,12 +364,24 @@ namespace DeepslateWorks
             var entry = J.O("name", Env.PackName, "type", "custom", "lastVersionId", versionId, "gameDir", gameDir, "javaArgs", javaArgs,
                             "javaDir", java, "icon", Brand.ProfileIcon(branding, J.Get(profile, "icon")), "created", now, "lastUsed", now);   // 2.1.1: the logo
             bool profileLeft = false;
-            if (!run.DryRun && FindLauncher(run).Count > 0 && TestLauncherProfile(Env.Profiles, profileId, versionId) == "" && ProfileJavaArgs(Env.Profiles, profileId) == javaArgs)
+            var given = xmx;   // what the profile has once this step is done (the report's xmxGb)
+            if (!run.DryRun)
             {
-                // Launcher open, profile already there, pointing at the right NeoForge and with this memory (3.5.0: a
-                // memory chosen in Settings is a change to write, so the launcher has to be closed for it): nothing to write.
-                profileLeft = true;
-                Log.Line("the launcher is open and the profile is right: launcher_profiles.json left as it is");
+                // 3.5.1 (docs/31 B-62): with the launcher open and the profile pointing at the right NeoForge, nothing is
+                // written, as before 3.5.0; a memory chosen in Settings then waits for a Play with the launcher closed
+                var current = ProfileJavaArgs(Env.Profiles, profileId);
+                var d = ProfileDecision(FindLauncher(run).Count > 0, TestLauncherProfile(Env.Profiles, profileId, versionId), current, javaArgs);
+                if (d != "write")
+                {
+                    profileLeft = true;
+                    Log.Line("the launcher is open and the profile is right: launcher_profiles.json left as it is");
+                    if (d == "leave, memory waits")
+                    {
+                        given = XmxOf(current) ?? xmx;
+                        Log.Line(string.Format("the profile has {0}, this Play would give {1}: left for a Play with the launcher closed", current, javaArgs));
+                        run.Note(string.Format("The Minecraft Launcher is open, so the game starts with {0} GB this time. Close the launcher before you press Play to give it {1} GB.", given, xmx));
+                    }
+                }
             }
             if (run.DryRun) run.Note("(dry run) would write the profile to launcher_profiles.json");
             else if (!profileLeft)
@@ -399,7 +411,7 @@ namespace DeepslateWorks
             }
             if (profileLeft) run.Tick(string.Format("Profile '{0}' is already in the launcher", Env.PackName));
             else run.Tick(string.Format("Profile '{0}' with {1} GB of RAM ({2}your PC has {3} GB), saved and checked", Env.PackName, xmxText, ramChosen.HasValue ? "chosen in Settings; " : "", totalGb.ToString(Inv)));
-            if (!run.DryRun) { try { run.Settings = GameSettings.ReportBlock(ramChosen, xmx, options); } catch (Exception e) { Log.Line("settings: not in the report: " + e.Message); } }
+            if (!run.DryRun) { try { run.Settings = GameSettings.ReportBlock(ramChosen, given, options); } catch (Exception e) { Log.Line("settings: not in the report: " + e.Message); } }
 
             // ---- the Play link and the shortcuts: put right when missing (setup made them; this keeps them) ------
             if (!run.DryRun && !Env.CustomRoot && Env.OnWindows && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LOCALAPPDATA")))

@@ -126,8 +126,9 @@ export const reportSchema = z
     extras: extrasReportSchema.nullish().transform((v) => v ?? null),
     // 2.1.0: the pack's mods before the game started / in the game that started
     mods: modsSchema.nullish().transform((v) => v ?? null),
-    // 3.5.0: the Settings tab (docs/30 §6)
-    settings: settingsSchema.nullish().transform((v) => v ?? null),
+    // 3.5.0: the Settings tab (docs/30 §6). 3.5.1 (docs/31 S-14): a block that does not read is dropped, never the
+    // report with it (its "ok" is what Play first counts)
+    settings: settingsSchema.nullish().catch(null).transform((v) => v ?? null),
   })
   .strip();
 export type Report = z.infer<typeof reportSchema>;

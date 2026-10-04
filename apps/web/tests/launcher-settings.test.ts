@@ -13,11 +13,17 @@ describe("the report's settings", () => {
     expect(reportSchema.parse(base).settings).toBeNull();
     expect(reportSchema.parse({ ...base, minimal: true, settings: null }).settings).toBeNull();
   });
-  it("automatic memory is a null ramGb; anything odd is refused, extra keys dropped", () => {
+  it("automatic memory is a null ramGb; extra keys dropped", () => {
     const r = reportSchema.parse({ ...base, settings: { ramGb: null, xmxGb: 6, renderDistance: null, villagers: false, javaArgs: "-Xmx99G" } });
     expect(r.settings).toEqual({ ramGb: null, xmxGb: 6, renderDistance: null, villagers: false });
-    expect(reportSchema.safeParse({ ...base, settings: { xmxGb: 1000 } }).success).toBe(false);
-    expect(reportSchema.safeParse({ ...base, settings: { xmxGb: "8" } }).success).toBe(false);
+  });
+  it("a block that does not read is dropped, and the report (its ok for Play first) is still taken (docs/31 S-14)", () => {
+    for (const settings of [{ xmxGb: 1000 }, { xmxGb: "8" }, { renderDistance: 99 }, "lots", 7]) {
+      const r = reportSchema.safeParse({ ...base, settings });
+      expect(r.success).toBe(true);
+      expect(r.data!.settings).toBeNull();
+      expect(r.data!.outcome).toBe("ok");
+    }
   });
 });
 

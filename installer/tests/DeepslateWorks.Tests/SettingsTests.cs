@@ -151,6 +151,23 @@ namespace DeepslateWorks.Tests
             }
         }
 
+        [Fact] public void Options_txt_is_replaced_in_one_step_and_nothing_is_left_beside_it()
+        {
+            // 3.5.1 (docs/31 B-63): written to .new and moved over the old file (never deleted first), by both writers
+            using (var s = new Scratch())
+            {
+                var f = s.P("options.txt");
+                File.Copy(FixturePath(), f);
+                GameOptions.Set(f, D("renderDistance", "14"));
+                GameSettings.SetVillagers(f, true);
+                GameOptions.KeepOnTop(f, GameSettings.VillagerId);
+                Assert.Equal("14", GameOptions.Read(f)["renderDistance"]);
+                Assert.True(GameSettings.VillagersOn(f));
+                Assert.Equal(140, File.ReadAllLines(f).Length);   // every keybind still there (the pack list line already was)
+                Assert.False(File.Exists(f + ".new"));
+            }
+        }
+
         [Fact] public void Keep_on_top_moves_only_that_pack_and_only_that_line()
         {
             using (var s = new Scratch())
@@ -230,6 +247,19 @@ namespace DeepslateWorks.Tests
                 File.WriteAllText(f, "{not json");
                 Assert.Null(Engine.ProfileJavaArgs(f, "deepslate-works"));
             }
+        }
+
+        [Fact] public void With_the_launcher_open_the_profile_is_left_and_a_new_memory_waits_for_it_to_close()
+        {
+            // 3.5.1 (docs/31 B-62): Play goes on with the launcher open; only a missing or wrong profile needs it closed
+            Assert.Equal("write", Engine.ProfileDecision(false, "", "-Xmx6G -Xms1G", "-Xmx8G -Xms1G"));
+            Assert.Equal("write", Engine.ProfileDecision(false, "", "-Xmx6G -Xms1G", "-Xmx6G -Xms1G"));
+            Assert.Equal("write", Engine.ProfileDecision(true, "the profile 'deepslate-works' is not in launcher_profiles.json", null, "-Xmx8G -Xms1G"));
+            Assert.Equal("leave", Engine.ProfileDecision(true, "", "-Xmx6G -Xms1G", "-Xmx6G -Xms1G"));
+            Assert.Equal("leave, memory waits", Engine.ProfileDecision(true, "", "-Xmx6G -Xms1G", "-Xmx8G -Xms1G"));
+            Assert.Equal("leave, memory waits", Engine.ProfileDecision(true, "", null, "-Xmx8G -Xms1G"));
+            Assert.Equal(6, Engine.XmxOf("-Xmx6G -Xms1G -XX:+UseG1GC")); Assert.Equal(12, Engine.XmxOf("-Xms1G -Xmx12g"));
+            Assert.Null(Engine.XmxOf("-Xmx4096M -Xms1G")); Assert.Null(Engine.XmxOf("")); Assert.Null(Engine.XmxOf(null));
         }
 
         [Fact] public void One_warning_at_a_time()

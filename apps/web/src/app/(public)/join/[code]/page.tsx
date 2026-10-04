@@ -41,7 +41,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
         <Card>
           <CardHeader>
             <CardTitle>You&apos;re invited{invite?.note ? `, ${invite.note.replace(/^for\s+/i, "")}` : ""}</CardTitle>
-            <CardDescription>{env.DISCORD_GUILD_ID ? <>Join the group&apos;s Discord server first: signing in with Discord only works for its members. Not on Discord? Use the link below.</> : <>One tap and you&apos;re in.</>} We only read your Discord name, nothing else.</CardDescription>
+            <CardDescription>One tap and you&apos;re in. We only read your Discord name, nothing else.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <form action={joinWithDiscord}>

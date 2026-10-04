@@ -64,6 +64,7 @@ model User {
   pcTierAt     DateTime? // when it was last measured
   verifiedAt   DateTime? // when the in-game link (docs/14) or an admin verified the Minecraft account
   guildMember  Boolean   @default(true) // cache of the last Discord server membership check
+  outsideAuth  Boolean   @default(false) // came in by an invite link: the Discord server rule is not applied to them
   createdAt    DateTime  @default(now())
   lastSeenAt   DateTime?
   invitedById  String?

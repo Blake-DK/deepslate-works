@@ -1,16 +1,17 @@
 // The admin's lists: which rows are shown. Pure, so it is tested.
 
-export const SHOW = { all: "Everyone", early: "Early access", rest: "Without", outdated: "Outdated installer" } as const;
+export const SHOW = { all: "Everyone", early: "Early access", rest: "Without", outdated: "Outdated installer", outside: "Outside Discord" } as const;
 export type Show = keyof typeof SHOW;
 
 /** `installerOutdated`: their latest run came from an installer older than the one the site hands out now. */
-type MemberLike = { displayName: string; mcUsername: string | null; earlyAccess: boolean; installerOutdated?: boolean };
+type MemberLike = { displayName: string; mcUsername: string | null; earlyAccess: boolean; installerOutdated?: boolean; outsideAuth?: boolean };
 
 const KEEP: Record<Show, (u: MemberLike) => boolean> = {
   all: () => true,
   early: (u) => u.earlyAccess,
   rest: (u) => !u.earlyAccess,
   outdated: (u) => Boolean(u.installerOutdated),
+  outside: (u) => Boolean(u.outsideAuth), // came in by an invite: the Discord server rule is not applied
 };
 
 /** Filter by early access (or by an outdated installer), then by what was typed: part of the Discord name or of the Minecraft name, any case. */

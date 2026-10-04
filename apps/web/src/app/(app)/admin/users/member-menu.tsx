@@ -2,9 +2,9 @@ import { RowMenu } from "@/components/admin/row-menu";
 import { menuItem } from "@/components/admin/menu-item";
 import { ConfirmItem, LinkByName } from "@/components/admin/menu-actions";
 import Link from "next/link";
-import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setMinecraftNameAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";
+import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setMinecraftNameAction, setOutsideAuthAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";
 
-type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUsername: string | null; passwordSignIn?: boolean; discordId?: string | null };
+type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUsername: string | null; passwordSignIn?: boolean; discordId?: string | null; outsideAuth?: boolean };
 
 /** A member's admin menu: on People → Members and on their player page (docs/13 §11 layout). */
 export function MemberMenu({ u, meId }: { u: Member; meId: string }) {
@@ -35,6 +35,9 @@ export function MemberMenu({ u, meId }: { u: Member; meId: string }) {
         <input type="hidden" name="id" value={u.id} />
         <button type="submit" role="menuitem" className={menuItem}>Sign out installer</button>
       </form>
+      {u.discordId && (u.outsideAuth
+        ? <ConfirmItem action={setOutsideAuthAction} fields={{ id: u.id, on: "0" }} question={`Apply the Discord server rule to ${u.displayName} again? If they are not in the Discord server they are signed out and wait in the entrance room until they join it.`}>Apply the Discord server rule</ConfirmItem>
+        : <ConfirmItem action={setOutsideAuthAction} fields={{ id: u.id, on: "1" }} question={`Let ${u.displayName} in without the Discord server? They can sign in and play whether or not they are in it, the same as someone who came in by an invite link.`}>Let in without the Discord server</ConfirmItem>)}
       {u.id !== meId && <ConfirmItem action={removeUserAction} fields={{ id: u.id }} question={`Remove ${u.displayName} from the group? Their votes and their link to Minecraft go with them. While they are in the Discord server they can sign in again and start afresh.`}>Remove</ConfirmItem>}
       {u.id !== meId && u.discordId && <ConfirmItem action={removeUserAction} fields={{ id: u.id, block: "1" }} question={`Remove ${u.displayName} and block their Discord account? They cannot sign in again until you unblock them on People.`}>Remove and block</ConfirmItem>}
     </RowMenu>

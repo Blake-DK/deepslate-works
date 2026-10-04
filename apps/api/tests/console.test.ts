@@ -24,6 +24,9 @@ describe("decideJoin", () => {
     expect(decideJoin({ verifiedAt: null, guildMember: true }).action).toBe("hold");
     expect(decideJoin({ verifiedAt: new Date(), guildMember: false }).action).toBe("hold");
     expect(decideJoin({ verifiedAt: new Date(), guildMember: true }).action).toBe("release");
+    // came in by an invite: the Discord server is not asked about, linking still is
+    expect(decideJoin({ verifiedAt: new Date(), guildMember: false, outsideAuth: true }).action).toBe("release");
+    expect(decideJoin({ verifiedAt: null, guildMember: false, outsideAuth: true }).action).toBe("hold");
   });
 });
 

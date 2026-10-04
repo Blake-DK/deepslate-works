@@ -18,8 +18,8 @@ describe("memberRows", () => {
     expect(memberRows(all, undefined, "nobody").rows).toEqual([]);
   });
   it("counts within what was found, so the numbers on the filters are those of the search", () => {
-    expect(memberRows(all, undefined, undefined).count).toEqual({ all: 4, early: 2, rest: 2, outdated: 0 });
-    expect(memberRows(all, "early", "max").count).toEqual({ all: 1, early: 1, rest: 0, outdated: 0 });
+    expect(memberRows(all, undefined, undefined).count).toEqual({ all: 4, early: 2, rest: 2, outdated: 0, outside: 0 });
+    expect(memberRows(all, "early", "max").count).toEqual({ all: 1, early: 1, rest: 0, outdated: 0, outside: 0 });
     expect(memberRows(all, "rest", "max").rows).toEqual([]);
   });
   it("shows those whose latest run came from an outdated installer, and nothing odd for a made-up filter", () => {
@@ -28,6 +28,11 @@ describe("memberRows", () => {
     expect(memberRows(some, undefined, undefined).count.outdated).toBe(1);
     expect(memberRows(some, "outdated", "bert").rows).toEqual([]);
     expect(memberRows(some, "toString", undefined).only).toBe("all");
+  });
+  it("lists those who came in by an invite, outside the Discord server", () => {
+    const some = [{ ...m("Gordon", null), outsideAuth: true }, m("Bertie", null), { ...m("Bramble09", "bramble09"), outsideAuth: false }];
+    expect(memberRows(some, "outside", undefined).rows.map((r) => r.displayName)).toEqual(["Gordon"]);
+    expect(memberRows(some, undefined, undefined).count.outside).toBe(1);
   });
   it("takes no more than forty characters of a search", () => {
     expect(memberRows(all, undefined, "x".repeat(200)).query.length).toBe(40);

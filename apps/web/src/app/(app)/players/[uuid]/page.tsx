@@ -51,7 +51,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   if (!ID.test(id)) notFound();
   const now = new Date();
   const [member, rows, status] = await Promise.all([
-    db.user.findFirst({ where: { mcUuid: id }, select: { id: true, displayName: true, pcTier: true, pcTierSource: true, mcUsername: true, verifiedAt: true, guildMember: true, role: true, earlyAccess: true } }),
+    db.user.findFirst({ where: { mcUuid: id }, select: { id: true, displayName: true, pcTier: true, pcTierSource: true, mcUsername: true, verifiedAt: true, guildMember: true, outsideAuth: true, discordId: true, role: true, earlyAccess: true } }),
     db.session.findMany({ where: { mcUuid: id }, orderBy: { joinedAt: "desc" }, take: 2000 }),
     getStatus(),
   ]);
@@ -115,7 +115,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
             {countries.length > 0 && <> · {countries.map((c) => `${flag(c)} ${COUNTRIES[c]?.[0] ?? c}`).join(", ")}</>}
           </p>
           <p className="text-sm text-muted-foreground">
-            {member ? (member.verifiedAt ? <>Linked in game {timeAgo(member.verifiedAt, now)}.{!member.guildMember && " No longer in the Discord server: they wait in the entrance room when they join."}</> : "Minecraft account set by an admin, not yet confirmed in game.") : "They wait in the entrance room until they link their Discord."}
+            {member ? (member.verifiedAt ? <>Linked in game {timeAgo(member.verifiedAt, now)}.{member.outsideAuth ? " Came in by an invite: they don't have to be in the Discord server." : !member.guildMember && " No longer in the Discord server: they wait in the entrance room when they join."}</> : "Minecraft account set by an admin, not yet confirmed in game.") : "They wait in the entrance room until they link their Discord."}
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -22,7 +22,7 @@ export const guesses = (g.__dwJoinGuesses ??= new GuessLimiter());
 
 const minutes = (ms: number) => Math.max(1, Math.ceil(ms / 60_000));
 
-type LinkUser = Pick<CurrentUser, "id" | "role" | "mcUuid" | "mcUsername" | "verifiedAt" | "discordId" | "guildMember">;
+type LinkUser = Pick<CurrentUser, "id" | "role" | "mcUuid" | "mcUsername" | "verifiedAt" | "discordId" | "guildMember" | "outsideAuth">;
 
 /** Looks at a code and changes nothing, except that a code that does not exist counts as a wrong guess. */
 export async function checkCode(user: LinkUser, code: string, via: "link" | "join"): Promise<LinkCheck> {
@@ -32,8 +32,8 @@ export async function checkCode(user: LinkUser, code: string, via: "link" | "joi
     return { ok: false, outcome: { tone: "error", title: "Too many wrong codes", text: `Wait ${minutes(wait)} minute${minutes(wait) === 1 ? "" : "s"}, then try again with the code on your screen in the game.` } };
   }
   // docs/31 B-05: somebody who has left the Discord server does not link their way back in. Linking used to set
-  // the flag true again without asking Discord.
-  if (user.discordId && !user.guildMember) {
+  // the flag true again without asking Discord. Whoever came in by an invite is not asked about the server.
+  if (user.discordId && !user.guildMember && !user.outsideAuth) {
     await audit({ userId: user.id, action: "link.bind", params: { via, refused: "left_discord" }, result: "DENIED" });
     return { ok: false, outcome: { tone: "error", title: "Sign in with Discord again", text: "You are no longer in the group's Discord server, or we have not seen you there since you left. Join it again, sign out here and sign in with Discord, then use the code." } };
   }

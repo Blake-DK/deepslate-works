@@ -111,6 +111,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "invite.create": "created an invite",
   "invite.revoke": "revoked an invite",
   "user.earlyAccess": (p) => (p.on ? `gave ${s(p.displayName, "a member")} early access` : `took early access away from ${s(p.displayName, "a member")}`),
+  "user.outsideAuth": (p) => (p.on ? `let ${s(p.displayName, "a member")} in without the Discord server` : `put ${s(p.displayName, "a member")} back under the Discord server rule`),
   "user.setRole": (p) => `changed a member's role to ${s(p.role).toLowerCase()}`,
   "user.remove": (p) => `removed ${s(p.displayName, "a member")} from the group${p.blocked ? " and blocked their Discord account" : ""}`,
   "user.unblock": (p) => `unblocked the Discord account of ${s(p.displayName, "a removed member")}`,

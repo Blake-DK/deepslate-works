@@ -53,10 +53,11 @@ const WHERE_WAIT_MS = 6000; // the console is read every two seconds
 const WHERE_FRESH_MS = 20_000;
 
 /** Pure: what to do with a join, given what the portal knows about that UUID. */
-export function decideJoin(user: { verifiedAt: Date | null; guildMember: boolean } | null): JoinDecision {
+export function decideJoin(user: { verifiedAt: Date | null; guildMember: boolean; outsideAuth?: boolean } | null): JoinDecision {
   if (!user) return { action: "hold", reason: "unknown uuid" };
   if (!user.verifiedAt) return { action: "hold", reason: "not linked" };
-  if (!user.guildMember) return { action: "hold", reason: "left the discord server" };
+  // Whoever came in by an invite (`outsideAuth`) is not asked about the Discord server.
+  if (!user.guildMember && !user.outsideAuth) return { action: "hold", reason: "left the discord server" };
   return { action: "release", reason: "linked member" };
 }
 
@@ -161,14 +162,14 @@ export class Limbo {
     for (const name of names) {
       if (this.held.has(name)) continue;
       let uuid = this.tail.uuidByName.get(name) ?? null;
-      const select = { id: true, verifiedAt: true, guildMember: true, mcUuid: true } as const;
+      const select = { id: true, verifiedAt: true, guildMember: true, outsideAuth: true, mcUuid: true } as const;
       const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select }) : await db.user.findFirst({ where: { mcUsername: name }, select });
       if (!uuid && user?.mcUuid) uuid = user.mcUuid;
       const row = uuid ? await this.store.get(uuid) : await this.store.byName(name);
       if (row) {
         if (!uuid) uuid = row.mcUuid;
         this.tail.uuidByName.set(name, uuid);
-        this.adopt(name, row, user && user.verifiedAt && user.guildMember ? user.id : undefined);
+        this.adopt(name, row, user && user.verifiedAt && (user.guildMember || user.outsideAuth) ? user.id : undefined);
         this.log({ name, uuid, reason: row.reason, back: Boolean(row.back) }, "resync: was being held, held again");
         continue;
       }
@@ -201,7 +202,7 @@ export class Limbo {
       await new Promise((r) => setTimeout(r, 400));
       uuid = this.tail.uuidByName.get(name);
     }
-    const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, verifiedAt: true, guildMember: true, mcUsername: true, role: true, earlyAccess: true } }) : null;
+    const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, verifiedAt: true, guildMember: true, outsideAuth: true, mcUsername: true, role: true, earlyAccess: true } }) : null;
     const decision = decideJoin(user);
     this.log({ name, uuid, decision }, "join");
     if (decision.action === "release") {
@@ -472,33 +473,35 @@ export class Limbo {
    * five-minute check does it: the flag, and someone playing is taken out as by docs/14.
    */
   async memberChanged(discordId: string, inGuild: boolean) {
-    const u = await db.user.findUnique({ where: { discordId }, select: { id: true, mcUuid: true, guildMember: true } });
+    const u = await db.user.findUnique({ where: { discordId }, select: { id: true, mcUuid: true, guildMember: true, outsideAuth: true } });
     if (!u) return;
-    if (u.guildMember !== inGuild) await this.setGuildMember(u.id, inGuild);
-    if (!inGuild && u.mcUuid) await this.revoke(u.mcUuid, null);
+    if (u.guildMember !== inGuild) await this.setGuildMember(u.id, inGuild, u.outsideAuth);
+    if (!inGuild && !u.outsideAuth && u.mcUuid) await this.revoke(u.mcUuid, null);
   }
 
   /**
    * The Discord server flag. docs/31 B-05: when it goes false, every portal session they have ends
    * (`sessionVersion`) and the installer's tokens are refused, so an old cookie cannot link them back in.
+   * For whoever came in by an invite (`outside`) only the flag is kept: nothing of theirs ends.
    */
-  private async setGuildMember(userId: string, member: boolean) {
-    await db.user.update({ where: { id: userId }, data: member ? { guildMember: true } : { guildMember: false, sessionVersion: { increment: 1 } } });
-    if (!member) await db.launcherAuth.updateMany({ where: { userId, status: "approved" }, data: { status: "denied" } }).catch((err) => this.log({ err: String(err) }, "could not end the installer's tokens"));
+  private async setGuildMember(userId: string, member: boolean, outside = false) {
+    const stays = member || outside;
+    await db.user.update({ where: { id: userId }, data: stays ? { guildMember: member } : { guildMember: false, sessionVersion: { increment: 1 } } });
+    if (!stays) await db.launcherAuth.updateMany({ where: { userId, status: "approved" }, data: { status: "denied" } }).catch((err) => this.log({ err: String(err) }, "could not end the installer's tokens"));
   }
 
   /** With a bot token: re-check guild membership of online, linked players every 5 min. Without one: rely on login-time checks. */
   private async refreshGuild() {
     if (!this.env.DISCORD_BOT_TOKEN || !this.env.DISCORD_GUILD_ID || this.tail.state !== 20 || this.tail.online.size === 0) return;
     const uuids = [...this.tail.online].map((n) => this.tail.uuidByName.get(n)).filter((u): u is string => Boolean(u));
-    const users = await db.user.findMany({ where: { mcUuid: { in: uuids }, discordId: { not: null } }, select: { id: true, discordId: true, mcUuid: true, guildMember: true } });
+    const users = await db.user.findMany({ where: { mcUuid: { in: uuids }, discordId: { not: null } }, select: { id: true, discordId: true, mcUuid: true, guildMember: true, outsideAuth: true } });
     for (const u of users) {
       const res = await fetch(`https://discord.com/api/v10/guilds/${this.env.DISCORD_GUILD_ID}/members/${u.discordId}`, { headers: { authorization: `Bot ${this.env.DISCORD_BOT_TOKEN}` }, signal: AbortSignal.timeout(8000) }).catch(() => null);
       if (!res) continue;
       const member = res.status === 200;
       if (res.status !== 200 && res.status !== 404) continue; // rate limit or outage: leave as is
-      if (member !== u.guildMember) await this.setGuildMember(u.id, member);
-      if (!member && u.mcUuid) await this.revoke(u.mcUuid, null);
+      if (member !== u.guildMember) await this.setGuildMember(u.id, member, u.outsideAuth);
+      if (!member && !u.outsideAuth && u.mcUuid) await this.revoke(u.mcUuid, null);
     }
   }
 }

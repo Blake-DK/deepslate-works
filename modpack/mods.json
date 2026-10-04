@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "minecraft": "1.21.1",
   "loader": "neoforge",
-  "neoforge": "latest",
+  "neoforge": "21.1.253",
   "server_address": "mc.dsw.test",
   "profile": {
     "id": "deepslate-works",
@@ -859,7 +859,9 @@
       "wiki": "https://modrinth.com/mod/flw-vanillin",
       "videos": [],
       "version": "latest",
-      "requires": [],
+      "requires": [
+        "create"
+      ],
       "note": "Uses Create's Flywheel",
       "guide": "behind"
     },
@@ -1235,7 +1237,7 @@
           "url": "https://www.youtube.com/watch?v=tGMjqovqMxg"
         }
       ],
-      "version": "pJxNzk4X",
+      "version": "Igmp9PwW",
       "requires": [
         "sophisticated-core"
       ],
@@ -2068,7 +2070,7 @@
       "name": "Ritchie's Projectile Library",
       "category": "base",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": true,
@@ -2092,7 +2094,7 @@
       "description": "Library needed by Sophisticated Backpacks.",
       "wiki": "https://modrinth.com/mod/sophisticated-core",
       "videos": [],
-      "version": "blXGSmAb",
+      "version": "nSoNwJfm",
       "requires": []
     },
     {

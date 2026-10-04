@@ -121,16 +121,14 @@ Six weeks each. A boss ladder, a trial every Friday at 19:00 UK, a zone off the 
 - Whitelist self-service is already covered by the white room; this phase adds the in-game conveniences via a homes mod or equivalent on the server (FTB Essentials was the first idea and is not in the catalogue).
 - Admin action log with per-action enable/disable and rate-limit editing.
 
-### Phase 5 · Discord bridge
-- Bot posts server status, joins and leaves to a channel; two-way chat relay.
-- `/whitelist`-style slash commands for admins.
-- Scheduled events page (build nights, resets) with Discord reminders.
+### Discord, what is left
+- Built and running: server status, joins, leaves and deaths in #game-chat, chat both ways, votes with buttons, slash commands, news and "We're live" in season-updates.
+- Still to come: the season moments above, and a scheduled events page (build nights, resets) with reminders.
 
 ### Later ideas (not committed)
 - Season archive: old worlds kept browsable on BlueMap under a different name.
 - Player-visible analytics opt-in per player.
 - Mod update notifications when a locked mod has a newer Modrinth release.
-- Automated world backups to off-site storage with restore from the portal.
 
 ## Principles (unchanged since day one)
 1. One click, or it doesn't ship.

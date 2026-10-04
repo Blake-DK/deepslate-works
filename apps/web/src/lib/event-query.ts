@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { EVENT_KINDS, PLAYER_KINDS, type EventKind } from "@/shared/events";
 
 // docs/16 §4: the filters of the event log live in the URL, so a filtered view can be linked.
@@ -102,14 +103,20 @@ export function filterWords(f: EventFilter, admin: boolean): string | null {
   return `Showing ${kinds.length ? "" : "everything · "}${parts.join(" · ")}`;
 }
 
+const NOT_SUPERSEDED = [{ meta: { equals: Prisma.AnyNull } }, { meta: { path: ["superseded"], equals: Prisma.AnyNull } }, { meta: { path: ["superseded"], equals: false } }];
+type SupersededNot = typeof NOT_SUPERSEDED;
+
 export type EventWhere = {
   kind: { in: EventKind[] };
   at?: { gte?: Date; lte?: Date };
   id?: { lt: bigint };
   actor?: { in: string[] };
   message?: { contains: string; mode: "insensitive" };
-  /** Rows marked `meta.superseded` stay in the table and out of the log (2026-09-30: the player-list loop's 2,408 joins and leaves). */
-  NOT: { meta: { path: string[]; equals: boolean } };
+  /**
+   * Rows marked `meta.superseded` stay in the table and out of the log (2026-09-30: the player-list loop's 2,408 joins and leaves).
+   * Said as "not marked", never as NOT(marked): in SQL that is NOT(NULL) for every row without the key, and it hid the whole log.
+   */
+  OR: SupersededNot;
 };
 
 /**
@@ -119,7 +126,7 @@ export type EventWhere = {
 export function eventWhere(f: EventFilter, admin: boolean, actors: string[] | null): EventWhere {
   const allowed: readonly EventKind[] = admin ? EVENT_KINDS : PLAYER_KINDS;
   const kinds = f.kinds.filter((k) => allowed.includes(k));
-  const where: EventWhere = { kind: { in: kinds.length ? kinds : [...allowed] }, NOT: { meta: { path: ["superseded"], equals: true } } };
+  const where: EventWhere = { kind: { in: kinds.length ? kinds : [...allowed] }, OR: NOT_SUPERSEDED };
   if (f.from || f.to) where.at = { ...(f.from ? { gte: f.from } : {}), ...(f.to ? { lte: f.to } : {}) };
   if (f.before !== null) where.id = { lt: f.before };
   if (f.player) where.actor = { in: actors ?? [] };

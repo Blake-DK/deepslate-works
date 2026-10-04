@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { csv, csvField, EVENT_GROUPS, eventWhere, everything, filterToQuery, filterWords, groupLit, groupsFor, readFilter, toggleGroup, type EventGroup } from "@/lib/event-query";
+import { Prisma } from "@prisma/client";
 import { EVENT_KINDS, PLAYER_KINDS } from "@/shared/events";
 
 describe("readFilter", () => {
@@ -36,7 +37,9 @@ describe("what a player may see", () => {
   });
   it("admins get everything by default", () => {
     expect(eventWhere(readFilter({}, true), true, null).kind.in).toHaveLength(19);
-    expect(eventWhere(readFilter({}, true), true, null).NOT).toEqual({ meta: { path: ["superseded"], equals: true } }); // superseded rows are kept, not shown
+    // superseded rows are kept, not shown, and rows without the mark (most of them: meta null or no key) are shown
+    expect(eventWhere(readFilter({}, true), true, null)).not.toHaveProperty("NOT");
+    expect(eventWhere(readFilter({}, true), true, null).OR).toEqual([{ meta: { equals: Prisma.AnyNull } }, { meta: { path: ["superseded"], equals: Prisma.AnyNull } }, { meta: { path: ["superseded"], equals: false } }]);
     expect(eventWhere(readFilter({}, false), false, null).kind.in).not.toContain("JOIN_BLOCKED");
     expect(eventWhere(readFilter({ kind: "INSTALL" }, false), false, null).kind.in).not.toContain("INSTALL");
   });

@@ -1,0 +1,59 @@
+flowchart TB
+    player(["Player's Windows PC<br/>browser + DeepslateWorks.exe"])
+    discord(["Discord<br/>sign-in, bot, announcements"])
+    modrinth(["Modrinth<br/>mod files and versions"])
+
+    subgraph github["GitHub"]
+        repo["Repo<br/>modpack/mods.json is the one mod list"]
+        ci["GitHub Actions<br/>tests, builds images and the installer"]
+        ghcr["GHCR<br/>deepslate-web, deepslate-api, deepslate-installer"]
+        repo --> ci --> ghcr
+    end
+
+    subgraph vps["VPS (Docker Compose, never builds)"]
+        caddy["Caddy :443<br/>TLS, forward_auth for the map"]
+        web["deepslate-web<br/>Next.js + Auth.js<br/>pages, votes, downloads"]
+        db[("deepslate-db<br/>PostgreSQL + Prisma")]
+        backups["deepslate-backups<br/>nightly pg_dump"]
+        relayOuter["map-relay-outer"]
+
+        subgraph tunnelns["WireGuard namespace (deepslate-wg)"]
+            api["deepslate-api<br/>Fastify: AMP client, action registry,<br/>console parser, status poller,<br/>modpack build and sync, Discord bot"]
+            relayInner["map-relay-inner"]
+        end
+
+        caddy -->|deepslate.dsw.test| web
+        caddy -->|map.deepslate.dsw.test| relayOuter
+        caddy -.->|is this person signed in?| web
+        web -->|"api-client.ts, bearer token"| api
+        web --> db
+        api --> db
+        backups --> db
+        relayOuter --> relayInner
+    end
+
+    subgraph homelab["Alex's homelab (AMP host)"]
+        router["mc-router :25565<br/>routes by hostname"]
+        ads["AMP ADS :8080<br/>HTTP API"]
+        mc["Minecraft 1.21.1 NeoForge<br/>instance DeepslateWorks01"]
+        bluemap["BlueMap :8100<br/>live map"]
+        sshd["sshd<br/>rrsync, deploy key only"]
+        ads --> mc
+        router --> mc
+        mc --- bluemap
+        sshd --> mc
+    end
+
+    player -->|HTTPS| caddy
+    player -->|"game traffic, mc.dsw.test"| router
+    web <-->|OAuth| discord
+    api <-->|bot and webhooks| discord
+    api -->|"lock: resolve versions"| modrinth
+    player -->|"installer downloads mods"| modrinth
+
+    api ==>|"WireGuard: status, console, start/stop"| ads
+    api ==>|"WireGuard: rsync server files"| sshd
+    relayInner ==>|WireGuard| bluemap
+
+    ghcr -.->|"deploy.sh pulls images"| vps
+    repo -.->|"mods.json → mods.lock.json → dist/"| api

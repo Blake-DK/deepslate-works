@@ -28,6 +28,8 @@ export type Actor = { role: "ADMIN" | "PLAYER" | "system" | null; name: string |
 
 /** Must agree with the CASE in prisma/migrations/0005_events_sessions_settings. */
 export function kindOf(action: string, role: Actor["role"]): EventKind {
+  // a line relayed from Discord is chat: under the Chat chip, kept as long as chat is kept, not shown to players
+  if (action === "chat.fromDiscord") return "CHAT";
   if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.adminRelease" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "limbo.kickIdleClosed" || action === "limbo.kickIdleOld" || action === "limbo.kickIdleMods" || action === "limbo.kickIdleVote" || action === "join.ready") return "LINK";
   if (action === "player.revoke" || action === "user.remove" || action === "user.clearMinecraft") return "REVOKE";
   if (action.startsWith("modpack.sync")) return "SYNC";
@@ -188,7 +190,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "server.wake": (p) => (p.failed ? `tried to wake the server (${p.via === "app" ? "app" : p.via === "discord" ? "Discord" : "Play"}); it didn't wake up` : `woke the server (${p.via === "app" ? "app" : p.via === "discord" ? "Discord" : "Play"})`),
   "server.say": (p) => `said in game: ${s(p.text, "")}`,
   // docs/22 §5: what was written is Discord's to keep; the log keeps who and how long
-  "chat.fromDiscord": (p) => `${s(p.name)} wrote into the game from Discord (${s(p.length, "?")} characters)`,
+  // what they said, as a chat line reads; without the text (chat logging off, or a row from before 2026-10-04) who and how long
+  "chat.fromDiscord": (p) => (typeof p.text === "string" && p.text ? `<${s(p.name)}> ${p.text} (from Discord)` : `${s(p.name)} wrote into the game from Discord (${s(p.length, "?")} characters)`),
   "console.send": (p) => `ran: ${s(p.command, "")}`,
   // docs/13 §13, the inventory editor (the same words as invPhrase in slots.ts)
   "inv.change": (p) => (p.op === "give" ? `gave ${s(p.player)} ${s(p.count, "1")} × ${s(p.item)}` : p.op === "clear" ? `cleared ${s(p.player)}'s ${s(p.slot)}` : `set ${s(p.player)}'s ${s(p.slot)} to ${s(p.item)}${Number(p.count) > 1 ? ` × ${s(p.count)}` : ""}`),

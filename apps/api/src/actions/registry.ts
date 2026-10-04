@@ -540,9 +540,13 @@ export const actions = {
       name: z.string().min(1).max(32).regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}§]+$/u),
       text: z.string().min(1).max(257).regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}§]+$/u),
       member: z.string().max(40).nullable(),
+      // Settings → "Chat in the event log": false when it is off, and then the text is not kept
+      log: z.boolean().optional(),
     }),
     build: (_ctx, { name, text }) => [`tellraw @a[tag=verified] ${JSON.stringify(["", { text: "[Discord] ", color: "blue" }, { text: name, color: "white" }, { text: `: ${text}`, color: "gray" }])}`],
-    audit: ({ name, text, member }) => ({ name, member, length: text.length }),
+    // Alex, 2026-10-04: Activity says what was said, as it does for chat typed in the game (docs/22 §5 kept only who
+    // and how long). The same switch rules both: with chat logging off, the text is not kept here either.
+    audit: ({ name, text, member, log }) => (log === false ? { name, member, length: text.length } : { name, member, length: text.length, text }),
   }),
   "server.say": define({
     name: "server.say",

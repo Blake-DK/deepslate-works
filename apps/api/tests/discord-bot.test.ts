@@ -1,3 +1,4 @@
+import { describeAction, kindOf } from "../src/shared/events.js";
 import Fastify from "fastify";
 import { viaDiscord, viaDiscordHook } from "../src/audit.js";
 import { describe, expect, it } from "vitest";
@@ -52,8 +53,13 @@ describe("chat from Discord into the game (docs/22 §5)", () => {
     expect(actions["chat.fromDiscord"].input.safeParse({ name: "a§b", text: "x", member: null }).success).toBe(false);
   });
 
-  it("the event log keeps who and how long, never the text", () => {
-    expect(actions["chat.fromDiscord"].audit!({ name: "Pabulum", text: "secret plans", member: "u1" })).toEqual({ name: "Pabulum", member: "u1", length: 12 });
+  it("the event log keeps what was said, as for game chat; with chat logging off only who and how long", () => {
+    expect(actions["chat.fromDiscord"].audit!({ name: "Pabulum", text: "meet at spawn", member: "u1" })).toEqual({ name: "Pabulum", member: "u1", length: 13, text: "meet at spawn" });
+    expect(actions["chat.fromDiscord"].audit!({ name: "Pabulum", text: "meet at spawn", member: "u1", log: true })).toMatchObject({ text: "meet at spawn" });
+    expect(actions["chat.fromDiscord"].audit!({ name: "Pabulum", text: "secret plans", member: "u1", log: false })).toEqual({ name: "Pabulum", member: "u1", length: 12 });
+    expect(describeAction("chat.fromDiscord", { role: "PLAYER", name: "Pabulum" }, { name: "Pabulum", length: 13, text: "meet at spawn" })).toBe("<Pabulum> meet at spawn (from Discord)");
+    expect(describeAction("chat.fromDiscord", { role: "PLAYER", name: "Pabulum" }, { name: "Pabulum", length: 39 })).toBe("Pabulum wrote into the game from Discord (39 characters)");
+    expect(kindOf("chat.fromDiscord", "PLAYER")).toBe("CHAT");
   });
 
   it("mentions become names, emoji :name:, pictures and files words; bots and webhooks never come back", () => {

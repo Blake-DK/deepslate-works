@@ -59,7 +59,26 @@ on the VPS  ──► sudo /home/ladm/Minecraft-site/deploy/deploy.sh
 - **Logs are capped** at 5 files of 10 MB per container (B-21).
 - **The nightly dump** (B-20) is `deploy/backup-loop.sh`: 00:00 UTC, the newest 14 kept, a failed dump tried again after ten minutes. api copies the newest dump into `_backup/db/` in the instance over the pack's rsync link, where AMP's 01:00 UTC backup picks it up (docs/28 §4.7; B-07). Admin → Files refuses that folder.
 - **The AMP host's ssh key is pinned** once `deploy/keys/known_hosts` exists (B-23); `deploy.sh` prints the one command that makes it. Until then api trusts the key afresh at each start, as before.
-- **Not done:** the WireGuard and socat images are still `latest` (B-22): pinning needs the digests that run today, read as root. `dockhand-sync.py` still speaks http: Dockhand offers no https on that port, and the address is on the tailnet, which encrypts the hop (B-24).
+- **The WireGuard and socat images are pinned by digest** (B-22), to the ones running on 2026-10-04. Updating them is a deliberate edit of the compose file.
+- **Not done:** `dockhand-sync.py` still speaks http: Dockhand offers no https on that port, and the address is on the tailnet, which encrypts the hop (B-24).
+
+### The health watch (docs/32 §7 item 3, 2026-10-04)
+
+api looks every ten minutes at the things that fail without anybody being told, and at once when a wake fails:
+
+| Check | Wrong when |
+|---|---|
+| Database dump | none, under 10 kB, or older than 26 hours |
+| Dump on the AMP host | the newest dump is over an hour old and api has not copied it |
+| World backup | AMP lists none, the newest is older than 30 hours, under 1 GB, or a third smaller than the one before |
+| Pack | the pack the site hands out is not the pack last synced to the server |
+| Last wake | a player pressed Play and the server did not come up |
+
+When a check goes from well to wrong, an ERROR event "Health: …" is written; the Discord feed posts it to the admin channel (not counted against the ten problems an hour the game's own errors share). When it is well again, a WARN event says so in Activity. What cannot be looked at (AMP out of reach) is "unknown" and never alerts by itself. Control Room shows "Needs a look" while anything is wrong.
+
+For a monitor outside (Uptime Kuma): `GET https://deepslate.dsw.test/api/health` and alert unless the body contains all of `"ok":true`, `"api":{"ok":true}`, `"watch":true` and `"pack":{"same":true}`. The detail (`checks`) is in the same answer for an admin session, and on the host through `deploy.sh`'s health line.
+
+Not looked at: the WireGuard handshake itself (api cannot see the tunnel's container; whether the tunnel carries traffic is `api.tunnel`), S3, and the age of the NAS copy. Those need the AMP host's `status.json` (docs/28 §3 F).
 
 ## Dockhand (pull-only)
 

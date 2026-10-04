@@ -124,7 +124,8 @@ describe("the small ones", () => {
   it("B-39: health for someone who is not an admin says yes or no, never what is wrong", () => {
     const full = { ok: true, db: true, api: { ok: false, tunnel: "down", amp: "unreachable", rsync: "no_key", discordBot: "refused" }, missingEnv: ["AUTH_SECRET"], discord: true, guildGate: true, pack: { server: "0.1.0+0d33a462", main: "0.1.0+d7521da9", same: false, unpushed: 2 } };
     const pub = publicHealth(full);
-    expect(pub).toEqual({ ok: true, db: true, api: { ok: false }, pack: { same: false } });
+    expect(pub).toEqual({ ok: true, db: true, api: { ok: false }, watch: true, pack: { same: false } });
+    expect(publicHealth({ ...full, api: { ok: true, watch: false } }).watch).toBe(false); // the health watch found something wrong
     expect(JSON.stringify(pub)).not.toMatch(/tunnel|rsync|AUTH_SECRET|0d33a462|unpushed/);
     expect(JSON.stringify(publicHealth({ ...full, api: { ok: true } }))).toContain('"api":{"ok":true}'); // what deploy.sh and a monitor look for
   });

@@ -14,7 +14,7 @@ import { InventoryPanel } from "@/components/players/inventory-panel";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { statusText } from "@/lib/server-status";
 import type { PageQuery } from "@/components/tabs";
-import { BackupCard, consoleLines, Flash, HeldCard, loadBackup, loadHeld, loadPlayers, loadSchedule, loadTail, PowerCard, RestartCard } from "./server/cards";
+import { BackupCard, consoleLines, Flash, HealthCard, HeldCard, loadBackup, loadHeld, loadPlayers, loadWatch, loadSchedule, loadTail, PowerCard, RestartCard } from "./server/cards";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Control Room" };
@@ -83,16 +83,18 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
       </div>
     );
   } else {
-    const [schedule, backup, heldNow, members, invites, recent] = await Promise.all([
+    const [schedule, backup, heldNow, watch, members, invites, recent] = await Promise.all([
       loadSchedule(caller),
       loadBackup(caller),
       loadHeld(caller),
+      loadWatch(caller),
       db.user.count(),
       db.invite.count({ where: { usedBy: null, expiresAt: { gt: new Date() } } }),
       db.event.findMany({ where: { kind: { in: ["ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP"] } }, orderBy: { at: "desc" }, take: 10, select: { id: true, at: true, kind: true, message: true, meta: true } }),
     ]);
     inspector = (
       <div className="space-y-3" data-testid="inspector-server">
+        <HealthCard view={watch} />
         <PowerCard status={status} players={players} back="/admin" />
         <HeldCard held={heldNow?.held ?? null} back="/admin" />
         <RestartCard schedule={schedule} running={status.server === "online"} back="/admin" />

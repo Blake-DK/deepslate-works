@@ -434,7 +434,9 @@ export class Announcer {
         const t = now.getTime();
         const seen = this.problems.get(e.message);
         this.problemTimes = this.problemTimes.filter((x) => t - x < 60 * 60_000);
-        if ((seen !== undefined && t - seen < PROBLEM_REPEAT_MS) || this.problemTimes.length >= PROBLEMS_PER_HOUR) return true;
+        // the health watch's own lines (meta.health) are never crowded out by the game's errors of the same hour
+        const health = Boolean(metaOf(e).health);
+        if ((seen !== undefined && t - seen < PROBLEM_REPEAT_MS) || (!health && this.problemTimes.length >= PROBLEMS_PER_HOUR)) return true;
         const r = await this.send(e, 0, "admin", "problem", asServer(brand, problemText(e.message, 1)));
         if (r.ok) {
           this.problems.set(e.message, t);

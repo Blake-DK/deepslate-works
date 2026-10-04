@@ -222,7 +222,7 @@ describe("the season's clock", () => {
 });
 
 describe("weeks, days and the scoreboard", () => {
-  const s1: SeasonFile = { id: "s1", name: "Season 1", startsAt: "2026-11-30T19:00:00Z", endsAt: "2026-12-28T19:00:00Z", icon: "minecraft:netherite_sword", bosses: [{ id: "a", title: "A Boss", entity: "", tier: 1, points: 10, where: "", hint: "" }], trials: [{ id: "t", title: "A Trial", opensAt: "2026-12-04T19:00:00Z", points: 5, solo: true, hint: "Do it.", icon: "minecraft:paper" }], goal: { title: "4 boss kills between us", count: "boss_kills", target: 4 }, finale: { at: "2026-12-26T20:00:00Z", title: "The Dragon, together", boss: "a" } };
+  const s1: SeasonFile = { id: "s1", name: "Season 1", startsAt: "2026-11-30T19:00:00Z", endsAt: "2026-12-28T19:00:00Z", icon: "minecraft:netherite_sword", groupRadius: 48, bosses: [{ id: "a", title: "A Boss", entity: "", tier: 1, points: 10, where: "", hint: "" }], trials: [{ id: "t", title: "A Trial", opensAt: "2026-12-04T19:00:00Z", points: 5, solo: true, hint: "Do it.", icon: "minecraft:paper" }], goal: { title: "4 boss kills between us", count: "boss_kills", target: 4 }, finale: { at: "2026-12-26T20:00:00Z", title: "The Dragon, together", boss: "a" } };
 
   it("counts weeks from the opening Monday by the UK's calendar", () => {
     expect(seasonClock(s1, new Date("2026-11-30T19:00:00Z"))).toEqual({ week: 1, weeks: 4, daysLeft: 28 });

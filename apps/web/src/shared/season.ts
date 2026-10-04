@@ -39,6 +39,9 @@ export const seasonFileSchema = z.object({
   endsAt: when,
   accent: z.string().optional(),
   icon: z.string().default("minecraft:netherite_sword"),
+  /** Who shares a kill: within this many blocks of the killer. */
+  groupRadius: z.number().int().default(48),
+  frontier: z.object({ dimension: z.string(), noise: z.string(), radius: z.number().int() }).optional(),
   bosses: z.array(bossSchema).default([]),
   trials: z.array(trialSchema).default([]),
   goal: z.object({ title: z.string(), count: z.literal("boss_kills"), target: z.number().int().min(1) }).optional(),

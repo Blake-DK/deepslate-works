@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { db } from "@/server/db";
 import { ukDayTime } from "@/lib/uk-time";
+import { seasonGuide } from "@/lib/season-guide";
 import { goalProgress, scoreboard, seasonCurrent, seasonFileSchema, seasonIndexFileSchema, seasonLine, type Clear, type ClearKind, type SeasonCurrent, type SeasonFile, type SeasonResult, type SeasonState } from "@/shared/season";
 
 // docs/34 §5 (W1.3): what the site shows of a season. The content is the season's file in the repo's modpack/
@@ -43,6 +44,14 @@ export async function getSeasonCurrent(now = new Date()): Promise<SeasonCurrent>
   if (!file) return { state: "none" };
   const row = await db.season.findUnique({ where: { id: file.id }, select: { state: true } }).catch(() => null);
   return seasonCurrent(file, row ? stateOf(row.state) : null, now);
+}
+
+/** The guide's Season section (Markdown), from the current season's file; null until a season is announced. */
+export async function getSeasonGuide(): Promise<string | null> {
+  const file = await currentFile();
+  if (!file) return null;
+  const row = await db.season.findUnique({ where: { id: file.id }, select: { state: true } }).catch(() => null);
+  return row ? seasonGuide(file, stateOf(row.state), (iso) => ukDayTime(new Date(iso))) : null;
 }
 
 /** The one line Home and the app's banner show; null when there is no season to speak of. */

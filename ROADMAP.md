@@ -86,6 +86,7 @@ Last updated 2026-10-03, 18:00 UTC: the site looks like the launcher, the Season
 - Season 1 "First Blood" (4 Nov to 16 Dec 2026), Season 2 "The Drowned and the Frozen" (to 27 Jan 2027), Season 3 "Fire and Iron" (to 10 Mar), Season 4 "The Otherside" (to 21 Apr). Working names and dates.
 - The full plan, the mods, the work and the decisions waiting for Alex: `docs/32-seasons-1-to-4-roadmap.md`. The mechanism behind it: `docs/20-seasons-bosses-trials.md`.
 - Before any of it: the bug list of 2026-10-04, `docs/31-review-and-bug-list.md`.
+- The AMP host's answers to that list's check list (read-only, 2026-10-04): `docs/33-amp-host-check-2026-10-04.md`.
 
 ### Phase 4 · player self-service
 - `/me` quick actions: take me to spawn, take me home, set home, where am I, unstick me. Each rate-limited and audited. The action registry is there; it has no player actions yet.

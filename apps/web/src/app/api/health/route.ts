@@ -6,7 +6,7 @@ import { driftHealth } from "@/lib/pack-drift";
 import { loadCurrentUser } from "@/server/auth/session";
 import { holdsKey, publicHealth } from "@/lib/health";
 
-type ApiHealth = { ok: boolean; tunnel: string; amp: string; rsync: string; discordFeed?: "on" | "off" | "refused"; discordBot?: "on" | "off" | "refused" | "reconnecting" };
+type ApiHealth = { ok: boolean; watch?: boolean; checks?: unknown; checkedAt?: string | null; tunnel: string; amp: string; rsync: string; discordFeed?: "on" | "off" | "refused"; discordBot?: "on" | "off" | "refused" | "reconnecting" };
 
 export async function GET(req: Request) {
   let dbOk = false;

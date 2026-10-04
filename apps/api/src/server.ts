@@ -52,6 +52,8 @@ import { discordRoutes } from "./routes/discord.js";
 import { makeBot, votePoster } from "./discord/wire.js";
 import { runAction } from "./actions/run.js";
 import { DumpPush } from "./backup/dump-push.js";
+import { allWell, HealthWatch } from "./status/health-watch.js";
+import { serverPack } from "./players/pack.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
@@ -62,7 +64,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   app.addHook("onRequest", serviceAuth(env.API_SERVICE_TOKEN));
   app.addHook("onRequest", viaDiscordHook);
   // docs/21 + docs/22: the Discord feed and the bot are made further down; /health reads them when asked
-  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState(), discordBot: bot ? bot.state() : "off" }));
+  // `checks` (docs/32 §7 item 3): what the health watch found at its last round; `watch` is false when any is wrong
+  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState(), discordBot: bot ? bot.state() : "off", watch: allWell(healthWatch.checks), checks: healthWatch.checks, checkedAt: healthWatch.lookedAt?.toISOString() ?? null }));
   modpackRoutes(app, env, ampClient, deps.build, () => pregen.quiesce());
 
   // Console tail, status poller and the wait room run for the life of the process (docs/05, docs/14).
@@ -93,6 +96,11 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   // docs/13 §12: one set of words for the server's state, and wake on Play.
   const wake = new Wake(ampClient, (a) => audit(a as Parameters<typeof audit>[0]));
   let tunnelUp: boolean | null = null;
+  const healthWatch = new HealthWatch({
+    amp: ampClient, dumpsDir: process.env.DB_DUMPS_DIR ?? "/dbdumps", repoDir: env.REPO_DIR,
+    copied: () => dumpPush.last, serverPack, wake: () => wake.view(),
+    addEvent: (e) => prismaRecorderStore.addEvent(e), log,
+  });
   const view = new ServerView({ poller, wake, lastDown: () => recorder.lastDown, sleep: () => ({ on: pregen.sleep.on, delayMin: pregen.sleep.delayMin }), tunnelUp: () => tunnelUp });
   // docs/22: the bot (only with DISCORD_BOT_TOKEN and DISCORD_GUILD_ID), and docs/21's feed, which posts its votes
   const bot = makeBot({
@@ -105,7 +113,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     async toGame(line) {
       // nobody on: nothing is sent and the server is not woken (docs/22 §5)
       if (tail.state !== 20 || tail.online.size === 0) return "nobody";
-      const r = await runAction(ampClient, limbo.actionCtx, "chat.fromDiscord", line, line.member);
+      const keep = (await getSection("privacy").catch(() => null))?.chat ?? true; // the switch that rules game chat in the log
+      const r = await runAction(ampClient, limbo.actionCtx, "chat.fromDiscord", { ...line, log: keep }, line.member);
       return r.ok ? "sent" : "failed";
     },
     memberChanged: (id, inGuild) => limbo.memberChanged(id, inGuild),
@@ -179,11 +188,15 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     // Every 10 s: a wake that ran out of time fails even when AMP is out of reach, and losing or regaining AMP
     // goes into the event log in the same words the site shows. The sleep delay is read again every 10 min.
     let reachable: boolean | null = null;
+    let wakeWas: string = wake.phase;
     let sleepLooked = 0;
     watching = setInterval(() => {
       void (async () => {
         const live = poller.fresh();
         await wake.update(live?.stateCode ?? null);
+        // a wake that has just failed (AMP refused the start, or three minutes without Running) is told at once
+        if (wake.phase === "failed" && wakeWas !== "failed") void healthWatch.wakeFailed();
+        wakeWas = wake.phase;
         tunnelUp = live ? true : await tcpReachable(env.AMP_TUNNEL_IP, 22);
         const now = live !== null;
         if (reachable !== null && now !== reachable) {
@@ -201,6 +214,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     tail.start();
     poller.start();
     dumpPush.start();
+    healthWatch.start();
     limbo.start();
     pings.start();
     distances.start();
@@ -219,6 +233,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   app.addHook("onClose", async () => {
     tail.stop();
     dumpPush.stop();
+    healthWatch.stop();
     poller.stop();
     limbo.stop();
     pings.stop();

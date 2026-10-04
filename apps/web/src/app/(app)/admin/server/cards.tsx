@@ -34,6 +34,9 @@ type Caller = { id: string; role: "ADMIN" };
 export const loadPlayers = (caller: Caller) => apiFetch<Players>("/players", { caller }).catch(() => null);
 export type HeldEntry = { name: string; uuid: string | null; kind: "link" | "play" | "closed" | "old" | "mods" | "vote"; reason: string | null; since: string; member: boolean; back: boolean };
 export const loadHeld = (caller: Caller) => apiFetch<{ state: number; held: HeldEntry[] }>("/held", { caller }).catch(() => null);
+export type HealthCheck = { ok: boolean | null; text: string };
+export type WatchView = { watch?: boolean; checks?: Record<string, HealthCheck> | null; checkedAt?: string | null };
+export const loadWatch = (caller: Caller) => apiFetch<WatchView>("/health", { caller, timeoutMs: 15_000 }).catch(() => null);
 export const loadTail = (caller: Caller) => apiFetch<Tail>("/console/tail?lines=200", { caller }).catch(() => null);
 export const loadSchedule = (caller: Caller) => apiFetch<Schedule>("/server/schedule", { caller }).catch(() => null);
 export const loadBackup = (caller: Caller) => apiFetch<Backup>("/server/backup", { caller }).catch(() => null);
@@ -58,6 +61,26 @@ export function Flash({ msg, detail }: { msg?: string; detail?: string }) {
 
 /** A hidden field that sends the admin back to the Control Room after the action, when the card sits there. */
 const Back = ({ to }: { to?: "/admin" }) => (to ? <input type="hidden" name="back" value={to} /> : null);
+
+const CHECK_LABEL: Record<string, string> = { dump: "Database dump", dumpCopy: "Dump on the AMP host", backup: "World backup", pack: "Pack", wake: "Last wake" };
+
+/**
+ * docs/32 §7 item 3: what the health watch found wrong (dumps, backups, the pack, the last wake). Shown only while
+ * something is wrong; the same lines go to the admin channel in Discord when they turn wrong.
+ */
+export function HealthCard({ view }: { view: WatchView | null }) {
+  const wrong = Object.entries(view?.checks ?? {}).filter(([, c]) => c.ok === false);
+  if (wrong.length === 0) return null;
+  return (
+    <Alert tone="error" data-testid="health-watch">
+      <strong>Needs a look.</strong>
+      <ul className="mt-1 list-disc pl-5">
+        {wrong.map(([name, c]) => <li key={name}><span className="font-medium">{CHECK_LABEL[name] ?? name}:</span> {c.text}.</li>)}
+      </ul>
+      {view?.checkedAt && <span className="text-xs">Looked at {timeAgo(new Date(view.checkedAt))}; looked at again every ten minutes.</span>}
+    </Alert>
+  );
+}
 
 /** Why somebody is in the entrance room, in the words the event log uses. */
 export function heldWhy(h: HeldEntry): string {

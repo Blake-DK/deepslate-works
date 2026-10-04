@@ -13,7 +13,8 @@ import { cell, Clip, Field, FixedTable, menuCell, Switch } from "@/components/ad
 import { getInstaller } from "@/server/modpack/lock";
 import { isOutdated } from "@/lib/installer-version";
 import { InstallerVersion } from "@/components/admin/installer-version";
-import { setEarlyAccessAction } from "./actions";
+import { setEarlyAccessAction, unblockAction } from "./actions";
+import { blockedList } from "@/server/auth/blocked";
 import { MemberMenu } from "./member-menu";
 import { stripLink } from "@/components/strip-link";
 import { fieldClasses } from "@/components/ui/input";
@@ -146,6 +147,31 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           </ul>
         </>
       )}
+      <BlockedList />
+    </div>
+  );
+}
+
+/** docs/31 B-37: the Discord accounts "Remove and block" has shut out, each with Unblock. Nothing while there are none. */
+async function BlockedList() {
+  const blocked = await blockedList();
+  if (blocked.length === 0) return null;
+  return (
+    <div data-testid="blocked">
+      <h3 className="text-sm font-semibold">Blocked · {blocked.length}</h3>
+      <p className="text-sm text-muted-foreground">Removed and blocked: these Discord accounts cannot sign in, even from inside the Discord server.</p>
+      <ul className="mt-1 divide-y text-sm">
+        {blocked.map((b) => (
+          <li key={b.discordId} className="flex flex-wrap items-center gap-2 py-1.5">
+            <span className="min-w-0 flex-1">{b.name || "A removed member"} <span className="font-mono text-xs text-muted-foreground">{b.discordId}</span>{b.at && <span className="text-muted-foreground"> · {timeAgo(new Date(b.at))}</span>}</span>
+            <form action={unblockAction}>
+              <input type="hidden" name="discordId" value={b.discordId} />
+              <input type="hidden" name="name" value={b.name} />
+              <button type="submit" className={buttonClasses("secondary", "sm")}>Unblock</button>
+            </form>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

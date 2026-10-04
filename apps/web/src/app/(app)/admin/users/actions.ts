@@ -10,6 +10,7 @@ import { revokeLauncherTokens } from "@/server/launcher";
 import { apiFetch } from "@/server/api-client";
 import { audit } from "@/server/events";
 import { onDemoted, removeAdminLogin } from "@/server/auth/admin-login";
+import { block, unblock } from "@/server/auth/blocked";
 
 export async function setRoleAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -40,16 +41,27 @@ export async function removeUserAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id || id === admin.id) return;
   const removed = await db.user.delete({ where: { id } }).catch(() => null);
+  // docs/31 B-37: "Remove and block". Without it, their next Discord sign-in makes a new account while they are in the server.
+  const blocked = Boolean(removed?.discordId) && formData.get("block") === "1";
+  if (blocked) await block(removed!.discordId!, removed!.displayName, admin.id);
   if (removed?.mcUuid) {
     try {
       await apiFetch("/player/revoke", { method: "POST", body: { uuid: removed.mcUuid, reason: "Removed from the group by an admin." }, caller: { id: admin.id, role: "ADMIN" } });
     } catch {}
   }
   if (removed) {
-    await audit({ userId: admin.id, action: "user.remove", params: { id, displayName: removed.displayName, mcUsername: removed.mcUsername }, result: "OK" });
+    await audit({ userId: admin.id, action: "user.remove", params: { id, displayName: removed.displayName, mcUsername: removed.mcUsername, blocked }, result: "OK" });
   }
   revalidatePath("/admin/people");
   revalidatePath("/players/[uuid]", "page");
+}
+
+export async function unblockAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const discordId = String(formData.get("discordId") ?? "");
+  if (!/^\d{5,25}$/.test(discordId)) return;
+  if (await unblock(discordId, admin.id)) await audit({ userId: admin.id, action: "user.unblock", params: { discordId, displayName: String(formData.get("name") ?? "").slice(0, 80) }, result: "OK" });
+  revalidatePath("/admin/people");
 }
 
 /** Admin tool (docs/14 keeps the Mojang lookup for admins only): set or verify a member's Minecraft account by name. */

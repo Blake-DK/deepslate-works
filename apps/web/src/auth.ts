@@ -9,6 +9,7 @@ import { env } from "@/env";
 import { verifyPassword } from "@/server/auth/password";
 import { findValidInvite } from "@/server/auth/invites";
 import { createUser, touchLastSeen } from "@/server/auth/users";
+import { isBlocked } from "@/server/auth/blocked";
 import { loginLimiter } from "@/server/auth/rate-limit";
 import { clientIp } from "@/server/auth/request";
 import { INVITE_COOKIE } from "@/server/auth/constants";
@@ -69,6 +70,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           await audit({ action: "auth.login", params: { email, ip }, result: "DENIED", detail: "bad credentials" });
           return null;
         }
+        // docs/31 B-35: an admin never signs in by email and password alone (docs/04: "no password-only path").
+        // An email-fallback member who was made admin uses Discord, or the admin sign-in with its code.
+        if (user.role === "ADMIN") {
+          await audit({ userId: user.id, action: "auth.login", params: { email, ip }, result: "DENIED", detail: "admin by email and password" });
+          return null;
+        }
         await touchLastSeen(user.id);
         return { id: user.id, name: user.displayName };
       },
@@ -114,12 +121,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account, profile }) {
       if (account?.provider !== "discord") return true;
       const discordId = account.providerAccountId;
+      // docs/31 B-37: removed and blocked by an admin. Refused before the guild is asked and before any account is made.
+      if (await isBlocked(discordId)) {
+        await audit({ action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "blocked" });
+        return "/login?error=blocked";
+      }
       // Optional gate: must be a member of Alex's Discord server (checked on every Discord sign-in).
       let inGuild = false;
       if (env.DISCORD_GUILD_ID) {
         inGuild = await isGuildMember(account.access_token, env.DISCORD_GUILD_ID);
         if (!inGuild) {
-          await db.user.updateMany({ where: { discordId }, data: { guildMember: false } }); // docs/14 §7: back to the room next join
+          // docs/14 §7: back to the room next join. docs/31 B-05: and every session they still have ends, the
+          // installer's tokens with it, so an old cookie cannot link them back in.
+          const left = await db.user.findUnique({ where: { discordId }, select: { id: true, guildMember: true } });
+          if (left?.guildMember) {
+            await db.user.update({ where: { id: left.id }, data: { guildMember: false, sessionVersion: { increment: 1 } } });
+            await db.launcherAuth.updateMany({ where: { userId: left.id, status: "approved" }, data: { status: "denied" } });
+          }
           await audit({ action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "not in discord server" });
           return "/login?error=not-in-server";
         }

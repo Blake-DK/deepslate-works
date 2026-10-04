@@ -28,7 +28,7 @@ export type Actor = { role: "ADMIN" | "PLAYER" | "system" | null; name: string |
 
 /** Must agree with the CASE in prisma/migrations/0005_events_sessions_settings. */
 export function kindOf(action: string, role: Actor["role"]): EventKind {
-  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "limbo.kickIdleClosed" || action === "limbo.kickIdleOld" || action === "limbo.kickIdleMods" || action === "limbo.kickIdleVote" || action === "join.ready") return "LINK";
+  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.adminRelease" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "limbo.kickIdleClosed" || action === "limbo.kickIdleOld" || action === "limbo.kickIdleMods" || action === "limbo.kickIdleVote" || action === "join.ready") return "LINK";
   if (action === "player.revoke" || action === "user.remove" || action === "user.clearMinecraft") return "REVOKE";
   if (action.startsWith("modpack.sync")) return "SYNC";
   if (action === "server.backup") return "BACKUP";
@@ -126,6 +126,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "limbo.kickIdleVote": (p) => `${s(p.name)} waited too long in the entrance room without voting and was disconnected`,
   "limbo.kickIdleMods": (p) => `${s(p.name)} waited too long in the entrance room with mods missing from their game and was disconnected`,
   "limbo.kickIdlePlay": (p) => `${s(p.name)} waited too long in the entrance room without pressing Play and was disconnected`,
+  "limbo.adminRelease": (p) => (p.refused ? `could not let ${s(p.name)} in from the entrance room: they have not linked` : `let ${s(p.name)} in from the entrance room${p.back ? ", back to where they were" : ""}`),
   "limbo.kickIdle": (p) => `${s(p.name)} waited too long in the entrance room and was disconnected`,
   "limbo.build": "built the entrance room",
   "opac.serverClaims": "made the spawn area and the entrance room server claims",

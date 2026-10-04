@@ -91,6 +91,13 @@ export class Recorder {
     return this.open.size;
   }
 
+  private reconcile = false;
+
+  /** Old lines have just been read (api started, or a new AMP session): the next live `list` answer closes the sessions of whoever is gone. */
+  reconcileNext() {
+    this.reconcile = true;
+  }
+
   onConsole = (e: ConsoleEvent, info?: { replay: boolean }) => {
     // Old lines, read again after a restart: they were recorded when they were new. Who is online is put right
     // from AMP's player list (see `status`). The UUIDs in them are still worth having.
@@ -133,8 +140,17 @@ export class Recorder {
         return this.join(e.name, e.ip, at, false);
       case "leave":
         return this.leave(e.name, e.reason, at, false);
-      case "list":
-        return; // who the server says is on is for "who's on" (console tail), not for sessions
+      case "list": {
+        // Who the server says is on is for "who's on" (console tail), not for sessions: a `list` answer never opens
+        // one and, while api runs, never closes one (planner 2026-09-30; REJOIN_MS above). The one exception is the
+        // first live answer after api has read old lines (docs/31 B-43): a leave that happened while api was
+        // restarting is in no line api will read again, and its session stayed open until the server went down.
+        if (!this.reconcile) return;
+        this.reconcile = false;
+        const on = new Set(e.names.map((n) => n.toLowerCase()));
+        for (const s of [...this.open.values()]) if (!on.has(s.mcName.toLowerCase())) await this.leave(s.mcName, null, at, true);
+        return;
+      }
       case "chat": {
         if (!(await this.d.privacy()).chat) return;
         await this.d.store.addEvent({ at, kind: "CHAT", actor: await this.actorFor(e.name), message: `<${e.name}> ${e.text}`.slice(0, 500), raw: this.raw, meta: { name: e.name } });

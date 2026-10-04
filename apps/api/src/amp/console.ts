@@ -135,7 +135,9 @@ export class ConsoleTail {
     if (this.busy) return;
     this.busy = true;
     try {
-      const u = await this.amp.call<Updates>("Core", "GetUpdates");
+      // which login answered: asked of the client with the call, not read afterwards (docs/31 B-41)
+      const tagged = this.amp.callTagged ? await this.amp.callTagged<Updates>("Core", "GetUpdates") : null;
+      const u = tagged ? tagged.answer : await this.amp.call<Updates>("Core", "GetUpdates");
       const prev = this.state;
       this.state = typeof u.Status?.State === "number" ? u.Status.State : this.state;
       if (prev === 20 && this.state !== 20) {
@@ -144,7 +146,7 @@ export class ConsoleTail {
       }
       // The first batch of an AMP session is AMP's backlog, not news. Lines already read are dropped; the rest
       // (after a restart of api: all of them) are read as history.
-      const session = this.amp.sessions ?? 0;
+      const session = tagged ? tagged.session : (this.amp.sessions ?? 0);
       const backlog = this.session === null || session !== this.session;
       const first = this.session === null;
       this.session = session;

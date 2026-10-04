@@ -185,6 +185,24 @@ model LinkCode {
   @@index([mcUuid])
 }
 
+// docs/31 B-02 to B-04: who the entrance room holds, why, and where they stood when they were taken there.
+// Written at a hold, deleted at a release; a leave or a restart of api does not touch it. `reason` is the door's
+// word (a BlockReason: "not live", "vote", "no report", …) or, for someone who has to link, "not linked",
+// "unknown uuid" or "left the discord server". `back*` is never a place in the room's own dimension.
+model HeldPlayer {
+  mcUuid     String   @id
+  mcUsername String
+  since      DateTime @default(now())
+  reason     String
+  codeId     String? // the LinkCode shown to someone who has to link
+  backDim    String?
+  backX      Float?
+  backY      Float?
+  backZ      Float?
+
+  @@index([mcUsername])
+}
+
 // One row ("site"): the launch switch. Until `live`, players see a launch page, no address, no downloads.
 model SiteSettings {
   id          String    @id @default("site")

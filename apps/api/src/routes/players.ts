@@ -15,6 +15,21 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
     held: [...limbo.held.entries()].map(([name, h]) => ({ name, since: new Date(h.since).toISOString() })),
   }));
 
+  // Admin → Control Room, "who is held and why" (docs/32 §7 item 10): the list, and Release for a linked member.
+  app.get("/held", async (req, reply) => {
+    if (!requireAdmin(req, reply)) return;
+    return { state: tail.state, held: limbo.heldList() };
+  });
+  app.post("/held/release", async (req, reply) => {
+    if (!requireAdmin(req, reply)) return;
+    const body = z.object({ name: z.string().regex(/^[A-Za-z0-9_]{3,16}$/) }).safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "name" } });
+    const r = await limbo.adminRelease(body.data.name, req.caller.userId);
+    if (r.ok) return { ok: true };
+    const message = r.code === "not_held" ? "They are not in the entrance room any more." : r.code === "not_linked" ? "They have not linked their Minecraft account yet, so they cannot be let in from here." : "The server did not take the command.";
+    return reply.code(r.code === "failed" ? 502 : 409).send({ error: { code: r.code, message } });
+  });
+
   // Portal → api after a successful /link: release now if online.
   app.post("/link/release", async (req, reply) => {
     const body = z.object({ uuid: z.string().uuid() }).safeParse(req.body);

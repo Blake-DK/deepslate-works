@@ -1,52 +1,80 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Check } from "@/components/ui/check";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import type { EventRow } from "@/server/event-log";
+import { EventItem } from "./event-list";
 
-type Live = { id: string; at: string; kind: string; label: string; tone: "neutral" | "good" | "warn" | "bad"; message: string; count: number };
+// docs/29 rule 6: Live is on by default and feeds the page's one list. The stream sends what EventItem needs
+// (raw and meta only for admins with scope=admin), so a live row looks like any other.
 
-const time = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+type State = "connecting" | "live" | "reconnecting";
+type Live = { on: boolean; state: State; rows: EventRow[]; toggle: () => void };
 
-/** New events as they are recorded, newest on top, for as long as the page is open. Uses the page's own filters. */
-export function LiveTail({ query, after, scope }: { query: string; after: string; scope: "admin" | "player" }) {
-  const [on, setOn] = useState(false);
-  const [state, setState] = useState<"connecting" | "live" | "reconnecting">("connecting");
-  const [rows, setRows] = useState<Live[]>([]);
+const LiveContext = createContext<Live>({ on: false, state: "connecting", rows: [], toggle: () => {} });
+
+function readRow(data: string): EventRow | null {
+  try {
+    const e = JSON.parse(data) as Omit<EventRow, "at" | "actor" | "raw" | "meta"> & { at: string; raw?: string | null; meta?: unknown };
+    return { ...e, at: new Date(e.at), actor: null, raw: e.raw ?? null, meta: e.meta ?? null };
+  } catch {
+    return null;
+  }
+}
+
+/** New events as they are recorded, for as long as the page is open and seen. Uses the page's own filters. */
+export function LiveTail({ query, after, scope, children }: { query: string; after: string; scope: "admin" | "player"; children: React.ReactNode }) {
+  const [on, setOn] = useState(true);
+  const [seen, setSeen] = useState(true);
+  const [state, setState] = useState<State>("connecting");
+  const [rows, setRows] = useState<EventRow[]>([]);
+  const last = useRef(after);
+
+  // A hidden tab holds no connection; when it is seen again it carries on from the last row it had.
+  useEffect(() => {
+    const look = () => setSeen(document.visibilityState !== "hidden");
+    look();
+    document.addEventListener("visibilitychange", look);
+    return () => document.removeEventListener("visibilitychange", look);
+  }, []);
 
   useEffect(() => {
-    if (!on) return;
+    if (!on || !seen) return;
+    setState("connecting");
     const sep = query ? "&" : "?";
-    const es = new EventSource(`/api/events/stream${query}${sep}after=${after}&scope=${scope}`);
+    const es = new EventSource(`/api/events/stream${query}${sep}after=${last.current}&scope=${scope}`);
     es.onopen = () => setState("live");
     es.onerror = () => setState("reconnecting");
     es.onmessage = (m) => {
-      try {
-        const e = JSON.parse(m.data as string) as Live;
-        setRows((r) => (r.some((x) => x.id === e.id) ? r : [e, ...r].slice(0, 200)));
-      } catch {}
+      const e = readRow(m.data as string);
+      if (!e) return;
+      if (BigInt(e.id) > BigInt(last.current)) last.current = e.id;
+      setRows((r) => (r.some((x) => x.id === e.id) ? r : [e, ...r].slice(0, 200)));
     };
     return () => es.close();
-  }, [on, query, after, scope]);
+  }, [on, seen, query, scope]);
 
+  return <LiveContext.Provider value={{ on, state, rows, toggle: () => setOn((v) => !v) }}>{children}</LiveContext.Provider>;
+}
+
+/** The "Live" marker at the right of the chip row: click to pause, click again to carry on. */
+export function LiveToggle() {
+  const { on, state, toggle } = useContext(LiveContext);
+  const title = !on ? "Paused: click to show new events again" : state === "live" ? "Live: new events appear at the top. Click to pause" : state === "connecting" ? "Connecting…" : "Reconnecting…";
   return (
-    <div className="space-y-2">
-      <label className="flex items-center gap-2 text-sm">
-        <Check type="checkbox" checked={on} onChange={(e) => { setOn(e.target.checked); setState("connecting"); }} /> Live: show new events as they happen
-        {on && <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className={`inline-block h-2 w-2 rounded-full ${state === "live" ? "bg-accent" : "bg-primary"}`} />{state === "live" ? "watching" : state === "connecting" ? "connecting…" : "reconnecting…"}</span>}
-      </label>
-      {on && (
-        <ul className="divide-y rounded-[4px] border bg-card" aria-live="polite">
-          {rows.length === 0 && <li className="px-4 py-3 text-sm text-muted-foreground">Nothing new yet.</li>}
-          {rows.map((e) => (
-            <li key={e.id} className="flex flex-wrap items-baseline gap-x-2 px-4 py-2 text-sm">
-              <span className="text-xs text-muted-foreground">{time.format(new Date(e.at))}</span>
-              <Badge tone={e.tone}>{e.label}</Badge>
-              <span className="min-w-0 break-words">{e.message}</span>
-              {e.count > 1 && <span className="text-xs text-muted-foreground">×{e.count}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <button type="button" onClick={toggle} aria-pressed={on} title={title} className="ml-auto inline-flex items-center gap-1.5 rounded-[3px] px-2 py-px text-[13px] font-semibold text-muted-foreground hover:text-foreground">
+      <span className={`inline-block h-2 w-2 rounded-full ${!on ? "bg-dim" : state === "live" ? "bg-accent" : "bg-primary"}`} aria-hidden />
+      {on ? "Live" : "Paused"}
+    </button>
+  );
+}
+
+/** The page's one list: live rows on top, then the rows the page was rendered with. */
+export function LiveList({ admin, empty, children }: { admin: boolean; empty: boolean; children: React.ReactNode }) {
+  const { rows } = useContext(LiveContext);
+  if (empty && rows.length === 0) return <p className="p-4 text-sm text-muted-foreground">Nothing matches.</p>;
+  return (
+    <ul className="divide-y" aria-live="polite">
+      {rows.map((e) => <EventItem key={e.id} e={e} admin={admin} />)}
+      {children}
+    </ul>
   );
 }

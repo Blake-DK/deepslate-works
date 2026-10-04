@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { csv, csvField, eventWhere, filterToQuery, readFilter } from "@/lib/event-query";
-import { PLAYER_KINDS } from "@/shared/events";
+import { csv, csvField, EVENT_GROUPS, eventWhere, everything, filterToQuery, filterWords, groupLit, groupsFor, readFilter, toggleGroup, type EventGroup } from "@/lib/event-query";
+import { EVENT_KINDS, PLAYER_KINDS } from "@/shared/events";
 
 describe("readFilter", () => {
   it("reads kinds from repeated and comma-separated values, dates as whole days, and trims the rest", () => {
@@ -73,5 +73,64 @@ describe("csv", () => {
   });
   it("writes a header and rows", () => {
     expect(csv(["a", "b"], [[1, "x,y"], [2, null]])).toBe('a,b\r\n1,"x,y"\r\n2,\r\n');
+  });
+});
+
+// docs/29 §3 and §4: the chip row of the Activity page.
+const group = (key: string) => EVENT_GROUPS.find((g) => g.key === key) as EventGroup;
+
+describe("the chip groups", () => {
+  it("hold every kind exactly once, and the players' four hold exactly PLAYER_KINDS", () => {
+    const all = EVENT_GROUPS.flatMap((g) => g.kinds);
+    expect([...all].sort()).toEqual([...EVENT_KINDS].sort()); // a new kind fails here until it joins a group
+    expect(new Set(all).size).toBe(all.length);
+    const players = groupsFor(false);
+    expect(players.map((g) => g.label)).toEqual(["Joins and leaves", "Deaths", "Advancements", "Server"]);
+    expect([...players.flatMap((g) => g.kinds)].sort()).toEqual([...PLAYER_KINDS].sort());
+    expect(groupsFor(true)).toHaveLength(11); // and Everything makes twelve
+  });
+});
+
+describe("a click on a chip", () => {
+  const start = readFilter({ player: "samoyedx", from: "2026-10-01", to: "2026-10-03", q: "lava", before: "500" }, true);
+  it("from Everything gives only that group, a second adds, a lit one removes, the last one gives Everything", () => {
+    expect(start.kinds).toEqual([]);
+    const deaths = toggleGroup(start, group("deaths"));
+    expect(deaths.kinds).toEqual(["DEATH"]);
+    const both = toggleGroup(deaths, group("advancements"));
+    expect(both.kinds).toEqual(["DEATH", "ADVANCEMENT"]);
+    expect(toggleGroup(both, group("deaths")).kinds).toEqual(["ADVANCEMENT"]);
+    expect(toggleGroup(toggleGroup(both, group("deaths")), group("advancements")).kinds).toEqual([]);
+    expect(toggleGroup(start, group("problems")).kinds).toEqual(["CRASH", "WARN", "ERROR"]);
+  });
+  it("starts at the top again and keeps player, dates and words", () => {
+    const f = toggleGroup(start, group("deaths"));
+    expect(f.before).toBeNull();
+    expect(f).toMatchObject({ player: "samoyedx", from: start.from, to: start.to, text: "lava" });
+    expect(filterToQuery(f)).toBe("?kind=DEATH&player=samoyedx&from=2026-10-01&to=2026-10-03&q=lava");
+    expect(everything(toggleGroup(start, group("deaths")))).toEqual({ ...start, kinds: [], before: null });
+  });
+  it("lights a group when one of its kinds is asked for, and a click takes it out", () => {
+    const f = readFilter({ kind: "JOIN" }, true);
+    expect(groupLit(f, group("joins"))).toBe(true);
+    expect(groupLit(f, group("deaths"))).toBe(false);
+    expect(toggleGroup(f, group("joins")).kinds).toEqual([]);
+  });
+  it("never gives a player an admin kind, whatever the query says", () => {
+    const f = readFilter({ kind: "CHAT,DEATH,BACKUP" }, false);
+    expect(f.kinds).toEqual(["DEATH"]);
+    expect(groupsFor(false).some((g) => g.kinds.includes("CHAT"))).toBe(false);
+    const forged = toggleGroup(f, group("chat")); // a chip the player is never shown, clicked anyway
+    expect(eventWhere(forged, false, null).kind.in).toEqual(["DEATH"]);
+  });
+});
+
+describe("the Showing line", () => {
+  it("says what is narrowed, and is not there when nothing is", () => {
+    expect(filterWords(readFilter({}, true), true)).toBeNull();
+    expect(filterWords(readFilter({ before: "40" }, true), true)).toBeNull();
+    expect(filterWords(readFilter({ kind: "DEATH,ADVANCEMENT", player: "samoyedx", from: "2026-10-01" }, true), true)).toBe("Showing deaths and advancements · samoyedx · from 1 Oct");
+    expect(filterWords(readFilter({ kind: "JOIN" }, false), false)).toBe("Showing joins");
+    expect(filterWords(readFilter({ player: "m1_owl", from: "2026-10-01", to: "2026-10-03", q: "creeper" }, false), false)).toBe("Showing everything · m1_owl · 1 Oct to 3 Oct · with “creeper”");
   });
 });

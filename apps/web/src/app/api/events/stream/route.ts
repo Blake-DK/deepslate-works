@@ -1,15 +1,13 @@
 import { loadCurrentUser } from "@/server/auth/session";
 import { readFilter } from "@/lib/event-query";
 import { eventsAfter } from "@/server/event-log";
-import { KIND_LABEL, SEVERITY } from "@/shared/events";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 660;
 
-const TONE = { info: "neutral", player: "good", warning: "warn", error: "bad", admin: "neutral" } as const;
-
 // Live tail of the event log (docs/16 §4) as text/event-stream. Admins may ask for the full log with
 // ?scope=admin; everyone else, and admins without it, get the trimmed kinds and never `raw` or `meta`.
+// Each row carries what EventItem needs (docs/29 rule 6), so a live row on /activity looks like any other.
 export async function GET(req: Request) {
   const user = await loadCurrentUser();
   if (!user?.pcTier) return Response.json({ error: { code: "unauthorized", message: "Sign in first" } }, { status: 401 });
@@ -39,7 +37,7 @@ export async function GET(req: Request) {
           const rows = await eventsAfter(after, filter, admin);
           for (const e of rows) {
             after = BigInt(e.id);
-            send(`id: ${e.id}\ndata: ${JSON.stringify({ id: e.id, at: e.at.toISOString(), kind: e.kind, label: KIND_LABEL[e.kind], tone: TONE[SEVERITY[e.kind]], message: e.message, count: e.count })}\n\n`);
+            send(`id: ${e.id}\ndata: ${JSON.stringify({ id: e.id, at: e.at.toISOString(), kind: e.kind, message: e.message, count: e.count, who: e.who, ...(admin ? { raw: e.raw, meta: e.meta } : {}) })}\n\n`);
           }
           quiet = rows.length ? 0 : quiet + 1;
           if (quiet % 8 === 7) send(": still here\n\n");

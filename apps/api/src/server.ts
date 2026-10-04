@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { CHANGES } from "./changelog.js";
 import { AmpClient, MockAmp, type Amp } from "./amp/client.js";
 import { installRoutes } from "./routes/installs.js";
 import { BACKUP_JOB_KEY, BackupWatch, type BackupJob } from "./status/backup-watch.js";
@@ -128,7 +129,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const portal = env.PORTAL_URL.replace(/\/+$/, "");
   const feed = new Announcer({
     store: prismaFeedStore(portal, env.REPO_DIR), feed: hook(env.DISCORD_WEBHOOK_FEED), admin: hook(env.DISCORD_WEBHOOK_ADMIN), updates: hook(env.DISCORD_WEBHOOK_UPDATES),
-    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), portal, log: (o, m) => app.log.info(o, m),
+    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: CHANGES, portal, log: (o, m) => app.log.info(o, m),
   });
   discordRoutes(app, feed, bot, env);
   installRoutes(app);

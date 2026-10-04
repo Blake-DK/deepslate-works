@@ -3,6 +3,7 @@
 // never slows the recorder, the door or a page.
 // docs/22 §13: with the forum season-updates (its webhook, or the bot), votes, news and We're live are forum posts there
 // (replies in the same post), and #game-chat (the feed webhook) also carries the game's chat.
+import { CHANGELOG_OPENER, CHANGELOG_TITLE, changeText, type Change } from "../changelog.js";
 import type { Attachment, Message, Sent, Webhook, Where } from "./webhook.js";
 import type { BotMessage, Component } from "./rest.js";
 import {
@@ -62,6 +63,7 @@ type Deps = {
   admin: Webhook | null;
   updates?: Webhook | null; // docs/22 §13: the forum season-updates
   bot?: VotePoster | null; // docs/22: set when DISCORD_BOT_TOKEN is
+  changes?: Change[]; // the change log's entries (changelog.ts); absent: no change log post
   chatRelay?: boolean; // docs/22 §5: game chat to #game-chat needs the bot (the chat channel is picked through it)
   portal: string; // https://deepslate.dsw.test
   log: (o: unknown, m: string) => void;
@@ -662,6 +664,46 @@ export class Announcer {
     return second.ok || !second.retry;
   }
 
+  // ---- the change log (Alex, 2026-10-04): one forum post, a reply per deploy ----------------------------------------------
+
+  private changeLogAt = 0;
+  private changeLogDone = false;
+
+  /**
+   * Every entry of changelog.ts that has not been posted yet becomes a reply in the one post "Change log" in
+   * season-updates, oldest first. The post is made the first time; one deleted by hand is made again. Looked at once
+   * a minute until everything is posted, so in practice once after each deploy. Without the forum's webhook: nothing.
+   */
+  private async changeLog(sw: Switches, brand: Brand, now: Date): Promise<void> {
+    const changes = this.d.changes ?? [];
+    if (this.changeLogDone || changes.length === 0 || now.getTime() - this.changeLogAt < 60_000) return;
+    this.changeLogAt = now.getTime();
+    if (!this.usable("updates")) return;
+    const open = async (): Promise<string | null> => {
+      const r = await this.send(null, 0, "updates", "change log post", asServer(brand, CHANGELOG_OPENER), undefined, { threadName: CHANGELOG_TITLE, tags: this.tags(sw, "News") });
+      if (!r.ok || !r.channelId) return null;
+      await this.d.store.savePost({ key: "changelog", channel: "updates", messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId: r.channelId });
+      return r.channelId;
+    };
+    let threadId = (await this.d.store.post("changelog"))?.threadId ?? null;
+    for (const c of changes) {
+      const key = `changelog:${c.id}`;
+      if (await this.d.store.post(key)) continue;
+      threadId ??= await open();
+      if (!threadId) return; // not taken, or not a forum: looked at again in a minute
+      let r = await this.send(null, 0, "updates", "change log", asServer(brand, changeText(c)), undefined, { threadId });
+      if (!r.ok && r.gone) {
+        // the post was deleted by hand in Discord: made again, and the entry goes into the new one
+        threadId = await open();
+        if (!threadId) return;
+        r = await this.send(null, 0, "updates", "change log", asServer(brand, changeText(c)), undefined, { threadId });
+      }
+      if (!r.ok) return;
+      await this.d.store.savePost({ key, channel: "updates", messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId });
+    }
+    this.changeLogDone = true;
+  }
+
   // ---- what happens with time, not with an event ---------------------------------------------------------------------
 
   private async duties(sw: Switches) {
@@ -678,6 +720,7 @@ export class Announcer {
     }
     for (const [uuid, run] of [...this.deaths]) if (t - run.lastAt >= RUN_MS) this.deaths.delete(uuid);
     for (const [uuid, at] of [...this.lastJoin]) if (t - at > 24 * 60 * 60_000) this.lastJoin.delete(uuid);
+    await this.changeLog(sw, brand, now);
     if (!sw.votes) return;
     // a vote's count, at most once a minute
     for (const key of [...this.dirtyVotes]) {

@@ -24,7 +24,12 @@ export type SeasonRouteDeps = {
   now?: () => Date;
 };
 
-const ukDayTime = (d: Date) => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+/** "Mon 30 Nov, 19:00" in UK time, as the site writes it (web's lib/uk-time.ts). */
+function ukDayTime(d: Date): string {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
+  const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+  return `${get("weekday")} ${get("day")} ${get("month")}, ${get("hour") === "24" ? "00" : get("hour")}:${get("minute")}`;
+}
 const tick = z.object({ userId: z.string().min(1).max(64), kind: z.enum(["boss", "trial"]), itemId: SEASON_ID });
 
 export function seasonRoutes(app: FastifyInstance, d: SeasonRouteDeps) {

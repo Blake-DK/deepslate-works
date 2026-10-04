@@ -12,6 +12,13 @@
 # deploy.sh refreshes the mirror after each deploy; edit here, never in Dockhand.
 name: deepslate
 
+# docs/31 B-21: without this the json-file logs grow without end (api writes a line for every AMP poll).
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 networks:
   web:
     external: true
@@ -22,6 +29,7 @@ services:
     image: postgres:16-alpine
     container_name: deepslate-db
     restart: unless-stopped
+    logging: *logging
     mem_limit: 256m
     command: ["postgres", "-c", "shared_buffers=128MB"]
     networks: [internal]
@@ -42,11 +50,28 @@ services:
     pull_policy: always
     container_name: deepslate-web
     restart: unless-stopped
+    logging: *logging
     mem_limit: 768m
     networks: [web, internal]
-    env_file: .env
+    # docs/31 B-18: the internet-facing container gets the variables it reads and no others. It used to get all of
+    # deploy/.env, the AMP password, the bot token and the webhooks included. A new variable for web goes here,
+    # in apps/web/src/env.ts and in .env.example.
     environment:
       DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_URL: ${AUTH_URL}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+      ADMIN_DISCORD_ID: ${ADMIN_DISCORD_ID:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      DISCORD_GUILD_AUTO_JOIN: ${DISCORD_GUILD_AUTO_JOIN:-0}
+      API_URL: ${API_URL}
+      API_SERVICE_TOKEN: ${API_SERVICE_TOKEN}
+      MANIFEST_KEY: ${MANIFEST_KEY:-}
+      MAP_URL: ${MAP_URL:-}
+      SERVER_ADDRESS: ${SERVER_ADDRESS:-mc.dsw.test}
+      MODRINTH_USER_AGENT: ${MODRINTH_USER_AGENT:-deepslate-works/0.1}
     volumes:
       # The manifest is edited by "apply results" and committed, so the live repo's modpack/ and .git are mounted.
       # Nothing else from the repo (no .env, no keys) is visible to the internet-facing container.
@@ -67,9 +92,12 @@ services:
       start_period: 40s
 
   wireguard:
+    # docs/31 B-22: still `latest`, with the two socat relays below. Pinning needs the digests that run today
+    # (docker inspect, root); a tag picked from outside would swap the tunnel's image at the next `up`.
     image: lscr.io/linuxserver/wireguard:latest
     container_name: deepslate-wg
     restart: unless-stopped
+    logging: *logging
     mem_limit: 128m
     cap_add: [NET_ADMIN]
     sysctls:
@@ -94,6 +122,7 @@ services:
     pull_policy: always
     container_name: deepslate-api
     restart: unless-stopped
+    logging: *logging
     mem_limit: 512m                     # also the cap for `modpack build`, which runs as a child of api
     network_mode: "service:wireguard"   # reachable as deepslate-wg:4000 on `internal` only
     env_file: .env
@@ -101,7 +130,10 @@ services:
       DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
       PORTAL_URL: ${AUTH_URL}
     volumes:
-      - ${DEEPSLATE_DIR:-..}/deploy/keys/deploy.key:/run/keys/deploy.key:ro
+      # the deploy key, and known_hosts beside it once it has been made (B-23: the AMP host's key is then pinned)
+      - ${DEEPSLATE_DIR:-..}/deploy/keys:/run/keys:ro
+      # the nightly database dumps; api copies the newest to the AMP host (docs/28 §4.7, apps/api/src/backup/dump-push.ts)
+      - /root/docker/deepslate/backups:/dbdumps:ro
       - ${DEEPSLATE_DIR:-..}/dist:/repo/dist             # `modpack build` writes it (owner uid 1000); sync-server rsyncs dist/server/ to the AMP host
       - ${DEEPSLATE_DIR:-..}/modpack:/repo/modpack:ro
       - ${DEEPSLATE_DIR:-..}/installer:/repo/installer:ro
@@ -117,11 +149,19 @@ services:
         condition: service_healthy     # web applies the database migrations when it starts; api needs them done
     security_opt:
       - no-new-privileges:true
+    # docs/31 B-09: api answers. Whether it reaches the AMP host is in the answer and is checked by deploy.sh.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null --header=\"Authorization: Bearer $$API_SERVICE_TOKEN\" http://127.0.0.1:4000/health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
 
   map-relay-inner:
     image: alpine/socat:latest
     container_name: deepslate-map-relay-inner
     restart: unless-stopped
+    logging: *logging
     mem_limit: 32m
     network_mode: "service:wireguard"
     command: TCP-LISTEN:8100,fork,reuseaddr TCP:10.77.0.2:8100
@@ -131,6 +171,7 @@ services:
     image: alpine/socat:latest
     container_name: deepslate-map-relay-outer
     restart: unless-stopped
+    logging: *logging
     mem_limit: 32m
     networks: [web, internal]
     command: TCP-LISTEN:8100,fork,reuseaddr TCP:deepslate-wg:8100
@@ -140,22 +181,17 @@ services:
     image: postgres:16-alpine
     container_name: deepslate-backups
     restart: unless-stopped
+    logging: *logging
     mem_limit: 64m
     networks: [internal]
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - /root/docker/deepslate/backups:/backups
+      - ${DEEPSLATE_DIR:-..}/deploy/backup-loop.sh:/backup-loop.sh:ro
     depends_on:
       postgres:
         condition: service_healthy
-    # Nightly pg_dump to deepslate-YYYY-MM-DD.sql.gz, keep the newest 14 of those. Simple loop; no cron package
-    # needed. Only $ is escaped for compose ($$); a % goes to date as written (%%F made the literal file
-    # "deepslate-%F.sql.gz" until 2026-10-03). A failed dump is not kept (pipefail, .part renamed only on
-    # success), so it never pushes a good copy out. Retention counts nightly dumps only, never pre-* dumps.
-    command: >
-      sh -c 'set -o pipefail; while true; do
-        f=/backups/deepslate-$$(date +%F).sql.gz;
-        if pg_dump -h postgres -U deepslate deepslate | gzip > $$f.part; then mv $$f.part $$f; else rm -f $$f.part; echo "pg_dump failed"; fi;
-        ls -1t /backups/deepslate-20??-??-??.sql.gz 2>/dev/null | tail -n +15 | xargs -r rm -f;
-        sleep 86400; done'
+    # Nightly pg_dump at 00:00 UTC to deepslate-YYYY-MM-DD.sql.gz, the newest 14 kept, a failed dump tried again
+    # after ten minutes (deploy/backup-loop.sh; docs/31 B-20). pre-* dumps are never counted or removed.
+    command: ["sh", "/backup-loop.sh"]

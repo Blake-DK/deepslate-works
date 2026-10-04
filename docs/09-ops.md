@@ -49,6 +49,18 @@ on the VPS  ──► sudo /home/ladm/Minecraft-site/deploy/deploy.sh
 - Never run `docker compose up --build`, `docker compose build` or `docker build` on the VPS. tooling sessions on this host are blocked from doing so by a hook (`/root/.tooling/hooks/mem-guard.py`), which also refuses `docker run` without `--memory`.
 - If CI is down and a change cannot wait: build on another machine and `docker save | ssh vps docker load`, then `IMAGE_TAG` to match. A build on the VPS is the last resort and Alex's call: stop the non-essential stacks first, one image at a time, through the memory-capped builder (`docker buildx use capped`, 2 GB), then start the stacks again.
 
+### Since PR B (docs/31, 2026-10-04)
+
+- **The images are the commit's, not `latest`** (B-08). `deploy.sh` sets `IMAGE_TAG` to the commit the checkout is at after the pull. If CI has not finished for it, the pull fails and nothing is changed. After `up`, both containers must report that commit in `PORTAL_COMMIT`. `IMAGE_TAG` in `deploy/.env` is no longer read by the script; Dockhand's copy still uses it, so a redeploy from Dockhand goes to `latest`. Roll back with `sudo IMAGE_TAG=<sha> deploy/deploy.sh`.
+- **api must be healthy and must reach the AMP host** (B-09). api has a healthcheck, and the script fails when web's health does not show `"api":{"ok":true`. With the homelab down on purpose: `sudo ALLOW_API_DOWN=1 deploy/deploy.sh`.
+- **A dump before a new migration** (B-19): when the pull changed `apps/web/prisma/migrations`, the database is dumped to `pre-<commit>-<time>.sql.gz` beside the nightly dumps before anything is started. Old images are pruned only after the health checks.
+- **git on the host runs without hooks, fsmonitor or an ssh command from `.git/config`** (B-17, short form): `web` can write that `.git`.
+- **web gets only the variables it reads** (B-18), listed under `environment:` in the compose file. A new variable for web is added there, in `apps/web/src/env.ts` and in `.env.example`.
+- **Logs are capped** at 5 files of 10 MB per container (B-21).
+- **The nightly dump** (B-20) is `deploy/backup-loop.sh`: 00:00 UTC, the newest 14 kept, a failed dump tried again after ten minutes. api copies the newest dump into `_backup/db/` in the instance over the pack's rsync link, where AMP's 01:00 UTC backup picks it up (docs/28 §4.7; B-07). Admin → Files refuses that folder.
+- **The AMP host's ssh key is pinned** once `deploy/keys/known_hosts` exists (B-23); `deploy.sh` prints the one command that makes it. Until then api trusts the key afresh at each start, as before.
+- **Not done:** the WireGuard and socat images are still `latest` (B-22): pinning needs the digests that run today, read as root. `dockhand-sync.py` still speaks http: Dockhand offers no https on that port, and the address is on the tailnet, which encrypts the hop (B-24).
+
 ## Dockhand (pull-only)
 
 The stack is registered in Dockhand (`http://100.64.0.10:3690`, environment **VPS-01V**, stack `deepslate`) like the other stacks on the VPS, so it can be watched, pulled and restarted from there.

@@ -51,6 +51,7 @@ import { Webhook } from "./discord/webhook.js";
 import { discordRoutes } from "./routes/discord.js";
 import { makeBot, votePoster } from "./discord/wire.js";
 import { runAction } from "./actions/run.js";
+import { DumpPush } from "./backup/dump-push.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
@@ -68,6 +69,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const log = (o: unknown, m: string) => app.log.info(o, m);
   const tail = new ConsoleTail(ampClient, log);
   const limbo = new Limbo(env, ampClient, tail, log);
+  const dumpPush = new DumpPush(env, log);
   // 2.1.0: the mod files the server loaded at each start, against the set PCs get (modpack/server-mods.ts)
   const serverMods = new ServerMods(ampClient, env.REPO_DIR, log);
   serverMods.start(tail);
@@ -197,6 +199,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     }, 10_000);
     tail.start();
     poller.start();
+    if (env.AMP_MOCK !== "1") dumpPush.start();
     limbo.start();
     pings.start();
     distances.start();
@@ -214,6 +217,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   });
   app.addHook("onClose", async () => {
     tail.stop();
+    dumpPush.stop();
     poller.stop();
     limbo.stop();
     pings.stop();

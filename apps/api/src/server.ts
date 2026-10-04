@@ -54,6 +54,11 @@ import { runAction } from "./actions/run.js";
 import { DumpPush } from "./backup/dump-push.js";
 import { allWell, HealthWatch } from "./status/health-watch.js";
 import { serverPack } from "./players/pack.js";
+import { currentSeason } from "./seasons/files.js";
+import { SeasonRecorder } from "./seasons/recorder.js";
+import { prismaSeasonStore } from "./seasons/store.js";
+import { listAdvancementFiles, readAdvancements } from "./seasons/advancements.js";
+import { seasonRoutes } from "./routes/seasons.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
@@ -122,7 +127,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const hook = (url: string | undefined) => (url ? new Webhook(url, { botToken: env.DISCORD_BOT_TOKEN }) : null);
   const portal = env.PORTAL_URL.replace(/\/+$/, "");
   const feed = new Announcer({
-    store: prismaFeedStore(portal), feed: hook(env.DISCORD_WEBHOOK_FEED), admin: hook(env.DISCORD_WEBHOOK_ADMIN), updates: hook(env.DISCORD_WEBHOOK_UPDATES),
+    store: prismaFeedStore(portal, env.REPO_DIR), feed: hook(env.DISCORD_WEBHOOK_FEED), admin: hook(env.DISCORD_WEBHOOK_ADMIN), updates: hook(env.DISCORD_WEBHOOK_UPDATES),
     bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), portal, log: (o, m) => app.log.info(o, m),
   });
   discordRoutes(app, feed, bot, env);
@@ -169,14 +174,42 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     uuidOf: (name) => tail.uuidByName.get(name),
     log,
   });
+  // docs/34 §4 (W1.3): the season's clears and what a season says, from the same console lines. It does nothing
+  // until a Season row says "running" (Admin → Seasons, W1.4).
+  const seasonFile = currentSeason(env.REPO_DIR, log);
+  seasonRoutes(app, { amp: ampClient, tail, ctx: () => limbo.actionCtx, file: seasonFile, store: prismaSeasonStore, addEvent: (e) => prismaRecorderStore.addEvent(e) });
+  const seasons = new SeasonRecorder({
+    file: seasonFile,
+    store: prismaSeasonStore,
+    uuidOf: async (name) => tail.uuidByName.get(name)?.toLowerCase() ?? (await prismaRecorderStore.uuidByName(name)),
+    addEvent: (e) => prismaRecorderStore.addEvent(e),
+    advancements: async () => {
+      if (tail.state !== 20) return null;
+      const files = await listAdvancementFiles(ampClient);
+      return files ? (uuid) => readAdvancements(ampClient, uuid, files.get(uuid) ?? 0) : null;
+    },
+    log,
+  });
   let housekeeping: NodeJS.Timeout | null = null;
   let watching: NodeJS.Timeout | null = null;
+  let seasonClock: NodeJS.Timeout | null = null;
+  let seasonFiles: NodeJS.Timeout | null = null;
 
   app.addHook("onReady", async () => {
     if (env.AMP_MOCK === "1") return;
     await recorder.init().catch((err) => log({ err: String(err) }, "could not load open sessions"));
     tail.on(recorder.onConsole);
     tail.onResync(() => recorder.reconcileNext());
+    tail.on(seasons.onConsole);
+    // the safety net (docs/34 §4): the players' advancement files, soon after every server start and every ten
+    // minutes while somebody is on; the clock, once a minute
+    tail.on((e, info) => {
+      if (e.type === "started" && !info?.replay) setTimeout(() => void seasons.fromFiles(), 30_000).unref();
+    });
+    seasonFiles = setInterval(() => {
+      if (tail.state === 20 && tail.online.size > 0) void seasons.fromFiles();
+    }, 10 * 60_000);
+    seasonClock = setInterval(() => void seasons.tick(), 60_000);
     poller.onStatus(recorder.onStatus);
     poller.onStatus((next) => {
       view.observe(next);
@@ -246,6 +279,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     ground.stop();
     if (housekeeping) clearInterval(housekeeping);
     if (watching) clearInterval(watching);
+    if (seasonClock) clearInterval(seasonClock);
+    if (seasonFiles) clearInterval(seasonFiles);
   });
   return app;
 }

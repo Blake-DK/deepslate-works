@@ -35,7 +35,7 @@ import { describeAction } from "@/shared/events";
 
 const UUID = "9e2b7c41-0a5d-4f36-8c19-b4e07d2a6f53";
 const soon = () => new Date(Date.now() + 20 * 60_000);
-const member = (over: Partial<Parameters<typeof checkCode>[0]> = {}) => ({ id: "u1", role: "PLAYER" as const, mcUuid: null, mcUsername: null, verifiedAt: null, discordId: "111111111111111111", guildMember: true, ...over });
+const member = (over: Partial<Parameters<typeof checkCode>[0]> = {}) => ({ id: "u1", role: "PLAYER" as const, mcUuid: null, mcUsername: null, verifiedAt: null, discordId: "111111111111111111", guildMember: true, outsideAuth: false, ...over });
 let n = 0;
 const fresh = () => member({ id: `u${++n}` }); // the guess limiter is per member and lives for the whole file
 
@@ -101,6 +101,10 @@ describe("leaving the Discord server sticks (B-05)", () => {
 
   it("the member without Discord (email fallback) is not caught by that rule", async () => {
     expect(await linkWithCode({ ...fresh(), discordId: null, guildMember: false }, "ABC234", "link")).toMatchObject({ tone: "success" });
+  });
+
+  it("nor is whoever came in by an invite: not in the Discord server, and not asked about it", async () => {
+    expect(await linkWithCode({ ...fresh(), guildMember: false, outsideAuth: true }, "ABC234", "link")).toMatchObject({ tone: "success" });
   });
 });
 

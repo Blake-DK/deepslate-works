@@ -10,6 +10,7 @@ import { modpackPaths } from "./paths";
 import { buildItems } from "./items";
 import { lockExtras } from "./extras";
 import type { Manifest } from "./schema";
+import { buildSeasons, loadSeasons } from "./seasons";
 
 const [cmd = "help", ...rest] = process.argv.slice(2);
 const P = modpackPaths();
@@ -47,8 +48,11 @@ async function main() {
     case "lint": {
       const { manifest, issues } = lintManifest(JSON.parse(await readFile(P.manifest, "utf8")));
       for (const i of issues) log(`${i.level.toUpperCase().padEnd(5)} ${i.message}`);
-      const errors = issues.filter((i) => i.level === "error").length;
-      log(`${P.manifest}: ${manifest ? `${manifest.mods.length} mods, ` : ""}${errors} error(s), ${issues.length - errors} warning(s)`);
+      // the season files too (docs/20 §4): a duplicate title or an unchecked entity stops CI as a bad mods.json does
+      const seasons = await loadSeasons(P.seasons);
+      for (const i of seasons.issues) log(`ERROR season ${i.season}: ${i.message}`);
+      const errors = issues.filter((i) => i.level === "error").length + seasons.issues.length;
+      log(`${P.manifest}: ${manifest ? `${manifest.mods.length} mods, ` : ""}${errors} error(s), ${issues.length - issues.filter((i) => i.level === "error").length} warning(s); ${seasons.seasons.length} season file(s), current ${seasons.index.current ?? "none"}, to the server: ${seasons.index.ship.join(", ") || "none"}`);
       process.exit(errors ? 1 : 0);
     }
     // falls through never
@@ -117,10 +121,12 @@ async function main() {
       if (what === "branding" || what === "all") await buildBranding(P.dist, log);
       if (what === "config" || what === "all") await buildConfigZip(P, log);
       if (what === "server" || what === "all") await buildServer(manifest, lock, P, log);
+      // after the server's folder: buildServer makes datapacks/ afresh, the season datapacks go in on top
+      if (what === "seasons" || what === "server" || what === "all") await buildSeasons(P, log);
       if (what === "installer" || what === "all") await buildInstaller(manifest, lock, P, portalUrl, log);
       // after the server jars: the item catalogue is read out of them (docs/13 §13)
       if (what === "items" || what === "all") await buildItems({ dist: P.dist, vanilla: P.items }, log);
-      if (!["branding", "config", "server", "installer", "items", "all"].includes(what)) {
+      if (!["branding", "config", "server", "installer", "items", "seasons", "all"].includes(what)) {
         console.error(`unknown build target ${what}`);
         process.exit(1);
       }
@@ -133,7 +139,7 @@ async function main() {
       process.exit(2);
     // falls through never
     default:
-      log(`usage: modpack <lint|verify-links|lock [--force]|check-sides|build [config|server|installer|items|all]> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
+      log(`usage: modpack <lint|verify-links|lock [--force]|check-sides|build [config|server|installer|items|seasons|all]> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
       process.exit(cmd === "help" ? 0 : 1);
   }
 }

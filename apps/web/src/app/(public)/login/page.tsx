@@ -15,9 +15,10 @@ import { Markdown } from "@/components/markdown";
 export const metadata: Metadata = { title: "Sign in" };
 
 const ERRORS: Record<string, string> = {
-  "no-invite": "That Discord account isn't in the group yet. You need an invite link from Alex.",
+  "no-invite": "That Discord account isn't in the group yet. Ask Alex for an invite link, open it, and sign in from there.",
+  "invite-invalid": "That invite link doesn't work any more: it has been used already or has run out. Ask Alex for a new one.",
   blocked: "This Discord account has been removed from the group. Talk to Alex.",
-  "not-in-server": "You need to be in the group's Discord server to sign in. Ask Alex for the server invite first.",
+  "not-in-server": "That Discord account isn't in the group's Discord server, so it can't sign in here. Join the Discord server and try again, or ask Alex for an invite link.",
   credentials: "Wrong email or password.",
   "rate-limited": "Too many attempts. Wait a minute and try again.",
   "discord-off": "Discord sign-in isn't set up yet. Use email for now.",

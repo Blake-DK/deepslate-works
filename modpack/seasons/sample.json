@@ -1,0 +1,86 @@
+{
+  "id": "sample",
+  "name": "Sample Season · Dress Rehearsal",
+  "startsAt": "2026-11-16T00:00:00Z",
+  "endsAt": "2026-11-29T00:00:00Z",
+  "icon": "minecraft:wooden_sword",
+  "groupRadius": 48,
+  "frontier": {
+    "dimension": "deepslate:frontier_sample",
+    "noise": "minecraft:large_biomes",
+    "radius": 500
+  },
+  "bosses": [
+    {
+      "id": "rehearsal_ravager",
+      "title": "The Rehearsal Ravager",
+      "entity": "minecraft:ravager",
+      "tier": 1,
+      "points": 10,
+      "where": "Summoned for the rehearsal",
+      "hint": "Two players, one of them within 48 blocks.",
+      "trophy": {
+        "item": "minecraft:saddle",
+        "name": "Rehearsal Ravager's Saddle"
+      }
+    },
+    {
+      "id": "rehearsal_golem",
+      "title": "The Rehearsal Golem",
+      "entity": "minecraft:iron_golem",
+      "tier": 2,
+      "points": 15,
+      "opensAt": "2026-11-23T19:00:00Z",
+      "where": "Any village, or summoned",
+      "hint": "Hit it once to see the wake line, then finish it.",
+      "trophy": {
+        "item": "minecraft:poppy",
+        "name": "Rehearsal Golem's Poppy"
+      }
+    }
+  ],
+  "trials": [
+    {
+      "id": "rehearsal_table",
+      "title": "Rehearsal: The Table",
+      "opensAt": "2026-11-16T00:00:00Z",
+      "points": 5,
+      "solo": true,
+      "hint": "Hold a crafting table.",
+      "icon": "minecraft:crafting_table",
+      "criteria": {
+        "trigger": "minecraft:inventory_changed",
+        "conditions": {
+          "items": [
+            {
+              "items": "minecraft:crafting_table"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rehearsal_bed",
+      "title": "Rehearsal: The Bed",
+      "opensAt": "2026-11-23T19:00:00Z",
+      "points": 5,
+      "solo": true,
+      "hint": "Sleep in a bed.",
+      "icon": "minecraft:red_bed",
+      "criteria": {
+        "trigger": "minecraft:slept_in_bed",
+        "conditions": {}
+      }
+    }
+  ],
+  "goal": {
+    "title": "3 boss kills between us",
+    "count": "boss_kills",
+    "target": 3
+  },
+  "finale": {
+    "at": "2026-11-23T20:00:00Z",
+    "title": "The Rehearsal Golem, together",
+    "boss": "rehearsal_golem"
+  }
+}

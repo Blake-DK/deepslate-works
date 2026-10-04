@@ -24,11 +24,12 @@ import { pendingFor } from "@/server/polls";
 import { joinLine } from "@/lib/play";
 import { clock } from "@/lib/utils";
 import { getBranding } from "@/server/branding";
+import { getSeasonCurrent, lineFor } from "@/server/season";
 
 export default async function HomePage() {
   const user = await requireOnboardedUser();
   const brand = await getBranding();
-  const [members, openVote, settings, status, series, news, play, agent, pending] = await Promise.all([
+  const [members, openVote, settings, status, series, news, play, agent, pending, season] = await Promise.all([
     db.user.count(),
     getOpenVote(),
     getSettings(),
@@ -38,6 +39,7 @@ export default async function HomePage() {
     getPlayInfo(user),
     headers().then((h) => h.get("user-agent")),
     pendingFor({ id: user.id, role: user.role }),
+    getSeasonCurrent().then(lineFor).catch(() => null),
   ]);
   const showServer = canSeeServer(user, settings);
   const mapUp = Boolean(env.MAP_URL) && status.server === "online";
@@ -51,6 +53,7 @@ export default async function HomePage() {
       </div>
       {!settings.live && !(user.earlyAccess && user.role !== "ADMIN") && <LaunchBanner launchAt={settings.launchAt} admin={user.role === "ADMIN"} />}
       <VoteBanner pending={pending} />
+      {season && <p className="rounded-[4px] border bg-card px-4 py-3 text-sm" data-testid="season-line"><Link href="/season" className="font-medium text-primary hover:underline">Season</Link> · {season}</p>}
       <div className="grid gap-4 sm:grid-cols-2">
         <StatusCard status={status} series={series} address={showServer ? env.SERVER_ADDRESS : null} admin={user.role === "ADMIN"} />
         <div className="space-y-4">

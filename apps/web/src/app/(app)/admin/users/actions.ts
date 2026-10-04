@@ -36,6 +36,31 @@ export async function setEarlyAccessAction(formData: FormData) {
   revalidatePath("/players/[uuid]", "page");
 }
 
+/**
+ * The outside list: a member the Discord server rule is not applied to. An invite link puts people on it; this is
+ * the same by hand, and the way off it. Taken off while not in the server: treated as someone who has just left.
+ */
+export async function setOutsideAuthAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const parsed = z.object({ id: z.string().min(1), on: z.enum(["1", "0"]) }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const on = parsed.data.on === "1";
+  const u = await db.user.update({ where: { id: parsed.data.id }, data: { outsideAuth: on }, select: { displayName: true, discordId: true, guildMember: true, mcUuid: true } }).catch(() => null);
+  if (!u) return;
+  await audit({ userId: admin.id, action: "user.outsideAuth", params: { id: parsed.data.id, displayName: u.displayName, on }, result: "OK" });
+  if (!on && u.discordId && !u.guildMember) {
+    await db.user.update({ where: { id: parsed.data.id }, data: { sessionVersion: { increment: 1 } } });
+    await revokeLauncherTokens(parsed.data.id);
+    if (u.mcUuid) {
+      try {
+        await apiFetch("/player/revoke", { method: "POST", body: { uuid: u.mcUuid }, caller: { id: admin.id, role: "ADMIN" } });
+      } catch {}
+    }
+  }
+  revalidatePath("/admin/people");
+  revalidatePath("/players/[uuid]", "page");
+}
+
 export async function removeUserAction(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");

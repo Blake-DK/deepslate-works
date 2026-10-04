@@ -22,3 +22,10 @@ export function ukLocalToDate(local: string): Date | null {
   const offsetMs = londonAsUtc - asUtc.getTime(); // how far London is ahead of UTC at that instant (0 or 1 h)
   return new Date(asUtc.getTime() - offsetMs);
 }
+
+/** "Mon 30 Nov, 19:00" in UK time: a day people plan around. */
+export function ukDayTime(d: Date): string {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("weekday")} ${get("day")} ${get("month")}, ${get("hour") === "24" ? "00" : get("hour")}:${get("minute")}`;
+}

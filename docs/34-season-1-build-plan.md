@@ -16,18 +16,25 @@ Work lands on `dev` (the working rules "Branches"); `main` moves when Alex wants
 | W1.9 | LOW-tier check | one measured LOW-tier PC in a Cataclysm dungeon | Alex | a dungeon near spawn |
 | W1.10 | Room on the AMP host | disk for the Frontier and its map; who deletes its folder | AMP host | docs/33 §4 |
 
+**Alex, 2026-10-04, after this plan was written: a season is a month, from the last Monday to the last Monday (docs/32, "Amendment"). Season 1 opens on Monday 30 November 2026 at 19:00 UK and ends on Monday 28 December.** The build has eight weeks, not four; the dates below are the new ones, and every "4 November" and "28 October" further down this file reads "30 November" and "23 November".
+
 | When | What |
 |---|---|
-| 5 to 18 Oct | W1.1, then W1.3. Started a week ahead of the planner's dates, for slack |
-| 19 to 25 Oct | W1.2 and W1.5 |
-| 26 to 27 Oct | W1.4 Start; the sample season end to end on `dev` |
-| Wed 28 Oct | **Rehearsal** on the real server with the sample season (§7) |
-| 29 Oct to 3 Nov | fixes from the rehearsal; W1.11 the guide's Season section; W1.6 the app's banner (may slip to week 1) |
-| **Wed 4 Nov** | Season 1 opens |
-| by 2 Dec | W1.7 the wipe, tried on a throwaway dimension; W1.4 End |
-| by 9 Dec | W1.8 `hall.update` and the Hall of Fame |
+| done 2026-10-04 | W1.1: the season files, lint, `build seasons` (on `dev`) |
+| done 2026-10-04 | W1.3 recording and `/season`; W1.4 Admin → Seasons (announce, start, end, a tick given or taken back); W1.5 Discord moments; W1.2's datapack (on `dev`, docs/11 first section) |
+| to 25 Oct | W1.3 |
+| 26 Oct to 8 Nov | W1.2 and W1.5 |
+| 9 to 15 Nov | W1.4 Start; the sample season end to end on `dev`; W1.11 the guide's Season section |
+| 16 to 22 Nov | slack; W1.6 the app's banner |
+| **Mon 23 Nov** | **Rehearsal** on the real server with the sample season (§7) |
+| 24 to 29 Nov | fixes from the rehearsal |
+| **Mon 30 Nov, 19:00 UK** | Season 1 opens |
+| by 14 Dec | W1.7 the wipe, tried on a throwaway dimension; W1.4 End |
+| by 21 Dec | W1.8 `hall.update` and the Hall of Fame |
+| Sat 26 Dec, 20:00 UK | the finale (Boxing Day by the rule; Alex to confirm, docs/32) |
+| Mon 28 Dec | End season, the wipe, Season 2 opens |
 
-If the build is behind on 28 Oct, the cuts are docs/32 §2's, in its order. Recording and the freeze are never cut.
+If the build is behind at the rehearsal, the cuts are docs/32 §2's, in its order. Recording and the freeze are never cut.
 
 ## 2. W1.1 · the season file
 
@@ -37,8 +44,8 @@ If the build is behind on 28 Oct, the cuts are docs/32 §2's, in its order. Reco
 {
   "id": "s1",
   "name": "Season 1 · First Blood",
-  "startsAt": "2026-11-04T19:00:00Z",
-  "endsAt": "2026-12-16T19:00:00Z",
+  "startsAt": "2026-11-30T19:00:00Z",
+  "endsAt": "2026-12-28T19:00:00Z",
   "accent": "#b8652c",
   "icon": "minecraft:netherite_sword",
   "groupRadius": 48,

@@ -15,10 +15,13 @@
 2. Discord OAuth (scopes `identify` and, because the server gate is on, `guilds`). With `DISCORD_GUILD_ID` set, an account that is not in that server is refused; with `DISCORD_GUILD_AUTO_JOIN=1`, one that is in it gets a `User` without any invite. Both are set in production.
 3. After the first sign-in, one question: roughly what their PC is like (three plain options). It is a first guess; the installer measures the PC and replaces it (`pcTierSource`, docs/07). **Nobody is asked for a Minecraft name.**
 
-**The one without Discord.**
+**The one who is not in the Discord server: an invite link (Alex, 2026-10-04).**
 
 1. An admin creates an invite in `/admin/invites` (note: "for Gordon", expires in 7 days). The site shows a link `https://deepslate.dsw.test/join/<code>`.
 2. The link's page has **Continue with Discord** and a small "No Discord?" link, which leads to a form: display name, email, password (12 characters at least). That makes a credentials user against the invite.
+3. **An invite stands in for the Discord server.** Whoever comes in by an invite link is let in whether or not their Discord account is in the server, and is marked `User.outsideAuth` (migration `0027_outside_auth`): the server rule is never applied to them, at sign-in, at linking, at the door of the game, or when the bot sees them leave. `guildMember` still records what Discord last said. The decision at a Discord sign-in is one pure function, `discordDoor` (`src/server/auth/discord-door.ts`).
+4. **The outside list** is Admin → People → Players → "Outside Discord"; those on it carry an "invited" badge. A member's menu has "Let in without the Discord server" and "Apply the Discord server rule" (the way off the list: someone taken off while not in the server is signed out everywhere and, if playing, taken out, like someone who has just left). A member who left the server and opens a new invite link is put on the list by it. Members invited before this existed are not on the list; the menu puts them there.
+5. **What a refused sign-in says** (`/login?error=…`): `not-in-server` (not in the Discord server and no invite: join it, or ask for an invite link), `invite-invalid` (came by a link that has been used or has run out: ask for a new one), `no-invite` (the server rule is off or auto-join is off, and there was no link). The link's own page says used, expired or not right before anyone signs in.
 
 Direct visits to `/login` show only "Continue with Discord" and "Sign in with email".
 
@@ -34,7 +37,7 @@ Signing in is one thing, using the site another. Until "We're live" is switched 
 
 - Auth.js JWT sessions in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie scoped to `Domain=.deepslate.dsw.test` so `map.deepslate.dsw.test` shares it and nothing else on dsw.test sees it.
 - `web` → `api` calls carry `Authorization: Bearer <API_SERVICE_TOKEN>` plus who is asking, from the verified session (`X-User-Id`, `X-User-Role` and, where there is one, `X-Mc-Username`); `api` rejects anything without the token and checks the role for every route. `src/server/api-client.ts` is the only place that makes such a call.
-- Leaving the Discord server: `guildMember` is looked at again at every Discord sign-in, and, if `DISCORD_BOT_TOKEN` is set (it is not, 2026-09-29), by `api` every five minutes for whoever is on the server. Somebody who has left is sent back to the entrance room at their next join.
+- Leaving the Discord server: `guildMember` is looked at again at every Discord sign-in, and, if `DISCORD_BOT_TOKEN` is set (it is not, 2026-09-29), by `api` every five minutes for whoever is on the server. Somebody who has left is sent back to the entrance room at their next join, unless an invite brought them (`outsideAuth`, above).
 - Session lifetime 30 days, refreshed on activity; 12 hours for admin password and break-glass sessions (below).
 - `GET /api/auth/verify` returns 200 if the request carries a valid session, 401 otherwise. Caddy's `forward_auth` uses it for BlueMap.
 

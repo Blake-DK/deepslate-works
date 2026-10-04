@@ -62,7 +62,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const parts = (u: (typeof rows)[number]) => {
     const admin = u.role === "ADMIN";
     return {
-      role: <span className="flex min-w-0 items-center gap-1"><Badge tone={admin ? "warn" : "neutral"} className="shrink-0">{u.role.toLowerCase()}</Badge>{u.passwordSignIn && <Badge tone="neutral" className="shrink-0" title="Can also sign in with username, password and an authenticator code">pw</Badge>}</span>,
+      role: <span className="flex min-w-0 items-center gap-1"><Badge tone={admin ? "warn" : "neutral"} className="shrink-0">{u.role.toLowerCase()}</Badge>{u.passwordSignIn && <Badge tone="neutral" className="shrink-0" title="Can also sign in with username, password and an authenticator code">pw</Badge>}{u.outsideAuth && <Badge tone="neutral" className="shrink-0" title="Came in by an invite link: they don't have to be in the Discord server">invited</Badge>}</span>,
       minecraft: u.mcUsername ? (
         <span className="flex min-w-0 items-center gap-2"><Clip text={u.mcUsername} mono />{u.verifiedAt && <Badge tone="good" className="shrink-0">verified</Badge>}</span>
       ) : <Badge className="shrink-0">Unlinked</Badge>,

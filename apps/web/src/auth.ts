@@ -7,7 +7,8 @@ import { authConfig, SHORT_SESSION_MS, tokenExpired, type AppToken } from "@/aut
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { verifyPassword } from "@/server/auth/password";
-import { findValidInvite } from "@/server/auth/invites";
+import { consumeInvite, findValidInvite } from "@/server/auth/invites";
+import { discordDoor } from "@/server/auth/discord-door";
 import { createUser, touchLastSeen } from "@/server/auth/users";
 import { isBlocked } from "@/server/auth/blocked";
 import { loginLimiter } from "@/server/auth/rate-limit";
@@ -126,49 +127,74 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await audit({ action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "blocked" });
         return "/login?error=blocked";
       }
-      // Optional gate: must be a member of Alex's Discord server (checked on every Discord sign-in).
-      let inGuild = false;
-      if (env.DISCORD_GUILD_ID) {
-        inGuild = await isGuildMember(account.access_token, env.DISCORD_GUILD_ID);
-        if (!inGuild) {
-          // docs/14 §7: back to the room next join. docs/31 B-05: and every session they still have ends, the
-          // installer's tokens with it, so an old cookie cannot link them back in.
-          const left = await db.user.findUnique({ where: { discordId }, select: { id: true, guildMember: true } });
-          if (left?.guildMember) {
-            await db.user.update({ where: { id: left.id }, data: { guildMember: false, sessionVersion: { increment: 1 } } });
-            await db.launcherAuth.updateMany({ where: { userId: left.id, status: "approved" }, data: { status: "denied" } });
-          }
-          await audit({ action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "not in discord server" });
-          return "/login?error=not-in-server";
-        }
-      }
+      // Optional gate: must be a member of Alex's Discord server (checked on every Discord sign-in), unless an
+      // invite link brought them: an invite stands in for the server (`discordDoor`).
+      const inGuild = env.DISCORD_GUILD_ID ? await isGuildMember(account.access_token, env.DISCORD_GUILD_ID) : false;
       const existing = await db.user.findUnique({ where: { discordId } });
-      if (existing) {
-        await touchLastSeen(existing.id);
-        if (env.DISCORD_GUILD_ID && !existing.guildMember) await db.user.update({ where: { id: existing.id }, data: { guildMember: true } });
-        return true;
-      }
-      const bootstrapAdmin = Boolean(env.ADMIN_DISCORD_ID) && discordId === env.ADMIN_DISCORD_ID;
       const jar = await cookies();
       const inviteCode = jar.get(INVITE_COOKIE)?.value;
       const invite = inviteCode ? await findValidInvite(inviteCode) : null;
-      const guildIsInvite = inGuild && env.DISCORD_GUILD_AUTO_JOIN;
-      if (!bootstrapAdmin && !invite && !guildIsInvite) {
-        await audit({ action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "no invite" });
-        return "/login?error=no-invite";
+      const dropInvite = () => {
+        try {
+          jar.delete(INVITE_COOKIE);
+        } catch {
+          /* not writable in this context; the cookie expires on its own */
+        }
+      };
+      const bootstrapAdmin = Boolean(env.ADMIN_DISCORD_ID) && discordId === env.ADMIN_DISCORD_ID;
+      const decision = discordDoor({ gate: Boolean(env.DISCORD_GUILD_ID), inGuild, existing, invite: Boolean(invite), staleInvite: Boolean(inviteCode) && !invite, autoJoin: env.DISCORD_GUILD_AUTO_JOIN, bootstrapAdmin });
+      const leftServer = Boolean(env.DISCORD_GUILD_ID) && !inGuild;
+      const refused = async (why: "not-in-server" | "no-invite" | "invite-invalid", detail: string) => {
+        // docs/14 §7: back to the room next join. docs/31 B-05: and every session they still have ends, the
+        // installer's tokens with it, so an old cookie cannot link them back in.
+        if (leftServer && existing?.guildMember && !existing.outsideAuth) {
+          await db.user.update({ where: { id: existing.id }, data: { guildMember: false, sessionVersion: { increment: 1 } } });
+          await db.launcherAuth.updateMany({ where: { userId: existing.id, status: "approved" }, data: { status: "denied" } });
+        }
+        if (why === "invite-invalid") dropInvite();
+        await audit({ action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail });
+        return `/login?error=${why}`;
+      };
+      if (decision.door === "refuse") {
+        const detail = decision.why === "invite-invalid" ? (leftServer ? "not in discord server, invite link not valid" : "invite link not valid") : decision.why === "not-in-server" ? "not in discord server" : "no invite";
+        return refused(decision.why, detail);
       }
+      if (existing && decision.door === "exempt") {
+        // A member who is not in the server, with a new invite: the invite is theirs and the rule no longer applies.
+        try {
+          await db.$transaction(async (tx) => {
+            await consumeInvite(tx, invite!.code, existing.id);
+            await tx.user.update({ where: { id: existing.id }, data: { outsideAuth: true } });
+            await audit({ userId: existing.id, action: "user.outsideAuth", params: { id: existing.id, displayName: existing.displayName, on: true, invite: invite!.code }, result: "OK" }, tx);
+          });
+        } catch {
+          return refused("invite-invalid", "not in discord server, invite not usable");
+        }
+        dropInvite();
+      }
+      if (existing) {
+        await touchLastSeen(existing.id);
+        // The flag stays what Discord last said, for whoever is on the outside list too: it counts again if they are taken off it.
+        if (env.DISCORD_GUILD_ID && existing.guildMember !== inGuild) await db.user.update({ where: { id: existing.id }, data: { guildMember: inGuild } });
+        return true;
+      }
+      const outside = decision.door === "create" && decision.outside;
       const p = (profile ?? {}) as { global_name?: string | null; username?: string };
-      await createUser({
-        displayName: user.name ?? p.global_name ?? p.username ?? "Player",
-        discordId,
-        inviteCode: invite?.code,
-        invitedById: invite?.createdBy,
-      });
       try {
-        jar.delete(INVITE_COOKIE);
-      } catch {
-        /* not writable in this context; the cookie expires on its own */
+        await createUser({
+          displayName: user.name ?? p.global_name ?? p.username ?? "Player",
+          discordId,
+          inviteCode: invite?.code,
+          invitedById: invite?.createdBy,
+          outsideAuth: outside,
+          guildMember: env.DISCORD_GUILD_ID ? inGuild : undefined,
+        });
+      } catch (err) {
+        // the invite was used by someone else between the look and the write
+        if (invite) return refused("invite-invalid", "invite used in the meantime");
+        throw err;
       }
+      dropInvite();
       return true;
     },
     async jwt({ token, user, account }) {

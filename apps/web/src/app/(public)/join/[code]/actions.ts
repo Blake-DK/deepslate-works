@@ -50,6 +50,7 @@ export async function registerWithEmail(formData: FormData) {
       passwordHash: await hashPassword(input.password),
       inviteCode: invite.code,
       invitedById: invite.createdBy,
+      outsideAuth: true,
     });
   } catch {
     return back("invite-gone");

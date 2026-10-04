@@ -7,6 +7,8 @@ import { readOptions, tallyPoll } from "../shared/polls.js";
 import { SYNCED_KEY } from "../players/pack.js";
 import type { FeedState, FeedStore, PostRow } from "./announcer.js";
 import type { PollView } from "./lines.js";
+import { currentSeasonId, readSeasonFile, seasonsDir } from "../seasons/files.js";
+import { findByTitle } from "../shared/season.js";
 
 // docs/21: what the Announcer reads and keeps. Its place in the event log, the refusals and the last 20 messages are
 // one Setting row; the messages it edits later are DiscordPost rows.
@@ -64,8 +66,18 @@ async function ballotView(id: string): Promise<PollView | null> {
   };
 }
 
-export function prismaFeedStore(portal: string): FeedStore {
+export function prismaFeedStore(portal: string, repoDir?: string): FeedStore {
   return {
+    // docs/21 §6: the season's file, for the posts' titles and first messages
+    async season(id) {
+      return repoDir ? readSeasonFile(seasonsDir(repoDir), id) : null;
+    },
+    async seasonTitle(title) {
+      if (!repoDir || !title) return false;
+      const id = await currentSeasonId(seasonsDir(repoDir));
+      const file = id ? await readSeasonFile(seasonsDir(repoDir), id) : null;
+      return Boolean(file && findByTitle(file, title));
+    },
     async newestEventId() {
       return (await db.event.findFirst({ orderBy: { id: "desc" }, select: { id: true } }))?.id ?? 0n;
     },

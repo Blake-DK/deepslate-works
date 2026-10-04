@@ -8,6 +8,7 @@ import { ukShort } from "@/lib/uk-time";
 import { wakeLine } from "@/shared/server-state";
 import { VOTE_FIRST_BUTTON } from "@/shared/polls";
 import { dashedUuid } from "@/lib/heads";
+import { getSeasonCurrent, lineFor } from "@/server/season";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
   };
   const site = env.AUTH_URL.replace(/\/+$/, "");
   if (!user) return Response.json({ signedIn: false, site, server }, { headers: { "cache-control": "no-store" } });
-  const [news, pending] = await Promise.all([getAnnouncements(0), pendingFor({ id: user.id, role: user.role })]);
+  const [news, pending, season] = await Promise.all([getAnnouncements(0), pendingFor({ id: user.id, role: user.role }), getSeasonCurrent().then(lineFor).catch(() => null)]);
   const pinned = news.find((n) => n.pinned) ?? null;
   return Response.json(
     {
@@ -41,6 +42,9 @@ export async function GET(req: Request) {
       // 3.4.0 (docs/21 §7): the same players with their UUIDs, so the app can ask /api/app/head/<uuid>.png. A list of
       // its own: apps before 3.4.0 read "online" as names and would show nobody if it became objects
       players: status.online.map((p) => ({ name: p.name, uuid: dashedUuid(p.uuid) })),
+      // docs/20 §7 (W1.6): the season in the same one line as the site's Home; null while there is none. Apps that do
+      // not know the field ignore it
+      season,
       news: pinned ? { body: pinned.body, at: ukShort(pinned.createdAt), author: pinned.author, image: pinned.image ? `${site}${pinned.image}` : null } : null,
       votes: {
         polls: pending.polls.map(forClient).map((p) => ({ ...p, options: p.options.map((o) => ({ ...o, imageUrl: o.imageUrl ? `${site}${o.imageUrl}` : null })) })),

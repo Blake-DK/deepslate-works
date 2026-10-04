@@ -185,13 +185,13 @@ describe("the frame (docs/23 §4)", () => {
     expect(pillFor(s("off")).dot).toBe("asleep");
   });
   it("the tab strip holds every link the sidebar held, in its order, and nothing of the sidebar is left", () => {
-    expect(hrefs(nav)).toEqual(["/", "/map", "/help", "/mods", "/players", "/pack", "/votes", "/activity", "/admin", "/me"]);
+    expect(hrefs(nav)).toEqual(["/", "/map", "/help", "/mods", "/season", "/players", "/pack", "/votes", "/activity", "/admin", "/me"]); // /season only once a season is announced (docs/34 §5)
     expect(nav).toContain('<Strip label="Main">');
     expect(nav + links).not.toMatch(/MobileMenu|aria-label="Sidebar"|>Menu</);
     expect(links).toMatch(/overflow-x-auto whitespace-nowrap/);
   });
-  it("admin pages get the admin strip with the six admin pages", () => {
-    expect(hrefs(links.slice(links.indexOf("export function AdminStrip")))).toEqual(["/admin", "/admin/server", "/admin/pack", "/admin/people", "/admin/news", "/admin/site"]);
+  it("admin pages get the admin strip with the seven admin pages", () => {
+    expect(hrefs(links.slice(links.indexOf("export function AdminStrip")))).toEqual(["/admin", "/admin/server", "/admin/pack", "/admin/seasons", "/admin/people", "/admin/news", "/admin/site"]);
     expect(nav).toContain("{admin && <AdminStrip />}");
   });
   it("the display face is on the banner's name and the drawn logo tile only", () => {

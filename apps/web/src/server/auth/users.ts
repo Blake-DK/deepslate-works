@@ -12,6 +12,8 @@ type NewUser = {
   passwordHash?: string;
   inviteCode?: string; // omitted only for the ADMIN_DISCORD_ID bootstrap
   invitedById?: string | null;
+  outsideAuth?: boolean; // an invite brought them: the Discord server rule is not applied
+  guildMember?: boolean; // what Discord said at this sign-in, when the rule is on
 };
 
 /**
@@ -31,6 +33,8 @@ export async function createUser(input: NewUser) {
         passwordHash: input.passwordHash,
         role,
         invitedById: input.invitedById ?? null,
+        outsideAuth: input.outsideAuth ?? false,
+        guildMember: input.guildMember,
         lastSeenAt: new Date(),
       },
     });

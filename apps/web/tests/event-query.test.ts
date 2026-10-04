@@ -33,10 +33,10 @@ describe("what a player may see", () => {
     // a filter built for an admin and replayed as a player is cut down again
     const forged = readFilter({ kind: "CHAT,ADMIN_ACTION" }, true);
     expect(eventWhere(forged, false, null).kind.in).toEqual([...PLAYER_KINDS]);
-    expect(eventWhere(readFilter({}, false), false, null).kind.in).toEqual(["JOIN", "LEAVE", "DEATH", "ADVANCEMENT", "SERVER_START", "SERVER_STOP"]);
+    expect(eventWhere(readFilter({}, false), false, null).kind.in).toEqual(["JOIN", "LEAVE", "DEATH", "ADVANCEMENT", "SEASON", "SERVER_START", "SERVER_STOP"]);
   });
   it("admins get everything by default", () => {
-    expect(eventWhere(readFilter({}, true), true, null).kind.in).toHaveLength(19);
+    expect(eventWhere(readFilter({}, true), true, null).kind.in).toHaveLength(20);
     // superseded rows are kept, not shown, and rows without the mark (most of them: meta null or no key) are shown
     expect(eventWhere(readFilter({}, true), true, null)).not.toHaveProperty("NOT");
     expect(eventWhere(readFilter({}, true), true, null).OR).toEqual([{ meta: { equals: Prisma.AnyNull } }, { meta: { path: ["superseded"], equals: Prisma.AnyNull } }, { meta: { path: ["superseded"], equals: false } }]);
@@ -83,14 +83,14 @@ describe("csv", () => {
 const group = (key: string) => EVENT_GROUPS.find((g) => g.key === key) as EventGroup;
 
 describe("the chip groups", () => {
-  it("hold every kind exactly once, and the players' four hold exactly PLAYER_KINDS", () => {
+  it("hold every kind exactly once, and the players' five hold exactly PLAYER_KINDS", () => {
     const all = EVENT_GROUPS.flatMap((g) => g.kinds);
     expect([...all].sort()).toEqual([...EVENT_KINDS].sort()); // a new kind fails here until it joins a group
     expect(new Set(all).size).toBe(all.length);
     const players = groupsFor(false);
-    expect(players.map((g) => g.label)).toEqual(["Joins and leaves", "Deaths", "Advancements", "Server"]);
+    expect(players.map((g) => g.label)).toEqual(["Joins and leaves", "Deaths", "Advancements", "Season", "Server"]);
     expect([...players.flatMap((g) => g.kinds)].sort()).toEqual([...PLAYER_KINDS].sort());
-    expect(groupsFor(true)).toHaveLength(11); // and Everything makes twelve
+    expect(groupsFor(true)).toHaveLength(12); // and Everything makes thirteen
   });
 });
 

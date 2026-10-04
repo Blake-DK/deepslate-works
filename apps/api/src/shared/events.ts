@@ -4,23 +4,23 @@
 // docs/16 §4: what an audit entry becomes in the event log. Portal actions are ADMIN_ACTION or
 // PLAYER_ACTION rows with the action's name, parameters and result in `meta`; a few have a kind of their own.
 
-export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP", "INSTALL", "JOIN_BLOCKED", "DOWNLOAD"] as const;
+export const EVENT_KINDS = ["JOIN", "LEAVE", "DEATH", "CHAT", "ADVANCEMENT", "SERVER_START", "SERVER_STOP", "CRASH", "WARN", "ERROR", "ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP", "INSTALL", "JOIN_BLOCKED", "DOWNLOAD", "SEASON"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 /** What players may see at /events. Everything else is for admins. */
-export const PLAYER_KINDS: readonly EventKind[] = ["JOIN", "LEAVE", "DEATH", "ADVANCEMENT", "SERVER_START", "SERVER_STOP"];
+export const PLAYER_KINDS: readonly EventKind[] = ["JOIN", "LEAVE", "DEATH", "ADVANCEMENT", "SEASON", "SERVER_START", "SERVER_STOP"];
 
 export type Severity = "info" | "player" | "warning" | "error" | "admin";
 export const SEVERITY: Record<EventKind, Severity> = {
   JOIN: "player", LEAVE: "player", DEATH: "player", CHAT: "player", ADVANCEMENT: "player",
   SERVER_START: "info", SERVER_STOP: "info", CRASH: "error", WARN: "warning", ERROR: "error",
-  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin", INSTALL: "player", JOIN_BLOCKED: "warning", DOWNLOAD: "player",
+  ADMIN_ACTION: "admin", PLAYER_ACTION: "player", LINK: "player", REVOKE: "admin", SYNC: "admin", BACKUP: "admin", INSTALL: "player", JOIN_BLOCKED: "warning", DOWNLOAD: "player", SEASON: "player",
 };
 
 export const KIND_LABEL: Record<EventKind, string> = {
   JOIN: "Joined", LEAVE: "Left", DEATH: "Death", CHAT: "Chat", ADVANCEMENT: "Advancement",
   SERVER_START: "Server started", SERVER_STOP: "Server stopped", CRASH: "Crash", WARN: "Warning", ERROR: "Error",
-  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup", INSTALL: "Install", JOIN_BLOCKED: "Held at the door", DOWNLOAD: "Download",
+  ADMIN_ACTION: "Admin", PLAYER_ACTION: "Player", LINK: "Link", REVOKE: "Removed", SYNC: "Mod sync", BACKUP: "Backup", INSTALL: "Install", JOIN_BLOCKED: "Held at the door", DOWNLOAD: "Download", SEASON: "Season",
 };
 
 export type AuditResult = "OK" | "DENIED" | "FAILED" | "TIMEOUT";
@@ -111,6 +111,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "invite.create": "created an invite",
   "invite.revoke": "revoked an invite",
   "user.earlyAccess": (p) => (p.on ? `gave ${s(p.displayName, "a member")} early access` : `took early access away from ${s(p.displayName, "a member")}`),
+  "user.outsideAuth": (p) => (p.on ? `let ${s(p.displayName, "a member")} in without the Discord server` : `put ${s(p.displayName, "a member")} back under the Discord server rule`),
   "user.setRole": (p) => `changed a member's role to ${s(p.role).toLowerCase()}`,
   "user.remove": (p) => `removed ${s(p.displayName, "a member")} from the group${p.blocked ? " and blocked their Discord account" : ""}`,
   "user.unblock": (p) => `unblocked the Discord account of ${s(p.displayName, "a removed member")}`,
@@ -132,6 +133,13 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "limbo.adminRelease": (p) => (p.refused ? `could not let ${s(p.name)} in from the entrance room: they have not linked` : `let ${s(p.name)} in from the entrance room${p.back ? ", back to where they were" : ""}`),
   "limbo.kickIdle": (p) => `${s(p.name)} waited too long in the entrance room and was disconnected`,
   "limbo.build": "built the entrance room",
+  // docs/34 §6 (W1.4): Admin → Seasons
+  "season.announce": (p) => `announced ${s(p.name, "the season")}`,
+  "season.start": (p) => `started ${s(p.name, "the season")}`,
+  "season.end": (p) => `ended ${s(p.name, "the season")}: its result is frozen`,
+  "season.reload": "had the server read its datapacks again (reload)",
+  "season.grant": (p) => (p.already ? `gave ${s(p.member)} the tick for ${s(p.title)} again (they had it)` : `gave ${s(p.member)} the tick for ${s(p.title)}${p.inGame ? "" : " on the site only: they are not on the server"}`),
+  "season.revoke": (p) => (p.had ? `took the tick for ${s(p.title)} back from ${s(p.member)}${p.inGame ? "" : " on the site only: they are not on the server"}` : `took the tick for ${s(p.title)} back from ${s(p.member)} (they did not have it)`),
   "opac.serverClaims": "made the spawn area and the entrance room server claims",
   "player.revoke": (p) => `kicked ${s(p.name)} and took them off the whitelist`,
   "site.settings": "changed the launch settings",

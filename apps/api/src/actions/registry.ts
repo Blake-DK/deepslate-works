@@ -9,6 +9,8 @@ import { COMPONENTS_RE, ITEM_RE, SLOT_RE } from "../shared/slots.js";
 // "system" actions are run by the api itself (join hook, timers); the rest need an ADMIN caller.
 
 export const MC_NAME = z.string().regex(/^[A-Za-z0-9_]{3,16}$/);
+/** The id of a season, a boss or a trial, as the season files have them. */
+export const SEASON_ID = z.string().regex(/^[a-z0-9_]{1,32}$/);
 const POS = /^(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)$/;
 const DIMENSION = /^[a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64}$/;
 
@@ -664,9 +666,27 @@ export const actions = {
   "map.stop": define({ name: "map.stop", role: "ADMIN", input: z.object({}), build: () => ["bluemap stop"] }),
   "map.start": define({ name: "map.start", role: "ADMIN", input: z.object({}), build: () => ["bluemap start"] }),
   "map.status": define({ name: "map.status", role: "ADMIN", input: z.object({}), build: () => ["bluemap"] }),
+  // ---- seasons (docs/34 §6, W1.4). The ids come from the season file, checked by the route; never free text.
+  // A boss advancement shares itself with whoever stands near (its reward function), unless the player holds the
+  // tag dw.credit: an admin grant is for one player, so the tag is put on for the grant and taken off again.
+  "season.grant": define({
+    name: "season.grant",
+    role: "ADMIN",
+    input: z.object({ name: MC_NAME, season: SEASON_ID, kind: z.enum(["boss", "trial"]), id: SEASON_ID }),
+    build: (_ctx, { name, season, kind, id }) => [`tag ${name} add dw.credit`, `advancement grant ${name} only deepslate:${season}/${kind}/${id}`, `tag ${name} remove dw.credit`],
+  }),
+  "season.revoke": define({
+    name: "season.revoke",
+    role: "ADMIN",
+    input: z.object({ name: MC_NAME, season: SEASON_ID, kind: z.enum(["boss", "trial"]), id: SEASON_ID }),
+    build: (_ctx, { name, season, kind, id }) => [`advancement revoke ${name} only deepslate:${season}/${kind}/${id}`],
+  }),
+  // Reads every datapack again, the season one among them. On a server with this many mods it can hold the game
+  // for some seconds (docs/34 §8, decision 3: timed at the rehearsal).
+  "season.reload": define({ name: "season.reload", role: "ADMIN", input: z.object({}), build: () => ["reload"] }),
 };
 
 export type ActionName = keyof typeof actions;
 /** Admin actions with a route of their own, not reachable through POST /actions/:name. */
-export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify"]);
+export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify", "season.grant", "season.revoke", "season.reload"]);
 export const ADMIN_ACTIONS: ActionName[] = (Object.keys(actions) as ActionName[]).filter((n) => actions[n].role === "ADMIN");

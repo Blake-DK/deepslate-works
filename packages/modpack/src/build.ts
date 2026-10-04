@@ -72,7 +72,12 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
   // linger in dist/ and go to the server with every Sync, as TabTPS's did for a day (2026-09-29).
   await rm(path.join(out, "config"), { recursive: true, force: true });
   if (await exists(paths.config)) await cp(paths.config, path.join(out, "config"), { recursive: true });
-  if (await exists(paths.server)) await cp(paths.server, out, { recursive: true });
+  if (await exists(paths.server)) {
+    // The same for everything else modpack/server/ ships (defaultconfigs/, bluemap/, …): each of its folders is
+    // made afresh, so a file taken out of the repo does not stay in dist/ and go on travelling (docs/31 B-30).
+    for (const name of await readdir(paths.server)) if (name !== "config") await rm(path.join(out, name), { recursive: true, force: true });
+    await cp(paths.server, out, { recursive: true });
+  }
   // the logo next to the server in everyone's server list: server-icon.png, exactly 64×64, in the server's folder
   await rm(path.join(out, "server-icon.png"), { force: true });
   const icon = path.join(paths.dist, "branding", "logo-64.png");

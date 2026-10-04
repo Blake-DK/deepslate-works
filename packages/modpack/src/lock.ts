@@ -94,7 +94,9 @@ async function hashConfigs(configDir: string): Promise<LockFile["configs"]> {
 /** One hash over every file of modpack/resourcepack/ (path + content), or undefined without a pack.mcmeta. */
 export async function hashResourcePack(dir: string | undefined): Promise<string | undefined> {
   if (!dir) return undefined;
-  const files = await hashConfigs(dir);
+  // The same files Build puts into the pack (docs/31 B-30): README.md is for whoever drops textures in, is left
+  // out of the zip, and so must not move the pack's version when it is edited.
+  const files = (await hashConfigs(dir)).filter((c) => c.path !== "config/README.md");
   if (!files.some((c) => c.path === "config/pack.mcmeta")) return undefined;
   return createHash("sha256").update(files.map((c) => `${c.path}@${c.sha256}`).join("\n")).digest("hex");
 }
@@ -144,7 +146,7 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
   }
 
   const files = [...entries.values()].sort((a, b) => a.slug.localeCompare(b.slug));
-  widenForDependents(files);
+  widenForDependents(files, warn);
   if (opts.jarCache) {
     await mkdir(opts.jarCache, { recursive: true });
     for (const f of files) {

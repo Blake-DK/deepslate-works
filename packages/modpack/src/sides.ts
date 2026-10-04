@@ -33,10 +33,11 @@ export function sideFor(slug: string, p: Pick<ModrinthProject, "client_side" | "
  * A library takes the sides of what needs it: required by a mod that is on PCs, it is on PCs too (and the same for
  * the server). One that cannot go where it is needed (Modrinth says "unsupported" there) is an error.
  */
-export function widenForDependents(entries: LockEntry[]): void {
+export function widenForDependents(entries: LockEntry[], warn: (w: string) => void = () => {}): void {
   const bySlug = new Map(entries.map((e) => [e.slug, e]));
   const onClient = (s: Side) => s !== "server";
   const onServer = (s: Side) => s !== "client";
+  const said = new Set<string>();
   for (let changed = true; changed; ) {
     changed = false;
     for (const e of entries) {
@@ -48,7 +49,14 @@ export function widenForDependents(entries: LockEntry[]): void {
           e.side = "both"; changed = true;
         }
         if (onServer(parent.side) && !onServer(e.side)) {
-          if (e.modrinth?.server === "unsupported") throw new Error(`${e.slug}: ${by} needs it on the server, but Modrinth says it does not run there`);
+          // docs/31 B-26: a client-only library of a mod that runs on both sides (Fusion under Rechiseled) stays on
+          // PCs. The server cannot load it and the mod does without it there. It used to stop the whole Lock, so
+          // one votable mod winning made the pack unlockable.
+          if (e.modrinth?.server === "unsupported") {
+            if (!said.has(`${e.slug}<${by}`)) warn(`${e.slug}: ${by} runs on the server too, but this library is client-only on Modrinth; it stays on PCs`);
+            said.add(`${e.slug}<${by}`);
+            continue;
+          }
           e.side = "both"; changed = true;
         }
       }

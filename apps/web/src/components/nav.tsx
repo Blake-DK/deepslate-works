@@ -9,6 +9,7 @@ import { pendingFor } from "@/server/polls";
 import { getSection } from "@/server/site-settings";
 import { AdminStrip, BannerBox, NavLink, Strip, TabBadge } from "./nav-link";
 import { stripLink } from "./strip-link";
+import { getSeasonCurrent } from "@/server/season";
 
 const DOT = { up: "bg-play-hi", waking: "bg-primary", asleep: "bg-dim", down: "bg-danger" } as const;
 
@@ -34,9 +35,9 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
   const [user, brand] = await Promise.all([loadCurrentUser(), getBranding()]);
   const member = !!user?.pcTier;
   const admin = member && user!.role === "ADMIN";
-  const [status, vote, privacy, pending] = member
-    ? await Promise.all([getStatus(), getOpenVote(), getSection("privacy"), pendingFor({ id: user!.id, role: user!.role }).catch(() => null)])
-    : [null, null, null, null];
+  const [status, vote, privacy, pending, season] = member
+    ? await Promise.all([getStatus(), getOpenVote(), getSection("privacy"), pendingFor({ id: user!.id, role: user!.role }).catch(() => null), getSeasonCurrent().catch(() => null)])
+    : [null, null, null, null, null];
 
   const signOutForm = user && (
     <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }} className="contents">
@@ -100,6 +101,8 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
         <NavLink href="/map">Map</NavLink>
         <NavLink href="/help">Getting started</NavLink>
         <NavLink href="/mods">Mods guide</NavLink>
+        {/* the tab is there once a season has been announced (docs/34 §5) */}
+        {season && season.state !== "none" && <NavLink href="/season">Season</NavLink>}
         <NavLink href="/players">{stats ? "Players & stats" : "Players"}</NavLink>
         <NavLink href="/pack" badge={vote ? <TabBadge>vote</TabBadge> : null}>Mods &amp; vote</NavLink>
         <NavLink href="/votes" badge={polls ? <TabBadge>{polls === 1 ? "new" : polls}</TabBadge> : null}>Votes</NavLink>

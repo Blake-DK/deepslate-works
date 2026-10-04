@@ -18,7 +18,7 @@ const U = { anna: "11111111-1111-4111-8111-111111111111", ben: "22222222-2222-42
 const members = [
   { mcUuid: U.anna, mcName: "Anna", userId: "u-anna" },
   { mcUuid: U.ben, mcName: "Ben", userId: "u-ben" },
-  { mcUuid: U.cy, mcName: "Cy", userId: "u-cy" },
+  { mcUuid: U.cy, mcName: "Cyra", userId: "u-cy" },
 ];
 
 async function sample(): Promise<SeasonFile> {
@@ -99,11 +99,11 @@ describe("the season recorder", () => {
     const t = await setup();
     t.say("Anna", "completed the challenge", "The Rehearsal Ravager");
     await t.flush();
-    t.say("Cy", "completed the challenge", "The Rehearsal Ravager");
+    t.say("Cyra", "completed the challenge", "The Rehearsal Ravager");
     t.say("Anna", "completed the challenge", "The Rehearsal Ravager");
     await t.flush();
-    expect(t.store.rows.map((r) => [r.mcName, r.first])).toEqual([["Anna", true], ["Cy", false]]);
-    expect(t.events.map((e) => e.message)).toContain("Cy defeated The Rehearsal Ravager");
+    expect(t.store.rows.map((r) => [r.mcName, r.first])).toEqual([["Anna", true], ["Cyra", false]]);
+    expect(t.events.map((e) => e.message)).toContain("Cyra defeated The Rehearsal Ravager");
   });
 
   it("first is the store's to decide: of two clears of one thing at the same moment only one is first", async () => {

@@ -199,7 +199,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     }, 10_000);
     tail.start();
     poller.start();
-    if (env.AMP_MOCK !== "1") dumpPush.start();
+    dumpPush.start();
     limbo.start();
     pings.start();
     distances.start();

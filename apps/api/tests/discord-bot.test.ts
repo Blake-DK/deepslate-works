@@ -1,3 +1,4 @@
+import { describeAction, kindOf } from "../src/shared/events.js";
 import Fastify from "fastify";
 import { viaDiscord, viaDiscordHook } from "../src/audit.js";
 import { describe, expect, it } from "vitest";

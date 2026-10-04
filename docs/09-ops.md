@@ -59,7 +59,8 @@ on the VPS  ──► sudo /home/ladm/Minecraft-site/deploy/deploy.sh
 - **Logs are capped** at 5 files of 10 MB per container (B-21).
 - **The nightly dump** (B-20) is `deploy/backup-loop.sh`: 00:00 UTC, the newest 14 kept, a failed dump tried again after ten minutes. api copies the newest dump into `_backup/db/` in the instance over the pack's rsync link, where AMP's 01:00 UTC backup picks it up (docs/28 §4.7; B-07). Admin → Files refuses that folder.
 - **The AMP host's ssh key is pinned** once `deploy/keys/known_hosts` exists (B-23); `deploy.sh` prints the one command that makes it. Until then api trusts the key afresh at each start, as before.
-- **Not done:** the WireGuard and socat images are still `latest` (B-22): pinning needs the digests that run today, read as root. `dockhand-sync.py` still speaks http: Dockhand offers no https on that port, and the address is on the tailnet, which encrypts the hop (B-24).
+- **The WireGuard and socat images are pinned by digest** (B-22), to the ones running on 2026-10-04. Updating them is a deliberate edit of the compose file.
+- **Not done:** `dockhand-sync.py` still speaks http: Dockhand offers no https on that port, and the address is on the tailnet, which encrypts the hop (B-24).
 
 ## Dockhand (pull-only)
 

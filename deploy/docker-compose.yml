@@ -92,9 +92,10 @@ services:
       start_period: 40s
 
   wireguard:
-    # docs/31 B-22: still `latest`, with the two socat relays below. Pinning needs the digests that run today
-    # (docker inspect, root); a tag picked from outside would swap the tunnel's image at the next `up`.
-    image: lscr.io/linuxserver/wireguard:latest
+    # docs/31 B-22: pinned to the image that was running on 2026-10-04 (read with docker image inspect, docs/11),
+    # so neither a deploy nor Dockhand's redeploy can swap the tunnel's image unasked. To update on purpose: pull
+    # the new tag, read its digest, change it here, deploy on a quiet night.
+    image: lscr.io/linuxserver/wireguard@sha256:216ca1ce9da7bfe26fb752111d952487804bd18933bbd4794970d424bf8adfe9
     container_name: deepslate-wg
     restart: unless-stopped
     logging: *logging
@@ -158,7 +159,7 @@ services:
       start_period: 40s
 
   map-relay-inner:
-    image: alpine/socat:latest
+    image: alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50
     container_name: deepslate-map-relay-inner
     restart: unless-stopped
     logging: *logging
@@ -168,7 +169,7 @@ services:
     depends_on: [wireguard]
 
   map-relay-outer:
-    image: alpine/socat:latest
+    image: alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50
     container_name: deepslate-map-relay-outer
     restart: unless-stopped
     logging: *logging

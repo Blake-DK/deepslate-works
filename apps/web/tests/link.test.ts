@@ -101,8 +101,10 @@ describe("leaving the Discord server sticks (B-05)", () => {
 
   it("the member without Discord (email fallback) is not caught by that rule", async () => {
     expect(await linkWithCode({ ...fresh(), discordId: null, guildMember: false }, "ABC234", "link")).toMatchObject({ tone: "success" });
-    // came in by an invite: not in the Discord server, and not asked about it
-    expect(await checkCode({ ...fresh(), guildMember: false, outsideAuth: true }, "ABC234", "link")).toMatchObject({ ok: true });
+  });
+
+  it("nor is whoever came in by an invite: not in the Discord server, and not asked about it", async () => {
+    expect(await linkWithCode({ ...fresh(), guildMember: false, outsideAuth: true }, "ABC234", "link")).toMatchObject({ tone: "success" });
   });
 });
 

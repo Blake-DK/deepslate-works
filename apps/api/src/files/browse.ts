@@ -17,9 +17,17 @@ export class FileError extends Error {
 
 const isAmpError = (v: unknown): v is AmpError => Boolean(v) && typeof v === "object" && !Array.isArray(v) && typeof (v as AmpError).Title === "string" && "Message" in (v as object);
 
+/** `_backup/db` and everything under it, whatever the case or the slashes. */
+export function isDbDumps(path: string): boolean {
+  return /^_backup\/db(\/|$)/i.test(path.replace(/\\/g, "/").replace(/^\/+/, ""));
+}
+
 function checked(input: unknown, denied: readonly string[]): string {
   const c = cleanPath(input);
   if (!c.ok) throw new FileError("validation", c.reason, 400);
+  // docs/28 §4.7: the database dumps that ride along in the world backup are refused in code, because a saved
+  // denied list does not pick up a new default.
+  if (isDbDumps(c.path)) throw new FileError("forbidden", `"${c.path}" holds the portal's database dumps and is never shown or downloaded here.`, 403);
   if (isDenied(c.path, denied)) throw new FileError("forbidden", `"${c.path}" is on the list of files the portal never shows or downloads (worlds, player data, backups, keys). Use AMP for those.`, 403);
   return c.path;
 }
@@ -34,7 +42,7 @@ export async function list(amp: Amp, dir: unknown, denied: readonly string[]): P
     .map((e): Entry => {
       const p = path ? `${path}/${e.Filename}` : e.Filename;
       const dirEntry = Boolean(e.IsDirectory);
-      return { name: e.Filename, path: p, dir: dirEntry, size: dirEntry ? 0 : Math.max(0, Number(e.SizeBytes) || 0), modified: e.Modified ?? e.Created ?? null, denied: isDenied(dirEntry ? `${p}/` : p, denied) || isDenied(p, denied), text: !dirEntry && isTextLike(e.Filename) };
+      return { name: e.Filename, path: p, dir: dirEntry, size: dirEntry ? 0 : Math.max(0, Number(e.SizeBytes) || 0), modified: e.Modified ?? e.Created ?? null, denied: isDbDumps(p) || isDenied(dirEntry ? `${p}/` : p, denied) || isDenied(p, denied), text: !dirEntry && isTextLike(e.Filename) };
     })
     .sort((a, b) => Number(b.dir) - Number(a.dir) || a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
   return { path, entries };

@@ -2,6 +2,7 @@ import { connect } from "node:net";
 import { execFile } from "node:child_process";
 import type { Amp } from "./amp/client.js";
 import type { Env } from "./env.js";
+import { sshCommand } from "./modpack/ssh.js";
 
 export type Health = { ok: boolean; tunnel: "ok" | "down"; amp: "ok" | "mock" | "unconfigured" | "unreachable" | "auth_failed"; rsync: "ok" | "wrong_root" | "no_key" | "down" };
 
@@ -24,7 +25,7 @@ export function tcpReachable(host: string, port: number, timeoutMs = 2000): Prom
 function rsyncCheck(env: Env): Promise<Health["rsync"]> {
   return new Promise((resolve) => {
     const target = env.RSYNC_TARGET.endsWith(":") ? env.RSYNC_TARGET : `${env.RSYNC_TARGET}:`;
-    const ssh = `ssh -i ${env.DEPLOY_KEY_PATH} -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=3`;
+    const ssh = sshCommand(env.DEPLOY_KEY_PATH, 3);
     execFile("rsync", ["-e", ssh, "--list-only", target], { timeout: 12000 }, (err, stdout, stderr) => {
       const text = `${stdout}${stderr}`;
       if (/no such file|not accessible|Load key/i.test(String(stderr))) return resolve("no_key");

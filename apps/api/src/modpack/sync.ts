@@ -3,6 +3,7 @@ import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import type { Env } from "../env.js";
 import type { Amp } from "../amp/client.js";
+import { sshCommand } from "./ssh.js";
 
 // docs/06 + docs/13 §4: rsync dist/server/ into the AMP instance's Minecraft/ dir over the tunnel
 // (rrsync-restricted deploy key), then Core.Restart through the ADS proxy if the mod set changed.
@@ -28,7 +29,7 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; b
   } catch {
     return { ok: false, lines: ["dist/server/mods not found: run Build first"], restarted: false, dryRun };
   }
-  const ssh = `ssh -i ${env.DEPLOY_KEY_PATH} -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10`;
+  const ssh = sshCommand(env.DEPLOY_KEY_PATH, 10);
   const target = env.RSYNC_TARGET.endsWith(":") ? env.RSYNC_TARGET : `${env.RSYNC_TARGET}:`;
   // 1. mods: replaced wholesale (--delete), dry run first to learn whether anything changes
   const dry = await run("rsync", ["-rlt", "--delete", "--itemize-changes", "--dry-run", "-e", ssh, `${DIST_SERVER}/mods/`, `${target}mods/`], 120_000);

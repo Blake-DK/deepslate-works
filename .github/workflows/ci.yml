@@ -31,6 +31,11 @@ jobs:
     needs: check
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
+    # docs/31 B-08: one image build per branch and app at a time, in the order of the pushes, so an older run can
+    # never finish last and leave `latest` on an older commit. A pull request's older run is simply cancelled.
+    concurrency:
+      group: images-${{ github.ref }}-${{ matrix.app }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     permissions:
       contents: read
       packages: write

@@ -116,7 +116,7 @@ describe("season moments in Discord (docs/21 §6, docs/22 §13)", () => {
       "Server goal: 2 of 3 boss kills. Half way.",
       "**Anna** takes the lead with 20 points",
       "A week to go in Sample Season · Dress Rehearsal",
-      "**Sample Season · Dress Rehearsal is over. Anna wins with 20 points.**\nThe result is kept in the hall of fame: https://deepslate.dsw.test/season?tab=hall",
+      "**Sample Season · Dress Rehearsal is over.** Anna wins with 20 points.\nThe result is kept in the hall of fame: https://deepslate.dsw.test/season?tab=hall",
     ]);
   });
 
@@ -165,7 +165,9 @@ describe("season moments in Discord (docs/21 §6, docs/22 §13)", () => {
   it("a moment about a boss the file no longer has is dropped, and names from the game cannot mention or format", async () => {
     const t = await setup();
     expect(seasonPost({ meta: { what: "boss", id: "gone" } }, t.file, PORTAL)).toBeNull();
-    expect(seasonReply({ message: "x", meta: { what: "leader", name: "@everyone_", points: 5 } }, t.file, PORTAL)).not.toContain("**@everyone_**");
+    expect(seasonReply({ message: "x", meta: { what: "leader", name: "@everyone_", points: 5 } }, t.file, PORTAL)).not.toContain("@everyone_");
+    expect(seasonReply({ message: "x", meta: { what: "boss", id: "rehearsal_golem", title: "The Rehearsal Golem", names: ["a_b_c"], first: false } }, t.file, PORTAL)).toBe("a\\_b\\_c beat The Rehearsal Golem.");
+    expect(seasonReply({ message: "x", meta: { what: "something_new" } }, t.file, PORTAL)).toBeNull();
     t.season("x", { what: "boss", id: "gone", names: ["Anna"] });
     await t.a.round();
     expect(t.sent()).toHaveLength(0);

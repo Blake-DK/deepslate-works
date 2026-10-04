@@ -251,7 +251,9 @@ export type SeasonInfo = {
 export type SeasonPost = { key: string; title: string; tag: "Boss" | "Trial" | "Season"; opener: string };
 
 const list = (xs: string[]) => (xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
-const bold = (s: string) => `**${escapeText(s)}**`;
+// Titles, places and hints are the season file's own words (linted, ours): written as they are. Players' names come
+// from the game and are escaped.
+const bold = (s: string) => `**${s}**`;
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
 /** The post a season moment belongs to, with its first message; null when the season's file does not have the boss or trial. */
@@ -262,13 +264,13 @@ export function seasonPost(e: Pick<FeedEvent, "meta">, s: SeasonInfo, portal: st
   if (what === "boss" || what === "wake" || what === "boss_open") {
     const b = s.bosses.find((x) => x.id === id);
     if (!b) return null;
-    const about = [b.where, b.hint].filter(Boolean).map(escapeText).join(". ");
+    const about = [b.where, b.hint].filter(Boolean).join(". ");
     return { key: `boss:${s.id}:${b.id}`, title: `${b.title} · ${s.name}`.slice(0, 100), tag: "Boss", opener: `${bold(b.title)} · tier ${b.tier} · ${b.points} points, twice for the first on the server${about ? `\n${about}` : ""}` };
   }
   if (what === "trial" || what === "trial_open") {
     const t = s.trials.find((x) => x.id === id);
     if (!t) return null;
-    return { key: `trial:${s.id}:${t.id}`, title: `Trial: ${t.title} · ${s.name}`.slice(0, 100), tag: "Trial", opener: `${bold(`Trial: ${t.title}`)} · ${t.points} points${t.hint ? `\n${escapeText(t.hint)}` : ""}` };
+    return { key: `trial:${s.id}:${t.id}`, title: `Trial: ${t.title} · ${s.name}`.slice(0, 100), tag: "Trial", opener: `${bold(`Trial: ${t.title}`)} · ${t.points} points${t.hint ? `\n${t.hint}` : ""}` };
   }
   return { key: `season:${s.id}`, title: s.name.slice(0, 100), tag: "Season", opener: `${bold(s.name)}\nThe ladder, the trials and the scoreboard: ${portal}/season` };
 }
@@ -278,7 +280,7 @@ export function seasonReply(e: Pick<FeedEvent, "message" | "meta">, s: SeasonInf
   const m = metaOf(e);
   const what = String(m.what ?? "");
   const names = strings(m.names).map(escapeText);
-  const title = escapeText(String(m.title ?? ""));
+  const title = String(m.title ?? "");
   const item = what === "boss" ? s.bosses.find((x) => x.id === m.id) : what === "trial" ? s.trials.find((x) => x.id === m.id) : undefined;
   const early = m.early ? " Found early." : "";
   switch (what) {
@@ -296,12 +298,20 @@ export function seasonReply(e: Pick<FeedEvent, "message" | "meta">, s: SeasonInf
       return `Server goal: ${Number(m.count ?? 0)} of ${Number(m.target ?? 0)} boss kills.${pc >= 100 ? " Done!" : pc === 50 ? " Half way." : ""}`;
     }
     case "leader":
-      return `${bold(String(m.name ?? ""))} takes the lead with ${Number(m.points ?? 0)} points`;
+      return `${bold(escapeText(String(m.name ?? "")))} takes the lead with ${Number(m.points ?? 0)} points`;
     case "started":
-      return `**${escapeText(s.name)} has begun.** A trial every week: ${portal}/season`;
-    case "ended":
-      return `**${escapeText(e.message)}**\nThe result is kept in the hall of fame: ${portal}/season?tab=hall`;
+      return `**${s.name} has begun.** A trial every week: ${portal}/season`;
+    case "ended": {
+      const winners = strings(m.winners).map(escapeText);
+      const won = winners.length === 0 ? "" : winners.length === 1 ? ` ${winners[0]} wins with ${Number(m.points ?? 0)} points.` : ` ${list(winners)} share first place with ${Number(m.points ?? 0)} points.`;
+      return `**${s.name} is over.**${won}\nThe result is kept in the hall of fame: ${portal}/season?tab=hall`;
+    }
+    case "announced":
+    case "week_to_go":
+    case "day_to_go":
+    case "finale":
+      return e.message; // the recorder's own words: the season's name, a title and a time, no player's name
     default:
-      return escapeText(e.message); // announced, a week to go, a day to go, the finale
+      return null;
   }
 }

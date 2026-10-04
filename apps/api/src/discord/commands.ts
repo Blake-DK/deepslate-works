@@ -90,7 +90,7 @@ export async function runCommand(d: CommandDeps, name: string, options: Option[]
       const s = await d.season?.(m?.id ?? null);
       if (!s?.line) return say("No season is running yet.");
       const mine = s.mine ? `\nYou are ${ordinal(s.mine.place)} with ${s.mine.points} ${s.mine.points === 1 ? "point" : "points"}.` : m ? "\nYou have no points yet." : "";
-      return say(`${escapeText(s.line)}${mine}\n${d.portal}/season`);
+      return say(`${s.line}${mine}\n${d.portal}/season`);
     }
   }
   // from here on: members of the portal only

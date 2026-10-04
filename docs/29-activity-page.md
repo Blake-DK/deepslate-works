@@ -58,11 +58,11 @@ Tests, in the manner of the existing event-query tests:
 
 ## 5. Done when
 
-- [ ] `/activity` with no query shows the log straight away, Everything lit, no tick boxes, Live running.
-- [ ] As an admin: Deaths shows only deaths; Deaths then Advancements shows both; Everything brings all of it back. The address bar holds the filter and the link opens the same view in another tab.
+- [x] `/activity` with no query shows the log straight away, Everything lit, no tick boxes, Live running.
+- [x] As an admin: Deaths shows only deaths; Deaths then Advancements shows both; Everything brings all of it back. The address bar holds the filter and the link opens the same view in another tab.
 - [ ] As a player (an account that is not an admin): five chips, no admin group in the page source, no address in any row.
 - [ ] A join or a death during the visit appears at the top of the same list without a reload, and an admin can open it for the console line.
-- [ ] More filters: a player name plus a date narrows the list, the "Showing …" line says so, Clear brings everything back.
-- [ ] Export CSV with Deaths lit holds only deaths.
-- [ ] The links from Control Room → recent activity and from a player's page still land on the right rows.
+- [x] More filters: a player name plus a date narrows the list, the "Showing …" line says so, Clear brings everything back.
+- [x] Export CSV with Deaths lit holds only deaths.
+- [x] The links from Control Room → recent activity and from a player's page still land on the right rows.
 - [ ] On a phone the chips wrap and nothing scrolls sideways.

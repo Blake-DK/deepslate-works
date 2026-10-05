@@ -12,7 +12,7 @@
 // "plain" is the vanilla settings as they are: what a world is without either, to compare against.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const PACK_FORMAT = 48; // Minecraft 1.21.1
@@ -46,6 +46,7 @@ const SHAPE = {
 
 const POINTS = [[0, 0], [1000, 1000], [-2500, 700], [4000, -3000], [-800, -5200], [7000, 7000]];
 const AIR_Y = [40, 70, 100];
+const BIOME_Y = 64;
 /** label → dimension. The game's own three are measured too: a plain copy should be their twin. */
 const DIMS = [
   ["main", "minecraft:overworld"],
@@ -125,8 +126,10 @@ function packs(vanilla, out) {
   }
 }
 
-function commands(step) {
+function commands(step, vanilla) {
   const lines = [];
+  // every biome the game has, from its own files: the game has no "which biome is this", only "is it this one"
+  const biomes = step === "measure" ? readdirSync(path.join(vanilla, "biome")).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5)).sort() : [];
   for (const [label, dim] of DIMS) {
     POINTS.forEach(([x, z], i) => {
       if (step === "load") lines.push(`execute in ${dim} run forceload add ${x} ${z}`);
@@ -134,6 +137,7 @@ function commands(step) {
         // the height of the ground (water does not count), carried out of the game in a marker's own name
         lines.push(`execute in ${dim} positioned ${x} 0 ${z} positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-${label}-${i}"'}`);
         for (const y of AIR_Y) lines.push(`execute in ${dim} if block ${x} ${y} ${z} #minecraft:air run say A-${label}-${i}-${y}`);
+        for (const b of biomes) lines.push(`execute in ${dim} if biome ${x} ${BIOME_Y} ${z} minecraft:${b} run say B-${label}-${i}-${b}`);
       }
     });
   }
@@ -157,28 +161,32 @@ function report(logFile) {
     heights.set(m[1], row);
   }
   for (const m of log.matchAll(/\[Server\] (A-[a-z_]+-\d+-\d+)/g)) air.add(m[1]);
+  const biomeAt = new Map(); // label-point → biome
+  for (const m of log.matchAll(/\[Server\] B-([a-z_]+-\d+)-([a-z_]+)/g)) biomeAt.set(m[1], m[2]);
   const signature = (label) => {
     const h = heights.get(label);
     if (!h || h.filter((v) => v !== undefined).length !== POINTS.length) return null;
     const bits = POINTS.map((_, i) => AIR_Y.map((y) => (air.has(`A-${label}-${i}-${y}`) ? "1" : "0")).join("")).join(" ");
-    return { h, bits };
+    const biomes = POINTS.map((_, i) => biomeAt.get(`${label}-${i}`) ?? "?");
+    return { h, bits, biomes };
   };
-  const out = ["## Worldgen boot", "", `Heights of the ground at ${POINTS.map((p) => `(${p.join(", ")})`).join(" ")}; air at y ${AIR_Y.join(", ")} per point.`, "", "| World | Heights | Air |", "|---|---|---|"];
+  const out = ["## Worldgen boot", "", `Heights of the ground at ${POINTS.map((p) => `(${p.join(", ")})`).join(" ")}; air at y ${AIR_Y.join(", ")} per point; the biome at y ${BIOME_Y}.`, "", "| World | Heights | Air | Biomes |", "|---|---|---|---|"];
   const missing = [];
   for (const [label] of DIMS) {
     const s = signature(label);
     if (!s) missing.push(label);
-    out.push(`| ${label} | ${s ? s.h.join(", ") : "**no data**"} | ${s ? s.bits : ""} |`);
+    out.push(`| ${label} | ${s ? s.h.join(", ") : "**no data**"} | ${s ? s.bits : ""} | ${s ? s.biomes.join(", ") : ""} |`);
   }
   const differs = (a, b) => {
     const x = signature(a);
     const y = signature(b);
-    if (!x || !y) return "no data";
+    if (!x || !y) return "no data | no data";
     const n = x.h.filter((v, i) => v !== y.h[i]).length;
     const same = n === 0 && x.bits === y.bits;
-    return same ? "**the same**" : `differs (${n} of ${POINTS.length} heights${x.bits === y.bits ? "" : ", air too"})`;
+    const b = x.biomes.filter((v, i) => v !== y.biomes[i]).length;
+    return `${same ? "**the same**" : `differs (${n} of ${POINTS.length} heights${x.bits === y.bits ? "" : ", air too"})`} | ${b === 0 ? "**the same**" : `differ at ${b} of ${POINTS.length}`}`;
   };
-  out.push("", "| Question | Answer |", "|---|---|");
+  out.push("", "| Question | Ground | Biomes |", "|---|---|---|");
   for (const [q, a, b] of [
     ["A plain copy is the main world's twin", "t_plain", "main"],
     ["Shift: seed alpha against the main world", "t_shift_a", "main"],
@@ -202,9 +210,9 @@ function report(logFile) {
 
 const [what, a, b] = process.argv.slice(2);
 if (what === "packs" && a && b) packs(a, b);
-else if (what === "commands" && ["load", "measure", "read"].includes(a)) commands(a);
+else if (what === "commands" && ["load", "measure", "read"].includes(a) && (a !== "measure" || b)) commands(a, b);
 else if (what === "report" && a) report(a);
 else {
-  console.error("usage: worldgen.mjs packs <vanilla worldgen dir> <datapacks dir> | commands load|measure|read| report <server.log>");
+  console.error("usage: worldgen.mjs packs <vanilla worldgen dir> <datapacks dir> | commands load|read | commands measure <vanilla worldgen dir> | report <server.log>");
   process.exit(2);
 }

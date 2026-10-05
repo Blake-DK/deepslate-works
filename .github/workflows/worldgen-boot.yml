@@ -56,7 +56,7 @@ jobs:
           until_said() { for i in $(seq 1 300); do grep -q "$1" server.log && return 0; kill -0 "$pid" 2>/dev/null || return 1; sleep 2; done; return 1; }
           node ../tools/worldgen-boot/worldgen.mjs commands load >&3
           until_said STEP-LOADED; sleep 20
-          node ../tools/worldgen-boot/worldgen.mjs commands measure >&3
+          node ../tools/worldgen-boot/worldgen.mjs commands measure vanilla/data/minecraft/worldgen >&3
           until_said STEP-SUMMONED; sleep 10
           node ../tools/worldgen-boot/worldgen.mjs commands read >&3
           until_said PROBES-DONE; sleep 5

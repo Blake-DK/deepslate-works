@@ -9,6 +9,35 @@ import { COMPONENTS_RE, ITEM_RE, SLOT_RE } from "../shared/slots.js";
 // "system" actions are run by the api itself (join hook, timers); the rest need an ADMIN caller.
 
 export const MC_NAME = z.string().regex(/^[A-Za-z0-9_]{3,16}$/);
+// ---- builds (docs/34 §10)
+/** A structure file holds 48 blocks a side at most; a larger build is a grid of pieces. */
+export const PIECE = 48;
+export const MAX_BUILD_SIDE = 192;
+export const MAX_BUILD_PIECES = 12;
+export const BUILD_NAME = z.string().regex(/^[a-z0-9_]{2,24}$/);
+/** Where a build may be taken from or put: the main world or a season's Frontier. Never the entrance room. */
+export const BUILD_DIMENSION = z.string().regex(/^(minecraft:overworld|deepslate:frontier_[a-z0-9_]{1,32})$/);
+const COORD = z.number().int().min(-100_000).max(100_000);
+const BLOCK = z.object({ x: COORD, y: z.number().int().min(-64).max(318), z: COORD });
+export type Block = { x: number; y: number; z: number };
+export type Piece = { ix: number; iy: number; iz: number; dx: number; dy: number; dz: number; sx: number; sy: number; sz: number };
+
+/** The box two corners span, whichever way round they were given: its lowest corner and its size in blocks. */
+export function buildBox(a: Block, b: Block): { min: Block; max: Block; size: Block } {
+  const min = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), z: Math.min(a.z, b.z) };
+  const max = { x: Math.max(a.x, b.x), y: Math.max(a.y, b.y), z: Math.max(a.z, b.z) };
+  return { min, max, size: { x: max.x - min.x + 1, y: max.y - min.y + 1, z: max.z - min.z + 1 } };
+}
+
+/** The pieces a build of this size is saved and placed as, each 48 a side at most, with its offset from the lowest corner. */
+export function buildPieces(size: Block): Piece[] {
+  const cut = (n: number) => Array.from({ length: Math.ceil(n / PIECE) }, (_, i) => ({ i, d: i * PIECE, s: Math.min(PIECE, n - i * PIECE) }));
+  const out: Piece[] = [];
+  for (const y of cut(size.y)) for (const x of cut(size.x)) for (const zz of cut(size.z)) out.push({ ix: x.i, iy: y.i, iz: zz.i, dx: x.d, dy: y.d, dz: zz.d, sx: x.s, sy: y.s, sz: zz.s });
+  return out;
+}
+export const pieceName = (name: string, p: Pick<Piece, "ix" | "iy" | "iz">) => `${name}_${p.ix}_${p.iy}_${p.iz}`;
+
 /** The id of a season, a boss or a trial, as the season files have them. */
 export const SEASON_ID = z.string().regex(/^[a-z0-9_]{1,32}$/);
 const POS = /^(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)$/;
@@ -684,9 +713,58 @@ export const actions = {
   // Reads every datapack again, the season one among them. On a server with this many mods it can hold the game
   // for some seconds (docs/34 §8, decision 3: timed at the rehearsal).
   "season.reload": define({ name: "season.reload", role: "ADMIN", input: z.object({}), build: () => ["reload"] }),
+  // ---- builds (docs/34 §10, T2 to T4): take something that stands in the world, put it somewhere else, lock the ground.
+  // The game has no console command that saves a structure, so a structure block in SAVE mode is set above each
+  // piece and powered with a redstone block; both are taken away again. The file lands in
+  // world/generated/deepslate/structures/. The area is force-loaded for as long as the commands run.
+  "build.capture": define({
+    name: "build.capture",
+    role: "ADMIN",
+    input: z.object({ name: BUILD_NAME, dimension: BUILD_DIMENSION, from: BLOCK, to: BLOCK }).refine((i) => i.name.length > 0 && buildPieces(buildBox(i.from, i.to).size).length <= MAX_BUILD_PIECES),
+    gapMs: 400,
+    build: (_ctx, { name, dimension, from, to }) => {
+      const box = buildBox(from, to);
+      const at = (cmd: string) => `execute in ${dimension} run ${cmd}`;
+      const out = [at(`forceload add ${box.min.x} ${box.min.z} ${box.max.x} ${box.max.z}`)];
+      for (const p of buildPieces(box.size)) {
+        // the structure block stands one above the piece's top, over its north-west corner; the redstone block on top of it
+        const b = { x: box.min.x + p.dx, y: box.min.y + p.dy + p.sy, z: box.min.z + p.dz };
+        out.push(
+          at(`setblock ${b.x} ${b.y} ${b.z} minecraft:structure_block{mode:"SAVE",name:"deepslate:${pieceName(name, p)}",posX:0,posY:${-p.sy},posZ:0,sizeX:${p.sx},sizeY:${p.sy},sizeZ:${p.sz},ignoreEntities:1b}`),
+          at(`setblock ${b.x} ${b.y + 1} ${b.z} minecraft:redstone_block`),
+          at(`setblock ${b.x} ${b.y + 1} ${b.z} minecraft:air`),
+          at(`setblock ${b.x} ${b.y} ${b.z} minecraft:air`),
+        );
+      }
+      out.push(at(`forceload remove ${box.min.x} ${box.min.z} ${box.max.x} ${box.max.z}`));
+      return out;
+    },
+  }),
+  "build.place": define({
+    name: "build.place",
+    role: "ADMIN",
+    input: z.object({ name: BUILD_NAME, dimension: BUILD_DIMENSION, at: BLOCK, size: z.object({ x: z.number().int().min(1).max(MAX_BUILD_SIDE), y: z.number().int().min(1).max(MAX_BUILD_SIDE), z: z.number().int().min(1).max(MAX_BUILD_SIDE) }) }).refine((i) => buildPieces(i.size).length <= MAX_BUILD_PIECES),
+    gapMs: 400,
+    build: (_ctx, { name, dimension, at: pos, size }) => {
+      const at = (cmd: string) => `execute in ${dimension} run ${cmd}`;
+      const far = { x: pos.x + size.x - 1, z: pos.z + size.z - 1 };
+      return [
+        at(`forceload add ${pos.x} ${pos.z} ${far.x} ${far.z}`),
+        ...buildPieces(size).map((p) => at(`place template deepslate:${pieceName(name, p)} ${pos.x + p.dx} ${pos.y + p.dy} ${pos.z + p.dz}`)),
+        at(`forceload remove ${pos.x} ${pos.z} ${far.x} ${far.z}`),
+      ];
+    },
+  }),
+  // A server claim over the build's ground, as the spawn claim is made: nobody breaks or places a block there.
+  "build.lock": define({
+    name: "build.lock",
+    role: "ADMIN",
+    input: z.object({ dimension: BUILD_DIMENSION, x1: COORD, z1: COORD, x2: COORD, z2: COORD }).refine((i) => Math.abs(i.x2 - i.x1) <= 512 && Math.abs(i.z2 - i.z1) <= 512),
+    build: (_ctx, { dimension, x1, z1, x2, z2 }) => [`oclaims server claim in ${dimension} ${Math.min(x1, x2)} ${Math.min(z1, z2)} ${Math.max(x1, x2)} ${Math.max(z1, z2)} anyway`],
+  }),
 };
 
 export type ActionName = keyof typeof actions;
 /** Admin actions with a route of their own, not reachable through POST /actions/:name. */
-export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify", "season.grant", "season.revoke", "season.reload"]);
+export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify", "season.grant", "season.revoke", "season.reload", "build.capture", "build.place", "build.lock"]);
 export const ADMIN_ACTIONS: ActionName[] = (Object.keys(actions) as ActionName[]).filter((n) => actions[n].role === "ADMIN");

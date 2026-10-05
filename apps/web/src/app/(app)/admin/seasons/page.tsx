@@ -12,6 +12,7 @@ import { Label, fieldClasses } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ukDayTime } from "@/lib/uk-time";
 import { seasonOpAction, seasonTickAction } from "./actions";
+import { BuildsCard, type BuildsView } from "./builds-card";
 
 export const metadata: Metadata = { title: "Seasons" };
 
@@ -37,6 +38,10 @@ const MSG: Record<string, string> = {
   revoked: "Taken back, on the site and in the game.",
   revokedSite: "Taken back on the site. They are not on the server, so the game's own tick stays until it is taken back there.",
   revokedNone: "They did not have that tick.",
+  captured: "Captured:",
+  placed: "Placed:",
+  placedLocked: "Placed, and its ground is locked:",
+  placedNotLocked: "Placed, but the lock was not taken by the server. Lock it by hand:",
   error: "That didn't work:",
 };
 const STATE: Record<string, { label: string; tone: "neutral" | "good" | "info" }> = { upcoming: { label: "Announced, not started", tone: "info" }, running: { label: "Running", tone: "good" }, ended: { label: "Ended", tone: "neutral" } };
@@ -49,6 +54,7 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
   const msg = typeof q.msg === "string" ? q.msg : undefined;
   const detail = typeof q.detail === "string" ? q.detail : undefined;
   const view = await apiFetch<View>("/seasons", { caller: { id: admin.id, role: "ADMIN" } }).catch(() => null);
+  const builds = await apiFetch<BuildsView>("/builds", { caller: { id: admin.id, role: "ADMIN" } }).catch(() => null);
   const file = view?.file ?? null;
   const state = view?.row?.state ?? null;
   return (
@@ -145,6 +151,7 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
           )}
         </div>
       )}
+      <BuildsCard view={builds} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
     </TabbedPage>
   );
 }

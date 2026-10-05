@@ -1,0 +1,25 @@
+# docs/36 Step 0 part 2: the six points of the CI job, kept loaded until probe/unload
+execute in minecraft:overworld run forceload add 0 0
+execute in minecraft:overworld run forceload add 1000 1000
+execute in minecraft:overworld run forceload add -2500 700
+execute in minecraft:overworld run forceload add 4000 -3000
+execute in minecraft:overworld run forceload add -800 -5200
+execute in minecraft:overworld run forceload add 7000 7000
+execute in deepslate:t_shift_a run forceload add 0 0
+execute in deepslate:t_shift_a run forceload add 1000 1000
+execute in deepslate:t_shift_a run forceload add -2500 700
+execute in deepslate:t_shift_a run forceload add 4000 -3000
+execute in deepslate:t_shift_a run forceload add -800 -5200
+execute in deepslate:t_shift_a run forceload add 7000 7000
+execute in deepslate:t_shift_b run forceload add 0 0
+execute in deepslate:t_shift_b run forceload add 1000 1000
+execute in deepslate:t_shift_b run forceload add -2500 700
+execute in deepslate:t_shift_b run forceload add 4000 -3000
+execute in deepslate:t_shift_b run forceload add -800 -5200
+execute in deepslate:t_shift_b run forceload add 7000 7000
+execute in deepslate:frontier_sample run forceload add 0 0
+execute in deepslate:frontier_sample run forceload add 1000 1000
+execute in deepslate:frontier_sample run forceload add -2500 700
+execute in deepslate:frontier_sample run forceload add 4000 -3000
+execute in deepslate:frontier_sample run forceload add -800 -5200
+execute in deepslate:frontier_sample run forceload add 7000 7000

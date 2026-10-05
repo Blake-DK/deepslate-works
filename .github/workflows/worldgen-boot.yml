@@ -1,0 +1,78 @@
+name: worldgen-boot
+# The worlds plan, Step 0: a worldgen file with a mistake in it can stop a dedicated server from starting, so every
+# datapack dimension we make is started here first, on a vanilla 1.21.1 server that is thrown away. The same run
+# measures the ground at a few points in each test world, on the live world's seed, so "this world differs from the
+# main one" is a number. Nothing here touches the real server.
+on:
+  push:
+    branches: [dev, main]
+    paths: ["tools/worldgen-boot/**", ".github/workflows/worldgen-boot.yml"]
+  pull_request:
+    paths: ["tools/worldgen-boot/**", ".github/workflows/worldgen-boot.yml"]
+  workflow_dispatch:
+
+jobs:
+  boot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The vanilla 1.21.1 server, from Mojang, and its worldgen files
+        run: |
+          set -euo pipefail
+          mkdir -p run && cd run
+          meta=$(curl -fsSL https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r '.versions[] | select(.id=="1.21.1") | .url')
+          curl -fsSL "$meta" -o version.json
+          curl -fsSL "$(jq -r .downloads.server.url version.json)" -o server.jar
+          echo "$(jq -r .downloads.server.sha1 version.json)  server.jar" | sha1sum -c -
+          unzip -q server.jar 'META-INF/versions/*' -d bundle
+          unzip -q bundle/META-INF/versions/1.21.1/server-1.21.1.jar 'data/minecraft/worldgen/*' -d vanilla
+      - name: The test packs
+        run: node tools/worldgen-boot/worldgen.mjs packs run/vanilla/data/minecraft/worldgen run/world/datapacks
+      - name: Start the server and measure
+        run: |
+          set -uo pipefail
+          cd run
+          echo eula=true > eula.txt
+          # the live world's seed, so a test world can be compared with the main world at the same place
+          printf 'level-seed=%s\nonline-mode=false\nmax-tick-time=-1\nview-distance=4\nsimulation-distance=4\nspawn-protection=0\n' "-3899835130120818196" > server.properties
+          mkfifo in
+          java -Xmx3G -jar server.jar nogui < in > server.log 2>&1 &
+          pid=$!
+          exec 3> in
+          for i in $(seq 1 240); do
+            grep -q 'Done (' server.log && break
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 2
+          done
+          if ! grep -q 'Done (' server.log; then echo "the server did not start:"; tail -150 server.log; exit 1; fi
+          until_said() { for i in $(seq 1 300); do grep -q "$1" server.log && return 0; kill -0 "$pid" 2>/dev/null || return 1; sleep 2; done; return 1; }
+          node ../tools/worldgen-boot/worldgen.mjs commands load >&3
+          until_said STEP-LOADED; sleep 20
+          node ../tools/worldgen-boot/worldgen.mjs commands measure vanilla/data/minecraft/worldgen >&3
+          until_said STEP-SUMMONED; sleep 10
+          node ../tools/worldgen-boot/worldgen.mjs commands read >&3
+          until_said PROBES-DONE; sleep 5
+          echo stop >&3
+          wait "$pid" || true
+          grep -iE 'ERROR|Exception|Failed to' server.log | head -60 || true
+      - name: What was measured
+        if: always()
+        run: |
+          set -o pipefail
+          node tools/worldgen-boot/worldgen.mjs report run/server.log | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: worldgen-boot
+          path: |
+            run/server.log
+            run/world/datapacks
+          retention-days: 14

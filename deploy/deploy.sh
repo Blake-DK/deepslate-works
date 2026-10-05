@@ -142,6 +142,12 @@ if [ ! -d data/news ]; then
   [ "$(id -u)" = 0 ] && chown "$owner": data/news
   echo "created data/news"
 fi
+# docs/34 §10: builds an admin uploads. web writes them; api (the modpack build) reads them. Made here with web's
+# owner: if docker made it for api's mount, it would be root's and no upload could be saved.
+if [ ! -d data/builds ]; then
+  mkdir -p data/builds
+  [ "$(id -u)" = 0 ] && chown "$owner": data/builds
+fi
 
 step "up"
 "${COMPOSE[@]}" up -d --remove-orphans

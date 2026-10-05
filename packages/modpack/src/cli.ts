@@ -122,7 +122,7 @@ async function main() {
       const manifest = process.env.PACK_NAME?.trim() ? { ...loaded, name: process.env.PACK_NAME.trim().slice(0, 40) } : loaded;
       const lock = await requireLock();
       await mkdir(P.dist, { recursive: true });
-      const portalUrl = process.env.AUTH_URL ?? "https://deepslate.dsw.test";
+      const portalUrl = process.env.AUTH_URL ?? process.env.PORTAL_URL ?? "https://deepslate.dsw.test";
       await removeClientPack(P, log);
       // first: the logo's sizes, which the server (server-icon.png) and config.zip (window icon) take from
       if (what === "branding" || what === "all") await buildBranding(P.dist, log);

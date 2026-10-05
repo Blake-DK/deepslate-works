@@ -8,7 +8,7 @@ stops or restarts anything. deploy.sh runs it after every deploy.
   deploy/dockhand-sync.py            register the stack if Dockhand does not manage it yet, else update it
   deploy/dockhand-sync.py --check    only report whether the mirror matches (exit 1 if it does not)
 
-Needs: DOCKHAND_URL (default http://100.64.0.10:3690) and an API key in DOCKHAND_KEY_FILE
+Needs: DOCKHAND_URL (from the environment, else from deploy/.env) and an API key in DOCKHAND_KEY_FILE
 (default /root/.config/deepslate/dockhand-key, first dh_... token in the file).
 """
 import json
@@ -19,7 +19,19 @@ import urllib.error
 import urllib.request
 
 HERE = os.path.dirname(os.path.realpath(__file__))
-URL = os.environ.get("DOCKHAND_URL", "http://100.64.0.10:3690").rstrip("/")
+def env_file(name):
+    try:
+        for line in open(os.path.join(HERE, ".env")):
+            if line.startswith(name + "="):
+                return line.split("=", 1)[1].strip().strip('"')
+    except OSError:
+        pass
+    return ""
+
+
+URL = (os.environ.get("DOCKHAND_URL") or env_file("DOCKHAND_URL")).rstrip("/")
+if not URL:
+    raise SystemExit("dockhand-sync: DOCKHAND_URL is not set (deploy/.env)")
 KEY_FILE = os.environ.get("DOCKHAND_KEY_FILE", "/root/.config/deepslate/dockhand-key")
 ENV_ID = int(os.environ.get("DOCKHAND_ENV_ID", "3"))
 STACK = "deepslate"

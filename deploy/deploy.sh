@@ -11,7 +11,7 @@
 #
 # docs/31 B-08: the images are the ones of this commit, never the moving `latest`. CI tags both with the commit's
 # sha; if it has not finished, the pull fails and nothing is changed. After `up` both containers must say they are
-# that commit. IMAGE_TAG in deploy/.env is not read here (Dockhand's copy still uses it).
+# that commit. A commit that changed only docs has no images: it runs those of the last commit that changed code. IMAGE_TAG in deploy/.env is not read here (Dockhand's copy still uses it).
 set -euo pipefail
 
 cd "$(dirname "$(readlink -f "$0")")/.."
@@ -67,13 +67,27 @@ git_here pull --ff-only
 echo "at $(git_here log -1 --format='%h %s')"
 head_sha=$(git_here rev-parse HEAD)
 migrations_after=$(git_here rev-parse -q --verify 'HEAD:apps/web/prisma/migrations' || echo none)
-IMAGE_TAG=${IMAGE_TAG:-$head_sha}
-export IMAGE_TAG
-echo "images: $IMAGE_TAG"
+# CI builds nothing for a push that changes only docs/ or Markdown files at the top (paths-ignore in ci.yml, the same
+# two patterns), so a commit like that has no images of its own: then the images are those of the last commit before
+# it that changed anything else. --first-parent: on main that is the merge CI built, never a dev commit inside it.
+# The checkout's own commit is tried first, as CI judges a whole push and may have built a docs commit at its head.
+if [ -n "${IMAGE_TAG:-}" ]; then
+  tags=("$IMAGE_TAG")
+else
+  tags=("$head_sha")
+  code_sha=$(git_here log -1 --first-parent --format=%H HEAD -- . ':(exclude)docs' ':(exclude,glob)*.md')
+  [ -z "$code_sha" ] || [ "$code_sha" = "$head_sha" ] || tags+=("$code_sha")
+fi
 
 step "pull images"
 # Only our two images. The third-party ones (postgres, wireguard, socat) are updated on purpose, not by a deploy.
-"${COMPOSE[@]}" pull web api || die "no images tagged $IMAGE_TAG yet: CI has not finished (or failed) for this commit. Nothing was changed. Look at the run on GitHub, then deploy again."
+pulled=
+for IMAGE_TAG in "${tags[@]}"; do
+  export IMAGE_TAG
+  echo "images: $IMAGE_TAG"
+  if "${COMPOSE[@]}" pull web api; then pulled=1; break; fi
+done
+[ -n "$pulled" ] || die "no images tagged ${tags[*]} yet: CI has not finished (or failed) for this commit. Nothing was changed. Look at the run on GitHub, then deploy again."
 
 # docs/31 B-19: web applies the migrations when it starts, and there is no way back from one. So when this deploy
 # brings a migration the running web does not have (or what web runs is not known), the database is dumped first,

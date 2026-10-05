@@ -24,6 +24,14 @@ export async function getManifest(): Promise<Manifest> {
   return manifest;
 }
 
+/**
+ * The address players join. The real one is SERVER_ADDRESS in deploy/.env, so it is not in the public repository;
+ * mods.json's `server_address` is a placeholder, used when SERVER_ADDRESS is not set (development).
+ */
+export function serverAddress(m: Manifest): string {
+  return process.env.SERVER_ADDRESS || m.server_address;
+}
+
 export type Section = { category: Category; mods: Mod[] };
 
 /**

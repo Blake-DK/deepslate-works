@@ -22,3 +22,4 @@ deploy/wireguard/*
 # the Windows app (3.0), built on the windows runner only
 installer/**/bin/
 installer/**/obj/
+__pycache__/

@@ -4,6 +4,7 @@
 // docs/14 "Play first": a member is let into the world when their last run of Play went through, not longer ago
 // than the window, with the pack the server runs. api decides with this at every join; the portal uses the same
 // rule to say "Ready to join until 10:35". Pure, so it is tested.
+const SITE_HOST = ((typeof process === "undefined" ? undefined : process.env.PORTAL_URL ?? process.env.AUTH_URL) ?? "https://deepslate.dsw.test").replace(/^https?:\/\//, "").replace(/\/+$/, ""); // as shared/site.ts (no imports between shared files: api needs ".js", web does not)
 
 export const GATE_REASONS = ["no report", "old installer", "missing mods", "stale", "wrong version"] as const;
 
@@ -78,4 +79,4 @@ export function modsMissingSince(run: PlayRun | null, mods: { at: Date; ok: bool
 }
 
 /** What somebody reads in the room while their installer is below the minimum (planner, installer 1.5.0). */
-export const OLD_INSTALLER_TEXT = "Press Play on deepslate.dsw.test to update Deepslate Works";
+export const OLD_INSTALLER_TEXT = `Press Play on ${SITE_HOST} to update Deepslate Works`;

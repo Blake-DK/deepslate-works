@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireOnboardedUser } from "@/server/auth/session";
-import { getManifest } from "@/server/modpack/manifest";
+import { getManifest, serverAddress } from "@/server/modpack/manifest";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
@@ -87,7 +87,7 @@ export default async function MePage() {
               <>Linked: <span className="font-mono text-foreground">{user.mcUsername}</span>{user.verifiedAt ? ` since ${formatDate(user.verifiedAt)}` : ""}.</>
             ) : (
               showServer ? (
-                <>Join the server to link your Minecraft account. Connect to <span className="font-mono text-foreground">{m.server_address}</span>, you&apos;ll land in a small room with a link in the chat; click it and you&apos;re through. On a phone, or if the link has scrolled away: <Link href="/join" className="underline">enter the code</Link> shown on your screen.</>
+                <>Join the server to link your Minecraft account. Connect to <span className="font-mono text-foreground">{serverAddress(m)}</span>, you&apos;ll land in a small room with a link in the chat; click it and you&apos;re through. On a phone, or if the link has scrolled away: <Link href="/join" className="underline">enter the code</Link> shown on your screen.</>
               ) : (
                 <>Join the server to link your Minecraft account: you&apos;ll land in a small room with a link in the chat, click it and you&apos;re through. {launchText(settings.launchAt)}</>
               )

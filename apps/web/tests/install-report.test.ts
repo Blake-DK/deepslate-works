@@ -3,7 +3,7 @@ import { markLog, MAX_LOG_BYTES, redactLog, redactText, reportSchema, sanitizeRe
 
 describe("redaction", () => {
   it("takes the name out of paths under Users, however they are written", () => {
-    expect(redactText("C:\\Users\\Alex\\AppData\\Roaming\\.minecraft")).toBe("C:\\Users\\~\\AppData\\Roaming\\.minecraft");
+    expect(redactText("C:\\Users\\Jo Bloggs\\AppData\\Roaming\\.minecraft")).toBe("C:\\Users\\~\\AppData\\Roaming\\.minecraft");
     expect(redactText("gameDir=c:\\users\\alex\\AppData")).toBe("gameDir=c:\\users\\~\\AppData");
     expect(redactText('"path":"C:\\\\Users\\\\alex.b\\\\AppData\\\\x.jar"')).toBe('"path":"C:\\\\Users\\\\~\\\\AppData\\\\x.jar"');
     expect(redactText("D:/Users/Alex/Desktop/installer")).toBe("D:/Users/~/Desktop/installer");

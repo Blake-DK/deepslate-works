@@ -12,7 +12,7 @@ describe("memberRows", () => {
     expect(memberRows(all, "nonsense", undefined).only).toBe("all");
   });
   it("finds by part of either name, in any case", () => {
-    expect(memberRows(all, undefined, "BLAKE").rows.map((r) => r.displayName)).toEqual(["Bramble09"]);
+    expect(memberRows(all, undefined, "BRAMBLE").rows.map((r) => r.displayName)).toEqual(["Bramble09"]);
     expect(memberRows(all, undefined, "_f_0").rows.map((r) => r.displayName)).toEqual(["Maximilian_Featherstonehaugh_032"]);
     expect(memberRows(all, undefined, "  bert ").rows.map((r) => r.displayName)).toEqual(["Bertie"]);
     expect(memberRows(all, undefined, "nobody").rows).toEqual([]);

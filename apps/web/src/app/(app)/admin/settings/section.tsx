@@ -1,6 +1,6 @@
 import { dateToUkLocal } from "@/lib/uk-time";
 import { getSettings } from "@/server/settings";
-import { getManifest } from "@/server/modpack/manifest";
+import { getManifest, serverAddress } from "@/server/modpack/manifest";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, fieldClasses } from "@/components/ui/input";
@@ -46,7 +46,7 @@ export default async function SettingsPage({ searchParams, cards }: { searchPara
         <CardHeader>
           <CardTitle className="flex items-center gap-2">Launch {settings.live ? <Badge tone="good">live</Badge> : <Badge tone="warn">not live</Badge>}</CardTitle>
           <CardDescription>
-            Until you flip this, players never see the server address (<span className="font-mono">{manifest.server_address}</span>) or the installer and pack downloads; Home and Getting started show the launch date instead. Once live, downloads open whenever the server is running. Admins always see everything.
+            Until you flip this, players never see the server address (<span className="font-mono">{serverAddress(manifest)}</span>) or the installer and pack downloads; Home and Getting started show the launch date instead. Once live, downloads open whenever the server is running. Admins always see everything.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -81,7 +81,7 @@ export default async function SettingsPage({ searchParams, cards }: { searchPara
             <div className="max-w-xs">
               <Label htmlFor="minInstaller">Minimum installer version</Label>
               <Input id="minInstaller" name="minInstaller" defaultValue={joining.minInstaller} pattern="(\d{1,4}(\.\d{1,4}){1,3})?" placeholder="1.5.0" />
-              <p className="mt-1 text-xs text-muted-foreground">A run of Play from an older installer does not count: the member is held with &quot;Download Deepslate Works again from deepslate.dsw.test/install&quot;. Empty: any installer. Admins are never held.</p>
+              <p className="mt-1 text-xs text-muted-foreground">A run of Play from an older installer does not count: the member is held with &quot;Download Deepslate Works again from the Install page&quot;. Empty: any installer. Admins are never held.</p>
             </div>
             <Button type="submit">Save</Button>
           </form>

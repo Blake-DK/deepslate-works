@@ -7,7 +7,7 @@ Once:
    Your browser opens to sign you in with Discord and asks "is this you?": press Yes.
    Everything is installed, and the Minecraft Launcher opens on the "Deepslate Works" profile. Press Play there.
 
-After that, just press Play on https://deepslate.dsw.test, or open "Deepslate Works" from your desktop or the
+After that, just press Play on {PORTAL_URL}, or open "Deepslate Works" from your desktop or the
 Start Menu. It keeps itself and the mods up to date, then opens the launcher. You can delete this folder.
 
 What Setup.bat puts on your PC (for your Windows user only, no admin rights):

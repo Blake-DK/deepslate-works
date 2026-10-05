@@ -15,7 +15,7 @@ export const env = {
   API_SERVICE_TOKEN: str("API_SERVICE_TOKEN"),
   MANIFEST_KEY: str("MANIFEST_KEY"),
   MAP_URL: str("MAP_URL"),
-  SERVER_ADDRESS: str("SERVER_ADDRESS", "play.example.com"),
+  SERVER_ADDRESS: str("SERVER_ADDRESS", "mc.dsw.test"),
   isProd: process.env.NODE_ENV === "production",
   get discordEnabled() {
     return Boolean(this.DISCORD_CLIENT_ID && this.DISCORD_CLIENT_SECRET);

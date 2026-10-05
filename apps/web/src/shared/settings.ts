@@ -4,12 +4,13 @@
 // docs/16 §5 and §6: what the Setting table holds, one row per section, with the defaults used when a
 // row (or a field) is missing. Anything read from the database goes through `parseSection`.
 import { z } from "zod";
+const SITE_HOST = ((typeof process === "undefined" ? undefined : process.env.PORTAL_URL ?? process.env.AUTH_URL) ?? "https://deepslate.dsw.test").replace(/^https?:\/\//, "").replace(/\/+$/, ""); // as shared/site.ts (no imports between shared files: api needs ".js", web does not)
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
 export const DEFAULT_TAGLINE = "Modded Minecraft with friends";
 const OLD_TAGLINE = "Invite only. Minecraft 1.21.1 · NeoForge.";
-export const DEFAULT_MOTD = ["§8Deepslate Works §6· modded with friends", "§7Create, guns, quarries · press Play on deepslate.dsw.test"] as const;
+export const DEFAULT_MOTD = ["§8Deepslate Works §6· modded with friends", `§7Create, guns, quarries · press Play on ${SITE_HOST}`] as const;
 
 export const sections = {
   privacy: z.object({

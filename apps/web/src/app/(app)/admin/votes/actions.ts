@@ -23,35 +23,35 @@ const createSchema = z.object({
 export async function createVoteAction(formData: FormData) {
   const admin = await requireAdmin();
   const parsed = createSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect("/admin/pack?tab=votes&error=form");
+  if (!parsed.success) redirect("/admin/pack?tab=modvote&error=form");
   let questions: unknown;
   try {
     questions = JSON.parse(parsed.data.questions || "[]");
   } catch {
-    redirect("/admin/pack?tab=votes&error=json");
+    redirect("/admin/pack?tab=modvote&error=json");
   }
   const clean = parseQuestions(questions);
   // typed as UK time, like a poll's and a news item's dates (docs/31 B-34: it was read as UTC, an hour late in summer)
   const closesAt = parsed.data.closesAt ? ukLocalToDate(parsed.data.closesAt) : null;
-  if (parsed.data.closesAt && (!closesAt || Number.isNaN(closesAt.getTime()))) redirect("/admin/pack?tab=votes&error=form");
+  if (parsed.data.closesAt && (!closesAt || Number.isNaN(closesAt.getTime()))) redirect("/admin/pack?tab=modvote&error=form");
   const vote = await db.vote.create({ data: { title: parsed.data.title, questions: clean as unknown as Prisma.InputJsonValue, closesAt } });
   await audit({ userId: admin.id, action: "vote.create", params: { voteId: vote.id, title: vote.title }, result: "OK" });
   revalidatePath("/admin/pack");
-  redirect("/admin/pack?tab=votes");
+  redirect("/admin/pack?tab=modvote");
 }
 
 export async function openVoteAction(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const open = await db.vote.count({ where: { status: "OPEN" } });
-  if (open > 0) redirect("/admin/pack?tab=votes&error=already-open");
+  if (open > 0) redirect("/admin/pack?tab=modvote&error=already-open");
   const vote = await db.vote.findUnique({ where: { id } });
-  if (!vote || vote.status !== "DRAFT") redirect("/admin/pack?tab=votes");
+  if (!vote || vote.status !== "DRAFT") redirect("/admin/pack?tab=modvote");
   await db.vote.update({ where: { id }, data: { status: "OPEN", opensAt: new Date() } });
   await audit({ userId: admin.id, action: "vote.open", params: { voteId: id }, result: "OK" });
   revalidatePath("/admin/pack");
   revalidatePath("/pack");
-  redirect("/admin/pack?tab=votes");
+  redirect("/admin/pack?tab=modvote");
 }
 
 export async function closeVoteAdminAction(formData: FormData) {
@@ -59,24 +59,24 @@ export async function closeVoteAdminAction(formData: FormData) {
   await closeVote(String(formData.get("id") ?? ""), admin.id);
   revalidatePath("/admin/pack");
   revalidatePath("/pack");
-  redirect("/admin/pack?tab=votes");
+  redirect("/admin/pack?tab=modvote");
 }
 
 export async function deleteVoteAction(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const vote = await db.vote.findUnique({ where: { id }, include: { _count: { select: { ballots: true } } } });
-  if (!vote || vote.status === "OPEN") redirect("/admin/pack?tab=votes");
+  if (!vote || vote.status === "OPEN") redirect("/admin/pack?tab=modvote");
   await db.vote.delete({ where: { id } });
   await audit({ userId: admin.id, action: "vote.delete", params: { voteId: id, title: vote.title, ballots: vote._count.ballots }, result: "OK" });
   revalidatePath("/admin/pack");
-  redirect("/admin/pack?tab=votes");
+  redirect("/admin/pack?tab=modvote");
 }
 
 // ---- quick polls (planner 2026-10-02, "votes before play") ---------------------------------------------------------
 
-const POLLS = "/admin/pack?tab=votes";
-const pollBack = (msg: string) => `${POLLS}&poll=${encodeURIComponent(msg)}#polls`;
+const POLLS = "/admin/votes";
+const pollBack = (msg: string) => `${POLLS}?poll=${encodeURIComponent(msg)}#polls`;
 
 /** New poll: the question, 2 to 8 options (text, optional picture, link or mod), single or multiple, a closing date, must vote. Opened at once. */
 export async function createPollAction(formData: FormData) {
@@ -112,7 +112,7 @@ export async function createPollAction(formData: FormData) {
   const closesAt = closesRaw ? ukLocalToDate(closesRaw) : null;
   if (closesRaw && (!closesAt || closesAt.getTime() <= Date.now() + 60_000)) redirect(pollBack("The closing date must be in the future (UK time)."));
   await openPoll({ id: admin.id, role: "ADMIN" }, { question, options: made.options, multiple: formData.get("multiple") === "on", mustVote: formData.get("mustVote") === "on", closesAt });
-  revalidatePath("/admin/pack");
+  revalidatePath("/admin/votes");
   revalidatePath("/votes");
   revalidatePath("/");
   redirect(pollBack("opened"));
@@ -121,7 +121,7 @@ export async function createPollAction(formData: FormData) {
 export async function closePollAction(id: string) {
   const admin = await requireAdmin();
   await closePoll({ id: admin.id, role: "ADMIN" }, id);
-  revalidatePath("/admin/pack");
+  revalidatePath("/admin/votes");
   revalidatePath("/votes");
   redirect(pollBack("closed"));
 }
@@ -129,7 +129,7 @@ export async function closePollAction(id: string) {
 export async function deletePollAction(id: string) {
   const admin = await requireAdmin();
   await deletePoll({ id: admin.id, role: "ADMIN" }, id);
-  revalidatePath("/admin/pack");
+  revalidatePath("/admin/votes");
   revalidatePath("/votes");
   redirect(pollBack("deleted"));
 }
@@ -138,9 +138,9 @@ export async function deletePollAction(id: string) {
 export async function ballotMustVoteAction(id: string, on: boolean) {
   const admin = await requireAdmin();
   const vote = await db.vote.findUnique({ where: { id }, select: { title: true } });
-  if (!vote) redirect("/admin/pack?tab=votes");
+  if (!vote) redirect("/admin/pack?tab=modvote");
   await db.vote.update({ where: { id }, data: { mustVote: on } });
   await audit({ userId: admin.id, action: "vote.mustVote", params: { voteId: id, title: vote.title, on }, result: "OK" });
   revalidatePath("/admin/pack");
-  redirect("/admin/pack?tab=votes");
+  redirect("/admin/pack?tab=modvote");
 }

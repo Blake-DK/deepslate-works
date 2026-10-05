@@ -40,11 +40,14 @@ export function AdminStrip() {
     <Strip label="Run the server">
       <NavLink href="/admin" exact>Control Room</NavLink>
       <NavLink href="/admin/server">Server</NavLink>
-      <NavLink href="/admin/pack">Pack</NavLink>
-      <NavLink href="/admin/seasons">Seasons</NavLink>
+      <NavLink href="/admin/joining">Joining</NavLink>
       <NavLink href="/admin/people" also={["/admin/installs"]}>People</NavLink>
+      <NavLink href="/admin/pack">Modpack</NavLink>
+      <NavLink href="/admin/seasons">Seasons</NavLink>
       <NavLink href="/admin/news">News</NavLink>
-      <NavLink href="/admin/site">Site settings</NavLink>
+      <NavLink href="/admin/votes">Votes</NavLink>
+      <NavLink href="/admin/discord">Discord</NavLink>
+      <NavLink href="/admin/site">Site</NavLink>
     </Strip>
   );
 }

@@ -7,8 +7,10 @@ import { apiFetch, ApiError } from "@/server/api-client";
 import { audit } from "@/server/events";
 import { BOT_SWITCHES, SWITCHES } from "./switches";
 
-// docs/21 §7: Admin → Site settings → Discord. web only stores the switches and asks api for a test line; api posts.
-const BACK = "/admin/site?tab=discord";
+// docs/21 §7: Admin → Discord (a page of its own since docs/35). web only stores the switches and asks api for a test line; api posts.
+const BACK = "/admin/discord?tab=connection";
+const BOT = "/admin/discord?tab=bot";
+const POSTED = "/admin/discord?tab=posted";
 
 export async function saveDiscordAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -16,8 +18,8 @@ export async function saveDiscordAction(formData: FormData) {
   const next = { ...current, ...Object.fromEntries(SWITCHES.map((s) => [s.key, formData.get(s.key) === "on"])) };
   const r = await setSection("discord", next, admin.id);
   await audit({ userId: admin.id, action: "discord.settings", params: r.ok ? { value: r.value } : { problems: r.problems }, result: r.ok ? "OK" : "DENIED" });
-  revalidatePath("/admin/site");
-  redirect(r.ok ? `${BACK}&saved=discord` : `${BACK}&error=discord&detail=${encodeURIComponent(r.problems.join("; ").slice(0, 300))}`);
+  revalidatePath("/admin/discord");
+  redirect(r.ok ? `${POSTED}&saved=discord` : `${POSTED}&error=discord&detail=${encodeURIComponent(r.problems.join("; ").slice(0, 300))}`);
 }
 
 /** docs/22 §7: the bot's switches and the two channels picked from the server's own lists. */
@@ -28,8 +30,8 @@ export async function saveDiscordBotAction(formData: FormData) {
   const next = { ...current, ...Object.fromEntries(BOT_SWITCHES.map((s) => [s.key, formData.get(s.key) === "on"])), chatChannel: id("chatChannel"), updatesForum: id("updatesForum"), adminChannel: id("adminChannel") };
   const r = await setSection("discord", next, admin.id);
   await audit({ userId: admin.id, action: "discord.settings", params: r.ok ? { value: r.value } : { problems: r.problems }, result: r.ok ? "OK" : "DENIED" });
-  revalidatePath("/admin/site");
-  redirect(r.ok ? `${BACK}&saved=discord` : `${BACK}&error=discord&detail=${encodeURIComponent(r.problems.join("; ").slice(0, 300))}`);
+  revalidatePath("/admin/discord");
+  redirect(r.ok ? `${BOT}&saved=discord` : `${BOT}&error=discord&detail=${encodeURIComponent(r.problems.join("; ").slice(0, 300))}`);
 }
 
 /** Pause: nothing is posted and nothing is queued; switching it back on does not replay what happened meanwhile. */
@@ -38,7 +40,7 @@ export async function pauseDiscordAction(paused: boolean) {
   const current = await getSection("discord");
   const r = await setSection("discord", { ...current, paused }, admin.id);
   await audit({ userId: admin.id, action: "discord.settings", params: { paused, wasPaused: current.paused }, result: r.ok ? "OK" : "DENIED" });
-  revalidatePath("/admin/site");
+  revalidatePath("/admin/discord");
   redirect(`${BACK}&saved=${paused ? "paused" : "resumed"}`);
 }
 

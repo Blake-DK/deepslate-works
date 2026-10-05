@@ -18,7 +18,7 @@ export function seasonGuide(s: SeasonFile, state: SeasonState, at: (iso: string)
   if (s.trials.length > 0) lines.push(`- **Trials.** Small tasks, ${s.trials.length} this season, one opening at a time. Each is done by yourself and can be done any time after it opens. One you happen to do before it opens still counts.`);
   if (s.goal) lines.push(`- **Together.** One goal for the whole server: ${s.goal.title}. Every tick on a boss counts towards it.`);
   if (s.frontier) {
-    lines.push('- **The Frontier.** A second world for this season, with fresh ground to explore and mine out. Take the waystone at spawn named "The Frontier"; the one there named "Home" brings you back.');
+    lines.push('- **The Frontier.** A second world for this season, with fresh ground to explore and mine out. Walk through the portal in the temple at spawn; the portal on the other side brings you back.');
     lines.push("- **The Frontier is wiped when the season ends.** Nothing you build or leave there is kept, and land there cannot be claimed. Keep your base in the main world.");
   }
   if (s.finale) lines.push(`- **The finale.** ${s.finale.title}: ${at(s.finale.at)}. Everyone who is there for it gets the tick.`);

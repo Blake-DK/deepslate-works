@@ -42,7 +42,7 @@ export default async function InvitesPage() {
       <Card>
         <CardHeader>
           <CardTitle>New invite</CardTitle>
-          <CardDescription>One link, one person. Whoever comes in by it doesn&apos;t have to be in the Discord server: they show under Players → Outside Discord.</CardDescription>
+          <CardDescription>One link, one person. Whoever comes in by it doesn&apos;t have to be in the Discord server: they show under Members → Outside Discord.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={createInviteAction} className="flex flex-wrap items-end gap-3">

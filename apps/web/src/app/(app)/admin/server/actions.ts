@@ -12,10 +12,10 @@ import { removePhoto, storePhoto } from "@/server/news-images";
 const ops = z.enum(["start", "stop", "restart"]);
 // Where to go after an action: the tab it belongs to, or the Control Room when its form says so. The form only
 // picks from this list; an address it sends is never used as such.
-const TABS = { power: "/admin/server", settings: "/admin/server?tab=settings", backups: "/admin/server?tab=backups", pregen: "/admin/server?tab=pregen", room: "/admin/server?tab=room", news: "/admin/news" } as const;
+const TABS = { power: "/admin/server", settings: "/admin/server?tab=performance", backups: "/admin/server?tab=backups", pregen: "/admin/server?tab=world", room: "/admin/joining?tab=room", news: "/admin/news" } as const;
 function place(formData: FormData | undefined, tab: keyof typeof TABS) {
   const back = formData?.get("back");
-  const base = back === "/admin" || back === "/" ? back : TABS[tab];
+  const base = back === "/admin" || back === "/" || back === "/admin/joining" ? back : TABS[tab];
   return (msg: string, detail?: string) => `${base}${base.includes("?") ? "&" : "?"}msg=${msg}${detail ? `&detail=${encodeURIComponent(detail)}` : ""}`;
 }
 
@@ -129,6 +129,7 @@ export async function releaseHeldAction(formData: FormData) {
     throw e;
   }
   revalidatePath("/admin");
+  revalidatePath("/admin/joining");
   redirect(to("released", name.data));
 }
 

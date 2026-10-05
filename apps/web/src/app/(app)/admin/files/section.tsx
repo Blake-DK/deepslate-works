@@ -70,7 +70,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
         <p className="text-muted-foreground">The game server&apos;s folder, to look at and download from.</p>
       </div>
       <Alert>
-        <strong>Read only.</strong> Nothing can be uploaded, renamed, edited or deleted here. Settings files are changed in the repo (<span className="font-mono">modpack/config/</span>) and sent to the server with Sync, so the mod list and its settings always come from one place. <Link href="/admin/pack" className="underline">Go to Pack</Link>
+        <strong>Read only.</strong> Nothing can be uploaded, renamed, edited or deleted here. Settings files are changed in the repo (<span className="font-mono">modpack/config/</span>) and sent to the server with Sync, so the mod list and its settings always come from one place. <Link href="/admin/pack" className="underline">Go to Modpack</Link>
       </Alert>
 
       <nav aria-label="Where you are" className="flex flex-wrap items-center gap-1 text-sm">

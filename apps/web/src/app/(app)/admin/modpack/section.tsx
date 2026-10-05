@@ -16,7 +16,7 @@ export default async function ModpackAdminPage() {
   const tone = (s: string) => (s === "ok" ? "good" : s === "off" ? "neutral" : s === "beta" || s === "alpha" ? "warn" : "bad");
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Modpack</h2>
+      <h2 className="text-xl font-semibold">Mods and build</h2>
       {driftSays && <Alert tone="warn" data-testid="pack-drift">{driftSays}</Alert>}
       <Card>
         <CardHeader>

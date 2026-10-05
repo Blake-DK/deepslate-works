@@ -23,7 +23,8 @@ const ERRORS: Record<string, string> = {
   "already-open": "Close the open vote before opening another.",
 };
 
-export default async function VotesAdminPage({ searchParams }: { searchParams: Promise<{ error?: string; poll?: string }> }) {
+/** `part` (docs/35): the quick polls are Admin → Votes, the season's mod vote is Modpack → Mod vote. */
+export default async function VotesSection({ searchParams, part }: { searchParams: Promise<{ error?: string; poll?: string }>; part: "polls" | "modvote" }) {
   const { error, poll: pollMsg } = await searchParams;
   const [votes, polls, mods, members] = await Promise.all([
     db.vote.findMany({ orderBy: { opensAt: "desc" }, include: { _count: { select: { ballots: true } } } }),
@@ -34,8 +35,9 @@ export default async function VotesAdminPage({ searchParams }: { searchParams: P
   const tone = { DRAFT: "neutral", OPEN: "good", CLOSED: "warn" } as const;
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Votes</h2>
+      <h2 className="text-xl font-semibold">{part === "polls" ? "Polls" : "Mod vote"}</h2>
       {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
+      {part === "polls" && (<>
       <Card id="polls" data-testid="poll-editor">
         <CardHeader>
           <CardTitle>New poll</CardTitle>
@@ -101,6 +103,8 @@ export default async function VotesAdminPage({ searchParams }: { searchParams: P
           </CardContent>
         </Card>
       )}
+      </>)}
+      {part === "modvote" && (<>
       <Card>
         <CardHeader><CardTitle>New vote</CardTitle><CardDescription>The mod list comes from mods.json; the questions below are the settings questions.</CardDescription></CardHeader>
         <CardContent>
@@ -140,6 +144,7 @@ export default async function VotesAdminPage({ searchParams }: { searchParams: P
           )}
         </CardContent>
       </Card>
+      </>)}
     </div>
   );
 }

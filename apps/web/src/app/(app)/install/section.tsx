@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { requireOnboardedUser } from "@/server/auth/session";
-import { getManifest } from "@/server/modpack/manifest";
+import { getManifest, serverAddress } from "@/server/modpack/manifest";
 import Link from "next/link";
 import { getInstaller, getLock } from "@/server/modpack/lock";
 
@@ -122,8 +122,8 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
       <Card>
         <CardHeader><CardTitle>Server address</CardTitle><CardDescription>The installer adds it to your server list; here it is in case you need it.</CardDescription></CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
-          <span className="rounded-[4px] border bg-panel px-3 py-2 font-mono">{m.server_address}</span>
-          <CopyButton text={m.server_address} label="Copy address" />
+          <span className="rounded-[4px] border bg-panel px-3 py-2 font-mono">{serverAddress(m)}</span>
+          <CopyButton text={serverAddress(m)} label="Copy address" />
           <Badge>Minecraft {m.minecraft} · NeoForge {lock?.neoforge ?? "?"}</Badge>
         </CardContent>
       </Card>

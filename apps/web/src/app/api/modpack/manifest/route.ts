@@ -1,4 +1,4 @@
-import { getManifest } from "@/server/modpack/manifest";
+import { getManifest, serverAddress } from "@/server/modpack/manifest";
 import { distancesFor, serverViewDistance } from "modpack/schema";
 import { getInstaller, getLock } from "@/server/modpack/lock";
 import { installerFor } from "@/lib/installer-info";
@@ -47,7 +47,7 @@ export async function GET(req: Request) {
     generatedAt: lock.generatedAt,
     minecraft: lock.minecraft,
     neoforge: lock.neoforge,
-    server_address: m.server_address,
+    server_address: serverAddress(m),
     profile: m.profile,
     ram: m.ram,
     render_distance: dist.render,

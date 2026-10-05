@@ -70,7 +70,7 @@ services:
       API_SERVICE_TOKEN: ${API_SERVICE_TOKEN}
       MANIFEST_KEY: ${MANIFEST_KEY:-}
       MAP_URL: ${MAP_URL:-}
-      SERVER_ADDRESS: ${SERVER_ADDRESS:-mc.dsw.test}
+      SERVER_ADDRESS: ${SERVER_ADDRESS:?SERVER_ADDRESS is the address players join; set it in deploy/.env}
       MODRINTH_USER_AGENT: ${MODRINTH_USER_AGENT:-deepslate-works/0.1}
     volumes:
       # The manifest is edited by "apply results" and committed, so the live repo's modpack/ and .git are mounted.

@@ -2,6 +2,28 @@
 
 Session of 2026-10-05, against `dev` `7651d08` (same code as `main` but for two docs commits). Review only: nothing was fixed, deployed, synced or restarted. It follows docs/31 and does not repeat it: a finding already in docs/31 is named here only where its fix turned out to be incomplete.
 
+## Where each finding stands (2026-10-05, the same day)
+
+The rows below are kept as written. This section is the state; update it, not the rows.
+
+- **Fixed on `dev`, CI green (typecheck, lint, tests), not deployed, nothing proven on the running system:** R-01 (migration `0028_invite_used_again`), R-02, R-03, R-05, R-06, R-07, R-08, R-09, R-11, R-12, R-13, R-14, R-15, R-16, R-17, R-19, R-20, R-21, R-22 to R-41, R-43.
+- **Not fixed, on purpose:**
+  - **R-04** (a refusal from AMP as HTTP 200 counts as success): what AMP really answers to a refused Start or console command has to be read on the live instance first. It goes with B-66.
+  - **R-10, R-42** (the uninstaller, checksums for Java and NeoForge): the exe. They need a version and a release of their own, and `installer.yml` does not run on `dev`. With B-55, B-57, B-59.
+  - **R-18** (the season's line names the next boss or trial): waits for Alex's yes or no.
+- **Left over inside a fix:**
+  - R-06: a 5xx from Discord while the bot makes a vote's post still falls back to the post without buttons (`bot.ts`'s result has no retry flag).
+  - R-43: Admin → Lock (`apps/web/src/server/modpack/run.ts`) still writes the extras lock before the pack's lock, the mirror of what the command line did; it could use `prepareExtrasLock` too.
+  - R-16: the wake, poll-vote and inventory routes keep their own inline origin check; only console and modpack share the new helper.
+- **Choices made in the fixes, for Alex and the planner to know:**
+  - **R-05:** after an api restart, a member is put through the door only when the door did not see their join: no join read by this run, and no session of theirs open from before it. Whoever left and rejoined inside the restart skips the door for that visit, as before.
+  - **R-11:** a removed member loses the map within 30 seconds (the answer is kept that long, because Caddy asks for every tile).
+  - **R-12:** while Discord gives no answer, nobody new gets in, a valid invite included (it is not used up); members on the outside list still do.
+  - **R-14:** kills within 5 seconds of the earliest share "first", by whatever path they arrive; an admin's tick days later is not first. A clear already written as first is never taken down. This softens docs/34's "two kills in the same second cannot both be first": for the planner.
+  - **R-27:** Activity's From and To are UK days now, in the address too.
+  - **R-36:** "ends tomorrow" is only said while it is still the day before.
+- **At the deploy that brings this:** `deploy.sh` does not start itself again after its pull, so that deploy still runs the old script. Run `sudo deploy/deploy.sh` once more after it: the second run restarts `deepslate-backups` onto the new `backup-loop.sh` (R-19) by itself. Migration 0028 drops one unique index and makes a plain one; the dump before it is taken as for any migration.
+
 ## How it was done
 
 - Five read-throughs in parallel (api core; api seasons and Discord; web server side; web player pages; installer, modpack tooling, deploy and CI), each told to skip what docs/31 already lists. Then the findings marked "checked" below were read again by hand against the files.

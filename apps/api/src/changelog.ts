@@ -22,6 +22,18 @@ export const CHANGES: Change[] = [
     date: "2026-10-04",
     lines: ["A coloured placard can be made plain again: craft it with white dye. That recipe was broken until now."],
   },
+  {
+    id: "2026-10-05-review-fixes",
+    date: "2026-10-05",
+    lines: [
+      "Pressing Play while the server is asleep: the line under the button now follows the server until it is ready, instead of staying on \"Waking the server\".",
+      "If you were waiting in the entrance room and the server was slow to let you through, it now tries again by itself. No more leaving and joining again.",
+      "A hiccup at Discord while you sign in no longer signs you out everywhere. The page says Discord did not answer; try again in a minute.",
+      "Mods & vote → Results shows the last finished vote while a new one is open, and no longer shows an error page before the first vote has closed.",
+      "The site's install help now talks about Deepslate Works.exe, not the old zip and Setup.bat.",
+      "Play time per day on a player's page was counted twice in places. It adds up now.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

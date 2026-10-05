@@ -183,8 +183,8 @@ function report(logFile) {
     if (!x || !y) return "no data | no data";
     const n = x.h.filter((v, i) => v !== y.h[i]).length;
     const same = n === 0 && x.bits === y.bits;
-    const b = x.biomes.filter((v, i) => v !== y.biomes[i]).length;
-    return `${same ? "**the same**" : `differs (${n} of ${POINTS.length} heights${x.bits === y.bits ? "" : ", air too"})`} | ${b === 0 ? "**the same**" : `differ at ${b} of ${POINTS.length}`}`;
+    const moved = x.biomes.filter((v, i) => v !== y.biomes[i]).length;
+    return `${same ? "**the same**" : `differs (${n} of ${POINTS.length} heights${x.bits === y.bits ? "" : ", air too"})`} | ${moved === 0 ? "**the same**" : `differ at ${moved} of ${POINTS.length}`}`;
   };
   out.push("", "| Question | Ground | Biomes |", "|---|---|---|");
   for (const [q, a, b] of [

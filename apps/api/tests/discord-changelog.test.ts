@@ -117,7 +117,6 @@ describe("the change log in Discord", () => {
     await t.a.round();
     expect([...t.posts.keys()].sort()).toEqual(["changelog", "changelog:a"]);
   });
-});
 
   it("an entry Discord refuses for good is skipped, said once, and does not hold up the one after it", async () => {
     const t = setup([ONE, TWO], { answer: (c) => (String(c.body.content).includes("First thing.") ? new Response(JSON.stringify({ code: 50035, message: "Invalid Form Body" }), { status: 400 }) : null) });

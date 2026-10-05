@@ -4,7 +4,7 @@
 // docs/16 §5 and §6: what the Setting table holds, one row per section, with the defaults used when a
 // row (or a field) is missing. Anything read from the database goes through `parseSection`.
 import { z } from "zod";
-import { SITE_HOST } from "./site";
+const SITE_HOST = ((typeof process === "undefined" ? undefined : process.env.PORTAL_URL ?? process.env.AUTH_URL) ?? "https://deepslate.dsw.test").replace(/^https?:\/\//, "").replace(/\/+$/, ""); // as shared/site.ts (no imports between shared files: api needs ".js", web does not)
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 

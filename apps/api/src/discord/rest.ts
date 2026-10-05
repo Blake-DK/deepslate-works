@@ -40,7 +40,7 @@ export class BotRest {
       try {
         res = await this.f(`${API}${path}`, {
           method,
-          headers: { ...(auth ? { authorization: `Bot ${this.token}` } : {}), ...(body === undefined ? {} : { "content-type": "application/json" }), "user-agent": "DiscordBot (https://deepslate.dsw.test, 1.0)" },
+          headers: { ...(auth ? { authorization: `Bot ${this.token}` } : {}), ...(body === undefined ? {} : { "content-type": "application/json" }), "user-agent": "DiscordBot (https://github.com/Blake-DK/deepslate-works, 1.0)" },
           body: body === undefined ? undefined : JSON.stringify(body),
           signal: AbortSignal.timeout(this.timeoutMs),
         });

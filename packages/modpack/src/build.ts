@@ -242,7 +242,12 @@ export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist:
   if (!version) throw new Error(`${INSTALLER_SCRIPT}: $InstallerVersion not found`);
   await writeFile(path.join(stage, INSTALLER_SCRIPT), stamped);
   await writeFile(path.join(stage, INSTALLER_BRIDGE), stamped);
-  for (const f of INSTALLER_ZIP_FILES) if (f !== INSTALLER_SCRIPT && f !== INSTALLER_BRIDGE) await cp(path.join(paths.installer, f), path.join(stage, f));
+  for (const f of INSTALLER_ZIP_FILES) {
+    if (f === INSTALLER_SCRIPT || f === INSTALLER_BRIDGE) continue;
+    // README.txt names the site, which is not in the repository: {PORTAL_URL} is stamped like the script's config
+    if (f === "README.txt") await writeFile(path.join(stage, f), (await readFile(path.join(paths.installer, f), "utf8")).replaceAll("{PORTAL_URL}", portalUrl));
+    else await cp(path.join(paths.installer, f), path.join(stage, f));
+  }
   const script = path.join(paths.dist, INSTALLER_SCRIPT);
   await writeFileWhole(script, stamped);
   const out = path.join(paths.dist, "installer.zip");

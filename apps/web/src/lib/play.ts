@@ -21,7 +21,7 @@ export function joinLine(join: { ok: true; time: string } | { ok: false; reason:
   if (join.ok) return { text: `Ready to join until ${join.time}`, ready: true };
   if (join.reason === "missing mods") return { text: MISSING_MODS_TEXT, ready: false };
   if (join.reason === "old installer" && selfUpdates) return { text: "Press Play before you join: it updates Deepslate Works first.", ready: false };
-  if (join.reason === "old installer") return { text: "Download Deepslate Works again from deepslate.dsw.test/install, open it once, then press Play. It keeps itself up to date after that.", ready: false };
+  if (join.reason === "old installer") return { text: "Download Deepslate Works again from the Install page, open it once, then press Play. It keeps itself up to date after that.", ready: false };
   if (join.reason === "wrong version") return { text: "The pack has changed since you pressed Play. Press it again before you join.", ready: false };
   if (join.reason === "stale") return { text: "Press Play before you join: the last time was a while ago.", ready: false };
   return { text: "Press Play before you join. That checks your mods are up to date.", ready: false };

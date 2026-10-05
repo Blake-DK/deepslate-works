@@ -34,6 +34,11 @@ export const CHANGES: Change[] = [
       "Play time per day on a player's page was counted twice in places. It adds up now.",
     ],
   },
+  {
+    id: "2026-10-05-maps-fixed",
+    date: "2026-10-05",
+    lines: ["This morning the game stopped at \"Error loading mods\" (the two map mods wanted a newer claims mod). Fixed: press Play again and it loads."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

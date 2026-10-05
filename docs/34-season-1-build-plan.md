@@ -134,7 +134,7 @@ Written up in full when W1.1 and W1.3 are in; the open points are already known.
 - **W1.4, Admin → Seasons.** Start and End are the two buttons that matter; End writes `resultJson` once and never again. `season.reload`, `season.grant`, `season.revoke` are actions in the registry; a grant takes a member and an item id from the file, never free text.
 - **W1.5, Discord.** docs/21 §6 and docs/22 §13 as written: one forum post per season, boss and trial, replies inside it, `threadId` on `DiscordPost`. The health watch's rule applies here too: a post that fails is retried, never doubled (docs/31 B-46 is deferred, and season posts are where it would show).
 
-## 7. The rehearsal, Wednesday 28 October
+## 7. The rehearsal, Monday 23 November (was Wednesday 28 October)
 
 On the real server, with the sample season, by Alex or the root session with two players in game. This session cannot run any of it.
 

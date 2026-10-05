@@ -54,7 +54,15 @@ unpushed=$(git_here log --format='  %h %s' origin/main..HEAD)
 [ -z "$unpushed" ] || die "the checkout has commits that are not on origin/main:
 $unpushed
 Push them as a branch (runuser -u $owner -- git push origin HEAD:refs/heads/<name>), open a PR, merge it, then deploy again. Nothing was deployed."
-migrations_before=$(git_here rev-parse -q --verify 'HEAD:apps/web/prisma/migrations' || echo none)
+# docs/35 R-09: "before" is the migrations of the commit the running web was built from, not of the checkout. The
+# checkout has already moved when a first try stopped after its pull (CI not finished: "deploy again"), and the
+# second try then saw nothing new and took no dump. When the running commit cannot be told, the dump is taken.
+running_web=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' deepslate-web 2>/dev/null | sed -n 's/^PORTAL_COMMIT=//p') || running_web=
+if [[ "$running_web" =~ ^[0-9a-f]{40}$ ]] && git_here cat-file -e "${running_web}^{commit}" 2>/dev/null; then
+  migrations_before=$(git_here rev-parse -q --verify "${running_web}:apps/web/prisma/migrations" || echo none)
+else
+  migrations_before=unknown
+fi
 git_here pull --ff-only
 echo "at $(git_here log -1 --format='%h %s')"
 head_sha=$(git_here rev-parse HEAD)
@@ -67,11 +75,13 @@ step "pull images"
 # Only our two images. The third-party ones (postgres, wireguard, socat) are updated on purpose, not by a deploy.
 "${COMPOSE[@]}" pull web api || die "no images tagged $IMAGE_TAG yet: CI has not finished (or failed) for this commit. Nothing was changed. Look at the run on GitHub, then deploy again."
 
-# docs/31 B-19: web applies the migrations when it starts, and there is no way back from one. So when this pull
-# brought a new migration, the database is dumped first, next to the nightly dumps (pre-* dumps are never removed).
+# docs/31 B-19: web applies the migrations when it starts, and there is no way back from one. So when this deploy
+# brings a migration the running web does not have (or what web runs is not known), the database is dumped first,
+# next to the nightly dumps (pre-* dumps are never removed).
 if [ "$migrations_before" != "$migrations_after" ] && docker inspect deepslate-db >/dev/null 2>&1; then
   step "dump before the new migration"
-  [ "$(id -u)" = 0 ] || die "a new migration is in this deploy and the dump before it needs root (the dumps' folder is root's)"
+  [ "$migrations_before" != unknown ] || echo "the commit of the running web is not known (${running_web:-no deepslate-web container}); dumping to be safe"
+  [ "$(id -u)" = 0 ] || die "a new migration is in this deploy (or the running web's commit is not known) and the dump before it needs root (the dumps' folder is root's)"
   pre="${DUMP_DIR:-/root/docker/deepslate/backups}/pre-${head_sha:0:7}-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
   docker exec deepslate-db pg_dump -U deepslate deepslate | gzip > "$pre.part" || { rm -f "$pre.part"; die "the dump before the migration failed; nothing was changed"; }
   [ -s "$pre.part" ] || { rm -f "$pre.part"; die "the dump before the migration is empty; nothing was changed"; }
@@ -90,7 +100,11 @@ fi
 # and published as a tiny image holding only DeepslateWorks.exe, its .sha256 and VERSION. Copied out into dist/ci/;
 # Admin -> Build (installer) checks it and hands it out. Never fatal: without it the site keeps the PowerShell one.
 step "installer exe"
-INSTALLER_IMAGE="ghcr.io/$(sed -n 's/^GHCR_OWNER=//p' deploy/.env)/deepslate-installer:${INSTALLER_TAG:-latest}"
+# docs/35 R-20: pulled by the version in installer/VERSION of this checkout (CI tags the image with it), not by the
+# moving `latest`, which an older run that finished last could leave on an older exe. INSTALLER_TAG overrides.
+installer_version=$(tr -d '[:space:]' < installer/VERSION 2>/dev/null || true)
+[[ "$installer_version" =~ ^[0-9]{1,4}(\.[0-9]{1,4}){1,3}$ ]] || { echo "installer/VERSION is not a version; falling back to the tag latest"; installer_version=latest; }
+INSTALLER_IMAGE="ghcr.io/$(sed -n 's/^GHCR_OWNER=//p' deploy/.env)/deepslate-installer:${INSTALLER_TAG:-$installer_version}"
 if docker pull -q "$INSTALLER_IMAGE" >/dev/null 2>&1; then
   cid=$(docker create "$INSTALLER_IMAGE" none)
   rm -rf dist/ci.new && mkdir -p dist/ci.new
@@ -131,6 +145,23 @@ fi
 
 step "up"
 "${COMPOSE[@]}" up -d --remove-orphans
+
+# docs/35 R-19: backup-loop.sh is mounted into `backups` as one file. git replaces a changed file with a new one, the
+# container keeps the old one it was started with, and `up -d` sees nothing to recreate: a fixed script would not
+# run until the container happened to be restarted. So the script the container has is compared with the checkout's,
+# and the container is restarted when they differ (a restart mounts the file afresh). Chosen over mounting a folder:
+# deploy/ holds keys and .env, so the script would have to move, and the dump test and the docs name it where it is.
+# A restart in the middle of a dump is safe: the .part is not kept, and the loop dumps at start when today's is missing.
+backups_stale=0
+want_sum=$(sha256sum deploy/backup-loop.sh | cut -d' ' -f1)
+have_sum=$(docker exec deepslate-backups sha256sum /backup-loop.sh 2>/dev/null | cut -d' ' -f1) || have_sum=unreadable
+if [ "$have_sum" != "$want_sum" ]; then
+  echo "deepslate-backups has another backup-loop.sh (${have_sum:0:12}) than the checkout (${want_sum:0:12}); restarting it"
+  "${COMPOSE[@]}" restart backups || backups_stale=1
+  have_sum=$(docker exec deepslate-backups sha256sum /backup-loop.sh 2>/dev/null | cut -d' ' -f1) || have_sum=unreadable
+  [ "$have_sum" = "$want_sum" ] || backups_stale=1
+  [ "$backups_stale" = 0 ] && echo "deepslate-backups now runs the checkout's backup-loop.sh" || echo "deploy: deepslate-backups could NOT be put on the new backup-loop.sh; the deploy goes on and fails at its end" >&2
+fi
 
 step "dockhand mirror"
 # Dockhand keeps a copy of the compose file and env so the stack can be pulled and restarted from its UI.
@@ -196,4 +227,5 @@ then compare its fingerprint with the AMP host's own (ssh-keygen -lf /etc/ssh/ss
 
 step "prune old images"
 docker image prune -f
+[ "$backups_stale" = 0 ] || die "everything else is deployed, but deepslate-backups does not run the checkout's backup-loop.sh (the nightly dumps): docker compose -f deploy/docker-compose.yml --env-file deploy/.env restart backups, then docker logs --tail 20 deepslate-backups"
 echo "deployed."

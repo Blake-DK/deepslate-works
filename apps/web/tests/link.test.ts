@@ -8,13 +8,17 @@ const state = vi.hoisted(() => ({
   codes: new Map<string, { code: string; mcUuid: string; mcUsername: string; expiresAt: Date; usedById: string | null }>(),
   users: [] as Array<{ id: string; mcUuid: string | null; displayName: string }>,
   updates: [] as Array<Record<string, unknown>>,
+  cleared: [] as Array<{ mcUsername: string; notId: string }>,
   audits: [] as Array<{ action: string; params: Record<string, unknown>; result: string }>,
   released: [] as string[],
 }));
 
 vi.mock("@/server/db", () => {
   const tx = {
-    user: { update: async ({ data }: { data: Record<string, unknown> }) => void state.updates.push(data) },
+    user: {
+      update: async ({ data }: { data: Record<string, unknown> }) => void state.updates.push(data),
+      updateMany: async ({ where }: { where: { mcUsername: string; NOT: { id: string } } }) => void state.cleared.push({ mcUsername: where.mcUsername, notId: where.NOT.id }),
+    },
     linkCode: { update: async ({ where, data }: { where: { code: string }; data: { usedById: string } }) => { state.codes.get(where.code)!.usedById = data.usedById; } },
   };
   return {
@@ -43,6 +47,7 @@ beforeEach(() => {
   state.codes.clear();
   state.users = [];
   state.updates.length = 0;
+  state.cleared.length = 0;
   state.audits.length = 0;
   state.released.length = 0;
   state.codes.set("ABC234", { code: "ABC234", mcUuid: UUID, mcUsername: "stranger_mc", expiresAt: soon(), usedById: null });
@@ -81,6 +86,18 @@ describe("opening a link links nothing (B-06)", () => {
     expect(await checkCode(fresh(), "ABC234", "link")).toMatchObject({ ok: false, outcome: { title: "That Minecraft account belongs to someone else" } });
     expect(await linkWithCode(fresh(), "ABC234", "link")).toMatchObject({ tone: "error" });
     expect(state.updates).toEqual([]);
+  });
+});
+
+describe("a name somebody else's row still holds (docs/35 R-30)", () => {
+  it("is taken off every other row before it is written, and only when the link goes through", async () => {
+    const u = fresh();
+    expect(await linkWithCode(u, "ABC234", "link")).toMatchObject({ tone: "success" });
+    expect(state.cleared).toEqual([{ mcUsername: "stranger_mc", notId: u.id }]);
+    state.cleared.length = 0;
+    state.users = [{ id: "other", mcUuid: UUID, displayName: "Rowan" }];
+    expect(await linkWithCode(fresh(), "ABC234", "link")).toMatchObject({ tone: "error" });
+    expect(state.cleared).toEqual([]);
   });
 });
 

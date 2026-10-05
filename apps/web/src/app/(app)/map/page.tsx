@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { env } from "@/env";
+import { requireOnboardedUser } from "@/server/auth/session";
 import { getStatus } from "@/server/status";
 import { statusText } from "@/lib/server-status";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { buttonClasses } from "@/components/ui/button";
 export const metadata: Metadata = { title: "Map" };
 
 export default async function MapPage() {
+  await requireOnboardedUser("/map"); // the page's own check, not only the middleware's and the layout's (docs/35 R-29)
   const status = await getStatus();
   const up = Boolean(env.MAP_URL) && status.server === "online";
   if (!up) {

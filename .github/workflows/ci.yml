@@ -6,6 +6,14 @@ on:
     branches: [main, dev]
   pull_request:
 
+# docs/35 R-20: the runs of pushes to main go one after the other, in the order of the pushes, from their first job
+# on. The group on the `images` job alone was entered only after `check`, so of two pushes close together the older
+# could be checked last, build last and leave `latest` on the older commit. Every other run (dev, a pull request)
+# gets a group of its own, which is no group at all.
+concurrency:
+  group: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'ci-main' || format('ci-{0}', github.run_id) }}
+  cancel-in-progress: false
+
 jobs:
   check:
     runs-on: ubuntu-latest

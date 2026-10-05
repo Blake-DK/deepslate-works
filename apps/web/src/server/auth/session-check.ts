@@ -16,5 +16,8 @@ export function sessionProblem(s: SessionClaims, u: SessionOwner): string | null
     if (u.adminLogin.passwordAt.getTime() !== s.pa) return "the password was changed";
   }
   if (s.via === "link" && u.role !== "ADMIN") return "not an admin any more";
+  // docs/35 R-17 (docs/04: "no password-only path"): a session that came in by email and password is never an
+  // admin's. A member promoted while signed in that way signs in again with Discord, or the admin sign-in.
+  if (s.via === "email" && u.role === "ADMIN") return "an admin by email and password";
   return null;
 }

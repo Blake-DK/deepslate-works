@@ -4,6 +4,7 @@ import { bearer, userFromLauncherToken } from "@/server/launcher";
 import { getInstaller, getLock, P } from "@/server/modpack/lock";
 import { installerFor } from "@/lib/installer-info";
 import { getSection } from "@/server/site-settings";
+import { canSeeServer, getSettings } from "@/server/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const user = await userFromLauncherToken(bearer(req));
   if (!user) return Response.json({ error: { code: "unauthorized", message: "Sign in first" } }, { status: 401 });
+  // docs/35 R-41: before "We're live" the pack's file list is not for players, here as in the mod list (same answer)
+  if (!canSeeServer(user, await getSettings())) return Response.json({ error: { code: "not_live", message: "Not launched yet" } }, { status: 403 });
   const [lock, info, joining, extras] = await Promise.all([
     getLock(),
     getInstaller(),

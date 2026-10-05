@@ -66,10 +66,21 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
     }, POLL_MS);
   }, []);
 
+  // docs/35 R-07: what the page was rendered with is followed when it changes (Home renders again as the server's
+  // state does). While the poller runs its answer is the fresher one and wins; once it has stopped, the page's is.
+  const { phase, startedAt, endedAt, leftS, by } = initialWake;
   useEffect(() => {
-    if (initialWake.phase === "waking") follow();
-    return () => { if (poller.current) clearInterval(poller.current); };
-  }, [initialWake.phase, follow]);
+    if (!poller.current) setWake({ phase, startedAt, endedAt, leftS, by });
+  }, [phase, startedAt, endedAt, leftS, by]);
+
+  useEffect(() => {
+    if (phase === "waking") follow();
+    // the ref is emptied too, or `follow` would take the cleared interval for a running one and never start again
+    return () => {
+      if (poller.current) clearInterval(poller.current);
+      poller.current = null;
+    };
+  }, [phase, follow]);
 
   /** Pressed while the server sleeps: wake it now, so it boots while the game loads. api decides; one start at most. */
   function wakeIt() {
@@ -80,6 +91,8 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
       .catch(() => follow());
   }
 
+  /** 3.0: the download is the program itself, nothing to unzip (as /install words it). */
+  const exe = download === "DeepslateWorks.exe";
   const [state, setState] = useState<"idle" | "waiting" | "missing">(installed ? "idle" : "missing");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lostFocus = useRef(false);
@@ -144,7 +157,7 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
           <p data-testid="last-launch">{last ? <>Your last launch: <span className="font-mono">{last.version}</span> on {last.on}</> : <>You haven&apos;t launched from this account yet</>}</p>
         </div>
       </div>
-      {tooOld && <p className="text-sm font-medium text-foreground" data-testid="play-too-old">Your copy is too old to update itself. Run {download === "DeepslateWorks.exe" ? "DeepslateWorks.exe" : "Setup.bat"} from this download once; after that Play keeps it up to date.</p>}
+      {tooOld && <p className="text-sm font-medium text-foreground" data-testid="play-too-old">Your copy is too old to update itself. Run {exe ? "DeepslateWorks.exe" : "Setup.bat"} from this download once; after that Play keeps it up to date.</p>}
       {(() => {
         const line = wakeLine(wake);
         if (!line) return null;
@@ -159,10 +172,10 @@ export function PlayButton({ name, current, ready, last, update, join = null, st
         <Alert tone="info" data-testid="play-missing">
           <p className="font-medium">{installed ? "Looks like the launcher isn\u2019t set up on this PC" : "Download Deepslate Works"}</p>
           {!installed && <p className="mt-1">It was taken off your PC. To play again, set it up once more:</p>}
-          <p className="mt-1">Download, unzip and double-click <span className="font-mono">Setup.bat</span> once. After that, Play works from here and it keeps itself up to date.{!stepsHere && <> The steps are under <Link href="/help" className="underline">Getting started → Getting in</Link>.</>}</p>
+          <p className="mt-1">{exe ? <>Download <span className="font-mono">DeepslateWorks.exe</span> and run it once.</> : <>Download, unzip and double-click <span className="font-mono">Setup.bat</span> once.</>} After that, Play works from here and it keeps itself up to date.{!stepsHere && <> The steps are under <Link href="/help" className="underline">Getting started → Getting in</Link>.</>}</p>
           <p className="mt-2 flex flex-wrap items-center gap-3">
             <a href={`/downloads/${download ?? "installer.zip"}`} className={buttonClasses("secondary", "sm")}>Download installer</a>
-            <span className="text-xs text-muted-foreground">Already installed? If your browser asked whether to open Windows PowerShell, answer yes.</span>
+            <span className="text-xs text-muted-foreground">Already installed? If your browser asked whether to open {exe ? "Deepslate Works" : "Windows PowerShell"}, answer yes.</span>
           </p>
         </Alert>
       )}

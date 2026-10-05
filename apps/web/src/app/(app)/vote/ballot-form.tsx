@@ -17,12 +17,13 @@ type Props = {
   questions: Question[];
   initial: { modIds: string[]; answers: Record<string, string>; savedAt: string | null } | null;
   tier: "LOW" | "MID" | "HIGH" | null;
-  closesAt: string | null;
+  /** When the vote closes, already written out in UK time on the server: the browser's clock and zone play no part. */
+  closes: string | null;
 };
 
 const TONE: Record<Load, "good" | "warn" | "bad"> = { L: "good", M: "warn", H: "bad" };
 
-export function BallotForm({ voteId, sections, questions, initial, tier, closesAt }: Props) {
+export function BallotForm({ voteId, sections, questions, initial, tier, closes: closesText }: Props) {
   const all = useMemo(() => sections.flatMap((s) => s.mods), [sections]);
   const bySlug = useMemo(() => new Map(all.map((m) => [m.slug, m])), [all]);
   const [picked, setPicked] = useState<Set<string>>(() => new Set(initial?.modIds ?? all.filter((m) => m.recommended && !m.exclusiveGroup).map((m) => m.slug)));
@@ -54,8 +55,6 @@ export function BallotForm({ voteId, sections, questions, initial, tier, closesA
       if (r.ok) setDirty(false);
     });
   }
-
-  const closesText = closesAt ? new Date(closesAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : null;
 
   return (
     <div className="space-y-8 pb-28">

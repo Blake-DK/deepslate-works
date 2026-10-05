@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import archiver from "archiver";
 import type { LockFile, LockEntry } from "./lock";
@@ -23,11 +23,24 @@ async function exists(p: string) {
   }
 }
 
+/**
+ * docs/35 R-43: web hands out config.zip, installer.zip, DeepslateWorks.ps1 and DeepslateWorks.exe straight from
+ * dist/ while a build may be running, so none of them is written in place: `<name>.tmp` beside it, then a rename.
+ * A download sees the old file or the new one, never half of one. A .tmp left by a build that died is written over
+ * by the next.
+ */
+async function writeFileWhole(file: string, data: string | Buffer): Promise<void> {
+  await writeFile(`${file}.tmp`, data);
+  await rename(`${file}.tmp`, file);
+}
+
 function zipDir(entries: Array<{ dir?: string; file?: string; name: string }>, out: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const output = createWriteStream(out);
+    const tmp = `${out}.tmp`;
+    const output = createWriteStream(tmp);
     const archive = archiver("zip", { zlib: { level: 9 } });
-    output.on("close", () => resolve());
+    output.on("close", () => rename(tmp, out).then(resolve, reject));
+    output.on("error", reject); // a full disk used to end the build with an error nobody caught
     archive.on("error", reject);
     archive.pipe(output);
     for (const e of entries) {
@@ -231,7 +244,7 @@ export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist:
   await writeFile(path.join(stage, INSTALLER_BRIDGE), stamped);
   for (const f of INSTALLER_ZIP_FILES) if (f !== INSTALLER_SCRIPT && f !== INSTALLER_BRIDGE) await cp(path.join(paths.installer, f), path.join(stage, f));
   const script = path.join(paths.dist, INSTALLER_SCRIPT);
-  await writeFile(script, stamped);
+  await writeFileWhole(script, stamped);
   const out = path.join(paths.dist, "installer.zip");
   await zipDir([{ dir: stage, name: false as unknown as string }], out);
   await rm(stage, { recursive: true, force: true });
@@ -239,7 +252,7 @@ export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist:
   const { size } = await stat(out);
   const scriptInfo = { sha256: await sha256File(script), size: (await stat(script)).size };
   const exe = await takeCiExe(paths.dist, log);
-  await writeFile(path.join(paths.dist, "installer.json"), `${JSON.stringify({ version, sha256, size, script: scriptInfo, exe, builtAt: new Date().toISOString() }, null, 2)}\n`);
+  await writeFileWhole(path.join(paths.dist, "installer.json"), `${JSON.stringify({ version, sha256, size, script: scriptInfo, exe, builtAt: new Date().toISOString() }, null, 2)}\n`);
   log(`installer.zip stamped with ${portalUrl} and version ${m.version}+${shortHash(lock)}`);
   log(`installer ${version}: zip sha256 ${sha256}, ${INSTALLER_SCRIPT} sha256 ${scriptInfo.sha256}`);
   return out;
@@ -276,7 +289,8 @@ export async function takeCiExe(dist: string, log: (s: string) => void): Promise
   if (claimed !== sha256) return drop(`its checksum ${sha256.slice(0, 12)}... is not the one CI wrote (${claimed.slice(0, 12) || "none"})`);
   const head = (await readFile(path.join(dir, EXE_NAME))).subarray(0, 2).toString("latin1");
   if (head !== "MZ") return drop("it is not a Windows program");
-  await cp(path.join(dir, EXE_NAME), out);
+  await cp(path.join(dir, EXE_NAME), `${out}.tmp`);
+  await rename(`${out}.tmp`, out);
   const { size } = await stat(out);
   log(`DeepslateWorks.exe ${version}: sha256 ${sha256}, ${(size / 1048576).toFixed(2)} MB`);
   return { version, sha256, size };

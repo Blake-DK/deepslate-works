@@ -82,7 +82,7 @@ describe("UK time", () => {
 });
 
 describe("slots and series", () => {
-  it("has 25 hour slots for the last 24 h (the first and last are part hours) and 8 days for a week", () => {
+  it("has 25 hour slots for the last 24 h (the hour it started in and the hour it ends in) and 8 days for a week", () => {
     expect(slots(rangeFor("24h", NOW, null))).toHaveLength(25);
     const week = slots(rangeFor("7d", NOW, null));
     expect(week.map((x) => x.label)).toEqual(["22/09", "23/09", "24/09", "25/09", "26/09", "27/09", "28/09", "29/09"]);
@@ -92,6 +92,33 @@ describe("slots and series", () => {
     const labels = slots(r).map((x) => x.label);
     expect(labels).toEqual(["21/10", "22/10", "23/10", "24/10", "25/10", "26/10", "27/10", "28/10"]);
     expect(new Set(labels).size).toBe(labels.length);
+  });
+  it("cuts hours and days where the UK's clock does, each slot ending where the next starts (docs/35 R-26)", () => {
+    const now = at("2026-09-29T12:37:00Z"); // not on the hour
+    for (const key of ["24h", "7d", "30d"]) {
+      const r = rangeFor(key, now, null);
+      const all = slots(r);
+      expect([key, all[0]!.start.toISOString()]).toEqual([key, r.from.toISOString()]);
+      for (let i = 1; i < all.length; i++) expect([key, i, all[i]!.start.toISOString()]).toEqual([key, i, all[i - 1]!.end.toISOString()]);
+    }
+    const hoursOf = slots(rangeFor("24h", now, null));
+    expect(hoursOf).toHaveLength(25);
+    expect([hoursOf[0]!.label, hoursOf[0]!.end.toISOString()]).toEqual(["13:00", "2026-09-28T13:00:00.000Z"]); // 13:37 to 14:00 in the UK
+    expect([hoursOf[1]!.start.toISOString(), hoursOf[1]!.end.toISOString()]).toEqual(["2026-09-28T13:00:00.000Z", "2026-09-28T14:00:00.000Z"]);
+    expect([hoursOf.at(-1)!.start.toISOString(), hoursOf.at(-1)!.end.toISOString()]).toEqual(["2026-09-29T12:00:00.000Z", "2026-09-29T13:00:00.000Z"]);
+    const days = slots(rangeFor("7d", now, null));
+    expect([days[0]!.label, days[0]!.end.toISOString()]).toEqual(["22/09", "2026-09-22T23:00:00.000Z"]); // midnight in the UK, summer time
+    expect([days.at(-1)!.label, days.at(-1)!.start.toISOString(), days.at(-1)!.end.toISOString()]).toEqual(["29/09", "2026-09-28T23:00:00.000Z", "2026-09-29T23:00:00.000Z"]);
+  });
+  it("gives the day the clocks go back its 25 hours", () => {
+    const day = slots(rangeFor("7d", at("2026-10-28T12:37:00Z"), null)).find((x) => x.label === "25/10")!;
+    expect([day.start.toISOString(), day.end.toISOString()]).toEqual(["2026-10-24T23:00:00.000Z", "2026-10-26T00:00:00.000Z"]);
+  });
+  it("puts each minute played in one day's bar only", () => {
+    const now = at("2026-09-29T12:37:00Z");
+    const played = [s("owly", "2026-09-25T18:00:00Z", "2026-09-25T20:00:00Z"), s("alex", "2026-09-26T22:30:00Z", "2026-09-26T23:30:00Z")]; // alex: 23:30 to 00:30 in the UK
+    const minutes = series(played, rangeFor("7d", now, null), now).map((p) => [p.slot.label, Math.round(played.reduce((a, x) => a + Math.max(0, Math.min((x.leftAt ?? now).getTime(), p.slot.end.getTime()) - Math.max(x.joinedAt.getTime(), p.slot.start.getTime())), 0) / 60_000)] as const);
+    expect(minutes.filter(([, m]) => m > 0)).toEqual([["25/09", 120], ["26/09", 30], ["27/09", 30]]);
   });
   it("counts sessions where they started and the peak wherever they reached", () => {
     const pts = series(SESSIONS, rangeFor("24h", NOW, null), NOW);

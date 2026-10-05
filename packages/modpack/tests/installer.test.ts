@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -80,6 +80,8 @@ describe("the download", () => {
       const info = JSON.parse(await readFile(path.join(dist, "installer.json"), "utf8")) as { version: string; sha256: string };
       expect(info.version).toBe(version);
       expect(info.sha256).toBe(await sha256File(zip)); // the zip's, which is what 1.4.x checks
+      // docs/35 R-43: what web hands out is written beside itself and renamed; nothing half-made is left in dist
+      expect((await readdir(dist)).sort()).toEqual(["DeepslateWorks.ps1", "installer.json", "installer.zip"]);
     } finally {
       await rm(dist, { recursive: true, force: true });
     }
@@ -121,6 +123,7 @@ describe("the 3.0 exe from CI", () => {
     await put(exe, sum, "3.0.0");
     expect(await takeCiExe(dist, () => {})).toEqual({ version: "3.0.0", sha256: sum, size: exe.length });
     expect(await readFile(path.join(dist, EXE_NAME))).toEqual(exe);
+    expect((await readdir(dist)).sort()).toEqual([EXE_NAME, CI_EXE_DIR].sort()); // no .tmp left (docs/35 R-43)
   });
   it("is left out when the checksum is not CI's, the version is missing, or it is not a program", async () => {
     await put(exe, "0".repeat(64), "3.0.0");

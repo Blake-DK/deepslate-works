@@ -61,6 +61,9 @@ export async function linkWithCode(user: LinkUser, code: string, via: "link" | "
   if (!check.ok) return check.outcome;
   await db.$transaction(async (tx) => {
     // `guildMember` is not written here (B-05): only a Discord sign-in or the bot says who is in the server.
+    // docs/35 R-30: the name is unique too. Somebody else's row may still hold it from before they renamed in
+    // Minecraft; this account has it now, so the old row lets go of it rather than the link failing.
+    await tx.user.updateMany({ where: { mcUsername: check.mcUsername, NOT: { id: user.id } }, data: { mcUsername: null } });
     await tx.user.update({ where: { id: user.id }, data: { mcUuid: check.mcUuid, mcUsername: check.mcUsername, verifiedAt: user.verifiedAt ?? new Date() } });
     await tx.linkCode.update({ where: { code: check.code }, data: { usedById: user.id } });
     await audit({ userId: user.id, action: "link.bind", params: { code: check.code, via, mcUsername: check.mcUsername, mcUuid: check.mcUuid }, result: "OK" }, tx);

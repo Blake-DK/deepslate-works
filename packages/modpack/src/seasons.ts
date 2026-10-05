@@ -118,8 +118,12 @@ const criteriaOf = (t: SeasonTrial): Record<string, z.infer<typeof criterion>> =
 /**
  * What a schema cannot say. `entities`: the ids that have been checked on the running server (docs/11, 2026-10-02;
  * modpack/seasons/entities.json). An id that is not in it is an error until somebody has checked it there.
+ * `vanillaItems`: the game's own items without the namespace (modpack/items/vanilla-1.21.1.json). With it, a
+ * minecraft: item the game does not have is an error (a trophy of it cannot be given, an icon of it breaks the
+ * advancement); a mod's item is let through, since the full catalogue exists only after a build. Without it, item
+ * ids are not checked.
  */
-export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>): SeasonIssue[] {
+export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>, vanillaItems?: ReadonlySet<string>): SeasonIssue[] {
   const issues: SeasonIssue[] = [];
   const titles = new Map<string, string>(); // title (lower case) → where it was first used
   const frontiers = new Map<string, string>(); // dimension → the season it belongs to
@@ -147,7 +151,13 @@ export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>): S
       else titles.set(key, `${s.id} ${what}`);
     };
     title(s.name, "the season's name");
+    const item = (id: string, what: string) => {
+      const [ns, key] = id.split(":");
+      if (vanillaItems && ns === "minecraft" && !vanillaItems.has(key ?? "")) err(`${what}: ${id} is not an item of Minecraft 1.21.1 (modpack/items/vanilla-1.21.1.json)`);
+    };
+    item(s.icon, "the season's icon");
     const ids = new Set<string>();
+    const bossOf = new Map<string, string>(); // entity → the boss that has it
     for (const b of s.bosses) {
       if (ids.has(`boss:${b.id}`)) err(`two bosses have the id ${b.id}`);
       ids.add(`boss:${b.id}`);
@@ -155,6 +165,11 @@ export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>): S
       title(wakeTitle(b), `the wake line of boss ${b.id}`);
       title(b.trophy.name, `the trophy of boss ${b.id}`);
       if (!entities.has(b.entity)) err(`boss ${b.id}: the entity ${b.entity} is not in modpack/seasons/entities.json (ids checked on the running server); check it there and add it`);
+      // one kill would tick both, and the console line of one hides the other
+      const sameEntity = bossOf.get(b.entity);
+      if (sameEntity !== undefined) err(`boss ${b.id}: the entity ${b.entity} is boss ${sameEntity}'s already; one entity, one boss in a season`);
+      else bossOf.set(b.entity, b.id);
+      item(b.trophy.item, `the trophy of boss ${b.id}`);
       if (b.opensAt && !inside(b.opensAt)) err(`boss ${b.id}: opensAt ${b.opensAt} is outside the season`);
     }
     for (const t of s.trials) {
@@ -162,6 +177,7 @@ export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>): S
       ids.add(`trial:${t.id}`);
       title(t.title, `trial ${t.id}`);
       if (!inside(t.opensAt)) err(`trial ${t.id}: opensAt ${t.opensAt} is outside the season`);
+      item(t.icon, `the icon of trial ${t.id}`);
       for (const [name, c] of Object.entries(criteriaOf(t))) {
         const [ns, key] = c.trigger.split(":");
         if (ns === "minecraft" && !TRIGGERS_1_21_1.has(key ?? "")) err(`trial ${t.id}: ${c.trigger} (criterion ${name}) is not an advancement trigger of Minecraft 1.21.1`);
@@ -186,8 +202,12 @@ export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>): S
   return issues;
 }
 
-/** Reads every season file of a folder (all *.json but index.json and entities.json), the index and the entity list. */
-export async function loadSeasons(dir: string): Promise<{ seasons: Season[]; index: SeasonIndex; entities: Set<string>; issues: SeasonIssue[] }> {
+/**
+ * Reads every season file of a folder (all *.json but index.json and entities.json), the index and the entity list.
+ * `vanillaFile`: modpack/items/vanilla-1.21.1.json; when given, item ids are checked against it, and a file that
+ * cannot be read is an error of its own.
+ */
+export async function loadSeasons(dir: string, vanillaFile?: string): Promise<{ seasons: Season[]; index: SeasonIndex; entities: Set<string>; issues: SeasonIssue[] }> {
   const issues: SeasonIssue[] = [];
   const seasons: Season[] = [];
   let names: string[];
@@ -214,7 +234,15 @@ export async function loadSeasons(dir: string): Promise<{ seasons: Season[]; ind
       issues.push({ season: id, message: `${name} cannot be read: ${e instanceof Error ? e.message : String(e)}` });
     }
   }
-  issues.push(...lintSeasons(seasons, entities));
+  let vanillaItems: Set<string> | undefined;
+  if (vanillaFile !== undefined) {
+    try {
+      vanillaItems = new Set(Object.keys(z.object({ items: z.record(z.unknown()) }).parse(JSON.parse(await readFile(vanillaFile, "utf8"))).items));
+    } catch (e) {
+      issues.push({ season: "items", message: `${vanillaFile} cannot be read, so no item id was checked: ${e instanceof Error ? e.message : String(e)}` });
+    }
+  }
+  issues.push(...lintSeasons(seasons, entities, vanillaItems));
   const known = new Set(seasons.map((s) => s.id));
   if (index.current && !known.has(index.current)) issues.push({ season: "index", message: `current is ${index.current}, and there is no such season file` });
   for (const id of index.ship) if (!known.has(id)) issues.push({ season: "index", message: `ship names ${id}, and there is no such season file` });
@@ -396,8 +424,8 @@ export async function writeSeasonDatapack(s: Season, outDir: string): Promise<st
  * A season that is not in `ship` is not built there: the real one stays off the server until its opening day,
  * because a boss killed while its advancement exists cannot be earned again when the season starts (docs/34 §8).
  */
-export async function buildSeasons(paths: { seasons: string; dist: string }, log: (s: string) => void): Promise<string[]> {
-  const { seasons, index, issues } = await loadSeasons(paths.seasons);
+export async function buildSeasons(paths: { seasons: string; dist: string; items?: string }, log: (s: string) => void): Promise<string[]> {
+  const { seasons, index, issues } = await loadSeasons(paths.seasons, paths.items);
   if (issues.length) throw new Error(`season files have errors:\n${issues.map((i) => `  ${i.season}: ${i.message}`).join("\n")}`);
   const out = path.join(paths.dist, "server", "datapacks");
   await mkdir(out, { recursive: true });

@@ -7,6 +7,7 @@ import { buildSeasons, frontierDatapack, isLastMondayOfItsMonth, lastMonday, lin
 // docs/20 §4, docs/34 §2 and §3 (W1.1): the season files, their lint, and the datapack built from one.
 
 const SEASONS = path.join(__dirname, "../../../modpack/seasons");
+const VANILLA = path.join(__dirname, "../../../modpack/items/vanilla-1.21.1.json");
 const dirs: string[] = [];
 afterEach(async () => {
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true });
@@ -24,7 +25,7 @@ const messages = (seasons: Season[]) => lintSeasons(seasons, ENTITIES).map((i) =
 
 describe("the season files in the repo", () => {
   it("all parse and lint clean: no duplicate title, every entity checked on the server, every date inside its season", async () => {
-    const { seasons, index, issues, entities } = await loadSeasons(SEASONS);
+    const { seasons, index, issues, entities } = await loadSeasons(SEASONS, VANILLA); // with the item ids checked (R-43)
     expect(issues).toEqual([]);
     expect(seasons.map((s) => s.id).sort()).toEqual(["s1", "sample"]);
     expect(index.current).toBe("s1");
@@ -82,6 +83,25 @@ describe("lint: each mistake with a line that says which", () => {
   it("an entity nobody has checked on the server", () => {
     const s = base({ bosses: [{ id: "x", title: "Mystery", entity: "cataclysm:nameless_sorcerer", tier: 1, points: 1, trophy: { item: "minecraft:stone", name: "A Stone" } }] });
     expect(messages([s])[0]).toMatch(/boss x: the entity cataclysm:nameless_sorcerer is not in modpack\/seasons\/entities\.json/);
+  });
+  it("one entity for two bosses of a season; the same entity in two seasons is fine (docs/35 R-43)", () => {
+    const second = { id: "again", title: "Frostmaw Again", entity: "mowziesmobs:frostmaw", tier: 2, points: 20, trophy: { item: "minecraft:ice", name: "A Second Tooth" } };
+    const s = base();
+    expect(messages([base({ bosses: [...s.bosses, second] })])).toEqual(["boss again: the entity mowziesmobs:frostmaw is boss frostmaw's already; one entity, one boss in a season"]);
+    const other = base({ id: "t2", name: "Another Season", bosses: [{ ...second, entity: "mowziesmobs:frostmaw" }], trials: [] });
+    expect(messages([s, other])).toEqual([]);
+  });
+  it("a minecraft: item the game does not have, as a trophy or an icon; a mod's item is let through (docs/35 R-43)", () => {
+    const items = new Set(["blue_ice", "paper", "netherite_sword"]);
+    const lint = (seasons: Season[]) => lintSeasons(seasons, ENTITIES, items).map((i) => i.message);
+    expect(lint([base()])).toEqual([]);
+    const s = base();
+    expect(lint([base({ icon: "minecraft:netherite_sward" })])).toEqual(["the season's icon: minecraft:netherite_sward is not an item of Minecraft 1.21.1 (modpack/items/vanilla-1.21.1.json)"]);
+    expect(lint([base({ bosses: [{ ...s.bosses[0]!, trophy: { item: "minecraft:frost_tooth", name: "Frostmaw's Tooth" } }] })])[0]).toMatch(/^the trophy of boss frostmaw: minecraft:frost_tooth is not an item/);
+    expect(lint([base({ trials: [{ ...s.trials[0]!, icon: "minecraft:bed" }] })])[0]).toMatch(/^the icon of trial bed: minecraft:bed is not an item/);
+    expect(lint([base({ bosses: [{ ...s.bosses[0]!, trophy: { item: "mowziesmobs:ice_crystal", name: "Frostmaw's Tooth" } }] })])).toEqual([]);
+    // without the list nothing is checked
+    expect(messages([base({ icon: "minecraft:netherite_sward" })])).toEqual([]);
   });
   it("a date outside the season, an end before the start, a finale for a boss that is not on the ladder", () => {
     expect(messages([base({ trials: [{ id: "late", title: "Too Late", opensAt: "2027-01-01T19:00:00Z", points: 5, criteria: { trigger: "minecraft:slept_in_bed" } }] })])[0]).toMatch(/trial late: opensAt 2027-01-01T19:00:00Z is outside the season/);
@@ -222,6 +242,16 @@ describe("build seasons", () => {
     bad.trials[0]!.title = bad.bosses[0]!.title;
     await writeFile(path.join(p.seasons, "sample.json"), JSON.stringify(bad));
     await expect(buildSeasons(p, () => undefined)).rejects.toThrow(/sample: the title "The Rehearsal Ravager"/);
+  });
+
+  it("with the game's item list: an item it does not have stops the build, and so does a list that cannot be read (docs/35 R-43)", async () => {
+    const p = await repo(["sample"]);
+    expect(await buildSeasons({ ...p, items: VANILLA }, () => undefined)).toEqual(["sample"]);
+    await expect(buildSeasons({ ...p, items: path.join(p.seasons, "no-such.json") }, () => undefined)).rejects.toThrow(/items: .*no-such\.json cannot be read, so no item id was checked/);
+    const bad = JSON.parse(await readFile(path.join(p.seasons, "sample.json"), "utf8")) as { bosses: Array<{ id: string; trophy: { item: string } }> };
+    bad.bosses[0]!.trophy.item = "minecraft:sadle";
+    await writeFile(path.join(p.seasons, "sample.json"), JSON.stringify(bad));
+    await expect(buildSeasons({ ...p, items: VANILLA }, () => undefined)).rejects.toThrow(/sample: the trophy of boss .*: minecraft:sadle is not an item of Minecraft 1\.21\.1/);
   });
 
   it("`ship` naming a season that does not exist is an error", async () => {

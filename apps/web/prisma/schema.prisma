@@ -109,10 +109,12 @@ model OneTimeLogin {
 model Invite {
   code      String   @id // 8 chars, human-readable
   createdBy String
-  usedBy    String?  @unique
+  usedBy    String? // not unique: a member who left the Discord server may be sent a second invite (docs/35 R-01)
   createdAt DateTime @default(now())
   expiresAt DateTime
   note      String?
+
+  @@index([usedBy])
 }
 
 model Vote {

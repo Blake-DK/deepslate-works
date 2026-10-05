@@ -32,6 +32,19 @@ describe("discordDoor", () => {
     expect(at({ staleInvite: true, inGuild: true })).toEqual({ door: "create", outside: false });
     expect(at({ staleInvite: true, existing: { outsideAuth: true } })).toEqual({ door: "in" });
   });
+  it("refuses and says so when Discord did not answer, whoever needed the answer", () => {
+    const unknown = { door: "refuse", why: "discord-unavailable" };
+    expect(at({ inGuild: null })).toEqual(unknown);
+    expect(at({ inGuild: null, existing: { outsideAuth: false } })).toEqual(unknown);
+    expect(at({ inGuild: null, existing: { outsideAuth: false }, invite: true })).toEqual(unknown);
+    expect(at({ inGuild: null, invite: true })).toEqual(unknown);
+    expect(at({ inGuild: null, staleInvite: true })).toEqual(unknown);
+    expect(at({ inGuild: null, bootstrapAdmin: true })).toEqual(unknown);
+    // the outside list is never asked about the server, and without the rule nobody is
+    expect(at({ inGuild: null, existing: { outsideAuth: true } })).toEqual({ door: "in" });
+    expect(at({ inGuild: null, gate: false, existing: { outsideAuth: false } })).toEqual({ door: "in" });
+    expect(at({ inGuild: null, gate: false, invite: true })).toEqual({ door: "create", outside: true });
+  });
   it("without the rule, asks for an invite as before", () => {
     expect(at({ gate: false })).toEqual({ door: "refuse", why: "no-invite" });
     expect(at({ gate: false, bootstrapAdmin: true })).toEqual({ door: "create", outside: false });

@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { requireOnboardedUser } from "@/server/auth/session";
-import { getResultsVote, tallyVote } from "@/server/vote/votes";
+import { getLastClosedVote, getResultsVote, tallyVote } from "@/server/vote/votes";
 import { getManifest, votableMods } from "@/server/modpack/manifest";
 import { TIER_KEYS, type Tally } from "@/server/vote/tally";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,10 +23,18 @@ const TIER_LABEL = { LOW: "weak PC", MID: "mid PC", HIGH: "strong PC", UNKNOWN: 
 export default async function ResultsPage({ searchParams }: { searchParams: Promise<{ applied?: string }> }) {
   const user = await requireOnboardedUser();
   const { applied } = await searchParams;
-  const vote = await getResultsVote();
-  if (!vote) notFound();
+  const current = await getResultsVote();
+  // docs/35 R-24: no vote has been held yet. A card, not a "page not found" for the whole tab.
+  if (!current) {
+    return (
+      <Card><CardHeader><CardTitle>No results yet</CardTitle><CardDescription>Results appear here once a vote has closed.</CardDescription></CardHeader></Card>
+    );
+  }
   const isAdmin = user.role === "ADMIN";
-  if (vote.status === "OPEN" && !isAdmin) {
+  // While a new vote is open, players see the last one that closed; only admins see the open one's count.
+  const newVoteOpen = current.status === "OPEN" && !isAdmin;
+  const vote = newVoteOpen ? await getLastClosedVote() : current;
+  if (!vote) {
     return (
       <Card><CardHeader><CardTitle>Results come when the vote closes</CardTitle><CardDescription>Until then, <Link href="/pack?tab=vote" className="underline">cast or change your vote</Link>.</CardDescription></CardHeader></Card>
     );
@@ -59,6 +66,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
         )}
       </div>
       {applied && APPLIED[applied] && <Alert tone={APPLIED[applied].tone}>{APPLIED[applied].text}</Alert>}
+      {newVoteOpen && <Alert tone="info">A new vote is open: <Link href="/pack?tab=vote" className="underline">cast or change your vote</Link>. Its results come when it closes; these are from the last vote.</Alert>}
 
       {groups.map(({ c, mods }) => (
         <Card key={c.id}>

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { everything, filterToQuery, filterWords, groupLit, groupsFor, toggleGroup, type EventFilter } from "@/lib/event-query";
+import { everything, filterDay, filterToQuery, filterWords, groupLit, groupsFor, toggleGroup, type EventFilter } from "@/lib/event-query";
 import type { EventRow } from "@/server/event-log";
 import { EventItem } from "./event-list";
 import { LiveList, LiveTail, LiveToggle } from "./live-tail";
@@ -53,8 +53,8 @@ export function EventPage({ base, admin, filter, rows, more, newest }: { base: s
           {filter.kinds.length > 0 && <input type="hidden" name="kind" value={filter.kinds.join(",")} />}
           <div className="grid gap-3 sm:grid-cols-4">
             <div><Label htmlFor="player">Player</Label><Input id="player" name="player" defaultValue={filter.player ?? ""} placeholder="Minecraft or display name" className="h-9 text-sm" /></div>
-            <div><Label htmlFor="from">From</Label><Input id="from" name="from" type="date" defaultValue={filter.from?.toISOString().slice(0, 10) ?? ""} className="h-9 text-sm" /></div>
-            <div><Label htmlFor="to">To</Label><Input id="to" name="to" type="date" defaultValue={filter.to?.toISOString().slice(0, 10) ?? ""} className="h-9 text-sm" /></div>
+            <div><Label htmlFor="from">From</Label><Input id="from" name="from" type="date" defaultValue={filter.from ? filterDay(filter.from) : ""} className="h-9 text-sm" /></div>
+            <div><Label htmlFor="to">To</Label><Input id="to" name="to" type="date" defaultValue={filter.to ? filterDay(filter.to) : ""} className="h-9 text-sm" /></div>
             <div><Label htmlFor="q">Words</Label><Input id="q" name="q" defaultValue={filter.text ?? ""} placeholder="in the message" className="h-9 text-sm" /></div>
           </div>
           <div className="flex flex-wrap gap-2">

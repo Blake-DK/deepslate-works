@@ -129,13 +129,16 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
         </div>
       </div>
 
-      <section aria-label="Totals" className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <Tile label="Time played" value={hours(total)} />
-        <Tile label="Sessions" value={String(sessions.length)} />
-        <Tile label="Longest session" value={hours(longest)} />
-        <Tile label="Deaths" value={String(deaths)} />
-        <Tile label="Last on" value={online ? "now" : rows[0] ? timeAgo(rows[0].leftAt ?? rows[0].joinedAt, now) : "never"} />
-      </section>
+      {/* docs/35 R-25: the totals, the ping and the chart are stats too: the same switch as the Sessions tab (`stats`) */}
+      {stats && (
+        <section aria-label="Totals" className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <Tile label="Time played" value={hours(total)} />
+          <Tile label="Sessions" value={String(sessions.length)} />
+          <Tile label="Longest session" value={hours(longest)} />
+          <Tile label="Deaths" value={String(deaths)} />
+          <Tile label="Last on" value={online ? "now" : rows[0] ? timeAgo(rows[0].leftAt ?? rows[0].joinedAt, now) : "never"} />
+        </section>
+      )}
 
       <nav aria-label="About this player" className="flex overflow-x-auto whitespace-nowrap border-b" data-testid="tabs">
         {tabs.map((t) => (
@@ -145,7 +148,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
         ))}
       </nav>
 
-      {tab === "overview" && online && (
+      {tab === "overview" && online && stats && (
         <Card data-testid="connection">
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2">Connection {pingNow !== null && <Badge tone={pingTone(pingNow)}>{pingNow} ms</Badge>}</CardTitle>
@@ -185,7 +188,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
         </Card>
       )}
 
-      {tab === "overview" && (
+      {tab === "overview" && stats && (
         <Card>
           <CardHeader><CardTitle>Minutes played per day</CardTitle><CardDescription>The last 30 days.</CardDescription></CardHeader>
           <CardContent><AreaChart points={perDay} unit={["minute", "minutes"]} height={120} /></CardContent>

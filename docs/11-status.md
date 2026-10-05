@@ -908,6 +908,8 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 
 ### Player guide (docs/18, 2026-09-29)
 
+- **2026-10-05:** step 2 of "Getting in" in the guide as it ships reads "Download DeepslateWorks.exe and run it once." (was "Download, double-click Setup.bat once."; Alex asked). It differs from docs/18's text on purpose: docs/18 names this line itself as out of date. The rest of docs/18's rewrite is not done.
+
 - `/guide`, second in the nav. Markdown like the rules page, kept in the branding settings (`branding.guide`), edited in Admin → Branding → "Guide page"; live on the next load. While nobody has saved a text of their own the page shows the guide as it ships (`apps/web/src/lib/guide-default.ts`, generated from the text between the two rules in docs/18), and goes on following it; saving the shipped text unchanged, or an empty box, keeps it that way.
 - **Tags** (`apps/web/src/lib/guide.ts`, tested): `<!-- mod: slug -->` on a heading covers the section down to the next heading of the same rank or above; on a list item, that item; in a paragraph, that paragraph. Several names in one tag: all are needed. Every comment is taken out of what is shown.
 - **The sign-in page** shows the numbered steps of "Getting in" (three lines), from the admin's text if it has such a section, else from the shipped guide.

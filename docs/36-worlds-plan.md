@@ -170,3 +170,28 @@ own code and cannot be confined is not added.
   clear → Arrival → teleport there → Pre-generation and Map list it → a portal with its frame and lighter.
 - Written into docs/34 as unproven until seen: Server Sided Portals with a custom dimension type and its far side
   per kind; BlueMap conf keys per kind; In Control! rules; reading folder sizes through AMP.
+
+## Step 0, part 1: what CI measured (2026-10-05)
+
+The job `worldgen-boot` started a vanilla 1.21.1 server on the live world's seed with 14 test worlds and measured
+the ground's height and air at six points in each (`tools/worldgen-boot/worldgen.mjs`). All 14 loaded.
+
+| Question | Answer |
+|---|---|
+| A plain copy of the overworld settings | the main world's twin, block for block |
+| **Shift**, against the main world, and two seeds against each other | differs at 6 of 6 points, both times |
+| **Rename**, against the main world | differs at 5 of 6 |
+| Large biomes as it is (today's Frontier) against the main world | differs at 6 of 6: docs/20's open check, on vanilla |
+| Large biomes shifted | differs from large biomes as it is |
+| Nether-like: plain, shifted, renamed | all three the real Nether's twin |
+| End-like: plain, shifted, renamed | all three the real End's twin |
+| Caves: plain and shifted | the same as each other, and the same shape as the Nether at these points |
+
+What follows:
+
+- **The seed is the shift.** It gives as many different worlds as there are seeds; rename gives one per name and
+  needs every noise copied. Shift replaces docs/32 W2.1 for overworld-shaped zones.
+- **Nether-like, End-like and Caves cannot be varied by either way.** docs/32's Season 3 and 4 zones (W3.1) cannot
+  rest on a renamed Nether or End: for the planner. The form offers one of each and says it is a twin.
+- Still to see on the real server (part 2): the same packs under NeoForge and our mods, Server Sided Portals with
+  these dimensions, whether an empty portal tag closes the way out as well as the way in.

@@ -1,4 +1,5 @@
 {
   "current": "s1",
-  "ship": []
+  "ship": [],
+  "frontiers": ["sample"]
 }

@@ -254,6 +254,20 @@ describe("build seasons", () => {
     await expect(buildSeasons({ ...p, items: VANILLA }, () => undefined)).rejects.toThrow(/sample: the trophy of boss .*: minecraft:sadle is not an item of Minecraft 1\.21\.1/);
   });
 
+  it("`frontiers` ships a season's Frontier alone: the dimension and the portal, nothing that can be earned", async () => {
+    const p = await repo([]);
+    await writeFile(path.join(p.seasons, "index.json"), JSON.stringify({ current: "s1", ship: [], frontiers: ["sample"] }));
+    expect(await buildSeasons(p, () => undefined)).toEqual([]);
+    const out = path.join(p.dist, "server", "datapacks");
+    expect(await readdir(out)).toEqual(["deepslate-frontier-sample"]);
+    expect((await readdir(path.join(out, "deepslate-frontier-sample", "data", "deepslate"))).sort()).toEqual(["dimension", "tags"]);
+    await writeFile(path.join(p.seasons, "index.json"), JSON.stringify({ current: "s1", ship: [], frontiers: [] }));
+    await buildSeasons(p, () => undefined);
+    expect(await readdir(out)).toEqual([]);
+    await writeFile(path.join(p.seasons, "index.json"), JSON.stringify({ current: "s1", ship: [], frontiers: ["s9"] }));
+    await expect(buildSeasons(p, () => undefined)).rejects.toThrow(/frontiers names s9/);
+  });
+
   it("`ship` naming a season that does not exist is an error", async () => {
     const p = await repo(["s9"]);
     await expect(buildSeasons(p, () => undefined)).rejects.toThrow(/ship names s9/);

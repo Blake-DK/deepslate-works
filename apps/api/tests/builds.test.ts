@@ -123,3 +123,18 @@ describe("Admin → Seasons, Builds", () => {
     expect(t.sent).toEqual([]);
   });
 });
+
+describe("pre-generating another world (Alex, 2026-10-05)", () => {
+  it("chunky is pointed at the world that was picked; the main world when none is", async () => {
+    const { mapOf } = await import("../src/status/map.js");
+    const { sameArea } = await import("../src/status/pregen.js");
+    const a = actions["world.pregen"];
+    expect(a.build(ctx, a.input.parse({ x: 0, z: 0, radius: 500, world: "deepslate:frontier_sample" }))[1]).toBe("chunky world deepslate:frontier_sample");
+    expect(a.build(ctx, a.input.parse({ x: 0, z: 0, radius: 500 }))[1]).toBe("chunky world minecraft:overworld");
+    for (const world of ["deepslate:limbo", "minecraft:overworld start", "ae2:spatial_storage"]) expect(a.input.safeParse({ x: 0, z: 0, radius: 500, world }).success).toBe(false);
+    expect([mapOf(), mapOf("minecraft:overworld"), mapOf("minecraft:the_nether"), mapOf("minecraft:the_end"), mapOf("deepslate:frontier_s1")]).toEqual(["world", "world", "world_the_nether", "world_the_end", "frontier_s1"]);
+    // the same square in another world is another area: chunky's old task is called off first
+    expect(sameArea({ x: 0, z: 0, radius: 500 }, { x: 0, z: 0, radius: 500, world: "minecraft:overworld" })).toBe(true);
+    expect(sameArea({ x: 0, z: 0, radius: 500 }, { x: 0, z: 0, radius: 500, world: "deepslate:frontier_s1" })).toBe(false);
+  });
+});

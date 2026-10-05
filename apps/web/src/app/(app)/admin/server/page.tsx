@@ -11,6 +11,7 @@ import SettingsSection from "../settings/section";
 import { BrandingForm } from "../branding/form";
 import { BrandingSaved, brandingValues } from "../branding/section";
 import { saveBrandingAction } from "../branding/actions";
+import { getFrontiers } from "@/server/season";
 import { BackupCard, consoleLines, DistanceCard, EntityCountsCard, Flash, GroundClearCard, loadGround, loadBackup, loadDistance, loadPlayers, loadPregen, loadSchedule, loadTail, MapCard, PowerCard, PregenCard, RestartCard } from "./cards";
 
 export const metadata: Metadata = { title: "Server" };
@@ -64,7 +65,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
     body = (
       <div className="space-y-4">
         <BrandingSaved saved={one(q.saved)} error={one(q.error)} note={one(q.note)} />
-        <PregenCard pregen={pregen} />
+        <PregenCard pregen={pregen} frontiers={await getFrontiers()} />
         <MapCard />
         <Card data-testid="motd-card">
           <CardHeader><CardTitle>Server description</CardTitle><CardDescription>The two lines under the server&apos;s name in Minecraft&apos;s server list.</CardDescription></CardHeader>

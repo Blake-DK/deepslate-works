@@ -295,7 +295,7 @@ export function BackupCard({ backup, back, list = true }: { backup: Backup | nul
   );
 }
 
-export function PregenCard({ pregen }: { pregen: Pregen | null }) {
+export function PregenCard({ pregen, frontiers = [] }: { pregen: Pregen | null; frontiers?: Array<{ dimension: string; name: string }> }) {
   const mode = modeText(pregen);
   const prog = progress(pregen);
   const mapProg = mapProgress(pregen);
@@ -331,6 +331,16 @@ export function PregenCard({ pregen }: { pregen: Pregen | null }) {
             <input type="hidden" name="op" value="on" />
             <input type="hidden" name="x" value={pregen?.plan.area?.x ?? 0} />
             <input type="hidden" name="z" value={pregen?.plan.area?.z ?? 0} />
+            <div>
+              <Label htmlFor="pgw">World</Label>
+              <select id="pgw" name="world" defaultValue={pregen?.plan.area?.world ?? "minecraft:overworld"} className={cn("mt-1 h-8 text-sm", fieldClasses)}>
+                <option value="minecraft:overworld">Main world (around spawn)</option>
+                <option value="minecraft:the_nether">The Nether (around 0, 0)</option>
+                <option value="minecraft:the_end">The End (around 0, 0)</option>
+                {frontiers.map((f) => <option key={f.dimension} value={f.dimension}>Frontier · {f.name} (around 0, 0)</option>)}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">One world at a time. A Frontier is in the list once its datapack is shipped; it exists on the server from the start after the Sync.</p>
+            </div>
             <div><Label htmlFor="pgr">Radius, blocks</Label><Input id="pgr" name="radius" type="number" min={16} max={10000} defaultValue={pregen?.plan.area?.radius ?? 1500} className="h-8 w-28 text-sm" required /></div>
             <p className="text-xs text-muted-foreground">Around {pregen?.plan.area?.x ?? 0}, {pregen?.plan.area?.z ?? 0} (spawn). Another radius calls the present area off and begins a new one; what is already made is passed over quickly. Roughly: {[1500, 3000, 5000, 10000].map((r) => { const c = pregenCost(r); return `${r} = ${c.hours < 1 ? `${Math.round(c.hours * 60)} min` : `${c.hours.toFixed(1)} h`}, ${c.gb < 1 ? c.gb.toFixed(1) : Math.round(c.gb)} GB`; }).join(" · ")}.</p>
             <fieldset className="space-y-1 text-sm">

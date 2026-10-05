@@ -57,6 +57,7 @@ export async function runActionAction(formData: FormData) {
 const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const blank = (v: FormDataEntryValue | null) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null);
 const pregenOn = z.object({
+  world: z.string().regex(/^(minecraft:(overworld|the_nether|the_end)|deepslate:frontier_[a-z0-9_]{1,32})$/).default("minecraft:overworld"),
   mode: z.enum(["empty", "now"]),
   what: z.enum(["generate", "render", "both"]),
   purge: z.boolean(),
@@ -77,11 +78,11 @@ export async function pregenAction(formData: FormData) {
   try {
     if (op === "on") {
       const mode = String(formData.get("mode") ?? "");
-      const parsed = pregenOn.safeParse({ mode, what: formData.get("what") || "both", purge: formData.get("purge") === "1", radius: formData.get("radius") || 1500, x: formData.get("x") || 0, z: formData.get("z") || 0, from: blank(formData.get("from")), to: blank(formData.get("to")), hours: blank(formData.get(mode === "now" ? "hoursNow" : "hoursEmpty")) });
+      const parsed = pregenOn.safeParse({ world: formData.get("world") || undefined, mode, what: formData.get("what") || "both", purge: formData.get("purge") === "1", radius: formData.get("radius") || 1500, x: formData.get("x") || 0, z: formData.get("z") || 0, from: blank(formData.get("from")), to: blank(formData.get("to")), hours: blank(formData.get(mode === "now" ? "hoursNow" : "hoursEmpty")) });
       if (!parsed.success) redirect(to("error", "The radius is between 16 and 10000, the hours between a quarter and 240, the times like 02:00."));
       const d = parsed.data;
       if (d.mode === "empty" && Boolean(d.from) !== Boolean(d.to)) redirect(to("error", "A window has a from and a to. Leave both empty for any time of day."));
-      await apiFetch("/pregen/on", { method: "POST", body: { mode: d.mode, what: d.purge && d.what === "generate" ? "render" : d.what, purge: d.purge, area: { x: d.x, z: d.z, radius: d.radius }, window: d.mode === "empty" && d.from && d.to ? { from: d.from, to: d.to } : null, capHours: d.hours }, caller, timeoutMs: 60_000 });
+      await apiFetch("/pregen/on", { method: "POST", body: { mode: d.mode, what: d.purge && d.what === "generate" ? "render" : d.what, purge: d.purge, area: d.world === "minecraft:overworld" ? { x: d.x, z: d.z, radius: d.radius } : { x: 0, z: 0, radius: d.radius, world: d.world }, window: d.mode === "empty" && d.from && d.to ? { from: d.from, to: d.to } : null, capHours: d.hours }, caller, timeoutMs: 60_000 });
     } else if (op === "map-reload") {
       await apiFetch("/pregen/map-reload", { method: "POST", body: {}, caller, timeoutMs: 30_000 });
     } else if (op === "off") {

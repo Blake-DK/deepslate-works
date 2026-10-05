@@ -9,6 +9,9 @@ import { COMPONENTS_RE, ITEM_RE, SLOT_RE } from "../shared/slots.js";
 // "system" actions are run by the api itself (join hook, timers); the rest need an ADMIN caller.
 
 export const MC_NAME = z.string().regex(/^[A-Za-z0-9_]{3,16}$/);
+/** The worlds that can be pre-generated: the game's three and a season's Frontier. Never the entrance room. */
+export const PREGEN_WORLD = z.string().regex(/^(minecraft:(overworld|the_nether|the_end)|deepslate:frontier_[a-z0-9_]{1,32})$/);
+
 // ---- builds (docs/34 §10)
 /** A structure file holds 48 blocks a side at most; a larger build is a grid of pieces. */
 export const PIECE = 48;
@@ -638,9 +641,10 @@ export const actions = {
   "world.pregen": define({
     name: "world.pregen",
     role: "ADMIN",
-    input: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(10_000) }),
-    // `quiet 30`: one line of progress every half minute instead of every second
-    build: (_ctx, { x, z, radius }) => ["chunky quiet 30", "chunky world minecraft:overworld", "chunky shape square", `chunky center ${x} ${z}`, `chunky radius ${radius}`, "chunky start"],
+    input: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(10_000), world: PREGEN_WORLD.optional() }),
+    // `quiet 30`: one line of progress every half minute instead of every second. `world`: the main world unless
+    // another is named (Alex, 2026-10-05: every dimension we make can be pre-generated)
+    build: (_ctx, { x, z, radius, world }) => ["chunky quiet 30", `chunky world ${world ?? "minecraft:overworld"}`, "chunky shape square", `chunky center ${x} ${z}`, `chunky radius ${radius}`, "chunky start"],
   }),
   "world.pregenContinue": define({ name: "world.pregenContinue", role: "ADMIN", input: z.object({}), build: () => ["chunky quiet 30", "chunky continue"] }),
   // chunky asks "are you sure" and wants `confirm`

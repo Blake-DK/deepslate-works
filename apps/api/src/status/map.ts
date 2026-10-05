@@ -7,6 +7,17 @@ import type { MapLine } from "../events/parse.js";
 
 /** The map of the overworld, as BlueMap names it (the folder of the world). */
 export const OVERWORLD_MAP = "world";
+/**
+ * The BlueMap map of a world, by its id. The game's three are named after their folders (BlueMap made those itself);
+ * a Frontier's is the one `build seasons` ships as config/bluemap/maps/<dimension's name>.conf.
+ */
+export function mapOf(world?: string | null): string {
+  if (!world || world === "minecraft:overworld") return OVERWORLD_MAP;
+  if (world === "minecraft:the_nether") return "world_the_nether";
+  if (world === "minecraft:the_end") return "world_the_end";
+  return world.split(":")[1] ?? OVERWORLD_MAP;
+}
+
 /** All the maps of the server: what "delete the map" deletes. */
 export const ALL_MAPS = ["world", "world_the_nether", "world_the_end"];
 

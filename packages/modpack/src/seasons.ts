@@ -423,6 +423,36 @@ export function frontierDatapack(s: Season): Map<string, string> | null {
   return files;
 }
 
+/**
+ * The Frontier's map (docs/20 §5): BlueMap makes map configs by itself only for the worlds it finds at its first
+ * start, so a dimension added later gets none. This one goes to config/bluemap/maps/<name>.conf, which Sync merges
+ * beside the three BlueMap made (world.conf and the two others). The map's id is the file's name.
+ */
+export function frontierMapConf(s: Season): { file: string; body: string } | null {
+  if (!s.frontier) return null;
+  const name = s.frontier.dimension.split(":")[1]!;
+  const lines = [
+    `# Deepslate Works: the Frontier of ${s.name}. Written by "modpack build seasons"; changes here are overwritten.`,
+    `world: "world"`,
+    `dimension: "${s.frontier.dimension}"`,
+    `name: "Frontier · ${s.name.replace(/"/g, "")}"`,
+    `sorting: 10`,
+    `sky-color: "#7dabff"`,
+    `ambient-light: 0.1`,
+    `remove-caves-below-y: 55`,
+    `storage: "file"`,
+  ];
+  return { file: `${name}.conf`, body: `${lines.join("\n")}\n` };
+}
+
+async function writeFrontierMap(s: Season, dist: string): Promise<void> {
+  const conf = frontierMapConf(s);
+  if (!conf) return;
+  const dir = path.join(dist, "server", "config", "bluemap", "maps");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, conf.file), conf.body);
+}
+
 async function writePack(root: string, files: Map<string, string>): Promise<void> {
   await rm(root, { recursive: true, force: true });
   for (const [rel, body] of files) {
@@ -470,6 +500,7 @@ export async function buildSeasons(paths: { seasons: string; dist: string; items
     const frontier = frontierDatapack(s);
     if (frontier && s.frontier) {
       await writePack(path.join(out, frontierPackName(s.id)), frontier);
+      await writeFrontierMap(s, paths.dist);
       log(`frontier datapack ${frontierPackName(s.id)}: ${s.frontier.dimension} on ${s.frontier.noise} (it counts from the server's next start)`);
     } else await rm(path.join(out, frontierPackName(s.id)), { recursive: true, force: true });
   }
@@ -478,6 +509,7 @@ export async function buildSeasons(paths: { seasons: string; dist: string; items
     const frontier = frontierDatapack(s);
     if (!frontier || !s.frontier) continue;
     await writePack(path.join(out, frontierPackName(s.id)), frontier);
+    await writeFrontierMap(s, paths.dist);
     log(`frontier datapack ${frontierPackName(s.id)} alone: ${s.frontier.dimension} on ${s.frontier.noise} (it counts from the server's next start)`);
   }
   if (built.length === 0) log(`seasons: ${seasons.length} file(s) lint clean, none in "ship", no season datapack built`);

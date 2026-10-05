@@ -1,6 +1,14 @@
 // Admin → Server → Pre-generation: what api says, in words. Pure, so it is tested.
 
-export type Area = { x: number; z: number; radius: number };
+export type Area = { x: number; z: number; radius: number; world?: string };
+
+/** A world in plain words: "the main world", "the Nether", "the End", "the Frontier (sample)". */
+export function worldName(world?: string | null): string {
+  if (!world || world === "minecraft:overworld") return "the main world";
+  if (world === "minecraft:the_nether") return "the Nether";
+  if (world === "minecraft:the_end") return "the End";
+  return `the Frontier (${world.replace(/^deepslate:frontier_/, "")})`;
+}
 /** Generate (chunky), render the map (BlueMap), or the one after the other. A plan without it generates. */
 export type What = "generate" | "render" | "both";
 export type MapView = {

@@ -85,6 +85,11 @@ export type SeasonTrial = Season["trials"][number];
 export const seasonIndexSchema = z.object({
   current: z.string().regex(ID).nullable(),
   ship: z.array(z.string().regex(ID)).default([]),
+  /**
+   * Seasons whose Frontier alone goes to the server: the dimension and its portal, without the season's
+   * advancements. For making the ground ahead of the opening (pre-generation, the temple), and for trying a portal.
+   */
+  frontiers: z.array(z.string().regex(ID)).default([]),
 });
 export type SeasonIndex = z.infer<typeof seasonIndexSchema>;
 
@@ -226,10 +231,10 @@ export async function loadSeasons(dir: string, vanillaFile?: string): Promise<{ 
   try {
     names = (await readdir(dir)).filter((n) => n.endsWith(".json")).sort();
   } catch {
-    return { seasons, index: { current: null, ship: [] }, entities: new Set(), issues };
+    return { seasons, index: { current: null, ship: [], frontiers: [] }, entities: new Set(), issues };
   }
   const read = async (name: string) => JSON.parse(await readFile(path.join(dir, name), "utf8")) as unknown;
-  let index: SeasonIndex = { current: null, ship: [] };
+  let index: SeasonIndex = { current: null, ship: [], frontiers: [] };
   let entities = new Set<string>();
   for (const name of names) {
     const id = name.replace(/\.json$/, "");
@@ -258,6 +263,11 @@ export async function loadSeasons(dir: string, vanillaFile?: string): Promise<{ 
   const known = new Set(seasons.map((s) => s.id));
   if (index.current && !known.has(index.current)) issues.push({ season: "index", message: `current is ${index.current}, and there is no such season file` });
   for (const id of index.ship) if (!known.has(id)) issues.push({ season: "index", message: `ship names ${id}, and there is no such season file` });
+  for (const id of index.frontiers) {
+    const s = seasons.find((x) => x.id === id);
+    if (!s) issues.push({ season: "index", message: `frontiers names ${id}, and there is no such season file` });
+    else if (!s.frontier) issues.push({ season: "index", message: `frontiers names ${id}, and that season has no frontier` });
+  }
   return { seasons, index, entities, issues };
 }
 
@@ -447,8 +457,10 @@ export async function buildSeasons(paths: { seasons: string; dist: string; items
   await mkdir(out, { recursive: true });
   // a season taken out of `ship` leaves dist/, so the next Sync does not carry it on
   for (const name of await readdir(out)) {
-    const id = /^deepslate-(?:season|frontier)-(.+)$/.exec(name)?.[1];
-    if (id !== undefined && !index.ship.includes(id)) await rm(path.join(out, name), { recursive: true, force: true });
+    const m = /^deepslate-(season|frontier)-(.+)$/.exec(name);
+    if (!m) continue;
+    const wanted = index.ship.includes(m[2]!) || (m[1] === "frontier" && index.frontiers.includes(m[2]!));
+    if (!wanted) await rm(path.join(out, name), { recursive: true, force: true });
   }
   const built: string[] = [];
   for (const s of seasons.filter((x) => index.ship.includes(x.id))) {
@@ -460,6 +472,13 @@ export async function buildSeasons(paths: { seasons: string; dist: string; items
       await writePack(path.join(out, frontierPackName(s.id)), frontier);
       log(`frontier datapack ${frontierPackName(s.id)}: ${s.frontier.dimension} on ${s.frontier.noise} (it counts from the server's next start)`);
     } else await rm(path.join(out, frontierPackName(s.id)), { recursive: true, force: true });
+  }
+  // a Frontier ahead of its season: the dimension and the portal's tags, and nothing that can be earned
+  for (const s of seasons.filter((x) => index.frontiers.includes(x.id) && !index.ship.includes(x.id))) {
+    const frontier = frontierDatapack(s);
+    if (!frontier || !s.frontier) continue;
+    await writePack(path.join(out, frontierPackName(s.id)), frontier);
+    log(`frontier datapack ${frontierPackName(s.id)} alone: ${s.frontier.dimension} on ${s.frontier.noise} (it counts from the server's next start)`);
   }
   if (built.length === 0) log(`seasons: ${seasons.length} file(s) lint clean, none in "ship", no season datapack built`);
   return built;

@@ -60,6 +60,7 @@ import { SeasonRecorder } from "./seasons/recorder.js";
 import { prismaSeasonStore } from "./seasons/store.js";
 import { listAdvancementFiles, readAdvancements } from "./seasons/advancements.js";
 import { seasonRoutes } from "./routes/seasons.js";
+import { BUILDS_KEY, buildRoutes, type SavedBuild } from "./routes/builds.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
@@ -178,6 +179,15 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   // docs/34 §4 (W1.3): the season's clears and what a season says, from the same console lines. It does nothing
   // until a Season row says "running" (Admin → Seasons, W1.4).
   const seasonFile = currentSeason(env.REPO_DIR, log);
+  buildRoutes(app, {
+    amp: ampClient, tail, ctx: () => limbo.actionCtx,
+    book: {
+      load: async () => ((await db.setting.findUnique({ where: { key: BUILDS_KEY } }))?.value as SavedBuild[] | undefined) ?? [],
+      save: async (list) => {
+        await db.setting.upsert({ where: { key: BUILDS_KEY }, create: { key: BUILDS_KEY, value: JSON.parse(JSON.stringify(list)) }, update: { value: JSON.parse(JSON.stringify(list)) } });
+      },
+    },
+  });
   seasonRoutes(app, { amp: ampClient, tail, ctx: () => limbo.actionCtx, file: seasonFile, store: prismaSeasonStore, addEvent: (e) => prismaRecorderStore.addEvent(e), settle: () => seasons.settle() }); // settle: docs/35 R-15
   const seasons = new SeasonRecorder({
     file: seasonFile,

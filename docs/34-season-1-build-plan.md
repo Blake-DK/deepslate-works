@@ -31,7 +31,7 @@ Work lands on `dev` (the working rules "Branches"); `main` moves when Alex wants
 | **Mon 30 Nov, 19:00 UK** | Season 1 opens |
 | by 14 Dec | W1.7 the wipe, tried on a throwaway dimension; W1.4 End |
 | by 21 Dec | W1.8 `hall.update` and the Hall of Fame |
-| Sat 26 Dec, 20:00 UK | the finale (Boxing Day by the rule; Alex to confirm, docs/32) |
+| Sat 19 Dec, 20:00 UK | the finale (Alex, 2026-10-05: the Saturday before Boxing Day, not the last Saturday) |
 | Mon 28 Dec | End season, the wipe, Season 2 opens |
 
 If the build is behind at the rehearsal, the cuts are docs/32 §2's, in its order. Recording and the freeze are never cut.
@@ -199,3 +199,24 @@ Alex's ask, in his words: take things people have built and use them in the worl
 **Order.** T1 with the Lock night, then the terrain check and T5 by hand in the sample season's Frontier; T2 to T4 after that, tried at the rehearsal on 23 November.
 
 **Done on `dev`, 2026-10-05 (T1's repo half).** `server-sided-portals` (`6ybc8eyX`, server only) and `cobweb` (`c10AZba0`) are in `mods.json`, not locked. **Cobweb goes on PCs as well as the server**: Modrinth lists it as required on the client, and the Lock refuses to make such a mod server-only (the rule from the TaCZ kick of 2026-10-01). So PCs get one small library at their next Play after the Lock; the portal mod itself stays off them. The season file's `frontier` has `portal` (`frame`, `igniter`), and `deepslate-frontier-<id>` carries the two tags the mod reads (`data/deepslate/tags/block/<dimension>_portal_frame.json`, `…/tags/item/<dimension>_portal_igniter.json`, from its wiki's "Datapack usage"). Defaults: frame `minecraft:reinforced_deepslate`, igniter `minecraft:knowledge_book`, neither obtainable in survival, so a portal is an admin's to make; lint refuses obsidian and fire. The guide's Season section and the First Steps Out hint say "the portal in the temple at spawn" instead of the waystones. Not proven: that the server starts with the two mods, that a knowledge book lights the frame, that a vanilla-looking client sees the portal, and which frame the mod builds on the far side.
+
+## 11. Alex's decisions, 2026-10-05
+
+Asked one by one and answered the same day. They settle §8's 8 and the three differences from docs/21 §6 that docs/11 lists; the planner amends docs/20, docs/21 and docs/32 where they say otherwise.
+
+| Question | Answer |
+|---|---|
+| Season 1's finale | **Saturday 19 December, 20:00 UK**, not Boxing Day. In `s1.json`. Later seasons keep "the last Saturday" unless the poll says otherwise |
+| Cataclysm's three lesser bosses on the Season 1 ladder | **They count, whatever the weak-PC check says.** W1.9 no longer blocks anything; a player on a weak PC gets the tick by standing within 48 blocks |
+| Admins on the scoreboard | Yes, like anyone |
+| The way into the Frontier | **The portal in the temple, and nothing else.** No waystone pair |
+| Who makes a portal | Admins only (reinforced deepslate and a knowledge book, as built) |
+| Mobs inside a locked area | If Open Parties and Claims' settings keep players from hurting mobs in a server claim, that is changed, for spawn as well |
+| "Has awoken" | names the first player to hit, at once (as built) |
+| How a season begins | Start is pressed (as built) |
+| The `.env.bak-*` files and `deepslate-%F.sql.gz` | deleted (docs/31 "for Alex"); the command is his or the root session's |
+| Mod versions | **every mod that is switched on is pinned** in `mods.json`; a test fails on "latest". An update is a commit that names the mod |
+| An outside monitor | Alex has Uptime Kuma on another server; one HTTP keyword monitor on `/api/health` |
+| What is built next | the temple's buttons (§10, T2 to T4) |
+
+**Built on `dev`, 2026-10-05 (T2 to T4).** Actions `build.capture`, `build.place`, `build.lock` (registry, no generic route), api `GET /builds`, `POST /builds/capture`, `POST /builds/place`, and a "Builds" card on Admin → Seasons. A build is 192 blocks a side and 12 pieces of 48 at most; what was captured (name, size, where from) is kept in the setting `_builds`. Worlds: the main world or a `deepslate:frontier_*`, never the entrance room. **Not proven on the server**: that a redstone block set by command makes a SAVE structure block write its file, that `place template` finds files in `world/generated/`, that `forceload` holds the area for the commands, and the form of the `oclaims` claim outside spawn. Also on `dev`: every enabled mod pinned (a test fails on "latest"), and the finale on 19 December.

@@ -46,7 +46,7 @@ describe("the season files in the repo", () => {
     // opening Monday, three Fridays, and the Christmas one moved from Friday the 25th to Wednesday the 23rd
     expect(s1.trials.map((t) => t.opensAt)).toEqual(["2026-11-30T19:00:00Z", "2026-12-04T19:00:00Z", "2026-12-11T19:00:00Z", "2026-12-18T19:00:00Z", "2026-12-23T19:00:00Z"]);
     expect(s1.bosses.find((b) => b.id === "ender_dragon")).toMatchObject({ tier: 3, points: 30, groupRadius: 0 });
-    expect(s1.finale).toMatchObject({ at: "2026-12-26T20:00:00Z", boss: "ender_dragon" }); // the last Saturday, 20:00 UK
+    expect(s1.finale).toMatchObject({ at: "2026-12-19T20:00:00Z", boss: "ender_dragon" }); // Alex, 2026-10-05: the Saturday before Boxing Day, 20:00 UK
   });
 });
 
@@ -254,6 +254,20 @@ describe("build seasons", () => {
     await expect(buildSeasons({ ...p, items: VANILLA }, () => undefined)).rejects.toThrow(/sample: the trophy of boss .*: minecraft:sadle is not an item of Minecraft 1\.21\.1/);
   });
 
+  it("`frontiers` ships a season's Frontier alone: the dimension and the portal, nothing that can be earned", async () => {
+    const p = await repo([]);
+    await writeFile(path.join(p.seasons, "index.json"), JSON.stringify({ current: "s1", ship: [], frontiers: ["sample"] }));
+    expect(await buildSeasons(p, () => undefined)).toEqual([]);
+    const out = path.join(p.dist, "server", "datapacks");
+    expect(await readdir(out)).toEqual(["deepslate-frontier-sample"]);
+    expect((await readdir(path.join(out, "deepslate-frontier-sample", "data", "deepslate"))).sort()).toEqual(["dimension", "tags"]);
+    await writeFile(path.join(p.seasons, "index.json"), JSON.stringify({ current: "s1", ship: [], frontiers: [] }));
+    await buildSeasons(p, () => undefined);
+    expect(await readdir(out)).toEqual([]);
+    await writeFile(path.join(p.seasons, "index.json"), JSON.stringify({ current: "s1", ship: [], frontiers: ["s9"] }));
+    await expect(buildSeasons(p, () => undefined)).rejects.toThrow(/frontiers names s9/);
+  });
+
   it("`ship` naming a season that does not exist is an error", async () => {
     const p = await repo(["s9"]);
     await expect(buildSeasons(p, () => undefined)).rejects.toThrow(/ship names s9/);
@@ -297,5 +311,13 @@ describe("the Frontier (docs/20 §5)", () => {
     const s1 = seasons.find((s) => s.id === "s1")!;
     expect(s1.frontier).toEqual({ dimension: "deepslate:frontier_s1", noise: "minecraft:large_biomes", radius: 3000, portal: { frame: "minecraft:reinforced_deepslate", igniter: "minecraft:knowledge_book" } });
     expect(JSON.stringify(s1.trials)).toContain('"to":"deepslate:frontier_s1"');
+  });
+});
+
+describe("mod versions (Alex, 2026-10-05)", () => {
+  it("every mod that is switched on has a pinned version: a Lock changes only what a commit changed", async () => {
+    // the Lock of 2026-10-05 took newer Xaero's maps by itself ("latest") and every PC failed to load
+    const manifest = JSON.parse(await readFile(path.join(SEASONS, "..", "mods.json"), "utf8")) as { mods: Array<{ slug: string; enabled: boolean; version: string }> };
+    expect(manifest.mods.filter((m) => m.enabled && m.version === "latest").map((m) => m.slug)).toEqual([]);
   });
 });

@@ -171,3 +171,29 @@ Each with a recommendation. 1 to 3 block W1.1; the rest block later pieces.
 - **W1.9**, the LOW-tier check: without it Cataclysm's three lesser guardians do not go on the Season 1 ladder (docs/20 §8), and week 4's drop needs a replacement.
 - **This session has no docker, no sudo and no Minecraft account.** Every proof on the server is Alex's or the root session's; the plan above puts all of them on two days, 28 October and 4 November.
 - **OPAC's live config is not in the repo** (B-32). W1.2 changes that file, so it has to be brought into the repo first.
+
+## 10. Temples: captured builds, a real portal, locked ground (Alex, 2026-10-05)
+
+Alex's ask, in his words: take things people have built and use them in the world; spawn a temple for the boss battle; inside it a portal into the boss world; lock the chunks so that nobody can destroy the building, but mobs inside can be killed. His answers the same day: the boss world is **the Frontier**; the portal is **a real portal mod, installed without a vote**. Nothing of this section is built.
+
+**The portal mod, checked on Modrinth 2026-10-05.** Server Sided Portals (`server-sided-portals`, Crystal Nest), version 2.2.1 `6ybc8eyX` for NeoForge 1.21.1, with its library Cobweb (`cobweb`, project `dQcfqGbl`), 1.4.0 `c10AZba0`. Its page says it runs on the server only and works with any client, vanilla included: nothing changes on players' PCs, so no weak-PC check and no new download for anybody. A portal is a frame of blocks named by a block tag (`<dimension>_portal_frame`), lit with an item named by an item tag, leading to a dimension made by a datapack, which is what `deepslate-frontier-<id>` already is. Not checked: the tags' exact paths (its wiki), that Cobweb is server-only too (Modrinth lists Cobweb as needed on both sides), the licence's terms for a private pack (a licence of Crystal Nest's own), and how it sits beside the 70-odd mods. Two other server-only candidates exist (`worldportal`, `dimensionlink`); both are at version 0.0.x and all rights reserved.
+
+**The pieces.**
+
+| # | Piece | How | Proven? |
+|---|---|---|---|
+| T1 | The portal mod on the server | `server-sided-portals` and `cobweb` in `mods.json` as server-only; Lock, Build, Sync, one restart. The frontier datapack gains the frame and igniter tags | no: the server has to start with it once before anything is built on it (the working rules) |
+| T2 | Capture a build | Admin → Seasons, "Capture a build": a name and two corners. The game has no console command that saves a structure, so the action sets a structure block in SAVE mode beside the build and powers it; the file lands in `world/generated/deepslate/structures/<name>.nbt` and is kept through a Frontier wipe. 48 blocks a side at most per piece; a larger build is captured as a grid of pieces by the same action | no |
+| T3 | Place a build | "Place": a captured build, a dimension, a position. `place template deepslate:<name>` per piece, in the main world or the Frontier | no |
+| T4 | Lock the ground | the action that claims spawn today, for any chunks: a server claim in Open Parties and Claims over the temple's chunks, in either dimension | the claim: yes (spawn). Killing mobs inside a server claim: not known, see below |
+| T5 | The portal in the temple | a frame of the tagged block inside the build (so it is captured and placed with it), lit once by an admin; its twin in the Frontier | no |
+
+**What stands in the way.**
+
+- **Open Parties and Claims' live settings are not in the repo** (docs/31 B-32). Whether a player may hurt mobs inside a server claim is one of them. The file is read off the server first; if it protects mobs today, the setting changes for the spawn claim too.
+- **docs/20 §5 said "no claims in the Frontier"** and "Waystones, nothing new for players to learn". A temple with a portal replaces the waystone pair as the way in; a server claim around the Frontier's temple is an admin's claim, not a player's, so the rule for players stands. For the planner to amend.
+- **A lit portal can be broken like a nether portal** (a frame block removed). The claim keeps players from it; mobs' explosions inside a server claim are another of OPAC's settings.
+- **T1 needs a Lock**, and the Lock night (PR E) has not been run. The portal mod goes into that same evening rather than a second one.
+- **A captured build holds what stood there**: chests with their contents, and modded blocks. The capture action leaves entities out; whoever captures empties the chests first.
+
+**Order.** T1 with the Lock night, then the terrain check and T5 by hand in the sample season's Frontier; T2 to T4 after that, tried at the rehearsal on 23 November.

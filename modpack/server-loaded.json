@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-03T19:33:34.314Z",
+  "at": "2026-10-05T07:57:19.067Z",
   "source": "logs/latest.log",
   "files": [
     {
@@ -48,6 +48,10 @@
     },
     {
       "filename": "Clumps-neoforge-1.21.1-19.0.0.1.jar",
+      "nested": false
+    },
+    {
+      "filename": "cobweb-neoforge-1.21-1.4.0.jar",
       "nested": false
     },
     {
@@ -215,15 +219,19 @@
       "nested": false
     },
     {
+      "filename": "server-sided-portals-neoforge-1.21-2.2.1.jar",
+      "nested": false
+    },
+    {
       "filename": "servercore-neoforge-1.5.19+1.21.1.jar",
       "nested": false
     },
     {
-      "filename": "sophisticatedbackpacks-1.21.1-3.26.6.2174.jar",
+      "filename": "sophisticatedbackpacks-1.21.1-3.26.7.2182.jar",
       "nested": false
     },
     {
-      "filename": "sophisticatedcore-1.21.1-1.5.2.2343.jar",
+      "filename": "sophisticatedcore-1.21.1-1.5.5.2363.jar",
       "nested": false
     },
     {

@@ -39,6 +39,11 @@ export const CHANGES: Change[] = [
     date: "2026-10-05",
     lines: ["This morning the game stopped at \"Error loading mods\" (the two map mods wanted a newer claims mod). Fixed: press Play again and it loads."],
   },
+  {
+    id: "2026-10-05-mod-videos",
+    date: "2026-10-05",
+    lines: ["Eight more mods on Mods & vote → Mod list have a video now, so you can see what they do."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

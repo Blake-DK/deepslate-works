@@ -15,6 +15,8 @@ export type GuideCard = {
   wiki: string | null;
   where: Where;
   icon: string | null;
+  /** The coming season's: listed to admins only (mods.json `adminOnly`). */
+  adminOnly: boolean;
 };
 export type GuidePart = { key: GuideSection | "extras"; title: string; blurb: string; cards: GuideCard[]; collapsed: boolean };
 
@@ -31,11 +33,12 @@ const PARTS: Array<{ key: GuidePart["key"]; title: string; blurb: string }> = [
 export const anchorOf = (id: string) => id.replace(/[^a-z0-9._-]/gi, "-").toLowerCase();
 
 /**
- * The page's four parts. Only mods that are switched on and not a dependency; a part with nothing in it is left
- * out. `icons` maps a Modrinth slug to its icon (mods), `pictures` an extra's id to its PNG (extras).
+ * The page's four parts. Only mods that are switched on and not a dependency, and admin-only ones only for an admin;
+ * a part with nothing in it is left out. `icons` maps a Modrinth slug to its icon (mods), `pictures` an extra's id to
+ * its PNG (extras).
  */
-export function guideParts(m: Pick<Manifest, "mods">, extras: ExtraEntry[], icons: Record<string, string> = {}, pictures: Record<string, string> = {}): GuidePart[] {
-  const mods = m.mods.filter((x) => x.enabled && !x.hidden);
+export function guideParts(m: Pick<Manifest, "mods">, extras: ExtraEntry[], icons: Record<string, string> = {}, pictures: Record<string, string> = {}, admin = false): GuidePart[] {
+  const mods = m.mods.filter((x) => x.enabled && !x.hidden && (admin || !x.adminOnly));
   const card = (x: Manifest["mods"][number]): GuideCard => ({
     id: anchorOf(x.slug),
     name: x.name,
@@ -46,6 +49,7 @@ export function guideParts(m: Pick<Manifest, "mods">, extras: ExtraEntry[], icon
     wiki: x.wiki || null,
     where: x.side === "server" ? "server" : "everyone",
     icon: icons[x.slug] ?? null,
+    adminOnly: x.adminOnly === true,
   });
   const extra = (x: ExtraEntry): GuideCard => ({
     id: anchorOf(x.id),
@@ -57,6 +61,7 @@ export function guideParts(m: Pick<Manifest, "mods">, extras: ExtraEntry[], icon
     wiki: x.projects[0] ? `https://modrinth.com/project/${x.projects[0].slug}` : null,
     where: "optional",
     icon: pictures[x.id] ?? (x.projects[0] ? icons[x.projects[0].slug] ?? null : null),
+    adminOnly: false,
   });
   return PARTS.map((p) => ({
     ...p,

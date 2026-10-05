@@ -14,6 +14,7 @@ export function lintManifest(raw: unknown): { manifest: Manifest | null; issues:
   const warn = (message: string) => issues.push({ level: "warn", message });
 
   const catIds = new Set(m.categories.map((c) => c.id));
+  const votableCats = new Set(m.categories.filter((c) => c.votable).map((c) => c.id));
   const slugs = new Set<string>();
   const enabledByGroup = new Map<string, string[]>();
   for (const mod of m.mods) {
@@ -25,11 +26,13 @@ export function lintManifest(raw: unknown): { manifest: Manifest | null; issues:
       list.push(mod.slug);
       enabledByGroup.set(mod.exclusiveGroup, list);
     }
-    if (!mod.hidden && mod.videos.length === 0) warn(`${mod.slug}: no videos (TODO)`);
+    if (!mod.hidden && !mod.noVideosFound && mod.videos.length === 0) warn(`${mod.slug}: no videos (TODO)`);
+    if (mod.noVideosFound && mod.videos.length > 0) err(`${mod.slug}: has videos and "noVideosFound": take one out`);
     // the Mods guide (/mods): every listed mod says where it goes, and every one a player uses says how
     if (!mod.hidden && !mod.guide) err(`${mod.slug}: no "guide" (game, helper or behind): the Mods guide needs to know where it goes`);
     if (isPlayerFacing(mod) && !mod.howTo) err(`${mod.slug}: switched on and player-facing, but has no "howTo" for the Mods guide`);
     if (mod.guide !== "behind" && mod.side === "server") warn(`${mod.slug}: server-only but in the guide's "${mod.guide}" part`);
+    if (mod.adminOnly && votableCats.has(mod.category)) err(`${mod.slug}: admin-only, but in a votable category: a mod up for vote is seen by everyone`);
     if (mod.side === "server" && mod.exclusiveGroup) warn(`${mod.slug}: server-only mods should not be in an exclusive group`);
   }
   const bySlug = new Map(m.mods.map((x) => [x.slug, x]));

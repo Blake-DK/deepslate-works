@@ -36,6 +36,20 @@ describe("lintManifest", () => {
     m.mods[0]!.videos = [];
     expect(lintManifest(m).issues.some((i) => i.level === "warn" && /no videos/.test(i.message))).toBe(true);
   });
+  it("no video warning once YouTube was searched and had nothing (noVideosFound); both at once is an error", () => {
+    const m = structuredClone(base);
+    m.mods[0]!.videos = [];
+    m.mods[0]!.noVideosFound = "2026-10-05";
+    expect(lintManifest(m).issues.some((i) => /no videos/.test(i.message))).toBe(false);
+    m.mods[1]!.noVideosFound = "2026-10-05";
+    expect(lintManifest(m).issues.filter((i) => i.level === "error").map((i) => i.message)).toEqual(['gun-a: has videos and "noVideosFound": take one out']);
+  });
+  it("admin-only is never in a votable category", () => {
+    const m = structuredClone(base);
+    m.mods[1]!.adminOnly = true;
+    const errors = lintManifest(m).issues.filter((i) => i.level === "error").map((i) => i.message);
+    expect(errors).toEqual(["gun-a: admin-only, but in a votable category: a mod up for vote is seen by everyone"]);
+  });
 });
 
 describe("estimateLoad", () => {

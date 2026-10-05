@@ -32,6 +32,16 @@ describe("the Mods guide", () => {
   it("leaves out empty parts", () => {
     expect(guideParts({ mods: [m.mods[2]!] }, []).map((p) => p.key)).toEqual(["behind"]);
   });
+  it("lists an admin-only mod (the coming season's) to admins only, and says so on its card", () => {
+    const withSeason = { mods: [...m.mods, mod({ slug: "l_enders-cataclysm", name: "Cataclysm", guide: "game", howTo: "Find a dungeon.", adminOnly: true })] };
+    const ids = (admin: boolean) => guideParts(withSeason, [], {}, {}, admin).flatMap((p) => p.cards.map((c) => c.id));
+    expect(ids(false)).not.toContain("l_enders-cataclysm");
+    expect(ids(true)).toContain("l_enders-cataclysm");
+    const game = guideParts(withSeason, [], {}, {}, true)[0]!;
+    expect(game.cards.map((c) => [c.id, c.adminOnly])).toEqual([["create", false], ["l_enders-cataclysm", true]]);
+    // a part holding only admin-only mods is left out for a player
+    expect(guideParts({ mods: [withSeason.mods.at(-1)!] }, []).length).toBe(0);
+  });
   it("searches names, text and keys", () => {
     const create = guideParts(m, [])[0]!.cards[0]!;
     expect(matches(searchText(create), "water wheel")).toBe(true);

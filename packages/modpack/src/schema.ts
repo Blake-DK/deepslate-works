@@ -28,11 +28,16 @@ export const modSchema = z.object({
   load: z.enum(LOADS),
   recommended: z.boolean().default(false),
   hidden: z.boolean().default(false), // dependencies pulled in at lock time; never shown or voted on
+  // Alex, 2026-10-05: kept for the coming season. Installed and run as usual, but the site lists it to admins only (the
+  // Mods guide, the Mod list). Never up for vote: lint refuses it in a votable category.
+  adminOnly: z.boolean().optional(),
   exclusiveGroup: z.string().nullable().default(null),
   description: z.string().min(1).max(240),
   note: z.string().max(160).optional(), // shown small on the card, e.g. "Needs Mekanism"
   wiki: z.string().url(),
   videos: z.array(videoSchema).max(3).default([]),
+  // the day YouTube was searched and nothing genuine about this mod turned up: lint stops asking for videos
+  noVideosFound: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "a date, YYYY-MM-DD").optional(),
   version: z.string().default("latest"), // "latest" or a Modrinth version id
   requires: z.array(z.string()).default([]),
   guide: z.enum(GUIDE_SECTIONS).optional(),

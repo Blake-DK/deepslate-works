@@ -30,9 +30,11 @@
       "recommended": true,
       "exclusiveGroup": null,           // e.g. "guns": at most one enabled per group
       "hidden": false,                  // true: not shown in the catalogue or on the ballot (a library another mod needs)
+      "adminOnly": false,               // optional; true: the coming season's; installed as usual, listed on the site to admins only (never in a votable category)
       "description": "Cogs, belts, steam engines, trains, mechanical drills and presses.",
       "wiki": "https://createmod.net/wiki",
       "videos": [ { "title": "…", "url": "https://www.youtube.com/watch?v=…" } ],
+      // "noVideosFound": "2026-10-05",  // optional, only with no videos: the day YouTube was searched and had nothing on it
       "version": "latest",              // or a Modrinth version id to pin
       "requires": []                    // slugs; auto-filled from Modrinth required deps at lock time
     }
@@ -45,6 +47,8 @@ Rules enforced by `modpack lint`:
 - At most one `enabled` mod per `exclusiveGroup`.
 - Every `requires` slug exists in the list (dependencies are added as `category: "base"`, `hidden: true`).
 - `server` side mods never ship to clients; `client` side mods never ship to the server.
+- An `adminOnly` mod is not in a votable category.
+- A shown mod with no videos is a warning, unless `noVideosFound` holds the date YouTube was searched and had nothing genuine about it.
 
 ## The catalogue as it stands (2026-09-29, pack `0.1.0+1a48e8ff`)
 

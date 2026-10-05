@@ -540,6 +540,7 @@
       "description": "The game window is called Deepslate Works and carries the server's logo in the taskbar.",
       "wiki": "https://github.com/chylex/Minecraft-Window-Title",
       "videos": [],
+      "noVideosFound": "2026-10-05",
       "version": "Pqn8PDBd",
       "requires": [],
       "guide": "behind"
@@ -732,6 +733,7 @@
       "description": "Press Tab: who's on, everyone's ping in milliseconds, and the server's TPS (20 is perfect). Only on your PC, nothing on the server. Takes the place of TabTPS, which could not run next to BlueMap.",
       "wiki": "https://github.com/tricube3/better-tab",
       "videos": [],
+      "noVideosFound": "2026-10-05",
       "version": "DnF5IgN7",
       "requires": [],
       "guide": "helper",
@@ -755,7 +757,16 @@
       "exclusiveGroup": null,
       "description": "Makes new land generate faster on the server. The world looks exactly the same.",
       "wiki": "https://modrinth.com/mod/noisium",
-      "videos": [],
+      "videos": [
+        {
+          "title": "Fast World Generation in Minecraft / Noisium Mod Review",
+          "url": "https://www.youtube.com/watch?v=pIekV1ZBjww"
+        },
+        {
+          "title": "More minecraft optimization mods explained (no ai)",
+          "url": "https://www.youtube.com/watch?v=67unIaJpW4A"
+        }
+      ],
       "version": "nJBE6tif",
       "requires": [],
       "guide": "behind"
@@ -772,7 +783,20 @@
       "exclusiveGroup": null,
       "description": "Experience orbs lying close together merge into one. Big farms stop lagging the server.",
       "wiki": "https://modrinth.com/mod/clumps",
-      "videos": [],
+      "videos": [
+        {
+          "title": "*NEW* Clumps Mod - Minecraft 1.20.2 (Mod Showcase)",
+          "url": "https://www.youtube.com/watch?v=Qkf69sD6dvE"
+        },
+        {
+          "title": "Clumps vs Vanilla mending",
+          "url": "https://www.youtube.com/watch?v=_0Bo2yb63Eo"
+        },
+        {
+          "title": "10 Server-Side Fabric & NeoForge Minecraft Mods",
+          "url": "https://www.youtube.com/watch?v=eUifBaPDa0c"
+        }
+      ],
       "version": "jo7lDoK4",
       "requires": [],
       "guide": "behind"
@@ -789,7 +813,16 @@
       "exclusiveGroup": null,
       "description": "Dropped items on the floor stack into fewer piles, so a broken chest or a mob farm costs the server less.",
       "wiki": "https://modrinth.com/mod/get-it-together-drops",
-      "videos": [],
+      "videos": [
+        {
+          "title": "Minecraft | Get It Together, Drops! mod showcase",
+          "url": "https://www.youtube.com/watch?v=ZYvu0Ztz9F0"
+        },
+        {
+          "title": "Stop Playing Minecraft Wrong...(Optimization Guide)",
+          "url": "https://www.youtube.com/watch?v=iW7rKjEzdNM"
+        }
+      ],
       "version": "K4TUzlwa",
       "requires": [],
       "guide": "behind"
@@ -806,7 +839,16 @@
       "exclusiveGroup": null,
       "description": "Furnaces work out recipes faster. Same smelting, less work for the server.",
       "wiki": "https://modrinth.com/mod/fastfurnace",
-      "videos": [],
+      "videos": [
+        {
+          "title": "Top 5 Performance / FPS Boost Mods Minecraft 1.12.2 (Forge) In 2026",
+          "url": "https://www.youtube.com/watch?v=_asJ-YJqFjM"
+        },
+        {
+          "title": "FastBench Fabric & FastFurnace Fabric 1.15.2 & 20w10a (1.16) Fabric Double Mod Overview",
+          "url": "https://www.youtube.com/watch?v=yNKwdXZ6Rc0"
+        }
+      ],
       "version": "pqj92Yco",
       "requires": [],
       "guide": "behind"
@@ -823,7 +865,16 @@
       "exclusiveGroup": null,
       "description": "Crafting tables work out recipes faster, so shift-clicking a stack doesn't stutter.",
       "wiki": "https://modrinth.com/mod/fastworkbench",
-      "videos": [],
+      "videos": [
+        {
+          "title": "Top 5 Performance / FPS Boost Mods Minecraft 1.12.2 (Forge) In 2026",
+          "url": "https://www.youtube.com/watch?v=_asJ-YJqFjM"
+        },
+        {
+          "title": "FastBench Fabric & FastFurnace Fabric 1.15.2 & 20w10a (1.16) Fabric Double Mod Overview",
+          "url": "https://www.youtube.com/watch?v=yNKwdXZ6Rc0"
+        }
+      ],
       "version": "IwciHwPN",
       "requires": [],
       "guide": "behind"
@@ -840,7 +891,16 @@
       "exclusiveGroup": null,
       "description": "A faster redstone engine on the server. Redstone builds work the same, with far less lag.",
       "wiki": "https://modrinth.com/mod/alternate-current",
-      "videos": [],
+      "videos": [
+        {
+          "title": "Redstone Dust But Fast & Efficient! Alternate Current Mod Showcase | Minecraft 1.17.1",
+          "url": "https://www.youtube.com/watch?v=n9LI9cDZ2vA"
+        },
+        {
+          "title": "Stop Playing Minecraft Wrong...(Optimization Guide)",
+          "url": "https://www.youtube.com/watch?v=iW7rKjEzdNM"
+        }
+      ],
       "version": "PCNyL6v4",
       "requires": [],
       "guide": "behind"
@@ -858,6 +918,7 @@
       "description": "Draws chests, minecarts and other block entities through Flywheel (which Create already brings), for more FPS in busy bases.",
       "wiki": "https://modrinth.com/mod/flw-vanillin",
       "videos": [],
+      "noVideosFound": "2026-10-05",
       "version": "Qn76dRvj",
       "requires": [
         "create"
@@ -877,7 +938,16 @@
       "exclusiveGroup": null,
       "description": "Small fixes that skip work the game does for nothing every frame. More FPS, nothing to set up.",
       "wiki": "https://modrinth.com/mod/badoptimizations",
-      "videos": [],
+      "videos": [
+        {
+          "title": "More minecraft optimization mods explained (no ai)",
+          "url": "https://www.youtube.com/watch?v=67unIaJpW4A"
+        },
+        {
+          "title": "How To Get More FPS In Minecraft 1.21.1 (NEOFORGE FPS MODS!)",
+          "url": "https://www.youtube.com/watch?v=ycVr1WilPwQ"
+        }
+      ],
       "version": "S2qthD5S",
       "requires": [],
       "guide": "behind"
@@ -2043,7 +2113,20 @@
       "exclusiveGroup": null,
       "description": "Mobs far from every player tick once a second instead of twenty times, and mobs that used to spawn past the mob cap count towards it.",
       "wiki": "https://github.com/Wesley1808/ServerCore/wiki",
-      "videos": [],
+      "videos": [
+        {
+          "title": "10 Server-Side Fabric & NeoForge Minecraft Mods",
+          "url": "https://www.youtube.com/watch?v=eUifBaPDa0c"
+        },
+        {
+          "title": "More minecraft optimization mods explained (no ai)",
+          "url": "https://www.youtube.com/watch?v=67unIaJpW4A"
+        },
+        {
+          "title": "25+ of the BEST server-side mods for FABRIC SMPs (1.21+)",
+          "url": "https://www.youtube.com/watch?v=4sCxilcudKE"
+        }
+      ],
       "version": "6N9hXiRa",
       "requires": [],
       "guide": "behind"
@@ -2061,6 +2144,7 @@
       "description": "Structure searches (/locate, explorer maps, dolphins, eyes of ender) run beside the game instead of freezing it.",
       "wiki": "https://github.com/Alvaro842DEV/AsyncLocator-Refined",
       "videos": [],
+      "noVideosFound": "2026-10-05",
       "version": "zHBIpxJZ",
       "requires": [],
       "guide": "behind"
@@ -2202,6 +2286,7 @@
       "load": "M",
       "recommended": false,
       "hidden": false,
+      "adminOnly": true,
       "exclusiveGroup": null,
       "description": "Eight or so large bosses, each in its own dungeon out in the world, with gear of their own to win.",
       "wiki": "https://modrinth.com/mod/l_enders-cataclysm",
@@ -2233,6 +2318,7 @@
       "load": "M",
       "recommended": false,
       "hidden": false,
+      "adminOnly": true,
       "exclusiveGroup": null,
       "description": "Four smaller bosses and some odd creatures met while exploring. Good for two or three players.",
       "wiki": "https://modrinth.com/mod/mowzies-mobs",
@@ -2264,6 +2350,7 @@
       "load": "L",
       "recommended": false,
       "hidden": false,
+      "adminOnly": true,
       "exclusiveGroup": null,
       "description": "Trials as wave fights: open a gateway, beat the waves, take the reward.",
       "wiki": "https://github.com/Shadows-of-Fire/GatewaysToEternity",
@@ -2292,6 +2379,7 @@
       "load": "L",
       "recommended": false,
       "hidden": false,
+      "adminOnly": true,
       "exclusiveGroup": null,
       "description": "The Ender Dragon gets a second phase and 500 health. Runs on the server: nothing on your PC.",
       "wiki": "https://modrinth.com/mod/edf-remastered",
@@ -2314,10 +2402,12 @@
       "load": "L",
       "recommended": false,
       "hidden": false,
+      "adminOnly": true,
       "exclusiveGroup": null,
       "description": "Boss health and loot go up with the number of players nearby.",
       "wiki": "https://modrinth.com/mod/multiplayerbosses",
       "videos": [],
+      "noVideosFound": "2026-10-05",
       "version": "latest",
       "requires": [],
       "guide": "behind"
@@ -2395,10 +2485,12 @@
       "load": "L",
       "recommended": false,
       "hidden": false,
+      "adminOnly": true,
       "exclusiveGroup": null,
       "description": "Real walk-through portals to the season's own world, the Frontier. Nothing to install: it runs on the server.",
       "wiki": "https://github.com/Crystal-Nest/server-sided-portals/wiki",
       "videos": [],
+      "noVideosFound": "2026-10-05",
       "version": "6ybc8eyX",
       "requires": [
         "cobweb"

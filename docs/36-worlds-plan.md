@@ -219,9 +219,9 @@ What follows:
 - Still to see on the real server (part 2): the same packs under NeoForge and our mods, Server Sided Portals with
   these dimensions, whether an empty portal tag closes the way out as well as the way in.
 
-## Step 0, part 2: prepared, not yet run
+## Step 0, part 2: on its way to the server (planner's go, 2026-10-05)
 
-Kept in `tools/worldgen-boot/server-test/`, where no Build picks them up:
+In `modpack/datapacks/` since the planner's go, so the next Build ships them (prepared in `tools/worldgen-boot/server-test/` before that):
 
 - `deepslate-test-t_shift_a`, `deepslate-test-t_shift_b`: the worldgen files as run 37316879522 built them (from
   its artifact, not regenerated), plus the two Server Sided Portals tags each. Frames and lighters, none of which a
@@ -233,7 +233,10 @@ Kept in `tools/worldgen-boot/server-test/`, where no Build picks them up:
   height at each; `probe/unload` removes the markers and the forceloads. A third pack, beyond the two the planner
   named: 72 console lines by hand was the alternative. It comes off with the other two.
 
-On Alex's word the three folders move to `modpack/datapacks/` (one commit, then the dev → main PR), which is what
+`probe/load` forceloads (7000, 7000) and (-800, -5200) in the main world, which lie outside the pre-generated
+area: the probe makes a few main-world chunks there, and those are the new specks on the map.
+
+The three folders were moved to `modpack/datapacks/` (one commit, then the dev → main PR), which is what
 makes Build ship them. Removal afterwards is by hand: three pack folders in `world/datapacks/` and the two folders
 `world/dimensions/deepslate/t_shift_a` and `t_shift_b`, named and sized first, deleted on Alex's yes with the
 server stopped; and the three folders leave `modpack/datapacks/` again, or the next Build puts them back.

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { ukDayTime } from "@/lib/uk-time";
 import { seasonOpAction, seasonTickAction } from "./actions";
 import { BuildsCard, type BuildsView } from "./builds-card";
+import { listBuilds } from "@/server/builds";
 
 export const metadata: Metadata = { title: "Seasons" };
 
@@ -38,6 +39,8 @@ const MSG: Record<string, string> = {
   revoked: "Taken back, on the site and in the game.",
   revokedSite: "Taken back on the site. They are not on the server, so the game's own tick stays until it is taken back there.",
   revokedNone: "They did not have that tick.",
+  uploaded: "Uploaded. Press Build and then Sync on the Modpack page to put it on the server:",
+  uploadRemoved: "Removed. It leaves the server with the next Build and Sync:",
   captured: "Captured:",
   placed: "Placed:",
   placedLocked: "Placed, and its ground is locked:",
@@ -151,7 +154,7 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
           )}
         </div>
       )}
-      <BuildsCard view={builds} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
+      <BuildsCard view={builds} files={await listBuilds()} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
     </TabbedPage>
   );
 }

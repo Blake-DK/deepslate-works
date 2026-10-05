@@ -60,7 +60,7 @@ import { SeasonRecorder } from "./seasons/recorder.js";
 import { prismaSeasonStore } from "./seasons/store.js";
 import { listAdvancementFiles, readAdvancements } from "./seasons/advancements.js";
 import { seasonRoutes } from "./routes/seasons.js";
-import { BUILDS_KEY, buildRoutes, type SavedBuild } from "./routes/builds.js";
+import { BUILDS_KEY, buildRoutes, readUploads, type SavedBuild } from "./routes/builds.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
@@ -181,6 +181,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const seasonFile = currentSeason(env.REPO_DIR, log);
   buildRoutes(app, {
     amp: ampClient, tail, ctx: () => limbo.actionCtx,
+    uploads: () => readUploads(`${env.REPO_DIR}/dist`),
     book: {
       load: async () => ((await db.setting.findUnique({ where: { key: BUILDS_KEY } }))?.value as SavedBuild[] | undefined) ?? [],
       save: async (list) => {

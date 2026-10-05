@@ -11,6 +11,7 @@ import { buildItems } from "./items";
 import { lockExtras, prepareExtrasLock } from "./extras";
 import type { Manifest } from "./schema";
 import { buildSeasons, loadSeasons } from "./seasons";
+import { buildBuilds } from "./builds";
 
 const [cmd = "help", ...rest] = process.argv.slice(2);
 const P = modpackPaths();
@@ -129,10 +130,11 @@ async function main() {
       if (what === "server" || what === "all") await buildServer(manifest, lock, P, log);
       // after the server's folder: buildServer makes datapacks/ afresh, the season datapacks go in on top
       if (what === "seasons" || what === "server" || what === "all") await buildSeasons(P, log);
+      if (what === "builds" || what === "server" || what === "all") await buildBuilds(P, log);
       if (what === "installer" || what === "all") await buildInstaller(manifest, lock, P, portalUrl, log);
       // after the server jars: the item catalogue is read out of them (docs/13 §13)
       if (what === "items" || what === "all") await buildItems({ dist: P.dist, vanilla: P.items }, log);
-      if (!["branding", "config", "server", "installer", "items", "seasons", "all"].includes(what)) {
+      if (!["branding", "config", "server", "installer", "items", "seasons", "builds", "all"].includes(what)) {
         console.error(`unknown build target ${what}`);
         process.exit(1);
       }

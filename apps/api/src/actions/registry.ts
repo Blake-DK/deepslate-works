@@ -759,6 +759,18 @@ export const actions = {
       ];
     },
   }),
+  // An uploaded build (docs/34 §10): one structure of the datapack deepslate-builds, whatever its size.
+  "build.placeUpload": define({
+    name: "build.placeUpload",
+    role: "ADMIN",
+    input: z.object({ name: BUILD_NAME, dimension: BUILD_DIMENSION, at: BLOCK, size: z.object({ x: z.number().int().min(1).max(256), y: z.number().int().min(1).max(256), z: z.number().int().min(1).max(256) }) }),
+    gapMs: 400,
+    build: (_ctx, { name, dimension, at: pos, size }) => {
+      const at = (cmd: string) => `execute in ${dimension} run ${cmd}`;
+      const far = { x: pos.x + size.x - 1, z: pos.z + size.z - 1 };
+      return [at(`forceload add ${pos.x} ${pos.z} ${far.x} ${far.z}`), at(`place template deepslate:upload/${name} ${pos.x} ${pos.y} ${pos.z}`), at(`forceload remove ${pos.x} ${pos.z} ${far.x} ${far.z}`)];
+    },
+  }),
   // A server claim over the build's ground, as the spawn claim is made: nobody breaks or places a block there.
   "build.lock": define({
     name: "build.lock",
@@ -770,5 +782,5 @@ export const actions = {
 
 export type ActionName = keyof typeof actions;
 /** Admin actions with a route of their own, not reachable through POST /actions/:name. */
-export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify", "season.grant", "season.revoke", "season.reload", "build.capture", "build.place", "build.lock"]);
+export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify", "season.grant", "season.revoke", "season.reload", "build.capture", "build.place", "build.placeUpload", "build.lock"]);
 export const ADMIN_ACTIONS: ActionName[] = (Object.keys(actions) as ActionName[]).filter((n) => actions[n].role === "ADMIN");

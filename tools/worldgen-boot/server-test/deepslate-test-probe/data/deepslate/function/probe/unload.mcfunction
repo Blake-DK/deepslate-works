@@ -1,0 +1,25 @@
+kill @e[type=minecraft:marker,tag=probe]
+execute in minecraft:overworld run forceload remove 0 0
+execute in minecraft:overworld run forceload remove 1000 1000
+execute in minecraft:overworld run forceload remove -2500 700
+execute in minecraft:overworld run forceload remove 4000 -3000
+execute in minecraft:overworld run forceload remove -800 -5200
+execute in minecraft:overworld run forceload remove 7000 7000
+execute in deepslate:t_shift_a run forceload remove 0 0
+execute in deepslate:t_shift_a run forceload remove 1000 1000
+execute in deepslate:t_shift_a run forceload remove -2500 700
+execute in deepslate:t_shift_a run forceload remove 4000 -3000
+execute in deepslate:t_shift_a run forceload remove -800 -5200
+execute in deepslate:t_shift_a run forceload remove 7000 7000
+execute in deepslate:t_shift_b run forceload remove 0 0
+execute in deepslate:t_shift_b run forceload remove 1000 1000
+execute in deepslate:t_shift_b run forceload remove -2500 700
+execute in deepslate:t_shift_b run forceload remove 4000 -3000
+execute in deepslate:t_shift_b run forceload remove -800 -5200
+execute in deepslate:t_shift_b run forceload remove 7000 7000
+execute in deepslate:frontier_sample run forceload remove 0 0
+execute in deepslate:frontier_sample run forceload remove 1000 1000
+execute in deepslate:frontier_sample run forceload remove -2500 700
+execute in deepslate:frontier_sample run forceload remove 4000 -3000
+execute in deepslate:frontier_sample run forceload remove -800 -5200
+execute in deepslate:frontier_sample run forceload remove 7000 7000

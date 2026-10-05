@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:flat_cache",
+  "argument": {
+    "type": "minecraft:shifted_noise",
+    "noise": "minecraft:ridge",
+    "shift_x": {
+      "type": "minecraft:add",
+      "argument1": 391946,
+      "argument2": "deepslate:t_shift_a/shift_x"
+    },
+    "shift_y": 0,
+    "shift_z": {
+      "type": "minecraft:add",
+      "argument1": -252687,
+      "argument2": "deepslate:t_shift_a/shift_z"
+    },
+    "xz_scale": 0.25,
+    "y_scale": 0
+  }
+}

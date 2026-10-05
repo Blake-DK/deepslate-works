@@ -484,3 +484,13 @@ Each with the recommendation and what it holds up.
 12. **Play first while B-01 to B-04 are open.** Recommended: off until B-01 is fixed, on again after. *Blocks:* friends getting in tonight.
 13. **External monitoring of `/api/health`** (Uptime Kuma on the homelab, or another). Recommended: yes, with the admin channel as the alert. *Blocks:* improvement 3.
 14. **Was "We're live" pressed on 2026-10-04?** If on another day, the calendar in §0 moves by the difference. *Blocks:* the dates.
+
+## Amendment 2026-10-05: zones after the worlds test (docs/36)
+
+Appended at the planner's request. Nothing above is changed; where this differs, this holds.
+
+- **W2.1 (renamed noise) is replaced by the shift of docs/36** for overworld-shaped zones. Season 2's zone uses the shift.
+- **A Nether-type or End-type zone cannot be given new ground by renaming or shifting:** its shape is the real dimension's (docs/36, Step 0 part 1). So Season 3's zone (`deepslate:frontier_s3`) and the End-type fallback of Season 4 put their arrival point 20,000 blocks out from 0, 0, the same fallback this file already names for large biomes. Nobody has been that far in the real Nether or End, so the ground is new in practice.
+- **The biome probe showed that the shift moves Nether biomes** (4 of 6 points; the End's do not move). So Season 3's zone also uses the shift, and its biome map is its own.
+- **W3.1 changes to:** a Nether-type zone from the worlds generator, arrival 20,000 out, and the check that Cataclysm's two structures generate there (`locate` on the server).
+- **Radius and pre-generation are centred on the arrival point,** not on 0, 0.

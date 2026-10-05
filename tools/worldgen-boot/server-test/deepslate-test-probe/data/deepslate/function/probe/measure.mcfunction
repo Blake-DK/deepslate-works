@@ -1,0 +1,25 @@
+# a marker at the ground's height at each point; read them from the console a moment later
+execute in minecraft:overworld positioned 0 0 0 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-main-0"'}
+execute in minecraft:overworld positioned 1000 0 1000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-main-1"'}
+execute in minecraft:overworld positioned -2500 0 700 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-main-2"'}
+execute in minecraft:overworld positioned 4000 0 -3000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-main-3"'}
+execute in minecraft:overworld positioned -800 0 -5200 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-main-4"'}
+execute in minecraft:overworld positioned 7000 0 7000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-main-5"'}
+execute in deepslate:t_shift_a positioned 0 0 0 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_a-0"'}
+execute in deepslate:t_shift_a positioned 1000 0 1000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_a-1"'}
+execute in deepslate:t_shift_a positioned -2500 0 700 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_a-2"'}
+execute in deepslate:t_shift_a positioned 4000 0 -3000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_a-3"'}
+execute in deepslate:t_shift_a positioned -800 0 -5200 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_a-4"'}
+execute in deepslate:t_shift_a positioned 7000 0 7000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_a-5"'}
+execute in deepslate:t_shift_b positioned 0 0 0 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_b-0"'}
+execute in deepslate:t_shift_b positioned 1000 0 1000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_b-1"'}
+execute in deepslate:t_shift_b positioned -2500 0 700 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_b-2"'}
+execute in deepslate:t_shift_b positioned 4000 0 -3000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_b-3"'}
+execute in deepslate:t_shift_b positioned -800 0 -5200 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_b-4"'}
+execute in deepslate:t_shift_b positioned 7000 0 7000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-t_shift_b-5"'}
+execute in deepslate:frontier_sample positioned 0 0 0 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-frontier_sample-0"'}
+execute in deepslate:frontier_sample positioned 1000 0 1000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-frontier_sample-1"'}
+execute in deepslate:frontier_sample positioned -2500 0 700 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-frontier_sample-2"'}
+execute in deepslate:frontier_sample positioned 4000 0 -3000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-frontier_sample-3"'}
+execute in deepslate:frontier_sample positioned -800 0 -5200 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-frontier_sample-4"'}
+execute in deepslate:frontier_sample positioned 7000 0 7000 positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-frontier_sample-5"'}

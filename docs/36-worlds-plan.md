@@ -89,9 +89,18 @@ database dump cannot change terrain, and the season lint ("the world exists and 
   logged out inside must be fetched by an admin when they next join.
 - **Ids are never reused.** A retired world's file stays; a new world with any id ever used is refused.
 - A missing or unreadable `modpack/worlds/` means "leave the server's packs alone", never "remove all".
-- Seedless kinds: the form says plainly "a Nether-like world is the real Nether's twin at the same coordinates".
-  One live world each for Caves, Floating islands, Nether-like and End-like, unless Step 0 shows a way to vary
-  them. Flat and Empty are identical by nature and unlimited: several arenas are a likely use.
+- **Which kinds take a seed** (measured, Step 0 part 1): Normal, Large biomes and One biome get new ground per
+  seed. **Nether-like** takes a seed too, and the form says "the tunnels are the real Nether's, block for block;
+  your seed changes which biome is where". **End-like and Caves** take no seed: the form says "a twin of the real
+  End" and "the same caves every time", and there is one live world of each. Floating islands is not measured yet
+  and is treated as seedless until it is. Flat and Empty are identical by nature and unlimited: several arenas are
+  a likely use.
+- **CI gaps to close with this step** (planner, 2026-10-05). `worldgen-boot` runs only on changes under
+  `tools/worldgen-boot/` and its own workflow file; its paths must also take `packages/modpack/src/worlds.ts` and
+  its tests, `modpack/worldgen/**` and `modpack/worlds/**`, so a `vps/<date>` PR that adds a world runs it. Not
+  booted yet, and each gets a test world in the job before the form offers it: a one-biome world (`fixed` biome
+  source), Floating islands, Flat, Empty, and a dimension type of our own for each mood (Normal, Endless night,
+  Endless dusk, Pitch dark).
 
 **Generator** `packages/modpack/src/worlds.ts`: `worldDatapack(w)` → `deepslate-world-<id>`: dimension, a dimension
 type of its own, noise settings and density functions for seeded kinds (templates vendored into
@@ -173,25 +182,68 @@ own code and cannot be confined is not added.
 
 ## Step 0, part 1: what CI measured (2026-10-05)
 
-The job `worldgen-boot` started a vanilla 1.21.1 server on the live world's seed with 14 test worlds and measured
-the ground's height and air at six points in each (`tools/worldgen-boot/worldgen.mjs`). All 14 loaded.
+The job `worldgen-boot` started a vanilla 1.21.1 server on the live world's seed with 14 test worlds and measured,
+at six points in each, the ground's height, air at y 40, 70 and 100, and the biome at y 64 (asked of every biome
+the game has; `tools/worldgen-boot/worldgen.mjs`). All 14 loaded. Run 37316879522.
 
-| Question | Answer |
-|---|---|
-| A plain copy of the overworld settings | the main world's twin, block for block |
-| **Shift**, against the main world, and two seeds against each other | differs at 6 of 6 points, both times |
-| **Rename**, against the main world | differs at 5 of 6 |
-| Large biomes as it is (today's Frontier) against the main world | differs at 6 of 6: docs/20's open check, on vanilla |
-| Large biomes shifted | differs from large biomes as it is |
-| Nether-like: plain, shifted, renamed | all three the real Nether's twin |
-| End-like: plain, shifted, renamed | all three the real End's twin |
-| Caves: plain and shifted | the same as each other, and the same shape as the Nether at these points |
+| Question | Ground (height and air) | Biomes |
+|---|---|---|
+| A plain copy of the overworld settings against the main world | the same | the same |
+| **Shift**, seed alpha against the main world | differs at 6 of 6 | differ at 6 of 6 |
+| **Shift**, seed alpha against seed beta | differs at 6 of 6 | differ at 6 of 6 |
+| **Rename** against the main world | differs at 5 of 6 | differ at 5 of 6 |
+| Large biomes as it is (today's Frontier) against the main world | differs at 6 of 6 | differ at 5 of 6 |
+| Large biomes shifted against large biomes as it is | differs at 6 of 6 | differ at 6 of 6 |
+| A plain Nether copy against the Nether | the same | the same |
+| Nether shifted against the Nether | the same | **differ at 4 of 6** |
+| Nether renamed against the Nether | the same | **differ at 4 of 6** |
+| A plain End copy against the End | the same | the same |
+| End shifted against the End | the same | the same |
+| End renamed against the End | the same | the same |
+| Caves shifted against Caves as it is | the same | the same (see below) |
+
+How far each reading goes: in the Nether and Caves the height is the bedrock roof at every point, so "the same
+ground" there rests on the 18 air readings. Caves read `river` at all six points, plain and shifted, so its biome
+reading says only that the shift did not move it at these points; with the overworld's biome list a Caves world
+looks to be one biome throughout, and is better given a biome of its own (the `fixed` source).
 
 What follows:
 
-- **The seed is the shift.** It gives as many different worlds as there are seeds; rename gives one per name and
-  needs every noise copied. Shift replaces docs/32 W2.1 for overworld-shaped zones.
-- **Nether-like, End-like and Caves cannot be varied by either way.** docs/32's Season 3 and 4 zones (W3.1) cannot
-  rest on a renamed Nether or End: for the planner. The form offers one of each and says it is a twin.
+- **The seed is the shift** for Normal, Large biomes and One biome. It gives as many worlds as there are seeds;
+  rename gives one per name and needs every noise copied. Shift replaces docs/32 W2.1 for overworld-shaped zones.
+- **Nether-like: the same shape, a different biome map per seed.** It takes a seed on the form and is not limited
+  to one live world.
+- **End-like is a twin whatever is done**, and so, by these readings, is Caves: no seed, one live world each.
+- docs/32's Nether-type and End-type zones cannot have new ground; its amendment of 2026-10-05 puts their arrival
+  20,000 blocks out instead.
 - Still to see on the real server (part 2): the same packs under NeoForge and our mods, Server Sided Portals with
   these dimensions, whether an empty portal tag closes the way out as well as the way in.
+
+## Step 0, part 2: prepared, not yet run
+
+Kept in `tools/worldgen-boot/server-test/`, where no Build picks them up:
+
+- `deepslate-test-t_shift_a`, `deepslate-test-t_shift_b`: the worldgen files as run 37316879522 built them (from
+  its artifact, not regenerated), plus the two Server Sided Portals tags each. Frames and lighters, none of which a
+  player can get: **A** frame `minecraft:bedrock`, lighter `minecraft:command_block_minecart`; **B** frame
+  `minecraft:end_portal_frame`, lighter `minecraft:debug_stick`. (The sample Frontier keeps reinforced deepslate
+  and the knowledge book.) Whether the debug stick lights a frame or only does its own thing is part of the test.
+- `deepslate-test-probe`: three functions and nothing else. `deepslate:probe/load` forceloads CI's six points in
+  the main world, both test worlds and the sample Frontier; `probe/measure` puts a named marker at the ground's
+  height at each; `probe/unload` removes the markers and the forceloads. A third pack, beyond the two the planner
+  named: 72 console lines by hand was the alternative. It comes off with the other two.
+
+On Alex's word the three folders move to `modpack/datapacks/` (one commit, then the dev → main PR), which is what
+makes Build ship them. Removal afterwards is by hand: three pack folders in `world/datapacks/` and the two folders
+`world/dimensions/deepslate/t_shift_a` and `t_shift_b`, named and sized first, deleted on Alex's yes with the
+server stopped; and the three folders leave `modpack/datapacks/` again, or the next Build puts them back.
+
+CI's numbers to compare with (ground height at (0, 0) (1000, 1000) (-2500, 700) (4000, -3000) (-800, -5200)
+(7000, 7000)):
+
+| World | CI, vanilla | The server |
+|---|---|---|
+| main | 105, 51, 70, 67, 66, 125 | |
+| t_shift_a | 61, 39, 117, 118, 67, 77 | |
+| t_shift_b | 50, 88, 73, 67, 64, 67 | |
+| large biomes (CI's `t_large_plain`; on the server `frontier_sample`) | 71, 66, 54, 51, 38, 169 | |

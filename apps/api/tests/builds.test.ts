@@ -119,7 +119,7 @@ describe("Admin → Seasons, Builds", () => {
     const t = app();
     expect((await t.post("/builds/place", { name: "nothing", dimension: "minecraft:overworld", at: { x: 0, y: 70, z: 0 } })).status).toBe(404);
     expect((await t.post("/builds/capture", { ...corners, to: { x: 400, y: 80, z: 25 } })).body.error?.code).toBe("too_large");
-    expect((await t.post("/builds/capture", { ...corners, to: { x: 30, y: 318, z: 25 } })).body.error?.code).toBe("too_high");
+    expect((await t.post("/builds/capture", { ...corners, from: { x: 10, y: 300, z: 10 }, to: { x: 30, y: 318, z: 25 } })).body.error?.code).toBe("too_high");
     expect(t.sent).toEqual([]);
   });
 });

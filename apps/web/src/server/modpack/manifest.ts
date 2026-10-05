@@ -26,11 +26,14 @@ export async function getManifest(): Promise<Manifest> {
 
 export type Section = { category: Category; mods: Mod[] };
 
-/** Categories in manifest order, each with its visible mods. Hidden (dependency) mods are never listed. */
-export function sections(m: Manifest, opts: { votableOnly?: boolean } = {}): Section[] {
+/**
+ * Categories in manifest order, each with its visible mods. Hidden (dependency) mods are never listed; admin-only ones
+ * (the coming season's) only when `admin`. A category left empty is left out, its title and blurb with it.
+ */
+export function sections(m: Manifest, opts: { votableOnly?: boolean; admin?: boolean } = {}): Section[] {
   return m.categories
     .filter((c) => !opts.votableOnly || c.votable)
-    .map((category) => ({ category, mods: m.mods.filter((mod) => mod.category === category.id && !mod.hidden) }))
+    .map((category) => ({ category, mods: m.mods.filter((mod) => mod.category === category.id && !mod.hidden && (opts.admin || !mod.adminOnly)) }))
     .filter((s) => s.mods.length > 0);
 }
 

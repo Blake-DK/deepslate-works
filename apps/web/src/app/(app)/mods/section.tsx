@@ -10,7 +10,7 @@ import { buttonClasses } from "@/components/ui/button";
 export default async function ModsPage() {
   const user = await requireOnboardedUser();
   const [manifest, openVote] = await Promise.all([getManifest(), getOpenVote()]);
-  const all = sections(manifest);
+  const all = sections(manifest, { admin: user.role === "ADMIN" });
   return (
     <div className="space-y-6">
       <div>
@@ -26,7 +26,7 @@ export default async function ModsPage() {
             {category.blurb && <p className="text-sm text-muted-foreground">{category.blurb}</p>}
           </div>
           <div className="grid gap-3 md:grid-cols-2">
-            {mods.map((mod) => <ModCard key={mod.slug} mod={mod} />)}
+            {mods.map((mod) => <ModCard key={mod.slug} mod={mod}>{mod.adminOnly && <Badge tone="info">admins only</Badge>}</ModCard>)}
           </div>
         </section>
       ))}

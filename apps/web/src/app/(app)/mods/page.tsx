@@ -46,7 +46,10 @@ function Card({ card }: { card: GuideCard }) {
           <h3 className="font-semibold leading-tight"><a href={`#${card.id}`} className="hover:underline">{card.name}</a></h3>
           <p className="text-sm text-muted-foreground">{card.description}</p>
         </div>
-        <Badge tone={card.where === "optional" ? "info" : card.where === "server" ? "neutral" : "good"} className="shrink-0">{WHERE_TEXT[card.where]}</Badge>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <Badge tone={card.where === "optional" ? "info" : card.where === "server" ? "neutral" : "good"}>{WHERE_TEXT[card.where]}</Badge>
+          {card.adminOnly && <Badge tone="info">admins only</Badge>}
+        </div>
       </header>
       {card.howTo && (
         <div className="mt-3 text-sm">
@@ -78,7 +81,8 @@ function Line({ card }: { card: GuideCard }) {
   return (
     <li id={card.id} data-mod-card data-search={searchText(card)} className="scroll-mt-20 py-1.5 text-sm target:bg-card-2" data-testid={`mod-${card.id}`}>
       <strong>{card.name}</strong>
-      {card.where === "server" && <span className="text-muted-foreground"> (server)</span>}: <span className="text-muted-foreground">{card.description}</span>
+      {card.where === "server" && <span className="text-muted-foreground"> (server)</span>}
+      {card.adminOnly && <span className="text-muted-foreground"> (admins only)</span>}: <span className="text-muted-foreground">{card.description}</span>
     </li>
   );
 }
@@ -109,9 +113,9 @@ function Part({ part }: { part: GuidePart }) {
 }
 
 export default async function ModsGuidePage() {
-  await requireOnboardedUser("/mods");
+  const user = await requireOnboardedUser("/mods");
   const [m, icons, { extras, pictures }] = await Promise.all([getManifest(), getModIcons(), extrasAndPictures()]);
-  const parts = guideParts(m, extras, icons, pictures);
+  const parts = guideParts(m, extras, icons, pictures, user.role === "ADMIN");
   return (
     <div className="space-y-6">
       <div className="space-y-1">

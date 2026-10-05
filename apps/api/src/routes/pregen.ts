@@ -2,7 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { ConsoleTail } from "../amp/console.js";
 import { requireAdmin } from "../auth.js";
-import { OVERWORLD_MAP } from "../status/map.js";
+import { mapOf } from "../status/map.js";
+import { PREGEN_WORLD } from "../actions/registry.js";
 import { chunksIn, phase, Refused, type Pregen } from "../status/pregen.js";
 
 // Admin → Server → Pre-generation. Off unless an admin turns it on; see status/pregen.ts.
@@ -12,7 +13,7 @@ const on = z.object({
   mode: z.enum(["empty", "now"]),
   what: z.enum(["generate", "render", "both"]).default("generate"),
   purge: z.boolean().default(false),
-  area: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(10_000) }),
+  area: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(10_000), world: PREGEN_WORLD.optional() }),
   window: z.object({ from: clock, to: clock }).nullable().default(null),
   capHours: z.number().min(0.25).max(240).nullable().default(null),
 });
@@ -20,9 +21,10 @@ const on = z.object({
 export function pregenRoutes(app: FastifyInstance, tail: ConsoleTail, pregen: Pregen, players: () => number | null = () => null) {
   const map = () => {
     const s = pregen.map.state;
-    const m = s.maps[OVERWORLD_MAP] ?? null;
+    const id = mapOf(pregen.plan.area?.world);
+    const m = s.maps[id] ?? null;
     // the estimate is for the task in hand, whichever map that is
-    return { id: OVERWORLD_MAP, status: m?.status ?? null, percent: m?.percent ?? null, waiting: m?.pending ?? null, remaining: s.current === OVERWORLD_MAP ? s.remaining : null, threads: s.threads, at: s.listAt, stopped: pregen.plan.mapStopped === true };
+    return { id, status: m?.status ?? null, percent: m?.percent ?? null, waiting: m?.pending ?? null, remaining: s.current === id ? s.remaining : null, threads: s.threads, at: s.listAt, stopped: pregen.plan.mapStopped === true };
   };
   const view = () => ({
     ...pregen.watch.state,

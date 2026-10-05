@@ -46,6 +46,25 @@ export async function getSeasonCurrent(now = new Date()): Promise<SeasonCurrent>
   return seasonCurrent(file, row ? stateOf(row.state) : null, now);
 }
 
+/**
+ * The Frontiers that are (or are about to be) on the server: the seasons index.json ships, whole or the Frontier
+ * alone. For the pre-generation card's list of worlds.
+ */
+export async function getFrontiers(): Promise<Array<{ dimension: string; name: string; radius: number }>> {
+  try {
+    const index = seasonIndexFileSchema.safeParse(await json("index.json"));
+    if (!index.success) return [];
+    const out: Array<{ dimension: string; name: string; radius: number }> = [];
+    for (const id of new Set([...index.data.ship, ...index.data.frontiers])) {
+      const file = await seasonFile(id);
+      if (file?.frontier) out.push({ dimension: file.frontier.dimension, name: file.name, radius: file.frontier.radius });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 /** The guide's Season section (Markdown), from the current season's file; null until a season is announced. */
 export async function getSeasonGuide(): Promise<string | null> {
   const file = await currentFile();

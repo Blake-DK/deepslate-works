@@ -51,7 +51,7 @@ export type SeasonFile = z.infer<typeof seasonFileSchema>;
 export type SeasonFileBoss = SeasonFile["bosses"][number];
 export type SeasonFileTrial = SeasonFile["trials"][number];
 
-export const seasonIndexFileSchema = z.object({ current: z.string().nullable().default(null) });
+export const seasonIndexFileSchema = z.object({ current: z.string().nullable().default(null), ship: z.array(z.string()).default([]), frontiers: z.array(z.string()).default([]) });
 
 export type SeasonState = "upcoming" | "running" | "ended";
 export type ClearKind = "boss" | "trial";

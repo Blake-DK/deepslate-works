@@ -3,7 +3,7 @@ import type { ConsoleTail } from "../amp/console.js";
 import { runAction } from "../actions/run.js";
 import type { ActionCtx } from "../actions/registry.js";
 import { audit } from "../audit.js";
-import { ALL_MAPS, MapWatch, OVERWORLD_MAP, rendered } from "./map.js";
+import { ALL_MAPS, MapWatch, mapOf, rendered } from "./map.js";
 
 // Pre-generation (chunky), as a mode on Admin → Server (planner, 2026-09-29).
 //
@@ -94,7 +94,8 @@ export class PregenWatch {
 
 // ---- the plan ------------------------------------------------------------------------------------------
 
-export type Area = { x: number; z: number; radius: number };
+/** `world`: the dimension; absent = the main world (every plan saved before 2026-10-05). */
+export type Area = { x: number; z: number; radius: number; world?: string };
 export type Window = { from: string; to: string }; // "02:00", "08:00", UK time; may run over midnight
 
 export type What = "generate" | "render" | "both";
@@ -198,7 +199,7 @@ export function step(plan: Exclude<PregenPlan, { mode: "off" }>, v: View): Step 
   return "run";
 }
 
-export const sameArea = (a: Area | null, b: Area | null) => Boolean(a && b && a.x === b.x && a.z === b.z && a.radius === b.radius);
+export const sameArea = (a: Area | null, b: Area | null) => Boolean(a && b && a.x === b.x && a.z === b.z && a.radius === b.radius && (a.world ?? "minecraft:overworld") === (b.world ?? "minecraft:overworld"));
 
 /** Pure: chunks in a square of that radius, as chunky counts them. */
 export function chunksIn(radius: number): number {
@@ -351,7 +352,7 @@ export class Pregen {
     // BlueMap goes back to rendering by itself, as it does on any day. If the server is not there to be told, it is told at its next start.
     const owed = was.mapStopped && !(await this.mapThreads(true));
     if (was.sleepWas !== null) await this.setSleep(was.sleepWas);
-    const map = this.map.state.maps[OVERWORLD_MAP];
+    const map = this.map.state.maps[mapOf(was.area?.world)];
     const inHand = phase(was.what, this.watch.state.status, reason === "done");
     this.plan = { mode: "off", area: reason === "done" ? null : was.area, ...(owed ? { mapStopped: true } : {}) };
     this.lastStep = "off";
@@ -394,7 +395,7 @@ export class Pregen {
     const listAt = s.listAt ? Date.parse(s.listAt) : 0;
     if (s.lists !== this.listSeen && listAt >= Date.parse(plan.mapAsked) + MAP_AFTER_ASK_MS && now - listAt >= MAP_SETTLE_MS) {
       this.listSeen = s.lists;
-      this.updatedInARow = rendered(s, OVERWORLD_MAP) ? this.updatedInARow + 1 : 0;
+      this.updatedInARow = rendered(s, mapOf(plan.area.world)) ? this.updatedInARow + 1 : 0;
     }
     return this.updatedInARow >= 2;
   }
@@ -499,7 +500,7 @@ export class Pregen {
     }
 
     const s = step(this.plan, { serverRunning: running, online, pregen: this.watch.state.status, at: new Date(now), sleepOff: this.plan.sleepWas !== null && this.sleep.on === false, emptyForMs: this.emptySince === null ? null : now - this.emptySince, sleepDelayMin: this.sleep.delayMin ?? 5, mapDone, lag: this.lag });
-    if (s !== this.lastStep) this.log({ step: s, online, percent: this.watch.state.percent, map: this.map.state.maps[OVERWORLD_MAP] ?? null }, "pregen");
+    if (s !== this.lastStep) this.log({ step: s, online, percent: this.watch.state.percent, map: this.map.state.maps[mapOf(this.plan.area?.world)] ?? null }, "pregen");
     this.lastStep = s;
     switch (s) {
       case "off:done":
@@ -546,9 +547,13 @@ export class Pregen {
           this.lastMapCommand = now;
           // Deleting a map makes BlueMap render it anew by itself, all of it, when the deleting is done.
           let ok = true;
-          if (this.plan.purge) for (const map of ALL_MAPS) ok = ok && (await runAction(this.amp, this.ctx(), "map.purge", { map }, this.plan.by)).ok;
-          else if (this.plan.wholeMaps) for (const map of ALL_MAPS) ok = ok && (await runAction(this.amp, this.ctx(), "map.update", { map }, this.plan.by)).ok;
-          else ok = (await runAction(this.amp, this.ctx(), "map.update", { map: OVERWORLD_MAP, ...this.plan.area }, this.plan.by)).ok;
+          // another world than the main one: its own map only; "the whole map" and "delete the map" never reach the others from there
+          const own = mapOf(this.plan.area.world);
+          const maps = this.plan.area.world && this.plan.area.world !== "minecraft:overworld" ? [own] : ALL_MAPS;
+          const { x, z, radius } = this.plan.area;
+          if (this.plan.purge) for (const map of maps) ok = ok && (await runAction(this.amp, this.ctx(), "map.purge", { map }, this.plan.by)).ok;
+          else if (this.plan.wholeMaps) for (const map of maps) ok = ok && (await runAction(this.amp, this.ctx(), "map.update", { map }, this.plan.by)).ok;
+          else ok = (await runAction(this.amp, this.ctx(), "map.update", { map: own, x, z, radius }, this.plan.by)).ok;
           if (!ok) return;
           this.updatedInARow = 0;
           this.plan = { ...this.plan, mapAsked: new Date(now).toISOString() };

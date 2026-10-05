@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildSeasons, frontierDatapack, isLastMondayOfItsMonth, lastMonday, lintSeasons, loadSeasons, seasonDatapack, seasonSchema, TRIGGERS_1_21_1, wakeTitle, type Season } from "../src/seasons";
+import { buildSeasons, frontierDatapack, frontierMapConf, isLastMondayOfItsMonth, lastMonday, lintSeasons, loadSeasons, seasonDatapack, seasonSchema, TRIGGERS_1_21_1, wakeTitle, type Season } from "../src/seasons";
 
 // docs/20 §4, docs/34 §2 and §3 (W1.1): the season files, their lint, and the datapack built from one.
 
@@ -261,6 +261,10 @@ describe("build seasons", () => {
     const out = path.join(p.dist, "server", "datapacks");
     expect(await readdir(out)).toEqual(["deepslate-frontier-sample"]);
     expect((await readdir(path.join(out, "deepslate-frontier-sample", "data", "deepslate"))).sort()).toEqual(["dimension", "tags"]);
+    // and its map: a BlueMap config beside the three BlueMap made itself (Sync merges config/, it never deletes there)
+    const conf = await readFile(path.join(p.dist, "server", "config", "bluemap", "maps", "frontier_sample.conf"), "utf8");
+    expect(conf).toContain('dimension: "deepslate:frontier_sample"');
+    expect(conf).toContain('world: "world"');
     await writeFile(path.join(p.seasons, "index.json"), JSON.stringify({ current: "s1", ship: [], frontiers: [] }));
     await buildSeasons(p, () => undefined);
     expect(await readdir(out)).toEqual([]);
@@ -319,5 +323,14 @@ describe("mod versions (Alex, 2026-10-05)", () => {
     // the Lock of 2026-10-05 took newer Xaero's maps by itself ("latest") and every PC failed to load
     const manifest = JSON.parse(await readFile(path.join(SEASONS, "..", "mods.json"), "utf8")) as { mods: Array<{ slug: string; enabled: boolean; version: string }> };
     expect(manifest.mods.filter((m) => m.enabled && m.version === "latest").map((m) => m.slug)).toEqual([]);
+  });
+});
+
+describe("the Frontier's map (docs/20 §5)", () => {
+  it("is a BlueMap map config named after the dimension, so the map's id is the dimension's name", () => {
+    const conf = frontierMapConf(base({ frontier: { dimension: "deepslate:frontier_t1", noise: "minecraft:large_biomes", radius: 3000 } }))!;
+    expect(conf.file).toBe("frontier_t1.conf");
+    expect(conf.body.split("\n").slice(1, 4)).toEqual(['world: "world"', 'dimension: "deepslate:frontier_t1"', 'name: "Frontier · Test Season"']);
+    expect(frontierMapConf(base())).toBeNull();
   });
 });

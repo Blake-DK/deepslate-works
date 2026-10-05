@@ -312,6 +312,16 @@ export function redact(text: string): string {
   return text.replace(/\[\/?(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:.]+\]):\d+\]/g, "[address hidden]");
 }
 
+/**
+ * Is this line something a player said? AMP's own mark (`Type` "Chat"), or the log's "<name> …". Such a line is never
+ * the server's answer to a command, whatever it reads like: AMP hands chat over as the bare text, so "Killed 999999
+ * entities" typed in chat is that and nothing else in `Contents` (docs/35 R-31).
+ */
+export function isChat(text: string, meta: Meta = {}): boolean {
+  if (meta.type && /^chat$/i.test(meta.type)) return true;
+  return RE.chat.test(reduce(text, meta).message);
+}
+
 export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) => boolean): GameEvent[] {
   const { message, level, logger } = reduce(text, meta);
   if (!message) return [];

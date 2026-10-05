@@ -39,6 +39,8 @@ export class PingWatch {
     private readonly ctx: () => ActionCtx,
     private readonly log: (o: unknown, m: string) => void,
     private readonly now: () => number = () => Date.now(),
+    /** Is AMP answering? The status poller's word (server.ts); the console's state stays "running" through an outage. */
+    private readonly reachable: () => boolean = () => true,
   ) {}
 
   start() {
@@ -62,6 +64,7 @@ export class PingWatch {
   async ask() {
     // Never to a server that is asleep or starting, and never to an empty one: there is nothing to measure.
     if (this.tail.state !== 20 || this.tail.online.size === 0) return;
+    if (!this.reachable()) return; // AMP or the tunnel is down: the question would only fail (docs/35 R-03)
     for (const name of whoToAsk(this.tail.online)) {
       const r = await runAction(this.amp, this.ctx(), "server.pings", { name }, null);
       if (!r.ok && !this.failed) this.log({ detail: r.detail }, "could not ask for pings");

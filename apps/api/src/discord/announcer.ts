@@ -17,7 +17,10 @@ export type PostRow = { key: string; channel: Channel; messageId: string; posted
 
 /** What the Announcer needs of the bot (docs/22 §4): votes with buttons are the bot's own forum posts. */
 export type VotePoster = {
+  /** In the server, as last heard. Sending is plain REST and does not need the gateway to be connected this second. */
   readonly inGuild: boolean;
+  /** Not heard from Discord yet whether it is in the server (api has just started, the gateway is still connecting). */
+  readonly connecting?: boolean;
   createPost(forum: string, title: string, message: BotMessage, tag: string): Promise<{ ok: true; threadId: string; messageId: string } | { ok: false; error: string; gone: boolean }>;
   edit(channel: string, messageId: string, message: Partial<BotMessage>): Promise<{ ok: boolean; retry: boolean; error?: string }>;
   tagFor(forum: string, name: string): string[];
@@ -115,8 +118,13 @@ export class Announcer {
     return Boolean(this.adminChannel && this.d.bot?.inGuild);
   }
 
+  /** The bot is set up but has not heard from Discord yet: what is meant for it waits a round, it is not dropped or sent round it. */
+  private botSoon(): boolean {
+    return Boolean(this.d.bot && !this.d.bot.inGuild && this.d.bot.connecting);
+  }
+
   private canAdmin(): boolean {
-    return this.botAdmin() || this.usable("admin") !== null;
+    return this.botAdmin() || (Boolean(this.adminChannel) && this.botSoon()) || this.usable("admin") !== null;
   }
 
   /** docs/22 §13: with the updates forum (or the bot) votes, news and We're live go there; without, docs/21's one feed. */
@@ -232,6 +240,27 @@ export class Announcer {
     await this.d.store.addError(refusedText(ch), { discord: ch, error: error.slice(0, 200) }).catch(() => undefined);
   }
 
+  /** Posts Discord took whose row could not be written: held here, so that the retry does not post them a second time. */
+  private unsaved = new Map<string, PostRow>();
+
+  /** Writes a post's row. A database error after Discord took the message must not end the round: the row is held and written later. */
+  private async keep(row: PostRow): Promise<void> {
+    try {
+      await this.d.store.savePost(row);
+      this.unsaved.delete(row.key);
+    } catch (err) {
+      if (!this.unsaved.has(row.key)) this.d.log({ err: String(err), key: row.key }, "discord feed: could not save a post's row; held in memory");
+      this.unsaved.set(row.key, row);
+    }
+  }
+
+  private async postOf(key: string): Promise<PostRow | null> {
+    const held = this.unsaved.get(key);
+    if (!held) return this.d.store.post(key);
+    await this.keep(held); // the database may be back
+    return held;
+  }
+
   private usable(ch: Channel): Webhook | null {
     const hook = this.hook(ch);
     if (!hook || !hook.valid || this.st?.refused[ch] === hook.hash) return null;
@@ -251,6 +280,7 @@ export class Announcer {
   /** Output number `n` of the event in hand: delivered at most once even if the event is tried again. */
   private async send(e: FeedEvent | null, n: number, ch: Channel, what: string, msg: Message, file?: Attachment, where: Where = {}): Promise<Outcome> {
     if (e && this.partial?.id === e.id && this.partial.done.has(n)) return { ok: true, id: "", channelId: "" };
+    if (ch === "admin" && this.adminChannel && this.botSoon()) return { ok: false, retry: true };
     if (ch === "admin" && this.botAdmin()) {
       const r = await this.d.bot!.sendTo(this.adminChannel, { content: msg.content, embeds: msg.embeds, allowed_mentions: msg.allowed_mentions, ...(msg.flags ? { flags: msg.flags } : {}) });
       this.record({ channel: "admin", what, ok: r.ok, ...(r.ok ? {} : { error: r.error }) });
@@ -264,7 +294,8 @@ export class Announcer {
     const hook = this.usable(ch);
     if (!hook) return { ok: false, retry: false };
     const r = await this.outcome(ch, what, await hook.send(msg, file, where));
-    if (e && (r.ok || !r.retry)) {
+    // gone (the post was deleted by hand) is not done: the caller makes the post again, and if that has to wait a round this is sent again
+    if (e && (r.ok || (!r.retry && !r.gone))) {
       if (this.partial?.id !== e.id) this.partial = { id: e.id, done: new Set() };
       this.partial.done.add(n);
     }
@@ -387,13 +418,13 @@ export class Announcer {
           run.lastAt = at;
           if (run.count >= 3 && run.messageId) {
             const r = await this.edit("feed", "deaths", run.messageId, asPlayer(brand, name, e.actor, deathRun(run.base, run.count - 2)));
-            if (r.ok) await this.d.store.savePost({ key: `deaths:${e.actor}`, channel: "feed", messageId: run.messageId, postedAt: new Date(at), editedAt: now });
+            if (r.ok) await this.keep({ key: `deaths:${e.actor}`, channel: "feed", messageId: run.messageId, postedAt: new Date(at), editedAt: now });
             return ok(r);
           }
           const r = await this.send(e, 0, "feed", "death", asPlayer(brand, name, e.actor, base));
           if (r.ok && r.id) {
             [run.messageId, run.base] = [r.id, base];
-            await this.d.store.savePost({ key: `deaths:${e.actor}`, channel: "feed", messageId: r.id, postedAt: now, editedAt: null });
+            await this.keep({ key: `deaths:${e.actor}`, channel: "feed", messageId: r.id, postedAt: now, editedAt: null });
           }
           return ok(r);
         }
@@ -460,9 +491,9 @@ export class Announcer {
         if (actionOf(e) !== "link.bind" || resultOf(e) !== "OK" || !sw.firstJoin || !e.actor) return true;
         const mc = String(paramsOf(e).mcUsername ?? "");
         const key = `welcome:${e.actor}`;
-        if (!mc || (await this.d.store.post(key))) return true; // once per member
+        if (!mc || (await this.postOf(key))) return true; // once per member
         const r = await this.send(e, 0, "feed", "welcome", asServer(brand, welcomeText(mc)));
-        if (r.ok) await this.d.store.savePost({ key, channel: "feed", messageId: r.id, postedAt: now, editedAt: null });
+        if (r.ok) await this.keep({ key, channel: "feed", messageId: r.id, postedAt: now, editedAt: null });
         return ok(r);
       }
       case "SYNC": {
@@ -546,7 +577,11 @@ export class Announcer {
 
   /** The bot posts a poll when it is in the server, buttons are on and the forum is picked. */
   private botPosts(sw: Switches, kind: PollView["kind"]): boolean {
-    return Boolean(this.d.bot?.inGuild && sw.voteButtons && sw.updatesForum && kind === "poll" && this.usable("updates"));
+    return Boolean(this.d.bot?.inGuild && this.botWould(sw, kind));
+  }
+
+  private botWould(sw: Switches, kind: PollView["kind"]): boolean {
+    return Boolean(sw.voteButtons && sw.updatesForum && kind === "poll" && this.usable("updates"));
   }
 
   private async components(kind: PollView["kind"], id: string, closed: boolean): Promise<Component[]> {
@@ -570,12 +605,14 @@ export class Announcer {
   private async openVote(e: FeedEvent | null, kind: PollView["kind"], v: PollView, sw: Switches, brand: Brand, now: Date): Promise<Outcome & { row?: PostRow }> {
     const key = `${kind}:${v.id}`;
     const msg = voteMessage(brand, v, this.d.portal);
+    // the bot is still connecting: wait for it, or the vote is the webhook's post without buttons for good
+    if (this.botSoon() && this.botWould(sw, kind)) return { ok: false, retry: true };
     if (this.botPosts(sw, kind)) {
       const r = await this.d.bot!.createPost(sw.updatesForum, v.title, { embeds: msg.embeds, components: await this.components(kind, v.id, false), allowed_mentions: msg.allowed_mentions }, "Vote");
       this.record({ channel: "updates", what: `${kind} opened`, ok: r.ok, ...(r.ok ? {} : { error: r.error }) });
       if (r.ok) {
         const row: PostRow = { key, channel: "updates", messageId: r.messageId, postedAt: now, editedAt: null, via: "bot", threadId: r.threadId };
-        await this.d.store.savePost(row);
+        await this.keep(row);
         return { ok: true, id: r.messageId, channelId: r.threadId, row };
       }
       // the bot could not post: the webhook's post, without buttons
@@ -584,26 +621,38 @@ export class Announcer {
     const r = await this.send(e, 0, ch, `${kind} opened`, msg, undefined, ch === "updates" ? { threadName: v.title, tags: this.tags(sw, "Vote") } : {});
     if (!r.ok) return r;
     const row: PostRow = { key, channel: ch, messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId: ch === "updates" ? r.channelId || null : null };
-    await this.d.store.savePost(row);
+    await this.keep(row);
     return { ...r, row };
   }
 
   /** A reply in the vote's post (the reminder, the result line). A post deleted by hand is made again, once. */
   private async replyToVote(e: FeedEvent | null, n: number, kind: PollView["kind"], id: string, what: string, msg: Message, brand: Brand, sw: Switches, now: Date): Promise<Outcome> {
-    const post = await this.d.store.post(`${kind}:${id}`);
+    const post = await this.postOf(`${kind}:${id}`);
     const ch: Channel = post?.channel ?? (this.twoChannels ? "updates" : "feed");
+    if (!post && ch === "updates") {
+      // no post of this vote (it was opened while the feed was off or paused), and a forum takes no line without one:
+      // an open vote gets its post now and the line goes in it; a result is a post of its own, named after the vote
+      const v = await this.d.store.vote(kind, id);
+      if (!v) return { ok: false, retry: false };
+      if (v.status !== "OPEN") return this.send(e, n, ch, what, msg, undefined, { threadName: v.title, tags: this.tags(sw, "Vote") });
+      const opened = await this.openVote(null, kind, v, sw, brand, now);
+      if (!opened.ok) return { ok: false, retry: opened.retry };
+      if (!opened.row?.threadId) return { ok: false, retry: false };
+      return this.send(e, n, ch, what, msg, undefined, { threadId: opened.row.threadId });
+    }
     const r = await this.send(e, n, ch, what, msg, undefined, post?.threadId ? { threadId: post.threadId } : {});
     if (r.ok || !r.gone) return r;
     const v = await this.d.store.vote(kind, id);
     if (!v) return { ok: false, retry: false };
     const again = await this.openVote(null, kind, v, sw, brand, now);
-    if (!again.ok || !again.row?.threadId) return { ok: false, retry: false };
-    return this.send(null, n, ch, what, msg, undefined, { threadId: again.row.threadId });
+    if (!again.ok) return { ok: false, retry: again.retry }; // Discord is away: the line is tried again, in the post made then
+    if (!again.row?.threadId) return { ok: false, retry: false };
+    return this.send(e, n, ch, what, msg, undefined, { threadId: again.row.threadId });
   }
 
   private async voteOpened(e: FeedEvent, kind: PollView["kind"], id: string, sw: Switches, brand: Brand, now: Date): Promise<boolean> {
     if (!sw.votes || !id) return true;
-    if (await this.d.store.post(`${kind}:${id}`)) return true;
+    if (await this.postOf(`${kind}:${id}`)) return true;
     const v = await this.d.store.vote(kind, id);
     if (!v || v.status !== "OPEN") return true; // closed or deleted since: nothing
     const r = await this.openVote(e, kind, v, sw, brand, now);
@@ -616,11 +665,11 @@ export class Announcer {
     if (!v) return true;
     const key = `${kind}:${id}`;
     this.dirtyVotes.delete(key);
-    const post = await this.d.store.post(key);
+    const post = await this.postOf(key);
     if (post?.messageId && !(this.partial?.id === e.id && this.partial.done.has(0))) {
       // the first message turns into the result; the buttons go
       const r = await this.editVote(post, kind, v, brand, `${kind} result`);
-      if (r.ok) await this.d.store.savePost({ ...post, editedAt: now });
+      if (r.ok) await this.keep({ ...post, editedAt: now });
       if (!r.ok && r.retry) return false;
       if (this.partial?.id !== e.id) this.partial = { id: e.id, done: new Set() };
       this.partial.done.add(0);
@@ -643,14 +692,14 @@ export class Announcer {
     if (!post) return true;
     const open = async (n: number): Promise<Outcome> => {
       const r = await this.send(e, n, "updates", `${post.tag.toLowerCase()} post`, asServer(brand, post.opener), undefined, { threadName: post.title, tags: this.tags(sw, post.tag) });
-      if (r.ok && r.channelId) await this.d.store.savePost({ key: post.key, channel: "updates", messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId: r.channelId });
+      if (r.ok && r.channelId) await this.keep({ key: post.key, channel: "updates", messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId: r.channelId });
       return r;
     };
-    let threadId = (await this.d.store.post(post.key))?.threadId ?? null;
+    let threadId = (await this.postOf(post.key))?.threadId ?? null;
     if (!threadId) {
       const r = await open(0);
       if (!r.ok) return !r.retry;
-      threadId = r.channelId || ((await this.d.store.post(post.key))?.threadId ?? null);
+      threadId = r.channelId || ((await this.postOf(post.key))?.threadId ?? null);
       if (!threadId) return true; // Discord took it but gave no post id: not a forum
     }
     const text = seasonReply(e, info, this.d.portal);
@@ -673,6 +722,7 @@ export class Announcer {
    * Every entry of changelog.ts that has not been posted yet becomes a reply in the one post "Change log" in
    * season-updates, oldest first. The post is made the first time; one deleted by hand is made again. Looked at once
    * a minute until everything is posted, so in practice once after each deploy. Without the forum's webhook: nothing.
+   * An entry Discord refuses for good is marked as posted and skipped, so it cannot hold up the ones after it.
    */
   private async changeLog(sw: Switches, brand: Brand, now: Date): Promise<void> {
     const changes = this.d.changes ?? [];
@@ -682,13 +732,13 @@ export class Announcer {
     const open = async (): Promise<string | null> => {
       const r = await this.send(null, 0, "updates", "change log post", asServer(brand, CHANGELOG_OPENER), undefined, { threadName: CHANGELOG_TITLE, tags: this.tags(sw, "News") });
       if (!r.ok || !r.channelId) return null;
-      await this.d.store.savePost({ key: "changelog", channel: "updates", messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId: r.channelId });
+      await this.keep({ key: "changelog", channel: "updates", messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId: r.channelId });
       return r.channelId;
     };
-    let threadId = (await this.d.store.post("changelog"))?.threadId ?? null;
+    let threadId = (await this.postOf("changelog"))?.threadId ?? null;
     for (const c of changes) {
       const key = `changelog:${c.id}`;
-      if (await this.d.store.post(key)) continue;
+      if (await this.postOf(key)) continue;
       threadId ??= await open();
       if (!threadId) return; // not taken, or not a forum: looked at again in a minute
       let r = await this.send(null, 0, "updates", "change log", asServer(brand, changeText(c)), undefined, { threadId });
@@ -698,8 +748,13 @@ export class Announcer {
         if (!threadId) return;
         r = await this.send(null, 0, "updates", "change log", asServer(brand, changeText(c)), undefined, { threadId });
       }
-      if (!r.ok) return;
-      await this.d.store.savePost({ key, channel: "updates", messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId });
+      if (!r.ok) {
+        // Discord is away, the post has gone again, or the webhook itself was refused: looked at again in a minute
+        if (r.retry || r.gone || !this.usable("updates")) return;
+        // Discord will never take this entry as it is (400): marked, said once, and the later entries are not held up
+        this.d.log({ id: c.id, error: this.st?.log[0]?.error }, "discord change log: Discord refused this entry; it is skipped");
+      }
+      await this.keep({ key, channel: "updates", messageId: r.ok ? r.id : "", postedAt: now, editedAt: null, via: "webhook", threadId });
     }
     this.changeLogDone = true;
   }
@@ -710,6 +765,8 @@ export class Announcer {
     const now = this.now();
     const t = now.getTime();
     const brand = await this.d.store.brand();
+    // rows the database would not take earlier
+    for (const row of [...this.unsaved.values()]) await this.keep(row);
     // leaves that nobody came back from
     for (const [uuid, l] of [...this.pendingLeaves]) {
       if (l.due > t) continue;
@@ -724,7 +781,7 @@ export class Announcer {
     if (!sw.votes) return;
     // a vote's count, at most once a minute
     for (const key of [...this.dirtyVotes]) {
-      const post = await this.d.store.post(key);
+      const post = await this.postOf(key);
       if (!post?.messageId) {
         this.dirtyVotes.delete(key);
         continue;
@@ -735,7 +792,7 @@ export class Announcer {
       this.dirtyVotes.delete(key);
       if (!v || v.status !== "OPEN") continue; // the close edits it
       const r = await this.editVote(post, kind, v, brand, `${kind} count`);
-      if (r.ok) await this.d.store.savePost({ ...post, editedAt: now });
+      if (r.ok) await this.keep({ ...post, editedAt: now });
       else if (r.retry) this.dirtyVotes.add(key);
     }
     // the reminder 24 hours before a vote closes
@@ -743,15 +800,15 @@ export class Announcer {
     this.remindedAt = t;
     for (const v of await this.d.store.remindable(now)) {
       const key = `remind:${v.kind}:${v.id}`;
-      if (await this.d.store.post(key)) continue;
+      if (await this.postOf(key)) continue;
       const missing = await this.d.store.unvoted(v.kind, v.id);
       if (missing.discordIds.length + missing.others === 0) {
-        await this.d.store.savePost({ key, channel: "feed", messageId: "", postedAt: now, editedAt: null }); // everybody has
+        await this.keep({ key, channel: "feed", messageId: "", postedAt: now, editedAt: null }); // everybody has
         continue;
       }
-      const buttons = (await this.d.store.post(`${v.kind}:${v.id}`))?.via === "bot";
+      const buttons = (await this.postOf(`${v.kind}:${v.id}`))?.via === "bot";
       const r = await this.replyToVote(null, 0, v.kind, v.id, "reminder", reminderMessage(brand, v, missing, sw.mentionUnvoted, now, buttons), brand, sw, now);
-      if (r.ok || !r.retry) await this.d.store.savePost({ key, channel: "feed", messageId: r.ok ? r.id : "", postedAt: now, editedAt: null });
+      if (r.ok || !r.retry) await this.keep({ key, channel: "feed", messageId: r.ok ? r.id : "", postedAt: now, editedAt: null });
     }
   }
 }

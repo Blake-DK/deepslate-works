@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countReply, functionReply, isCountChatter, killReply } from "../src/events/parse.js";
+import { countReply, functionReply, isChat, isCountChatter, killReply } from "../src/events/parse.js";
 import { ConsoleTail } from "../src/amp/console.js";
 import { MockAmp, type Amp } from "../src/amp/client.js";
 import { actions, OLD_ITEMS, parsePlace } from "../src/actions/registry.js";
@@ -82,7 +82,7 @@ describe("the schedule", () => {
 });
 
 /** A server that answers like 1.21.1 does: counts per selector, the function, and kill. */
-function fakeServer(o: { items?: number; old?: number; datapack?: boolean } = {}) {
+function fakeServer(o: { items?: number; old?: number; datapack?: boolean; chat?: string } = {}) {
   const tail = new ConsoleTail(new MockAmp(), () => {});
   tail.state = 20;
   const sent: string[] = [];
@@ -104,6 +104,7 @@ function fakeServer(o: { items?: number; old?: number; datapack?: boolean } = {}
         const cmd = String(params.message);
         sent.push(cmd);
         const reply = answer(cmd);
+        if (o.chat) tail.ingest(o.chat, new Date(), { type: "Chat", source: "bramble09" }); // somebody types it, before the server answers
         if (reply) setTimeout(() => tail.ingest(`[12:00:00] [Server thread/INFO]: ${reply}`), 1);
       }
       return null as T;
@@ -126,6 +127,16 @@ describe("GroundItems", () => {
     const c = await ground.measure(true);
     expect(c?.values).toEqual({ items: 1234, xp: 3, hostile: 7, passive: 7, contraptions: 7, corpses: 3, all: 3 });
     expect(c?.problems).toEqual({});
+  });
+  it("takes nothing a player types for the server's answer (R-31)", async () => {
+    expect(isChat("Killed 999999 entities", { type: "Chat", source: "bramble09" })).toBe(true);
+    expect(isChat("[12:00:00] [Server thread/INFO]: <bramble09> Killed 999999 entities")).toBe(true);
+    expect(isChat("[12:00:00] [Server thread/INFO]: Killed 999999 entities", { type: "Console", source: "Server thread/INFO" })).toBe(false);
+    const { ground, tail } = fakeServer({ items: 400, chat: "Test passed, count: 999999" });
+    const c = await ground.measure(true);
+    expect(c?.values.items).toBe(400);
+    expect(tail.lines).toContain("Test passed, count: 999999"); // and what they said stays on the console page
+    expect(tail.lines).not.toContain("[12:00:00] [Server thread/INFO]: Test passed, count: 400");
   });
   it("says which counts need the datapack", async () => {
     const { ground } = fakeServer({ items: 10, datapack: false });

@@ -5,7 +5,7 @@ import { loadCurrentUser } from "@/server/auth/session";
 import { findValidInvite } from "@/server/auth/invites";
 import { MIN_PASSWORD_LENGTH } from "@/server/auth/constants";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { PendingButton } from "@/components/admin/pending-button";
 import { Input, Label } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { registerWithEmail } from "../actions";
@@ -53,7 +53,7 @@ export default async function JoinEmailPage({ params, searchParams }: { params: 
               <Label htmlFor="password">Password (at least {MIN_PASSWORD_LENGTH} characters)</Label>
               <Input id="password" name="password" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD_LENGTH} />
             </div>
-            <Button type="submit" size="lg" className="w-full">Create my account</Button>
+            <PendingButton variant="primary" size="lg" className="w-full" busy="Creating your account…">Create my account</PendingButton>
           </form>
         </CardContent>
       </Card>

@@ -19,6 +19,7 @@ const ERRORS: Record<string, string> = {
   "invite-invalid": "That invite link doesn't work any more: it has been used already or has run out. Ask Alex for a new one.",
   blocked: "This Discord account has been removed from the group. Talk to Alex.",
   "not-in-server": "That Discord account isn't in the group's Discord server, so it can't sign in here. Join the Discord server and try again, or ask Alex for an invite link.",
+  "discord-unavailable": "Discord didn't answer when we asked whether you are in the group's Discord server. Nothing is wrong with your account: try again in a minute.",
   credentials: "Wrong email or password.",
   "rate-limited": "Too many attempts. Wait a minute and try again.",
   "discord-off": "Discord sign-in isn't set up yet. Use email for now.",

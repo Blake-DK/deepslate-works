@@ -1,8 +1,8 @@
 import type { Amp } from "../amp/client.js";
-import type { ConsoleTail } from "../amp/console.js";
+import type { ConsoleEvent, ConsoleTail, EventInfo } from "../amp/console.js";
 import { runAction } from "../actions/run.js";
 import { COUNTED, GROUND_DONE, GROUND_MARK, OLD_ITEM_TICKS, type ActionCtx, type ActionName, type Counted } from "../actions/registry.js";
-import { countReply, functionReply, killReply, reduce } from "../events/parse.js";
+import { countReply, functionReply, isChat, killReply, reduce } from "../events/parse.js";
 
 // Admin → Server → Settings: what is lying around, and clearing items on the ground (planner, 2026-10-01). No mod:
 // the datapack deepslate-tools writes each item's Age into a score (ground/mark), the console kills the item
@@ -90,9 +90,10 @@ export class GroundItems {
       let found: T | null = null;
       let done: () => void = () => {};
       const answered = new Promise<void>((r) => (done = r));
-      const handler = (e: { type: string; text?: string }, info: { replay: boolean }) => {
+      const handler = (e: ConsoleEvent, info: EventInfo) => {
         if (info.replay || e.type !== "line" || found !== null) return;
-        const hit = match(reduce(e.text ?? "").message);
+        if (isChat(e.text, { source: e.source, type: e.kind })) return; // a player can type "Killed 999999 entities" (docs/35 R-31)
+        const hit = match(reduce(e.text).message);
         if (hit !== null) {
           found = hit;
           done();

@@ -23,6 +23,11 @@ export async function getResultsVote() {
   );
 }
 
+/** The last vote that closed: what players are shown while a new one is open (docs/35 R-24). */
+export async function getLastClosedVote() {
+  return db.vote.findFirst({ where: { status: "CLOSED" }, orderBy: { closesAt: "desc" } });
+}
+
 export async function loadBallots(voteId: string): Promise<BallotRow[]> {
   const rows = await db.ballot.findMany({ where: { voteId }, include: { user: { select: { pcTier: true } } } });
   return rows.map((r) => ({ modIds: r.modIds, answers: (r.answers ?? {}) as Record<string, string>, pcTier: r.user.pcTier }));

@@ -149,6 +149,13 @@ describe("sessions", () => {
     expect(sessionProblem(s, owner({ adminLogin: { enabled: true, passwordAt: new Date(6000) } }))).toBeTruthy();
     expect(sessionProblem({ sv: 0, via: "discord" }, owner({ adminLogin: null }))).toBeNull();
   });
+  it("an email-and-password session is never an admin's (docs/35 R-17: promoted while signed in)", () => {
+    const s = { sv: 0, via: "email" as const };
+    expect(sessionProblem(s, owner({ role: "PLAYER", adminLogin: null }))).toBeNull();
+    expect(sessionProblem(s, owner({ adminLogin: null }))).toBeTruthy();
+    expect(sessionProblem(s, owner())).toBeTruthy();
+    expect(sessionProblem({ sv: 0, via: "link" as const }, owner())).toBeNull();
+  });
   it("password and link sessions last 12 hours", () => {
     expect(SHORT_SESSION_MS).toBe(12 * 3600_000);
     expect(tokenExpired({ until: 1000 }, 999)).toBe(false);

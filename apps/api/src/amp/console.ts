@@ -1,5 +1,5 @@
 import type { Amp } from "./client.js";
-import { isCountChatter, isEntityDump, isMapChatter, isPingChatter, isTpsLine, parse, type GameEvent, type Meta } from "../events/parse.js";
+import { isChat, isCountChatter, isEntityDump, isMapChatter, isPingChatter, isTpsLine, parse, type GameEvent, type Meta } from "../events/parse.js";
 
 // Tails the instance console through Core.GetUpdates (AMP returns only new entries per session) and
 // turns the lines into events. The patterns are in src/events/parse.ts.
@@ -90,7 +90,9 @@ export class ConsoleTail {
   /** Adds one console line and notifies the handlers; `poll` calls it for every new AMP entry. */
   ingest(text: string, at: Date = new Date(), meta: Meta = {}, replay = false) {
     // The answers to the ping rounds are read below like any line, but not kept for the console page.
-    if (!isPingChatter(text) && !isEntityDump(text) && !(Date.now() < this.hushMapUntil && isMapChatter(text)) && !(Date.now() < this.hushTpsUntil && isTpsLine(text)) && !(Date.now() < this.hushCountUntil && isCountChatter(text))) this.entries.push({ seq: ++this.seq, at: at.toISOString(), text, source: meta.source ?? null, kind: meta.type ?? null });
+    // What a player says is always kept: a chat line that reads like one of those answers is not one (docs/35 R-31).
+    const chatter = !isChat(text, meta) && (isPingChatter(text) || isEntityDump(text) || (Date.now() < this.hushMapUntil && isMapChatter(text)) || (Date.now() < this.hushTpsUntil && isTpsLine(text)) || (Date.now() < this.hushCountUntil && isCountChatter(text)));
+    if (!chatter) this.entries.push({ seq: ++this.seq, at: at.toISOString(), text, source: meta.source ?? null, kind: meta.type ?? null });
     if (this.entries.length > KEEP) this.entries.splice(0, this.entries.length - KEEP);
     const known = (name: string) => this.online.has(name) || this.uuidByName.has(name);
     for (const e of parseConsoleLine(text, meta, known)) {

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { EVENT_KINDS, PLAYER_KINDS, type EventKind } from "@/shared/events";
+import { dateToUkLocal, ukLocalToDate } from "@/lib/uk-time";
 
 // docs/16 §4: the filters of the event log live in the URL, so a filtered view can be linked.
 // Pure: turns the query string into a filter and the filter into a Prisma `where`.
@@ -9,11 +10,18 @@ export type EventFilter = { kinds: EventKind[]; player: string | null; from: Dat
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 const many = (v: string | string[] | undefined) => (Array.isArray(v) ? v : v ? [v] : []).flatMap((x) => x.split(","));
 
+/** docs/35 R-27: From and To are days of the UK's calendar, as every time on the page is: midnight to midnight there. */
 function day(s: string, endOfDay: boolean): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
-  const d = new Date(`${s}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`);
-  return Number.isNaN(d.getTime()) ? null : d;
+  const start = ukLocalToDate(`${s}T00:00`);
+  if (!start || !endOfDay) return start;
+  // the last millisecond before the next UK midnight (a day there is 23, 24 or 25 hours long)
+  const next = ukLocalToDate(`${new Date(Date.parse(`${s}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)}T00:00`);
+  return next ? new Date(next.getTime() - 1) : null;
 }
+
+/** The UK day an instant falls on, as a date field and the URL write it ("2026-10-01"). */
+export const filterDay = (d: Date): string => dateToUkLocal(d).slice(0, 10);
 
 export function readFilter(q: Record<string, string | string[] | undefined>, admin: boolean): EventFilter {
   const allowed: readonly EventKind[] = admin ? EVENT_KINDS : PLAYER_KINDS;
@@ -28,8 +36,8 @@ export function filterToQuery(f: EventFilter, extra: Record<string, string> = {}
   const p = new URLSearchParams();
   if (f.kinds.length) p.set("kind", f.kinds.join(","));
   if (f.player) p.set("player", f.player);
-  if (f.from) p.set("from", f.from.toISOString().slice(0, 10));
-  if (f.to) p.set("to", f.to.toISOString().slice(0, 10));
+  if (f.from) p.set("from", filterDay(f.from));
+  if (f.to) p.set("to", filterDay(f.to));
   if (f.text) p.set("q", f.text);
   for (const [k, v] of Object.entries(extra)) p.set(k, v);
   const s = p.toString();
@@ -82,7 +90,7 @@ export function everything(f: EventFilter): EventFilter {
   return { ...f, kinds: [], before: null };
 }
 
-const dayWords = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short" });
+const dayWords = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short" });
 const and = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}`);
 
 /** docs/29 rule 5: what is narrowed, in one line ("Showing deaths and advancements · samoyedx · from 1 Oct"), or null when nothing is. */

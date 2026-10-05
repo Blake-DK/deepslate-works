@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { csv, csvField, EVENT_GROUPS, eventWhere, everything, filterToQuery, filterWords, groupLit, groupsFor, readFilter, toggleGroup, type EventGroup } from "@/lib/event-query";
+import { csv, csvField, EVENT_GROUPS, eventWhere, everything, filterDay, filterToQuery, filterWords, groupLit, groupsFor, readFilter, toggleGroup, type EventGroup } from "@/lib/event-query";
 import { Prisma } from "@prisma/client";
 import { EVENT_KINDS, PLAYER_KINDS } from "@/shared/events";
 
@@ -8,10 +8,27 @@ describe("readFilter", () => {
     const f = readFilter({ kind: ["JOIN", "death,chat", "nonsense"], player: "  Bramble09 ", from: "2026-09-01", to: "2026-09-29", q: " creeper ", before: "120" }, true);
     expect(f.kinds).toEqual(["JOIN", "DEATH", "CHAT"]);
     expect(f.player).toBe("Bramble09");
-    expect(f.from?.toISOString()).toBe("2026-09-01T00:00:00.000Z");
-    expect(f.to?.toISOString()).toBe("2026-09-29T23:59:59.999Z");
+    // days of the UK's calendar (docs/35 R-27): in September the UK is an hour ahead of UTC
+    expect(f.from?.toISOString()).toBe("2026-08-31T23:00:00.000Z");
+    expect(f.to?.toISOString()).toBe("2026-09-29T22:59:59.999Z");
     expect(f.text).toBe("creeper");
     expect(f.before).toBe(120n);
+  });
+  it("takes From and To as UK days, summer and winter, and the days the clocks change", () => {
+    const f = (from: string, to: string) => readFilter({ from, to }, true);
+    const winter = f("2026-12-01", "2026-12-01");
+    expect(winter.from?.toISOString()).toBe("2026-12-01T00:00:00.000Z");
+    expect(winter.to?.toISOString()).toBe("2026-12-01T23:59:59.999Z");
+    const back = f("2026-10-25", "2026-10-25"); // 25 hours long
+    expect(back.from?.toISOString()).toBe("2026-10-24T23:00:00.000Z");
+    expect(back.to?.toISOString()).toBe("2026-10-25T23:59:59.999Z");
+    const forward = f("2026-03-29", "2026-03-29"); // 23 hours long
+    expect(forward.from?.toISOString()).toBe("2026-03-29T00:00:00.000Z");
+    expect(forward.to?.toISOString()).toBe("2026-03-29T22:59:59.999Z");
+    // and the URL and the date fields give the same days back
+    expect(filterToQuery(f("2026-07-01", "2026-07-31"))).toBe("?from=2026-07-01&to=2026-07-31");
+    expect(filterDay(new Date("2026-07-01T23:30:00Z"))).toBe("2026-07-02");
+    expect(filterWords(f("2026-07-01", "2026-07-31"), true)).toBe("Showing everything · 1 Jul to 31 Jul");
   });
   it("ignores what it cannot read", () => {
     const f = readFilter({ from: "yesterday", to: "2026-13-45", before: "-1; drop table", kind: "" }, true);
@@ -49,7 +66,7 @@ describe("eventWhere", () => {
   it("builds the rest of the query", () => {
     const w = eventWhere(readFilter({ player: "m1_owl", from: "2026-09-01", q: "lava", before: "90" }, true), true, ["uuid-1", "user-1"]);
     expect(w.actor).toEqual({ in: ["uuid-1", "user-1"] });
-    expect(w.at).toEqual({ gte: new Date("2026-09-01T00:00:00.000Z") });
+    expect(w.at).toEqual({ gte: new Date("2026-08-31T23:00:00.000Z") });
     expect(w.message).toEqual({ contains: "lava", mode: "insensitive" });
     expect(w.id).toEqual({ lt: 90n });
   });

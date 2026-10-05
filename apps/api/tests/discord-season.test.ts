@@ -18,7 +18,7 @@ const PORTAL = "https://deepslate.dsw.test";
 
 type Call = { method: string; url: string; body: Record<string, unknown> };
 
-async function setup(opts: { updates?: boolean; sw?: Partial<Switches>; answer?: (c: Call) => Response | null } = {}) {
+async function setup(opts: { updates?: boolean; sw?: Partial<Switches>; answer?: (c: Call) => Response | null; saveFails?: () => boolean } = {}) {
   const file = await readSeasonFile(DIR, "sample");
   if (!file) throw new Error("sample.json does not read");
   const calls: Call[] = [];
@@ -52,7 +52,10 @@ async function setup(opts: { updates?: boolean; sw?: Partial<Switches>; answer?:
     picture: async () => null,
     packChange: async () => null,
     post: async (key) => posts.get(key) ?? null,
-    savePost: async (row) => { posts.set(row.key, row); },
+    savePost: async (row) => {
+      if (opts.saveFails?.()) throw new Error("database away");
+      posts.set(row.key, row);
+    },
     addError: async () => {},
     switches: async () => ({ ...SW, ...opts.sw }) as Switches,
     brand: async () => ({ name: "Deepslate Works", avatar: null }),
@@ -160,6 +163,48 @@ describe("season moments in Discord (docs/21 §6, docs/22 §13)", () => {
     expect(s[2]!.url).toContain(`thread_id=${thread}`);
     await t.a.round();
     expect(t.sent()).toHaveLength(3); // and not again
+  });
+
+  it("the post made again cannot be made this round (Discord is away): the reply is not lost, it goes in at the next", async () => {
+    let down = true;
+    const t = await setup({
+      answer: (c) => {
+        if (c.url.includes("thread_id=111")) return new Response(JSON.stringify({ code: 10003, message: "Unknown Channel" }), { status: 404 });
+        return down && c.body.thread_name ? new Response("{}", { status: 500 }) : null;
+      },
+    });
+    t.posts.set("boss:sample:rehearsal_ravager", { key: "boss:sample:rehearsal_ravager", channel: "updates", messageId: "1", postedAt: new Date(), editedAt: null, via: "webhook", threadId: "111" });
+    t.season("Anna defeated The Rehearsal Ravager", { what: "boss", id: "rehearsal_ravager", title: "The Rehearsal Ravager", names: ["Anna"], first: false });
+    await t.a.round();
+    expect(t.sent().some((c) => c.body.content === "Anna beat The Rehearsal Ravager." && !c.url.includes("thread_id=111"))).toBe(false);
+    down = false;
+    await t.a.round();
+    const thread = t.posts.get("boss:sample:rehearsal_ravager")?.threadId;
+    expect(thread).not.toBe("111");
+    const last = t.sent().at(-1)!;
+    expect([last.body.content, last.url.includes(`thread_id=${thread}`)]).toEqual(["Anna beat The Rehearsal Ravager.", true]);
+    const count = t.sent().length;
+    await t.a.round();
+    expect(t.sent()).toHaveLength(count); // and not again
+  });
+
+  it("the database failing after Discord took a new post does not make the post a second time", async () => {
+    let down = true;
+    const t = await setup({ saveFails: () => down });
+    t.season("The Rehearsal Golem has awoken", { what: "wake", id: "rehearsal_golem", title: "The Rehearsal Golem", by: "Anna" });
+    await t.a.round();
+    expect(t.sent().map((c) => Boolean(c.body.thread_name))).toEqual([true, false]); // the post and the reply in it, in one round
+    expect(t.posts.size).toBe(0);
+    t.season("Cyra defeated The Rehearsal Golem", { what: "boss", id: "rehearsal_golem", title: "The Rehearsal Golem", names: ["Cyra"], first: false });
+    await t.a.round();
+    const s = t.sent();
+    expect(s.map((c) => Boolean(c.body.thread_name))).toEqual([true, false, false]); // into the post that is there
+    const thread = /thread_id=(\d+)/.exec(s[1]!.url)?.[1];
+    expect(thread).toBeTruthy();
+    expect(s[2]!.url).toContain(`thread_id=${thread}`);
+    down = false;
+    await t.a.round();
+    expect(t.posts.get("boss:sample:rehearsal_golem")?.threadId).toBe(thread); // written once the database is back
   });
 
   it("a moment about a boss the file no longer has is dropped, and names from the game cannot mention or format", async () => {

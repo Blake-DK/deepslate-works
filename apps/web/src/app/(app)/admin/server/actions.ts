@@ -8,6 +8,7 @@ import { db } from "@/server/db";
 import { apiFetch, ApiError } from "@/server/api-client";
 import { audit } from "@/server/events";
 import { removePhoto, storePhoto } from "@/server/news-images";
+import { photoInUse } from "@/server/polls";
 
 const ops = z.enum(["start", "stop", "restart"]);
 // Where to go after an action: the tab it belongs to, or the Control Room when its form says so. The form only
@@ -230,9 +231,9 @@ export async function announcementChangeAction(which: string, formData: FormData
   if (!id.success || !what.success) redirect(to("error", "Unknown announcement."));
   const row = await db.announcement.findUnique({ where: { id: id.data }, select: { image: true } });
   if (!row) redirect(to("error", "Unknown announcement."));
-  // a picture file is removed only when no other news item shows the same picture
+  // a picture file is removed only when no other news item, and no poll's option (docs/35 R-40), shows the same picture
   const drop = async (file: string | null) => {
-    if (file && (await db.announcement.count({ where: { image: file } })) === 0) await removePhoto(file);
+    if (file && !(await photoInUse(file))) await removePhoto(file);
   };
   if (what.data === "delete") {
     await db.announcement.deleteMany({ where: { id: id.data } });

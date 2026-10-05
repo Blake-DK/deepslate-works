@@ -371,4 +371,21 @@ describe("Recorder: who left while api was restarting", () => {
     await t.say(L("There are 0 of a max of 20 players online: ")); // a later answer, with no resync before it
     expect(t.sessions.find((s) => s.mcName === "Bramble09")?.leftAt).toBeNull();
   });
+
+  // docs/35 R-21: and a join in that time got no session, so the visit was no play time.
+  it("whoever joined meanwhile gets a session from that answer, once, marked inferred", async () => {
+    const t = setup();
+    await t.say(L(`UUID of player Bramble09 is ${UUID}`));
+    await t.say(L("Bramble09 joined the game"));
+    t.tick(600);
+    t.rec.reconcileNext(); // m1_owl came in while api was restarting
+    await t.say(L("There are 2 of a max of 20 players online: Bramble09, m1_owl"));
+    expect(t.sessions.map((s) => [s.mcName, s.joinedAt.toISOString(), s.leftAt])).toEqual([["Bramble09", "2026-09-29T10:00:00.000Z", null], ["m1_owl", "2026-09-29T10:10:00.000Z", null]]);
+    expect(t.events.at(-1)).toMatchObject({ kind: "JOIN", raw: null, meta: { name: "m1_owl", inferred: true } });
+    await t.say(L("There are 3 of a max of 20 players online: Bramble09, m1_owl, AMPs_ghost")); // no resync before it: opens nothing
+    expect(t.sessions).toHaveLength(2);
+    t.tick(300);
+    await t.say(L("m1_owl left the game"));
+    expect(t.events.at(-1)).toMatchObject({ kind: "LEAVE", message: "m1_owl left after 5 min" });
+  });
 });

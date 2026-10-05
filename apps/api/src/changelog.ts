@@ -22,6 +22,18 @@ export const CHANGES: Change[] = [
     date: "2026-10-04",
     lines: ["A coloured placard can be made plain again: craft it with white dye. That recipe was broken until now."],
   },
+  {
+    id: "2026-10-05-review-fixes",
+    date: "2026-10-05",
+    lines: [
+      "Pressing Play while the server is asleep: the line under the button now follows the server until it is ready, instead of staying on \"Waking the server\".",
+      "If you were waiting in the entrance room and the server was slow to let you through, it now tries again by itself. No more leaving and joining again.",
+      "A hiccup at Discord while you sign in no longer signs you out everywhere. The page says Discord did not answer; try again in a minute.",
+      "Mods & vote → Results shows the last finished vote while a new one is open, and no longer shows an error page before the first vote has closed.",
+      "The site's install help now talks about Deepslate Works.exe, not the old zip and Setup.bat.",
+      "Play time per day on a player's page was counted twice in places. It adds up now.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";
@@ -29,8 +41,23 @@ export const CHANGELOG_OPENER = "What's new on the site and the server. Every up
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-/** One entry as a Discord message: the date in bold, a bullet per line. */
+/** Discord takes 2000 characters in one message and refuses a longer one outright. */
+export const DISCORD_MAX = 2000;
+/** The last line of an entry that did not fit. The test over CHANGES fails on it, so a real entry never ends this way. */
+export const CHANGE_CUT = "… and more: this update was too long for one message.";
+
+/** One entry as a Discord message: the date in bold, a bullet per line. Too long for one message: cut at a line break. */
 export function changeText(c: Change): string {
   const [y, m, d] = c.date.split("-").map(Number);
-  return [`**${d} ${MONTHS[(m ?? 1) - 1]} ${y}**`, ...c.lines.map((l) => `• ${l}`)].join("\n");
+  const lines = [`**${d} ${MONTHS[(m ?? 1) - 1]} ${y}**`, ...c.lines.map((l) => `• ${l}`)];
+  const whole = lines.join("\n");
+  if (whole.length <= DISCORD_MAX) return whole;
+  const kept: string[] = [];
+  let size = CHANGE_CUT.length;
+  for (const l of lines) {
+    if (size + l.length + 1 > DISCORD_MAX) break;
+    kept.push(l);
+    size += l.length + 1;
+  }
+  return [...kept, CHANGE_CUT].join("\n");
 }

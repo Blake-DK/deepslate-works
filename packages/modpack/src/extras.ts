@@ -126,13 +126,25 @@ export async function pngPicture(url: string): Promise<string | null> {
  * the file is written only when the pinned files are not the same as before.
  */
 export async function lockExtras(paths: { extras: string; extrasLock: string }, pack: Pick<LockFile, "files" | "minecraft">, loader: string, log: (s: string) => void): Promise<{ written: boolean; lock: ExtrasLock | null }> {
+  const { written, lock, commit } = await prepareExtrasLock(paths, pack, loader, log);
+  await commit();
+  return { written, lock };
+}
+
+/**
+ * lockExtras in two steps (docs/35 R-43): everything that can fail (extras.json, Modrinth) happens here, and
+ * extras.lock.json.tmp is written; `commit` only renames it into place. `modpack lock` puts mods.lock.json in place
+ * between the two, so a Lock whose extras fail leaves both lock files as they were.
+ */
+export async function prepareExtrasLock(paths: { extras: string; extrasLock: string }, pack: Pick<LockFile, "files" | "minecraft">, loader: string, log: (s: string) => void): Promise<{ written: boolean; lock: ExtrasLock | null; commit: () => Promise<void> }> {
   const { readFile, writeFile, rename } = await import("node:fs/promises");
+  const nothing = async () => undefined;
   let raw: unknown;
   try {
     raw = JSON.parse(await readFile(paths.extras, "utf8"));
   } catch {
     log("no extras.json: no extras");
-    return { written: false, lock: null };
+    return { written: false, lock: null, commit: nothing };
   }
   const { extras, errors } = lintExtras(raw);
   if (!extras) throw new Error(`extras.json: ${errors.join("; ")}`);
@@ -147,10 +159,12 @@ export async function lockExtras(paths: { extras: string; extrasLock: string }, 
   const mb = (lock.extras.reduce((n, x) => n + x.size, 0) / 1048576).toFixed(1);
   if (same) {
     log(`extras.lock.json unchanged (${lock.extras.length} extras, ${mb} MB)`);
-    return { written: false, lock: prev };
+    return { written: false, lock: prev, commit: nothing };
   }
   await writeFile(`${paths.extrasLock}.tmp`, JSON.stringify(lock, null, 2) + "\n");
-  await rename(`${paths.extrasLock}.tmp`, paths.extrasLock);
-  log(`wrote extras.lock.json: ${lock.extras.length} extras, ${mb} MB, hash ${lock.hash.slice(0, 8)}`);
-  return { written: true, lock };
+  const commit = async () => {
+    await rename(`${paths.extrasLock}.tmp`, paths.extrasLock);
+    log(`wrote extras.lock.json: ${lock.extras.length} extras, ${mb} MB, hash ${lock.hash.slice(0, 8)}`);
+  };
+  return { written: true, lock, commit };
 }

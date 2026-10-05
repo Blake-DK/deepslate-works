@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { buttonClasses } from "@/components/ui/button";
 import { LoadChip } from "@/components/mods/load-chip";
 import { BallotForm } from "./ballot-form";
+import { ukDayTime } from "@/lib/uk-time";
 
 export default async function VotePage() {
   const user = await requireOnboardedUser();
@@ -51,7 +52,7 @@ export default async function VotePage() {
         questions={parseQuestions(vote.questions)}
         initial={ballot ? { modIds: ballot.modIds, answers: (ballot.answers ?? {}) as Record<string, string>, savedAt: ballot.submittedAt.toISOString() } : null}
         tier={user.pcTier}
-        closesAt={vote.closesAt?.toISOString() ?? null}
+        closes={vote.closesAt ? ukDayTime(vote.closesAt) : null}
       />
     </div>
   );

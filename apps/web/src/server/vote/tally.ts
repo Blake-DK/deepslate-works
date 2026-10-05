@@ -89,7 +89,8 @@ export function decide(mods: Mod[], t: Tally, thresholdPct = 50): Decision[] {
       to = winner === mod.slug;
       reason = winner ? (to ? `wins group "${mod.exclusiveGroup}"` : `loses group "${mod.exclusiveGroup}" to ${winner}`) : `nobody picked anything in group "${mod.exclusiveGroup}"`;
     } else {
-      to = t.ballots > 0 && r.pct >= thresholdPct;
+      // the count itself against the threshold; `pct` is rounded and only for showing (59.52% is not 60%)
+      to = t.ballots > 0 && r.yes * 100 >= thresholdPct * t.ballots;
       reason = `${r.pct}% yes (threshold ${thresholdPct}%)`;
     }
     if (to && mod.load === "H" && r.lowTierMajority === false) reason += "; WARNING: no majority among weak-PC voters";

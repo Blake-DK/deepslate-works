@@ -10,15 +10,39 @@ export const clearKey = (kind: ClearKind, itemId: string, mcUuid: string) => `${
 export type SeasonRow = { id: string; name: string; startsAt: Date; endsAt: Date; state: SeasonState; marks: Marks; result: unknown };
 export type ClearSource = "console" | "file" | "admin";
 export type NewClear = { kind: ClearKind; itemId: string; mcUuid: string; mcName: string; userId: string | null; at: Date; early: boolean; source: ClearSource };
+export type AddedClear = NewClear & { first: boolean };
+
+/** How long the first clear of a boss or trial waits for the rest of the group (docs/21 §6), and how far apart two clears may be and still share "first". */
+export const GROUP_MS = 5_000;
+
+/**
+ * Which of `clears` (of ONE boss or trial) are new, and which of those are first on the server. First goes by the
+ * time of the kill, not by which line reached us first: a clear is first when nobody's clear of that item is more
+ * than the group's five seconds older. So a group member whose kill comes later by the safety net shares it, and a
+ * tick an admin gives days later does not. A row that is there already is never changed.
+ */
+export function decideFirst(existing: Array<{ mcUuid: string; at: Date }>, clears: NewClear[]): AddedClear[] {
+  const one = clears[0];
+  if (!one) return [];
+  const have = new Set(existing.map((r) => r.mcUuid));
+  const fresh: NewClear[] = [];
+  for (const c of clears) {
+    if (c.kind !== one.kind || c.itemId !== one.itemId || have.has(c.mcUuid)) continue;
+    have.add(c.mcUuid);
+    fresh.push(c);
+  }
+  const earliest = Math.min(...existing.map((r) => r.at.getTime()), ...fresh.map((c) => c.at.getTime()));
+  return fresh.map((c) => ({ ...c, first: c.at.getTime() - earliest <= GROUP_MS }));
+}
 
 export interface SeasonStore {
   season(id: string): Promise<SeasonRow | null>;
   /**
-   * Adds the clears of ONE boss or trial that are not there yet. `first` is decided here, under a lock: true for
-   * everybody in the call when nobody had that item before, so two kills in the same second cannot both be first,
-   * and a group that kills together shares it.
+   * Adds the clears of ONE boss or trial that are not there yet. `first` is decided here, under a lock, by the time
+   * of each clear (`decideFirst`): a group that kills together shares it, whichever way each of their clears came.
+   * The `first` beside `added` is true when every clear that was added is first.
    */
-  addClears(seasonId: string, clears: NewClear[]): Promise<{ added: NewClear[]; first: boolean }>;
+  addClears(seasonId: string, clears: NewClear[]): Promise<{ added: AddedClear[]; first: boolean }>;
   clears(seasonId: string): Promise<Clear[]>;
   /** Puts a mark. False when it was there already. */
   mark(seasonId: string, key: string): Promise<boolean>;
@@ -58,16 +82,11 @@ export const prismaSeasonStore: SeasonStore = {
     if (!one) return { added: [], first: false };
     return db.$transaction(async (tx) => {
       await lock(tx, `season:${seasonId}:${one.kind}:${one.itemId}`);
-      const have = new Set((await tx.seasonClear.findMany({ where: { seasonId, kind: one.kind, itemId: one.itemId }, select: { mcUuid: true } })).map((r) => r.mcUuid));
-      const first = have.size === 0;
-      const added: NewClear[] = [];
-      for (const c of clears) {
-        if (c.kind !== one.kind || c.itemId !== one.itemId || have.has(c.mcUuid)) continue;
-        have.add(c.mcUuid);
-        await tx.seasonClear.create({ data: { seasonId, kind: c.kind, itemId: c.itemId, mcUuid: c.mcUuid, mcName: c.mcName, userId: c.userId, at: c.at, first, early: c.early, source: c.source } });
-        added.push(c);
+      const added = decideFirst(await tx.seasonClear.findMany({ where: { seasonId, kind: one.kind, itemId: one.itemId }, select: { mcUuid: true, at: true } }), clears);
+      for (const c of added) {
+        await tx.seasonClear.create({ data: { seasonId, kind: c.kind, itemId: c.itemId, mcUuid: c.mcUuid, mcName: c.mcName, userId: c.userId, at: c.at, first: c.first, early: c.early, source: c.source } });
       }
-      return { added, first };
+      return { added, first: added.length > 0 && added.every((c) => c.first) };
     });
   },
   async clears(seasonId) {
@@ -95,7 +114,13 @@ export const prismaSeasonStore: SeasonStore = {
   },
   async create(s) {
     if (await db.season.findUnique({ where: { id: s.id }, select: { id: true } })) return false;
-    await db.season.create({ data: { id: s.id, name: s.name, startsAt: s.startsAt, endsAt: s.endsAt, state: "upcoming" } });
+    try {
+      await db.season.create({ data: { id: s.id, name: s.name, startsAt: s.startsAt, endsAt: s.endsAt, state: "upcoming" } });
+    } catch (err) {
+      // a double click: the other request made the row between our look and our write
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return false;
+      throw err;
+    }
     return true;
   },
   async setState(id, state) {
@@ -140,22 +165,15 @@ export const prismaSeasonStore: SeasonStore = {
 
 /** For tests. `rows` is the SeasonClear table; `seasons` the Season table. */
 export function memorySeasonStore(seasons: SeasonRow[] = [], members: Array<{ mcUuid: string; mcName: string; userId: string }> = []) {
-  const rows: Array<NewClear & { seasonId: string; first: boolean }> = [];
+  const rows: Array<AddedClear & { seasonId: string }> = [];
   const store: SeasonStore = {
     season: async (id) => seasons.find((s) => s.id === id) ?? null,
     async addClears(seasonId, clears) {
       const one = clears[0];
       if (!one) return { added: [], first: false };
-      const have = new Set(rows.filter((r) => r.seasonId === seasonId && r.kind === one.kind && r.itemId === one.itemId).map((r) => r.mcUuid));
-      const first = have.size === 0;
-      const added: NewClear[] = [];
-      for (const c of clears) {
-        if (c.kind !== one.kind || c.itemId !== one.itemId || have.has(c.mcUuid)) continue;
-        have.add(c.mcUuid);
-        rows.push({ ...c, seasonId, first });
-        added.push(c);
-      }
-      return { added, first };
+      const added = decideFirst(rows.filter((r) => r.seasonId === seasonId && r.kind === one.kind && r.itemId === one.itemId), clears);
+      for (const c of added) rows.push({ ...c, seasonId });
+      return { added, first: added.length > 0 && added.every((c) => c.first) };
     },
     clears: async (seasonId) => rows.filter((r) => r.seasonId === seasonId).map((r) => ({ kind: r.kind, itemId: r.itemId, mcUuid: r.mcUuid, mcName: r.mcName, at: r.at, first: r.first, early: r.early })),
     async mark(seasonId, key) {

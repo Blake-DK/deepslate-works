@@ -1,6 +1,8 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { extrasForApp, lintExtras, type ExtrasLock } from "../src/extras";
+import { extrasForApp, lintExtras, prepareExtrasLock, type ExtrasLock } from "../src/extras";
 import { lintManifest } from "../src/lint";
 
 // The app's Extras tab (planner, 2026-10-01): personal extras, apart from the pack and the vote.
@@ -53,5 +55,32 @@ describe("extrasForApp", () => {
     }
     expect(body.extras.find((x) => x.id === "fresh-animations")!.files.map((f) => f.kind).sort()).toEqual(["mod", "mod", "resourcepack"]);
     expect(body.extras.find((x) => x.id === "shader-full")!.files[0]!.kind).toBe("shader");
+  });
+});
+
+// docs/35 R-43: `modpack lock` works both locks out before it puts either in place
+describe("prepareExtrasLock", () => {
+  const pack = { files: [], minecraft: "1.21.1" };
+  it("extras.json that does not lint throws before anything is written", async () => {
+    const d = mkdtempSync(path.join(tmpdir(), "extras-"));
+    try {
+      writeFileSync(path.join(d, "extras.json"), JSON.stringify({ extras: [{ id: "aa" }] }));
+      await expect(prepareExtrasLock({ extras: path.join(d, "extras.json"), extrasLock: path.join(d, "extras.lock.json") }, pack, "neoforge", () => undefined)).rejects.toThrow(/^extras\.json: /);
+      expect(readdirSync(d)).toEqual(["extras.json"]);
+    } finally {
+      rmSync(d, { recursive: true, force: true });
+    }
+  });
+  it("no extras.json: nothing to write, and commit does nothing", async () => {
+    const d = mkdtempSync(path.join(tmpdir(), "extras-"));
+    try {
+      const lines: string[] = [];
+      const r = await prepareExtrasLock({ extras: path.join(d, "extras.json"), extrasLock: path.join(d, "extras.lock.json") }, pack, "neoforge", (l) => lines.push(l));
+      expect([r.written, r.lock, lines]).toEqual([false, null, ["no extras.json: no extras"]]);
+      await r.commit();
+      expect(readdirSync(d)).toEqual([]);
+    } finally {
+      rmSync(d, { recursive: true, force: true });
+    }
   });
 });

@@ -102,7 +102,11 @@ export async function setMinecraftNameAction(formData: FormData) {
   if (!lookup.ok) redirect(`/admin/people?error=${lookup.reason}`);
   const taken = await db.user.findFirst({ where: { mcUuid: lookup.uuid, NOT: { id: parsed.data.id } }, select: { displayName: true } });
   if (taken) redirect("/admin/people?error=taken");
-  await db.user.update({ where: { id: parsed.data.id }, data: { mcUsername: lookup.name, mcUuid: lookup.uuid, verifiedAt: new Date() } });
+  // docs/35 R-30: the name is unique too; a row that still holds it from before its owner renamed lets go of it.
+  await db.$transaction([
+    db.user.updateMany({ where: { mcUsername: lookup.name, NOT: { id: parsed.data.id } }, data: { mcUsername: null } }),
+    db.user.update({ where: { id: parsed.data.id }, data: { mcUsername: lookup.name, mcUuid: lookup.uuid, verifiedAt: new Date() } }),
+  ]);
   await audit({ userId: admin.id, action: "user.setMinecraft", params: { id: parsed.data.id, mcUsername: lookup.name, mcUuid: lookup.uuid }, result: "OK" });
   revalidatePath("/admin/people");
   revalidatePath("/admin/joining");

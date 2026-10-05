@@ -3,7 +3,7 @@ import type { Amp } from "../amp/client.js";
 import type { ConsoleTail } from "../amp/console.js";
 import type { ActionCtx, ActionName } from "../actions/registry.js";
 import { runAction } from "../actions/run.js";
-import { invReply, type InvReply } from "../events/parse.js";
+import { invReply, isChat, type InvReply } from "../events/parse.js";
 import { clampCount, COMPONENTS_RE, invPhrase, ITEM_RE, SLOT_RE } from "../shared/slots.js";
 import { toPlayerData, type PlayerData } from "./inventory.js";
 
@@ -62,7 +62,8 @@ export class InventoryEditor {
   ) {
     tail.on((e, info) => {
       if (info.replay) return;
-      if (e.type === "line") this.waiters = this.waiters.filter((w) => !w(e.text));
+      // never what a player says: "Gave 64 [Diamond] to samoyedx" can be typed in chat (docs/35 R-31)
+      if (e.type === "line" && !isChat(e.text, { source: e.source, type: e.kind })) this.waiters = this.waiters.filter((w) => !w(e.text));
       if (e.type === "entitydata") {
         const wait = this.dumps.get(e.name.toLowerCase());
         if (wait) {

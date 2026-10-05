@@ -8,12 +8,19 @@ export function statusRoutes(app: FastifyInstance, amp: Amp, poller?: StatusPoll
   // Served from the poller's last answer (at most 10 s old); AMP is only asked directly when that is stale.
   // docs/13 §12: when AMP cannot be reached at all, the answer is still 200, with `server: "unreachable"` and the
   // reason, so the site never shows that as "offline" or "switched off".
+  // One question to AMP at a time, shared by every request that is waiting for it.
+  let asking: Promise<LiveStatus> | null = null;
+  const ask = () => (asking ??= amp.getStatus().then((s) => toLive(s, tail ?? null, new Date(), pings())).finally(() => { asking = null; }));
+
   app.get("/status", async (_req, reply) => {
     let live: LiveStatus | null = poller?.fresh() ?? null;
     let error: string | null = null;
-    if (!live) {
+    // The poller's last try failed (it tries every 10 s): AMP is not asked again here. Each page would wait out AMP's
+    // 10 s timeout, and web gives up after 8 s with an error instead of "unreachable" (docs/35 R-13).
+    if (!live && poller?.lastError) error = poller.lastError;
+    else if (!live) {
       try {
-        live = toLive(await amp.getStatus(), tail ?? null, new Date(), pings());
+        live = await ask();
       } catch (e) {
         error = String(e instanceof Error ? e.message : e);
       }

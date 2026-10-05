@@ -46,6 +46,15 @@ describe("decide", () => {
     expect(by("tacz").to).toBe(true);
     expect(by("pointblank").to).toBe(false);
   });
+  it("compares the count with the threshold, not the rounded percentage (docs/35 R-39)", () => {
+    const one = [mod("create")];
+    const votes = (yes: number, all: number): BallotRow[] => Array.from({ length: all }, (_, i) => ({ modIds: i < yes ? ["create"] : [], answers: {}, pcTier: null }));
+    const just = tally(one, [], votes(25, 42)); // 59.52%, shown as 60%
+    expect(just.mods[0]!.pct).toBe(60);
+    expect(decide(one, just, 60)[0]!.to).toBe(false);
+    expect(decide(one, tally(one, [], votes(3, 5)), 60)[0]!.to).toBe(true); // 60% exactly
+    expect(decide(one, tally(one, [], votes(199, 400)), 50)[0]!.to).toBe(false); // 49.75%, shown as 50%
+  });
   it("enables nothing when nobody voted", () => {
     const none = decide(mods, tally(mods, questions, []));
     expect(none.every((x) => x.to === false)).toBe(true);

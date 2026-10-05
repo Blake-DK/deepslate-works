@@ -8,7 +8,13 @@ import { chunks } from "../files/browse.js";
 //   { "deepslate:s1/boss/frostmaw": { "criteria": { "kill": "2026-11-30 19:22:11 +0000" }, "done": true }, "DataVersion": 3955 }
 
 const DIR = "world/advancements";
-const MAX_BYTES = 2 * 1024 * 1024;
+// A long-time player's file on this pack passes 2 MB (every recipe and every mod's advancements are in it).
+const MAX_BYTES = 8 * 1024 * 1024;
+type Log = (o: unknown, m: string) => void;
+/** Where the too-large line goes when the caller gives no log: stderr, in the form api's own log has (as audit.ts does). */
+const stderr: Log = (o, m) => console.error(JSON.stringify({ level: 40, msg: m, ...(o as Record<string, unknown>) }));
+/** Files already said to be too large, so the safety net's pass every ten minutes says it once. */
+const tooLarge = new Set<string>();
 type AmpEntry = { IsDirectory?: boolean; Filename?: string; SizeBytes?: number };
 
 /** "2026-11-30 19:22:11 +0000" (the game's form) as an instant; null when it is not that. */
@@ -46,8 +52,14 @@ export async function listAdvancementFiles(amp: Amp): Promise<Map<string, number
 }
 
 /** One player's advancements file as data, or null when it cannot be read. */
-export async function readAdvancements(amp: Amp, uuid: string, size: number): Promise<unknown> {
-  if (!/^[0-9a-f-]{36}$/.test(uuid) || size <= 0 || size > MAX_BYTES) return null;
+export async function readAdvancements(amp: Amp, uuid: string, size: number, log: Log = stderr): Promise<unknown> {
+  if (!/^[0-9a-f-]{36}$/.test(uuid) || size <= 0) return null;
+  if (size > MAX_BYTES) {
+    // not read: the season's safety net cannot see this player's clears, and somebody has to know
+    if (!tooLarge.has(uuid)) log({ uuid, size, max: MAX_BYTES }, "season: a player's advancements file is too large to read; the safety net skips it");
+    tooLarge.add(uuid);
+    return null;
+  }
   try {
     const parts: Buffer[] = [];
     for await (const c of chunks(amp, `${DIR}/${uuid}.json`, size, MAX_BYTES)) parts.push(c);

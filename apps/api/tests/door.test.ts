@@ -17,12 +17,16 @@ const state = vi.hoisted(() => ({
   audits: [] as Array<{ action: string; params: Record<string, unknown>; result?: string }>,
   users: [] as Array<{ id: string; mcUuid: string | null; mcUsername: string | null; verifiedAt: Date | null; guildMember: boolean; role: "PLAYER" | "ADMIN"; earlyAccess: boolean }>,
   codes: 0,
+  sessions: [] as Array<{ id: string; mcUuid: string; joinedAt: Date }>, // the open ones
+  fail: new Set<string>(), // actions the server does not take
+  nameTaken: false, // another account still carries the name: the unique column refuses it
+  cleared: 0,
 }));
 
 vi.mock("../src/actions/run.js", () => ({
   runAction: async (_amp: unknown, _ctx: unknown, name: string, input: Record<string, unknown>) => {
     state.ran.push({ name, input });
-    return { ok: true, commands: 1 };
+    return state.fail.has(name) ? { ok: false, commands: 0, detail: "timeout" } : { ok: true, commands: 1 };
   },
 }));
 vi.mock("../src/audit.js", () => ({ audit: async (a: { action: string; params: Record<string, unknown>; result?: string }) => void state.audits.push(a) }));
@@ -32,7 +36,22 @@ vi.mock("../src/db.js", () => {
   const find = (where: Where) => state.users.find((u) => (where.mcUuid ? u.mcUuid === where.mcUuid : where.mcUsername ? u.mcUsername === where.mcUsername : u.id === where.id)) ?? null;
   return {
     db: {
-      user: { findFirst: async ({ where }: { where: Where }) => find(where), findUnique: async ({ where }: { where: Where }) => find(where), update: async () => ({}) },
+      user: {
+        findFirst: async ({ where }: { where: Where }) => find(where),
+        findUnique: async ({ where }: { where: Where }) => find(where),
+        update: async () => {
+          if (state.nameTaken) throw new Error("Unique constraint failed on the fields: (`mcUsername`)");
+          return {};
+        },
+        updateMany: async () => {
+          state.nameTaken = false;
+          state.cleared++;
+          return { count: 1 };
+        },
+      },
+      session: {
+        findFirst: async ({ where }: { where: { joinedAt: { lt: Date }; mcUuid: { in: string[] } } }) => state.sessions.find((s) => where.mcUuid.in.includes(s.mcUuid) && s.joinedAt < where.joinedAt.lt) ?? null,
+      },
       linkCode: { updateMany: async () => ({ count: 0 }), findFirst: async () => null, findUnique: async () => null, create: async () => ({ code: `CODE${++state.codes}` }) },
     },
   };
@@ -79,6 +98,10 @@ beforeEach(() => {
   state.audits.length = 0;
   state.users = [member("u1", UUID_A, "samoyedx")];
   state.codes = 0;
+  state.sessions = [];
+  state.fail.clear();
+  state.nameTaken = false;
+  state.cleared = 0;
 });
 
 describe("a member held twice goes back to where they first stood (B-02)", () => {
@@ -157,10 +180,45 @@ describe("after a restart of api the room acts on the live list answer only (B-0
 
   it("a playing member with no UUID in memory is found by name and left exactly where they are", async () => {
     const t = setup();
+    state.sessions = [{ id: "s1", mcUuid: UUID_A, joinedAt: new Date(Date.now() - 3_600_000) }]; // the run before saw them join
     await t.room.resync(["samoyedx"]);
     expect(state.ran).toEqual([]);
     expect(t.room.held.size).toBe(0);
     expect(t.tail.uuidByName.get("samoyedx")).toBe(UUID_A); // and known again, so a later revoke or release finds them
+  });
+
+  it("a member whose join was only in the old lines meets the door on the live list answer (R-05)", async () => {
+    const t = setup();
+    t.tail.online.add("samoyedx");
+    t.tail.uuidByName.set("samoyedx", UUID_A);
+    await t.room.onEvent({ type: "join", name: "samoyedx", ip: null }, { replay: true }); // read as history: nothing done
+    expect(state.ran).toEqual([]);
+    await t.room.resync(["samoyedx"]); // no session of theirs is open: nobody saw them come in
+    expect(ran("limbo.holdPlay")).toHaveLength(1);
+    expect(t.room.held.get("samoyedx")).toMatchObject({ kind: "play", userId: "u1", back: BASE });
+  });
+
+  it("and is let in when the door has nothing to ask; a linked member left in the room without their tag gets out", async () => {
+    const t = setup();
+    t.room.blocked = null;
+    t.tail.online.add("samoyedx");
+    t.tail.uuidByName.set("samoyedx", UUID_A);
+    await t.room.resync(["samoyedx"]);
+    expect(state.ran.map((r) => r.name)).toEqual(["link.release"]); // changes nothing for someone who has their tag
+    expect(t.room.held.size).toBe(0);
+  });
+
+  it("a member this run of api saw join is left alone by a later resync (a new AMP session)", async () => {
+    const t = setup();
+    t.room.blocked = null;
+    t.tail.online.add("samoyedx");
+    t.tail.uuidByName.set("samoyedx", UUID_A);
+    await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+    state.ran.length = 0;
+    t.room.blocked = "no report"; // their run of Play has aged since: that is for their next join
+    await t.room.resync(["samoyedx"]);
+    expect(state.ran).toEqual([]);
+    expect(t.room.held.size).toBe(0);
   });
 
   it("a name with no UUID in memory and no member of that name is not held by name", async () => {
@@ -204,6 +262,80 @@ describe("after a restart of api the room acts on the live list answer only (B-0
     expect(t.room.held.size).toBe(0);
     expect(state.audits.at(-1)).toMatchObject({ action: "limbo.held", result: "FAILED" });
   }, 10_000);
+});
+
+describe("a release the server did not take (R-02, R-33)", () => {
+  it("keeps them in the room's list, and the next round lets them out", async () => {
+    const t = setup();
+    await t.join("samoyedx", UUID_A);
+    t.room.blocked = null; // they pressed Play
+    state.fail.add("limbo.releaseBack"); // AMP times out
+    await tick(t.room);
+    expect(ran("limbo.releaseBack")).toHaveLength(1); // once in the round, not for ever
+    expect(t.room.held.has("samoyedx")).toBe(true);
+    expect(t.store.rows.has(UUID_A)).toBe(true);
+    expect(state.audits.at(-1)).toMatchObject({ action: "join.ready", result: "FAILED" });
+    state.fail.clear();
+    await tick(t.room);
+    expect(ran("limbo.releaseBack").at(-1)?.input).toEqual({ name: "samoyedx", back: BASE });
+    expect(t.room.held.has("samoyedx")).toBe(false);
+    expect(t.store.rows.has(UUID_A)).toBe(false);
+  });
+
+  it("after linking: they stay in the list as a member, and the next round lets them out", async () => {
+    const t = setup();
+    state.users = [];
+    await t.join("samoyedx", UUID_A); // unknown: held to link
+    expect(t.room.held.get("samoyedx")?.kind).toBe("link");
+    state.users = [member("u1", UUID_A, "samoyedx")]; // they link on the site
+    t.room.blocked = null;
+    state.fail.add("link.release");
+    expect(await t.room.release(UUID_A)).toEqual({ released: false, name: "samoyedx" });
+    expect(t.room.held.get("samoyedx")).toMatchObject({ kind: "play", userId: "u1" });
+    state.fail.clear();
+    await tick(t.room);
+    expect(ran("limbo.releaseBack")).toHaveLength(1);
+    expect(t.room.held.has("samoyedx")).toBe(false);
+  });
+
+  it("two rounds at once: the second does nothing", async () => {
+    const t = setup();
+    await t.join("samoyedx", UUID_A);
+    t.room.blocked = null;
+    await Promise.all([tick(t.room), tick(t.room)]);
+    expect(ran("limbo.keep")).toHaveLength(1);
+    expect(ran("limbo.releaseBack")).toHaveLength(1);
+  });
+});
+
+describe("the link's release asks who they are (R-41)", () => {
+  it("lets nobody in for a UUID no member has linked", async () => {
+    const t = setup();
+    state.users = [];
+    await t.join("stranger", UUID_B);
+    expect(await t.room.release(UUID_B)).toEqual({ released: false });
+    expect(ran("link.release")).toHaveLength(0);
+    expect(t.room.held.get("stranger")?.kind).toBe("link");
+  });
+
+  it("nor for a member who has left the Discord server", async () => {
+    const t = setup();
+    state.users = [{ ...member("u1", UUID_A, "samoyedx"), guildMember: false }];
+    await t.join("samoyedx", UUID_A);
+    expect(await t.room.release(UUID_A)).toEqual({ released: false });
+    expect(ran("link.release")).toHaveLength(0);
+  });
+});
+
+describe("a name another account still carries (R-30)", () => {
+  it("is taken off that account, and the join goes on", async () => {
+    const t = setup();
+    t.room.blocked = null;
+    state.nameTaken = true;
+    await t.join("newname", UUID_A); // u1 was samoyedx
+    expect(state.cleared).toBe(1);
+    expect(ran("link.release")).toHaveLength(1);
+  });
 });
 
 describe("Release on the Control Room card", () => {

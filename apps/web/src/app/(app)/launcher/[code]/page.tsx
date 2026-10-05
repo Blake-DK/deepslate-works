@@ -3,7 +3,8 @@ import { requireOnboardedUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { normaliseInviteCode } from "@/server/auth/invite-codes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { PendingButton } from "@/components/admin/pending-button";
+import { getInstaller } from "@/server/modpack/lock";
 import { Alert } from "@/components/ui/alert";
 import { decideLauncherAction } from "./actions";
 
@@ -16,6 +17,8 @@ export default async function LauncherApprovePage({ params, searchParams }: { pa
   const code = normaliseInviteCode(raw);
   const row = code ? await db.launcherAuth.findUnique({ where: { code } }) : null;
   const live = row && row.status === "pending" && row.expiresAt.getTime() > Date.now();
+  // 3.0: the download is DeepslateWorks.exe and the code is in its own window (as /install knows it)
+  const exe = (await getInstaller())?.download === "DeepslateWorks.exe";
 
   return (
     <div className="mx-auto max-w-md space-y-4 pt-4">
@@ -29,7 +32,7 @@ export default async function LauncherApprovePage({ params, searchParams }: { pa
             <CardTitle>Code <span className="font-mono text-primary">{code || "?"}</span></CardTitle>
             <CardDescription>
               {live ? (
-                <>The Deepslate Works installer{row.hostname ? <> on <span className="font-mono">{row.hostname}</span></> : null} is asking to update the game as <strong>{user.displayName}</strong>. Only approve if this code matches the one in the black installer window.</>
+                <>The Deepslate Works installer{row.hostname ? <> on <span className="font-mono">{row.hostname}</span></> : null} is asking to update the game as <strong>{user.displayName}</strong>. Only approve if this code matches the one in the {exe ? "Deepslate Works window" : "black installer window"}.</>
               ) : (
                 <>This code isn&apos;t waiting for approval. It may have expired (codes last 10 minutes). Press Play again.</>
               )}
@@ -39,8 +42,9 @@ export default async function LauncherApprovePage({ params, searchParams }: { pa
             <CardContent>
               <form action={decideLauncherAction.bind(null, "deny")} className="flex gap-2">
                 <input type="hidden" name="code" value={code} />
-                <Button type="submit" formAction={decideLauncherAction.bind(null, "approve")} size="lg">Yes, that&apos;s me</Button>
-                <Button type="submit" formAction={decideLauncherAction.bind(null, "deny")} variant="secondary" size="lg">No</Button>
+                {/* docs/35 R-28: busy while it is sent, so a second click cannot land on a code that is already used */}
+                <PendingButton formAction={decideLauncherAction.bind(null, "approve")} variant="primary" size="lg" busy="One moment…">Yes, that&apos;s me</PendingButton>
+                <PendingButton formAction={decideLauncherAction.bind(null, "deny")} size="lg" busy="One moment…">No</PendingButton>
               </form>
             </CardContent>
           )}

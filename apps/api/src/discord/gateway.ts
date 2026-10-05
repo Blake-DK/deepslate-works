@@ -107,7 +107,13 @@ export class Gateway {
       } catch {
         return;
       }
-      this.onPayload(p, resume);
+      try {
+        this.onPayload(p, resume);
+      } catch (e) {
+        // a frame that is not what Discord documents (no `d`, not an object): nothing may throw out of the socket's listener
+        this.d.log({ err: String(e) }, "discord gateway: a frame could not be read, reconnecting");
+        this.drop(4000, true);
+      }
     };
     ws.onclose = (ev) => {
       if (this.ws !== ws) return;

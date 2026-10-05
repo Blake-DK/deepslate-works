@@ -28,7 +28,7 @@ export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: t
       if (res.ok && !body.data.dryRun) await recordSynced().catch((err) => req.log.warn({ err: String(err) }, "could not record the synced pack"));
       return res.ok ? res : reply.code(502).send({ ...res, error: { code: "amp_error", message: res.lines.at(-1) ?? "sync failed" } });
     } finally {
-      busy.release();
+      busy.release(held.token);
     }
   });
 
@@ -43,6 +43,7 @@ export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: t
     const events = build(env, body.data.target, packName ? { packName } : {});
     const log = req.log;
     const by = req.caller.userId;
+    const token = held.token; // this run's hold: both ways out below give back this one and no other
     async function* ndjson(): AsyncGenerator<string> {
       let last: BuildEvent | null = null;
       try {
@@ -51,14 +52,14 @@ export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: t
           yield `${JSON.stringify(e)}\n`;
         }
       } finally {
-        busy.release();
+        busy.release(token);
         log.info({ target: body.data?.target, by, result: last && "done" in last ? last : "aborted" }, "modpack build");
       }
     }
     const stream = Readable.from(ndjson());
     // If the stream is torn down before it is ever read, the generator's `finally` never runs.
     stream.once("close", () => {
-      busy.release();
+      busy.release(token);
     });
     return reply
       .header("content-type", "application/x-ndjson; charset=utf-8")

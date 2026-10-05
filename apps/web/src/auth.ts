@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { authConfig, SHORT_SESSION_MS, tokenExpired, type AppToken } from "@/auth.config";
 import { db } from "@/server/db";
 import { env } from "@/env";
-import { verifyPassword } from "@/server/auth/password";
+import { dummyVerifyPassword, verifyPassword } from "@/server/auth/password";
 import { consumeInvite, findValidInvite } from "@/server/auth/invites";
 import { discordDoor } from "@/server/auth/discord-door";
 import { createUser, touchLastSeen } from "@/server/auth/users";
@@ -31,20 +31,24 @@ class AdminFailed extends CredentialsSignin {
 
 const VIA: Record<string, NonNullable<AppToken["via"]>> = { discord: "discord", credentials: "email", "admin-password": "password", "one-time-link": "link" };
 
-/** Discord `guilds` scope: list the user's servers and look for ours. Fails closed. */
-async function isGuildMember(accessToken: string | undefined, guildId: string): Promise<boolean> {
-  if (!accessToken) return false;
+/**
+ * Discord `guilds` scope: list the user's servers and look for ours. Three answers (docs/35 R-12): true, false, and
+ * null when Discord did not say (no token, 429, 5xx, timeout). Null is never read as "left the server".
+ */
+async function isGuildMember(accessToken: string | undefined, guildId: string): Promise<boolean | null> {
+  if (!accessToken) return null;
   try {
     const res = await fetch("https://discord.com/api/v10/users/@me/guilds", {
       headers: { authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(6000),
       cache: "no-store",
     });
-    if (!res.ok) return false;
-    const guilds = (await res.json()) as Array<{ id: string }>;
-    return guilds.some((g) => g.id === guildId);
+    if (!res.ok) return null;
+    const guilds = (await res.json()) as unknown;
+    if (!Array.isArray(guilds)) return null;
+    return (guilds as Array<{ id?: string }>).some((g) => g?.id === guildId);
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -66,7 +70,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new RateLimited();
         }
         const user = await db.user.findUnique({ where: { email } });
-        const ok = Boolean(user?.passwordHash) && (await verifyPassword(parsed.data.password, user!.passwordHash!));
+        const hash = user?.passwordHash;
+        const ok = hash ? await verifyPassword(parsed.data.password, hash) : false;
+        if (!hash) await dummyVerifyPassword(parsed.data.password);
         if (!user || !ok) {
           await audit({ action: "auth.login", params: { email, ip }, result: "DENIED", detail: "bad credentials" });
           return null;
@@ -143,7 +149,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       };
       const bootstrapAdmin = Boolean(env.ADMIN_DISCORD_ID) && discordId === env.ADMIN_DISCORD_ID;
       const decision = discordDoor({ gate: Boolean(env.DISCORD_GUILD_ID), inGuild, existing, invite: Boolean(invite), staleInvite: Boolean(inviteCode) && !invite, autoJoin: env.DISCORD_GUILD_AUTO_JOIN, bootstrapAdmin });
-      const leftServer = Boolean(env.DISCORD_GUILD_ID) && !inGuild;
+      const leftServer = Boolean(env.DISCORD_GUILD_ID) && inGuild === false;
       const refused = async (why: "not-in-server" | "no-invite" | "invite-invalid", detail: string) => {
         // docs/14 §7: back to the room next join. docs/31 B-05: and every session they still have ends, the
         // installer's tokens with it, so an old cookie cannot link them back in.
@@ -156,6 +162,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return `/login?error=${why}`;
       };
       if (decision.door === "refuse") {
+        if (decision.why === "discord-unavailable") {
+          // docs/35 R-12: Discord gave no answer. This sign-in is refused; nothing about the member changes.
+          await audit({ action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail: "discord did not answer" });
+          return "/login?error=discord-unavailable";
+        }
         const detail = decision.why === "invite-invalid" ? (leftServer ? "not in discord server, invite link not valid" : "invite link not valid") : decision.why === "not-in-server" ? "not in discord server" : "no invite";
         return refused(decision.why, detail);
       }
@@ -175,7 +186,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (existing) {
         await touchLastSeen(existing.id);
         // The flag stays what Discord last said, for whoever is on the outside list too: it counts again if they are taken off it.
-        if (env.DISCORD_GUILD_ID && existing.guildMember !== inGuild) await db.user.update({ where: { id: existing.id }, data: { guildMember: inGuild } });
+        if (env.DISCORD_GUILD_ID && inGuild !== null && existing.guildMember !== inGuild) await db.user.update({ where: { id: existing.id }, data: { guildMember: inGuild } });
         return true;
       }
       const outside = decision.door === "create" && decision.outside;
@@ -187,7 +198,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           inviteCode: invite?.code,
           invitedById: invite?.createdBy,
           outsideAuth: outside,
-          guildMember: env.DISCORD_GUILD_ID ? inGuild : undefined,
+          guildMember: env.DISCORD_GUILD_ID ? (inGuild ?? undefined) : undefined,
         });
       } catch (err) {
         // the invite was used by someone else between the look and the write

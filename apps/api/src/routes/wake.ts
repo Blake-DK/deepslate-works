@@ -33,8 +33,11 @@ export function wakeRoutes(app: FastifyInstance, wake: Wake, view: ServerView, d
   app.post("/server/wake", async (req, reply) => {
     const id = req.caller.userId;
     const who = id && (req.caller.role === "ADMIN" || req.caller.role === "PLAYER") ? await deps.member(id) : null;
+    const live = who ? await deps.live() : false;
+    // Nothing is waited for between reading the state and `wake.start`, which says "waking" at once: of two requests
+    // a moment apart the second finds a wake running and sends no second start (docs/35 R-32).
     const state = view.state();
-    const decision = wakeDecision({ member: Boolean(who), openFor: who ? isOpenFor(who, await deps.live()) : false, state });
+    const decision = wakeDecision({ member: Boolean(who), openFor: who ? isOpenFor(who, live) : false, state });
     if (decision === "start") {
       try {
         const asked = (req.body as { via?: unknown } | null)?.via;

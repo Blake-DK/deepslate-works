@@ -110,17 +110,29 @@ export function slots(range: Range): Slot[] {
     }
     return out;
   }
-  const step = range.bucket === "hour" ? HOUR : DAY;
+  // docs/35 R-26: the real hours and days of the UK's clock. Each slot ends where the next starts and the first
+  // starts with the range, so no minute is in two bars. UK time is a whole number of hours from UTC, so every hour
+  // and every midnight there falls on a UTC hour: walk those (a day of 23 or 25 hours is still found once).
+  const keyAt = (t: number) => {
+    const p = ukParts(new Date(t));
+    return range.bucket === "hour" ? { key: `${p.day} ${String(p.hour).padStart(2, "0")}`, label: `${String(p.hour).padStart(2, "0")}:00` } : { key: p.day, label: p.day.slice(5).split("-").reverse().join("/") };
+  };
   const seen = new Set<string>();
-  // walk in hours so a day that is 23 or 25 hours long (clock change) is still found once
-  for (let t = range.from.getTime(); t <= range.to.getTime() + HOUR; t += HOUR) {
-    const at = new Date(Math.min(t, range.to.getTime()));
-    const p = ukParts(at);
-    const key = range.bucket === "hour" ? `${p.day} ${String(p.hour).padStart(2, "0")}` : p.day;
+  let t = Math.floor(range.from.getTime() / HOUR) * HOUR;
+  for (; t <= range.to.getTime(); t += HOUR) {
+    const { key, label } = keyAt(t);
     if (seen.has(key)) continue;
     seen.add(key);
-    const label = range.bucket === "hour" ? `${String(p.hour).padStart(2, "0")}:00` : p.day.slice(5).split("-").reverse().join("/");
-    out.push({ key, label, start: at, end: new Date(at.getTime() + step) });
+    const start = new Date(Math.max(t, range.from.getTime()));
+    const before = out.at(-1);
+    if (before) before.end = start;
+    out.push({ key, label, start, end: start });
+  }
+  // the last slot runs to the end of its own hour or day, wherever the range stops
+  const last = out.at(-1);
+  if (last) {
+    while (keyAt(t).key === last.key) t += HOUR;
+    last.end = new Date(t);
   }
   return out;
 }

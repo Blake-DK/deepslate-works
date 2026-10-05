@@ -93,7 +93,7 @@ export class Recorder {
 
   private reconcile = false;
 
-  /** Old lines have just been read (api started, or a new AMP session): the next live `list` answer closes the sessions of whoever is gone. */
+  /** Old lines have just been read (api started, or a new AMP session): the next live `list` answer closes the sessions of whoever is gone and opens one for whoever came. */
   reconcileNext() {
     this.reconcile = true;
   }
@@ -145,10 +145,13 @@ export class Recorder {
         // one and, while api runs, never closes one (planner 2026-09-30; REJOIN_MS above). The one exception is the
         // first live answer after api has read old lines (docs/31 B-43): a leave that happened while api was
         // restarting is in no line api will read again, and its session stayed open until the server went down.
+        // The same for a join in that time (docs/35 R-21): whoever is on with no session gets one from now, marked
+        // `inferred`, so that the visit counts as play time and nothing is said about it in Discord.
         if (!this.reconcile) return;
         this.reconcile = false;
         const on = new Set(e.names.map((n) => n.toLowerCase()));
         for (const s of [...this.open.values()]) if (!on.has(s.mcName.toLowerCase())) await this.leave(s.mcName, null, at, true);
+        for (const name of e.names) if (!this.open.has(name.toLowerCase())) await this.join(name, null, at, true);
         return;
       }
       case "chat": {

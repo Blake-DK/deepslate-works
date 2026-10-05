@@ -40,6 +40,8 @@ export default async function MePage() {
   ]);
   // Their last run came from an older installer than the site hands out: until a report from a new one arrives.
   const oldInstaller = install && install.mode !== "uninstall" && installer && mustDownloadAgain(install.installerVersion, installer.current) ? installer.current : null;
+  // 3.0: the download is DeepslateWorks.exe, nothing to unzip (as /install knows it)
+  const exe = installer?.download === "DeepslateWorks.exe";
   const showServer = canSeeServer(user, settings);
   const play = showServer ? await getPlayInfo(user) : null;
   const join = play ? joinLine(play.join ? (play.join.ok ? { ok: true, time: clock(play.join.until) } : play.join) : null, !play.tooOld) : null;
@@ -62,13 +64,13 @@ export default async function MePage() {
       )}
       {linkRun?.playLinkMissing && install?.mode !== "uninstall" && (
         <Alert tone="info" data-testid="play-link-missing">
-          The Play button isn&apos;t set up on your PC yet. Run Setup.bat again from the extracted download; if it still fails, tell Alex.
+          The Play button isn&apos;t set up on your PC yet. {exe ? "Run DeepslateWorks.exe again from your download" : "Run Setup.bat again from the extracted download"}; if it still fails, tell Alex.
         </Alert>
       )}
       {oldInstaller && (
         <Alert tone="info" data-testid="installer-outdated">
           <strong>Download Deepslate Works again.</strong> Your last run used {install!.installerVersion === "unknown" ? "an old installer" : <>installer {install!.installerVersion}</>}, which cannot update itself; the current one is {oldInstaller}.{" "}
-          <Link href="/help" className="font-medium underline">Download it from Getting started → Getting in</Link> and double-click Setup.bat once. After that it keeps itself up to date.
+          <Link href="/help" className="font-medium underline">Download it from Getting started → Getting in</Link> and {exe ? "run DeepslateWorks.exe once" : "double-click Setup.bat once"}. After that it keeps itself up to date.
         </Alert>
       )}
       {join && (

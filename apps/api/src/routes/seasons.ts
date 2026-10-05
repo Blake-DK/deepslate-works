@@ -21,6 +21,8 @@ export type SeasonRouteDeps = {
   file: () => Promise<SeasonFile | null>;
   store: SeasonStore;
   addEvent: (e: NewEvent) => Promise<unknown>;
+  /** The recorder's `settle`: what it still holds is written and the files are read once more, before End freezes the result. */
+  settle?: () => Promise<void>;
   now?: () => Date;
 };
 
@@ -68,7 +70,8 @@ export function seasonRoutes(app: FastifyInstance, d: SeasonRouteDeps) {
 
     if (op === "announce") {
       if (row) return denied("season.announce", `${file.name} is announced already.`);
-      await d.store.create({ id: file.id, name: file.name, startsAt: new Date(file.startsAt), endsAt: new Date(file.endsAt) });
+      // false: a second click made the row a moment ago
+      if (!(await d.store.create({ id: file.id, name: file.name, startsAt: new Date(file.startsAt), endsAt: new Date(file.endsAt) }))) return denied("season.announce", `${file.name} is announced already.`);
       await event(file, `${file.name} is announced: it opens ${ukDayTime(new Date(file.startsAt))}`, { what: "announced" });
       await audit({ userId: by, action: "season.announce", params, result: "OK" });
       return { ok: true, state: "upcoming" };
@@ -88,6 +91,8 @@ export function seasonRoutes(app: FastifyInstance, d: SeasonRouteDeps) {
 
     if (op === "end") {
       if (row?.state !== "running") return denied("season.end", `${file.name} is not running.`);
+      // the result is written once: a kill of the last seconds (the finale's) must be in the table before it is
+      await d.settle?.().catch(() => undefined);
       const clears = await d.store.clears(file.id);
       const result = seasonResult(file, clears, now());
       if (!(await d.store.end(file.id, result))) return denied("season.end", `${file.name} has a result already. It is written once.`);

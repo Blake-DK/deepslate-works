@@ -1,5 +1,6 @@
 import { loadCurrentUser } from "@/server/auth/session";
 import { apiFetch, ApiError } from "@/server/api-client";
+import { fromAnotherSite } from "@/server/same-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +10,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const user = await loadCurrentUser(); // checks the session is still good (docs/04 "Ending sessions")
   if (!user || user.role !== "ADMIN") return Response.json({ error: { code: "forbidden", message: "admin only" } }, { status: 403 });
-  const origin = req.headers.get("origin");
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  if (!req.headers.get("content-type")?.startsWith("application/json") || (origin && host && new URL(origin).host !== host)) {
+  if (!req.headers.get("content-type")?.startsWith("application/json") || fromAnotherSite(req)) {
     return Response.json({ error: { code: "forbidden", message: "same-site JSON only" } }, { status: 403 });
   }
   const body = (await req.json().catch(() => null)) as { command?: unknown } | null;

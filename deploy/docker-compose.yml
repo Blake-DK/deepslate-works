@@ -189,6 +189,8 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - /root/docker/deepslate/backups:/backups
+      # One file, so the container keeps the script it was started with when git replaces it; deploy/deploy.sh
+      # compares the two after `up` and restarts this container when they differ (docs/35 R-19).
       - ${DEEPSLATE_DIR:-..}/deploy/backup-loop.sh:/backup-loop.sh:ro
     depends_on:
       postgres:

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  advancementText, asPlayer, deathRun, deathText, escapeText, headUrl, isStale, joinText, leaveText, liveText, packText,
+  advancementText, asPlayer, asServer, deathRun, deathText, escapeText, headUrl, isStale, joinText, leaveText, liveText, packText,
   reminderMessage, restartText, ukWhen, voteClosedText, voteMessage, welcomeText, type FeedEvent, type PollView,
 } from "../src/discord/lines.js";
 
@@ -34,6 +34,14 @@ describe("Discord lines (docs/21 §4)", () => {
   it("a name Discord would not take as a sender is shown in bold under the server's name", () => {
     const m = asPlayer(brand, "discord_fan", REAL.death.actor!, "joined · 1 online");
     expect(m).toMatchObject({ username: "Deepslate Works", content: "**discord\\_fan** joined · 1 online" });
+  });
+
+  it("a server name Discord would refuse as a sender (\"discord\" or \"clyde\" in it, or empty) is not sent as one", () => {
+    expect(asServer(brand, "x").username).toBe("Deepslate Works");
+    expect(asServer({ name: "Our Discord Server", avatar: null }, "x").username).toBe("The server");
+    expect(asServer({ name: "Clyde's place", avatar: null }, "x").username).toBe("The server");
+    expect(asServer({ name: "   ", avatar: null }, "x").username).toBe("The server");
+    expect(voteMessage({ name: "discord", avatar: null }, { kind: "poll", id: "p", title: "T", options: ["A"], closesAt: null, mustVote: false, voters: 0, members: 1, status: "OPEN" }, "https://deepslate.dsw.test").username).toBe("The server");
   });
 
   it("joins, leaves, challenges and advancements", () => {

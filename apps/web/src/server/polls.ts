@@ -7,6 +7,7 @@ import { apiFetch } from "@/server/api-client";
 import { getManifest, modBySlug } from "@/server/modpack/manifest";
 import { newsImageUrl, SYSTEM_AUTHOR } from "@/server/announcements";
 import { ukShort } from "@/lib/uk-time";
+import { removePhoto } from "@/server/news-images";
 import { castVote, closedNews, DONT_MIND, isOpen, openedNews, pendingOrder, readOptions, resultLine, tallyPoll, type PollOption, type Pending, type Tally, type VoteStore } from "@/shared/polls";
 
 // Planner 2026-10-02, "votes before play": quick polls on the site and in the app, and must-vote. The rules are in
@@ -131,10 +132,24 @@ export async function closePoll(admin: Viewer, id: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * docs/35 R-40: pictures are named after their content and kept in one folder (news-images.ts), so a news item and
+ * a poll's option may show the same file. True while anything still shows it.
+ */
+export async function photoInUse(file: string): Promise<boolean> {
+  if ((await db.announcement.count({ where: { image: file } })) > 0) return true;
+  const polls = await db.poll.findMany({ select: { options: true } });
+  return polls.some((p) => readOptions(p.options).some((o) => o.image === file));
+}
+
 export async function deletePoll(admin: Viewer, id: string): Promise<void> {
   const poll = await db.poll.findUnique({ where: { id }, include: { _count: { select: { answers: true } } } });
   if (!poll) return;
   await db.poll.delete({ where: { id } });
+  // its options' pictures go with it, unless a news item or another poll shows the same picture
+  for (const file of new Set(readOptions(poll.options).map((o) => o.image))) {
+    if (file && !(await photoInUse(file))) await removePhoto(file);
+  }
   await audit({ userId: admin.id, action: "poll.delete", params: { pollId: id, question: poll.question, answers: poll._count.answers }, result: "OK" });
 }
 

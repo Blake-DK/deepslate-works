@@ -37,6 +37,9 @@ export async function pollLauncherAuth(pollToken: string): Promise<{ status: "pe
 /** Called from the approval page by a logged-in user. */
 export async function approveLauncherAuth(code: string, userId: string, approve: boolean): Promise<"ok" | "denied" | "gone"> {
   const row = await db.launcherAuth.findUnique({ where: { code } });
+  // docs/35 R-28: the same answer sent twice (a double click) is the answer it already has, not "expired"
+  if (row && approve && row.status === "approved" && row.userId === userId) return "ok";
+  if (row && !approve && row.status === "denied") return "denied";
   if (!row || row.status !== "pending" || row.expiresAt.getTime() < Date.now()) return "gone";
   await db.launcherAuth.update({ where: { code }, data: approve ? { status: "approved", userId, approvedAt: new Date() } : { status: "denied" } });
   return approve ? "ok" : "denied";

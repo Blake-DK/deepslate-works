@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
 import { describe, expect, it } from "vitest";
+import { parse } from "../src/events/parse.js";
 import { actions, ADMIN_ACTIONS, OWN_ROUTE } from "../src/actions/registry.js";
 import { MockAmp } from "../src/amp/client.js";
 import { ConsoleTail } from "../src/amp/console.js";
@@ -40,13 +41,15 @@ async function app(online: string[] = []) {
   const f = Fastify();
   f.addHook("onRequest", serviceAuth("secret"));
   let now = new Date("2026-11-24T20:00:00Z");
-  seasonRoutes(f, { amp, tail, ctx: () => ctx, file: async () => file, store, addEvent: async (e) => void events.push(e), now: () => now });
+  // the recorder beside the routes, as in server.ts; its five-second timer never runs here, so only End's settle writes a waiting group
+  const rec = new SeasonRecorder({ file: async () => file, store, uuidOf: async (name) => members.find((m) => m.mcName === name)?.mcUuid ?? null, addEvent: async (e) => void events.push(e), log: () => {}, now: () => now, later: () => {} });
+  seasonRoutes(f, { amp, tail, ctx: () => ctx, file: async () => file, store, addEvent: async (e) => void events.push(e), settle: () => rec.settle(), now: () => now });
   const as = (role: string) => ({ authorization: "Bearer secret", "x-user-role": role, "x-user-id": "u1", "content-type": "application/json" });
   const post = async (op: string, payload: object = {}, role = "ADMIN") => {
     const r = await f.inject({ method: "POST", url: `/seasons/${op}`, headers: as(role), payload });
     return { status: r.statusCode, body: r.json() as { ok?: boolean; added?: boolean; removed?: boolean; inGame?: boolean; error?: { code: string; message: string } } };
   };
-  return { f, file, store, events, sent, post, as, setNow: (d: string) => { now = new Date(d); } };
+  return { f, file, store, events, sent, post, as, rec, setNow: (d: string) => { now = new Date(d); } };
 }
 
 describe("Admin → Seasons", () => {
@@ -77,6 +80,35 @@ describe("Admin → Seasons", () => {
     expect(result.scoreboard.map((r) => [r.mcName, r.points])).toEqual([["Anna", 20]]);
     expect(result.endedAt).toBe("2026-11-24T20:00:00.000Z");
     expect((await t.post("grant", { userId: "u-ben", kind: "boss", itemId: "rehearsal_ravager" })).status).toBe(409); // frozen
+  });
+
+  it("a kill in the last seconds before End is in the frozen result (the group's five seconds are not waited out)", async () => {
+    const t = await app();
+    await t.post("start");
+    const line = "[29Sep2026 03:46:07.132] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Anna has completed the challenge [The Rehearsal Ravager]";
+    for (const e of parse(line)) t.rec.onConsole(e, { replay: false });
+    await t.rec.idle();
+    expect(t.store.rows).toHaveLength(0); // still waiting for the rest of the group
+    expect((await t.post("end")).body).toMatchObject({ ok: true, state: "ended" });
+    expect((t.store.seasons[0]!.result as SeasonResult).scoreboard.map((r) => [r.mcName, r.points])).toEqual([["Anna", 20]]);
+    expect(t.events.at(-1)!.message).toBe("Sample Season · Dress Rehearsal is over. Anna wins with 20 points.");
+  });
+
+  it("a second click on Announce that loses the race is refused, not an error, and says nothing twice", async () => {
+    const t = await app();
+    t.store.create = async () => false; // the other request made the row between this one's look and its write
+    const r = await t.post("announce");
+    expect([r.status, r.body.error?.message]).toEqual([409, "Sample Season · Dress Rehearsal is announced already."]);
+    expect(t.events).toHaveLength(0);
+  });
+
+  it("a tick given by hand is first only when nobody had it before: given days after a kill, it is not", async () => {
+    const t = await app();
+    await t.post("start");
+    await t.post("grant", { userId: "u-anna", kind: "boss", itemId: "rehearsal_ravager" });
+    t.setNow("2026-11-26T20:00:00Z");
+    await t.post("grant", { userId: "u-ben", kind: "boss", itemId: "rehearsal_ravager" });
+    expect(t.store.rows.map((x) => [x.mcName, x.source, x.first])).toEqual([["Anna", "admin", true], ["Ben", "admin", false]]);
   });
 
   it("start without announce makes the row; a second running season is refused", async () => {

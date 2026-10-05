@@ -13,6 +13,10 @@ export function setGapWait(w: (ms: number) => Promise<void>) { gapWait = w; }
 // portal says to somebody at the door, which has a line of its own there ("… is waiting in the entrance room").
 const QUIET = new Set<string>(["limbo.keep", "limbo.bar", "limbo.bookCheck", "limbo.giveBook", "server.list", "server.pings", "server.tps", "server.welcome", "player.where", "limbo.remindPlay", "limbo.remindClosed", "limbo.remindOld", "limbo.remindMods", "limbo.remindVote", "map.status", "map.list", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify", "ground.count", "ground.warn", "ground.mark", "ground.kill", "ground.done", "season.grant", "season.revoke"]); // the inventory editor writes its own row, after the server answered; status/ground.ts one "items.clear" row with the count
 const QUIET_FROM_THE_PORTAL = new Set<string>(["limbo.hold", "limbo.remind"]);
+const isQuiet = (name: string, callerId: string | null) => QUIET.has(name) || (callerId === null && QUIET_FROM_THE_PORTAL.has(name));
+// Quiet actions that are failing now. Their failures are not written into the event log either: with AMP out of
+// reach that was a row every few seconds, kept for good (docs/35 R-03). One line in the api's log when it begins.
+const quietFailing = new Set<string>();
 
 export async function runAction(amp: Amp, ctx: ActionCtx, name: ActionName, rawInput: unknown, callerId: string | null): Promise<RunResult> {
   const action = actions[name];
@@ -32,13 +36,19 @@ export async function runAction(amp: Amp, ctx: ActionCtx, name: ActionName, rawI
       await amp.call("Core", "SendConsoleMessage", { message: cmd });
       sent++;
     }
-    if (!QUIET.has(name) && !(callerId === null && QUIET_FROM_THE_PORTAL.has(name))) {
+    if (!isQuiet(name, callerId)) {
       await audit({ userId: callerId, action: name, params: kept, result: "OK", detail: `${sent} command(s)` });
     }
+    quietFailing.delete(name);
     return { ok: true, commands: sent };
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
-    await audit({ userId: callerId, action: name, params: kept, result: "FAILED", detail: `${detail} after ${sent}/${commands.length}` });
+    if (!isQuiet(name, callerId)) {
+      await audit({ userId: callerId, action: name, params: kept, result: "FAILED", detail: `${detail} after ${sent}/${commands.length}` });
+    } else if (!quietFailing.has(name)) {
+      quietFailing.add(name);
+      console.warn(JSON.stringify({ level: 40, msg: "action failed (said once, until it goes through again)", action: name, detail: `${detail} after ${sent}/${commands.length}` }));
+    }
     return { ok: false, commands: sent, detail };
   }
 }

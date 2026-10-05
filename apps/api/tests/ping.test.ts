@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isPingChatter, parse } from "../src/events/parse.js";
 import { ConsoleTail } from "../src/amp/console.js";
 import { MockAmp } from "../src/amp/client.js";
-import { currentPings, whoToAsk, PING_STALE_MS } from "../src/status/ping.js";
+import { currentPings, PingWatch, whoToAsk, PING_STALE_MS } from "../src/status/ping.js";
 import { toLive } from "../src/status/poller.js";
 import { actions, parsePlace } from "../src/actions/registry.js";
 
@@ -35,6 +35,13 @@ describe("ping lines", () => {
     expect(seen).toEqual([["bramble09", 41]]);
     expect(tail.lines).toEqual(["bramble09 joined the game"]);
   });
+  it("keeps what a player says on the console page, whatever it looks like (R-31)", () => {
+    const tail = new ConsoleTail(new MockAmp(), () => {});
+    tail.ingest("----------", new Date(), { type: "Chat", source: "bramble09" });
+    tail.ingest("Average ping: 5ms (1 player)", new Date(), { type: "Chat", source: "bramble09" });
+    tail.ingest("----------", new Date(), { type: "Console", source: "Server thread/INFO" });
+    expect(tail.lines).toEqual(["----------", "Average ping: 5ms (1 player)"]);
+  });
 });
 
 describe("ping rounds", () => {
@@ -42,6 +49,19 @@ describe("ping rounds", () => {
     expect(whoToAsk([])).toEqual([]);
     expect(whoToAsk(["bramble09", "m1_owl", "bramble09", "a b; op me", "x"])).toEqual(["bramble09", "m1_owl"]);
     expect(whoToAsk(Array.from({ length: 60 }, (_, i) => `player_${i}`)).length).toBe(40);
+  });
+  it("asks nothing while AMP is out of reach (R-03)", async () => {
+    let asked = 0;
+    let up = false;
+    const amp = { call: async () => { asked++; return {}; } };
+    const tail = { state: 20, online: new Set(["bramble09"]), on() {} };
+    const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
+    const watch = new PingWatch(amp as never, tail as never, () => ctx, () => {}, undefined, () => up);
+    await watch.ask();
+    expect(asked).toBe(0);
+    up = true;
+    await watch.ask();
+    expect(asked).toBe(1);
   });
   it("sends spark's command and nothing a caller could shape", () => {
     const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };

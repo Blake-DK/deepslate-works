@@ -17,8 +17,8 @@ export const MAX_BUILD_PIECES = 12;
 export const BUILD_NAME = z.string().regex(/^[a-z0-9_]{2,24}$/);
 /** Where a build may be taken from or put: the main world or a season's Frontier. Never the entrance room. */
 export const BUILD_DIMENSION = z.string().regex(/^(minecraft:overworld|deepslate:frontier_[a-z0-9_]{1,32})$/);
-const COORD = z.number().int().min(-100_000).max(100_000);
-const BLOCK = z.object({ x: COORD, y: z.number().int().min(-64).max(318), z: COORD });
+const BUILD_COORD = z.number().int().min(-100_000).max(100_000);
+const BLOCK = z.object({ x: BUILD_COORD, y: z.number().int().min(-64).max(318), z: BUILD_COORD });
 export type Block = { x: number; y: number; z: number };
 export type Piece = { ix: number; iy: number; iz: number; dx: number; dy: number; dz: number; sx: number; sy: number; sz: number };
 
@@ -759,7 +759,7 @@ export const actions = {
   "build.lock": define({
     name: "build.lock",
     role: "ADMIN",
-    input: z.object({ dimension: BUILD_DIMENSION, x1: COORD, z1: COORD, x2: COORD, z2: COORD }).refine((i) => Math.abs(i.x2 - i.x1) <= 512 && Math.abs(i.z2 - i.z1) <= 512),
+    input: z.object({ dimension: BUILD_DIMENSION, x1: BUILD_COORD, z1: BUILD_COORD, x2: BUILD_COORD, z2: BUILD_COORD }).refine((i) => Math.abs(i.x2 - i.x1) <= 512 && Math.abs(i.z2 - i.z1) <= 512),
     build: (_ctx, { dimension, x1, z1, x2, z2 }) => [`oclaims server claim in ${dimension} ${Math.min(x1, x2)} ${Math.min(z1, z2)} ${Math.max(x1, x2)} ${Math.max(z1, z2)} anyway`],
   }),
 };

@@ -3,7 +3,7 @@
 // Run only by .github/workflows/worldgen-boot.yml, against a vanilla server that is thrown away afterwards.
 //
 //   worldgen.mjs packs <vanilla worldgen dir> <datapacks dir>   one datapack per test world
-//   worldgen.mjs commands load|measure                          console commands, one per line
+//   worldgen.mjs commands load|measure|read                         console commands, one per line
 //   worldgen.mjs report <server.log>                            what was measured, as markdown; exit 1 if a world is missing
 //
 // Two ways to a seed are tried side by side:
@@ -130,14 +130,17 @@ function commands(step) {
   for (const [label, dim] of DIMS) {
     POINTS.forEach(([x, z], i) => {
       if (step === "load") lines.push(`execute in ${dim} run forceload add ${x} ${z}`);
-      else {
+      else if (step === "measure") {
         // the height of the ground (water does not count), carried out of the game in a marker's own name
         lines.push(`execute in ${dim} positioned ${x} 0 ${z} positioned over ocean_floor run summon minecraft:marker ~ ~ ~ {Tags:["probe"],CustomName:'"P-${label}-${i}"'}`);
         for (const y of AIR_Y) lines.push(`execute in ${dim} if block ${x} ${y} ${z} #minecraft:air run say A-${label}-${i}-${y}`);
       }
     });
   }
-  if (step !== "load") {
+  // a marker is not there for a selector in the tick it was summoned in, so reading them is a step of its own
+  if (step === "load") lines.push("say STEP-LOADED");
+  if (step === "measure") lines.push("say STEP-SUMMONED");
+  if (step === "read") {
     lines.push("execute as @e[type=minecraft:marker,tag=probe] run data get entity @s Pos[1]");
     lines.push("say PROBES-DONE");
   }
@@ -199,9 +202,9 @@ function report(logFile) {
 
 const [what, a, b] = process.argv.slice(2);
 if (what === "packs" && a && b) packs(a, b);
-else if (what === "commands" && (a === "load" || a === "measure")) commands(a);
+else if (what === "commands" && ["load", "measure", "read"].includes(a)) commands(a);
 else if (what === "report" && a) report(a);
 else {
-  console.error("usage: worldgen.mjs packs <vanilla worldgen dir> <datapacks dir> | commands load|measure | report <server.log>");
+  console.error("usage: worldgen.mjs packs <vanilla worldgen dir> <datapacks dir> | commands load|measure|read| report <server.log>");
   process.exit(2);
 }

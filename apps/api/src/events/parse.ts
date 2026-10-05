@@ -284,6 +284,18 @@ export function isPingChatter(text: string): boolean {
   return RE.sparkPing.test(t) || /^(?:\[\u26a1\]:?\s*)?Ping data is not available for '[A-Za-z0-9_]{3,16}'\.$/.test(t) || RE.ping.test(t) || /^Average ping: \d+\s?ms \(\d+ players?\)$/.test(t) || /^-* ?(?:\[?TabTPS\]? )?Player Pings ?-*$/.test(t) || /^-{6,}$/.test(t);
 }
 
+/**
+ * Errors the server prints that are known and harmless, and that Alex has asked not to hear about in Discord. Unlike
+ * NOISE they stay in the event log (Activity still shows them); only the admin channel's "Problem:" line is left out.
+ * Each is the message as the real server printed it.
+ */
+const KNOWN_HARMLESS: RegExp[] = [
+  // Industrial Foregoing's Curios file names a slot "example" that no mod registers; at every start and reload,
+  // 3.6.27 to 3.6.39 alike (docs/11, 2026-10-05)
+  /^example is not a registered slot type!$/,
+];
+export const isKnownHarmless = (message: string): boolean => KNOWN_HARMLESS.some((k) => k.test(message.trim()));
+
 // Printed on every start by the mod loader and harmless; they would only bury the lines that matter.
 const NOISE = [
   /^Reference map '.*refmap\.json' for .* could not be read/,

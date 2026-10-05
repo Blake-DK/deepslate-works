@@ -571,6 +571,14 @@ describe("the admin channel picked on the card (Alex, 2026-10-02)", () => {
     expect(t.botCalls.filter((c) => c.what === "sendTo")).toHaveLength(2);
   });
 
+  it("a known, harmless error is not posted to the admin channel; any other still is (Alex, 2026-10-05)", async () => {
+    const t = routed({ bot: true, adminChannel: "900", botState: { inGuild: true, connecting: false } });
+    t.add({ kind: "ERROR", message: "example is not a registered slot type!", meta: {} });
+    t.add({ kind: "ERROR", message: "Something broke", meta: {} });
+    await t.a.round();
+    expect(t.botCalls.filter((c) => c.what === "sendTo").map((c) => (c.args[1] as { content: string }).content)).toEqual(["Problem: Something broke"]);
+  });
+
   it("a bot that is not in the server and not connecting is gone round: the admin line is simply not sent", async () => {
     const t = routed({ bot: true, adminChannel: "900", botState: { inGuild: false, connecting: false } });
     t.add({ kind: "CRASH" }, REAL.crash);

@@ -192,7 +192,7 @@
       "opensAt": "2026-12-04T19:00:00Z",
       "points": 5,
       "solo": true,
-      "hint": "Take the waystone at spawn to the Frontier.",
+      "hint": "Walk through the portal in the temple at spawn.",
       "icon": "minecraft:compass",
       "criteria": {
         "trigger": "minecraft:changed_dimension",

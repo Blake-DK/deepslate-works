@@ -8,7 +8,7 @@ This replaces the six-week seasons and the Wednesday changeovers of §0, and eve
 
 | Season | Opens (Monday, 19:00 UK) | Finale (Saturday, 20:00 UK) | Ends, zone reset (Monday) | Weeks |
 |---|---|---|---|---|
-| 1 · First Blood | 30 Nov 2026 | 26 Dec 2026 | 28 Dec 2026 | 4 |
+| 1 · First Blood | 30 Nov 2026 | 19 Dec 2026 (Alex, 2026-10-05) | 28 Dec 2026 | 4 |
 | 2 · The Drowned and the Frozen | 28 Dec 2026 | 23 Jan 2027 | 25 Jan 2027 | 4 |
 | 3 · Fire and Iron | 25 Jan 2027 | 20 Feb 2027 | 22 Feb 2027 | 4 |
 | 4 · The Otherside | 22 Feb 2027 | 27 Mar 2027 | 29 Mar 2027 | 5 |

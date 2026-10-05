@@ -118,7 +118,7 @@
           "url": "https://www.youtube.com/watch?v=xSECqzGSesk"
         }
       ],
-      "version": "latest",
+      "version": "uMOpc5uV",
       "requires": [],
       "guide": "behind"
     },
@@ -148,7 +148,7 @@
           "url": "https://www.youtube.com/watch?v=eUifBaPDa0c"
         }
       ],
-      "version": "latest",
+      "version": "DDUrRVCA",
       "requires": [],
       "guide": "behind"
     },
@@ -178,7 +178,7 @@
           "url": "https://www.youtube.com/watch?v=pb7ovXHHX8k"
         }
       ],
-      "version": "latest",
+      "version": "x7kQWVju",
       "requires": [],
       "guide": "behind"
     },
@@ -208,7 +208,7 @@
           "url": "https://www.youtube.com/watch?v=CX8r7nqNLQ0"
         }
       ],
-      "version": "latest",
+      "version": "5HLHxQ2F",
       "requires": [],
       "guide": "behind"
     },
@@ -238,7 +238,7 @@
           "url": "https://www.youtube.com/watch?v=anQSFxIT_5s"
         }
       ],
-      "version": "latest",
+      "version": "8w8FfUPs",
       "requires": [],
       "guide": "behind"
     },
@@ -268,7 +268,7 @@
           "url": "https://www.youtube.com/watch?v=KdO__efhGFM"
         }
       ],
-      "version": "latest",
+      "version": "OUpXxw4n",
       "requires": [],
       "guide": "behind"
     },
@@ -298,7 +298,7 @@
           "url": "https://www.youtube.com/watch?v=CX8r7nqNLQ0"
         }
       ],
-      "version": "latest",
+      "version": "T238FZpQ",
       "requires": [],
       "guide": "behind"
     },
@@ -328,7 +328,7 @@
           "url": "https://www.youtube.com/watch?v=tUTwa6LVS30"
         }
       ],
-      "version": "latest",
+      "version": "ufHUqt9b",
       "requires": [],
       "guide": "helper",
       "howTo": "The item list on the right of any inventory screen. Hover over an item and press **R** to see how it's made, **U** to see what it's used in. Type in the search box at the bottom to find anything; `@create` shows only Create's items.",
@@ -385,7 +385,7 @@
           "url": "https://www.youtube.com/watch?v=HHzkAf17ses"
         }
       ],
-      "version": "latest",
+      "version": "eYz2YBGT",
       "requires": [],
       "guide": "helper",
       "howTo": "Nothing to do: look at a block, a machine or a mob and a small box at the top of the screen says what it is and which mod it's from, plus things like a furnace's progress or a crop's growth.",
@@ -540,7 +540,7 @@
       "description": "The game window is called Deepslate Works and carries the server's logo in the taskbar.",
       "wiki": "https://github.com/chylex/Minecraft-Window-Title",
       "videos": [],
-      "version": "latest",
+      "version": "Pqn8PDBd",
       "requires": [],
       "guide": "behind"
     },
@@ -570,7 +570,7 @@
           "url": "https://www.youtube.com/watch?v=k9_FeNzTONY"
         }
       ],
-      "version": "latest",
+      "version": "uAKA6Laj",
       "requires": [],
       "guide": "helper",
       "howTo": "Hover over food in your inventory to see how much hunger (drumsticks) and saturation it gives. Your hunger bar shows how much a held food would fill."
@@ -601,7 +601,7 @@
           "url": "https://www.youtube.com/watch?v=RgmVCpPVIOI"
         }
       ],
-      "version": "latest",
+      "version": "9I21YYxf",
       "requires": [],
       "guide": "helper",
       "howTo": "- Hold **right-click** and drag across slots to spread a stack evenly.\n- Hold **left-click** and drag to pick up the same item from many slots.\n- **Shift + left-click** and drag to move many stacks at once.\n- **Scroll** over a stack to move items one by one."
@@ -628,7 +628,7 @@
           "url": "https://www.youtube.com/watch?v=mJwqbN0aZvk"
         }
       ],
-      "version": "latest",
+      "version": "Zwf8nv8y",
       "requires": [],
       "guide": "game",
       "howTo": "When you die, your things stay in your body where you fell. It never disappears. For 30 minutes only you can open it; after that your friends can too, so they can bring your things back if you're offline. Your minimap marks where you died.\n\nRight-click the body to open it. The 30 minutes only run while someone is near it. Press **U** for your death history.",
@@ -714,7 +714,7 @@
           "url": "https://www.youtube.com/watch?v=zmce1lR_z9I"
         }
       ],
-      "version": "latest",
+      "version": "wxGXaJMA",
       "requires": [],
       "guide": "game",
       "howTo": "Break the bottom log of a tree and the whole tree comes down, with an axe or by hand. **Sneak** while breaking to take just one log. Leaves decay quickly afterwards."
@@ -732,7 +732,7 @@
       "description": "Press Tab: who's on, everyone's ping in milliseconds, and the server's TPS (20 is perfect). Only on your PC, nothing on the server. Takes the place of TabTPS, which could not run next to BlueMap.",
       "wiki": "https://github.com/tricube3/better-tab",
       "videos": [],
-      "version": "latest",
+      "version": "DnF5IgN7",
       "requires": [],
       "guide": "helper",
       "howTo": "Hold **Tab** in game: who's on, everyone's ping in milliseconds, and the server's TPS (20 is perfect, lower means the server is struggling).",
@@ -756,7 +756,7 @@
       "description": "Makes new land generate faster on the server. The world looks exactly the same.",
       "wiki": "https://modrinth.com/mod/noisium",
       "videos": [],
-      "version": "latest",
+      "version": "nJBE6tif",
       "requires": [],
       "guide": "behind"
     },
@@ -773,7 +773,7 @@
       "description": "Experience orbs lying close together merge into one. Big farms stop lagging the server.",
       "wiki": "https://modrinth.com/mod/clumps",
       "videos": [],
-      "version": "latest",
+      "version": "jo7lDoK4",
       "requires": [],
       "guide": "behind"
     },
@@ -790,7 +790,7 @@
       "description": "Dropped items on the floor stack into fewer piles, so a broken chest or a mob farm costs the server less.",
       "wiki": "https://modrinth.com/mod/get-it-together-drops",
       "videos": [],
-      "version": "latest",
+      "version": "K4TUzlwa",
       "requires": [],
       "guide": "behind"
     },
@@ -807,7 +807,7 @@
       "description": "Furnaces work out recipes faster. Same smelting, less work for the server.",
       "wiki": "https://modrinth.com/mod/fastfurnace",
       "videos": [],
-      "version": "latest",
+      "version": "pqj92Yco",
       "requires": [],
       "guide": "behind"
     },
@@ -824,7 +824,7 @@
       "description": "Crafting tables work out recipes faster, so shift-clicking a stack doesn't stutter.",
       "wiki": "https://modrinth.com/mod/fastworkbench",
       "videos": [],
-      "version": "latest",
+      "version": "IwciHwPN",
       "requires": [],
       "guide": "behind"
     },
@@ -841,7 +841,7 @@
       "description": "A faster redstone engine on the server. Redstone builds work the same, with far less lag.",
       "wiki": "https://modrinth.com/mod/alternate-current",
       "videos": [],
-      "version": "latest",
+      "version": "PCNyL6v4",
       "requires": [],
       "guide": "behind"
     },
@@ -858,7 +858,7 @@
       "description": "Draws chests, minecarts and other block entities through Flywheel (which Create already brings), for more FPS in busy bases.",
       "wiki": "https://modrinth.com/mod/flw-vanillin",
       "videos": [],
-      "version": "latest",
+      "version": "Qn76dRvj",
       "requires": [
         "create"
       ],
@@ -878,7 +878,7 @@
       "description": "Small fixes that skip work the game does for nothing every frame. More FPS, nothing to set up.",
       "wiki": "https://modrinth.com/mod/badoptimizations",
       "videos": [],
-      "version": "latest",
+      "version": "S2qthD5S",
       "requires": [],
       "guide": "behind"
     },
@@ -908,7 +908,7 @@
           "url": "https://www.youtube.com/watch?v=RpYESCJW9uQ"
         }
       ],
-      "version": "latest",
+      "version": "UjX6dr61",
       "requires": [],
       "guide": "game",
       "howTo": "Start with a **water wheel** next to flowing water and a **shaft**: anything on the shaft turns. Make **andesite alloy** (andesite + iron nugget) for shafts, cogwheels and the **mechanical press**. Next: a press over a belt for automatic plates, a millstone for flour and dyes.\n\nIn JEI, hold **W** over any Create block to watch its Ponder animation; the **Engineer's Goggles** show speed and stress when you look at a machine.",
@@ -950,7 +950,7 @@
           "url": "https://www.youtube.com/watch?v=AZPL85Olrww"
         }
       ],
-      "version": "latest",
+      "version": "qPr8V4G2",
       "requires": [
         "create"
       ],
@@ -984,7 +984,7 @@
           "url": "https://www.youtube.com/watch?v=m4rUwcbO6zQ"
         }
       ],
-      "version": "latest",
+      "version": "bOiDu0LS",
       "requires": [
         "create",
         "rpl"
@@ -1018,7 +1018,7 @@
           "url": "https://www.youtube.com/watch?v=BFJF9U7nHmE"
         }
       ],
-      "version": "latest",
+      "version": "uNRARSH2",
       "requires": [],
       "guide": "game",
       "howTo": "Start with the **Engineer's Manual** (craft a book with a lever): it explains every machine. Early on: a **coke oven** for coal coke, a **water wheel** or **windmill** with **LV wire** to power machines, then the multiblocks shown in the manual, built and finished with the **Engineer's Hammer**."
@@ -1144,7 +1144,7 @@
           "url": "https://www.youtube.com/watch?v=2QjWp1vzTT8"
         }
       ],
-      "version": "latest",
+      "version": "erRsRPki",
       "requires": [],
       "guide": "game",
       "howTo": "Machines that farm and breed for you. Power them with a **Pitiful Generator** to start. Place a machine, then right-click it to set its **working area**; add range upgrades for a bigger area."
@@ -1175,7 +1175,7 @@
           "url": "https://www.youtube.com/watch?v=Ngf06CAj4lw"
         }
       ],
-      "version": "latest",
+      "version": "KDnFUmMm",
       "requires": [],
       "guide": "game",
       "howTo": "Grow **certus quartz** in your first inscriber recipes, build an **ME Controller**, a **Drive** with **storage cells** and an **ME Terminal**, all joined with cables. Everything in the cells shows up in the terminal, searchable. Autocrafting comes later with pattern providers."
@@ -1206,7 +1206,7 @@
           "url": "https://www.youtube.com/watch?v=yB9S8XDwBV0"
         }
       ],
-      "version": "latest",
+      "version": "syKekkIm",
       "requires": [],
       "guide": "game",
       "howTo": "Just mine: break one ore block with the right pickaxe and the rest of the vein (up to 100 blocks) comes out with it. No key to hold. It costs hunger and tool durability, so bring food and a spare pickaxe. Trees are FallingTree's job."
@@ -1288,7 +1288,7 @@
           "url": "https://www.youtube.com/watch?v=WLfT1gvlGoo"
         }
       ],
-      "version": "latest",
+      "version": "p0XlQYuL",
       "requires": [
         "scalable-cats-force"
       ],
@@ -1322,7 +1322,7 @@
           "url": "https://www.youtube.com/watch?v=9xVwyA19bgc"
         }
       ],
-      "version": "latest",
+      "version": "62q6mB5Q",
       "requires": [],
       "guide": "game",
       "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Watch out: several of TaCZ's keys are also used by other mods (V, G, H, C, Z); change them in Options \u2192 Controls if something clashes.",
@@ -1419,7 +1419,7 @@
           "url": "https://www.youtube.com/watch?v=b2WYiZEKQBk"
         }
       ],
-      "version": "latest",
+      "version": "6Z6MQ6os",
       "requires": [],
       "guide": "game",
       "howTo": "Find **waystones** in villages and the wild, or craft one. Right-click it to activate and name it. From any waystone (or with a **warp scroll** or **warp stone**) you can teleport to every waystone you've activated; it costs a little XP."
@@ -1450,7 +1450,7 @@
           "url": "https://www.youtube.com/watch?v=BY-c9gAiqMM"
         }
       ],
-      "version": "latest",
+      "version": "XTVZDOol",
       "requires": [],
       "guide": "game",
       "howTo": "Craft a **cooking pot** and put it on a campfire or stove; meals give long-lasting saturation. A **cutting board** with a knife slices ingredients. Plant **rice** in water and **tomatoes**, **cabbages** and **onions** you find in the wild."
@@ -1481,7 +1481,7 @@
           "url": "https://www.youtube.com/watch?v=-UUor9ThmmQ"
         }
       ],
-      "version": "latest",
+      "version": "BPGKb8pi",
       "requires": [],
       "guide": "game",
       "howTo": "Place a pipe against a chest or machine; one pipe each for items, fluids, energy and gas. Right-click a pipe's end with the **wrench** to choose whether it pulls out of or pushes into the block. Add filters and speed upgrades in the end's menu."
@@ -1505,7 +1505,7 @@
           "url": "https://www.youtube.com/watch?v=HeHIdIWr7BA"
         }
       ],
-      "version": "latest",
+      "version": "qrcMVoBD",
       "requires": [
         "create"
       ],
@@ -1531,7 +1531,7 @@
           "url": "https://www.youtube.com/watch?v=jrC30auMZls"
         }
       ],
-      "version": "latest",
+      "version": "bPYeUWZx",
       "requires": [
         "create"
       ],
@@ -1566,7 +1566,7 @@
           "url": "https://www.youtube.com/watch?v=LpXvNvFZC9k"
         }
       ],
-      "version": "latest",
+      "version": "jiXRXiSt",
       "requires": [],
       "guide": "game",
       "howTo": "Craft roof pieces from planks, stone or terracotta at a crafting table; JEI lists them all (search `@mcwroofs`). They place like stairs: the direction you face decides the slope."
@@ -1593,7 +1593,7 @@
           "url": "https://www.youtube.com/watch?v=WHfudQ7-O48"
         }
       ],
-      "version": "latest",
+      "version": "rQUE4LCz",
       "requires": [],
       "guide": "game",
       "howTo": "Windows, shutters, curtains and window boxes in every wood. Craft at a crafting table; right-click a window or shutter to open and close it."
@@ -1620,7 +1620,7 @@
           "url": "https://www.youtube.com/watch?v=KOD7JkO9JnU"
         }
       ],
-      "version": "latest",
+      "version": "u7BRX44F",
       "requires": [],
       "guide": "game",
       "howTo": "Dozens of doors in every wood: barn, stable, glass and more. Craft at a crafting table; JEI lists them (search `@mcwdoors`)."
@@ -1647,7 +1647,7 @@
           "url": "https://www.youtube.com/watch?v=jFObd4lbDvI"
         }
       ],
-      "version": "latest",
+      "version": "JfqnpP2Z",
       "requires": [
         "resourceful-lib"
       ],
@@ -1676,7 +1676,7 @@
           "url": "https://www.youtube.com/watch?v=4mQWK4JYv0E"
         }
       ],
-      "version": "latest",
+      "version": "Z5V3Ps7S",
       "requires": [],
       "guide": "game",
       "howTo": "Tables, chairs, desks, wardrobes and kitchen counters in every wood. Right-click chairs to sit and drawers to store things. JEI lists them all."
@@ -1703,7 +1703,7 @@
           "url": "https://www.youtube.com/watch?v=DsKO2UqERFo"
         }
       ],
-      "version": "latest",
+      "version": "jVdb0r4W",
       "requires": [],
       "guide": "game",
       "howTo": "Fences, walls and railings in many styles. Craft at a crafting table; JEI lists them all."
@@ -1730,7 +1730,7 @@
           "url": "https://www.youtube.com/watch?v=jwQf46NnCtE"
         }
       ],
-      "version": "latest",
+      "version": "aQ7rY7ng",
       "requires": [],
       "guide": "game",
       "howTo": "Bridge pieces and rope bridges with railings and supports. Craft at a crafting table and place them in a row; JEI lists them all."
@@ -1753,7 +1753,7 @@
           "url": "https://www.youtube.com/watch?v=gsb-qaMct6c"
         }
       ],
-      "version": "latest",
+      "version": "tlymsxUG",
       "requires": [],
       "guide": "game",
       "howTo": "Paths, paving and edgings. Craft at a crafting table and lay them like slabs; JEI lists them all."
@@ -1780,7 +1780,7 @@
           "url": "https://www.youtube.com/watch?v=i0kv2gqbb3I"
         }
       ],
-      "version": "latest",
+      "version": "5U2kQZIL",
       "requires": [],
       "guide": "game",
       "howTo": "Lamps, lanterns, chandeliers and wall lights. Craft at a crafting table; right-click a lamp to switch it on or off."
@@ -1826,7 +1826,7 @@
           "url": "https://www.youtube.com/watch?v=hDE_lJPS5_8"
         }
       ],
-      "version": "latest",
+      "version": "4t8L0dGP",
       "requires": [],
       "guide": "game",
       "howTo": "More stairs, railings and balconies in every wood. Craft at a crafting table; JEI lists them all."
@@ -1849,7 +1849,7 @@
           "url": "https://www.youtube.com/watch?v=VNUA_Ezgd7I"
         }
       ],
-      "version": "latest",
+      "version": "cugGiMKt",
       "requires": [],
       "guide": "game",
       "howTo": "Chairs, tables, benches, shelves, curtains and lamps. Right-click to sit or use; JEI lists every piece."
@@ -1967,7 +1967,7 @@
           "url": "https://www.youtube.com/watch?v=KV-KzXIwIH4"
         }
       ],
-      "version": "latest",
+      "version": "LuFhm4eU",
       "requires": [],
       "guide": "behind"
     },
@@ -1997,7 +1997,7 @@
           "url": "https://www.youtube.com/watch?v=1pSQ21kNREk"
         }
       ],
-      "version": "latest",
+      "version": "v5qtqRQi",
       "requires": [],
       "guide": "behind"
     },
@@ -2027,7 +2027,7 @@
           "url": "https://www.youtube.com/watch?v=_vAucQ56H1g"
         }
       ],
-      "version": "latest",
+      "version": "8iJcPOHJ",
       "requires": [],
       "guide": "behind"
     },
@@ -2044,7 +2044,7 @@
       "description": "Mobs far from every player tick once a second instead of twenty times, and mobs that used to spawn past the mob cap count towards it.",
       "wiki": "https://github.com/Wesley1808/ServerCore/wiki",
       "videos": [],
-      "version": "latest",
+      "version": "6N9hXiRa",
       "requires": [],
       "guide": "behind"
     },
@@ -2061,7 +2061,7 @@
       "description": "Structure searches (/locate, explorer maps, dolphins, eyes of ender) run beside the game instead of freezing it.",
       "wiki": "https://github.com/Alvaro842DEV/AsyncLocator-Refined",
       "videos": [],
-      "version": "latest",
+      "version": "zHBIpxJZ",
       "requires": [],
       "guide": "behind"
     },
@@ -2078,7 +2078,7 @@
       "description": "Library needed by Create Big Cannons.",
       "wiki": "https://modrinth.com/mod/rpl",
       "videos": [],
-      "version": "latest",
+      "version": "hZ6B2Z0x",
       "requires": []
     },
     {
@@ -2110,7 +2110,7 @@
       "description": "Library needed by the Quarry mod.",
       "wiki": "https://modrinth.com/mod/scalable-cats-force",
       "videos": [],
-      "version": "latest",
+      "version": "WG1FLeZM",
       "requires": []
     },
     {
@@ -2126,7 +2126,7 @@
       "description": "Library needed by Handcrafted.",
       "wiki": "https://modrinth.com/mod/resourceful-lib",
       "videos": [],
-      "version": "latest",
+      "version": "x99nCLTm",
       "requires": []
     },
     {
@@ -2219,7 +2219,7 @@
           "url": "https://www.youtube.com/watch?v=NUknJfNq09k"
         }
       ],
-      "version": "latest",
+      "version": "PsPYpoCC",
       "requires": [],
       "guide": "game",
       "howTo": "Big dungeons generate in the world: a ruined citadel, a sunken city, a burning arena and more, each guarded by a boss. Most are fights for a **group**: go together and bring food, armour and a bed nearby. What they drop is gear you can't get any other way."
@@ -2250,7 +2250,7 @@
           "url": "https://www.youtube.com/watch?v=NmhCMBxHdSw"
         }
       ],
-      "version": "latest",
+      "version": "xgAXTl17",
       "requires": [],
       "guide": "game",
       "howTo": "You'll meet these while exploring: a frost beast in snowy plains, a sun chief in savanna villages, an armoured knight in a hidden hall underground. Each fight has a pattern: watch it once before you swing. Their drops are unusual tools and weapons."
@@ -2301,7 +2301,7 @@
           "url": "https://www.youtube.com/watch?v=8n_7fZu1A6Y"
         }
       ],
-      "version": "latest",
+      "version": "5OYoqItD",
       "requires": [],
       "guide": "behind"
     },
@@ -2335,7 +2335,7 @@
       "description": "Library needed by L_Ender's Cataclysm.",
       "wiki": "https://modrinth.com/mod/lionfish-api",
       "videos": [],
-      "version": "latest",
+      "version": "fTRMVgyZ",
       "requires": []
     },
     {
@@ -2351,7 +2351,7 @@
       "description": "Library needed by L_Ender's Cataclysm.",
       "wiki": "https://modrinth.com/mod/curios",
       "videos": [],
-      "version": "latest",
+      "version": "yohfFbgD",
       "requires": []
     },
     {
@@ -2367,7 +2367,7 @@
       "description": "Library needed by Mowzie's Mobs.",
       "wiki": "https://modrinth.com/mod/geckolib",
       "videos": [],
-      "version": "latest",
+      "version": "Grwn5rUB",
       "requires": []
     },
     {

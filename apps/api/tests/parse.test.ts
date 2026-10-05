@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ipOf, parse, redact, reduce } from "../src/events/parse.js";
+import { ipOf, isKnownHarmless, parse, redact, reduce } from "../src/events/parse.js";
 
 // Lines in the log-file shape were captured from the instance on 2026-09-28/29 (names swapped where a
 // line had none of ours); the AMP-entry shape is the same message with the prefix in `source`.
@@ -80,6 +80,12 @@ describe("parse", () => {
     expect(parse("[29Sep2026 03:51:01.024] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping server")).toEqual([{ type: "stopping" }]);
     // the stop command's answer, what AMP's stop and its sleep write first (2026-09-29 17:02): a clean stop too
     expect(parse("[29Sep2026 03:51:00.534] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping the server")).toEqual([{ type: "stopping" }]);
+  });
+  it("knows the errors that are harmless and not for Discord, and still reports them to the event log", () => {
+    expect(isKnownHarmless("example is not a registered slot type!")).toBe(true);
+    expect(isKnownHarmless("ring is not a registered slot type!")).toBe(false);
+    expect(isKnownHarmless("Encountered an unexpected exception")).toBe(false);
+    expect(parse(L("example is not a registered slot type!", "Server thread", "ERROR"))).toMatchObject([{ type: "problem", level: "ERROR", text: "example is not a registered slot type!" }]);
   });
   it("reports warnings and errors, but not the mod loader's start-up noise (real lines)", () => {
     expect(parse(L("Can't keep up! Is the server overloaded? Running 2500ms or 50 ticks behind", "Server thread", "WARN"))).toEqual([{ type: "problem", level: "WARN", text: "Can't keep up! Is the server overloaded? Running 2500ms or 50 ticks behind", logger: "net.minecraft.server.MinecraftServer" }]);

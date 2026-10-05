@@ -4,6 +4,7 @@
 // docs/22 §13: with the forum season-updates (its webhook, or the bot), votes, news and We're live are forum posts there
 // (replies in the same post), and #game-chat (the feed webhook) also carries the game's chat.
 import { CHANGELOG_OPENER, CHANGELOG_TITLE, changeText, type Change } from "../changelog.js";
+import { isKnownHarmless } from "../events/parse.js";
 import type { Attachment, Message, Sent, Webhook, Where } from "./webhook.js";
 import type { BotMessage, Component } from "./rest.js";
 import {
@@ -473,6 +474,7 @@ export class Announcer {
         return ok(await this.send(e, 1, "feed", "crash", asServer(brand, crashFeedText(adminTold && a.ok))));
       }
       case "ERROR": {
+        if (isKnownHarmless(e.message)) return true; // known and harmless: in the event log, not in Discord (events/parse.ts)
         if (!sw.problems || !this.canAdmin()) return true;
         const t = now.getTime();
         const seen = this.problems.get(e.message);

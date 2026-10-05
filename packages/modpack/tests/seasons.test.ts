@@ -265,7 +265,10 @@ describe("the Frontier (docs/20 §5)", () => {
 
   it("is a datapack of its own with one dimension: an overworld on the season's noise settings", () => {
     const files = frontierDatapack(base({ frontier }))!;
-    expect([...files.keys()].sort()).toEqual(["data/deepslate/dimension/frontier_t1.json", "pack.mcmeta"]);
+    expect([...files.keys()].sort()).toEqual(["data/deepslate/dimension/frontier_t1.json", "data/deepslate/tags/block/frontier_t1_portal_frame.json", "data/deepslate/tags/item/frontier_t1_portal_igniter.json", "pack.mcmeta"]);
+    // docs/34 §10: the portal's frame and the one item that lights it, both out of a survival player's reach
+    expect(JSON.parse(files.get("data/deepslate/tags/block/frontier_t1_portal_frame.json")!)).toEqual({ values: ["minecraft:reinforced_deepslate"] });
+    expect(JSON.parse(files.get("data/deepslate/tags/item/frontier_t1_portal_igniter.json")!)).toEqual({ values: ["minecraft:knowledge_book"] });
     expect(JSON.parse(files.get("pack.mcmeta")!)).toMatchObject({ pack: { pack_format: 48 } });
     expect(JSON.parse(files.get("data/deepslate/dimension/frontier_t1.json")!)).toEqual({
       type: "minecraft:overworld",
@@ -283,6 +286,8 @@ describe("the Frontier (docs/20 §5)", () => {
     expect(messages([base({ frontier: { ...frontier, dimension: "deepslate:limbo" } })])[0]).toMatch(/entrance room/);
     const second = base({ id: "t2", name: "Second Test Season", frontier, bosses: [], trials: [] });
     expect(messages([base({ frontier }), second]).join("\n")).toMatch(/deepslate:frontier_t1 is season t1's already/);
+    expect(messages([base({ frontier: { ...frontier, portal: { frame: "minecraft:obsidian" } } })])[0]).toMatch(/every nether portal frame/);
+    expect(messages([base({ frontier: { ...frontier, portal: { igniter: "minecraft:flint_and_steel" } } })])[0]).toMatch(/anybody could light a portal/);
     expect(seasonSchema.safeParse({ ...base(), frontier: { ...frontier, dimension: "minecraft:overworld" } }).success).toBe(false);
     expect(seasonSchema.safeParse({ ...base(), frontier: { ...frontier, radius: 50_000 } }).success).toBe(false);
   });
@@ -290,7 +295,7 @@ describe("the Frontier (docs/20 §5)", () => {
   it("Season 1's is deepslate:frontier_s1 on large_biomes, radius 3,000 (docs/32 §2), and its first-steps trial names it", async () => {
     const { seasons } = await loadSeasons(SEASONS);
     const s1 = seasons.find((s) => s.id === "s1")!;
-    expect(s1.frontier).toEqual({ dimension: "deepslate:frontier_s1", noise: "minecraft:large_biomes", radius: 3000 });
+    expect(s1.frontier).toEqual({ dimension: "deepslate:frontier_s1", noise: "minecraft:large_biomes", radius: 3000, portal: { frame: "minecraft:reinforced_deepslate", igniter: "minecraft:knowledge_book" } });
     expect(JSON.stringify(s1.trials)).toContain('"to":"deepslate:frontier_s1"');
   });
 });

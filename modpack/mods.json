@@ -2385,6 +2385,41 @@
       "videos": [],
       "version": "latest",
       "requires": []
+    },
+    {
+      "slug": "server-sided-portals",
+      "name": "Server Sided Portals",
+      "category": "server",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Real walk-through portals to the season's own world, the Frontier. Nothing to install: it runs on the server.",
+      "wiki": "https://github.com/Crystal-Nest/server-sided-portals/wiki",
+      "videos": [],
+      "version": "6ybc8eyX",
+      "requires": [
+        "cobweb"
+      ],
+      "guide": "behind"
+    },
+    {
+      "slug": "cobweb",
+      "name": "Cobweb",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Server Sided Portals.",
+      "wiki": "https://modrinth.com/mod/cobweb",
+      "videos": [],
+      "version": "c10AZba0",
+      "requires": []
     }
   ]
 }

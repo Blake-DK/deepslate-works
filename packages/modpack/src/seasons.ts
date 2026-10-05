@@ -58,7 +58,15 @@ export const seasonSchema = z.object({
   goal: z.object({ title: z.string().max(80), count: z.literal("boss_kills"), target: z.number().int().min(1) }).optional(),
   finale: z.object({ at: when, title: z.string().max(80), boss: z.string().regex(ID) }).optional(),
   /** docs/20 §5: the season's own dimension, wiped at its end. `noise`: the noise settings its terrain is made with. */
-  frontier: z.object({ dimension: z.string().regex(/^deepslate:[a-z0-9_]{1,40}$/), noise: z.string().regex(RESOURCE), radius: z.number().int().min(500).max(10_000) }).optional(),
+  frontier: z.object({
+    dimension: z.string().regex(/^deepslate:[a-z0-9_]{1,40}$/), noise: z.string().regex(RESOURCE), radius: z.number().int().min(500).max(10_000),
+    /**
+     * docs/34 §10: the way in is a real portal (the mod Server Sided Portals, on the server only). `frame`: the block
+     * a portal's frame is built of. `igniter`: the one item that lights it. Both default to things nobody can get in
+     * survival, so only an admin makes a portal; the one the mod builds on the far side uses the same frame.
+     */
+    portal: z.object({ frame: z.string().regex(RESOURCE).default("minecraft:reinforced_deepslate"), igniter: z.string().regex(RESOURCE).default("minecraft:knowledge_book") }).default({}),
+  }).optional(),
 });
 export type Season = z.infer<typeof seasonSchema>;
 
@@ -68,6 +76,8 @@ export type Season = z.infer<typeof seasonSchema>;
  * weak PCs (docs/20 §5). Settings of our own (a later season) are added here when their file is in the datapack.
  */
 export const FRONTIER_NOISE = new Set(["minecraft:large_biomes"]);
+/** What lights a nether portal: never the Frontier's igniter. */
+const PORTAL_FIRE = new Set(["minecraft:flint_and_steel", "minecraft:fire_charge"]);
 export type SeasonBoss = Season["bosses"][number];
 export type SeasonTrial = Season["trials"][number];
 
@@ -197,6 +207,8 @@ export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>, va
       else frontiers.set(f.dimension, s.id);
       if (f.noise === "minecraft:overworld") err("the Frontier's noise is minecraft:overworld: that would be a copy of the main world (a dimension has no seed of its own in 1.21.1)");
       else if (!FRONTIER_NOISE.has(f.noise)) err(`the Frontier's noise ${f.noise} is not one of ${[...FRONTIER_NOISE].join(", ")}`);
+      if (f.portal.frame === "minecraft:obsidian") err("the Frontier's portal frame is obsidian: every nether portal frame would also be a way into the Frontier");
+      if (PORTAL_FIRE.has(f.portal.igniter)) err(`the Frontier's portal igniter is ${f.portal.igniter}: anybody could light a portal anywhere; name an item players cannot get`);
     }
   }
   return issues;
@@ -381,7 +393,7 @@ export const frontierPackName = (id: string) => `deepslate-frontier-${id}`;
 
 /**
  * docs/20 §5: the Frontier's datapack, one dimension: an overworld (the vanilla dimension type and biomes) on the
- * season's noise settings. A datapack of its own, so that the wipe takes it off without touching the season's
+ * season's noise settings, and the tags that make a portal to it (docs/34 §10). A datapack of its own, so that the wipe takes it off without touching the season's
  * advancements. A new dimension counts from the server's next start, not from a reload.
  */
 export function frontierDatapack(s: Season): Map<string, string> | null {
@@ -394,6 +406,10 @@ export function frontierDatapack(s: Season): Map<string, string> | null {
     type: "minecraft:overworld",
     generator: { type: "minecraft:noise", settings: s.frontier.noise, biome_source: { type: "minecraft:multi_noise", preset: "minecraft:overworld" } },
   });
+  // Server Sided Portals reads two tags in the dimension's namespace, named after the dimension. With an igniter
+  // tag that is not empty, fire no longer lights the frame. The main world is the connection by default.
+  json(`data/deepslate/tags/block/${name}_portal_frame.json`, { values: [s.frontier.portal.frame] });
+  json(`data/deepslate/tags/item/${name}_portal_igniter.json`, { values: [s.frontier.portal.igniter] });
   return files;
 }
 

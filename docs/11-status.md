@@ -10,12 +10,12 @@ Last updated 2026-10-05: a code review (docs/35) and the control panel reorganis
 - **Before the Season 1 rehearsal:** R-14 (who was first), R-15 (End can lose the finale's kill).
 - **The control panel is reorganised on `dev`, not deployed** (Alex said yes the same day). The strip: Control Room · Server · Joining · People · Modpack · Seasons · News · Votes · Discord · Site. Joining is new (who is waiting, the rules, the entrance room); Votes holds the polls; Discord is a page; Site is Look, Pages, Privacy & data. Old addresses are sent on. No change to api or the database. What was built and where it differs from the proposal: docs/35, "Decided and built". **Not proven in a browser**: after the deploy, click through each tab and save once on each form.
 
-## The `createdeco:placard` ERROR fixed in our datapack (2026-10-04, on `dev`, not deployed)
+## The `createdeco:placard` ERROR fixed in our datapack (2026-10-04, deployed: PR #105, `main` `80516c0`)
 
 - **The ERROR** (at every start and `reload` since the world was made; accepted as known in the docs/24 run): "Parsing error loading recipe createdeco:placard … Failed to parse either … No key item in MapLike[{"id":"minecraft:white_dye"}]". Create Deco's `data/createdeco/recipe/placard.json` (any placard + white dye → `create:placard`) names the dye as `{"id": …}`, the 1.21.2+ form; 1.21.1 reads only `{"item": …}` or `{"tag": …}`. 2.1.3 is the latest Create Deco for NeoForge 1.21.1 on Modrinth (checked 2026-10-04), so no update fixes it.
 - **The fix:** `modpack/datapacks/deepslate-tools/data/createdeco/recipe/placard.json`, the same recipe with `{"item": "minecraft:white_dye"}` and a `neoforge:mod_loaded` condition on `createdeco` (a vote that takes Create Deco out leaves no broken recipe behind). The world's datapacks load after the mods' data, so this file replaces the jar's. Tests in `packages/modpack/tests/datapack.test.ts`.
 - **Checked:** every recipe in every jar of `dist/server/mods/` for the same mistake (an ingredient with `id` and no `item`/`tag`): this is the only one.
-- **On the server, after the deploy:** Admin → Modpack → Build (server), Sync, then `reload` (recipes come back with a reload; no restart needed). `latest.log` after it should have only the Curios "example" ERROR; JEI should show white dye + any placard → a Create placard.
+- **Deployed** (Alex, 2026-10-04 evening): PR #105 merged 18:38 UTC, `main` CI green, `deploy.sh`, then Build (server), Sync and `reload`. Alex: the ERROR is gone. The only known ERROR left at start and `reload` is the Curios "example" one. Change log entry `2026-10-04-placard-recipe` goes out with this deploy.
 
 ## The change log in Discord (2026-10-04, on `dev`, not deployed)
 

@@ -5,7 +5,7 @@ import type { NewEvent } from "../src/events/recorder.js";
 import { advancementKey, doneAt, gameTime } from "../src/seasons/advancements.js";
 import { currentSeasonId, readSeasonFile } from "../src/seasons/files.js";
 import { SeasonRecorder } from "../src/seasons/recorder.js";
-import { memorySeasonStore, type SeasonRow } from "../src/seasons/store.js";
+import { decideFirst, GROUP_MS, memorySeasonStore, type SeasonRow } from "../src/seasons/store.js";
 import { findByTitle, goalMarks, nextUp, scoreboard, seasonClock, seasonCurrent, seasonLine, seasonResult, ukDay, type Clear, type SeasonFile } from "../src/shared/season.js";
 
 // docs/34 §4 (W1.3): the season's recording. The season is the sample file as it is in the repo, so this also shows
@@ -36,13 +36,18 @@ async function setup(state: SeasonRow["state"] = "running", at = "2026-11-24T20:
   const timers: Array<() => void> = [];
   const clock = { now: new Date(at) };
   const files = new Map<string, unknown>();
+  const logs: string[] = [];
+  const fail = { addEvent: false };
   const rec = new SeasonRecorder({
     file: async () => file,
     store,
     uuidOf: async (name) => members.find((m) => m.mcName === name)?.mcUuid ?? null,
-    addEvent: async (e) => void events.push(e),
+    addEvent: async (e) => {
+      if (fail.addEvent) throw new Error("database away");
+      events.push(e);
+    },
     advancements: async () => async (uuid) => files.get(uuid) ?? null,
-    log: () => {},
+    log: (_o, m) => void logs.push(m),
     now: () => clock.now,
     later: (fn) => void timers.push(fn),
   });
@@ -55,7 +60,7 @@ async function setup(state: SeasonRow["state"] = "running", at = "2026-11-24T20:
     for (const t of timers.splice(0)) t();
     await rec.idle();
   };
-  return { file, store, events, rec, say, flush, clock, files, timers };
+  return { file, store, events, rec, say, flush, clock, files, timers, logs, fail };
 }
 
 describe("the season files, as api reads them", () => {
@@ -99,6 +104,7 @@ describe("the season recorder", () => {
     const t = await setup();
     t.say("Anna", "completed the challenge", "The Rehearsal Ravager");
     await t.flush();
+    t.clock.now = new Date(t.clock.now.getTime() + 60_000); // a minute later: not the same fight
     t.say("Cyra", "completed the challenge", "The Rehearsal Ravager");
     t.say("Anna", "completed the challenge", "The Rehearsal Ravager");
     await t.flush();
@@ -106,12 +112,47 @@ describe("the season recorder", () => {
     expect(t.events.map((e) => e.message)).toContain("Cyra defeated The Rehearsal Ravager");
   });
 
-  it("first is the store's to decide: of two clears of one thing at the same moment only one is first", async () => {
+  it("first is the store's to decide, by the time of the kill: within the group's five seconds it is shared, after them it is not", async () => {
     const file = await sample();
     const store = memorySeasonStore([row(file, "running")], members);
-    const clear = (m: (typeof members)[number]) => ({ kind: "trial" as const, itemId: "rehearsal_table", mcUuid: m.mcUuid, mcName: m.mcName, userId: m.userId, at: new Date("2026-11-20T10:00:00Z"), early: false, source: "console" as const });
-    const [a, b] = await Promise.all([store.addClears("sample", [clear(members[0]!)]), store.addClears("sample", [clear(members[1]!)])]);
-    expect([a.first, b.first].filter(Boolean)).toHaveLength(1);
+    const clear = (m: (typeof members)[number], at: string, source: "console" | "file" | "admin" = "console") => ({ kind: "trial" as const, itemId: "rehearsal_table", mcUuid: m.mcUuid, mcName: m.mcName, userId: m.userId, at: new Date(at), early: false, source });
+    // two of a group whose clears come by different ways, in either order: both first
+    const [a, b] = await Promise.all([store.addClears("sample", [clear(members[0]!, "2026-11-20T10:00:03Z")]), store.addClears("sample", [clear(members[1]!, "2026-11-20T10:00:00Z", "file")])]);
+    expect([a.first, b.first]).toEqual([true, true]);
+    // six seconds after the earliest: not first
+    const c = await store.addClears("sample", [clear(members[2]!, "2026-11-20T10:00:06Z", "file")]);
+    expect([c.first, c.added.map((x) => x.first)]).toEqual([false, [false]]);
+    expect(store.rows.map((r) => [r.mcName, r.first])).toEqual([["Anna", true], ["Ben", true], ["Cyra", false]]);
+    // and the same player a second time adds nothing
+    expect(await store.addClears("sample", [clear(members[0]!, "2026-11-20T10:00:00Z")])).toEqual({ added: [], first: false });
+  });
+
+  it("one call with clears days apart: only those of the first fight are first", () => {
+    const clear = (m: (typeof members)[number], at: string) => ({ kind: "boss" as const, itemId: "rehearsal_ravager", mcUuid: m.mcUuid, mcName: m.mcName, userId: m.userId, at: new Date(at), early: false, source: "file" as const });
+    const out = decideFirst([], [clear(members[1]!, "2026-11-22T10:00:00Z"), clear(members[0]!, "2026-11-20T10:00:00Z"), clear(members[2]!, "2026-11-20T10:00:04Z")]);
+    expect(out.map((c) => [c.mcName, c.first])).toEqual([["Ben", false], ["Anna", true], ["Cyra", true]]);
+    expect(GROUP_MS).toBe(5000);
+  });
+
+  it("a group still waiting when the season is no longer running is dropped, and the log says so", async () => {
+    const t = await setup();
+    t.say("Anna", "completed the challenge", "The Rehearsal Ravager");
+    await t.rec.idle();
+    t.store.seasons[0]!.state = "ended";
+    await t.flush();
+    expect(t.store.rows).toHaveLength(0);
+    expect(t.logs).toEqual(["season: a group's clears were dropped, no season is running"]);
+  });
+
+  it("settle writes the group that is still waiting and reads the files once more (before End)", async () => {
+    const t = await setup();
+    t.say("Anna", "completed the challenge", "The Rehearsal Ravager");
+    t.files.set(U.ben, { "deepslate:sample/trial/rehearsal_table": { criteria: { done: "2026-11-24 19:30:00 +0000" }, done: true } });
+    await t.rec.settle(); // the five seconds have not passed: no timer has run
+    expect(t.store.rows.map((r) => [r.mcName, r.itemId, r.source])).toEqual([["Anna", "rehearsal_ravager", "console"], ["Ben", "rehearsal_table", "file"]]);
+    await t.flush(); // the timer, late: nothing twice
+    expect(t.store.rows).toHaveLength(2);
+    expect(t.events.filter((e) => (e.meta as { what?: string }).what === "boss")).toHaveLength(1);
   });
 
   it("a wake title makes a line and no clear, once in fifteen minutes", async () => {
@@ -195,12 +236,28 @@ describe("the safety net: the players' advancement files", () => {
       "deepslate:sample/trial/rehearsal_table": { criteria: { done: "2026-11-10 12:00:00 +0000" }, done: true }, // before the season: not recorded
     });
     await t.rec.fromFiles();
-    expect(t.store.rows.map((r) => [r.mcName, r.itemId, r.source, r.first])).toEqual([["Anna", "rehearsal_ravager", "console", true], ["Ben", "rehearsal_ravager", "file", false]]);
+    // Ben stood in the same fight (two seconds from Anna's line): he shares "first", though his clear came by the file
+    expect(t.store.rows.map((r) => [r.mcName, r.itemId, r.source, r.first])).toEqual([["Anna", "rehearsal_ravager", "console", true], ["Ben", "rehearsal_ravager", "file", true]]);
     expect(t.store.rows[1]!.at.toISOString()).toBe("2026-11-24T19:59:58.000Z");
-    expect(t.events.slice(before).map((e) => e.message)).toContain("Ben defeated The Rehearsal Ravager");
+    expect(t.events.slice(before).map((e) => e.message)).toContain("The Rehearsal Ravager has fallen for the first time, to Ben");
     const again = t.events.length;
     await t.rec.fromFiles();
     expect(t.events).toHaveLength(again);
+  });
+
+  it("a clear the files give from another day is not first, and one pass with both kinds says a line for each", async () => {
+    const t = await setup("running", "2026-11-26T20:00:00Z");
+    const kill = (at: string) => ({ "deepslate:sample/boss/rehearsal_ravager": { criteria: { kill: at }, done: true } });
+    t.files.set(U.anna, kill("2026-11-24 19:00:00 +0000"));
+    t.files.set(U.ben, kill("2026-11-24 19:00:03 +0000"));
+    t.files.set(U.cy, kill("2026-11-25 21:00:00 +0000"));
+    await t.rec.fromFiles();
+    expect(t.store.rows.map((r) => [r.mcName, r.first])).toEqual([["Anna", true], ["Ben", true], ["Cyra", false]]);
+    const lines = t.events.filter((e) => (e.meta as { what?: string }).what === "boss");
+    expect(lines.map((e) => [e.message, (e.meta as { first?: boolean }).first, e.at.toISOString()])).toEqual([
+      ["The Rehearsal Ravager has fallen for the first time, to Anna and Ben", true, "2026-11-24T19:00:03.000Z"],
+      ["Cyra defeated The Rehearsal Ravager", false, "2026-11-25T21:00:00.000Z"],
+    ]);
   });
 });
 
@@ -212,6 +269,40 @@ describe("the season's clock", () => {
     await t.rec.tick();
     expect(t.events).toHaveLength(3); // the table trial opened a week ago: marked, not said
     expect(t.store.seasons[0]!.marks.done).toEqual(expect.arrayContaining(["trial:rehearsal_table", "trial:rehearsal_bed", "boss:rehearsal_golem", "week_to_go"]));
+  });
+
+  it("a line is only said while it is true: \"tonight\" for an hour, \"ends tomorrow\" for six and not past midnight", async () => {
+    const late = await setup("running", "2026-11-23T20:00:30Z"); // the finale began half a minute ago
+    late.store.seasons[0]!.marks = { done: ["trial:rehearsal_table", "trial:rehearsal_bed", "boss:rehearsal_golem", "week_to_go"] };
+    await late.rec.tick();
+    expect(late.events).toHaveLength(0);
+    expect(late.store.seasons[0]!.marks.done).toContain("finale"); // marked all the same: not looked at again
+    // the sample ends on the 29th at 00:00 UK: "ends tomorrow" from the 28th at 00:00
+    const said = ["trial:rehearsal_table", "trial:rehearsal_bed", "boss:rehearsal_golem", "week_to_go", "finale"];
+    const soon = await setup("running", "2026-11-28T05:59:00Z");
+    soon.store.seasons[0]!.marks = { done: [...said] };
+    await soon.rec.tick();
+    expect(soon.events).toHaveLength(1);
+    expect(soon.events[0]!.message).toMatch(/^Sample Season · Dress Rehearsal ends tomorrow at \d\d:00 UK$/);
+    const after = await setup("running", "2026-11-28T06:00:30Z");
+    after.store.seasons[0]!.marks = { done: [...said] };
+    await after.rec.tick();
+    expect(after.events).toHaveLength(0);
+    expect(after.store.seasons[0]!.marks.done).toContain("day_to_go");
+  });
+
+  it("a line that could not be written is not marked: it is said at the next minute", async () => {
+    const t = await setup("running", "2026-11-23T19:00:30Z");
+    t.store.seasons[0]!.marks = { done: ["trial:rehearsal_table", "trial:rehearsal_bed", "boss:rehearsal_golem", "week_to_go"] };
+    t.fail.addEvent = true;
+    await t.rec.tick();
+    expect(t.events).toHaveLength(0);
+    expect(t.store.seasons[0]!.marks.done).not.toContain("finale");
+    t.fail.addEvent = false;
+    await t.rec.tick();
+    expect(t.events.map((e) => e.message)).toEqual(["The Rehearsal Golem, together: tonight at 20:00 UK"]);
+    await t.rec.tick();
+    expect(t.events).toHaveLength(1);
   });
 
   it("does nothing for a season that is not running", async () => {

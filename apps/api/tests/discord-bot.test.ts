@@ -178,6 +178,19 @@ describe("the gateway (docs/22 §3, §11)", () => {
     expect(Math.max(...waits)).toBe(60_000);
   });
 
+  it("a frame that is not what Discord documents does not throw out of the socket: the connection is dropped and resumed", () => {
+    const { f, g } = start();
+    f.say(0, ready);
+    expect(() => f.say(0, null)).not.toThrow();
+    expect(f.sockets[0]!.closed).toBe(4000);
+    expect(g.state).toBe("reconnecting");
+    f.runTimers();
+    expect(f.sockets).toHaveLength(2);
+    expect(() => f.say(1, { op: 10 })).not.toThrow(); // a Hello without its data
+    expect(f.sockets[1]!.closed).toBe(4000);
+    expect(() => f.say(0, { op: 0, s: 9, t: "READY", d: null })).not.toThrow(); // from a socket already left: not looked at
+  });
+
   it("a bad token is refused and not retried; missing privileged intents run without them", () => {
     const a = start();
     a.f.close(0, 4004);
@@ -321,7 +334,7 @@ const SW: Switches = { deaths: true, joins: true, challenges: true, advancements
 const FEED = "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz0123456789ABCD";
 const UPDATES = "https://discord.com/api/webhooks/323456789012345678/ubcdefghijklmnopqrstuvwxyz0123456789ABCD";
 
-function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; adminChannel?: string; botRefuses?: string } = {}) {
+function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; adminChannel?: string; botRefuses?: string; botState?: { inGuild: boolean; connecting: boolean }; remind?: boolean } = {}) {
   const clock = Date.parse("2026-10-02T19:00:00Z");
   const calls: Array<{ method: string; url: string; body: Record<string, unknown> }> = [];
   let ids = 5000;
@@ -345,7 +358,8 @@ function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; a
   const votes: Record<string, PollView> = { "poll:p1": poll };
   const botCalls: Array<{ what: string; args: unknown[] }> = [];
   const bot: VotePoster = {
-    inGuild: true,
+    get inGuild() { return opts.botState?.inGuild ?? true; },
+    get connecting() { return opts.botState?.connecting ?? false; },
     createPost: async (...args) => { botCalls.push({ what: "post", args }); return { ok: true, threadId: "8800", messageId: "8800" }; },
     edit: async (...args) => { botCalls.push({ what: "edit", args }); return { ok: true, retry: false }; },
     tagFor: (_f, name) => (name === "Vote" ? ["t-vote"] : []),
@@ -362,8 +376,8 @@ function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; a
     member: async (uuid) => (uuid === REAL.death.actor || uuid === REAL.join.actor ? { userId: "u" } : null),
     online: async () => 2,
     vote: async (kind, id) => votes[`${kind}:${id}`] ?? null,
-    remindable: async () => [],
-    unvoted: async () => ({ discordIds: [], others: 0 }),
+    remindable: async () => (opts.remind ? Object.values(votes).filter((v) => v.status === "OPEN") : []),
+    unvoted: async () => ({ discordIds: [], others: opts.remind ? 1 : 0 }),
     news: async () => ({ body: "**Map cache cleared.**\nThe map shows the new world now.", image: null }),
     picture: async () => null,
     packChange: async () => null,
@@ -429,6 +443,37 @@ describe("where things go (docs/22 §13)", () => {
     const replies = t.calls.filter((c) => c.method === "POST");
     // the post, the reply refused (unknown channel), the post made again, the reply in it
     expect(replies.map((c) => (c.body.thread_name ? "post" : (c.url.match(/thread_id=(\d+)/)?.[1] ?? "?")))).toEqual(["post", "9001", "post", t.posts.get("poll:p1")!.threadId]);
+  });
+
+  it("a vote with no post of its own (opened while the feed was paused): the reminder opens the post and goes in it", async () => {
+    const t = routed({ remind: true });
+    await t.a.round();
+    expect(t.calls.map((c) => [t.where(c), c.body.thread_name ?? null, c.url.match(/thread_id=(\d+)/)?.[1] ?? null])).toEqual([["updates", "Next boss", null], ["updates", null, "9001"]]);
+    expect(t.calls[1]!.body.content).toBe("The vote **Next boss** closes soon. 1 person still to vote.");
+    expect(t.posts.get("poll:p1")).toMatchObject({ threadId: "9001" });
+    expect(t.posts.get("remind:poll:p1")?.messageId).toBe("5002");
+  });
+
+  it("a vote with no post of its own that closes: the result is a post named after the vote, not a line the forum refuses", async () => {
+    const t = routed();
+    t.votes["poll:p1"] = { ...t.poll, status: "CLOSED", voters: 2, result: [{ text: "A", votes: 2 }, { text: "B", votes: 0 }, { text: "I don't mind", votes: 0 }], winners: ["A"] };
+    t.add({ meta: { action: "poll.close", params: { pollId: "p1" }, result: "OK" } });
+    await t.a.round();
+    expect(t.calls).toHaveLength(1);
+    expect([t.where(t.calls[0]!), t.calls[0]!.body.thread_name, t.calls[0]!.body.content]).toEqual(["updates", "Next boss", "**The vote is closed: Next boss** · A won with 2 of 2"]);
+  });
+
+  it("the bot still connecting when a vote opens (api has just started): the vote waits for it and is posted with buttons, not by the webhook without", async () => {
+    const botState = { inGuild: false, connecting: true };
+    const t = routed({ bot: true, botState });
+    t.add({ meta: { action: "poll.open", params: { pollId: "p1" }, result: "OK" } });
+    await t.a.round();
+    expect([t.calls.length, t.botCalls.length, t.posts.size]).toEqual([0, 0, 0]);
+    botState.inGuild = true; // the gateway dropping after this changes nothing: posting is REST
+    await t.a.round();
+    expect(t.botCalls.map((c) => c.what)).toEqual(["post"]);
+    expect(t.calls).toHaveLength(0);
+    expect(t.posts.get("poll:p1")).toMatchObject({ via: "bot" });
   });
 
   it("Test season-updates makes a post, replies in it and edits the reply: the three forum calls §13 builds on", async () => {
@@ -509,6 +554,29 @@ describe("the admin channel picked on the card (Alex, 2026-10-02)", () => {
     t.add({ kind: "CRASH" }, REAL.crash);
     await t.a.round();
     expect((await t.a.overview()).admin).toMatchObject({ state: "failing", name: "the bot", channel: "deepslate-admin", error: refused, last: { ok: false, error: refused } });
+  });
+
+  it("a crash while the bot is still connecting is not dropped: it waits a round and is then sent, once (R-06)", async () => {
+    const botState = { inGuild: false, connecting: true };
+    const t = routed({ bot: true, adminChannel: "900", botState });
+    t.add({ kind: "CRASH" }, REAL.crash);
+    t.add({ kind: "ERROR", message: "Something broke", meta: {} });
+    await t.a.round();
+    expect([t.botCalls.length, t.calls.length]).toEqual([0, 0]);
+    botState.inGuild = true;
+    await t.a.round();
+    expect(t.botCalls.filter((c) => c.what === "sendTo").map((c) => (c.args[1] as { content: string }).content)).toEqual([expect.stringMatching(/^The server crashed at /), "Problem: Something broke"]);
+    expect(t.calls.map((c) => c.body.content)).toEqual(["The server fell over. Alex has been told."]);
+    await t.a.round();
+    expect(t.botCalls.filter((c) => c.what === "sendTo")).toHaveLength(2);
+  });
+
+  it("a bot that is not in the server and not connecting is gone round: the admin line is simply not sent", async () => {
+    const t = routed({ bot: true, adminChannel: "900", botState: { inGuild: false, connecting: false } });
+    t.add({ kind: "CRASH" }, REAL.crash);
+    await t.a.round();
+    expect(t.botCalls).toHaveLength(0);
+    expect(t.calls.map((c) => c.body.content)).toEqual(["The server fell over."]);
   });
 
   it("no channel picked and no admin webhook: problems are not posted, the feed only hears that the server fell over", async () => {

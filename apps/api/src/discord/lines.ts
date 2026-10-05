@@ -70,12 +70,19 @@ export function asPlayer(brand: Brand, name: string, uuid: string, text: string)
   return { ...asServer(brand, `**${escapeText(name)}** ${text}`) };
 }
 
+/** The server's name as a webhook's sender: Discord refuses every message under a name with "discord" or "clyde" in it, or an empty one. */
+const SERVER_FALLBACK = "The server";
+export function serverName(brand: Brand): string {
+  const name = brand.name.trim().slice(0, 80).trim();
+  return name && !/discord|clyde/i.test(name) ? name : SERVER_FALLBACK;
+}
+
 export function asServer(brand: Brand, content: string): Message {
-  return { content, username: brand.name.slice(0, 80), ...(brand.avatar ? { avatar_url: brand.avatar } : {}), flags: SUPPRESS_EMBEDS, allowed_mentions: NO_MENTIONS };
+  return { content, username: serverName(brand), ...(brand.avatar ? { avatar_url: brand.avatar } : {}), flags: SUPPRESS_EMBEDS, allowed_mentions: NO_MENTIONS };
 }
 
 function embedMsg(brand: Brand, embed: NonNullable<Message["embeds"]>[number], content?: string): Message {
-  return { ...(content ? { content } : {}), embeds: [embed], username: brand.name.slice(0, 80), ...(brand.avatar ? { avatar_url: brand.avatar } : {}), allowed_mentions: NO_MENTIONS };
+  return { ...(content ? { content } : {}), embeds: [embed], username: serverName(brand), ...(brand.avatar ? { avatar_url: brand.avatar } : {}), allowed_mentions: NO_MENTIONS };
 }
 
 /** Every embed's edge is the site's Copper (docs/23 §3), whatever the branding row once held as an accent. */

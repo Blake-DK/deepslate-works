@@ -61,7 +61,7 @@ export function pollRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, ct
     const question = String((req.body as { question?: unknown } | null)?.question ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, 200);
     if (!question) return reply.code(400).send({ error: { code: "bad_request", message: "question missing" } });
     if (tail.state !== 20 || tail.online.size === 0) return { told: 0 };
-    const r = await runAction(amp, ctx(), "server.pollOpened", { question }, null);
+    const r = await runAction(amp, ctx(), "server.pollOpened", { question }, req.caller.userId); // the admin who opened it, on the event
     return { told: r.ok ? tail.online.size : 0 };
   });
 }

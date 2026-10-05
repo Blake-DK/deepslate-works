@@ -12,15 +12,19 @@ export function busyMessage(h: Hold): string {
 export class OneAtATime {
   private hold: Hold | null = null;
 
-  /** Takes the hold, or says who has it. */
-  take(what: Hold["what"], by: string | null | undefined, now = new Date()): { ok: true } | { ok: false; message: string } {
+  /** Takes the hold, or says who has it. `token`: this hold, to give back to `release`. */
+  take(what: Hold["what"], by: string | null | undefined, now = new Date()): { ok: true; token: Hold } | { ok: false; message: string } {
     if (this.hold) return { ok: false, message: busyMessage(this.hold) };
     this.hold = { what, by: by || "an unnamed caller", since: now };
-    return { ok: true };
+    return { ok: true, token: this.hold };
   }
 
-  release(): void {
-    this.hold = null;
+  /**
+   * With the token `take` gave: lets go only when that hold is still the one held. A build's stream that closes
+   * late must not let go of what a later run has taken (docs/35 R-34). Without a token: lets go, whoever holds.
+   */
+  release(token?: Hold): void {
+    if (token === undefined || this.hold === token) this.hold = null;
   }
 
   get current(): Hold | null {

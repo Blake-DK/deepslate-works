@@ -208,7 +208,7 @@ describe("the door after linking: the same order as at a join", () => {
     const limbo = new Limbo(env, {} as never, tail as never, () => {});
     const did: string[] = [];
     const l = limbo as unknown as Record<string, unknown>;
-    l.memberByUuid = async () => ({ id: "u1", role: "PLAYER", earlyAccess: true });
+    l.memberByUuid = async () => ({ id: "u1", role: "PLAYER", earlyAccess: true, verifiedAt: new Date(), guildMember: true, outsideAuth: false });
     l.atTheDoor = async () => blocked;
     l.holdMember = async (name: string, _u: string, _id: string, reason: BlockReason, inRoom: boolean) => { did.push(`hold ${name} ${reason} inRoom=${inRoom}`); };
     l.letIn = async (name: string) => { did.push(`let in ${name}`); return { ok: true, commands: 1 }; };

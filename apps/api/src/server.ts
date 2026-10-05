@@ -87,7 +87,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     if ((req.query as { fresh?: string }).fresh === "1") await serverMods.capture();
     return (await db.setting.findUnique({ where: { key: SERVER_MODS_KEY } }))?.value ?? null;
   });
-  const pings = new PingWatch(ampClient, tail, () => limbo.actionCtx, log);
+  const pings = new PingWatch(ampClient, tail, () => limbo.actionCtx, log, undefined, () => poller.fresh() !== null);
   const pregenWatch = new PregenWatch(tail);
   const pregen = new Pregen(ampClient, tail, pregenWatch, () => limbo.actionCtx, {
     load: async () => ((await db.setting.findUnique({ where: { key: PLAN_KEY } }))?.value as PregenPlan | undefined) ?? { mode: "off", area: null },
@@ -178,7 +178,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   // docs/34 §4 (W1.3): the season's clears and what a season says, from the same console lines. It does nothing
   // until a Season row says "running" (Admin → Seasons, W1.4).
   const seasonFile = currentSeason(env.REPO_DIR, log);
-  seasonRoutes(app, { amp: ampClient, tail, ctx: () => limbo.actionCtx, file: seasonFile, store: prismaSeasonStore, addEvent: (e) => prismaRecorderStore.addEvent(e) });
+  seasonRoutes(app, { amp: ampClient, tail, ctx: () => limbo.actionCtx, file: seasonFile, store: prismaSeasonStore, addEvent: (e) => prismaRecorderStore.addEvent(e), settle: () => seasons.settle() }); // settle: docs/35 R-15
   const seasons = new SeasonRecorder({
     file: seasonFile,
     store: prismaSeasonStore,
@@ -187,7 +187,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     advancements: async () => {
       if (tail.state !== 20) return null;
       const files = await listAdvancementFiles(ampClient);
-      return files ? (uuid) => readAdvancements(ampClient, uuid, files.get(uuid) ?? 0) : null;
+      return files ? (uuid) => readAdvancements(ampClient, uuid, files.get(uuid) ?? 0, log) : null;
     },
     log,
   });

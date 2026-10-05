@@ -29,8 +29,23 @@ export const CHANGELOG_OPENER = "What's new on the site and the server. Every up
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-/** One entry as a Discord message: the date in bold, a bullet per line. */
+/** Discord takes 2000 characters in one message and refuses a longer one outright. */
+export const DISCORD_MAX = 2000;
+/** The last line of an entry that did not fit. The test over CHANGES fails on it, so a real entry never ends this way. */
+export const CHANGE_CUT = "… and more: this update was too long for one message.";
+
+/** One entry as a Discord message: the date in bold, a bullet per line. Too long for one message: cut at a line break. */
 export function changeText(c: Change): string {
   const [y, m, d] = c.date.split("-").map(Number);
-  return [`**${d} ${MONTHS[(m ?? 1) - 1]} ${y}**`, ...c.lines.map((l) => `• ${l}`)].join("\n");
+  const lines = [`**${d} ${MONTHS[(m ?? 1) - 1]} ${y}**`, ...c.lines.map((l) => `• ${l}`)];
+  const whole = lines.join("\n");
+  if (whole.length <= DISCORD_MAX) return whole;
+  const kept: string[] = [];
+  let size = CHANGE_CUT.length;
+  for (const l of lines) {
+    if (size + l.length + 1 > DISCORD_MAX) break;
+    kept.push(l);
+    size += l.length + 1;
+  }
+  return [...kept, CHANGE_CUT].join("\n");
 }

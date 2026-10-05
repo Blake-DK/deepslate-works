@@ -46,6 +46,8 @@ const WAS: Record<HeldFor, string> = { closed: "not live", old: "old installer",
 /** The reasons someone who has to link is held for (`decideJoin`); every other reason in HeldPlayer is the door's. */
 const LINK_REASONS = new Set(["unknown uuid", "not linked", "left the discord server"]);
 type Known = Member & { id: string };
+/** What `decideJoin` asks of an account. */
+type Linked = { verifiedAt: Date | null; guildMember: boolean; outsideAuth?: boolean };
 
 export type JoinDecision = { action: "release" | "hold"; reason: string };
 
@@ -86,6 +88,8 @@ export class Limbo {
   /** Old lines have been read; the room is put right when the server's live answer to `list` arrives. */
   private resyncDue = false;
   private readonly store: HeldStore;
+  /** When this room began: a session opened before it was opened by a join an earlier run of api saw (`sawJoin`). */
+  private readonly bornAt = new Date();
 
   constructor(private readonly env: Env, private readonly amp: Amp, private readonly tail: ConsoleTail, private readonly log: (o: unknown, m: string) => void, store?: HeldStore) {
     this.store = store ?? prismaHeldStore(log);
@@ -152,7 +156,8 @@ export class Limbo {
   /**
    * After old lines have been read (api restarted, or AMP gave out a new session), on the server's live answer to
    * `list` (`names`): whoever was being held is held again, with what HeldPlayer kept; whoever is online, should be
-   * in the room and is not, is held. Members are left exactly where they are.
+   * in the room and is not, is held. Members whose join the door saw are left exactly where they are; a member
+   * whose join was only in the old lines (they came in while api restarted) meets the door now, as on a join (R-05).
    *
    * docs/31 B-03, B-04. A name with no UUID in memory is looked up among the members by its name; a name nobody
    * knows is left alone and said so in the log. It used to be held "by name only", with a code that did not exist,
@@ -162,7 +167,7 @@ export class Limbo {
     for (const name of names) {
       if (this.held.has(name)) continue;
       let uuid = this.tail.uuidByName.get(name) ?? null;
-      const select = { id: true, verifiedAt: true, guildMember: true, outsideAuth: true, mcUuid: true } as const;
+      const select = { id: true, verifiedAt: true, guildMember: true, outsideAuth: true, mcUuid: true, mcUsername: true, role: true, earlyAccess: true } as const;
       const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select }) : await db.user.findFirst({ where: { mcUsername: name }, select });
       if (!uuid && user?.mcUuid) uuid = user.mcUuid;
       const row = uuid ? await this.store.get(uuid) : await this.store.byName(name);
@@ -181,6 +186,27 @@ export class Limbo {
       const decision = decideJoin(user);
       this.log({ name, uuid, decision }, "resync");
       if (decision.action === "hold") await this.hold(name, uuid, decision.reason);
+      else if (user && !(await this.sawJoin(name, uuid))) {
+        this.log({ name, uuid }, "resync: joined while nobody was listening, at the door now");
+        await this.admit(name, uuid, user);
+      }
+    }
+  }
+
+  /**
+   * Did the door see this visit begin? Yes when this run of api read their join as it happened, or when a session of
+   * theirs is open that began before this run did (the run before saw the join). No for someone whose join line was
+   * only among the old lines. When the database cannot say, yes: a member who is playing is never pulled into the
+   * room on a guess (docs/31 B-03).
+   */
+  protected async sawJoin(name: string, uuid: string): Promise<boolean> {
+    if (this.lastJoin.has(name)) return true;
+    try {
+      const open = await db.session.findFirst({ where: { leftAt: null, joinedAt: { lt: this.bornAt }, mcUuid: { in: [uuid, `name:${name.toLowerCase()}`] } }, select: { id: true } });
+      return open !== null;
+    } catch (err) {
+      this.log({ name, err: String(err) }, "resync: could not look for their session; left alone");
+      return true;
     }
   }
 
@@ -205,25 +231,8 @@ export class Limbo {
     const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, verifiedAt: true, guildMember: true, outsideAuth: true, mcUsername: true, role: true, earlyAccess: true } }) : null;
     const decision = decideJoin(user);
     this.log({ name, uuid, decision }, "join");
-    if (decision.action === "release") {
-      if (user && user.mcUsername !== name) await db.user.update({ where: { id: user.id }, data: { mcUsername: name } }); // name change
-      // The door (`doorRule`, shared/access.ts): is the server open for them, live or early access? Then Play first.
-      // Admins are never held.
-      const blocked = user ? await this.atTheDoor(user) : null;
-      if (blocked) {
-        await this.holdMember(name, uuid ?? "", user!.id, blocked);
-        return;
-      }
-      // docs/31 B-02: they were being held when they left, so they stand in the room without their tag. With a
-      // place kept for them they go back to it; `link.release` would send them to spawn, and before that the room
-      // itself was taken for where they stood and they were sealed in it.
-      const kept = uuid ? await this.store.get(uuid) : null;
-      if (kept?.back) {
-        await this.releaseBack(name, { uuid: kept.mcUuid, code: "", since: Date.now(), lastReminder: Date.now(), kind: "play", userId: user?.id, back: kept.back, reason: kept.reason });
-        return;
-      }
-      if (kept) await this.store.remove(kept.mcUuid);
-      await runAction(this.amp, this.ctx, "link.release", { name }, null);
+    if (decision.action === "release" && user && uuid) {
+      await this.admit(name, uuid, user);
       return;
     }
     if (!uuid) {
@@ -234,6 +243,47 @@ export class Limbo {
       return;
     }
     await this.hold(name, uuid, decision.reason);
+  }
+
+  /** A linked member at the door, on joining or (`resync`) at the first look after a join nobody saw: held, or let in. */
+  private async admit(name: string, uuid: string, user: Known & { mcUsername: string | null }) {
+    if (user.mcUsername !== name) await this.nameChanged(user.id, name);
+    // The door (`doorRule`, shared/access.ts): is the server open for them, live or early access? Then Play first.
+    // Admins are never held.
+    const blocked = await this.atTheDoor(user);
+    if (blocked) {
+      await this.holdMember(name, uuid, user.id, blocked);
+      return;
+    }
+    // docs/31 B-02: they were being held when they left, so they stand in the room without their tag. With a
+    // place kept for them they go back to it; `link.release` would send them to spawn, and before that the room
+    // itself was taken for where they stood and they were sealed in it.
+    const kept = await this.store.get(uuid);
+    if (kept?.back) {
+      await this.releaseBack(name, { uuid: kept.mcUuid, code: "", since: Date.now(), lastReminder: Date.now(), kind: "play", userId: user.id, back: kept.back, reason: kept.reason });
+      return;
+    }
+    if (kept) await this.store.remove(kept.mcUuid);
+    await runAction(this.amp, this.ctx, "link.release", { name }, null);
+  }
+
+  /**
+   * Their Minecraft name is not the one the portal has. `mcUsername` is unique: when another account still carries
+   * this name (its owner renamed, and this player took the name), that one gives it up first and gets its own new
+   * name at its next join. Never throws: a name that could not be written must not stop the join (R-30).
+   */
+  private async nameChanged(userId: string, name: string) {
+    const write = () => db.user.update({ where: { id: userId }, data: { mcUsername: name } });
+    try {
+      await write();
+    } catch {
+      try {
+        await db.user.updateMany({ where: { mcUsername: name, id: { not: userId } }, data: { mcUsername: null } });
+        await write();
+      } catch (err) {
+        this.log({ name, userId, err: String(err) }, "could not write their new Minecraft name; the join goes on");
+      }
+    }
   }
 
   private liveSeen: { at: number; live: boolean } | null = null;
@@ -309,6 +359,7 @@ export class Limbo {
     this.held.delete(name);
     const r = await runAction(this.amp, this.ctx, "limbo.releaseBack", { name, back: h.back ?? null }, null);
     if (r.ok && h.uuid) await this.store.remove(h.uuid); // kept when the command did not go through: the next join or round tries again
+    if (!r.ok && this.tail.online.has(name)) this.held.set(name, h); // still in the room: the next round has to see them (R-02)
     await audit({ userId: h.userId ?? null, action: "join.ready", params: { name, uuid: h.uuid, back: Boolean(h.back), was: WAS[h.kind === "link" ? "play" : h.kind] }, result: r.ok ? "OK" : "FAILED", detail: r.detail ?? null });
   }
 
@@ -370,36 +421,45 @@ export class Limbo {
     }
   }
 
+  private ticking = false;
+
   /** Every 5 s while anyone is held: drag them back, open the door when it may, the action bar, kick the idle. (The prompt has a timer of its own.) */
   private async tick() {
-    if (this.held.size === 0 || this.tail.state !== 20) return;
-    await runAction(this.amp, this.ctx, "limbo.keep", {}, null);
-    const now = Date.now();
-    for (const [name, h] of this.held) {
-      if (now - h.since > IDLE_KICK_MS) {
-        await runAction(this.amp, this.ctx, KICK[h.kind], { name }, null);
-        this.held.delete(name); // HeldPlayer keeps them: they come back to the room, and later to where they stood
-        continue;
-      }
-      if (h.kind !== "link") {
-        // The site may have gone live, the flag may have been given, they may have voted or pressed Play: looked at
-        // every round, so that the door opens within seconds.
-        const user = h.userId ? await db.user.findUnique({ where: { id: h.userId }, select: { id: true, role: true, earlyAccess: true } }) : null;
-        const blocked = user ? await this.atTheDoor(user) : null;
-        if (user && blocked === null) {
-          await this.releaseBack(name, h);
+    if (this.held.size === 0 || this.tail.state !== 20 || this.ticking) return;
+    this.ticking = true; // a slow AMP must not have two rounds release the same player twice
+    try {
+      await runAction(this.amp, this.ctx, "limbo.keep", {}, null);
+      const now = Date.now();
+      // A copy: a release that failed puts them back in `held`, and the round must not come round to them again.
+      for (const [name, h] of [...this.held]) {
+        if (this.held.get(name) !== h) continue; // let in, or gone, while the round was at somebody else
+        if (now - h.since > IDLE_KICK_MS) {
+          await runAction(this.amp, this.ctx, KICK[h.kind], { name }, null);
+          this.held.delete(name); // HeldPlayer keeps them: they come back to the room, and later to where they stood
           continue;
         }
-        const kind = blocked ? waitFor(blocked) : h.kind;
-        if (user && blocked && kind !== h.kind) {
-          // open for them now, but Play first has not been met (or the other way round): the other words, at once
-          h.kind = kind;
-          await this.prompt(name, h, now);
-          continue;
+        if (h.kind !== "link") {
+          // The site may have gone live, the flag may have been given, they may have voted or pressed Play: looked at
+          // every round, so that the door opens within seconds.
+          const user = h.userId ? await db.user.findUnique({ where: { id: h.userId }, select: { id: true, role: true, earlyAccess: true } }) : null;
+          const blocked = user ? await this.atTheDoor(user) : null;
+          if (user && blocked === null) {
+            await this.releaseBack(name, h);
+            continue;
+          }
+          const kind = blocked ? waitFor(blocked) : h.kind;
+          if (user && blocked && kind !== h.kind) {
+            // open for them now, but Play first has not been met (or the other way round): the other words, at once
+            h.kind = kind;
+            await this.prompt(name, h, now);
+            continue;
+          }
         }
+        if (h.kind === "link" && h.code) await runAction(this.amp, this.ctx, "limbo.bookCheck", { name, code: h.code }, null); // dropped: another within 5 s
+        if (now - h.lastReminder >= BAR_GAP_MS) await runAction(this.amp, this.ctx, "limbo.bar", h.kind === "link" ? { name, kind: h.kind, code: h.code } : { name, kind: h.kind }, null);
       }
-      if (h.kind === "link" && h.code) await runAction(this.amp, this.ctx, "limbo.bookCheck", { name, code: h.code }, null); // dropped: another within 5 s
-      if (now - h.lastReminder >= BAR_GAP_MS) await runAction(this.amp, this.ctx, "limbo.bar", h.kind === "link" ? { name, kind: h.kind, code: h.code } : { name, kind: h.kind }, null);
+    } finally {
+      this.ticking = false;
     }
   }
 
@@ -412,19 +472,23 @@ export class Limbo {
     // They have just linked: the door as for anybody who walks in (`doorReason`), open for them and then Play
     // first. Held, they stay in the room with that line (not open yet, or press Play) instead of the link line.
     const user = await this.memberByUuid(uuid);
-    const blocked = user ? await this.atTheDoor(user) : null;
-    if (user && blocked) {
+    // Only for a UUID the portal has linked to a member (R-41): this is called with a UUID, and one that belongs to
+    // nobody, or to somebody who has left the Discord server, stays in the room.
+    if (!user || decideJoin(user).action !== "release") return { released: false };
+    const blocked = await this.atTheDoor(user);
+    if (blocked) {
       await this.holdMember(name, uuid, user.id, blocked, true);
       return { released: false, name };
     }
     if (was?.back) {
       // linked again after leaving the Discord server while a place was kept for them: back to it, not to spawn
-      await this.releaseBack(name, { ...was, userId: user?.id });
-      return { released: true, name };
+      await this.releaseBack(name, { ...was, kind: "play", code: "", userId: user.id }); // a member now: if the command fails, the next round tries again
+      return { released: !this.held.has(name), name }; // a release that failed has put them back
     }
     this.held.delete(name);
     const r = await this.letIn(name);
     if (r.ok) await this.store.remove(uuid);
+    else if (was) this.held.set(name, { ...was, kind: "play", code: "", userId: user.id }); // still in the room, as a member now: the next round tries again (R-02)
     return { released: r.ok, name };
   }
 
@@ -452,8 +516,8 @@ export class Limbo {
     return r.ok ? { ok: true } : { ok: false, code: "failed" };
   }
 
-  protected memberByUuid(uuid: string): Promise<Known | null> {
-    return db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, role: true, earlyAccess: true } });
+  protected memberByUuid(uuid: string): Promise<(Known & Linked) | null> {
+    return db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, role: true, earlyAccess: true, verifiedAt: true, guildMember: true, outsideAuth: true } });
   }
 
   protected letIn(name: string) {

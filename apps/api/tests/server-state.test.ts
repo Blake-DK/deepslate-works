@@ -78,7 +78,7 @@ describe("wakeDecision", () => {
 
 const live = (stateCode: number, players: string[] = []): LiveStatus => ({ state: `S${stateCode}`, stateCode, availability: "offline", players, ampPlayers: players, online: [], maxPlayers: 10, cpu: 0, memMb: 0, memMaxMb: 0, tps: null, uptime: null, at: new Date().toISOString() });
 
-function setup(o: { state?: number | null; crashed?: boolean; member?: { role: "ADMIN" | "PLAYER"; earlyAccess?: boolean } | null; live?: boolean } = {}) {
+function setup(o: { state?: number | null; crashed?: boolean; member?: { role: "ADMIN" | "PLAYER"; earlyAccess?: boolean } | null; live?: boolean; liveAfterMs?: number } = {}) {
   let clock = 1_000_000;
   const now = () => clock;
   const calls: string[] = [];
@@ -93,7 +93,7 @@ function setup(o: { state?: number | null; crashed?: boolean; member?: { role: "
   let current: LiveStatus | null = o.state === null ? null : live(o.state ?? 30);
   const poller = { fresh: () => current, lastError: o.state === null ? "AMP login failed: unknown" : null };
   const view = new ServerView({ poller: poller as never, wake, lastDown: () => (o.crashed ? "crash" : null), sleep: () => ({ on: true, delayMin: 5 }), tunnelUp: () => true, now });
-  const deps: WakeDeps = { member: async () => (o.member === null ? null : { role: "PLAYER", earlyAccess: false, displayName: "Pabulum", ...(o.member ?? {}) }), live: async () => o.live ?? true };
+  const deps: WakeDeps = { member: async () => (o.member === null ? null : { role: "PLAYER", earlyAccess: false, displayName: "Pabulum", ...(o.member ?? {}) }), live: async () => { if (o.liveAfterMs) await new Promise((r) => setTimeout(r, o.liveAfterMs)); return o.live ?? true; } };
   const f = Fastify();
   f.addHook("onRequest", serviceAuth("secret"));
   wakeRoutes(f, wake, view, deps);
@@ -132,6 +132,13 @@ describe("POST /server/wake", () => {
     t.set(10);
     const again = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: {} });
     expect([again.statusCode, again.json().result]).toEqual([200, "already"]);
+    expect(t.calls).toEqual(["Start"]);
+  });
+  it("sends one start for two requests a moment apart (R-32)", async () => {
+    const t = setup({ state: 30, liveAfterMs: 5 }); // both are still asking the database when the second arrives
+    const press = () => t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: {} });
+    const [a, b] = await Promise.all([press(), press()]);
+    expect([a.json().result, b.json().result].sort()).toEqual(["already", "started"]);
     expect(t.calls).toEqual(["Start"]);
   });
   it("never starts a server that is switched off, crashed, busy or out of reach", async () => {
@@ -200,5 +207,39 @@ describe("GET /status when AMP can't be reached", () => {
     statusRoutes(f, amp, poller as never, undefined, () => ({}), view);
     const r = await f.inject({ url: "/status", headers: { authorization: "Bearer secret" } });
     expect([r.statusCode, r.json().server, r.json().reason]).toEqual([200, "unreachable", "login refused"]);
+  });
+
+  const withPoller = (lastError: string | null, getStatus: () => Promise<AmpStatus>) => {
+    const amp = new (class extends MockAmp {
+      override getStatus(): Promise<AmpStatus> { return getStatus(); }
+    })();
+    const poller = { fresh: () => null, lastError };
+    const view = new ServerView({ poller: poller as never, wake: new Wake(amp, async () => {}), lastDown: () => null, sleep: () => ({ on: null, delayMin: null }), tunnelUp: () => false });
+    const f = Fastify();
+    f.addHook("onRequest", serviceAuth("secret"));
+    statusRoutes(f, amp, poller as never, undefined, () => ({}), view);
+    return () => f.inject({ url: "/status", headers: { authorization: "Bearer secret" } });
+  };
+
+  it("does not ask AMP again when the poller has just failed to (R-13)", async () => {
+    let asked = 0;
+    const get = withPoller("AMP timeout", async () => { asked++; throw new Error("AMP timeout"); });
+    const r = await get();
+    expect([r.statusCode, r.json().server, r.json().reason]).toEqual([200, "unreachable", "tunnel down"]);
+    expect(asked).toBe(0);
+  });
+
+  it("asks once for requests that arrive together when the poller has nothing to say (R-13)", async () => {
+    let asked = 0;
+    const get = withPoller(null, async () => {
+      asked++;
+      await new Promise((r) => setTimeout(r, 10));
+      return { state: "Sleeping", stateCode: 30, players: [], maxPlayers: 20, cpu: 0, memMb: 0, memMaxMb: 6144, tps: null, uptime: "0" };
+    });
+    const [a, b, c] = await Promise.all([get(), get(), get()]);
+    expect([a.json().server, b.json().server, c.json().server]).toEqual(["asleep", "asleep", "asleep"]);
+    expect(asked).toBe(1);
+    await get(); // and again once that answer has gone out
+    expect(asked).toBe(2);
   });
 });

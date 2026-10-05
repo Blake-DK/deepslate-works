@@ -1,8 +1,8 @@
 import type { ConsoleEvent } from "../amp/console.js";
 import type { NewEvent } from "../events/recorder.js";
-import { findByTitle, goalMarks, goalProgress, names, opensAt, scoreboard, type ClearKind, type SeasonFile } from "../shared/season.js";
+import { findByTitle, goalMarks, goalProgress, names, opensAt, scoreboard, ukDay, type ClearKind, type SeasonFile } from "../shared/season.js";
 import { advancementKey, doneAt } from "./advancements.js";
-import type { ClearSource, NewClear, SeasonRow, SeasonStore } from "./store.js";
+import { GROUP_MS, type ClearSource, type NewClear, type SeasonRow, type SeasonStore } from "./store.js";
 
 // docs/20 §7, docs/34 §4: what the season remembers. The console says "<name> has completed the challenge [<title>]";
 // the title is looked up in the current season's file, and a boss or a trial becomes a SeasonClear. Everything a
@@ -24,11 +24,14 @@ export type SeasonDeps = {
   later?: (fn: () => void, ms: number) => void;
 };
 
-export const GROUP_MS = 5_000;
+export { GROUP_MS };
 /** A "has awoken" line comes once per boss in this long; the datapack takes the advancement back after as long. */
 const WAKE_QUIET_MS = 15 * 60_000;
 /** Something that opened longer ago than this is marked as said without saying it (api was off, or the season was started late). */
 const STALE_MS = 24 * 3_600_000;
+/** "Ends tomorrow at 19:00" is only true for so long, and "tonight at 20:00" only until the finale begins. */
+const DAY_TO_GO_LATE_MS = 6 * 3_600_000;
+const FINALE_LATE_MS = 3_600_000;
 const LEADER_QUIET_MS = 24 * 3_600_000;
 const WEEK_MS = 7 * 86_400_000;
 
@@ -112,22 +115,41 @@ export class SeasonRecorder {
     this.pending.delete(key);
     if (!batch) return;
     const live = await this.running();
-    if (!live) return;
+    if (!live) {
+      this.d.log({ key, names: batch.clears.map((c) => c.mcName) }, "season: a group's clears were dropped, no season is running");
+      return;
+    }
     await this.write(live.file, batch, "console");
     await this.after(live.file);
   }
 
-  /** Stores one boss's or trial's clears and says so in one event. Returns how many were new. */
+  /**
+   * Before End freezes the result: every group still waiting out its five seconds is written now, and the safety
+   * net looks at the files once more. Never rejects (the queue logs what fails).
+   */
+  async settle(): Promise<void> {
+    await this.chain; // console lines still queued become waiting groups first
+    for (const key of [...this.pending.keys()]) this.enqueue(() => this.flush(key));
+    await this.fromFiles();
+  }
+
+  /**
+   * Stores one boss's or trial's clears and says so in one event: two when some of them were first on the server
+   * and some came after (the files can give both at once). Returns how many were new.
+   */
   private async write(file: SeasonFile, batch: Pending, source: ClearSource): Promise<number> {
-    const { added, first } = await this.d.store.addClears(file.id, batch.clears);
-    if (added.length === 0) return 0;
-    const who = names(added.map((c) => c.mcName));
-    const early = added.every((c) => c.early) ? " (found early)" : "";
-    const message = batch.kind === "boss"
-      ? first ? `${batch.title} has fallen for the first time, to ${who}${early}` : `${who} defeated ${batch.title}${early}`
-      : first ? `${who} ${added.length === 1 ? "is" : "are"} the first to finish the trial ${batch.title}${early}` : `${who} finished the trial ${batch.title}${early}`;
-    const at = new Date(Math.max(...added.map((c) => c.at.getTime())));
-    await this.event(file, at, added[0]!.mcUuid, message, { what: batch.kind, id: batch.itemId, title: batch.title, names: added.map((c) => c.mcName), uuids: added.map((c) => c.mcUuid), first, early: early !== "", source });
+    const { added } = await this.d.store.addClears(file.id, batch.clears);
+    for (const first of [true, false]) {
+      const part = added.filter((c) => c.first === first);
+      if (part.length === 0) continue;
+      const who = names(part.map((c) => c.mcName));
+      const early = part.every((c) => c.early) ? " (found early)" : "";
+      const message = batch.kind === "boss"
+        ? first ? `${batch.title} has fallen for the first time, to ${who}${early}` : `${who} defeated ${batch.title}${early}`
+        : first ? `${who} ${part.length === 1 ? "is" : "are"} the first to finish the trial ${batch.title}${early}` : `${who} finished the trial ${batch.title}${early}`;
+      const at = new Date(Math.max(...part.map((c) => c.at.getTime())));
+      await this.event(file, at, part[0]!.mcUuid, message, { what: batch.kind, id: batch.itemId, title: batch.title, names: part.map((c) => c.mcName), uuids: part.map((c) => c.mcUuid), first, early: early !== "", source });
+    }
     return added.length;
   }
 
@@ -155,8 +177,10 @@ export class SeasonRecorder {
 
   /**
    * The clock, once a minute: a trial or a boss that has just opened, a week and a day to go, the finale an hour
-   * before it (docs/21 §6). Each is said once
-   * (Season.marks), and not at all when its moment passed more than a day ago.
+   * before it (docs/21 §6). Each is said once (Season.marks), and not at all when its moment passed too long ago
+   * for the line to be true still: a day for what opened, six hours and the same evening for "ends tomorrow", an
+   * hour for "tonight at". The line is said before its mark is put, so one that could not be written is said at
+   * the next minute and not lost.
    */
   tick(): Promise<void> {
     this.enqueue(async () => {
@@ -165,24 +189,28 @@ export class SeasonRecorder {
       const { file } = live;
       const at = this.now();
       const t = at.getTime();
-      const due = async (key: string, when: number, say: () => Promise<unknown>) => {
-        if (when > t) return;
-        if (!(await this.d.store.mark(file.id, key))) return;
-        if (t - when < STALE_MS) await say();
+      const said = new Set(live.row.marks.done ?? []);
+      const due = async (key: string, when: number, late: number, say: () => Promise<unknown>) => {
+        if (when > t || said.has(key)) return;
+        if (t - when < late) await say();
+        await this.d.store.mark(file.id, key);
       };
+      const ends = Date.parse(file.endsAt);
+      // "tomorrow" stops being true at midnight in the UK, however few hours have passed
+      const dayLate = ukDay(new Date(ends)) - ukDay(at) === 1 ? DAY_TO_GO_LATE_MS : 0;
       const start = Date.parse(file.startsAt);
       for (const x of file.trials) {
-        await due(`trial:${x.id}`, Date.parse(x.opensAt), () => this.event(file, at, null, `A new trial is open: ${x.title}${x.hint ? `. ${x.hint}` : ""}`, { what: "trial_open", id: x.id, title: x.title }));
+        await due(`trial:${x.id}`, Date.parse(x.opensAt), STALE_MS, () => this.event(file, at, null, `A new trial is open: ${x.title}${x.hint ? `. ${x.hint}` : ""}`, { what: "trial_open", id: x.id, title: x.title }));
       }
       for (const b of file.bosses) {
         if (!b.opensAt || Date.parse(b.opensAt) <= start) continue;
-        await due(`boss:${b.id}`, Date.parse(b.opensAt), () => this.event(file, at, null, `${b.title} joins the ladder${b.where ? `. ${b.where}` : ""}`, { what: "boss_open", id: b.id, title: b.title }));
+        await due(`boss:${b.id}`, Date.parse(b.opensAt), STALE_MS, () => this.event(file, at, null, `${b.title} joins the ladder${b.where ? `. ${b.where}` : ""}`, { what: "boss_open", id: b.id, title: b.title }));
       }
-      await due("week_to_go", Date.parse(file.endsAt) - WEEK_MS, () => this.event(file, at, null, `A week to go in ${file.name}`, { what: "week_to_go" }));
-      await due("day_to_go", Date.parse(file.endsAt) - 86_400_000, () => this.event(file, at, null, `${file.name} ends tomorrow at ${ukClock(new Date(file.endsAt))} UK`, { what: "day_to_go" }));
+      await due("week_to_go", ends - WEEK_MS, STALE_MS, () => this.event(file, at, null, `A week to go in ${file.name}`, { what: "week_to_go" }));
+      await due("day_to_go", ends - 86_400_000, dayLate, () => this.event(file, at, null, `${file.name} ends tomorrow at ${ukClock(new Date(ends))} UK`, { what: "day_to_go" }));
       if (file.finale) {
         const f = file.finale;
-        await due("finale", Date.parse(f.at) - 3_600_000, () => this.event(file, at, null, `${f.title}: tonight at ${ukClock(new Date(f.at))} UK`, { what: "finale", title: f.title, boss: f.boss }));
+        await due("finale", Date.parse(f.at) - 3_600_000, FINALE_LATE_MS, () => this.event(file, at, null, `${f.title}: tonight at ${ukClock(new Date(f.at))} UK`, { what: "finale", title: f.title, boss: f.boss }));
       }
     });
     return this.chain;

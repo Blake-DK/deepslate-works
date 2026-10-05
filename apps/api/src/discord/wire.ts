@@ -152,8 +152,12 @@ export function makeBot(w: BotWiring): Bot | null {
 /** The Announcer's view of the bot: votes with buttons as its own forum posts. */
 export function votePoster(bot: Bot): VotePoster {
   return {
+    // Posting is REST: it does not need the gateway this second. A reconnect must not drop a crash alert (R-06).
     get inGuild() {
-      return bot.inGuild && bot.gateway.state === "on";
+      return bot.inGuild;
+    },
+    get connecting() {
+      return bot.gateway.state === "connecting" || bot.gateway.state === "reconnecting";
     },
     createPost: (forum, title, message, tag) => bot.createPost(forum, title, message, tag),
     edit: (channel, id, message) => bot.edit(channel, id, message),

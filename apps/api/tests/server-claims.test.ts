@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../src/audit.js", () => ({ audit: async () => {} }));
+const audits = vi.hoisted(() => [] as Array<{ action: string; result: string }>);
+vi.mock("../src/audit.js", () => ({ audit: async (a: { action: string; result: string }) => void audits.push(a) }));
 
 import { actions, parsePlace, parsePos, spawnClaimArea } from "../src/actions/registry.js";
 import { runAction, setGapWait } from "../src/actions/run.js";
@@ -39,5 +40,25 @@ describe("opac.serverClaims", () => {
     const amp = { call: async () => ({}) };
     await runAction(amp as never, ctx(null), "world.standable", { x: 0, y: 105, z: 0 }, null);
     expect(waits).toEqual([]);
+  });
+});
+
+// docs/35 R-03: with AMP out of reach the questions asked every few seconds each wrote a FAILED row, kept for good.
+describe("an action that fails", () => {
+  const down = { call: async () => { throw new Error("AMP timeout"); } };
+  it("is written down when a person or the portal did something", async () => {
+    audits.length = 0;
+    const r = await runAction(down as never, ctx(null), "world.standable", { x: 0, y: 105, z: 0 }, "admin1");
+    expect(r).toMatchObject({ ok: false, commands: 0, detail: "AMP timeout" });
+    expect(audits).toEqual([expect.objectContaining({ action: "world.standable", result: "FAILED" })]);
+  });
+  it("is not written down for the quiet ones, and the answer is the same", async () => {
+    audits.length = 0;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    for (let i = 0; i < 3; i++) expect(await runAction(down as never, ctx(null), "server.pings", { name: "bramble09" }, null)).toEqual({ ok: false, commands: 0, detail: "AMP timeout" });
+    expect(await runAction(down as never, ctx(null), "limbo.remind", { name: "bramble09", code: "ABCDEF" }, null)).toMatchObject({ ok: false });
+    expect(audits).toEqual([]);
+    expect(warn).toHaveBeenCalledTimes(2); // once for each action, not once a round
+    warn.mockRestore();
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Announcer, type FeedState, type FeedStore, type PostRow } from "../src/discord/announcer.js";
 import type { Switches } from "../src/discord/lines.js";
 import { Webhook } from "../src/discord/webhook.js";
-import { CHANGES, changeText, type Change } from "../src/changelog.js";
+import { CHANGE_CUT, CHANGES, changeText, type Change } from "../src/changelog.js";
 
 // The change log (Alex, 2026-10-04): one forum post "Change log" in season-updates; every deploy's entry is a reply in it.
 
@@ -49,9 +49,10 @@ function setup(changes: Change[], opts: { updates?: boolean; answer?: (c: Call) 
     switches: async () => SW,
     brand: async () => ({ name: "Deepslate Works", avatar: null }),
   };
-  const make = (list: Change[]) => new Announcer({ store, feed, admin: null, updates, changes: list, portal: "https://deepslate.dsw.test", log: () => {}, now: () => new Date(clock) });
+  const logs: string[] = [];
+  const make = (list: Change[]) => new Announcer({ store, feed, admin: null, updates, changes: list, portal: "https://deepslate.dsw.test", log: (_o, m) => void logs.push(m), now: () => new Date(clock) });
   const sent = () => calls.filter((c) => c.method === "POST");
-  return { a: make(changes), make, posts, sent, later: (ms: number) => void (clock += ms) };
+  return { a: make(changes), make, posts, store, sent, logs, later: (ms: number) => void (clock += ms) };
 }
 
 describe("the change log in Discord", () => {
@@ -118,6 +119,50 @@ describe("the change log in Discord", () => {
   });
 });
 
+  it("an entry Discord refuses for good is skipped, said once, and does not hold up the one after it", async () => {
+    const t = setup([ONE, TWO], { answer: (c) => (String(c.body.content).includes("First thing.") ? new Response(JSON.stringify({ code: 50035, message: "Invalid Form Body" }), { status: 400 }) : null) });
+    await t.a.round();
+    expect(t.sent().map((c) => String(c.body.content).split("\n")[0])).toEqual(["What's new on the site and the server. Every update adds a reply here, newest at the bottom.", "**4 October 2026**", "**1 November 2026**"]);
+    expect(t.posts.get("changelog:a")?.messageId).toBe("");
+    expect(t.posts.get("changelog:b")?.messageId).toBeTruthy();
+    expect(t.logs).toEqual(["discord change log: Discord refused this entry; it is skipped"]);
+    t.later(61_000);
+    await t.a.round();
+    expect(t.sent()).toHaveLength(3); // not tried for ever
+  });
+
+  it("the database failing after Discord took a reply does not post it a second time", async () => {
+    const t = setup([ONE]);
+    const save = t.store.savePost;
+    let down = true;
+    t.store.savePost = async (row) => {
+      if (down) throw new Error("database away");
+      await save(row);
+    };
+    await t.a.round();
+    expect(t.sent()).toHaveLength(2); // the post and the entry, though neither row could be written
+    expect(t.posts.size).toBe(0);
+    down = false;
+    t.later(61_000);
+    await t.a.round();
+    expect(t.sent()).toHaveLength(2);
+    expect([...t.posts.keys()].sort()).toEqual(["changelog", "changelog:a"]); // written once the database is back
+    await t.make([ONE, TWO]).round(); // and after a restart only the new entry is posted
+    expect(t.sent()).toHaveLength(3);
+  });
+
+  it("an entry too long for one Discord message is cut at a line break and says so", () => {
+    const long: Change = { id: "long", date: "2026-10-05", lines: Array.from({ length: 40 }, (_, i) => `Line ${i + 1} ${"x".repeat(80)}`) };
+    const text = changeText(long);
+    expect(text.length).toBeLessThanOrEqual(2000);
+    const lines = text.split("\n");
+    expect(lines[0]).toBe("**5 October 2026**");
+    expect(lines.at(-1)).toBe(CHANGE_CUT);
+    expect(lines.slice(1, -1).every((l, i) => l === `• ${long.lines[i]}`)).toBe(true); // whole lines only
+    expect(lines.length).toBeGreaterThan(10);
+  });
+});
+
 describe("the entries in the repo", () => {
   it("have ids of their own, a real date, and fit a Discord message", () => {
     expect(new Set(CHANGES.map((c) => c.id)).size).toBe(CHANGES.length);
@@ -125,7 +170,9 @@ describe("the entries in the repo", () => {
       expect(c.id).toMatch(/^[a-z0-9-]{3,60}$/);
       expect(c.date).toMatch(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/);
       expect(c.lines.length).toBeGreaterThan(0);
+      // whole, in one message: Discord takes 2000 characters, and a longer entry would be posted cut short
       expect(changeText(c).length).toBeLessThanOrEqual(2000);
+      expect(changeText(c)).not.toContain(CHANGE_CUT);
     }
   });
 });

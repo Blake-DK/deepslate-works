@@ -10,7 +10,8 @@ import { pauseDiscordAction, saveDiscordAction, saveDiscordBotAction, testDiscor
 import { BOT_SWITCHES, SWITCHES, UPDATES } from "./switches";
 import { Check } from "@/components/ui/check";
 import { cn } from "@/lib/utils";
-import { fieldClasses } from "@/components/ui/input";
+import { fieldClasses, Input, Label } from "@/components/ui/input";
+import { saveBrandingAction } from "../branding/actions";
 
 type LastSend = { at: string; what: string; ok: boolean; error?: string } | null;
 type Hook = ({ state: "unset" } | { state: "refused" } | { state: "unreachable"; error: string } | { state: "ok"; name: string; channel: string | null } | { state: "failing"; name: string; channel: string | null; error: string }) & { last?: LastSend };
@@ -46,13 +47,14 @@ function where(h: Hook, env: string): React.ReactNode {
 
 const SAVED: Record<string, string> = { discord: "Saved.", paused: "The feed is paused: nothing is posted until you switch it back on.", resumed: "The feed is on again. What happened while it was paused is not posted." };
 
-/** docs/21 §7: Admin → Site settings → Discord. */
-export default async function DiscordSection({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string; detail?: string; tested?: string; testError?: string }> }) {
+/** docs/21 §7, and docs/35 for where it sits: Admin → Discord, one tab for each of its parts. */
+export default async function DiscordSection({ searchParams, tab }: { searchParams: Promise<{ saved?: string; error?: string; detail?: string; note?: string; tested?: string; testError?: string }>; tab: "connection" | "bot" | "posted" }) {
   const admin = await requireAdmin();
-  const [q, sw, privacy, overview] = await Promise.all([
+  const [q, sw, privacy, branding, overview] = await Promise.all([
     searchParams,
     getSection("discord"),
     getSection("privacy"),
+    getSection("branding"),
     apiFetch<Overview>("/discord", { caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 12_000 }).catch(() => null),
   ]);
   const feedSet = overview ? overview.feed.state !== "unset" : false;
@@ -60,10 +62,12 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
   const twoChannels = Boolean(overview && ((overview.updates && overview.updates.state !== "unset") || (overview.bot && overview.bot.state !== "unset" && overview.bot.state !== "no_guild")));
   return (
     <div className="space-y-4">
-      {q.saved && <Alert tone="success">{SAVED[q.saved] ?? "Saved."}</Alert>}
-      {q.error && <Alert tone="error">Not saved. {q.detail}</Alert>}
+      {q.saved && <Alert tone="success">{SAVED[q.saved] ?? "Saved."} {q.note}</Alert>}
+      {/* the invite link is saved with the branding, which puts its reason in `error` itself */}
+      {q.error && <Alert tone="error">Not saved. {q.detail ?? (q.error === "discord" ? "" : q.error)}</Alert>}
       {q.tested && <Alert tone="success">Discord took the test message. Look in the {q.tested === "admin" ? "admin channel" : q.tested === "updates" ? "forum season-updates (a new post)" : "chat channel"}.</Alert>}
       {q.testError && <Alert tone="error">The test message did not arrive: {q.testError}</Alert>}
+      {tab === "connection" && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -83,7 +87,7 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
               <dt className="font-medium">season-updates</dt>
               <dd>{!overview.updates || overview.updates.state === "unset" ? <>No webhook set{overview.bot && overview.bot.state !== "unset" ? <>: votes, news and the season are not posted. Ask the VPS session to add <span className="font-mono">DISCORD_WEBHOOK_UPDATES</span>.</> : <> (optional): votes and news go to #game-chat as before.</>}</> : where(overview.updates, "DISCORD_WEBHOOK_UPDATES")}</dd>
               <dt className="font-medium">Admin channel</dt>
-              <dd>{overview.admin.state === "unset" ? <>None. Pick a private channel as the admin channel in the Bot part below; crashes and problems are not posted until then.</> : where(overview.admin, "DISCORD_WEBHOOK_ADMIN")}</dd>
+              <dd>{overview.admin.state === "unset" ? <>None. Pick a private channel as the admin channel on the Channels &amp; bot tab; crashes and problems are not posted until then.</> : where(overview.admin, "DISCORD_WEBHOOK_ADMIN")}</dd>
             </dl>
           )}
           <form action={testDiscordAction.bind(null, "feed")} className="flex flex-wrap gap-2">
@@ -98,6 +102,23 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
           </form>
         </CardContent>
       </Card>
+      )}
+      {tab === "connection" && (
+      <Card data-testid="discord-invite">
+        <CardHeader>
+          <CardTitle>Invite link</CardTitle>
+          <CardDescription>The link to the group&apos;s Discord server that the site shows: in the footer and wherever somebody is told to join it. Empty: no link is shown.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={saveBrandingAction} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="from" value="invite" />
+            <div className="min-w-0 flex-1 sm:max-w-md"><Label htmlFor="discordInvite">Discord invite link</Label><Input id="discordInvite" name="discordInvite" type="url" defaultValue={branding.discordInvite} maxLength={200} placeholder="https://discord.gg/…" /></div>
+            <Button type="submit">Save</Button>
+          </form>
+        </CardContent>
+      </Card>
+      )}
+      {tab === "bot" && (
       <Card>
         <CardHeader>
           <CardTitle>Bot</CardTitle>
@@ -131,7 +152,7 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
                   <span className="mt-1 block text-muted-foreground">Crashes and problems, for admins only: pick a private channel, and let Deepslate Works into it (Edit channel → Permissions → add the bot), or the test says it cannot write there.</span>
                 </label>
               </div>
-              {!privacy.chat && <p className="text-sm text-muted-foreground">Chat relay is off because chat logging is off (Site settings → Privacy).</p>}
+              {!privacy.chat && <p className="text-sm text-muted-foreground">Chat relay is off because chat logging is off (Site → Privacy &amp; data).</p>}
               {BOT_SWITCHES.map((s) => (
                 <label key={s.key} className="flex cursor-pointer items-start gap-3 rounded-[4px] border p-3">
                   <Check className="mt-1" type="checkbox" name={s.key} defaultChecked={sw[s.key]} />
@@ -143,6 +164,8 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
           )}
         </CardContent>
       </Card>
+      )}
+      {tab === "posted" && (
       <Card>
         <CardHeader>
           <CardTitle>What is posted</CardTitle>
@@ -160,7 +183,8 @@ export default async function DiscordSection({ searchParams }: { searchParams: P
           </form>
         </CardContent>
       </Card>
-      {overview && overview.recent.length > 0 && (
+      )}
+      {tab === "connection" && overview && overview.recent.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Last messages sent</CardTitle>

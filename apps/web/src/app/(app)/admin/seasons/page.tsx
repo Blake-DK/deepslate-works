@@ -81,7 +81,7 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
               )}
               {(state === null || state === "upcoming") && (
                 <form action={seasonOpAction.bind(null, "start")} className="space-y-2">
-                  <p className="text-muted-foreground">Starting begins the recording: from then on a boss kill or a finished trial counts. Do it when the season&apos;s datapack is on the server (Pack → Build, then Sync), not before.</p>
+                  <p className="text-muted-foreground">Starting begins the recording: from then on a boss kill or a finished trial counts. Do it when the season&apos;s datapack is on the server (Modpack → Build, then Sync), not before.</p>
                   <div className="flex flex-wrap items-center gap-2">
                     <label className="flex items-center gap-2"><Check type="checkbox" name="sure" /> I&apos;m sure</label>
                     <Button type="submit" size="sm">Start the season</Button>

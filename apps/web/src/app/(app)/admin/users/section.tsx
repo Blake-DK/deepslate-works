@@ -28,6 +28,8 @@ const ERRORS: Record<string, string> = {
 
 const PC = { HIGH: ["high", "good"], MID: ["mid", "neutral"], LOW: ["low", "warn"] } as const;
 const WIDTHS = ["25%", "20%", "9%", "14%", "11%", "12%", "56px"];
+// docs/35: once the site is live the early-access switch changes nothing, so its column goes (it is on Joining → Rules while not live)
+const WIDTHS_LIVE = ["29%", "24%", "10%", "16%", "12%", "56px"];
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; show?: string; q?: string }> }) {
   const me = await requireAdmin();
@@ -51,6 +53,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   });
   const { rows, only, query, count } = memberRows(all, show, q);
   const early = `While "We're live" is off, a member with early access can download, press Play and join like any player once it is on. Nothing of an admin's.${settings.live ? " The site is live, so it changes nothing right now." : ""}`;
+  const showEarly = !settings.live || only === "early" || only === "rest";
   const href = (k: Show) => {
     const sp = new URLSearchParams();
     if (k !== "all") sp.set("show", k);
@@ -79,12 +82,12 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold">Players</h2>
+        <h2 className="text-xl font-semibold">Members</h2>
         <p className="text-sm text-muted-foreground">Minecraft accounts link themselves in game; &quot;Link by name…&quot; in a row&apos;s menu is the fallback.</p>
       </div>
       {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
       <div className="flex flex-wrap items-center gap-3">
-        <nav className="flex max-w-full overflow-x-auto whitespace-nowrap border-b" aria-label="Filter the players">
+        <nav className="flex max-w-full overflow-x-auto whitespace-nowrap border-b" aria-label="Filter the members">
           {(Object.keys(SHOW) as Show[]).map((k) => <Link key={k} href={href(k)} aria-current={only === k ? "page" : undefined} className={cn("-mb-px", stripLink(only === k))}>{SHOW[k]} ({count[k]})</Link>)}
         </nav>
         <form method="get" action="/admin/people" className="flex min-w-0 flex-1 items-center gap-2" role="search">
@@ -101,7 +104,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         <>
           <Card className="hidden min-[800px]:block" data-testid="players-table">
             <CardContent className="p-2">
-              <FixedTable label="Players" widths={WIDTHS} head={[{ text: "Member" }, { text: "Minecraft" }, { text: "PC" }, { text: "Installer", title: current ? `The installer each member used last; the site hands out ${current}` : "The installer each member used last" }, { text: "Seen", right: true }, { text: "Early access", center: true, title: early }, { text: "Actions", hidden: true }]}>
+              <FixedTable label="Members" widths={showEarly ? WIDTHS : WIDTHS_LIVE} head={[{ text: "Member" }, { text: "Minecraft" }, { text: "PC" }, { text: "Installer", title: current ? `The installer each member used last; the site hands out ${current}` : "The installer each member used last" }, { text: "Seen", right: true }, ...(showEarly ? [{ text: "Early access", center: true, title: early }] : []), { text: "Actions", hidden: true }]}>
                 {rows.map((u) => {
                   const p = parts(u);
                   return (
@@ -111,7 +114,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       <td className={cell}>{p.pc}</td>
                       <td className={cell}>{p.installer}</td>
                       <td className={`${cell} text-right`}>{p.seen}</td>
-                      <td className={`${cell} text-center`}>{p.early}</td>
+                      {showEarly && <td className={`${cell} text-center`}>{p.early}</td>}
                       <td className={menuCell}>{p.menu}</td>
                     </tr>
                   );
@@ -137,7 +140,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                         <Field name="PC">{p.pc}</Field>
                         <Field name="Installer">{p.installer}</Field>
                         <Field name="Seen">{p.seen}</Field>
-                        <Field name="Early access">{p.early}</Field>
+                        {showEarly && <Field name="Early access">{p.early}</Field>}
                       </dl>
                     </CardContent>
                   </Card>
@@ -152,8 +155,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   );
 }
 
-/** docs/31 B-37: the Discord accounts "Remove and block" has shut out, each with Unblock. Nothing while there are none. */
-async function BlockedList() {
+/** docs/31 B-37: the Discord accounts "Remove and block" has shut out, each with Unblock. Nothing while there are none. Also on Joining → Rules (docs/35). */
+export async function BlockedList() {
   const blocked = await blockedList();
   if (blocked.length === 0) return null;
   return (

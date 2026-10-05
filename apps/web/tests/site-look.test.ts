@@ -190,8 +190,8 @@ describe("the frame (docs/23 §4)", () => {
     expect(nav + links).not.toMatch(/MobileMenu|aria-label="Sidebar"|>Menu</);
     expect(links).toMatch(/overflow-x-auto whitespace-nowrap/);
   });
-  it("admin pages get the admin strip with the seven admin pages", () => {
-    expect(hrefs(links.slice(links.indexOf("export function AdminStrip")))).toEqual(["/admin", "/admin/server", "/admin/pack", "/admin/seasons", "/admin/people", "/admin/news", "/admin/site"]);
+  it("admin pages get the admin strip with the ten admin pages (docs/35)", () => {
+    expect(hrefs(links.slice(links.indexOf("export function AdminStrip")))).toEqual(["/admin", "/admin/server", "/admin/joining", "/admin/people", "/admin/pack", "/admin/seasons", "/admin/news", "/admin/votes", "/admin/discord", "/admin/site"]);
     expect(nav).toContain("{admin && <AdminStrip />}");
   });
   it("the display face is on the banner's name and the drawn logo tile only", () => {

@@ -1,29 +1,41 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/server/auth/session";
+import { redirect } from "next/navigation";
 import { getStatus } from "@/server/status";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { asSectionQuery, pickTab, TabbedPage, type PageQuery } from "@/components/tabs";
 import { LiveConsole } from "@/components/server/live-console";
 import FilesSection from "../files/section";
-import { BackupCard, consoleLines, DistanceCard, EntityCountsCard, Flash, GroundClearCard, loadGround, loadBackup, loadDistance, loadPlayers, loadPregen, loadSchedule, loadTail, PowerCard, PregenCard, RestartCard, RoomCard } from "./cards";
+import SettingsSection from "../settings/section";
+import { BrandingForm } from "../branding/form";
+import { BrandingSaved, brandingValues } from "../branding/section";
+import { saveBrandingAction } from "../branding/actions";
+import { BackupCard, consoleLines, DistanceCard, EntityCountsCard, Flash, GroundClearCard, loadGround, loadBackup, loadDistance, loadPlayers, loadPregen, loadSchedule, loadTail, MapCard, PowerCard, PregenCard, RestartCard } from "./cards";
 
 export const metadata: Metadata = { title: "Server" };
 
+const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
+
 const TABS = [
   { key: "power", label: "Power & restarts" },
-  { key: "settings", label: "Settings" },
+  { key: "performance", label: "Performance" },
   { key: "backups", label: "Backups" },
-  { key: "pregen", label: "Pre-generation" },
-  { key: "room", label: "Entrance room" },
+  { key: "world", label: "World & map" },
   { key: "console", label: "Console" },
   { key: "files", label: "Files" },
 ] as const;
 
-// docs/13 §11 layout: what was one long page is tabs (Settings added 2026-10-01); each loads only what it shows. News has its own page.
+// docs/35: tabs that were renamed or moved; their old addresses are sent on.
+const MOVED: Record<string, string> = { settings: "/admin/server?tab=performance", pregen: "/admin/server?tab=world", room: "/admin/joining?tab=room" };
+
+// docs/13 §11 layout: what was one long page is tabs; each loads only what it shows. News has its own page.
+// docs/35: Performance (was Settings), World & map (pre-generation, the map, the server list's lines), and the file
+// browser's limits under the browser. The entrance room is on Joining.
 export default async function ServerAdminPage({ searchParams }: { searchParams: PageQuery }) {
   const admin = await requireAdmin();
   const q = await searchParams;
+  if (typeof q.tab === "string" && MOVED[q.tab]) redirect(MOVED[q.tab]!);
   const tab = pickTab(q.tab, TABS);
   const caller = { id: admin.id, role: "ADMIN" as const };
   const msg = typeof q.msg === "string" ? q.msg : undefined;
@@ -35,7 +47,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
   if (tab === "power") {
     const [players, schedule] = await Promise.all([loadPlayers(caller), loadSchedule(caller)]);
     body = <div className="grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><PowerCard status={status} players={players} /></div><RestartCard schedule={schedule} running={running} /></div>;
-  } else if (tab === "settings") {
+  } else if (tab === "performance") {
     const [distance, schedule, ground] = await Promise.all([loadDistance(caller), loadSchedule(caller), loadGround(caller)]);
     body = (
       <div className="grid gap-4 lg:grid-cols-2">
@@ -47,10 +59,19 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
   } else if (tab === "backups") {
     const backup = await loadBackup(caller);
     body = <>{backup?.job?.phase === "waiting" && <AutoRefresh seconds={30} />}<BackupCard backup={backup} /></>;
-  } else if (tab === "pregen") {
-    body = <PregenCard pregen={await loadPregen(caller)} />;
-  } else if (tab === "room") {
-    body = <RoomCard players={await loadPlayers(caller)} running={running} />;
+  } else if (tab === "world") {
+    const [pregen, initial] = await Promise.all([loadPregen(caller), brandingValues(admin.id, true)]);
+    body = (
+      <div className="space-y-4">
+        <BrandingSaved saved={one(q.saved)} error={one(q.error)} note={one(q.note)} />
+        <PregenCard pregen={pregen} />
+        <MapCard />
+        <Card data-testid="motd-card">
+          <CardHeader><CardTitle>Server description</CardTitle><CardDescription>The two lines under the server&apos;s name in Minecraft&apos;s server list.</CardDescription></CardHeader>
+          <CardContent><BrandingForm action={saveBrandingAction} initial={initial} part="motd" /></CardContent>
+        </Card>
+      </div>
+    );
   } else if (tab === "console") {
     const tail = await loadTail(caller);
     body = (
@@ -60,7 +81,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
       </Card>
     );
   } else {
-    body = <FilesSection searchParams={asSectionQuery(q)} />;
+    body = <div className="space-y-4"><FilesSection searchParams={asSectionQuery(q)} /><SettingsSection searchParams={asSectionQuery(q)} cards={["files"]} /></div>;
   }
 
   return (

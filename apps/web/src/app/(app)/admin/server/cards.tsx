@@ -60,7 +60,7 @@ export function Flash({ msg, detail }: { msg?: string; detail?: string }) {
 }
 
 /** A hidden field that sends the admin back to the Control Room after the action, when the card sits there. */
-const Back = ({ to }: { to?: "/admin" }) => (to ? <input type="hidden" name="back" value={to} /> : null);
+const Back = ({ to }: { to?: "/admin" | "/admin/joining" }) => (to ? <input type="hidden" name="back" value={to} /> : null);
 
 const CHECK_LABEL: Record<string, string> = { dump: "Database dump", dumpCopy: "Dump on the AMP host", backup: "World backup", pack: "Pack", wake: "Last wake" };
 
@@ -93,7 +93,7 @@ export function heldWhy(h: HeldEntry): string {
  * docs/32 §7 item 10 (the small part): who is in the entrance room and why, and Release for a linked member, so an
  * admin does not need the console to see why a friend cannot get in. Shown only while somebody is held.
  */
-export function HeldCard({ held, back }: { held: HeldEntry[] | null; back?: "/admin" }) {
+export function HeldCard({ held, back }: { held: HeldEntry[] | null; back?: "/admin" | "/admin/joining" }) {
   if (!held || held.length === 0) return null;
   return (
     <Card data-testid="held">
@@ -377,11 +377,6 @@ export function PregenCard({ pregen }: { pregen: Pregen | null }) {
           <p>{sleepy.line}</p>
           {sleepy.grant && <p className="mt-1">To allow it: in the instance&apos;s own panel, give the role of the user <span className="font-mono">webapp</span> the permission Settings → MinecraftModule → Limits → SleepMode, <span className="font-mono">{sleepy.grant}</span>. The setting is <span className="font-mono">{pregen?.sleep.node}</span>.</p>}
         </div>
-        <form action={pregenAction} className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <input type="hidden" name="op" value="map-reload" />
-          <Button type="submit" size="sm" variant="secondary">Reload BlueMap&apos;s settings</Button>
-          <span>After a change to BlueMap&apos;s config (render threads) has been synced. A render in hand carries on.</span>
-        </form>
         <HowThisWorks>
           <p>Makes the world around spawn ahead of time and renders the map of it, so that exploring is smooth and the map is whole.</p>
           <p>A render that was not finished carries on by itself after a restart of the server or a power cut: the portal asks BlueMap for the map again as soon as the server is up.</p>
@@ -402,18 +397,60 @@ export function RoomCard({ players, running }: { players: Players | null; runnin
       <CardContent className="space-y-3">
         <form action={runActionAction}><input type="hidden" name="action" value="limbo.build" /><Button type="submit" size="sm" variant="secondary" disabled={!running}>Build the room</Button></form>
         <form action={runActionAction}><input type="hidden" name="action" value="opac.serverClaims" /><Button type="submit" size="sm" variant="secondary" disabled={!running}>Server-claim spawn and the room</Button></form>
-        <form action={runActionAction} className="flex items-end gap-2">
-          <input type="hidden" name="action" value="player.revoke" />
-          <div><Label htmlFor="rvname">Kick + unwhitelist</Label><Input id="rvname" name="name" placeholder="Minecraft name" pattern="[A-Za-z0-9_]{3,16}" className="h-8 w-40 text-sm" required /></div>
-          <Button type="submit" size="sm" variant="danger" disabled={!running}>Revoke</Button>
-        </form>
-        <HowThisWorks>Players who have not linked their account, or who have not pressed Play when Play first is on, or who the server is not open for yet, are held in a glass room in a dimension of its own (LIMBO_POS) with a line in chat telling them what to do (docs/14). Build it once per world, and again after a change to the room. &quot;Server-claim&quot; makes the spawn area (8×8 chunks around 0,0) and the room Open Parties and Claims server claims, so no player can claim them; once per world is enough. Who is let in is set in Site settings → Joining and Launch.</HowThisWorks>
+        <HowThisWorks>Players who have not linked their account, or who have not pressed Play when Play first is on, or who the server is not open for yet, are held in a glass room in a dimension of its own (LIMBO_POS) with a line in chat telling them what to do (docs/14). Build it once per world, and again after a change to the room. &quot;Server-claim&quot; makes the spawn area (8×8 chunks around 0,0) and the room Open Parties and Claims server claims, so no player can claim them; once per world is enough. Who is let in is set on the Rules tab.</HowThisWorks>
       </CardContent>
     </Card>
   );
 }
 
 type News = Awaited<ReturnType<typeof getAnnouncements>>;
+
+/**
+ * docs/35: the map's own button, out of the Pre-generation card. Deleting the map and rendering it again stays in
+ * that card's form: it runs in the mode picked there (when nobody is on, or now).
+ */
+export function MapCard() {
+  return (
+    <Card data-testid="map-card">
+      <CardHeader>
+        <CardTitle>Map</CardTitle>
+        <CardDescription>BlueMap, the live map. Rendering it, and deleting it to render it again, are in Pre-generation above.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form action={pregenAction} className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <input type="hidden" name="op" value="map-reload" />
+          <Button type="submit" size="sm" variant="secondary">Reload BlueMap&apos;s settings</Button>
+          <span>After a change to BlueMap&apos;s config (render threads) has been synced. A render in hand carries on.</span>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Was "Kick + unwhitelist" on the Entrance room card. The whitelist is off (docs/14), so what this does today: the
+ * player loses the "verified" tag and is kicked, and meets the door again at their next join. By name, because it is
+ * also for somebody who is not a member.
+ */
+export function KickCard({ running }: { running: boolean }) {
+  return (
+    <Card data-testid="kick">
+      <CardHeader>
+        <CardTitle>Kick a player back to the door</CardTitle>
+        <CardDescription>Kicks them and takes their pass away, so the door looks at them again the next time they join: a member who may come in is let in as usual, anyone else waits in the entrance room.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form action={runActionAction} className="flex items-end gap-2">
+          <input type="hidden" name="back" value="/admin/joining" />
+          <input type="hidden" name="action" value="player.revoke" />
+          <input type="hidden" name="reason" value="An admin sent you back to the door. Join again." />
+          <div><Label htmlFor="rvname">Minecraft name</Label><Input id="rvname" name="name" placeholder="Minecraft name" pattern="[A-Za-z0-9_]{3,16}" className="h-8 w-40 text-sm" required /></div>
+          <Button type="submit" size="sm" variant="danger" disabled={!running}>Kick</Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function AnnounceCard({ running }: { running: boolean }) {
   return (

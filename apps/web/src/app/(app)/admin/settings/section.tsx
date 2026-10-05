@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 // Show the stored instant as UK wall-clock time in the datetime-local box.
 const toLocalInput = dateToUkLocal;
 
-const SECTION: Record<string, string> = { privacy: "Privacy", retention: "How long things are kept", files: "File browser", joining: "Joining", "1": "Launch" };
+const SECTION: Record<string, string> = { privacy: "Privacy", retention: "How long things are kept", files: "File browser limits", joining: "Play first", "1": "Launch" };
 
 function Tick({ name, checked, title, children }: { name: string; checked: boolean; title: string; children: React.ReactNode }) {
   return (
@@ -27,14 +27,20 @@ function Tick({ name, checked, title, children }: { name: string; checked: boole
   );
 }
 
-/** Site settings' first five tabs (docs/13 §11 layout): one card each. `tab` picks which. */
-export default async function SettingsPage({ searchParams, tab }: { searchParams: Promise<{ saved?: string; error?: string; detail?: string }>; tab: "launch" | "joining" | "privacy" | "kept" | "files" }) {
-  const show = (t: typeof tab) => t === tab;
+export type SettingsCard = "launch" | "joining" | "privacy" | "kept" | "files";
+
+/**
+ * The settings cards, each shown on the page of what it changes (docs/35): Launch and Play first on Joining → Rules,
+ * Privacy and "How long things are kept" on Site → Privacy & data, the file browser's limits on Server → Files.
+ * `cards` picks which.
+ */
+export default async function SettingsPage({ searchParams, cards }: { searchParams: Promise<{ saved?: string; error?: string; detail?: string }>; cards: readonly SettingsCard[] }) {
+  const show = (t: SettingsCard) => cards.includes(t);
   const [{ saved, error, detail }, settings, manifest, privacy, retention, files, joining, pack] = await Promise.all([searchParams, getSettings(), getManifest(), getSection("privacy"), getSection("retention"), getSection("files"), getSection("joining"), serverPack()]);
   return (
     <div className="space-y-4">
-      {saved && <Alert tone="success">Saved{SECTION[saved] ? `: ${SECTION[saved]}` : ""}.</Alert>}
-      {error && <Alert tone="error">{error === "form" ? "Check the launch date and try again." : <>Not saved ({SECTION[error] ?? error}). {detail}</>}</Alert>}
+      {saved && SECTION[saved] && <Alert tone="success">Saved: {SECTION[saved]}.</Alert>}
+      {error && (error === "form" || SECTION[error]) && <Alert tone="error">{error === "form" ? "Check the launch date and try again." : <>Not saved ({SECTION[error] ?? error}). {detail}</>}</Alert>}
       {show("launch") && (
         <Card>
         <CardHeader>
@@ -62,7 +68,7 @@ export default async function SettingsPage({ searchParams, tab }: { searchParams
       {show("joining") && (
         <Card>
         <CardHeader>
-          <CardTitle>Joining</CardTitle>
+          <CardTitle>Play first {joining.requirePlay ? <Badge tone="good">on</Badge> : <Badge tone="warn">off</Badge>}</CardTitle>
           <CardDescription>Members press Play on the site before they join, so that their mods are the server&apos;s. Whoever has not is kept in the entrance room with a line that says so, and is let through, back to where they stood, within seconds of pressing it. Admins are never kept. The server runs <span className="font-mono">{pack ?? "a pack nobody has written down yet (it is after the next sync)"}</span>.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -93,7 +99,7 @@ export default async function SettingsPage({ searchParams, tab }: { searchParams
             <Tick name="geo" checked={privacy.geo} title="Work out which country players connect from">Used for the countries panel on the analytics page. Looked up in a file on this server; nothing is sent anywhere. The address itself is only ever visible to admins. Off: the panel says &quot;Location off&quot;.</Tick>
             <Tick name="chat" checked={privacy.chat} title="Keep chat in the event log">In-game chat lines are stored so admins can read back what was said. Say so on the rules page. Off: chat is not stored at all.</Tick>
             <Tick name="analyticsForPlayers" checked={privacy.analyticsForPlayers} title="Players can see the Stats tab">Play time, sessions and who plays when, for everyone in the group. Addresses and console lines are never shown to players. Off: the Stats tab is hidden for players.</Tick>
-            <Button type="submit">Save privacy</Button>
+            <Button type="submit">Save</Button>
           </form>
         </CardContent>
         </Card>
@@ -120,8 +126,8 @@ export default async function SettingsPage({ searchParams, tab }: { searchParams
       {show("files") && (
         <Card>
         <CardHeader>
-          <CardTitle>File browser</CardTitle>
-          <CardDescription>Limits for Admin → Server → Files. The browser can only read; nothing here allows changing files on the server.</CardDescription>
+          <CardTitle>Limits</CardTitle>
+          <CardDescription>What the file browser above will show and hand out. The browser can only read; nothing here allows changing files on the server.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={saveFilesAction} className="space-y-3">

@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   // Admin → Branding uploads pictures of up to 2 MB through a server action; the default limit is 1 MB. A new poll
   // (planner 2026-10-02) may carry a picture of up to 3 MB for each of its 8 options.
   experimental: { serverActions: { bodySizeLimit: "26mb" } },
+  // A tab that moved (docs/35) is sent on by its old page, not here: see MOVED in admin/{server,pack,site}/page.tsx.
   // docs/13 §11 layout: every address from before the sidebar still works. Temporary (307) on purpose while v6
   // settles: a browser remembers a 308 for good, and would keep going to the new addresses after a rollback.
   async redirects() {
@@ -24,12 +25,11 @@ const nextConfig: NextConfig = {
       to("/admin/events", "/activity"),
       to("/admin/files", "/admin/server?tab=files"),
       to("/admin/modpack", "/admin/pack"),
-      to("/admin/votes", "/admin/pack?tab=votes"),
       to("/admin/users", "/admin/people"),
       to("/admin/invites", "/admin/people?tab=invites"),
       to("/admin/installs", "/admin/people?tab=installs"),
       to("/admin/settings", "/admin/site"),
-      to("/admin/branding", "/admin/site?tab=branding"),
+      to("/admin/branding", "/admin/site"),
     ];
   },
   images: {

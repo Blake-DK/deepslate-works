@@ -183,7 +183,39 @@ Every card is already a component (`server/cards.tsx`, the `section.tsx` files),
 
 It is an admin-only change, so no change-log entry for players.
 
-### For Alex to decide
+### Decided and built (Alex, 2026-10-05; on `dev`, not deployed)
+
+Alex's answers: the top bar keeps its one Control Room button and the second bar carries every page; Joining is a page of its own; the polls are a page of their own called Votes; the server-list description moves to Server; build it now.
+
+The strip as built, ten pages: **Control Room · Server · Joining · People · Modpack · Seasons · News · Votes · Discord · Site**.
+
+| Page | Tabs | Address |
+|---|---|---|
+| Server | Power & restarts · Performance · Backups · World & map · Console · Files | `/admin/server` |
+| Joining | Who's waiting · Rules · Entrance room | `/admin/joining` (new) |
+| People | Members · Invites · Installs | `/admin/people` |
+| Modpack | Mods & build · Mod vote · Apply results | `/admin/pack` |
+| Votes | (the polls) | `/admin/votes` (was a redirect; now the page) |
+| Discord | Connection · Channels & bot · What is posted | `/admin/discord` (new) |
+| Site | Look · Pages · Privacy & data | `/admin/site` |
+
+- **Joining → Who's waiting:** who is held and Release, the last ten times the door held somebody, and "Kick a player back to the door" (the old "Kick + unwhitelist", by name, with a reason of its own). **Rules:** Launch, Play first, which open votes hold people, early access (only while not live), the outside-Discord list, Blocked. **Entrance room:** Build the room and Server-claim.
+- **Old addresses are sent on** by the page they pointed at (`MOVED` in `admin/server`, `admin/pack` and `admin/site`): `?tab=settings`, `pregen`, `room`, `votes`, `launch`, `joining`, `kept`, `files`, `branding`, `discord`.
+- **The branding save takes one part of the form at a time** (`from` names the page; a field that was not sent is left as it is), because its fields now sit on four pages: Site → Look, Site → Pages, Server → World & map (the server list's lines), Discord → Connection (the invite link).
+- No change to api, to the database or to what any action does.
+
+Where it differs from the proposal above:
+
+- **News stays a page by itself**; the polls are Votes (Alex).
+- **"Kick and unverify" is not in the member's menu.** It takes a name because it is also for somebody who is not a member, so it is a card on Joining → Who's waiting.
+- **"Delete the map and render it again" stays inside Pre-generation's form**: it runs in the mode picked there. Only "Reload BlueMap's settings" moved to the Map card under it.
+- **"Reload datapacks" stays on Seasons only**: api's reload is part of the season's route and refuses when no season is current.
+- **The early-access column on People** is hidden once the site is live (its two filters still show it); the per-member switch on a player's own page is unchanged.
+
+**Not proven:** nothing here ran in a browser. CI's typecheck, lint and tests are the check; the pages want a click-through after the deploy (each tab, one save on each form, Release, an old address).
+
+### The questions as asked
+
 
 1. **Nine items on the strip, or fewer?** Fewer means Discord back under Site, and News & polls under Site as well; the strip scrolls sideways on a phone either way.
 2. **Joining as its own page**, or only the lists gathered under People? Its own page is the proposal.

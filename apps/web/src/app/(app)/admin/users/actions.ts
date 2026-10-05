@@ -21,6 +21,7 @@ export async function setRoleAction(formData: FormData) {
   if (parsed.data.role === "PLAYER") await onDemoted(parsed.data.id);
   await audit({ userId: admin.id, action: "user.setRole", params: parsed.data, result: "OK" });
   revalidatePath("/admin/people");
+  revalidatePath("/admin/joining");
   revalidatePath("/players/[uuid]", "page");
 }
 
@@ -32,7 +33,7 @@ export async function setEarlyAccessAction(formData: FormData) {
   const on = parsed.data.on === "1";
   const u = await db.user.update({ where: { id: parsed.data.id }, data: { earlyAccess: on }, select: { displayName: true } }).catch(() => null);
   if (u) await audit({ userId: admin.id, action: "user.earlyAccess", params: { id: parsed.data.id, displayName: u.displayName, on }, result: "OK" });
-  for (const p of ["/admin/people", "/", "/help", "/me"]) revalidatePath(p);
+  for (const p of ["/admin/people", "/admin/joining", "/", "/help", "/me"]) revalidatePath(p);
   revalidatePath("/players/[uuid]", "page");
 }
 
@@ -58,6 +59,7 @@ export async function setOutsideAuthAction(formData: FormData) {
     }
   }
   revalidatePath("/admin/people");
+  revalidatePath("/admin/joining");
   revalidatePath("/players/[uuid]", "page");
 }
 
@@ -78,6 +80,7 @@ export async function removeUserAction(formData: FormData) {
     await audit({ userId: admin.id, action: "user.remove", params: { id, displayName: removed.displayName, mcUsername: removed.mcUsername, blocked }, result: "OK" });
   }
   revalidatePath("/admin/people");
+  revalidatePath("/admin/joining");
   revalidatePath("/players/[uuid]", "page");
 }
 
@@ -87,6 +90,7 @@ export async function unblockAction(formData: FormData) {
   if (!/^\d{5,25}$/.test(discordId)) return;
   if (await unblock(discordId, admin.id)) await audit({ userId: admin.id, action: "user.unblock", params: { discordId, displayName: String(formData.get("name") ?? "").slice(0, 80) }, result: "OK" });
   revalidatePath("/admin/people");
+  revalidatePath("/admin/joining");
 }
 
 /** Admin tool (docs/14 keeps the Mojang lookup for admins only): set or verify a member's Minecraft account by name. */
@@ -101,6 +105,7 @@ export async function setMinecraftNameAction(formData: FormData) {
   await db.user.update({ where: { id: parsed.data.id }, data: { mcUsername: lookup.name, mcUuid: lookup.uuid, verifiedAt: new Date() } });
   await audit({ userId: admin.id, action: "user.setMinecraft", params: { id: parsed.data.id, mcUsername: lookup.name, mcUuid: lookup.uuid }, result: "OK" });
   revalidatePath("/admin/people");
+  revalidatePath("/admin/joining");
   revalidatePath("/players/[uuid]", "page");
   redirect("/admin/people");
 }
@@ -111,6 +116,7 @@ export async function clearMinecraftNameAction(formData: FormData) {
   const u = await db.user.update({ where: { id }, data: { mcUsername: null, mcUuid: null, verifiedAt: null } }).catch(() => null);
   if (u) await audit({ userId: admin.id, action: "user.clearMinecraft", params: { id }, result: "OK" });
   revalidatePath("/admin/people");
+  revalidatePath("/admin/joining");
   revalidatePath("/players/[uuid]", "page");
   redirect("/admin/people");
 }
@@ -121,6 +127,7 @@ export async function revokeLauncherAction(formData: FormData) {
   const n = await revokeLauncherTokens(id);
   await audit({ userId: admin.id, action: "launcher.revoke", params: { id, revoked: n }, result: "OK" });
   revalidatePath("/admin/people");
+  revalidatePath("/admin/joining");
   revalidatePath("/players/[uuid]", "page");
   redirect("/admin/people");
 }
@@ -133,4 +140,5 @@ export async function turnOffPasswordSignInAction(formData: FormData) {
   const who = await db.user.findUnique({ where: { id }, select: { displayName: true } });
   if (who && (await removeAdminLogin(id))) await audit({ userId: admin.id, action: "auth.adminOff", params: { forId: id, forName: who.displayName }, result: "OK" });
   revalidatePath("/admin/people");
+  revalidatePath("/admin/joining");
 }

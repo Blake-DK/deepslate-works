@@ -16,22 +16,30 @@ const ownGuide = (t: string) => {
   return v.trim() === "" || v.trim() === DEFAULT_GUIDE.trim() ? "" : v;
 };
 
+// Where a save goes back to: the form names its page from this list; an address it sends is never used as such.
+const FROM = { look: "/admin/site?tab=look&", pages: "/admin/site?tab=pages&", motd: "/admin/server?tab=world&", invite: "/admin/discord?tab=connection&" } as const;
+
 export async function saveBrandingAction(formData: FormData) {
   const admin = await requireAdmin();
   const current = await getSection("branding");
+  const from = text(formData, "from");
+  const back = Object.hasOwn(FROM, from) ? FROM[from as keyof typeof FROM] : FROM.look;
+  const sent = (k: "name" | "tagline" | "footer" | "motd" | "motd2") => (formData.has(k) ? text(formData, k) : current[k]);
   const next: Record<string, unknown> = {
     ...current,
-    name: text(formData, "name"),
-    tagline: text(formData, "tagline"),
+    // docs/35: the fields sit on four pages now (Site → Look and Pages, Server → World & map, Discord), each with a
+    // form of its own. A field that was not in the form that was sent is left as it is.
+    name: sent("name"),
+    tagline: sent("tagline"),
     // accent, accentDark and defaultTheme are kept as stored: the site has one theme (docs/23 §3); accent still colours Discord's embeds
-    discordInvite: text(formData, "discordInvite").trim(),
-    footer: text(formData, "footer"),
-    rules: text(formData, "rules").replace(/\r\n?/g, "\n"),
+    discordInvite: formData.has("discordInvite") ? text(formData, "discordInvite").trim() : current.discordInvite,
+    footer: sent("footer"),
+    rules: formData.has("rules") ? text(formData, "rules").replace(/\r\n?/g, "\n") : current.rules,
     // Not in the form that was sent: left as it is. Sent as it ships, or empty: nothing of the admin's own is kept,
     // so the guide goes on following docs/18 as that changes.
     guide: formData.has("guide") ? ownGuide(text(formData, "guide")) : current.guide,
-    motd: text(formData, "motd"),
-    motd2: text(formData, "motd2"),
+    motd: sent("motd"),
+    motd2: sent("motd2"),
   };
   const notes: string[] = [];
   const problems: string[] = [];
@@ -55,12 +63,12 @@ export async function saveBrandingAction(formData: FormData) {
   }
   if (problems.length) {
     await audit({ userId: admin.id, action: "branding.save", params: { problems }, result: "DENIED" });
-    redirect(`/admin/site?tab=branding&error=${encodeURIComponent(problems.join(" ").slice(0, 400))}`);
+    redirect(`${back}error=${encodeURIComponent(problems.join(" ").slice(0, 400))}`);
   }
   const saved = await setSection("branding", next, admin.id);
   if (!saved.ok) {
     await audit({ userId: admin.id, action: "branding.save", params: { problems: saved.problems }, result: "DENIED" });
-    redirect(`/admin/site?tab=branding&error=${encodeURIComponent(saved.problems.join("; ").slice(0, 400))}`);
+    redirect(`${back}error=${encodeURIComponent(saved.problems.join("; ").slice(0, 400))}`);
   }
   for (const s of stored) await tidy(s.slot, s.file);
   const changed = Object.keys(saved.value).filter((k) => JSON.stringify((saved.value as Record<string, unknown>)[k]) !== JSON.stringify((current as Record<string, unknown>)[k]));
@@ -75,10 +83,10 @@ export async function saveBrandingAction(formData: FormData) {
     }
   }
   revalidatePath("/", "layout");
-  redirect(`/admin/site?tab=branding&saved=1${notes.length ? `&note=${encodeURIComponent(notes.join(" ").slice(0, 400))}` : ""}${changed.includes("name") ? "&renamed=1" : ""}`);
+  redirect(`${back}saved=1${notes.length ? `&note=${encodeURIComponent(notes.join(" ").slice(0, 400))}` : ""}${changed.includes("name") ? "&renamed=1" : ""}`);
 }
 
-const BACK = "/admin/site?tab=branding";
+const BACK = "/admin/site?tab=look";
 
 /** Sends the picture to api, which makes every size (site, server icon, window icon, app), then records the choice. */
 async function applyLogo(adminId: string, choice: string, kind: "svg" | "png", data: Buffer, pixel?: boolean): Promise<string | null> {

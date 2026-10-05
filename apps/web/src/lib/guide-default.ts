@@ -6,7 +6,7 @@ export const DEFAULT_GUIDE = [
   "## Getting in",
   "",
   "1. Go to deepslate.dsw.test and sign in with Discord.",
-  "2. Download, double-click Setup.bat once.",
+  "2. Download DeepslateWorks.exe and run it once.",
   "3. After that, just press **Play** on the site or open Deepslate Works from your desktop. It keeps itself up to date.",
   "",
   "The first time you join you'll be in a small room. Click the link in chat or right-click the book in your hand, sign in with Discord, and you're through. You never need to type a username or ask to be whitelisted.",

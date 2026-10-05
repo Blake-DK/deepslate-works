@@ -141,6 +141,9 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   // docs/34 §10: builds taken from the world and put somewhere else
   "build.capture": (p) => `captured the build "${s(p.name)}" in ${s(p.dimension)}`,
   "build.place": (p) => `placed the build "${s(p.name)}" in ${s(p.dimension)}`,
+  "build.placeUpload": (p) => `placed the uploaded build "${s(p.name)}" in ${s(p.dimension)}`,
+  "build.upload": (p) => `uploaded the build "${s(p.name)}" (${s(p.format)}, ${s(p.kb)} KB)`,
+  "build.uploadRemove": (p) => `removed the uploaded build "${s(p.name)}"`,
   "build.lock": (p) => `locked the ground of a build in ${s(p.dimension)} (a server claim)`,
   "season.grant": (p) => (p.already ? `gave ${s(p.member)} the tick for ${s(p.title)} again (they had it)` : `gave ${s(p.member)} the tick for ${s(p.title)}${p.inGame ? "" : " on the site only: they are not on the server"}`),
   "season.revoke": (p) => (p.had ? `took the tick for ${s(p.title)} back from ${s(p.member)}${p.inGame ? "" : " on the site only: they are not on the server"}` : `took the tick for ${s(p.title)} back from ${s(p.member)} (they did not have it)`),

@@ -139,6 +139,7 @@ services:
       - ${DEEPSLATE_DIR:-..}/modpack:/repo/modpack:ro
       - ${DEEPSLATE_DIR:-..}/installer:/repo/installer:ro
       - ${DEEPSLATE_DIR:-..}/data/news:/repo/data/news:ro   # docs/21: news pictures go to Discord as attachments
+      - ${DEEPSLATE_DIR:-..}/data/builds:/repo/data/builds:ro # docs/34 §10: builds an admin uploaded; `modpack build` makes their datapack
       # country lookup for the analytics page: MaxMind's GeoLite2-Country, kept current by the web-proxy stack
       - ${GEOIP_DIR:-/root/docker/web-proxy/geoip}:/geoip:ro
     depends_on:

@@ -12,6 +12,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { PlayerHead } from "@/components/server/player-head";
 import { InventoryPanel } from "@/components/players/inventory-panel";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { PackPending } from "@/components/admin/pack-pending";
 import { statusText } from "@/lib/server-status";
 import type { PageQuery } from "@/components/tabs";
 import { BackupCard, consoleLines, Flash, HealthCard, HeldCard, loadBackup, loadHeld, loadPlayers, loadWatch, loadSchedule, loadTail, PowerCard, RestartCard } from "./server/cards";
@@ -129,6 +130,7 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
         <span className="text-sm text-muted-foreground" data-testid="control-status">{statusText(status, true).line}{status.server === "online" && <> · TPS {status.tps?.toFixed(1) ?? "?"} · RAM {status.memMb ?? "?"}{status.memMaxMb ? ` / ${status.memMaxMb}` : ""} MB</>}{status.server === "unreachable" && status.reason && <> · {status.reason}</>}</span>
       </div>
       <Flash msg={typeof q.msg === "string" ? q.msg : undefined} detail={typeof q.detail === "string" ? q.detail : undefined} />
+      <PackPending link />
       <div className="grid gap-3 xl:grid-cols-[13rem_minmax(0,1fr)]">
         <section aria-label="Players" className="rounded-[4px] border bg-card p-2 xl:max-h-[75vh] xl:overflow-y-auto">
           <Link href="/admin" aria-current={!who ? "true" : undefined} className={cn("flex items-center gap-2 rounded-[4px] px-2 py-1.5 text-sm font-medium hover:bg-muted", !who && "bg-card-2 text-foreground shadow-[inset_3px_0_0_var(--primary)]")}>

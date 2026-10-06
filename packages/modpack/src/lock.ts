@@ -1,11 +1,14 @@
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, stat } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { Manifest, Mod } from "./schema";
 import { getProject, getVersion, getVersions, NotFound, type ModrinthVersion } from "./modrinth";
 import { fetchJar } from "./download";
 import { jarChannels, sideFor, widenForDependents } from "./sides";
 import { openZipFile } from "./zip";
+import { hashConfigs, hashResourcePack } from "./hashes";
+
+export { hashConfigs, hashResourcePack };
 
 // docs/06: mods.lock.json — exact Modrinth versions, file URLs and hashes for every enabled mod plus required deps.
 
@@ -70,36 +73,6 @@ export async function resolveNeoForge(spec: string): Promise<string> {
   return best;
 }
 
-async function hashConfigs(configDir: string): Promise<LockFile["configs"]> {
-  const out: LockFile["configs"] = [];
-  async function walk(dir: string, rel: string) {
-    let entries: string[] = [];
-    try {
-      entries = await readdir(dir);
-    } catch {
-      return;
-    }
-    for (const name of entries.sort()) {
-      const full = path.join(dir, name);
-      const relPath = rel ? `${rel}/${name}` : name;
-      const s = await stat(full);
-      if (s.isDirectory()) await walk(full, relPath);
-      else out.push({ path: `config/${relPath}`, sha256: createHash("sha256").update(await readFile(full)).digest("hex") });
-    }
-  }
-  await walk(configDir, "");
-  return out;
-}
-
-/** One hash over every file of modpack/resourcepack/ (path + content), or undefined without a pack.mcmeta. */
-export async function hashResourcePack(dir: string | undefined): Promise<string | undefined> {
-  if (!dir) return undefined;
-  // The same files Build puts into the pack (docs/31 B-30): README.md is for whoever drops textures in, is left
-  // out of the zip, and so must not move the pack's version when it is edited.
-  const files = (await hashConfigs(dir)).filter((c) => c.path !== "config/README.md");
-  if (!files.some((c) => c.path === "config/pack.mcmeta")) return undefined;
-  return createHash("sha256").update(files.map((c) => `${c.path}@${c.sha256}`).join("\n")).digest("hex");
-}
 
 export async function buildLock(m: Manifest, opts: { configDir: string; onProgress?: (msg: string) => void; /** The NeoForge of the lock in hand: kept when the maven cannot be read. */ previousNeoForge?: string; /** modpack/resourcepack/, hashed into the pack. */ resourcepackDir?: string; /** 2.1.0: where jars are kept, so each can be looked into for network channels. */ jarCache?: string }): Promise<{ lock: LockFile; warnings: LockWarning[] }> {
   const warnings: LockWarning[] = [];

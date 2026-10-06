@@ -8,6 +8,7 @@ import { Runner } from "./runner";
 import { Alert } from "@/components/ui/alert";
 import { getPackDrift } from "@/server/modpack/drift";
 import { driftLine } from "@/lib/pack-drift";
+import { PackPending } from "@/components/admin/pack-pending";
 
 export default async function ModpackAdminPage() {
   const { manifest, lock, issues, rows } = await modpackStatus();
@@ -17,6 +18,7 @@ export default async function ModpackAdminPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">Mods and build</h2>
+      <PackPending />
       {driftSays && <Alert tone="warn" data-testid="pack-drift">{driftSays}</Alert>}
       <Card>
         <CardHeader>

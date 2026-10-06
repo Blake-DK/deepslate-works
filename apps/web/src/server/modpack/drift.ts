@@ -7,7 +7,8 @@ import type { PackDrift } from "@/lib/pack-drift";
 const MODPACK_DIR = process.env.MODPACK_DIR ?? path.resolve(process.cwd(), "..", "..", "modpack");
 const REPO_DIR = process.env.REPO_DIR ?? path.resolve(MODPACK_DIR, "..");
 
-function git(args: string[]): Promise<string | null> {
+/** A read-only git command in the deploy checkout; null when it fails. */
+export function git(args: string[]): Promise<string | null> {
   return new Promise((resolve) => {
     execFile("git", ["-C", REPO_DIR, "-c", `safe.directory=${REPO_DIR}`, ...args], { timeout: 10_000, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => resolve(err ? null : stdout));
   });

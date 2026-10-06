@@ -163,13 +163,13 @@ namespace DeepslateWorks.Tests
             using (new Scratch())
                 WithWindow(ui =>
                 {
-                    Resize(ui, 980, 720);
+                    Resize(ui, 980, 600);   // below CI's screen (about 720 high), so there is room to grow
                     ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Waking)), "ready");
-                    ui.SimSteps(18);
+                    ui.SimSteps(14);
                     ui.Pump(); ui.Window.UpdateLayout(); ui.Pump(); ui.Window.UpdateLayout(); ui.Pump();
                     var sv = (System.Windows.Controls.ScrollViewer)ui.Window.FindName("PlayScroll");
                     // the screen decides how far it can grow (CI's is small): all of it shown, or the whole height used
-                    Assert.True(ui.Window.ActualHeight > 720 || ScreenFull(ui.Window), "the window did not grow: " + ui.Window.ActualHeight);
+                    Assert.True(ui.Window.ActualHeight > 600, "the window did not grow: " + ui.Window.ActualHeight);
                     Assert.True(sv.ExtentHeight <= sv.ViewportHeight + 0.5 || ScreenFull(ui.Window), "the steps still scroll: " + sv.ExtentHeight + " in " + sv.ViewportHeight);
                     Assert.True(ui.Window.MinHeight >= ui.Window.ActualHeight - 0.5, "it can be dragged smaller than its text");
                 });

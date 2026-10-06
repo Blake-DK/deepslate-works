@@ -160,8 +160,6 @@ namespace DeepslateWorks
       </Setter.Value></Setter>
     </Style>
     <Style TargetType=""TabControl"" x:Key=""Strip"">
-      <!-- 3.5.4 (Alex, 2026-10-06): without it the tabs' text inherits Windows' control text colour, black, and every
-           TextBlock that sets no colour of its own (the server line, the pinned news) was black on the dark cards -->
       <Setter Property=""Foreground"" Value=""{DynamicResource Fg}""/>
       <Setter Property=""Template""><Setter.Value>
         <ControlTemplate TargetType=""TabControl"">
@@ -177,6 +175,10 @@ namespace DeepslateWorks
       </Setter.Value></Setter>
     </Style>
     <Style TargetType=""TabItem"">
+      <!-- 3.5.4 (Alex, 2026-10-06): a tab's content takes its text colour from its TabItem, whose default is Windows'
+           control text colour, black: every TextBlock with no colour of its own (the server line, the pinned news,
+           the titles) was black on the dark cards. LookTests reads every text on every tab against its background. -->
+      <Setter Property=""Foreground"" Value=""{DynamicResource Fg}""/>
       <Setter Property=""FocusVisualStyle"" Value=""{x:Null}""/><Setter Property=""Cursor"" Value=""Hand""/>
       <Setter Property=""Template""><Setter.Value>
         <ControlTemplate TargetType=""TabItem"">
@@ -343,7 +345,7 @@ namespace DeepslateWorks
     <TabItem x:Name=""VoteTab"" Visibility=""Collapsed"">
       <TabItem.Header>
         <StackPanel Orientation=""Horizontal"">
-          <TextBlock Text=""Vote""/>
+          <TextBlock Text=""Vote"" Foreground=""{Binding Path=(TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}""/>
           <Border x:Name=""VoteBadge"" Background=""{DynamicResource Copper}"" CornerRadius=""3"" Padding=""5,0"" Margin=""6,0,0,0"" VerticalAlignment=""Center"" Visibility=""Collapsed"">
             <TextBlock x:Name=""VoteBadgeText"" FontFamily=""Segoe UI"" FontSize=""12"" FontWeight=""SemiBold"" Foreground=""{DynamicResource OnCopper}""/>
           </Border>

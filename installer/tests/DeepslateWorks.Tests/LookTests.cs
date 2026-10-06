@@ -172,6 +172,8 @@ namespace DeepslateWorks.Tests
                             foreach (var t in Tree(ui.Window).OfType<System.Windows.Controls.TextBlock>())
                             {
                                 if (!t.IsVisible || string.IsNullOrWhiteSpace(t.Text) || !(t.Foreground is SolidColorBrush fg)) continue;
+                                // a drawn shadow is not text to read; a block button's face and words are ThemeTests' pairs
+                                if (t.Name == "BrandShade" || t.Name == "Shade" || InButton(t)) continue;
                                 var bg = BackOf(t);
                                 if (bg == null) continue;
                                 var r = Theme.Contrast(fg.Color, bg.Value);
@@ -187,12 +189,19 @@ namespace DeepslateWorks.Tests
                 });
         }
 
-        /// <summary>The first solid colour behind an element: a Border's, a Panel's or a Control's background.</summary>
+        static bool InButton(DependencyObject d)
+        {
+            for (var p = VisualTreeHelper.GetParent(d); p != null; p = VisualTreeHelper.GetParent(p)) if (p is System.Windows.Controls.Button) return true;
+            return false;
+        }
+
+        /// <summary>The first solid colour behind an element: a Border's or a Panel's background, the ones that are drawn (a
+        /// control's own Background, a check box's white say, is only drawn when its template uses it).</summary>
         static Color? BackOf(DependencyObject d)
         {
             for (var p = VisualTreeHelper.GetParent(d); p != null; p = VisualTreeHelper.GetParent(p))
             {
-                var b = (p as System.Windows.Controls.Border)?.Background ?? (p as System.Windows.Controls.Panel)?.Background ?? (p as System.Windows.Controls.Control)?.Background;
+                var b = (p as System.Windows.Controls.Border)?.Background ?? (p as System.Windows.Controls.Panel)?.Background;
                 if (b is SolidColorBrush s && s.Color.A == 255 && s.Opacity >= 1) return s.Color;
             }
             return null;

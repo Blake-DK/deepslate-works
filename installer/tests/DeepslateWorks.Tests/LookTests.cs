@@ -77,7 +77,7 @@ namespace DeepslateWorks.Tests
                 WithWindow(ui =>
                 {
                     ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Up)), "ready");
-                    foreach (var size in new[] { new Size(980, 620), new Size(900, 560) })
+                    foreach (var size in new[] { new Size(980, 720), new Size(980, 620), new Size(900, 560) })
                     {
                         Resize(ui, size.Width, size.Height);
                         var w = ui.Window;
@@ -86,6 +86,8 @@ namespace DeepslateWorks.Tests
                         Assert.Equal(340, F("PlayLeft").ActualWidth, 0);
                         Assert.True(At("PlayCard").Left >= At("PlayLeft").Right + 15, size + ": the card overlaps the left column");
                         Assert.True(At("ServerBox").Width >= 330, size + ": the server card does not fill its column");
+                        // 3.5.3: the left column never scrolls; the (long) pinned news ends in "…" inside it
+                        Assert.True(F("NewsBox").IsVisible && At("NewsBox").Bottom <= At("PlayLeft").Bottom + 0.5, size + ": the news runs off the column");
                         Assert.True(At("PlayRow").Top >= At("PlayLeft").Bottom + 11 && At("PlayRow").Top >= At("PlayCard").Bottom + 11, size + ": the row is not under both columns");
                         Assert.True(At("PlayButton").Right <= At("PlayRow").Right + 0.5, size + ": Play is cut off");
                     }

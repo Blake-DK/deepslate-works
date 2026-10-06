@@ -61,6 +61,7 @@ import { prismaSeasonStore } from "./seasons/store.js";
 import { listAdvancementFiles, readAdvancements } from "./seasons/advancements.js";
 import { seasonRoutes } from "./routes/seasons.js";
 import { BUILDS_KEY, buildRoutes, readUploads, type SavedBuild } from "./routes/builds.js";
+import { builderRoutes } from "./routes/builder.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
@@ -189,6 +190,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
       },
     },
   });
+  builderRoutes(app, { amp: ampClient, tail, ctx: () => limbo.actionCtx, findUser: (id) => db.user.findUnique({ where: { id }, select: { id: true, role: true, builderTools: true, mcUsername: true } }) }); // docs/37
   seasonRoutes(app, { amp: ampClient, tail, ctx: () => limbo.actionCtx, file: seasonFile, store: prismaSeasonStore, addEvent: (e) => prismaRecorderStore.addEvent(e), settle: () => seasons.settle() }); // settle: docs/35 R-15
   const seasons = new SeasonRecorder({
     file: seasonFile,

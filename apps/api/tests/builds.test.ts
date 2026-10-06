@@ -138,3 +138,16 @@ describe("pre-generating another world (Alex, 2026-10-05)", () => {
     expect(sameArea({ x: 0, z: 0, radius: 500 }, { x: 0, z: 0, radius: 500, world: "deepslate:frontier_s1" })).toBe(false);
   });
 });
+
+describe("Lock on its own (docs/37 Step 2: after a WorldEdit paste)", () => {
+  it("a server claim over two typed corners; admins only, 512 a side at most, server running", async () => {
+    const t = app();
+    expect(await t.post("/builds/lock", { dimension: "minecraft:overworld", x1: 40, z1: 10, x2: 0, z2: 30 })).toEqual({ status: 200, body: { ok: true } });
+    expect(t.sent).toEqual(["oclaims server claim in minecraft:overworld 0 10 40 30 anyway"]);
+    expect((await t.post("/builds/lock", { dimension: "minecraft:overworld", x1: 0, z1: 0, x2: 600, z2: 0 })).body.error?.code).toBe("too_large");
+    expect((await t.post("/builds/lock", { dimension: "deepslate:limbo", x1: 0, z1: 0, x2: 1, z2: 1 })).body.error?.code).toBe("validation");
+    expect((await t.post("/builds/lock", { dimension: "minecraft:overworld", x1: 0, z1: 0, x2: 1, z2: 1 }, "PLAYER")).status).toBe(403);
+    expect((await app(0).post("/builds/lock", { dimension: "minecraft:overworld", x1: 0, z1: 0, x2: 1, z2: 1 })).body.error?.code).toBe("server_offline");
+    expect(t.sent).toHaveLength(1);
+  });
+});

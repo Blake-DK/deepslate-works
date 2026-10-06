@@ -147,6 +147,10 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "build.upload": (p) => `uploaded the build "${s(p.name)}" (${s(p.format)}, ${s(p.kb)} KB)`,
   "build.uploadRemove": (p) => `removed the uploaded build "${s(p.name)}"`,
   "build.lock": (p) => `locked the ground of a build in ${s(p.dimension)} (a server claim)`,
+  // docs/37 Step 2: Builder tools (a tick per admin) and Builder mode (creative, where WorldEdit works)
+  "user.builderTools": (p) => (p.on ? `gave ${s(p.displayName, "an admin")} Builder tools` : `took Builder tools away from ${s(p.displayName, "an admin")}`),
+  "builder.on": (p) => `switched Builder mode on for ${s(p.player)} (creative, WorldEdit)`,
+  "builder.off": (p) => `switched Builder mode off for ${s(p.player)} (survival)`,
   "season.grant": (p) => (p.already ? `gave ${s(p.member)} the tick for ${s(p.title)} again (they had it)` : `gave ${s(p.member)} the tick for ${s(p.title)}${p.inGame ? "" : " on the site only: they are not on the server"}`),
   "season.revoke": (p) => (p.had ? `took the tick for ${s(p.title)} back from ${s(p.member)}${p.inGame ? "" : " on the site only: they are not on the server"}` : `took the tick for ${s(p.title)} back from ${s(p.member)} (they did not have it)`),
   "opac.serverClaims": "made the spawn area and the entrance room server claims",

@@ -251,6 +251,62 @@ export function withoutNamespaces(structure: Tag, gone: ReadonlySet<string>): { 
   return { structure: compound({ ...(structure as Extract<Tag, { t: 10 }>).v, palette: list(10, newPalette), blocks: list(10, blocks) }), airFor };
 }
 
+/** A block state as a .schem palette key: "minecraft:oak_stairs[facing=north,half=bottom]" (properties sorted). */
+const schemKey = (state: Tag) => {
+  const props = Object.entries(child(state, "Properties", 10)?.v ?? {}).map(([k, v]) => `${k}=${v.t === 8 ? v.v : ""}`).sort();
+  return `${child(state, "Name", 8)?.v ?? "minecraft:air"}${props.length ? `[${props.join(",")}]` : ""}`;
+};
+
+/**
+ * docs/37 Step 2: a structure as a WorldEdit .schem (Sponge version 3, as WorldEdit 7.3 writes it). Offset 0 and no
+ * WorldEdit origin: `//paste` puts the build's lowest north-west corner on the block the player stands in. A place the
+ * structure leaves out is air, which `//paste -a` skips. Block data goes with its block; entities are left out.
+ */
+export function structureToSchem(structure: Tag): Buffer {
+  const { size } = structureInfo(structure);
+  const keys = (child(structure, "palette", 9)?.v ?? []).map(schemKey);
+  const ids = new Map<string, number>([["minecraft:air", 0]]);
+  const idOf = (k: string) => {
+    if (!ids.has(k)) ids.set(k, ids.size);
+    return ids.get(k)!;
+  };
+  const cells = new Array<number>(size.x * size.y * size.z).fill(0);
+  const entities: Tag[] = [];
+  for (const b of child(structure, "blocks", 9)?.v ?? []) {
+    const pos = child(b, "pos", 9)?.v.map((t) => (t.t === 3 ? t.v : -1));
+    const st = numberOf(b, "state");
+    if (!pos || pos.length !== 3 || st === undefined || keys[st] === undefined) continue;
+    const [x, y, z] = pos as [number, number, number];
+    if (x < 0 || y < 0 || z < 0 || x >= size.x || y >= size.y || z >= size.z) continue;
+    cells[x + size.x * (z + size.z * y)] = idOf(keys[st]!);
+    const nbt = child(b, "nbt", 10);
+    const id = child(nbt, "id", 8)?.v;
+    if (nbt && id) entities.push(compound({ Pos: { t: 11, v: [x, y, z] }, Id: str(id), Data: compound(Object.fromEntries(Object.entries(nbt.v).filter(([k]) => k !== "id"))) }));
+  }
+  const data: number[] = [];
+  for (let v of cells) {
+    while (v >= 0x80) {
+      data.push((v & 0x7f) | 0x80);
+      v >>>= 7;
+    }
+    data.push(v);
+  }
+  return writeNbt(compound({
+    Schematic: compound({
+      Version: int(3),
+      DataVersion: int(numberOf(structure, "DataVersion") ?? 3955),
+      Width: { t: 2, v: size.x },
+      Height: { t: 2, v: size.y },
+      Length: { t: 2, v: size.z },
+      Offset: { t: 11, v: [0, 0, 0] },
+      Blocks: compound({ Palette: compound(Object.fromEntries([...ids].map(([k, n]) => [k, int(n)]))), Data: { t: 7, v: Buffer.from(data) }, BlockEntities: list(10, entities) }),
+    }),
+  }));
+}
+
+/** Where Build puts each upload for WorldEdit: the server's config/worldedit/schematics/ (`//schem load <name>`). */
+export const WORLDEDIT_SCHEMATICS = path.join("server", "config", "worldedit", "schematics");
+
 export type PackBlocks = { builtAt: string; namespaces: Record<string, string> };
 
 /** The namespaces of blocks the pack has (each jar's assets/<ns>/blockstates/, nested jars too), with the mod's name. */
@@ -330,7 +386,9 @@ export const uploadTemplate = (name: string) => `deepslate:upload/${name}`;
  * deepslate-builds in dist/server/datapacks/, and dist/builds.json says what is in it (the site reads the sizes
  * from there). A file that does not read is named and left out; the others are still built. docs/37: first
  * dist/pack-blocks.json is written from the server's jars; a build with blocks of a mod the pack does not have is left
- * out, unless its admin ticked "the missing blocks become air" at upload, and then they are written as air.
+ * out, unless its admin ticked "the missing blocks become air" at upload, and then they are written as air. Each
+ * build is also written as a WorldEdit .schem into dist/server/config/worldedit/schematics/, which Sync merges into
+ * the server's config/ (never deleting: a removed upload stays in WorldEdit's list until it is deleted there).
  */
 export async function buildBuilds(paths: { repo: string; dist: string }, log: (s: string) => void): Promise<BuildInfo[]> {
   const from = path.join(paths.repo, "data", "builds");
@@ -346,6 +404,8 @@ export async function buildBuilds(paths: { repo: string; dist: string }, log: (s
     // nothing uploaded yet
   }
   await rm(pack, { recursive: true, force: true });
+  const schems = path.join(paths.dist, WORLDEDIT_SCHEMATICS);
+  await rm(schems, { recursive: true, force: true });
   const done: BuildInfo[] = [];
   const problems: Array<{ file: string; why: string }> = [];
   for (const file of names) {
@@ -357,16 +417,21 @@ export async function buildBuilds(paths: { repo: string; dist: string }, log: (s
       const { structure, check } = readBuild(raw, format, known);
       let bytes = format === "nbt" ? raw : writeNbt(structure);
       let airFor = 0;
+      let final = structure;
       if (check.missing.length) {
         const choice = await readFile(path.join(from, `${name}.json`), "utf8").then((t) => JSON.parse(t) as BuildChoice).catch(() => ({}) as BuildChoice);
         if (!choice.allowMissing) throw new BuildError(`it has blocks of mods the pack does not have: ${missingLine(check.needs, check.missing)}. Upload it again with "the missing blocks become air" ticked, or leave it out`);
         const cut = withoutNamespaces(structure, new Set(check.missing));
-        bytes = writeNbt(cut.structure);
+        final = cut.structure;
+        bytes = writeNbt(final);
         airFor = cut.airFor;
       }
       const out = path.join(pack, "data", "deepslate", "structure", "upload", `${name}.nbt`);
       await mkdir(path.dirname(out), { recursive: true });
       await writeFile(out, bytes);
+      // docs/37 Step 2: the same build for WorldEdit, `//schem load <name>`
+      await mkdir(schems, { recursive: true });
+      await writeFile(path.join(schems, `${name}.schem`), structureToSchem(final));
       done.push({ name, format, size: check.size, blocks: check.blocks, needs: check.needs, missing: check.missing, airFor });
       log(`build ${name} (${format}): ${check.size.x} by ${check.size.y} by ${check.size.z}${airFor ? `, ${airFor} blocks of missing mods made air` : ""}`);
     } catch (e) {

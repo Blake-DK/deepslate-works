@@ -1,8 +1,9 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readdir, readFile, rm, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildServer } from "../src/build";
+import { buildServer, jarStem } from "../src/build";
 import type { LockFile } from "../src/lock";
 import type { Manifest } from "../src/schema";
 
@@ -29,6 +30,22 @@ describe("the datapack deepslate-limbo (docs/14)", () => {
 describe("buildServer", () => {
   let dir = "";
   afterEach(async () => { if (dir) await rm(dir, { recursive: true, force: true }); });
+  it("an old jar of a mod in the lock is said as updated; one of a mod gone from the lock as removed (Alex, 2026-10-06)", async () => {
+    dir = await mkdtemp(path.join(tmpdir(), "mods-test-"));
+    const mods = path.join(dir, "dist", "server", "mods");
+    await mkdir(mods, { recursive: true });
+    const jar = Buffer.from("placebo 9.9.3");
+    await writeFile(path.join(mods, "Placebo-1.21.1-9.9.3.jar"), jar); // already in place: nothing is downloaded
+    await writeFile(path.join(mods, "Placebo-1.21.1-9.9.2.jar"), "placebo 9.9.2");
+    await writeFile(path.join(mods, "OldMod-1.0.jar"), "old");
+    const placebo = { slug: "placebo", filename: "Placebo-1.21.1-9.9.3.jar", side: "both", sha512: createHash("sha512").update(jar).digest("hex"), url: "https://cdn.invalid/p.jar" };
+    const lines: string[] = [];
+    await buildServer({ version: "0.0.1" } as Manifest, { files: [placebo], hash: "abcdef0123456789", neoforge: "21.1.252" } as unknown as LockFile, { dist: path.join(dir, "dist"), config: path.join(dir, "none"), server: path.join(dir, "none") }, (l) => lines.push(l));
+    expect(lines).toContain("updated Placebo-1.21.1-9.9.2.jar → Placebo-1.21.1-9.9.3.jar");
+    expect(lines).toContain("removed OldMod-1.0.jar (no longer in the lock)");
+    expect(await readdir(mods)).toEqual(["Placebo-1.21.1-9.9.3.jar"]);
+    expect([jarStem("appleskin-neoforge-mc1.21-3.0.6.jar"), jarStem("worldedit-mod-7.3.8.jar")]).toEqual(["appleskin-neoforge", "worldedit-mod"]);
+  });
   it("puts the datapacks next to the server files, for Sync to carry into the world", async () => {
     dir = await mkdtemp(path.join(tmpdir(), "datapack-test-"));
     const packs = path.join(dir, "datapacks", "deepslate-limbo");

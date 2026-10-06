@@ -94,16 +94,8 @@ namespace DeepslateWorks
         }
 
         // ---- the pinned news (3.5.3, Alex 2026-10-06) ----------------------------------------------------------------
-        public const int NewsMax = 600;
-
-        /// <summary>The news as the card shows it: blank lines squeezed to one, cut at a word near NewsMax with "…".</summary>
-        public static string NewsShort(string body, int max = NewsMax)
-        {
-            var t = Regex.Replace((body ?? "").Replace("\r\n", "\n").Trim(), "\n{3,}", "\n\n");
-            if (t.Length <= max) return t;
-            var cut = t.LastIndexOf(' ', max - 1);
-            return t.Substring(0, cut > max / 2 ? cut : max - 1).TrimEnd(' ', ',', '.', ';', ':', '\n') + "…";
-        }
+        /// <summary>The news as the card shows it: whole (Alex, 2026-10-06: never cut off), blank lines squeezed to one.</summary>
+        public static string NewsShort(string body) => Regex.Replace((body ?? "").Replace("\r\n", "\n").Trim(), "\n{3,}", "\n\n");
 
         /// <summary>Where a click on the news card goes: the site's link for it, only if it is on the site; else the site.</summary>
         public static string NewsUrl(HomeInfo h)

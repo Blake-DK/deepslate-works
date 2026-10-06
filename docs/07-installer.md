@@ -43,6 +43,12 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.5.4: readable text, the whole news, Play through the vote (Alex, 2026-10-06)
+
+- **Text colour.** The tab strip (`Strip`) sets `Foreground` to Fg. Before, every TextBlock inside a tab that set no colour of its own inherited Windows' control text colour, black: the server line and the pinned news were #000000 on Card #202226 (about 1.2:1; measured in CI's screenshot of 3.5.3). `LookTests.Every_text_on_every_tab_reads_at_4_5_to_1_or_better` walks every visible text on every tab against the first solid background behind it (WCAG AA, 4.5:1).
+- **The pinned news** is never cut (Alex): 14 pt in Fg, the whole text. The card takes the room left in the column (no `FitNews` any more); a longer text scrolls inside it with a thin 8 px bar (`NewsScroll`), so the server card keeps its width. Pressing the bar is not a click on the news.
+- **Play with a vote waiting.** The button stays pressable with the site's label ("Vote first, it takes ten seconds"). Pressing it, the website's Play, or a run that would have started the game by itself opens the Vote tab and remembers it (`playAfterVotes`). Once every vote is answered (the results show for 4 s, the button says "Play now") the game starts: `OnReady` goes straight to `Go(true)`, or an idle window starts the run.
+
 ## 3.5.3: the Play tab fits, the news opens the site (Alex, 2026-10-06)
 
 - **The window** opens 980×720 (less when the screen's work area is smaller; never under 900×560). On the Play tab a step and its first tick share one row: "✓  Finding Java 21 · Using the Java we downloaded last time". A second tick goes under it, indented.

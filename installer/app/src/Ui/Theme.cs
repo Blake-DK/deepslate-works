@@ -107,6 +107,13 @@ namespace DeepslateWorks
             return (Math.Max(l1, l2) + 0.05) / (Math.Min(l1, l2) + 0.05);
         }
 
+        /// <summary>The same for two colours (the window test that reads every text on every tab).</summary>
+        public static double Contrast(Color a, Color b)
+        {
+            double l1 = Luminance(a), l2 = Luminance(b);
+            return (Math.Max(l1, l2) + 0.05) / (Math.Min(l1, l2) + 0.05);
+        }
+
         static double Luminance(Color c)
         {
             double Lin(byte v) { var s = v / 255.0; return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4); }

@@ -160,6 +160,9 @@ namespace DeepslateWorks
       </Setter.Value></Setter>
     </Style>
     <Style TargetType=""TabControl"" x:Key=""Strip"">
+      <!-- 3.5.4 (Alex, 2026-10-06): without it the tabs' text inherits Windows' control text colour, black, and every
+           TextBlock that sets no colour of its own (the server line, the pinned news) was black on the dark cards -->
+      <Setter Property=""Foreground"" Value=""{DynamicResource Fg}""/>
       <Setter Property=""Template""><Setter.Value>
         <ControlTemplate TargetType=""TabControl"">
           <DockPanel>
@@ -249,7 +252,7 @@ namespace DeepslateWorks
       <Grid x:Name=""PlayGrid"" Margin=""16,14,16,12"">
         <Grid.ColumnDefinitions><ColumnDefinition Width=""340""/><ColumnDefinition Width=""16""/><ColumnDefinition Width=""*""/></Grid.ColumnDefinitions>
         <Grid.RowDefinitions><RowDefinition Height=""*""/><RowDefinition Height=""12""/><RowDefinition Height=""Auto""/></Grid.RowDefinitions>
-        <!-- 3.5.3: no scrolling; the news card takes what room is left and ends in an ellipsis (a click shows it all on the site) -->
+        <!-- 3.5.4: the cards keep their width; the news card takes the room that is left, and only its text scrolls when it is longer -->
         <DockPanel x:Name=""PlayLeft"" Grid.Column=""0"" Grid.Row=""0"" LastChildFill=""True"" ClipToBounds=""True"">
           <Border x:Name=""ServerBox"" DockPanel.Dock=""Top"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
             <StackPanel>
@@ -288,8 +291,24 @@ namespace DeepslateWorks
                 <TextBlock x:Name=""NewsOpen"" DockPanel.Dock=""Right"" Foreground=""{DynamicResource Blue}"" FontSize=""12"" Text=""Read it on the site ›""/>
                 <TextBlock Text=""PINNED NEWS"" Foreground=""{DynamicResource Copper}"" FontSize=""11.5"" FontWeight=""SemiBold""/>
               </DockPanel>
-              <TextBlock x:Name=""NewsMeta"" DockPanel.Dock=""Bottom"" Foreground=""{DynamicResource Dim}"" FontSize=""11.5"" Margin=""0,6,0,0""/>
-              <TextBlock x:Name=""NewsText"" TextWrapping=""Wrap"" TextTrimming=""WordEllipsis"" FontSize=""13.5"" LineHeight=""20"" LineStackingStrategy=""BlockLineHeight"" Margin=""0,6,0,0""/>
+              <TextBlock x:Name=""NewsMeta"" DockPanel.Dock=""Bottom"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Margin=""0,6,0,0""/>
+              <ScrollViewer x:Name=""NewsScroll"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Disabled"" Margin=""0,6,0,0"" Focusable=""False"">
+                <ScrollViewer.Resources>
+                  <Style TargetType=""ScrollBar"">
+                    <Setter Property=""Width"" Value=""8""/><Setter Property=""MinWidth"" Value=""8""/><Setter Property=""Margin"" Value=""6,0,0,0""/><Setter Property=""Cursor"" Value=""Arrow""/>
+                    <Setter Property=""Template""><Setter.Value>
+                      <ControlTemplate TargetType=""ScrollBar"">
+                        <Border Background=""{DynamicResource Line}"" CornerRadius=""4"">
+                          <Track x:Name=""PART_Track"" Orientation=""Vertical"" IsDirectionReversed=""True"">
+                            <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType=""Thumb""><Border Background=""{DynamicResource BoxLine}"" CornerRadius=""4""/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+                          </Track>
+                        </Border>
+                      </ControlTemplate>
+                    </Setter.Value></Setter>
+                  </Style>
+                </ScrollViewer.Resources>
+                <TextBlock x:Name=""NewsText"" TextWrapping=""Wrap"" Foreground=""{DynamicResource Fg}"" FontSize=""14"" LineHeight=""21"" LineStackingStrategy=""BlockLineHeight""/>
+              </ScrollViewer>
             </DockPanel>
           </Border>
         </DockPanel>
@@ -478,7 +497,7 @@ namespace DeepslateWorks
             "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "Footer", "FooterApp", "FooterPack", "FooterServer",
             "StepLabel", "SettingsLink", "PlayHint",
             // 3.2.0 (planner 2026-10-02): the server on the Play tab, and the Vote tab
-            "ServerBox", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "StartButton", "SiteLink", "NewsBox", "NewsText", "NewsMeta", "NewsOpen",
+            "ServerBox", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "StartButton", "SiteLink", "NewsBox", "NewsText", "NewsMeta", "NewsOpen", "NewsScroll",
             "VoteTab", "VoteStep", "VoteTitle", "VoteNote", "VoteBody", "VoteButton", "VoteError",
             "UpdateButton", "UpdateLine",   // 3.3.0
             // 3.4.0 (docs/21): the ground, the banner with the server pill, the drawn logo, the Vote tab's badge, the card

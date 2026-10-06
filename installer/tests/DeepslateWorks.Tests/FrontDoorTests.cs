@@ -34,18 +34,17 @@ namespace DeepslateWorks.Tests
             var up = H(HomeSamples.Up);
             Assert.Equal("https://deepslate.dsw.test/votes", SiteHome.NewsUrl(up));
             Assert.Equal("Vote on the site ›", SiteHome.NewsAction(SiteHome.NewsUrl(up)));
-            Assert.Contains("3. Which boss goes first?", SiteHome.NewsShort(up.News.Body));   // the whole of it, not cut at 280
+            Assert.Contains("3. Which boss goes first?", SiteHome.NewsShort(up.News.Body));   // the whole of it
             // a link off the site is never opened: the site instead; no link (an older site): the site
             up.News.Url = "https://example.com/x";
             Assert.Equal("https://deepslate.dsw.test", SiteHome.NewsUrl(up));
             var w = H(HomeSamples.Waking);
             Assert.Equal("https://deepslate.dsw.test", SiteHome.NewsUrl(w));
             Assert.Equal("Read it on the site ›", SiteHome.NewsAction("https://deepslate.dsw.test/#news-n2"));
-            // blank lines squeezed, a long one cut at a word
+            // blank lines squeezed; a long one is never cut (Alex, 2026-10-06): the card scrolls instead
             Assert.Equal("a\n\nb", SiteHome.NewsShort("a\r\n\r\n\r\n\r\nb"));
-            var cut = SiteHome.NewsShort(string.Join(" ", Enumerable.Repeat("word", 200)));
-            Assert.True(cut.Length <= SiteHome.NewsMax + 1);
-            Assert.EndsWith("word…", cut);
+            var longOne = string.Join(" ", Enumerable.Repeat("word", 400));
+            Assert.Equal(longOne, SiteHome.NewsShort(longOne));
         }
 
         [Fact] public void Only_an_admin_gets_Start_and_only_for_a_server_that_will_not_wake()
@@ -164,7 +163,7 @@ namespace DeepslateWorks.Tests
             return ui;
         }
 
-        [WindowsFact] public void The_Vote_screen_comes_first_and_Play_stays_shut_until_every_vote_is_answered()
+        [WindowsFact] public void The_Vote_screen_comes_first_and_Play_leads_to_it_until_every_vote_is_answered()
         {
             using (new Scratch())
                 OnSta(() =>
@@ -176,17 +175,22 @@ namespace DeepslateWorks.Tests
                         ui.Pump();
                         Assert.True(ui.OnVoteTab);
                         Assert.Equal("What's the next boss?", ui.VoteQuestion);
-                        Assert.False(ui.PlayOpen);
+                        // 3.5.4 (Alex, 2026-10-06): the button can be pressed; it goes to the vote, and the game starts after it
+                        Assert.True(ui.PlayOpen);
                         Assert.Equal("Vote first, it takes ten seconds", ui.PlayLabel);
-                        ui.Tick();   // nothing turns it back on while the vote waits
-                        Assert.False(ui.PlayOpen);
+                        ui.Tick();   // still the vote's label while it waits
+                        Assert.Equal("Vote first, it takes ten seconds", ui.PlayLabel);
+                        Assert.False(ui.PlaysAfterVotes);
+                        ui.PressTab("play"); ui.PressPlay(); ui.Pump();
+                        Assert.True(ui.OnVoteTab);
+                        Assert.True(ui.PlaysAfterVotes);
                         ui.SimVoted(SiteHome.ParsePoll(Json.Parse(HomeSamples.Voted)));
                         Assert.Equal("Next vote", ui.VoteButtonLabel);
-                        Assert.False(ui.PlayOpen);   // the second one still waits
+                        Assert.Equal("Vote first, it takes ten seconds", ui.PlayLabel);   // the second one still waits
                         ui.Next();
                         Assert.Equal("Which mods should we add next?", ui.VoteQuestion);
                         ui.SimVoted(SiteHome.ParsePoll(Json.Parse(HomeSamples.Voted)));
-                        Assert.Equal("Go to Play", ui.VoteButtonLabel);
+                        Assert.Equal("Play now", ui.VoteButtonLabel);
                         ui.Next();
                         Assert.False(ui.OnVoteTab);
                         Assert.True(ui.PlayOpen);

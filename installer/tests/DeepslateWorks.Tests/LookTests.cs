@@ -86,8 +86,10 @@ namespace DeepslateWorks.Tests
                         Assert.Equal(340, F("PlayLeft").ActualWidth, 0);
                         Assert.True(At("PlayCard").Left >= At("PlayLeft").Right + 15, size + ": the card overlaps the left column");
                         Assert.True(At("ServerBox").Width >= 330, size + ": the server card does not fill its column");
-                        // 3.5.3: the left column never scrolls; the (long) pinned news ends in "…" inside it
+                        // 3.5.4: the cards keep their width; a long pinned news scrolls inside its own card, which stays in the column
                         Assert.True(F("NewsBox").IsVisible && At("NewsBox").Bottom <= At("PlayLeft").Bottom + 0.5, size + ": the news runs off the column");
+                        var ns = (System.Windows.Controls.ScrollViewer)F("NewsScroll");
+                        Assert.True(ns.ExtentHeight <= ns.ViewportHeight + 0.5 || ns.ComputedVerticalScrollBarVisibility == Visibility.Visible, size + ": the news is cut off without a way to scroll it");
                         Assert.True(At("PlayRow").Top >= At("PlayLeft").Bottom + 11 && At("PlayRow").Top >= At("PlayCard").Bottom + 11, size + ": the row is not under both columns");
                         Assert.True(At("PlayButton").Right <= At("PlayRow").Right + 0.5, size + ": Play is cut off");
                     }
@@ -151,6 +153,49 @@ namespace DeepslateWorks.Tests
                         Assert.Equal(new[] { "BrandName", "PlayButton", "VoteButton" }, owners.OrderBy(o => o, StringComparer.Ordinal).ToArray());
                     });
             }
+        }
+
+        [WindowsFact] public void Every_text_on_every_tab_reads_at_4_5_to_1_or_better()
+        {
+            // 3.5.4 (Alex, 2026-10-06, "that news black text is hard to read"): the tab strip set no text colour, so a
+            // TextBlock with none of its own (the pinned news, the server line) was Windows' black on the dark card,
+            // about 1.2:1. Every visible text on every tab against the first solid background behind it: WCAG AA, 4.5:1.
+            using (new Scratch())
+                WithWindow(ui =>
+                {
+                    var low = new List<string>();
+                    void Walk(params string[] tabs)
+                    {
+                        foreach (var tab in tabs)
+                        {
+                            ui.PressTab(tab); ui.Pump(); ui.Window.UpdateLayout();
+                            foreach (var t in Tree(ui.Window).OfType<System.Windows.Controls.TextBlock>())
+                            {
+                                if (!t.IsVisible || string.IsNullOrWhiteSpace(t.Text) || !(t.Foreground is SolidColorBrush fg)) continue;
+                                var bg = BackOf(t);
+                                if (bg == null) continue;
+                                var r = Theme.Contrast(fg.Color, bg.Value);
+                                if (r < 4.5) low.Add(string.Format("{0}: \"{1}\" ({2}) {3} on {4}: {5:0.0}:1", tab, t.Text.Length > 30 ? t.Text.Substring(0, 30) + "…" : t.Text, Owner(t), fg.Color, bg.Value, r));
+                            }
+                        }
+                    }
+                    ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Up)), "ready"); ui.Pump();
+                    Walk("play", "extras", "settings", "log");
+                    ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready"); ui.Pump();
+                    Walk("play", "vote");
+                    Assert.True(low.Count == 0, "hard to read:\n" + string.Join("\n", low.Distinct()));
+                });
+        }
+
+        /// <summary>The first solid colour behind an element: a Border's, a Panel's or a Control's background.</summary>
+        static Color? BackOf(DependencyObject d)
+        {
+            for (var p = VisualTreeHelper.GetParent(d); p != null; p = VisualTreeHelper.GetParent(p))
+            {
+                var b = (p as System.Windows.Controls.Border)?.Background ?? (p as System.Windows.Controls.Panel)?.Background ?? (p as System.Windows.Controls.Control)?.Background;
+                if (b is SolidColorBrush s && s.Color.A == 255 && s.Opacity >= 1) return s.Color;
+            }
+            return null;
         }
 
         [WindowsFact] public void A_long_block_label_is_Segoe_UI_and_a_short_one_keeps_the_face()

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/server/db";
+import { requireAdmin } from "@/server/auth/session";
 import { DEFAULT_QUESTIONS } from "@/server/vote/tally";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -55,6 +56,9 @@ function OptionRow({ i, mods, value, testId }: { i: number; mods: Mods; value?: 
 function EditPoll({ poll, mods }: { poll: PollView; mods: Mods }) {
   const current = poll.options.filter((o) => o.id !== DONT_MIND.id);
   const voted = new Map(poll.results?.counts.map((c) => [c.id, c.votes]) ?? []);
+  const total = poll.results?.voters ?? 0;
+  const dontMind = voted.get(DONT_MIND.id) ?? 0;
+  const count = (n: number) => (n === 0 ? "No votes" : `${n} ${n === 1 ? "vote" : "votes"}`);
   const free = MAX_OPTIONS - current.length;
   return (
     <details className="rounded-[4px] border p-3" data-testid="poll-edit">
@@ -63,9 +67,10 @@ function EditPoll({ poll, mods }: { poll: PollView; mods: Mods }) {
         <div><Label htmlFor={`q-${poll.id}`}>Question</Label><Input id={`q-${poll.id}`} name="question" defaultValue={poll.question} required minLength={3} maxLength={160} /></div>
         <fieldset className="space-y-2">
           <legend className="mb-1 text-sm font-medium">Options</legend>
+          <p className="text-sm text-muted-foreground" data-testid="poll-edit-votes">{count(total)} so far{total > 0 && <>, {dontMind} of them &ldquo;{DONT_MIND.text}&rdquo; (added to every poll, so it isn&apos;t listed here)</>}.</p>
           {current.map((o, k) => (
             <div key={o.id} className="space-y-1">
-              {(voted.get(o.id) ?? 0) > 0 && <p className="text-xs text-muted-foreground">{voted.get(o.id)} {voted.get(o.id) === 1 ? "vote" : "votes"}: it can be reworded, not taken away.</p>}
+              <p className="text-xs text-muted-foreground">{count(voted.get(o.id) ?? 0)}{(voted.get(o.id) ?? 0) > 0 && ": it can be reworded, not taken away"}</p>
               <OptionRow i={k + 1} mods={mods} value={{ id: o.id, text: o.text, link: o.link, modId: o.modId, imageUrl: o.imageUrl }} />
             </div>
           ))}
@@ -99,9 +104,11 @@ const ERRORS: Record<string, string> = {
 /** `part` (docs/35): the quick polls are Admin → Votes, the season's mod vote is Modpack → Mod vote. */
 export default async function VotesSection({ searchParams, part }: { searchParams: Promise<{ error?: string; poll?: string }>; part: "polls" | "modvote" }) {
   const { error, poll: pollMsg } = await searchParams;
+  const admin = await requireAdmin();
   const [votes, polls, mods, members] = await Promise.all([
     db.vote.findMany({ orderBy: { opensAt: "desc" }, include: { _count: { select: { ballots: true } } } }),
-    listPolls({ id: "", role: "ADMIN" }, 20),
+    // as this admin, so their own vote (on the site or in Discord) shows as theirs
+    listPolls({ id: admin.id, role: "ADMIN" }, 20),
     getManifest().then(votableMods).catch(() => []),
     db.user.count(),
   ]);

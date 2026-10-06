@@ -39,6 +39,12 @@ Last updated 2026-10-06, latest: app 3.5.4, readable text, the whole news, Play 
 - **Checked:** the app and its tests compile in the capped dotnet container; `deploy/check.sh` green after merging `dev` (modpack 159, api 606, web 498 tests). The xUnit window tests and the screenshots run in CI (`installer.yml`); screenshot 28 is now `28-window.png`.
 - **The deploy needs:** the `dev` → `main` PR (installer CI builds 3.5.3), Build (installer). Change-log entry `2026-10-06-app-home`. 3.5.3 becomes the required app the moment it is the download (3.5.2 rule).
 
+## Snyk's PR #6 closed; Next 16 is on the plan (2026-10-06)
+
+- **Alex:** check the new PR from Snyk; then close it and add it to the plan.
+- **PR #6** (next 15.5.26 → 16.1.5 for SNYK-JS-NEXT-15105315, CVE-2025-59472) was **closed unmerged** with a comment, its branch deleted. The issue is in partial prerendering; GitHub's advisory (GHSA-5f7q-jpqc-wp7h) lists only 15.x canary builds, and `next.config.ts` does not enable it. 16.1.5 itself is open to later critical advisories that 15.5.26 is patched for. CI had failed at install (lockfile not updated).
+- **On the plan:** docs/10 open items, P2 item 18: the move to the newest 16.3.x, through `dev`, with what to read and click through. **Open (Alex, Person):** ignore SNYK-JS-NEXT-15105315 in Snyk.
+
 ## Discord votes are the site vote; polls can be edited and made must-vote (2026-10-06, on `dev`, not deployed)
 
 - **Alex:** the votes in Discord need to link to the account on the site, and someone who voted in Discord should not have to vote on the site; edit a vote; a must-vote-before-play flag.

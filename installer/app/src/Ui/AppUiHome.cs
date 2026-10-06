@@ -26,7 +26,7 @@ namespace DeepslateWorks
         public TabItem VoteTab;
         Border ServerBox, NewsBox;
         Ellipse ServerDot;
-        TextBlock ServerLineText, ServerHint, ServerOnline, NewsText, NewsMeta, VoteStep, VoteTitle, VoteNote, VoteError;
+        TextBlock ServerLineText, ServerHint, ServerOnline, NewsText, NewsMeta, NewsOpen, VoteStep, VoteTitle, VoteNote, VoteError;
         Hyperlink SiteLink;
         Button StartButton, VoteButton;
         StackPanel VoteBody;
@@ -55,16 +55,46 @@ namespace DeepslateWorks
             T F<T>(string n) where T : class => w.FindName(n) as T ?? throw new InvalidOperationException("the window has no " + n);
             VoteTab = F<TabItem>("VoteTab"); ServerBox = F<Border>("ServerBox"); NewsBox = F<Border>("NewsBox"); ServerDot = F<Ellipse>("ServerDot");
             ServerLineText = F<TextBlock>("ServerLine"); ServerHint = F<TextBlock>("ServerHint"); ServerOnline = F<TextBlock>("ServerOnline");
-            NewsText = F<TextBlock>("NewsText"); NewsMeta = F<TextBlock>("NewsMeta"); SiteLink = F<Hyperlink>("SiteLink");
+            NewsText = F<TextBlock>("NewsText"); NewsMeta = F<TextBlock>("NewsMeta"); NewsOpen = F<TextBlock>("NewsOpen"); SiteLink = F<Hyperlink>("SiteLink");
             StartButton = F<Button>("StartButton"); VoteButton = F<Button>("VoteButton"); VoteBody = F<StackPanel>("VoteBody");
             VoteStep = F<TextBlock>("VoteStep"); VoteTitle = F<TextBlock>("VoteTitle"); VoteNote = F<TextBlock>("VoteNote"); VoteError = F<TextBlock>("VoteError");
             SiteLink.Click += (s, e) => OpenSite(SiteNow?.Site ?? Env.PortalUrl);
+            // 3.5.3: the whole news card opens it on the site (the Votes page for news about a vote)
+            NewsBox.MouseLeftButtonUp += (s, e) => { var u = SiteHome.NewsUrl(SiteNow); Log.Line("window: news opened on the site"); OpenSite(u); };
+            PlayLeft = F<FrameworkElement>("PlayLeft");
+            PlayLeft.SizeChanged += (s, e) => FitNews();
+            ServerBox.SizeChanged += (s, e) => FitNews();
+            NewsBox.SizeChanged += (s, e) => FitNews();
+            F<FrameworkElement>("ChangedBox").SizeChanged += (s, e) => FitNews();
             StartButton.Click += (s, e) => OnStartServer();
             VoteButton.Click += (s, e) => OnVoteButton();
             HomeTimer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromSeconds(HomeEverySec) };
             HomeTimer.Tick += (s, e) => RefreshHome();
             VoteNextTimer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromSeconds(4) };
             VoteNextTimer.Tick += (s, e) => NextVote();
+        }
+
+        FrameworkElement PlayLeft;
+
+        /// <summary>3.5.3: the left column never scrolls. The news text gets the whole lines that fit under the cards above
+        /// it (at least one; WordEllipsis ends the last with "…"); the author and date line goes when two lines would not fit.</summary>
+        void FitNews()
+        {
+            if (NewsBox.Visibility != Visibility.Visible || PlayLeft.ActualHeight <= 0) return;
+            try
+            {
+                const double MetaRoom = 22;   // NewsMeta: 11.5 pt and its 6 px margin
+                var lh = NewsText.LineHeight;
+                var top = NewsBox.TranslatePoint(new Point(0, 0), PlayLeft).Y;
+                var metaShown = NewsMeta.Visibility == Visibility.Visible;
+                var bare = NewsBox.ActualHeight - NewsText.ActualHeight - (metaShown ? NewsMeta.ActualHeight + NewsMeta.Margin.Top : 0);
+                var room = PlayLeft.ActualHeight - top - bare;
+                var wantMeta = !string.IsNullOrEmpty(NewsMeta.Text) && room - MetaRoom >= 2 * lh;
+                var max = Math.Max(1, Math.Floor((room - (wantMeta ? MetaRoom : 0)) / lh)) * lh;
+                if (wantMeta != metaShown) NewsMeta.Visibility = wantMeta ? Visibility.Visible : Visibility.Collapsed;
+                if (Math.Abs(NewsText.MaxHeight - max) > 0.5) NewsText.MaxHeight = max;
+            }
+            catch { }
         }
 
         void StartHome() { RefreshHome(); HomeTimer.Start(); }
@@ -132,10 +162,12 @@ namespace DeepslateWorks
             StartButton.Visibility = h.Admin && s.CanStart ? Visibility.Visible : Visibility.Collapsed;
             if (h.News != null)
             {
-                var body = h.News.Body.Length > 280 ? h.News.Body.Substring(0, 277) + "..." : h.News.Body;
-                NewsText.Text = body;
-                NewsMeta.Text = "Pinned news" + (string.IsNullOrEmpty(h.News.Author) ? "" : " · " + h.News.Author) + (string.IsNullOrEmpty(h.News.At) ? "" : " · " + h.News.At);
+                NewsText.Text = SiteHome.NewsShort(h.News.Body);
+                NewsMeta.Text = string.Join(" · ", new[] { h.News.Author, h.News.At }.Where(x => !string.IsNullOrEmpty(x)));
+                if (NewsMeta.Text.Length == 0) NewsMeta.Visibility = Visibility.Collapsed;   // else FitNews decides whether it fits
+                NewsOpen.Text = SiteHome.NewsAction(SiteHome.NewsUrl(h));
                 NewsBox.Visibility = Visibility.Visible;
+                FitNews();
             }
             else NewsBox.Visibility = Visibility.Collapsed;
             VerServer = s.Line; UpdateAppFooter();

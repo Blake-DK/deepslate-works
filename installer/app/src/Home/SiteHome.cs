@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace DeepslateWorks
 {
@@ -29,7 +30,7 @@ namespace DeepslateWorks
         public int Voters;
     }
     public sealed class BallotInfo { public string Id, Title, Url; }
-    public sealed class NewsInfo { public string Body, At, Author; }
+    public sealed class NewsInfo { public string Body, At, Author, Url; }
     /// <summary>3.4.0 (docs/21 §7): a player in the world, with the UUID whose head the site serves (null: not known).</summary>
     public sealed class OnlinePlayer { public string Name, Uuid; }
     /// <summary>One thing to answer before Play, in the order the site gives (oldest first): a poll, or the mod ballot.</summary>
@@ -74,7 +75,7 @@ namespace DeepslateWorks
                 if (!string.IsNullOrEmpty(name)) h.Players.Add(new OnlinePlayer { Name = name, Uuid = IsUuid(J.Str(p, "uuid")) ? J.Str(p, "uuid").ToLowerInvariant() : null });
             }
             var n = J.Obj(j, "news");
-            if (n != null && !string.IsNullOrWhiteSpace(J.Str(n, "body"))) h.News = new NewsInfo { Body = J.Str(n, "body"), At = J.Str(n, "at"), Author = J.Str(n, "author") };
+            if (n != null && !string.IsNullOrWhiteSpace(J.Str(n, "body"))) h.News = new NewsInfo { Body = J.Str(n, "body"), At = J.Str(n, "at"), Author = J.Str(n, "author"), Url = J.Str(n, "url") };
             var v = J.Obj(j, "votes");
             if (v != null)
             {
@@ -91,6 +92,29 @@ namespace DeepslateWorks
             }
             return h;
         }
+
+        // ---- the pinned news (3.5.3, Alex 2026-10-06) ----------------------------------------------------------------
+        public const int NewsMax = 600;
+
+        /// <summary>The news as the card shows it: blank lines squeezed to one, cut at a word near NewsMax with "…".</summary>
+        public static string NewsShort(string body, int max = NewsMax)
+        {
+            var t = Regex.Replace((body ?? "").Replace("\r\n", "\n").Trim(), "\n{3,}", "\n\n");
+            if (t.Length <= max) return t;
+            var cut = t.LastIndexOf(' ', max - 1);
+            return t.Substring(0, cut > max / 2 ? cut : max - 1).TrimEnd(' ', ',', '.', ';', ':', '\n') + "…";
+        }
+
+        /// <summary>Where a click on the news card goes: the site's link for it, only if it is on the site; else the site.</summary>
+        public static string NewsUrl(HomeInfo h)
+        {
+            var site = (h?.Site ?? Env.PortalUrl).TrimEnd('/');
+            var u = h?.News?.Url;
+            return !string.IsNullOrEmpty(u) && u.StartsWith(site + "/", StringComparison.OrdinalIgnoreCase) ? u : site;
+        }
+
+        /// <summary>The words in the news card's corner, by where it goes.</summary>
+        public static string NewsAction(string url) => (url ?? "").TrimEnd('/').EndsWith("/votes", StringComparison.OrdinalIgnoreCase) ? "Vote on the site ›" : "Read it on the site ›";
 
         public static ServerInfo ParseServer(object s)
         {

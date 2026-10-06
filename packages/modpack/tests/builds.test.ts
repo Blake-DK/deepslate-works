@@ -4,7 +4,7 @@ import path from "node:path";
 import { PassThrough } from "node:stream";
 import archiver from "archiver";
 import { afterEach, describe, expect, it } from "vitest";
-import { BuildError, buildBuilds, jarBlockNamespaces, litematicToStructure, missingLine, packBlocks, paletteEntry, readBuild, schemToStructure, structureInfo, structureNeeds, toStructure, withoutNamespaces } from "../src/builds";
+import { BuildError, buildBuilds, jarBlockNamespaces, structureToSchem, litematicToStructure, missingLine, packBlocks, paletteEntry, readBuild, schemToStructure, structureInfo, structureNeeds, toStructure, withoutNamespaces } from "../src/builds";
 import { byte, child, compound, int, ints, list, numberOf, readNbt, short, str, writeNbt, type Tag } from "../src/nbt";
 import { openZip } from "../src/zip";
 
@@ -240,5 +240,38 @@ describe("build builds, with the pack's blocks (docs/37)", () => {
     const repo = await mkdtemp(path.join(tmpdir(), "builds-"));
     dirs.push(repo);
     expect(await packBlocks(path.join(repo, "dist"))).toBeNull();
+  });
+});
+
+describe("a build as a WorldEdit .schem (docs/37 Step 2)", () => {
+  it("version 3 with Offset 0 and no origin, so the lowest corner lands at the player's feet; reads back block for block", () => {
+    const { structure } = litematicToStructure(litematic());
+    const schem = readNbt(structureToSchem(structure));
+    const s = child(schem, "Schematic", 10);
+    expect([numberOf(s, "Version"), numberOf(s, "Width"), numberOf(s, "Height"), numberOf(s, "Length"), child(s, "Offset", 11)?.v, child(s, "Metadata", 10)]).toEqual([3, 2, 2, 2, [0, 0, 0], undefined]);
+    // the places the .litematic left out (0,1,0 and 1,1,0) come back as air; the chest keeps its data
+    const back = schemToStructure(schem).structure;
+    const named = (t: Tag) => blocksOf(t).map(([pos, st, id]) => [pos, child((child(t, "palette", 9)?.v ?? [])[st as number], "Name", 8)?.v, id]);
+    expect(named(back)).toEqual([
+      ["0,0,0", "minecraft:stone", null], ["1,0,0", "create:cogwheel", null], ["0,0,1", "minecraft:air", null], ["1,0,1", "minecraft:stone", null],
+      ["0,1,0", "minecraft:air", null], ["1,1,0", "minecraft:air", null], ["0,1,1", "minecraft:chest", "minecraft:chest"], ["1,1,1", "minecraft:air", null],
+    ]);
+    expect(Object.keys(child(child(s, "Blocks", 10), "Palette", 10)?.v ?? {})).toEqual(["minecraft:air", "minecraft:stone", "create:cogwheel[axis=y]", "minecraft:chest[facing=west]"]);
+  });
+
+  it("Build writes one beside each built upload, in the server's config/worldedit/schematics/", async () => {
+    const repo = await mkdtemp(path.join(tmpdir(), "builds-"));
+    dirs.push(repo);
+    const from = path.join(repo, "data", "builds");
+    await mkdir(from, { recursive: true });
+    await writeFile(path.join(from, "mill.litematic"), writeNbt(litematic()));
+    await writeFile(path.join(from, "broken.schem"), Buffer.from("not a build"));
+    const paths = { repo, dist: path.join(repo, "dist") };
+    await buildBuilds(paths, () => undefined);
+    const dir = path.join(paths.dist, "server", "config", "worldedit", "schematics");
+    expect(await readdir(dir)).toEqual(["mill.schem"]);
+    await rm(path.join(from, "mill.litematic"));
+    await buildBuilds(paths, () => undefined);
+    await expect(readdir(dir)).rejects.toThrow();
   });
 });

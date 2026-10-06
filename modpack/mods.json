@@ -2498,6 +2498,33 @@
       "guide": "behind"
     },
     {
+      "slug": "worldedit",
+      "name": "WorldEdit",
+      "category": "server",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "adminOnly": true,
+      "exclusiveGroup": null,
+      "description": "Places the builds uploaded on the site, from where you stand, with an undo. For admins with Builder tools, in Builder mode (creative). Nothing to install: it runs on the server.",
+      "wiki": "https://worldedit.enginehub.org/en/latest/",
+      "videos": [
+        {
+          "title": "Minecraft *WorldEdit* //Schematic //Copy //Paste Command Tutorial 1.21.8",
+          "url": "https://www.youtube.com/watch?v=Us0gYaP8Goo"
+        },
+        {
+          "title": "How to Load a Schematic in WorldEdit \u2013 Quick & Easy Guide",
+          "url": "https://www.youtube.com/watch?v=8cHi70jgi_0"
+        }
+      ],
+      "version": "WTAFvuRx",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
       "slug": "cobweb",
       "name": "Cobweb",
       "category": "base",

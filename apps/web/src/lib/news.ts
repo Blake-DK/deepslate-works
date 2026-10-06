@@ -38,3 +38,11 @@ export function parseNewsDates(pinnedUntil: string, expires: string, now: Date):
   if (p && e && p.getTime() > e.getTime()) return { ok: false, reason: "Pinned until is after it is hidden." };
   return { ok: true, pinnedUntil: p, expiresAt: e };
 }
+
+const ABOUT_VOTES = /\b(vote|votes|voting|poll|polls)\b/i;
+
+/** Where the app's pinned news opens on the site (Alex, 2026-10-06): the Votes page when it is about a vote, otherwise
+ *  the item itself on Home (each item there has the anchor news-<id>). */
+export function newsLink(site: string, n: { id: string; body: string }): string {
+  return ABOUT_VOTES.test(n.body) ? `${site}/votes` : `${site}/#news-${n.id}`;
+}

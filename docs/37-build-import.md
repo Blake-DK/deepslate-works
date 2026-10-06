@@ -62,8 +62,8 @@ not through op.
 - **Builds for WorldEdit.** Build also writes each upload as a Sponge `.schem` (version 3) into
   `dist/server/config/worldedit/schematics/<name>.schem`, which Sync puts on the server. Its offset is set so the
   build's lowest north-west corner is the point you stand on: `//paste` puts that corner at your feet.
-- **Builder tools tick.** A field on the user (`builderTools`, default off), set by an admin on Admin → Players, only
-  on an admin's row, audited (`builder.grant` / `builder.revoke`). Unticking also switches Builder mode off.
+- **Builder tools tick.** A field on the user (`builderTools`, default off), set by an admin on People (a row's
+  menu), only on an admin's row, audited (`user.builderTools`). Unticking also switches Builder mode off.
 - **Builder mode.** A switch on the Builds card, shown only to a ticked admin with a linked Minecraft account. On:
   `gamemode creative <name>` through a registry action (`builder.on`); off: `gamemode survival <name>` (`builder.off`).
   Both audited, both refused unless the caller's own `builderTools` is on and they are online. While in creative
@@ -71,9 +71,36 @@ not through op.
 - **Not closed by this, and accepted:** anyone who is op still has WorldEdit (the provider checks op first), and
   anyone put in creative by other means gets it too. Creative also means flying and free blocks while it is on. Who
   is op on the server is to be checked and written in docs/11 when Step 2 goes live.
-- **Lock after a paste.** The site does not know where WorldEdit pasted. Until there is something better, Lock takes
-  typed corners as today.
+- **Lock after a paste.** The site does not know where WorldEdit pasted, so Lock gets a form of its own: a world and
+  two corners, typed in.
 - The site's Place (typed coordinates) stays, for exact places like the temple at spawn.
+
+## Step 2, as built (2026-10-06, on `dev`)
+
+- `modpack/mods.json`: `worldedit`, version `WTAFvuRx` (7.3.8, NeoForge, 1.21.1), server only, `adminOnly`, in the
+  server category, two tutorial videos checked through YouTube's oEmbed. Not locked: Lock is pressed on the site.
+  The real jar was looked into with `jarChannels`: its one channel (WorldEdit's CUI) is optional, so the Lock takes
+  it as server-only; it has no blocks of its own.
+- `modpack/server/config/worldedit/worldedit.properties`: `use-in-creative=true`, `cheat-mode=false`. WorldEdit
+  writes its other settings into the file at its first start; the next Sync puts ours back, which keeps those two.
+- `packages/modpack/src/builds.ts`: `structureToSchem` (Sponge version 3, Offset 0, no WorldEdit origin, every
+  place the structure leaves out as air, block data kept); `build builds` writes each built upload to
+  `dist/server/config/worldedit/schematics/<name>.schem` (the folder made afresh on each Build). Read from the
+  source of the tag `7.3.8`: `SpongeSchematicV3Reader` sets the clipboard's origin to the metadata's origin (0 when
+  there is none) and its lowest corner to Offset plus origin, so the paste's lowest corner is the player's block.
+- `User.builderTools` (migration `0030_builder_tools`). People → a row's menu, on admins only: "Give Builder tools" /
+  "Take Builder tools away" (audited `user.builderTools`), a "builder" badge. Made a player: the tick goes too.
+  Taken away or made a player: Builder mode off.
+- api: actions `builder.on` (`gamemode creative <name>`) and `builder.off` (`gamemode survival <name>`), own route
+  `POST /builder/mode`: on only for the caller, with the tick, an admin, a linked name, online; off for anyone by any
+  admin, nothing to do when they are offline. `POST /builds/lock`: Lock on its own, two corners, 512 a side.
+- Admin → Seasons → Builds: "Place it where you stand (WorldEdit)": Builder mode on and off, the four steps, and
+  "Lock its ground" for something WorldEdit placed.
+- Tests: `apps/api/tests/builder.test.ts`, the lock in `builds.test.ts`, the `.schem` read back by our own reader
+  in `packages/modpack/tests/builds.test.ts`.
+- **Not proven** until the server runs it: that NeoForge loads WorldEdit 7.3.8 with our mods, that PCs need nothing,
+  that `use-in-creative` lets a non-op in creative use it, that `//schem load` reads our files and the corner lands
+  where the source says. Who is op on the server is still to be looked up (an op has WorldEdit in any mode).
 
 ## Step 3: the see-through preview on a ticked admin's PC (app 3.6.0)
 

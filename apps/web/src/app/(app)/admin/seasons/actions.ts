@@ -116,3 +116,37 @@ export async function buildRemoveAction(formData: FormData) {
   revalidatePath("/admin/seasons");
   redirect(to("uploadRemoved", name));
 }
+
+/**
+ * docs/37 Step 2: Builder mode for the admin pressing it, through api (which checks their Builder tools and that they
+ * are online). On: creative, where WorldEdit works; off: survival.
+ */
+export async function builderModeAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const on = formData.get("on") === "1";
+  let r: { ok: boolean; online?: boolean };
+  try {
+    r = await apiFetch<{ ok: boolean; online?: boolean }>("/builder/mode", { method: "POST", body: { on }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/seasons");
+  redirect(to(on ? "builderOn" : r.online === false ? "builderOffline" : "builderOff"));
+}
+
+/** docs/37 Step 2: lock the ground of something WorldEdit placed (the site does not see it): a world and two corners. */
+export async function buildLockAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const n = (k: string) => Number(formData.get(k));
+  const f = z.object({ dimension: z.string().min(1) }).safeParse({ dimension: formData.get("dimension") });
+  const [x1, z1, x2, z2] = [n("x1"), n("z1"), n("x2"), n("z2")];
+  if (!f.success || ![x1, z1, x2, z2].every(Number.isInteger)) redirect(to("error", "Give a world and whole numbers for both corners"));
+  try {
+    await apiFetch("/builds/lock", { method: "POST", body: { dimension: f.data.dimension, x1, z1, x2, z2 }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  redirect(to("locked", `${Math.min(x1, x2)} ${Math.min(z1, z2)} to ${Math.max(x1, x2)} ${Math.max(z1, z2)}`));
+}

@@ -102,9 +102,9 @@ namespace DeepslateWorks.Tests
 
         [Fact] public void The_window_is_landscape_with_crisp_text()
         {
-            // 3.4.1 (docs/21 §11): 980x620, never under 900x560; Display formatting, ClearType, layout rounding
+            // 3.4.1 (docs/21 §11): landscape, never under 900x560 (3.5.3: 980x720, so the Play steps fit); Display formatting, ClearType, layout rounding
             var x = AppWindow.AppXaml;
-            Assert.Contains("Width=\"980\" Height=\"620\" MinWidth=\"900\" MinHeight=\"560\"", x);
+            Assert.Contains("Width=\"980\" Height=\"720\" MinWidth=\"900\" MinHeight=\"560\"", x);
             foreach (var w in new[] { AppWindow.AppXaml, AppWindow.AskXaml })
             {
                 Assert.Contains("FontSize=\"14\"", w);

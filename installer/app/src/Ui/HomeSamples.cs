@@ -19,7 +19,7 @@ namespace DeepslateWorks
   ""server"": { ""state"": ""online"", ""line"": ""Online, 2 playing"", ""label"": ""Online"", ""tone"": ""good"", ""hint"": ""The server is up."", ""wake"": { ""phase"": ""idle"", ""leftS"": null, ""line"": null }, ""canStart"": false },
   ""online"": [""Bramble09"", ""samoyedx""],
   ""players"": [ { ""name"": ""Bramble09"", ""uuid"": ""069a79f4-44e9-4726-a5be-fca90e38aaf5"" }, { ""name"": ""samoyedx"", ""uuid"": null } ],
-  ""news"": { ""body"": ""Season 1 mods: the vote closes on Sunday. Boss mods are in the pack from day one."", ""at"": ""yesterday"", ""author"": ""m1owl"", ""image"": null },
+  ""news"": { ""body"": ""Have your say: how seasons will work\n\nSeasons start soon: a ladder of bosses, a new trial every week, a zone to explore and one big fight at the end, everybody together.\n\nThree quick votes, in this channel and on the site under Votes:\n1. How long should a season be?\n2. When should the big fight be?\n3. Which boss goes first?"", ""at"": ""4 Oct, 17:35"", ""author"": ""m1_owl"", ""image"": null, ""url"": ""https://deepslate.dsw.test/votes"" },
   ""votes"": { ""polls"": [], ""ballot"": null, ""order"": [], ""button"": ""Vote first, it takes ten seconds"" } }";
 
         public const string Asleep = @"{ ""signedIn"": true, ""site"": ""https://deepslate.dsw.test"", ""name"": ""Pabulum"", ""admin"": false,

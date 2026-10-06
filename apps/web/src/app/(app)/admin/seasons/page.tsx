@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/session";
+import { db } from "@/server/db";
 import { apiFetch } from "@/server/api-client";
 import { TabbedPage, type PageQuery } from "@/components/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +42,10 @@ const MSG: Record<string, string> = {
   revokedNone: "They did not have that tick.",
   uploaded: "Uploaded. Press Build and then Sync on the Modpack page to put it on the server:",
   uploadRemoved: "Removed. It leaves the server with the next Build and Sync:",
+  locked: "Its ground is locked: nobody can break or place blocks there. From",
+  builderOn: "Builder mode is on: you are in creative and WorldEdit works for you. Switch it off when you are done.",
+  builderOff: "Builder mode is off: you are back in survival.",
+  builderOffline: "You are not on the server, so nothing changed. If you left in Builder mode you are still in creative: switch it off when you are next on.",
   captured: "Captured:",
   placed: "Placed:",
   placedLocked: "Placed, and its ground is locked:",
@@ -57,6 +62,8 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
   const msg = typeof q.msg === "string" ? q.msg : undefined;
   const detail = typeof q.detail === "string" ? q.detail : undefined;
   const view = await apiFetch<View>("/seasons", { caller: { id: admin.id, role: "ADMIN" } }).catch(() => null);
+  // docs/37 Step 2: the admin's own Builder tools, for the Builds card's switch
+  const me = await db.user.findUnique({ where: { id: admin.id }, select: { builderTools: true, mcUsername: true } });
   const builds = await apiFetch<BuildsView>("/builds", { caller: { id: admin.id, role: "ADMIN" } }).catch(() => null);
   const file = view?.file ?? null;
   const state = view?.row?.state ?? null;
@@ -154,7 +161,7 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
           )}
         </div>
       )}
-      <BuildsCard view={builds} files={await listBuilds()} mods={(await readPackBlocks())?.namespaces ?? {}} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
+      <BuildsCard view={builds} files={await listBuilds()} mods={(await readPackBlocks())?.namespaces ?? {}} builder={me?.builderTools ? { mcUsername: me.mcUsername } : null} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
     </TabbedPage>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { arrangeNews, isExpired, isPinnedNow, parseNewsDates, type Dated } from "@/lib/news";
+import { arrangeNews, isExpired, isPinnedNow, newsLink, parseNewsDates, type Dated } from "@/lib/news";
 import { dateToUkLocal } from "@/lib/uk-time";
 
 // docs/05: "pinned until" and "hide from" on news items, handled by the app (no host timer).
@@ -70,5 +70,17 @@ describe("the two boxes on Admin → Server (UK time)", () => {
     expect(dateToUkLocal(at("2026-10-02T04:20:00Z"))).toBe("2026-10-02T05:20");
     expect(dateToUkLocal(at("2026-12-01T00:30:00Z"))).toBe("2026-12-01T00:30");
     expect(dateToUkLocal(null)).toBe("");
+  });
+});
+
+describe("where the app's news card opens", () => {
+  const site = "https://deepslate.dsw.test";
+  it("the Votes page for news about a vote", () => {
+    expect(newsLink(site, { id: "n1", body: "Have your say: three quick votes, on the site under Votes." })).toBe(`${site}/votes`);
+    expect(newsLink(site, { id: "n1", body: "A new poll is up" })).toBe(`${site}/votes`);
+  });
+  it("the item itself on Home otherwise", () => {
+    expect(newsLink(site, { id: "n2", body: "Season 1 starts Saturday at 19:00." })).toBe(`${site}/#news-n2`);
+    expect(newsLink(site, { id: "n3", body: "Devoted builders welcome" })).toBe(`${site}/#news-n3`);
   });
 });

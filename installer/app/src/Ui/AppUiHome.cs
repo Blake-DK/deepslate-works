@@ -67,6 +67,9 @@ namespace DeepslateWorks
             VoteStep = F<TextBlock>("VoteStep"); VoteTitle = F<TextBlock>("VoteTitle"); VoteNote = F<TextBlock>("VoteNote"); VoteError = F<TextBlock>("VoteError");
             SiteLink.Click += (s, e) => OpenSite(SiteNow?.Site ?? Env.PortalUrl);
             // 3.5.3: the whole news card opens it on the site (the Votes page for news about a vote)
+            // 3.5.5 (Alex, 2026-10-06): nothing on the Play tab scrolls; the window grows to show it all
+            F<ScrollViewer>("NewsScroll").ScrollChanged += (s, e) => FitPlayTab();
+            F<ScrollViewer>("PlayScroll").ScrollChanged += (s, e) => FitPlayTab();
             NewsBox.MouseLeftButtonUp += (s, e) =>
             {
                 if (OnScrollBar(e.OriginalSource as DependencyObject)) return;   // scrolling a long news item is not a click on it
@@ -79,6 +82,33 @@ namespace DeepslateWorks
             VoteNextTimer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromSeconds(4) };
             VoteNextTimer.Tick += (s, e) => NextVote();
         }
+
+        public const double BaseMinHeight = 560;
+
+        /// <summary>3.5.5 (Alex, 2026-10-06: "all text should be visible at all times"): when the news or the steps are taller
+        /// than their box, the window grows by what is missing, up to the screen's work area, and that height becomes its
+        /// smallest, so dragging it smaller cannot hide text either. Only on a screen too small for it all does the news scroll.</summary>
+        void FitPlayTab()
+        {
+            if (fitting || Window.WindowState != WindowState.Normal || Tabs.SelectedItem != PlayTab) return;
+            fitting = true;
+            try
+            {
+                double Over(string n) { var sv = Window.FindName(n) as ScrollViewer; return sv == null || !sv.IsVisible ? 0 : sv.ExtentHeight - sv.ViewportHeight; }
+                var missing = Math.Max(Over("NewsScroll"), Over("PlayScroll"));
+                if (missing <= 0.5) return;
+                var wa = SystemParameters.WorkArea;
+                var want = Math.Min(Math.Ceiling(Window.ActualHeight + missing), wa.Height);
+                if (want <= Window.ActualHeight + 0.5) return;   // the screen has no more room
+                Window.MinHeight = Math.Max(BaseMinHeight, want);
+                Window.Height = want;
+                if (Window.Top + want > wa.Bottom) Window.Top = Math.Max(wa.Top, wa.Bottom - want);
+                Log.Line(string.Format("window: taller so the Play tab shows everything: {0:0} px", want));
+            }
+            catch { }
+            finally { fitting = false; }
+        }
+        bool fitting;
 
         static bool OnScrollBar(DependencyObject d)
         {
@@ -495,6 +525,7 @@ namespace DeepslateWorks
         internal void Tick() => GatePlay();
         internal void Next() => NextVote();
         internal bool PlaysAfterVotes => playAfterVotes;
+        internal void SimSteps(int n) { for (int i = 1; i <= n; i++) { ShowRunLine("step", "Step " + i, UiText.LineFor(J.O("t", "step", "text", "Step " + i))); ShowRunLine("tick", "Done", UiText.LineFor(J.O("t", "tick", "text", "Done"))); } }
 
         // ---- screenshots ------------------------------------------------------------------------------------------------
         /// <summary>Screenshots: the Play tab and the Vote tab as they would be with this answer from the site.</summary>

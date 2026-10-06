@@ -126,6 +126,13 @@ export class Bot {
     return { ok: false, retry: r.status === null || (r.status ?? 0) >= 500 || r.status === 429, error: r.error };
   }
 
+  /** A forum post's title. The bot may rename the posts it made; a webhook's needs Manage Threads. */
+  async rename(thread: string, name: string): Promise<{ ok: boolean; retry: boolean; error?: string }> {
+    const r = await this.d.rest.rename(thread, name);
+    if (r.ok) return { ok: true, retry: false };
+    return { ok: false, retry: r.status === null || (r.status ?? 0) >= 500 || r.status === 429, error: r.error };
+  }
+
   // ---- events ---------------------------------------------------------------------------------------------------
 
   private async onDispatch(type: string, data: unknown) {

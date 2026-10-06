@@ -71,7 +71,7 @@ export function PollCard({ poll: initial, showVoters = false, refreshAfter = fal
         {poll.multiple ? "Pick as many as you like." : "Pick one."}
         {poll.open && poll.closes && <> Open until {poll.closes}.</>}
         {!poll.open && poll.closed && <> Closed {poll.closed}.</>}
-        {poll.open && poll.mine && <> Your vote: <span className="font-medium text-foreground">{choiceText(poll.mine)}</span>.</>}
+        {poll.open && poll.mine && <> Your vote: <span className="font-medium text-foreground">{choiceText(poll.mine)}</span>{poll.mineVia === "discord" && " (in Discord)"}.</>}
       </p>
 
       {editing ? (
@@ -121,12 +121,13 @@ export function PollCard({ poll: initial, showVoters = false, refreshAfter = fal
               </li>
             ))}
           </ul>
+          {poll.open && poll.mineVia === "discord" && <p className="text-sm" data-testid="poll-via-discord">You voted in Discord. It counts here too, so there&apos;s nothing more to do.</p>}
           <p className="text-xs text-muted-foreground">{results.voters} {results.voters === 1 ? "vote" : "votes"} so far{!poll.open && results.winners.length > 0 ? `. Result: ${results.winners.join(" and ")}` : ""}.</p>
           {poll.open && poll.mine && <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>Change my vote</Button>}
           {showVoters && poll.voters && poll.voters.length > 0 && (
             <details className="text-sm">
               <summary className="cursor-pointer text-muted-foreground">Who voted for what ({poll.voters.length})</summary>
-              <ul className="mt-2 space-y-1">{poll.voters.map((v) => <li key={v.name}><span className="font-medium">{v.name}</span>: {choiceText(v.choices)} <span className="text-xs text-muted-foreground">({v.at})</span></li>)}</ul>
+              <ul className="mt-2 space-y-1">{poll.voters.map((v) => <li key={v.name}><span className="font-medium">{v.name}</span>: {choiceText(v.choices)} <span className="text-xs text-muted-foreground">({v.at}{v.via === "discord" ? ", in Discord" : ""})</span></li>)}</ul>
             </details>
           )}
         </div>

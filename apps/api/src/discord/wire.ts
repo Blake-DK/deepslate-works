@@ -161,6 +161,7 @@ export function votePoster(bot: Bot): VotePoster {
     },
     createPost: (forum, title, message, tag) => bot.createPost(forum, title, message, tag),
     edit: (channel, id, message) => bot.edit(channel, id, message),
+    rename: (thread, name) => bot.rename(thread, name),
     tagFor: (forum, name) => bot.tagFor(forum, name),
     sendTo: (channel, message) => bot.sendTo(channel, message),
     channelName: (id) => bot.channelName(id),

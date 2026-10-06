@@ -35,17 +35,76 @@ export function readOptions(raw: unknown): PollOption[] {
 export type OptionInput = { text: string; image?: string | null; link?: string | null; modId?: string | null };
 export type MadeOptions = { ok: true; options: PollOption[] } | { ok: false; reason: string };
 
+type Row = OptionInput & { text: string; link: string | null; modId: string | null };
+const tidy = (r: OptionInput): Row => ({ ...r, text: r.text.trim(), link: r.link?.trim() || null, modId: r.modId?.trim() || null });
+const filled = (r: Row) => r.text !== "" || Boolean(r.modId);
+
+/** What is wrong with the kept rows, or null: 2 to 8, short, links that are links, no two alike. */
+function rowsProblem(kept: Row[]): string | null {
+  if (kept.length < MIN_OPTIONS) return `A poll needs at least ${MIN_OPTIONS} options.`;
+  if (kept.length > MAX_OPTIONS) return `A poll has at most ${MAX_OPTIONS} options (plus "I don't mind").`;
+  if (kept.some((r) => r.text.length > 120)) return "An option is longer than 120 characters.";
+  if (kept.some((r) => r.link && !LINK.test(r.link))) return "A link must start with http:// or https://.";
+  const texts = kept.map((r) => r.text.toLowerCase()).filter(Boolean);
+  if (new Set(texts).size !== texts.length) return "Two options say the same thing.";
+  if (texts.includes(DONT_MIND.text.toLowerCase())) return `"${DONT_MIND.text}" is added to every poll by itself.`;
+  return null;
+}
+
 /** The editor's rows into stored options: empty rows dropped, 2 to 8 left, ids o1..o8, "I don't mind" added. */
 export function makeOptions(rows: OptionInput[]): MadeOptions {
-  const kept = rows.map((r) => ({ ...r, text: r.text.trim(), link: r.link?.trim() || null, modId: r.modId?.trim() || null })).filter((r) => r.text !== "" || r.modId);
-  if (kept.length < MIN_OPTIONS) return { ok: false, reason: `A poll needs at least ${MIN_OPTIONS} options.` };
-  if (kept.length > MAX_OPTIONS) return { ok: false, reason: `A poll has at most ${MAX_OPTIONS} options (plus "I don't mind").` };
-  if (kept.some((r) => r.text.length > 120)) return { ok: false, reason: "An option is longer than 120 characters." };
-  if (kept.some((r) => r.link && !LINK.test(r.link))) return { ok: false, reason: "A link must start with http:// or https://." };
-  const texts = kept.map((r) => r.text.toLowerCase()).filter(Boolean);
-  if (new Set(texts).size !== texts.length) return { ok: false, reason: "Two options say the same thing." };
-  if (texts.includes(DONT_MIND.text.toLowerCase())) return { ok: false, reason: `"${DONT_MIND.text}" is added to every poll by itself.` };
+  const kept = rows.map(tidy).filter(filled);
+  const problem = rowsProblem(kept);
+  if (problem) return { ok: false, reason: problem };
   return { ok: true, options: readOptions(kept.map((r, i) => ({ id: `o${i + 1}`, text: r.text, image: r.image ?? null, link: r.link, modId: r.modId }))) };
+}
+
+/** An edit's row: `id` is the option it was (empty for a new one). An emptied row with an id removes that option. */
+export type EditRow = OptionInput & { id?: string | null };
+export type Edited = { ok: true; options: PollOption[]; changes: string[] } | { ok: false; reason: string };
+
+/**
+ * An open poll edited by an admin (Alex, 2026-10-06). Options keep their ids, so the votes already cast stay on the
+ * option they were for; a new option gets a new id. An option somebody voted for cannot be taken away, and a poll
+ * somebody answered with more than one option cannot become single choice: both would change a vote behind their back.
+ * `changes` is for the event log: what was added, removed or reworded.
+ */
+export function editOptions(current: { options: unknown; multiple: boolean }, answers: Array<{ choices: string[] }>, rows: EditRow[], multiple: boolean): Edited {
+  const before = readOptions(current.options).filter((o) => o.id !== DONT_MIND.id);
+  const byId = new Map(before.map((o) => [o.id, o]));
+  const votes = new Map<string, number>();
+  for (const a of answers) for (const c of new Set(a.choices)) votes.set(c, (votes.get(c) ?? 0) + 1);
+  const seen = new Set<string>();
+  let next = Math.max(0, ...before.map((o) => Number(/^o(\d+)$/.exec(o.id)?.[1] ?? 0))) + 1;
+  const kept: Array<Row & { id: string }> = [];
+  for (const raw of rows) {
+    const r = tidy(raw);
+    const old = raw.id ? byId.get(raw.id) : undefined;
+    if (raw.id && !old) return { ok: false, reason: "That poll has changed since the page was opened. Open it again." };
+    if (old) seen.add(old.id);
+    if (!filled(r)) {
+      if (old && (votes.get(old.id) ?? 0) > 0) return { ok: false, reason: `"${old.text}" has votes, so it can't be taken away. Close the poll and open a new one instead.` };
+      continue;
+    }
+    // a row with no picture of its own keeps the one it had
+    kept.push({ ...r, id: old?.id ?? `o${next++}`, image: r.image ?? old?.image ?? null });
+  }
+  for (const o of before) if (!seen.has(o.id) && (votes.get(o.id) ?? 0) > 0) return { ok: false, reason: `"${o.text}" has votes, so it can't be taken away. Close the poll and open a new one instead.` };
+  const problem = rowsProblem(kept);
+  if (problem) return { ok: false, reason: problem };
+  if (!multiple && answers.some((a) => a.choices.length > 1)) return { ok: false, reason: "Somebody picked more than one option, so this poll has to stay multiple choice." };
+  const options = readOptions(kept.map((r) => ({ id: r.id, text: r.text, image: r.image ?? null, link: r.link, modId: r.modId })));
+  const changes: string[] = [];
+  for (const o of options) {
+    if (o.id === DONT_MIND.id) continue;
+    const old = byId.get(o.id);
+    if (!old) changes.push(`added "${o.text}"`);
+    else if (old.text !== o.text) changes.push(`"${old.text}" now "${o.text}"`);
+    else if ((old.link ?? null) !== (o.link ?? null) || (old.modId ?? null) !== (o.modId ?? null) || (old.image ?? null) !== (o.image ?? null)) changes.push(`changed "${o.text}"`);
+  }
+  for (const o of before) if (!options.some((x) => x.id === o.id)) changes.push(`removed "${o.text}"`);
+  if (multiple !== current.multiple) changes.push(multiple ? "now multiple choice" : "now single choice");
+  return { ok: true, options, changes };
 }
 
 /** Open: opened, not closed, and its date (if any) not passed. */
@@ -130,7 +189,7 @@ export type VoteStore = {
   poll: { findUnique(args: { where: { id: string } }): Promise<PollRow | null> };
   pollAnswer: {
     findUnique(args: { where: { pollId_userId: { pollId: string; userId: string } }; select: { choices: true } }): Promise<{ choices: string[] } | null>;
-    upsert(args: { where: { pollId_userId: { pollId: string; userId: string } }; create: { pollId: string; userId: string; choices: string[] }; update: { choices: string[] } }): Promise<unknown>;
+    upsert(args: { where: { pollId_userId: { pollId: string; userId: string } }; create: { pollId: string; userId: string; choices: string[]; via: string }; update: { choices: string[]; via: string } }): Promise<unknown>;
   };
 };
 export type VoteAudit = (a: { userId: string; action: "poll.vote"; params: Record<string, unknown>; result: "OK" }) => Promise<void>;
@@ -144,7 +203,8 @@ export async function castVote(store: VoteStore, audit: VoteAudit, userId: strin
   if (!c.ok) return { ok: false, status: 400, code: "bad_choice", message: c.reason };
   const key = { pollId_userId: { pollId, userId } };
   const before = await store.pollAnswer.findUnique({ where: key, select: { choices: true } });
-  await store.pollAnswer.upsert({ where: key, create: { pollId, userId, choices: c.choices }, update: { choices: c.choices } });
+  // `via`: where the latest vote came from, so the site can say "You voted in Discord" (PollAnswer.via)
+  await store.pollAnswer.upsert({ where: key, create: { pollId, userId, choices: c.choices, via: via ?? "site" }, update: { choices: c.choices, via: via ?? "site" } });
   const texts = readOptions(poll.options).filter((o) => c.choices.includes(o.id)).map((o) => o.text);
   if (!before || before.choices.join() !== c.choices.join()) {
     await audit({ userId, action: "poll.vote", params: { pollId, question: poll.question, choices: texts, changed: Boolean(before), ...(via ? { via } : {}) }, result: "OK" });

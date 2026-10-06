@@ -308,6 +308,11 @@ describe("vote buttons (docs/22 §4)", () => {
 
   it("the answer only to them: what they voted for and the results so far", () => {
     expect(votedText(["The Harbinger"], [{ text: "The Harbinger", votes: 2, percent: 67 }, { text: "Ignis", votes: 1, percent: 33 }], 3, false)).toBe("You voted for **The Harbinger**. You can change it until it closes.\n\nSo far, 3 votes:\nThe Harbinger · 2 (67%)\nIgnis · 1 (33%)");
+    // Alex, 2026-10-06: the press is their vote on the site, and a must-vote says whether they can play now
+    const counts = [{ text: "Ignis", votes: 1, percent: 100 }];
+    expect(votedText(["Ignis"], counts, 1, false, { name: "Bramble09", mustVote: false, stillToVote: 0 })).toBe("You voted for **Ignis**. You can change it until it closes.\nIt's saved to your account on the site (**Bramble09**), so you don't need to vote there as well.\n\nSo far, 1 vote:\nIgnis · 1 (100%)");
+    expect(votedText(["Ignis"], counts, 1, false, { name: "Bramble09", mustVote: true, stillToVote: 0 })).toContain("\nThat was the vote you needed before playing: you can join the server now.\n\n");
+    expect(votedText(["Ignis"], counts, 1, true, { name: "m1_owl", mustVote: true, stillToVote: 2 })).toContain("(**m1\\_owl**), so you don't need to vote there as well.\n2 more votes to answer before you can play.");
   });
 });
 
@@ -362,6 +367,7 @@ function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; a
     get connecting() { return opts.botState?.connecting ?? false; },
     createPost: async (...args) => { botCalls.push({ what: "post", args }); return { ok: true, threadId: "8800", messageId: "8800" }; },
     edit: async (...args) => { botCalls.push({ what: "edit", args }); return { ok: true, retry: false }; },
+    rename: async (...args) => { botCalls.push({ what: "rename", args }); return { ok: true, retry: false }; },
     tagFor: (_f, name) => (name === "Vote" ? ["t-vote"] : []),
     sendTo: async (...args) => { botCalls.push({ what: "sendTo", args }); return opts.botRefuses ? { ok: false, retry: false, error: opts.botRefuses } : { ok: true, id: "7700" }; },
     channelName: (id) => (id === "900" ? "deepslate-admin" : null),
@@ -431,6 +437,51 @@ describe("where things go (docs/22 §13)", () => {
     expect(edit.args[0]).toBe("8800");
     expect((edit.args[2] as { components: unknown[] }).components).toEqual([]);
     expect(t.calls.at(-1)!.url).toContain("thread_id=8800");
+  });
+
+  it("the bot's post says the buttons are the vote on the site, not a link to vote there again (Alex, 2026-10-06)", async () => {
+    const t = routed({ bot: true });
+    t.add({ meta: { action: "poll.open", params: { pollId: "p1" }, result: "OK" } });
+    await t.a.round();
+    const d = (t.botCalls[0]!.args[2] as { embeds: Array<{ description: string }> }).embeds[0]!.description;
+    expect(d).toContain("Vote with the buttons below. It counts for your account on the site");
+    expect(d).not.toContain("[Vote](");
+  });
+
+  it("a poll edited on the site: the bot's post is drawn again at once, with the new question as its title (Alex, 2026-10-06)", async () => {
+    const t = routed({ bot: true });
+    t.add({ meta: { action: "poll.open", params: { pollId: "p1" }, result: "OK" } });
+    await t.a.round();
+    t.votes["poll:p1"] = { ...t.poll, title: "Next big boss", options: ["A", "B", "C"], mustVote: true };
+    t.add({ meta: { action: "poll.edit", params: { pollId: "p1", question: "Next big boss" }, result: "OK" } });
+    await t.a.round();
+    const edit = t.botCalls.find((c) => c.what === "edit")!;
+    expect(edit.args.slice(0, 2)).toEqual(["8800", "8800"]);
+    const msg = edit.args[2] as { embeds: Array<{ title: string; description: string }>; components: unknown[] };
+    expect(msg.embeds[0]!.title).toBe("Next big boss");
+    expect(msg.embeds[0]!.description).toContain("• C");
+    expect(msg.embeds[0]!.description).toContain("You need to vote before you can play");
+    expect(msg.components).toHaveLength(1);
+    expect(t.botCalls.find((c) => c.what === "rename")!.args).toEqual(["8800", "Next big boss"]);
+  });
+
+  it("must-vote switched on a webhook's post: its message is edited the webhook's way, and nothing is renamed", async () => {
+    const t = routed();
+    t.add({ meta: { action: "poll.open", params: { pollId: "p1" }, result: "OK" } });
+    await t.a.round();
+    t.votes["poll:p1"] = { ...t.poll, mustVote: true };
+    t.add({ meta: { action: "poll.mustVote", params: { pollId: "p1", question: "Next boss", on: true }, result: "OK" } });
+    await t.a.round();
+    expect(t.calls[1]).toMatchObject({ method: "PATCH" });
+    expect(t.calls[1]!.url).toContain("/messages/5001?thread_id=9001");
+    const d = (t.calls[1]!.body.embeds as Array<{ description: string }>)[0]!.description;
+    expect(d).toContain("You need to vote before you can play");
+    expect(d).toContain("[Vote](https://deepslate.dsw.test/votes)");
+    // a closed poll is not redrawn by an edit: its result stays
+    t.votes["poll:p1"] = { ...t.poll, status: "CLOSED" };
+    t.add({ meta: { action: "poll.edit", params: { pollId: "p1" }, result: "OK" } });
+    await t.a.round();
+    expect(t.calls).toHaveLength(2);
   });
 
   it("a post deleted by hand is made again once and the reply goes in the new one", async () => {

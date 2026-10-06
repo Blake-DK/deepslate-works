@@ -2,12 +2,13 @@ import "server-only";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { hashConfigs, hashResourcePack } from "modpack/hashes";
-import { pendingSteps, type Pending } from "modpack/pending";
+import { pendingSteps, uploadsSinceBuild, type Pending } from "modpack/pending";
 import { installerVersion } from "modpack/script-version";
 import { db } from "@/server/db";
 import { getManifest } from "@/server/modpack/manifest";
 import { getLock, P } from "@/server/modpack/lock";
 import { git } from "@/server/modpack/drift";
+import { listBuilds } from "@/server/builds";
 
 // Admin → Modpack's "out of date" box (Alex, 2026-10-06): the facts for packages/modpack/src/pending.ts. Nothing new is
 // written anywhere: the last Build is known by its files' times in dist/, and what the repo changed since then by the
@@ -55,6 +56,14 @@ export async function getPending(): Promise<Pending> {
     db.setting.findUnique({ where: { key: "_packSynced" } }).catch(() => null),
     text(P.manifest),
   ]);
+  const [buildsJson, buildsAt, uploads] = await Promise.all([text(path.join(dist, "builds.json")), mtime(path.join(dist, "builds.json")), listBuilds()]);
+  let builtNames: string[] | null = null;
+  try {
+    const b = JSON.parse(buildsJson ?? "") as { builds?: Array<{ name?: unknown }>; problems?: Array<{ file?: unknown }> };
+    builtNames = [...(b.builds ?? []).map((x) => x.name), ...(b.problems ?? []).map((x) => (typeof x.file === "string" ? x.file.replace(/\.[a-z]+$/, "") : null))].filter((n): n is string => typeof n === "string");
+  } catch {
+    // no build of the uploads yet
+  }
 
   let built: { version?: unknown; exe?: { version?: unknown; sha256?: unknown } | null; builtAt?: unknown } = {};
   try {
@@ -84,6 +93,7 @@ export async function getPending(): Promise<Pending> {
     repoScript: repoPs1 ? installerVersion(repoPs1) : null,
     builtScript: typeof built.version === "string" ? built.version : null,
     brandingPicked: Boolean(sourceAt && (!logoAt || sourceAt.getTime() > logoAt.getTime())),
+    uploadsChanged: uploadsSinceBuild(builtNames && buildsAt ? { names: builtNames, at: buildsAt } : null, uploads),
     synced: typeof s?.version === "string" && typeof s.at === "string" ? { version: s.version, at: new Date(s.at) } : null,
     serverBuiltAt,
   });

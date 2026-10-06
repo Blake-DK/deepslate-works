@@ -29,6 +29,8 @@ export type PendingFacts = {
   builtScript: string | null;
   /** A logo was picked in Admin → Branding after the last Build made its sizes. */
   brandingPicked: boolean;
+  /** docs/37: builds uploaded, replaced or removed on Admin → Seasons since the last Build (uploadsSinceBuild). */
+  uploadsChanged?: string[];
   /** The pack the server was last synced to, and when; when dist/server was last built. */
   synced: { version: string; at: Date } | null;
   serverBuiltAt: Date | null;
@@ -107,6 +109,10 @@ export function pendingSteps(f: PendingFacts): Pending {
     add("build", "A new logo was picked in Admin → Branding.");
     serverBuild = true; // the server's icon
   }
+  if (f.uploadsChanged?.length) {
+    add("build", `Builds uploaded or removed since the last build: ${list(f.uploadsChanged)}.`);
+    serverBuild = true; // they go into the server's datapacks
+  }
 
   if (f.builtPack) {
     if (!f.synced) add("sync", "The server has not been synced from the site yet.");
@@ -121,6 +127,17 @@ export function pendingSteps(f: PendingFacts): Pending {
   // a new lock always makes a new pack for the server; an app-only build does not touch it
   if (lockNeeded || serverBuild || reasons.some((r) => r.step === "sync")) steps.push("sync");
   return { steps, reasons, pack: { repo, built: f.builtPack, server: f.synced?.version ?? null } };
+}
+
+/**
+ * The uploads (data/builds/) the last Build did not see as they are now: new or replaced since dist/builds.json was
+ * written, or gone from data/builds/ while builds.json still has them. No builds.json: every upload is new.
+ */
+export function uploadsSinceBuild(built: { names: string[]; at: Date } | null, now: Array<{ name: string; at: Date }>): string[] {
+  const out = new Set<string>();
+  for (const u of now) if (!built || !built.names.includes(u.name) || u.at.getTime() > built.at.getTime()) out.add(u.name);
+  for (const n of built?.names ?? []) if (!now.some((u) => u.name === n)) out.add(n);
+  return [...out].sort();
 }
 
 const LABEL: Record<Step, string> = { lock: "Lock", build: "Build", sync: "Sync server" };

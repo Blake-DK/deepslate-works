@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LockFile } from "../src/lock";
-import { lockReasons, pendingHeadline, pendingSteps, type PendingFacts } from "../src/pending";
+import { lockReasons, pendingHeadline, pendingSteps, type PendingFacts, uploadsSinceBuild } from "../src/pending";
 import type { Manifest } from "../src/schema";
 
 // Alex, 2026-10-06: a box on Admin → Modpack that says when Lock, Build or Sync server has to be pressed, and why.
@@ -107,6 +107,17 @@ describe("the out-of-date box", () => {
     expect(pendingSteps(ok({ synced: null })).reasons).toEqual([{ step: "sync", text: "The server has not been synced from the site yet." }]);
     expect(pendingSteps(ok({ serverBuiltAt: new Date(SYNCED.getTime() + 60_000) })).reasons).toEqual([{ step: "sync", text: "Built again after the last sync." }]);
     expect(pendingHeadline({ steps: ["sync"] })).toBe("Out of date: press Sync server.");
+  });
+
+  it("docs/37: asks for Build and Sync when a build was uploaded, replaced or removed since the last build", () => {
+    const at = new Date("2026-10-06T12:00:00Z");
+    const later = new Date(at.getTime() + 60_000);
+    expect(uploadsSinceBuild({ names: ["gate", "mill"], at }, [{ name: "gate", at }, { name: "mill", at }])).toEqual([]);
+    expect(uploadsSinceBuild({ names: ["gate", "mill"], at }, [{ name: "gate", at: later }, { name: "tower", at }])).toEqual(["gate", "mill", "tower"]);
+    expect(uploadsSinceBuild(null, [{ name: "gate", at }])).toEqual(["gate"]);
+    expect(uploadsSinceBuild(null, [])).toEqual([]);
+    const p = pendingSteps(ok({ uploadsChanged: ["tower"] }));
+    expect(p).toMatchObject({ steps: ["build", "sync"], reasons: [{ step: "build", text: "Builds uploaded or removed since the last build: tower." }] });
   });
 
   it("asks for everything when nothing has been locked or built", () => {

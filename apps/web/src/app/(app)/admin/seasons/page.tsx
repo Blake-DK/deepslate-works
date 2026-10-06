@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { ukDayTime } from "@/lib/uk-time";
 import { seasonOpAction, seasonTickAction } from "./actions";
 import { BuildsCard, type BuildsView } from "./builds-card";
-import { listBuilds } from "@/server/builds";
+import { listBuilds, readPackBlocks } from "@/server/builds";
 
 export const metadata: Metadata = { title: "Seasons" };
 
@@ -154,7 +154,7 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
           )}
         </div>
       )}
-      <BuildsCard view={builds} files={await listBuilds()} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
+      <BuildsCard view={builds} files={await listBuilds()} mods={(await readPackBlocks())?.namespaces ?? {}} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
     </TabbedPage>
   );
 }

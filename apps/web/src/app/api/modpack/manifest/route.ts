@@ -1,8 +1,7 @@
 import { getManifest, serverAddress } from "@/server/modpack/manifest";
 import { distancesFor, serverViewDistance } from "modpack/schema";
 import { getInstaller, getLock } from "@/server/modpack/lock";
-import { installerFor } from "@/lib/installer-info";
-import { getSection } from "@/server/site-settings";
+import { installerFor } from "@/shared/installer-info";
 import { loadCurrentUser } from "@/server/auth/session";
 import { canDownload, manifestKeyOk } from "@/server/modpack/gate";
 import { env } from "@/env";
@@ -33,8 +32,8 @@ export async function GET(req: Request) {
       return Response.json({ error: { code, message } }, { status: gate.reason === "anonymous" ? 401 : 403 });
     }
   }
-  const [m, lock, installerInfo, brand, joining] = await Promise.all([getManifest(), getLock(), getInstaller(), getBranding(), getSection("joining")]);
-  const installer = installerFor(installerInfo, req.headers.get("user-agent"), joining.minInstaller);
+  const [m, lock, installerInfo, brand] = await Promise.all([getManifest(), getLock(), getInstaller(), getBranding()]);
+  const installer = installerFor(installerInfo, req.headers.get("user-agent"));
   if (!lock) return Response.json({ error: { code: "no_lock", message: "Pack not built yet" } }, { status: 503 });
   // The member's measured PC tier picks the distances (mods.json render_by_tier); as plain numbers, which every
   // installer reads. Only a first install and a value the installer set itself are changed (docs/07).

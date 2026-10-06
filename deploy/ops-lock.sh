@@ -1,8 +1,8 @@
 # Sourced by deploy/deploy.sh and the VPS's api.sh: one pack-or-deploy job at a time on this host, and the caller named.
 # 2026-10-03: two sessions deployed, built and synced at once and api's log showed both as "vps-session".
 #
-#   ops_caller                 who is calling: $DEEPSLATE_CALLER, else the tooling job (JOB_DIR, looked up
-#                              through the parent processes because sudo drops the environment), else the tty
+#   ops_caller                 who is calling: $DEEPSLATE_CALLER, else the session's job id (from JOB_DIR, .../jobs/<id>),
+#                              both looked up through the parent processes because sudo drops the environment, else the tty
 #   ops_lock <what>            takes the lock for this shell's life, or prints "busy, held by <id> since <time> (<what>)"
 #                              and returns 75
 

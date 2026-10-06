@@ -83,9 +83,15 @@ namespace DeepslateWorks
             }
             run.UpdateProblem = u.Problem;
             Log.Line("UPDATE NOT APPLIED: " + u.Problem);
-            run.Emit(J.O("t", "note", "text", string.Format("Deepslate Works could not update itself ({0}). Carrying on with {1}.", u.Problem, Env.Version)));
+            run.Emit(J.O("t", "note", "text", string.Format("Deepslate Works could not update itself ({0}).", u.Problem)));
             return "failed";
         }
+
+        /// <summary>3.5.2 (Alex, 2026-10-06): the server lets in only the newest app, so a run whose update failed stops
+        /// here instead of carrying on with a version that could not join. Play tries the update again.</summary>
+        public static string NotUpdatedText(string offered) => string.Format(
+            "Deepslate Works {0} is needed to play, and this PC could not update to it, so nothing was started. Press Play to try again. If it keeps happening, download Deepslate Works again from the site.",
+            offered);
 
         /// <summary>What the new exe is started with: what this one passes on, then -WaitFor this process and -From update
         /// (a -From or -WaitFor this one was started with is not passed twice).</summary>

@@ -1,7 +1,7 @@
 name: ci
-# `dev` is where work lands (the working rules "Branches"): a push to it runs the checks, nothing more. Images are built and
+# `dev` is where work lands: a push to it runs the checks, nothing more. Images are built and
 # pushed for `main` only, and a pull request (dev → main is the usual one) builds them without pushing.
-# A push or pull request that changes only docs/ or Markdown files at the top (README, ROADMAP, TOOLING) runs nothing:
+# A push or pull request that changes only docs/ or Markdown files at the top (README, ROADMAP) runs nothing:
 # they are in no image and no test. Such a commit on main has no images of its own, so deploy/deploy.sh then deploys
 # the images of the last commit before it that changed anything else; the two lists must stay the same.
 on:

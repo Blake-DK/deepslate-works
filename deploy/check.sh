@@ -19,12 +19,12 @@ avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
 if docker ps --format '{{.Names}}' | grep -q '^deepslate-check$'; then echo "check: another check is already running" >&2; exit 1; fi
 
 case "$pkg" in
-  install) run='pnpm install --no-frozen-lockfile' ;;
-  all) run='pnpm install --frozen-lockfile >/dev/null && pnpm typecheck && pnpm lint && pnpm -r --no-bail test' ;;
+  install) setup='pnpm install --no-frozen-lockfile'; run=':' ;;
+  all) setup='pnpm install --frozen-lockfile >/dev/null'; run='pnpm typecheck && pnpm lint && pnpm -r --no-bail test' ;;
   api|web|modpack)
     case "$step" in
-      all) run="pnpm install --frozen-lockfile >/dev/null && pnpm --filter $pkg typecheck && pnpm --filter $pkg lint && pnpm --filter $pkg test" ;;
-      typecheck|lint|test) run="pnpm install --frozen-lockfile >/dev/null && pnpm --filter $pkg $step" ;;
+      all) setup='pnpm install --frozen-lockfile >/dev/null'; run="pnpm --filter $pkg typecheck && pnpm --filter $pkg lint && pnpm --filter $pkg test" ;;
+      typecheck|lint|test) setup='pnpm install --frozen-lockfile >/dev/null'; run="pnpm --filter $pkg $step" ;;
       *) echo "check: unknown step $step" >&2; exit 2 ;;
     esac ;;
   *) echo "check: unknown package $pkg" >&2; exit 2 ;;
@@ -37,7 +37,9 @@ exec docker run --rm --name deepslate-check \
     set -e
     npm i -g --prefix /tmp/pnpm pnpm@10 >/dev/null 2>&1
     export PATH=/tmp/pnpm/bin:\$PATH
-    (cd apps/web && pnpm exec prisma generate >/dev/null 2>&1) || true
-    (cd apps/api && pnpm exec prisma generate >/dev/null 2>&1) || true
+    $setup
+    for app in web api; do
+      out=\$(cd apps/\$app && pnpm exec prisma generate 2>&1) || { echo \"\$out\" >&2; echo \"check: prisma generate failed in apps/\$app\" >&2; exit 1; }
+    done
     $run
   "

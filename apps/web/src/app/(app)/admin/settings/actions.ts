@@ -49,7 +49,7 @@ export async function savePrivacyAction(formData: FormData) {
 
 export async function saveJoiningAction(formData: FormData) {
   const admin = await requireAdmin();
-  await save("joining", { requirePlay: on(formData.get("requirePlay")), windowMin: int(formData.get("windowMin")), minInstaller: String(formData.get("minInstaller") ?? "").trim() }, admin.id);
+  await save("joining", { requirePlay: on(formData.get("requirePlay")), windowMin: int(formData.get("windowMin")) }, admin.id);
 }
 
 export async function saveRetentionAction(formData: FormData) {

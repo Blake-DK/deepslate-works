@@ -4,7 +4,7 @@ import path from "node:path";
 import { apiFetch } from "@/server/api-client";
 import { getInstaller, getLock } from "@/server/modpack/lock";
 import { getManifest } from "@/server/modpack/manifest";
-import { shownAppVersion } from "@/lib/installer-info";
+import { shownAppVersion } from "@/shared/installer-info";
 
 // Versions in the footers (planner, 2026-10-01). One source each, read at runtime or stamped at build:
 //   portal (web, api): package.json's semver + the commit and build time CI stamps (PORTAL_COMMIT, PORTAL_BUILT_AT)

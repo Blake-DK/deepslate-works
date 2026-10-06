@@ -18,7 +18,7 @@ A friend downloads one zip and double-clicks `Setup.bat` once. After that they p
 
 Pictures, the log and the test results are the run's artifact. Job `publish` (main only) pushes `ghcr.io/<owner>/deepslate-installer:{VERSION,sha,latest}`, an image FROM scratch holding the exe, its .sha256 and VERSION. On the VPS a compile check is allowed in a capped container (`mcr.microsoft.com/dotnet/sdk:8.0`, `--memory=1500m`); the shipped exe never comes from there.
 
-**To the site.** `deploy/deploy.sh` (step "installer exe") pulls that image and copies the three files into `dist/ci/`. Admin → Build (installer) (`takeCiExe` in packages/modpack/src/build.ts) checks the checksum, the version and the MZ header, then copies the exe to `dist/DeepslateWorks.exe`. installer.json gains `exe: {version, sha256, size}`, which the mod list passes on as `installer.exe`. `installer.version` stays the PowerShell bridge's version, because 2.x copies update by it, and `installer.zip` is still built for 1.4.x copies. The web side (`lib/installer-info.ts`): `current` is the exe's version when there is one, and that is what "out of date" means now; `download` is `DeepslateWorks.exe`, served from `/downloads/DeepslateWorks.exe` behind the same gate as the other downloads. The download buttons on /help and the Play button give it directly, with no zip.
+**To the site.** `deploy/deploy.sh` (step "installer exe") pulls that image and copies the three files into `dist/ci/`. Admin → Build (installer) (`takeCiExe` in packages/modpack/src/build.ts) checks the checksum, the version and the MZ header, then copies the exe to `dist/DeepslateWorks.exe`. installer.json gains `exe: {version, sha256, size}`, which the mod list passes on as `installer.exe`. `installer.version` stays the PowerShell bridge's version, because 2.x copies update by it, and `installer.zip` is still built for 1.4.x copies. The web side (`shared/installer-info.ts`, a copy in both web and api): `current` is the exe's version when there is one, and that is what "out of date" means now; `download` is `DeepslateWorks.exe`, served from `/downloads/DeepslateWorks.exe` behind the same gate as the other downloads. The download buttons on /help and the Play button give it directly, with no zip.
 
 **First run.** A start from anywhere but `%LOCALAPPDATA%\DeepslateWorks` copies the exe there (a newer one already there is left alone; `.copy`, then moved), lists it in Settings → Apps, starts that copy with `-From download` and exits. From inside a zip or a temp folder it refuses with a message box (problem `in_zip`). The Play link (`"<exe>" "%1"`) and the desktop and Start Menu shortcuts (`-From desktop` / `-From startmenu`, plus "Uninstall Deepslate Works" `-Uninstall -From startmenu`) come once the "Shortcuts and Play button" card is allowed, as in 2.x. The Apps entry's UninstallString is `"<exe>" -Uninstall -From apps`.
 
@@ -42,6 +42,15 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 - identity validation. The individual-developer route is for the USA and Canada only, so from the UK this means validating an organisation (a registered company).
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
+
+## 3.5.2: the newest app is required (Alex, 2026-10-06)
+
+**Alex:** the latest launcher is always the required one, and it must update when there is an update.
+
+- **The door.** A run of Play lets someone in only when it came from the app the site hands out now: `requiredInstaller` in `shared/installer-info.ts`, which is installer.json's `exe` version when `DeepslateWorks.exe` checks out, else the script's version, else nothing (nobody is held). Web (the Play button's line, `server/play.ts`) and api (the entrance room, `players/app-version.ts`, read from `dist/` the same way, kept 30 s) use the same function. Settings → Joining "Minimum installer version" is gone; a saved value is dropped when read. Admins are never held, and "Play first" off still lets everyone in.
+- **Publishing a new app** holds nobody who is already in the game: only joins, and whoever is already waiting in the entrance room, are checked. The next Play updates the app, and its report carries the new version.
+- **The app** updated itself on every Play already. New in 3.5.2: when that update fails, the run stops (`run.Fail`, reported as failed with `updateProblem`) with "Deepslate Works X is needed to play, and this PC could not update to it, so nothing was started. Press Play to try again." Before, it carried on with the old version, which the door now refuses.
+- **The old launcher** (2.2.0) is told the required version as `minimum`. That is always above 2.2.0, so its question has no "Not now": Update now, or why it can no longer join. A 1.5.x copy fetches the 2.2.0 script on its next Play and then gets the same question. 1.3.x and older cannot update and are told to download again, as before.
 
 ## Installer 2.1.1: the chosen logo (planner, 2026-10-01)
 
@@ -545,7 +554,7 @@ Version numbers: `installer/VERSION` is the app's version, which is now the exe'
 
 - **Who sees what.** The mod list names `installer.exe` only to the app (user agent `DeepslateWorks/<version>`). The old
   launcher is shown `installer.app` (same shape) and `installer.minimum` (Settings → Joining). 2.1.3 moved a PC the moment
-  it saw `exe`, without asking; it now sees none, updates itself to 2.2.0, and 2.2.0 asks. `lib/installer-info.ts installerFor`.
+  it saw `exe`, without asking; it now sees none, updates itself to 2.2.0, and 2.2.0 asks. `shared/installer-info.ts installerFor`.
 - **2.2.0's question**, before anything else: "A new Deepslate Works app is ready. It replaces this one: same game, same
   mods, nothing to reinstall. It has its own Play button and no black window." **Update now** / **Not now** (no Allow all).
   Not now plays with 2.2.0 and asks again next Play. With `minimum` above 2.2.0, Not now is replaced by why it can no longer

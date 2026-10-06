@@ -107,6 +107,7 @@ namespace DeepslateWorks
             run.Emit(J.O("t", "versions", "app", Env.Version, "pack", run.PackSeen ?? ""));   // the window's footer: this exe's version (new after a self-update)
 
             // A newer app on the site: fetched, checked, put in place and started with what this one was started with.
+            // Never skipped: only the newest app's runs let anyone in (Alex, 2026-10-06).
             if (string.IsNullOrEmpty(run.UpdatedFrom) && !run.DryRun && (run.PretendRunning == null || run.PretendRunning.Length == 0))
             {
                 var u = SelfUpdate.Check(run, manifest, run.RestartArgs);
@@ -116,11 +117,8 @@ namespace DeepslateWorks
                     ExitLock(ref mutex);
                     return "updated";
                 }
-                if (u == "failed")
-                {
-                    Log.Line("UPDATE NOT APPLIED: " + run.UpdateProblem);
-                    Show(run, string.Format("Deepslate Works could not update itself ({0}). Carrying on with {1}.", run.UpdateProblem, Env.Version));
-                }
+                // 3.5.2: the server needs the newest app (Alex, 2026-10-06); a run that could not update stops, reported
+                if (u == "failed") throw run.Fail(SelfUpdate.NotUpdatedText(SelfUpdate.Offered(manifest)?.Version ?? "?"));
             }
 
             var neo = J.Str(manifest, "neoforge");

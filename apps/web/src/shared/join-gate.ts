@@ -40,8 +40,8 @@ export type Gate = { ok: true; until: Date } | { ok: false; reason: GateReason }
  */
 export function playGate(run: PlayRun | null, serverPack: string | null, windowMin: number, now: Date, minInstaller = "", modsMissing = false): Gate {
   if (!run) return { ok: false, reason: "no report" };
-  // Settings → Joining "Minimum installer version": a run from an older installer does not count. Pressing Play again
-  // with it would not help, so this comes before "stale".
+  // `minInstaller`: the app the site hands out now (installer-info.ts requiredInstaller, Alex 2026-10-06). A run from
+  // an older one does not count; pressing Play updates it first. Comes before "stale", which says less.
   if (minInstaller && olderThan(run.installerVersion, minInstaller)) return { ok: false, reason: "old installer" };
   // 2.1.0 (2026-10-01, kanefinch's TaCZ kick): the game on their PC was seen without some of the pack's mods since
   // their last Play (`modsMissing`). Play repairs it, so this says so before anything about time or version.
@@ -59,7 +59,7 @@ export const GATE_TEXT: Record<BlockReason, string> = {
   "not live": "the server is not open yet",
   vote: "has not answered the new vote",
   "no report": "has not pressed Play on the site",
-  "old installer": "has an installer older than the minimum",
+  "old installer": "has not updated Deepslate Works yet",
   "missing mods": "started the game without some of the pack's mods",
   stale: "pressed Play too long ago",
   "wrong version": "pressed Play before the pack changed",

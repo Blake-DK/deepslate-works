@@ -1,3 +1,6 @@
+// SHARED FILE: apps/web/src/shared/ and apps/api/src/shared/ hold identical copies (a test compares them).
+// Edit the copy in apps/web, then `cp apps/web/src/shared/*.ts apps/api/src/shared/`.
+//
 // docs/07 "Updates". What the mod list says about the installer the site hands out. Pure, so it is tested.
 
 /**
@@ -58,7 +61,7 @@ export function installerInfo(sidecar: unknown, zip: Actual | null, script: Actu
 export type InstallerOffer = InstallerInfo & {
   /** The app, offered to the old launcher under a name only 2.2.0 reads: 2.2.0 asks first (Update now / Not now). */
   app?: InstallerInfo["exe"];
-  /** Settings → Joining "Minimum installer version", so 2.2.0 knows when "Not now" can no longer join. */
+  /** The app players need to join (`requiredInstaller`): above 2.2.0, so 2.2.0 offers no "Not now". */
   minimum?: string | null;
 };
 
@@ -68,12 +71,22 @@ export const isApp = (userAgent: string | null | undefined): boolean => /^Deepsl
 /**
  * The app gets `exe` (its own self-update). The old launcher never does: 2.1.3 moves to the app the moment it sees
  * `exe`, without asking, so it is shown no exe, updates itself to the current script (2.2.0) and that one asks. 2.2.0
- * finds the app under `app`, with the minimum installer version.
+ * finds the app under `app`, with the version players need to join (`minimum`), which takes away its "Not now".
  */
-export function installerFor(info: InstallerInfo | null, userAgent: string | null | undefined, minimum: string): InstallerOffer | null {
+export function installerFor(info: InstallerInfo | null, userAgent: string | null | undefined): InstallerOffer | null {
   if (!info) return null;
   if (isApp(userAgent)) return info;
-  return { ...info, exe: null, app: info.exe, minimum: minimum || null };
+  return { ...info, exe: null, app: info.exe, minimum: requiredInstaller(info) || null };
+}
+
+/**
+ * The installer a run of Play has to come from to let anyone in (Alex, 2026-10-06): always the newest the site hands
+ * out, so every PC updates before it plays. Pressing Play updates it (the app by itself, an older launcher through
+ * the 2.2.0 bridge, which may no longer say "Not now"). "" when the site has no installer that checks out: there is
+ * nothing to update to, and nobody is held for it.
+ */
+export function requiredInstaller(info: Pick<InstallerInfo, "current"> | null | undefined): string {
+  return info?.current ?? "";
 }
 
 /**

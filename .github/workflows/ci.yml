@@ -1,8 +1,6 @@
 name: ci
-# `dev` is where work lands. A push to `main` or `dev` runs the checks, then builds both images and pushes them
-# tagged with the commit and with the branch's moving tag: `latest` for `main`, `dev` for `dev` (Alex, 2026-10-06).
-# The live site runs `main`'s, by commit (deploy/deploy.sh); `dev`'s are there to pull and try. A pull request
-# (dev → main is the usual one) builds them without pushing.
+# `dev` is where work lands: a push to it runs the checks, nothing more. Images are built and
+# pushed for `main` only, and a pull request (dev → main is the usual one) builds them without pushing.
 # A push or pull request that changes only docs/ or Markdown files at the top (README, ROADMAP) runs nothing:
 # they are in no image and no test. Such a commit on main has no images of its own, so deploy/deploy.sh then deploys
 # the images of the last commit before it that changed anything else; the two lists must stay the same.
@@ -15,10 +13,10 @@ on:
 
 # docs/35 R-20: the runs of pushes to main go one after the other, in the order of the pushes, from their first job
 # on. The group on the `images` job alone was entered only after `check`, so of two pushes close together the older
-# could be checked last, build last and leave `latest` on the older commit. Pushes to dev queue the same way in a
-# group of their own, for the `dev` tag. Every other run (a pull request) gets a group of its own, which is no group.
+# could be checked last, build last and leave `latest` on the older commit. Every other run (dev, a pull request)
+# gets a group of its own, which is no group at all.
 concurrency:
-  group: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && format('ci-{0}', github.ref_name) || format('ci-{0}', github.run_id) }}
+  group: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'ci-main' || format('ci-{0}', github.run_id) }}
   cancel-in-progress: false
 
 jobs:
@@ -43,13 +41,13 @@ jobs:
       - run: pnpm --filter modpack cli check-sides
 
   # Images are built here and only here; the VPS pulls them (deploy/deploy.sh). A pull request builds them too, so a
-  # branch's `next build` is proven before it reaches main; pushes to main and dev push them to the registry.
+  # branch's `next build` is proven before it reaches main, but only main pushes them to the registry.
   images:
     needs: check
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'))
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     # docs/31 B-08: one image build per branch and app at a time, in the order of the pushes, so an older run can
-    # never finish last and leave `latest` (or `dev`) on an older commit. A pull request's older run is simply cancelled.
+    # never finish last and leave `latest` on an older commit. A pull request's older run is simply cancelled.
     concurrency:
       group: images-${{ github.ref }}-${{ matrix.app }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -83,11 +81,9 @@ jobs:
           build-args: |
             GIT_SHA=${{ github.sha }}
             BUILT_AT=${{ steps.stamp.outputs.built }}
-          # the commit's tag, which deploy.sh deploys by; and the branch's moving tag: `dev` for dev, else `latest`
-          # (a pull request's image is only loaded here, never pushed)
           tags: |
             ${{ steps.names.outputs.image }}:${{ github.sha }}
-            ${{ steps.names.outputs.image }}:${{ github.ref == 'refs/heads/dev' && 'dev' || 'latest' }}
+            ${{ steps.names.outputs.image }}:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}

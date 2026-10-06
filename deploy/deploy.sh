@@ -38,7 +38,9 @@ git_here() { as_owner git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core
 [ -f deploy/.env ] || die "deploy/.env is missing (copy deploy/.env.example)"
 grep -Eq '^GHCR_OWNER=[a-z0-9-]+$' deploy/.env || die "set GHCR_OWNER in deploy/.env (GitHub owner, lower case)"
 grep -Eq "^DEEPSLATE_DIR=$(pwd)\$" deploy/.env || die "set DEEPSLATE_DIR=$(pwd) in deploy/.env (absolute path of this checkout)"
-placeholders=$(grep -E '^[A-Z_]+=(.*replace-me.*|0{17,}|00000000-0000-.*)$' deploy/.env | cut -d= -f1 | tr '\n' ' ')
+# `|| true`: a .env with no placeholder makes grep exit 1, and under `set -euo pipefail` that ended the whole deploy
+# without a word (2026-10-06, the first deploy after this check came in)
+placeholders=$(grep -E '^[A-Z_]+=(.*replace-me.*|0{17,}|00000000-0000-.*)$' deploy/.env | cut -d= -f1 | tr '\n' ' ' || true)
 [ -z "$placeholders" ] || die "deploy/.env still has placeholder values from .env.example: ${placeholders}(fill them in, or leave optional ones empty)"
 
 avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)

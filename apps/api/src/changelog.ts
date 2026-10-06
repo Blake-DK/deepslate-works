@@ -53,6 +53,14 @@ export const CHANGES: Change[] = [
       "Still on the old Deepslate Works launcher? Pressing Play moves you to the new app straight away; \"Not now\" is gone.",
     ],
   },
+  {
+    id: "2026-10-06-discord-votes",
+    date: "2026-10-06",
+    lines: [
+      "Voting with the buttons on a vote's post here counts as your vote on the site too. You don't need to vote twice. The reply after you press says which account it was saved to and, if the vote was needed before playing, whether you can join now.",
+      "The site shows \"You voted in Discord\" on those votes.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

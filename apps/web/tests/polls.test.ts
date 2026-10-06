@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { closedNews, DONT_MIND, makeOptions, openedNews, pendingOrder, readOptions, resultLine, tallyPoll, voteHolds } from "@/shared/polls";
+import { closedNews, DONT_MIND, editOptions, makeOptions, openedNews, pendingOrder, readOptions, resultLine, tallyPoll, voteHolds } from "@/shared/polls";
 
 // Planner 2026-10-02, "votes before play": quick polls on the site and in the app.
 
@@ -30,6 +30,41 @@ vi.mock("@/server/events", () => ({ audit: async (a: { action: string; params: R
 vi.mock("@/server/api-client", () => ({ apiFetch: async () => ({}) }));
 vi.mock("@/server/modpack/manifest", () => ({ getManifest: async () => ({ mods: [] }), modBySlug: () => new Map() }));
 vi.mock("@/server/announcements", () => ({ SYSTEM_AUTHOR: "system", newsImageUrl: (f: string | null) => (f ? `/news-image/${f}` : null) }));
+
+describe("editing an open poll (Alex, 2026-10-06)", () => {
+  const poll = { options: [{ id: "o1", text: "The Warden", image: "warden.webp" }, { id: "o2", text: "A Lava Golem" }, { id: "o3", text: "Ignis" }, { ...DONT_MIND }], multiple: true };
+  const answers = [{ choices: ["o1"] }, { choices: ["o1", "o3"] }];
+
+  it("keeps each option's id, so votes stay with their option, and gives a new option a new id", () => {
+    const r = editOptions(poll, answers, [{ id: "o1", text: "The Warden (deep dark)" }, { id: "o2", text: "" }, { id: "o3", text: "Ignis" }, { text: "The Harbinger" }], true);
+    expect(r.ok && r.options).toEqual([
+      { id: "o1", text: "The Warden (deep dark)", image: "warden.webp", link: null, modId: null }, // the picture it had stays
+      { id: "o3", text: "Ignis", image: null, link: null, modId: null },
+      { id: "o4", text: "The Harbinger", image: null, link: null, modId: null },
+      { ...DONT_MIND },
+    ]);
+    expect(r.ok && r.changes).toEqual(['"The Warden" now "The Warden (deep dark)"', 'added "The Harbinger"', 'removed "A Lava Golem"']);
+  });
+
+  it("refuses to take away an option somebody voted for, whether emptied or left out", () => {
+    expect(editOptions(poll, answers, [{ id: "o1", text: "The Warden" }, { id: "o2", text: "A Lava Golem" }, { id: "o3", text: " " }], true)).toEqual({ ok: false, reason: '"Ignis" has votes, so it can\'t be taken away. Close the poll and open a new one instead.' });
+    expect(editOptions(poll, answers, [{ id: "o2", text: "A Lava Golem" }, { id: "o3", text: "Ignis" }], true).ok).toBe(false);
+  });
+
+  it("stays multiple choice once somebody picked more than one; single choice is fine before that", () => {
+    const rows = [{ id: "o1", text: "The Warden" }, { id: "o2", text: "A Lava Golem" }, { id: "o3", text: "Ignis" }];
+    expect(editOptions(poll, answers, rows, false)).toEqual({ ok: false, reason: "Somebody picked more than one option, so this poll has to stay multiple choice." });
+    const r = editOptions(poll, [{ choices: ["o1"] }], rows, false);
+    expect(r.ok && r.changes).toEqual(["now single choice"]);
+  });
+
+  it("checks the rows as a new poll does, and refuses an option id it does not know (a stale page)", () => {
+    expect(editOptions(poll, [], [{ id: "o1", text: "Ignis" }, { id: "o3", text: "ignis" }], true).ok).toBe(false);
+    expect(editOptions(poll, [], [{ id: "o1", text: "Only one" }], true).ok).toBe(false);
+    expect(editOptions(poll, [], [{ id: "o9", text: "A" }, { text: "B" }], true).ok).toBe(false);
+    expect(editOptions(poll, [], [{ id: "o1", text: "The Warden" }, { id: "o2", text: "A Lava Golem" }, { id: "o3", text: "Ignis" }], true)).toEqual({ ok: true, options: readOptions(poll.options), changes: [] });
+  });
+});
 
 describe("making a poll", () => {
   it("keeps 2 to 8 filled rows, numbers them, and adds 'I don't mind' last", () => {
@@ -83,6 +118,8 @@ describe("voting", () => {
     expect(r.ok && r.poll.results?.counts[0]?.votes).toBe(1);
     expect(r.ok && r.poll.mine).toEqual(["o1"]);
     expect(r.ok && r.poll.voters).toBeNull(); // who voted for what: admins only
+    expect(r.ok && r.poll.mineVia).toBe("site");
+    expect(db.answers[0]).toMatchObject({ via: "site" });
     expect(db.audits).toEqual([{ userId: "pabulum", action: "poll.vote", params: { pollId: "p1", question: "Next boss", choices: ["The Warden"], changed: false }, result: "OK" }]);
   });
 

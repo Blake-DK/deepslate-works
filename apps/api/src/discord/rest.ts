@@ -86,6 +86,10 @@ export class BotRest {
   edit(channel: string, messageId: string, message: Partial<BotMessage>) {
     return this.call("PATCH", `/channels/${channel}/messages/${messageId}`, message);
   }
+  /** A thread's (forum post's) name: a poll's question edited on the site. */
+  rename(thread: string, name: string) {
+    return this.call("PATCH", `/channels/${thread}`, { name: name.slice(0, 100) });
+  }
   react(channel: string, messageId: string, emoji: string) {
     return this.call("PUT", `/channels/${channel}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}/@me`);
   }

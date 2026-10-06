@@ -8,11 +8,11 @@ import { db } from "@/server/db";
 import { closeVote } from "@/server/vote/votes";
 import { parseQuestions } from "@/server/vote/tally";
 import { audit } from "@/server/events";
-import { closePoll, deletePoll, openPoll } from "@/server/polls";
+import { closePoll, deletePoll, editPoll, openPoll, setPollMustVote } from "@/server/polls";
 import { storePhoto } from "@/server/news-images";
 import { getManifest, modBySlug } from "@/server/modpack/manifest";
 import { ukLocalToDate } from "@/lib/uk-time";
-import { makeOptions, MAX_OPTIONS, type OptionInput } from "@/shared/polls";
+import { makeOptions, MAX_OPTIONS, type EditRow } from "@/shared/polls";
 
 const createSchema = z.object({
   title: z.string().trim().min(2).max(80),
@@ -78,20 +78,18 @@ export async function deleteVoteAction(formData: FormData) {
 const POLLS = "/admin/votes";
 const pollBack = (msg: string) => `${POLLS}?poll=${encodeURIComponent(msg)}#polls`;
 
-/** New poll: the question, 2 to 8 options (text, optional picture, link or mod), single or multiple, a closing date, must vote. Opened at once. */
-export async function createPollAction(formData: FormData) {
-  const admin = await requireAdmin();
-  const question = String(formData.get("question") ?? "").replace(/[\r\n]+/g, " ").trim();
-  if (question.length < 3 || question.length > 160) redirect(pollBack("Give the poll a question (3 to 160 characters)."));
-  const rows: OptionInput[] = [];
+/** The form's option rows (text, picture, link or mod, and for an edit the option's id), in order. Stops at a bad picture. */
+async function readRows(formData: FormData): Promise<EditRow[]> {
+  const rows: EditRow[] = [];
   for (let i = 1; i <= MAX_OPTIONS; i++) {
+    const id = String(formData.get(`id${i}`) ?? "") || null;
     const text = String(formData.get(`option${i}`) ?? "");
     const link = String(formData.get(`link${i}`) ?? "");
     const modId = String(formData.get(`mod${i}`) ?? "");
     const pic = formData.get(`image${i}`);
     let image: string | null = null;
-    if (pic instanceof File && pic.size > 0) {
-      if (!text.trim() && !modId) continue; // a picture without an option is dropped with its empty row
+    if (pic instanceof File && pic.size > 0 && (text.trim() || modId)) {
+      // a picture without an option is dropped with its empty row
       const stored = await storePhoto(pic);
       if (!stored.ok) redirect(pollBack(`Option ${i}: ${stored.reason}`));
       image = stored.file;
@@ -104,18 +102,60 @@ export async function createPollAction(formData: FormData) {
       } catch {}
       if (!label) redirect(pollBack(`Option ${i}: that mod isn't in mods.json.`));
     }
-    rows.push({ text: label, link, modId, image });
+    rows.push({ id, text: label, link, modId, image });
   }
-  const made = makeOptions(rows);
-  if (!made.ok) redirect(pollBack(made.reason));
+  return rows;
+}
+
+function readQuestion(formData: FormData): string {
+  const question = String(formData.get("question") ?? "").replace(/[\r\n]+/g, " ").trim();
+  if (question.length < 3 || question.length > 160) redirect(pollBack("Give the poll a question (3 to 160 characters)."));
+  return question;
+}
+
+function readCloses(formData: FormData): Date | null {
   const closesRaw = String(formData.get("closesAt") ?? "").trim();
   const closesAt = closesRaw ? ukLocalToDate(closesRaw) : null;
   if (closesRaw && (!closesAt || closesAt.getTime() <= Date.now() + 60_000)) redirect(pollBack("The closing date must be in the future (UK time)."));
-  await openPoll({ id: admin.id, role: "ADMIN" }, { question, options: made.options, multiple: formData.get("multiple") === "on", mustVote: formData.get("mustVote") === "on", closesAt });
+  return closesAt;
+}
+
+function pollsChanged() {
   revalidatePath("/admin/votes");
   revalidatePath("/votes");
   revalidatePath("/");
+}
+
+/** New poll: the question, 2 to 8 options (text, optional picture, link or mod), single or multiple, a closing date, must vote. Opened at once. */
+export async function createPollAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const question = readQuestion(formData);
+  const made = makeOptions(await readRows(formData));
+  if (!made.ok) redirect(pollBack(made.reason));
+  const closesAt = readCloses(formData);
+  await openPoll({ id: admin.id, role: "ADMIN" }, { question, options: made.options, multiple: formData.get("multiple") === "on", mustVote: formData.get("mustVote") === "on", closesAt });
+  pollsChanged();
   redirect(pollBack("opened"));
+}
+
+/** Edit an open poll (Alex, 2026-10-06): votes already cast stay with their option. */
+export async function editPollAction(id: string, formData: FormData) {
+  const admin = await requireAdmin();
+  const question = readQuestion(formData);
+  const rows = await readRows(formData);
+  const closesAt = readCloses(formData);
+  const r = await editPoll({ id: admin.id, role: "ADMIN" }, id, { question, rows, multiple: formData.get("multiple") === "on", mustVote: formData.get("mustVote") === "on", closesAt });
+  if (!r.ok) redirect(pollBack(r.reason));
+  pollsChanged();
+  redirect(pollBack(r.changed ? "edited" : "unchanged"));
+}
+
+/** Must vote before playing, on an open poll: on or off. */
+export async function pollMustVoteAction(id: string, on: boolean) {
+  const admin = await requireAdmin();
+  await setPollMustVote({ id: admin.id, role: "ADMIN" }, id, on);
+  pollsChanged();
+  redirect(pollBack(on ? "must-vote" : "optional"));
 }
 
 export async function closePollAction(id: string) {

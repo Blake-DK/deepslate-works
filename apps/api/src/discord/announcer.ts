@@ -24,6 +24,8 @@ export type VotePoster = {
   readonly connecting?: boolean;
   createPost(forum: string, title: string, message: BotMessage, tag: string): Promise<{ ok: true; threadId: string; messageId: string } | { ok: false; error: string; gone: boolean }>;
   edit(channel: string, messageId: string, message: Partial<BotMessage>): Promise<{ ok: boolean; retry: boolean; error?: string }>;
+  /** A forum post's title (a poll's question edited on the site). */
+  rename?(thread: string, name: string): Promise<{ ok: boolean; retry: boolean; error?: string }>;
   tagFor(forum: string, name: string): string[];
   /** A plain message from the bot into a channel (the admin channel picked on the card). */
   sendTo(channel: string, message: BotMessage): Promise<{ ok: true; id: string } | { ok: false; retry: boolean; error: string }>;
@@ -552,6 +554,9 @@ export class Announcer {
         if (sw.votes && id) this.dirtyVotes.add(`${action === "poll.vote" ? "poll" : "ballot"}:${id}`);
         return true;
       }
+      case "poll.edit":
+      case "poll.mustVote":
+        return this.voteEdited(String(p.pollId ?? ""), sw, brand, now);
       case "poll.close":
       case "vote.close":
         return this.voteClosed(e, action === "poll.close" ? "poll" : "ballot", String(p.pollId ?? p.voteId ?? ""), sw, brand, now);
@@ -593,7 +598,7 @@ export class Announcer {
 
   /** The vote's message kept up to date, the way it was posted. */
   private async editVote(post: PostRow, kind: PollView["kind"], v: PollView, brand: Brand, what: string): Promise<{ ok: boolean; retry: boolean }> {
-    const msg = voteMessage(brand, v, this.d.portal);
+    const msg = voteMessage(brand, v, this.d.portal, post.via === "bot");
     if (post.via === "bot" && this.d.bot && post.threadId) {
       const r = await this.d.bot.edit(post.threadId, post.messageId, { embeds: msg.embeds, components: await this.components(kind, v.id, v.status !== "OPEN"), allowed_mentions: msg.allowed_mentions });
       this.record({ channel: post.channel, what, ok: r.ok, ...(r.error ? { error: r.error } : {}) });
@@ -606,7 +611,7 @@ export class Announcer {
   /** Open a vote's post: the bot's (buttons) or the webhook's (a link to the site). */
   private async openVote(e: FeedEvent | null, kind: PollView["kind"], v: PollView, sw: Switches, brand: Brand, now: Date): Promise<Outcome & { row?: PostRow }> {
     const key = `${kind}:${v.id}`;
-    const msg = voteMessage(brand, v, this.d.portal);
+    const msg = voteMessage(brand, v, this.d.portal, this.botPosts(sw, kind));
     // the bot is still connecting: wait for it, or the vote is the webhook's post without buttons for good
     if (this.botSoon() && this.botWould(sw, kind)) return { ok: false, retry: true };
     if (this.botPosts(sw, kind)) {
@@ -659,6 +664,26 @@ export class Announcer {
     if (!v || v.status !== "OPEN") return true; // closed or deleted since: nothing
     const r = await this.openVote(e, kind, v, sw, brand, now);
     return r.ok || !r.retry;
+  }
+
+  /**
+   * A poll edited on the site (Alex, 2026-10-06): its message is drawn again at once (question, options, buttons,
+   * must-vote line) and the post takes the new question as its title. A closed poll's result is left alone.
+   */
+  private async voteEdited(id: string, sw: Switches, brand: Brand, now: Date): Promise<boolean> {
+    if (!sw.votes || !id) return true;
+    const post = await this.postOf(`poll:${id}`);
+    if (!post?.messageId) return true; // never posted: nothing to redraw
+    const v = await this.d.store.vote("poll", id);
+    if (!v || v.status !== "OPEN") return true;
+    const r = await this.editVote(post, "poll", v, brand, "poll edited");
+    if (!r.ok) return !r.retry;
+    await this.keep({ ...post, editedAt: now });
+    if (post.threadId && this.d.bot?.rename) {
+      const t = await this.d.bot.rename(post.threadId, v.title);
+      if (!t.ok) this.record({ channel: post.channel, what: "poll renamed", ok: false, ...(t.error ? { error: t.error } : {}) });
+    }
+    return true;
   }
 
   private async voteClosed(e: FeedEvent, kind: PollView["kind"], id: string, sw: Switches, brand: Brand, now: Date): Promise<boolean> {

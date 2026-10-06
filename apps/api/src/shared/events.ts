@@ -106,6 +106,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   // planner 2026-10-02, quick polls: the choice is in `meta` (admins only), never in the line
   "poll.open": (p) => `opened the poll "${s(p.question)}"${p.mustVote ? " (must vote before playing)" : ""}`,
   "poll.close": (p) => (p.auto ? `the poll "${s(p.question)}" closed at its date: ${s(p.result, "no clear answer")}` : `closed the poll "${s(p.question)}": ${s(p.result, "no clear answer")}`),
+  "poll.edit": (p) => `edited the poll "${s(p.question)}"`,
+  "poll.mustVote": (p) => (p.on ? `made the poll "${s(p.question)}" a must-vote: members answer it before they play` : `made the poll "${s(p.question)}" optional again`),
   "poll.delete": (p) => `deleted the poll "${s(p.question)}"`,
   "poll.vote": (p) => `${p.changed ? "changed their vote" : "voted"} in "${s(p.question)}"`,
   "invite.create": "created an invite",

@@ -63,6 +63,15 @@ For polls (`Poll`). The season's mod ballot stays a link to the site: it is a pa
 - The count in the footer and the reminder work as in docs/21. The reminder's mention now also says "Vote with the buttons above".
 - **The app and the site** are unchanged: a vote cast in Discord shows there as any other.
 
+**Added 2026-10-06 (Alex: "the votes in Discord need to link to the account on the site, and if they vote in Discord they don't need to do it on the site; edit the vote; a must-vote flag").** The link was already there (the press is stored for the account whose `discordId` pressed); what was missing was saying so, and the editing:
+
+- **The bot's post** no longer ends with "[Vote](…/votes)", which read as "go and vote on the site". It says "Vote with the buttons below. It counts for your account on the site, so there's no need to vote there as well." A webhook's post (no buttons) keeps the link.
+- **The answer to a press** adds "It's saved to your account on the site (**name**), so you don't need to vote there as well." and, for a must-vote poll, either "That was the vote you needed before playing: you can join the server now." or "N more votes to answer before you can play." (`unvotedFor`, the door's own count).
+- **The site says where a vote came from:** `PollAnswer.via` ("site" or "discord", migration `0029_poll_answer_via`, which fills it for earlier votes from their latest `poll.vote` event). The poll card shows "Your vote: … (in Discord)" and "You voted in Discord. It counts here too, so there's nothing more to do."; Admin → Votes' "Who voted for what" marks them "in Discord".
+- **Editing an open poll** (Admin → Votes → "Edit this poll"): question, options (text, mod, link, picture), single or multiple choice, closing date, must-vote. Each option keeps its id, so votes already cast stay with their option. Refused: taking away an option somebody voted for, and making a poll single choice once somebody picked more than one (`editOptions` in `shared/polls.ts`). A new option gets the next id. Event `poll.edit`, with what changed in `params.changes`.
+- **Must vote before playing, on an open poll**: a button beside "Close now" (event `poll.mustVote`). Like a new must-vote poll, it never holds or kicks anyone playing; it applies from their next join.
+- **In Discord**, either event redraws the vote's message at once (question, options, buttons, the must-vote line) and the bot renames the forum post to the new question (`PATCH /channels/{thread}`; a webhook's post is renamed only if the bot has Manage Threads, and a refusal is only logged on the card). A closed poll is not redrawn.
+
 ## 5. Two-way chat
 
 The channel is **#game-chat**, picked on the card (§7).

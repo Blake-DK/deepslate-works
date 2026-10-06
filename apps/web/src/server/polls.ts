@@ -8,7 +8,7 @@ import { getManifest, modBySlug } from "@/server/modpack/manifest";
 import { newsImageUrl, SYSTEM_AUTHOR } from "@/server/announcements";
 import { ukShort } from "@/lib/uk-time";
 import { removePhoto } from "@/server/news-images";
-import { castVote, closedNews, DONT_MIND, isOpen, openedNews, pendingOrder, readOptions, resultLine, tallyPoll, type PollOption, type Pending, type Tally, type VoteStore } from "@/shared/polls";
+import { castVote, closedNews, DONT_MIND, editOptions, isOpen, openedNews, pendingOrder, readOptions, resultLine, tallyPoll, type EditRow, type PollOption, type Pending, type Tally, type VoteStore } from "@/shared/polls";
 
 // Planner 2026-10-02, "votes before play": quick polls on the site and in the app, and must-vote. The rules are in
 // shared/polls.ts (the api reads the same tables for the door and closes polls at their date: players/polls.ts).
@@ -28,10 +28,12 @@ export type PollView = {
   closedAt: Date | null;
   /** What this member picked; null when they have not voted. */
   mine: string[] | null;
+  /** Where their vote came from: the buttons in Discord count as a vote here (docs/22 §4). */
+  mineVia: "site" | "discord" | null;
   /** After they voted, once it is closed, and always for admins. */
   results: Tally | null;
   /** Admins only: who voted for what. */
-  voters: Array<{ name: string; choices: string[]; at: Date }> | null;
+  voters: Array<{ name: string; choices: string[]; at: Date; via: "site" | "discord" }> | null;
 };
 
 const mods = async () => {
@@ -42,11 +44,12 @@ const mods = async () => {
   }
 };
 
-type Row = { id: string; question: string; options: unknown; multiple: boolean; mustVote: boolean; status: "DRAFT" | "OPEN" | "CLOSED"; openedAt: Date | null; closesAt: Date | null; closedAt: Date | null; answers: Array<{ userId: string; choices: string[]; updatedAt: Date; user?: { displayName: string } | null }> };
+type Row = { id: string; question: string; options: unknown; multiple: boolean; mustVote: boolean; status: "DRAFT" | "OPEN" | "CLOSED"; openedAt: Date | null; closesAt: Date | null; closedAt: Date | null; answers: Array<{ userId: string; choices: string[]; via: string; updatedAt: Date; user?: { displayName: string } | null }> };
 
 function view(p: Row, who: Viewer, bySlug: Map<string, Mod>, now: Date): PollView {
   const admin = who.role === "ADMIN";
-  const mine = p.answers.find((a) => a.userId === who.id)?.choices ?? null;
+  const answer = p.answers.find((a) => a.userId === who.id);
+  const mine = answer?.choices ?? null;
   const open = isOpen(p, now);
   const options = readOptions(p.options).map((o) => {
     const m = o.modId ? bySlug.get(o.modId) : undefined;
@@ -55,12 +58,13 @@ function view(p: Row, who: Viewer, bySlug: Map<string, Mod>, now: Date): PollVie
   const showResults = admin || mine !== null || !open;
   return {
     id: p.id, question: p.question, options, multiple: p.multiple, mustVote: p.mustVote, open, openedAt: p.openedAt, closesAt: p.closesAt, closedAt: p.closedAt, mine,
+    mineVia: answer ? (answer.via === "discord" ? "discord" : "site") : null,
     results: showResults ? tallyPoll(p.options, p.answers) : null,
-    voters: admin ? p.answers.map((a) => ({ name: a.user?.displayName ?? "someone who has left", choices: a.choices, at: a.updatedAt })) : null,
+    voters: admin ? p.answers.map((a) => ({ name: a.user?.displayName ?? "someone who has left", choices: a.choices, at: a.updatedAt, via: a.via === "discord" ? ("discord" as const) : ("site" as const) })) : null,
   };
 }
 
-const withAnswers = (admin: boolean) => ({ answers: { select: { userId: true, choices: true, updatedAt: true, ...(admin ? { user: { select: { displayName: true } } } : {}) } } });
+const withAnswers = (admin: boolean) => ({ answers: { select: { userId: true, choices: true, via: true, updatedAt: true, ...(admin ? { user: { select: { displayName: true } } } : {}) } } });
 
 /** Open polls (oldest first) and the closed ones (newest first), as this member may see them. */
 export async function listPolls(who: Viewer, closedLimit = 30): Promise<{ open: PollView[]; closed: PollView[] }> {
@@ -142,6 +146,42 @@ export async function photoInUse(file: string): Promise<boolean> {
   return polls.some((p) => readOptions(p.options).some((o) => o.image === file));
 }
 
+export type PollEdit = { question: string; rows: EditRow[]; multiple: boolean; mustVote: boolean; closesAt: Date | null };
+export type Edit = { ok: true; changed: boolean } | { ok: false; reason: string };
+
+/**
+ * Admin → Votes → Edit (Alex, 2026-10-06): an open poll's question, options, choice, closing date and must-vote. The
+ * votes already cast stay (editOptions keeps each option's id); the Discord post is redrawn from the event.
+ */
+export async function editPoll(admin: Viewer, id: string, e: PollEdit): Promise<Edit> {
+  const poll = await db.poll.findUnique({ where: { id }, include: { answers: { select: { choices: true } } } });
+  if (!poll || !isOpen(poll, new Date())) return { ok: false, reason: "That poll has closed, so it can't be edited." };
+  const made = editOptions(poll, poll.answers, e.rows, e.multiple);
+  if (!made.ok) return made;
+  const changes = [...made.changes];
+  if (e.question !== poll.question) changes.unshift(`question was "${poll.question}"`);
+  if ((e.closesAt?.getTime() ?? null) !== (poll.closesAt?.getTime() ?? null)) changes.push(e.closesAt ? `closes ${ukShort(e.closesAt)}` : "no closing date");
+  if (e.mustVote !== poll.mustVote) changes.push(e.mustVote ? "must vote before playing" : "voting is optional");
+  if (changes.length === 0) return { ok: true, changed: false };
+  await db.poll.update({ where: { id }, data: { question: e.question, options: made.options as unknown as Prisma.InputJsonValue, multiple: e.multiple, mustVote: e.mustVote, closesAt: e.closesAt } });
+  // a picture replaced or taken away with its option goes, unless something else still shows it
+  const kept = new Set(made.options.map((o) => o.image));
+  for (const file of new Set(readOptions(poll.options).map((o) => o.image))) {
+    if (file && !kept.has(file) && !(await photoInUse(file))) await removePhoto(file);
+  }
+  await audit({ userId: admin.id, action: "poll.edit", params: { pollId: id, question: e.question, changes, mustVote: e.mustVote, answers: poll.answers.length }, result: "OK" });
+  return { ok: true, changed: true };
+}
+
+/** The quick switch on an open poll: members answer it before they play, or not. Nobody playing is held or kicked. */
+export async function setPollMustVote(admin: Viewer, id: string, on: boolean): Promise<boolean> {
+  const poll = await db.poll.findUnique({ where: { id }, select: { question: true, mustVote: true, status: true, closesAt: true } });
+  if (!poll || !isOpen(poll, new Date()) || poll.mustVote === on) return false;
+  await db.poll.update({ where: { id }, data: { mustVote: on } });
+  await audit({ userId: admin.id, action: "poll.mustVote", params: { pollId: id, question: poll.question, on }, result: "OK" });
+  return true;
+}
+
 export async function deletePoll(admin: Viewer, id: string): Promise<void> {
   const poll = await db.poll.findUnique({ where: { id }, include: { _count: { select: { answers: true } } } });
   if (!poll) return;
@@ -154,7 +194,7 @@ export async function deletePoll(admin: Viewer, id: string): Promise<void> {
 }
 
 /** JSON-safe, for the poll card in the browser and for the app: dates as text, "closes" already in UK time. */
-export type ClientPoll = Omit<PollView, "openedAt" | "closesAt" | "closedAt" | "voters"> & { openedAt: string | null; closes: string | null; closed: string | null; voters: Array<{ name: string; choices: string[]; at: string }> | null };
+export type ClientPoll = Omit<PollView, "openedAt" | "closesAt" | "closedAt" | "voters"> & { openedAt: string | null; closes: string | null; closed: string | null; voters: Array<{ name: string; choices: string[]; at: string; via: "site" | "discord" }> | null };
 export function forClient(p: PollView): ClientPoll {
   return {
     ...p,

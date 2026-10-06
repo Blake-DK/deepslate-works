@@ -15,7 +15,7 @@ export type FeedEvent = { id: bigint; at: Date; kind: string; actor: string | nu
 export const STALE_MS = 10 * 60_000;
 export const KEEP_MS = 24 * 60 * 60_000;
 export const CHAT_STALE_MS = 2 * 60_000;
-const KEEP_ACTIONS = new Set(["poll.open", "poll.close", "poll.vote", "vote.open", "vote.close", "ballot.save", "announcement.create", "site.settings"]);
+const KEEP_ACTIONS = new Set(["poll.open", "poll.close", "poll.vote", "poll.edit", "poll.mustVote", "vote.open", "vote.close", "ballot.save", "announcement.create", "site.settings"]);
 
 export function actionOf(e: Pick<FeedEvent, "meta">): string | null {
   const a = (e.meta as { action?: unknown } | null)?.action;
@@ -181,8 +181,12 @@ function bar(votes: number, voters: number): string {
   return `${"█".repeat(n)}${"░".repeat(10 - n)}`;
 }
 
-/** The one message per vote, kept up to date: open (count only, never who or what), then closed with the result. */
-export function voteMessage(brand: Brand, v: PollView, portal: string): Message {
+/**
+ * The one message per vote, kept up to date: open (count only, never who or what), then closed with the result.
+ * `buttons`: the bot's post, voted on right there. A press is the member's vote on the site (their account is their
+ * Discord account), so the message says so instead of sending them to the site to vote again.
+ */
+export function voteMessage(brand: Brand, v: PollView, portal: string, buttons = false): Message {
   const link = v.kind === "ballot" ? `${portal}/vote` : `${portal}/votes`;
   const lines: string[] = [];
   if (v.status === "OPEN") {
@@ -191,7 +195,8 @@ export function voteMessage(brand: Brand, v: PollView, portal: string): Message 
     lines.push("");
     lines.push(v.closesAt ? `Closes ${ukWhen(v.closesAt)}` : "Open until an admin closes it");
     if (v.mustVote) lines.push("You need to vote before you can play");
-    lines.push(`[Vote](${link})`);
+    if (buttons) lines.push("", "Vote with the buttons below. It counts for your account on the site, so there's no need to vote there as well.");
+    else lines.push(`[Vote](${link})`);
   } else if (v.kind === "poll" && v.result) {
     const winners = new Set(v.winners ?? []);
     const rows = [...v.result.filter((r) => r.text !== DONT_MIND.text), ...v.result.filter((r) => r.text === DONT_MIND.text)];

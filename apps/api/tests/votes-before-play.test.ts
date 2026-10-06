@@ -27,7 +27,7 @@ vi.mock("../src/actions/run.js", () => ({
   },
 }));
 vi.mock("../src/audit.js", () => ({ audit: async (a: { action: string; params: Record<string, unknown> }) => void state.audits.push(a) }));
-vi.mock("../src/settings.js", () => ({ getSection: async (k: string) => (k === "joining" ? { requirePlay: true, windowMin: 30, minInstaller: "1.5.0" } : { name: "Deepslate Works", tagline: "" }) }));
+vi.mock("../src/settings.js", () => ({ getSection: async (k: string) => (k === "joining" ? { requirePlay: true, windowMin: 30 } : { name: "Deepslate Works", tagline: "" }) }));
 vi.mock("../src/players/pack.js", () => ({ serverPack: async () => "0.1.0+43978c76" }));
 vi.mock("../src/players/mods.js", () => ({ modsMissingFor: async () => false }));
 vi.mock("../src/db.js", () => {

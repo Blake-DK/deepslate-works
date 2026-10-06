@@ -2,8 +2,7 @@ import { readFile } from "node:fs/promises";
 import type { ExtrasLock } from "modpack/extras";
 import { bearer, userFromLauncherToken } from "@/server/launcher";
 import { getInstaller, getLock, P } from "@/server/modpack/lock";
-import { installerFor } from "@/lib/installer-info";
-import { getSection } from "@/server/site-settings";
+import { installerFor } from "@/shared/installer-info";
 import { canSeeServer, getSettings } from "@/server/settings";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +16,13 @@ export async function GET(req: Request) {
   if (!user) return Response.json({ error: { code: "unauthorized", message: "Sign in first" } }, { status: 401 });
   // docs/35 R-41: before "We're live" the pack's file list is not for players, here as in the mod list (same answer)
   if (!canSeeServer(user, await getSettings())) return Response.json({ error: { code: "not_live", message: "Not launched yet" } }, { status: 403 });
-  const [lock, info, joining, extras] = await Promise.all([
+  const [lock, info, extras] = await Promise.all([
     getLock(),
     getInstaller(),
-    getSection("joining"),
     readFile(P.extrasLock, "utf8").then((t) => JSON.parse(t) as ExtrasLock).catch(() => null),
   ]);
   if (!lock) return Response.json({ error: { code: "no_lock", message: "The pack hasn't been built yet" } }, { status: 503 });
-  const offer = installerFor(info, req.headers.get("user-agent"), joining.minInstaller);
+  const offer = installerFor(info, req.headers.get("user-agent"));
   return Response.json(
     {
       pack: {

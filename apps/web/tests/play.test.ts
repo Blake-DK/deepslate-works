@@ -63,7 +63,7 @@ describe("the installer updates itself", () => {
   const base = { packVersion: "0.1.0+47b0b579", installerVersion: "1.4.0", mode: "play", outcome: "ok", failedStep: null, durationSec: 9, log: "", system: {} };
 
   it("names the installer in the mod list only while installer.json describes the zip that is there", async () => {
-    const { installerInfo } = await import("@/lib/installer-info");
+    const { installerInfo } = await import("@/shared/installer-info");
     expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: sha, size: 16022 })).toEqual({ version: "1.4.0", sha256: sha, size: 16022, script: null, exe: null, current: "1.4.0", download: "installer.zip", downloadSize: 16022 });
     expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: "b".repeat(64), size: 16022 })).toBeNull(); // another zip
     expect(installerInfo({ version: "1.4.0", sha256: sha, size: 16022 }, { sha256: sha, size: 1 })).toBeNull();
@@ -75,7 +75,7 @@ describe("the installer updates itself", () => {
   });
 
   it("names DeepslateWorks.ps1 (1.5.0) only while installer.json describes the script that is there", async () => {
-    const { installerInfo } = await import("@/lib/installer-info");
+    const { installerInfo } = await import("@/shared/installer-info");
     const ps = "c".repeat(64);
     const side = { version: "1.5.0", sha256: sha, size: 30000, script: { sha256: ps, size: 70000 } };
     const zip = { sha256: sha, size: 30000 };
@@ -87,7 +87,7 @@ describe("the installer updates itself", () => {
   });
 
   it("names DeepslateWorks.exe (3.0) only while installer.json describes the exe that is there; it is then current and the download", async () => {
-    const { installerInfo } = await import("@/lib/installer-info");
+    const { installerInfo } = await import("@/shared/installer-info");
     const ex = "f".repeat(64);
     const side = { version: "2.1.3", sha256: sha, size: 30000, exe: { version: "3.0.0", sha256: ex, size: 400000 } };
     const zip = { sha256: sha, size: 30000 };

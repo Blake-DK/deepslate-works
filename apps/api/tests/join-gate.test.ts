@@ -29,9 +29,10 @@ describe("playGate (docs/14 \"Play first\")", () => {
   });
   it("follows the window from the settings", () => {
     expect(playGate({ at: ago(100), packVersion: PACK }, PACK, 120, now).ok).toBe(true);
-    expect(parseSection("joining", undefined)).toEqual({ requirePlay: true, windowMin: 30, minInstaller: "1.5.0" });
-    expect(parseSection("joining", { requirePlay: false, windowMin: 60 })).toEqual({ requirePlay: false, windowMin: 60, minInstaller: "1.5.0" }); // saved before there was a minimum: 1.5.0
-    expect(parseSection("joining", { requirePlay: true, windowMin: 30, minInstaller: "" })).toEqual({ requirePlay: true, windowMin: 30, minInstaller: "" });
+    expect(parseSection("joining", undefined)).toEqual({ requirePlay: true, windowMin: 30 });
+    expect(parseSection("joining", { requirePlay: false, windowMin: 60 })).toEqual({ requirePlay: false, windowMin: 60 });
+    // Alex, 2026-10-06: no minimum to set any more; the app the site hands out is the one needed. One saved before is dropped.
+    expect(parseSection("joining", { requirePlay: true, windowMin: 30, minInstaller: "1.5.0" })).toEqual({ requirePlay: true, windowMin: 30 });
   });
 });
 
@@ -162,7 +163,7 @@ describe("the door after linking: the same order as at a join", () => {
     ["player", player, true, true, run("install", 10), null],
     ["player", player, true, true, run("play", 31), "stale"],
     ["admin", admin, false, true, null, null],
-    // installer 1.5.0 (planner): Settings → Joining "Minimum installer version", 1.5.0 by default
+    // a run from an installer older than the one needed (here 1.5.0; since 2026-10-06 always the app the site hands out)
     ["player", player, true, true, run("play", 5, PACK, "1.4.3"), "old installer"], // a fresh run of Play, but from 1.4.3
     ["early access", early, false, true, run("install", 5, PACK, "1.4.1"), "old installer"],
     ["player", player, true, true, run("play", 45, PACK, "1.4.3"), "old installer"], // said before "stale": pressing Play again with it would not help
@@ -180,7 +181,13 @@ describe("the door after linking: the same order as at a join", () => {
     expect(PLAY_MODES).toEqual(["play", "install", "first_install", "update", "update_only"]);
     expect(PLAY_MODES).not.toContain("already_running");
   });
-  it("takes no minimum when the setting is empty", () => {
+  it("needs the newest app the site hands out, and holds nobody for it when the site has none", () => {
+    const at = (v: string) => doorReason(player, { live: true, requirePlay: true, windowMin: 30, run: run("play", 5, PACK, v), pack: PACK, now, minInstaller: "3.5.1" });
+    expect(at("3.5.1")).toBeNull();
+    expect(at("3.6.0")).toBeNull(); // newer than the download (a test build): not held
+    expect(at("3.5.0")).toBe("old installer"); // one behind: Play updates it first
+    expect(at("2.2.0")).toBe("old installer"); // the old launcher, even after "Not now"
+    expect(at("1.5.6")).toBe("old installer");
     expect(doorReason(player, { live: true, requirePlay: true, windowMin: 30, run: run("play", 5, PACK, "1.3.0"), pack: PACK, now, minInstaller: "" })).toBeNull();
   });
   it("compares versions as versions", () => {

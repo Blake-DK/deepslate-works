@@ -154,7 +154,7 @@ namespace DeepslateWorks.Tests
             Assert.True(Logged("update step: not again in this run"));
         }
 
-        [Fact] public void A_failed_update_is_reported_and_the_run_carries_on()
+        [Fact] public void A_failed_update_is_reported_and_changes_nothing()
         {
             var run = new Run();
             var o = SetSite("MZ v=9.9.1 new");
@@ -165,6 +165,16 @@ namespace DeepslateWorks.Tests
             Assert.True(Untouched());
             Assert.True(Logged("UPDATE NOT APPLIED: "));
             Assert.Empty(Started);
+        }
+
+        [Fact] public void A_run_that_could_not_update_stops_and_says_what_to_do()
+        {
+            // 3.5.2 (Alex, 2026-10-06): the server lets in only the newest app, so the engine stops with this (run.Fail)
+            var t = SelfUpdate.NotUpdatedText("9.9.1");
+            Assert.Contains("Deepslate Works 9.9.1 is needed to play", t);
+            Assert.Contains("nothing was started", t);
+            Assert.Contains("Press Play to try again", t);
+            Assert.DoesNotContain("Carrying on", t);
         }
 
         [Fact] public void A_new_exe_that_cannot_be_started_is_taken_out_again()

@@ -262,7 +262,7 @@ export function closedTellraw(name: string): string {
   return `tellraw ${name} ${JSON.stringify(["", { text: NOT_OPEN_TEXT, color: "gold" }])}`;
 }
 
-/** Settings → Joining "Minimum installer version": their last run was from an older installer (planner, installer 1.5.0). */
+/** Their last run was from an older app than the one the site hands out now (players/app-version.ts; Alex, 2026-10-06). */
 export function oldTellraw(name: string, portalUrl: string): string {
   const host = hostOf(portalUrl);
   const url = `${portalUrl.replace(/\/+$/, "")}/install`;
@@ -448,7 +448,7 @@ export const actions = {
   }),
   "limbo.remindClosed": define({ name: "limbo.remindClosed", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [...screenCommands(name, "closed", ctx.portalUrl), closedTellraw(name)] }),
   "limbo.kickIdleClosed": define({ name: "limbo.kickIdleClosed", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${NOT_OPEN_TEXT}`] }),
-  // Settings → Joining "Minimum installer version": held until a run from a new enough installer arrives.
+  // Held until a run from the app the site hands out now arrives (players/app-version.ts).
   "limbo.holdOld": define({
     name: "limbo.holdOld",
     role: "system",

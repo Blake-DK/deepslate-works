@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { installerFor, isApp, type InstallerInfo } from "@/lib/installer-info";
+import { installerFor, isApp, requiredInstaller, type InstallerInfo } from "@/shared/installer-info";
 import { installerKind } from "@/lib/installer-version";
 import { MODES, reportSchema } from "@/lib/install-report";
 import { describeAction } from "@/shared/events";
@@ -22,19 +22,21 @@ describe("the hand-over offer", () => {
     expect(isApp("Mozilla/5.0 DeepslateWorks/3.0.0")).toBe(false);
   });
   it("gives the app its own update as `exe`, as before", () => {
-    expect(installerFor(info, "DeepslateWorks/3.0.0 (Windows)", "1.5.0")).toEqual(info);
+    expect(installerFor(info, "DeepslateWorks/3.0.0 (Windows)")).toEqual(info);
   });
   it("never shows the old launcher `exe`, so 2.1.3 updates to the script that asks first", () => {
-    const o = installerFor(info, POWERSHELL, "1.5.0")!;
+    const o = installerFor(info, POWERSHELL)!;
     expect(o.exe).toBeNull();
     expect(o.script).toEqual(info.script);
     expect(o.version).toBe("2.2.0");
     expect(o.app).toEqual(info.exe);
-    expect(o.minimum).toBe("1.5.0");
+    expect(o.minimum).toBe("3.1.0"); // the app itself (Alex, 2026-10-06): above 2.2.0, so 2.2.0 offers no "Not now"
   });
-  it("says when there is no minimum, and offers nothing when there is no installer", () => {
-    expect(installerFor(info, POWERSHELL, "")!.minimum).toBeNull();
-    expect(installerFor(null, POWERSHELL, "3.0")).toBeNull();
+  it("needs the newest app the site hands out, and nothing when the site has no installer", () => {
+    expect(requiredInstaller(info)).toBe("3.1.0");
+    expect(requiredInstaller({ current: "2.2.0" })).toBe("2.2.0"); // no exe that checks out: the script is the newest
+    expect(requiredInstaller(null)).toBe("");
+    expect(installerFor(null, POWERSHELL)).toBeNull();
   });
 });
 
@@ -67,7 +69,7 @@ describe("hand-over reports", () => {
 
 describe("the app version in the footers", () => {
   it("is the app the download gives (3.x), not the old launcher's script version", async () => {
-    const { shownAppVersion } = await import("@/lib/installer-info");
+    const { shownAppVersion } = await import("@/shared/installer-info");
     expect(shownAppVersion(info)).toBe("3.1.0");
     expect(shownAppVersion({ version: "2.2.0", current: "2.2.0" })).toBe("2.2.0"); // before the app was built
     expect(shownAppVersion(null)).toBeNull();

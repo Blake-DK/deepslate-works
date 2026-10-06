@@ -5,7 +5,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type { LockFile } from "modpack";
 import { modpackPaths } from "modpack/paths";
-import { installerInfo, type InstallerInfo } from "@/lib/installer-info";
+import { installerInfo, type InstallerInfo } from "@/shared/installer-info";
 
 export const P = modpackPaths(process.env.MODPACK_DIR);
 

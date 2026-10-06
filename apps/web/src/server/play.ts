@@ -10,6 +10,7 @@ import { canDownload } from "@/server/modpack/gate";
 import { installedNow, tooOldToUpdate, updateAvailable, type LastLaunch } from "@/lib/play";
 import { getSection } from "@/server/site-settings";
 import { modsMissingSince, PLAY_MODES, playGate, type Gate } from "@/shared/join-gate";
+import { requiredInstaller } from "@/shared/installer-info";
 
 type GateUser = Parameters<typeof canDownload>[0];
 
@@ -59,7 +60,7 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
   const installed = installedNow(latest);
   const tooOld = tooOldToUpdate(latest);
   const said = statusText(status, user.role === "ADMIN");
-  const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date(), joining.minInstaller, await modsMissingFor(user.id, run)) : null;
+  const join = joining.requirePlay && user.role !== "ADMIN" ? playGate(run, pack, joining.windowMin, new Date(), requiredInstaller(installer), await modsMissingFor(user.id, run)) : null;
   const current = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
   const last = report && installed ? { version: report.packVersion, at: report.at } : null;
   return { name: m.name, current, ready: Boolean(lock && installer) && gate.ok, download: installer?.download ?? "installer.zip", last, update: updateAvailable(current, last?.version), join, installed, tooOld, server: { state: said.state, line: said.line, hint: said.hint }, wake: status.wake };

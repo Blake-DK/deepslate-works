@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { launchText } from "@/components/launch-banner";
 import { getSection } from "@/server/site-settings";
 import { serverPack } from "@/server/play";
+import { getInstaller } from "@/server/modpack/lock";
+import { requiredInstaller } from "@/shared/installer-info";
 import { saveFilesAction, savePrivacyAction, saveRetentionAction, saveSettingsAction, saveJoiningAction } from "./actions";
 import { Check } from "@/components/ui/check";
 import { cn } from "@/lib/utils";
@@ -36,7 +38,8 @@ export type SettingsCard = "launch" | "joining" | "privacy" | "kept" | "files";
  */
 export default async function SettingsPage({ searchParams, cards }: { searchParams: Promise<{ saved?: string; error?: string; detail?: string }>; cards: readonly SettingsCard[] }) {
   const show = (t: SettingsCard) => cards.includes(t);
-  const [{ saved, error, detail }, settings, manifest, privacy, retention, files, joining, pack] = await Promise.all([searchParams, getSettings(), getManifest(), getSection("privacy"), getSection("retention"), getSection("files"), getSection("joining"), serverPack()]);
+  const [{ saved, error, detail }, settings, manifest, privacy, retention, files, joining, pack, installer] = await Promise.all([searchParams, getSettings(), getManifest(), getSection("privacy"), getSection("retention"), getSection("files"), getSection("joining"), serverPack(), getInstaller()]);
+  const required = requiredInstaller(installer);
   return (
     <div className="space-y-4">
       {saved && SECTION[saved] && <Alert tone="success">Saved: {SECTION[saved]}.</Alert>}
@@ -78,11 +81,9 @@ export default async function SettingsPage({ searchParams, cards }: { searchPara
               <Label htmlFor="windowMin">A run of Play counts for, minutes</Label>
               <Input id="windowMin" name="windowMin" type="number" min={5} max={1440} defaultValue={joining.windowMin} required />
             </div>
-            <div className="max-w-xs">
-              <Label htmlFor="minInstaller">Minimum installer version</Label>
-              <Input id="minInstaller" name="minInstaller" defaultValue={joining.minInstaller} pattern="(\d{1,4}(\.\d{1,4}){1,3})?" placeholder="1.5.0" />
-              <p className="mt-1 text-xs text-muted-foreground">A run of Play from an older installer does not count: the member is held with &quot;Download Deepslate Works again from the Install page&quot;. Empty: any installer. Admins are never held.</p>
-            </div>
+            <p className="text-sm text-muted-foreground" data-testid="required-app">
+              {required ? <>A run of Play counts only from Deepslate Works <span className="font-mono">{required}</span>, the newest the site hands out. Pressing Play updates an older copy first, so members are held only until they press it. Admins are never held.</> : <>The site has no Deepslate Works download that checks out, so any version counts until there is one.</>}
+            </p>
             <Button type="submit">Save</Button>
           </form>
         </CardContent>

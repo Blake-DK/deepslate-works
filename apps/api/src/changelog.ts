@@ -44,6 +44,15 @@ export const CHANGES: Change[] = [
     date: "2026-10-05",
     lines: ["Eight more mods on Mods & vote → Mod list have a video now, so you can see what they do."],
   },
+  {
+    id: "2026-10-06-newest-app",
+    date: "2026-10-06",
+    lines: [
+      "You now need the newest Deepslate Works to join. You don't have to do anything: pressing Play updates it first, then opens the game.",
+      "If it can't update, it now stops and says so instead of starting an old version the server would turn away. Press Play to try again.",
+      "Still on the old Deepslate Works launcher? Pressing Play moves you to the new app straight away; \"Not now\" is gone.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

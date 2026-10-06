@@ -30,7 +30,7 @@ vi.mock("../src/actions/run.js", () => ({
   },
 }));
 vi.mock("../src/audit.js", () => ({ audit: async (a: { action: string; params: Record<string, unknown>; result?: string }) => void state.audits.push(a) }));
-vi.mock("../src/settings.js", () => ({ getSection: async (k: string) => (k === "joining" ? { requirePlay: true, windowMin: 30, minInstaller: "" } : { name: "Deepslate Works", tagline: "" }) }));
+vi.mock("../src/settings.js", () => ({ getSection: async (k: string) => (k === "joining" ? { requirePlay: true, windowMin: 30 } : { name: "Deepslate Works", tagline: "" }) }));
 vi.mock("../src/db.js", () => {
   type Where = { mcUuid?: string; mcUsername?: string; id?: string };
   const find = (where: Where) => state.users.find((u) => (where.mcUuid ? u.mcUuid === where.mcUuid : where.mcUsername ? u.mcUsername === where.mcUsername : u.id === where.id)) ?? null;

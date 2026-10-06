@@ -9,6 +9,7 @@ import { parsePlace, parsePos, type ActionCtx } from "../actions/registry.js";
 import { getSection } from "../settings.js";
 import { PLAY_MODES, playGate, type BlockReason, type PlayRun } from "../shared/join-gate.js";
 import { serverPack } from "./pack.js";
+import { requiredApp } from "./app-version.js";
 import { modsMissingFor } from "./mods.js";
 import { unvotedFor } from "./polls.js";
 import { doorRule, type Member } from "../shared/access.js";
@@ -31,7 +32,7 @@ export type Back = { dimension: string; x: number; y: number; z: number };
 /** `kind`: waiting to link their Discord, or (docs/14 "Play first") a member who has not pressed Play. */
 /** "closed": a member for whom the server is not open yet (not live, no early access; docs/13 §9). */
 /** `lastReminder`: when the prompt last went to them (docs/14 "The prompt"). */
-/** "old": their last run was from an installer below Settings → Joining "Minimum installer version". */
+/** "old": their last run was from an older app than the one the site hands out now (players/app-version.ts). */
 /** `reason`: the door's word for it, as it is kept in HeldPlayer (docs/31 B-02). */
 export type Held = { uuid: string; code: string; since: number; lastReminder: number; kind: "link" | HeldFor; userId?: string; back?: Back | null; reason?: string };
 /** "vote": an open must-vote poll they have not answered (planner 2026-10-02). */
@@ -313,14 +314,15 @@ export class Limbo {
 
   /** Why this member may not come in yet, or null when they may (`doorReason`). */
   protected async atTheDoor(user: Known): Promise<BlockReason | null> {
-    const [live, joining, run, pack] = await Promise.all([
+    const [live, joining, run, pack, required] = await Promise.all([
       this.live(),
       getSection("joining"),
       db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { at: true, packVersion: true, installerVersion: true } }),
       serverPack(),
+      requiredApp(),
     ]);
     const [modsMissing, unvoted] = await Promise.all([modsMissingFor(user.id, run), user.role === "ADMIN" ? Promise.resolve(0) : unvotedFor(user.id)]);
-    return doorReason(user, { live, requirePlay: joining.requirePlay, windowMin: joining.windowMin, run, pack, now: new Date(), minInstaller: joining.minInstaller, modsMissing, unvoted });
+    return doorReason(user, { live, requirePlay: joining.requirePlay, windowMin: joining.windowMin, run, pack, now: new Date(), minInstaller: required, modsMissing, unvoted });
   }
 
   /** Asks the server where they are and waits for the answer; null when none comes. */

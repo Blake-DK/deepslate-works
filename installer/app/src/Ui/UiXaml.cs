@@ -195,7 +195,7 @@ namespace DeepslateWorks
 
         /// <summary>The main window: the banner, then the Play, (Vote,) Extras, Settings and Log tabs, then the footer.</summary>
         public static readonly string AppXaml = @"<Window " + Ns + @"
-        Title=""Deepslate Works"" Width=""980"" Height=""620"" MinWidth=""900"" MinHeight=""560"" WindowStartupLocation=""CenterScreen""
+        Title=""Deepslate Works"" Width=""980"" Height=""720"" MinWidth=""900"" MinHeight=""560"" WindowStartupLocation=""CenterScreen""
         FontFamily=""Segoe UI"" FontSize=""14"" TextOptions.TextFormattingMode=""Display"" TextOptions.TextRenderingMode=""ClearType"" UseLayoutRounding=""True"" SnapsToDevicePixels=""True"" Background=""{DynamicResource Ground}"" Foreground=""{DynamicResource Fg}"">
   <Window.Resources>" + ThemeXaml + @"
     <dw:MarkSplit x:Key=""MarkSplit""/>
@@ -264,12 +264,25 @@ namespace DeepslateWorks
                 <StackPanel x:Name=""OnlineHeads"" DockPanel.Dock=""Left"" Orientation=""Horizontal"" VerticalAlignment=""Center"" Visibility=""Collapsed""/>
                 <TextBlock x:Name=""ServerOnline"" TextWrapping=""Wrap"" VerticalAlignment=""Center"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
               </DockPanel>
-              <Border x:Name=""NewsBox"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""0,1,0,0"" Margin=""0,8,0,0"" Padding=""0,7,0,0"" Visibility=""Collapsed"">
-                <StackPanel>
-                  <TextBlock x:Name=""NewsText"" TextWrapping=""Wrap"" FontSize=""12.5""/>
-                  <TextBlock x:Name=""NewsMeta"" Foreground=""{DynamicResource Dim}"" FontSize=""11"" Margin=""0,3,0,0""/>
-                </StackPanel>
-              </Border>
+            </StackPanel>
+          </Border>
+          <!-- 3.5.3 (Alex, 2026-10-06): the pinned news in a card of its own, larger, and the whole card opens it on the site -->
+          <Border x:Name=""NewsBox"" Margin=""0,10,0,0"" CornerRadius=""4"" Padding=""12,10"" Cursor=""Hand"" Visibility=""Collapsed"">
+            <Border.Style>
+              <Style TargetType=""Border"">
+                <Setter Property=""Background"" Value=""{DynamicResource Card}""/>
+                <Setter Property=""BorderBrush"" Value=""{DynamicResource Line}""/>
+                <Setter Property=""BorderThickness"" Value=""1""/>
+                <Style.Triggers><Trigger Property=""IsMouseOver"" Value=""True""><Setter Property=""BorderBrush"" Value=""{DynamicResource Copper}""/></Trigger></Style.Triggers>
+              </Style>
+            </Border.Style>
+            <StackPanel>
+              <DockPanel>
+                <TextBlock x:Name=""NewsOpen"" DockPanel.Dock=""Right"" Foreground=""{DynamicResource Blue}"" FontSize=""12"" Text=""Read it on the site ›""/>
+                <TextBlock Text=""PINNED NEWS"" Foreground=""{DynamicResource Copper}"" FontSize=""11.5"" FontWeight=""SemiBold""/>
+              </DockPanel>
+              <TextBlock x:Name=""NewsText"" TextWrapping=""Wrap"" FontSize=""13.5"" LineHeight=""20"" Margin=""0,6,0,0""/>
+              <TextBlock x:Name=""NewsMeta"" Foreground=""{DynamicResource Dim}"" FontSize=""11.5"" Margin=""0,6,0,0""/>
             </StackPanel>
           </Border>
           <Border x:Name=""ChangedBox"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,8"" Margin=""0,10,0,0""
@@ -466,7 +479,7 @@ namespace DeepslateWorks
             "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "Footer", "FooterApp", "FooterPack", "FooterServer",
             "StepLabel", "SettingsLink", "PlayHint",
             // 3.2.0 (planner 2026-10-02): the server on the Play tab, and the Vote tab
-            "ServerBox", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "StartButton", "SiteLink", "NewsBox", "NewsText", "NewsMeta",
+            "ServerBox", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "StartButton", "SiteLink", "NewsBox", "NewsText", "NewsMeta", "NewsOpen",
             "VoteTab", "VoteStep", "VoteTitle", "VoteNote", "VoteBody", "VoteButton", "VoteError",
             "UpdateButton", "UpdateLine",   // 3.3.0
             // 3.4.0 (docs/21): the ground, the banner with the server pill, the drawn logo, the Vote tab's badge, the card

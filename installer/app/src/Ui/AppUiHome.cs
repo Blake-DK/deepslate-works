@@ -26,7 +26,7 @@ namespace DeepslateWorks
         public TabItem VoteTab;
         Border ServerBox, NewsBox;
         Ellipse ServerDot;
-        TextBlock ServerLineText, ServerHint, ServerOnline, NewsText, NewsMeta, VoteStep, VoteTitle, VoteNote, VoteError;
+        TextBlock ServerLineText, ServerHint, ServerOnline, NewsText, NewsMeta, NewsOpen, VoteStep, VoteTitle, VoteNote, VoteError;
         Hyperlink SiteLink;
         Button StartButton, VoteButton;
         StackPanel VoteBody;
@@ -55,10 +55,12 @@ namespace DeepslateWorks
             T F<T>(string n) where T : class => w.FindName(n) as T ?? throw new InvalidOperationException("the window has no " + n);
             VoteTab = F<TabItem>("VoteTab"); ServerBox = F<Border>("ServerBox"); NewsBox = F<Border>("NewsBox"); ServerDot = F<Ellipse>("ServerDot");
             ServerLineText = F<TextBlock>("ServerLine"); ServerHint = F<TextBlock>("ServerHint"); ServerOnline = F<TextBlock>("ServerOnline");
-            NewsText = F<TextBlock>("NewsText"); NewsMeta = F<TextBlock>("NewsMeta"); SiteLink = F<Hyperlink>("SiteLink");
+            NewsText = F<TextBlock>("NewsText"); NewsMeta = F<TextBlock>("NewsMeta"); NewsOpen = F<TextBlock>("NewsOpen"); SiteLink = F<Hyperlink>("SiteLink");
             StartButton = F<Button>("StartButton"); VoteButton = F<Button>("VoteButton"); VoteBody = F<StackPanel>("VoteBody");
             VoteStep = F<TextBlock>("VoteStep"); VoteTitle = F<TextBlock>("VoteTitle"); VoteNote = F<TextBlock>("VoteNote"); VoteError = F<TextBlock>("VoteError");
             SiteLink.Click += (s, e) => OpenSite(SiteNow?.Site ?? Env.PortalUrl);
+            // 3.5.3: the whole news card opens it on the site (the Votes page for news about a vote)
+            NewsBox.MouseLeftButtonUp += (s, e) => { var u = SiteHome.NewsUrl(SiteNow); Log.Line("window: news opened on the site"); OpenSite(u); };
             StartButton.Click += (s, e) => OnStartServer();
             VoteButton.Click += (s, e) => OnVoteButton();
             HomeTimer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromSeconds(HomeEverySec) };
@@ -132,9 +134,10 @@ namespace DeepslateWorks
             StartButton.Visibility = h.Admin && s.CanStart ? Visibility.Visible : Visibility.Collapsed;
             if (h.News != null)
             {
-                var body = h.News.Body.Length > 280 ? h.News.Body.Substring(0, 277) + "..." : h.News.Body;
-                NewsText.Text = body;
-                NewsMeta.Text = "Pinned news" + (string.IsNullOrEmpty(h.News.Author) ? "" : " · " + h.News.Author) + (string.IsNullOrEmpty(h.News.At) ? "" : " · " + h.News.At);
+                NewsText.Text = SiteHome.NewsShort(h.News.Body);
+                NewsMeta.Text = string.Join(" · ", new[] { h.News.Author, h.News.At }.Where(x => !string.IsNullOrEmpty(x)));
+                NewsMeta.Visibility = NewsMeta.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+                NewsOpen.Text = SiteHome.NewsAction(SiteHome.NewsUrl(h));
                 NewsBox.Visibility = Visibility.Visible;
             }
             else NewsBox.Visibility = Visibility.Collapsed;

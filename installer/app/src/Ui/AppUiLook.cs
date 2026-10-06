@@ -91,12 +91,12 @@ namespace DeepslateWorks
             t.Inlines.Add(new System.Windows.Documents.Run(text.Substring(cut + 1)) { Foreground = Theme.Brush(tone == "Copper" ? "Copper" : "Muted") });
         }
 
-        /// <summary>The Log tab (docs/21 §4): every line Muted, the last one Fg; error lines stay Red.</summary>
+        /// <summary>The Log tab (docs/21 §4): every line Muted, the last one Fg; error lines stay Red, good ones GreenText.</summary>
         void MarkLastLog()
         {
-            if (lastLog != null && !UiText.IsErrorLine(lastLog.Text)) lastLog.Foreground = Theme.Brush("Muted");
+            if (lastLog != null) lastLog.Foreground = Theme.Brush(UiText.LogTone(lastLog.Text, false));
             lastLog = LogList.Items.Count > 0 ? LogList.Items[LogList.Items.Count - 1] as TextBlock : null;
-            if (lastLog != null && !UiText.IsErrorLine(lastLog.Text)) lastLog.Foreground = Theme.Brush("Fg");
+            if (lastLog != null) lastLog.Foreground = Theme.Brush(UiText.LogTone(lastLog.Text, true));
         }
 
         /// <summary>A card's tone (docs/21 §3): no tinted boxes; the card stays a card and a 3 px stripe on its left says

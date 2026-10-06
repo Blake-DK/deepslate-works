@@ -61,6 +61,15 @@ export const CHANGES: Change[] = [
       "The site shows \"You voted in Discord\" on those votes.",
     ],
   },
+  {
+    id: "2026-10-06-app-home",
+    date: "2026-10-06",
+    lines: [
+      "Deepslate Works (the app) opens a little taller, and each step on the Play tab takes one line, so the list fits without scrolling.",
+      "The pinned news on the Play tab has a box of its own, in bigger text, and shows the whole message. Click it to open it on the site; news about a vote opens the Votes page.",
+      "The Log tab shows lines that went fine in green. Red is only for something that went wrong.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

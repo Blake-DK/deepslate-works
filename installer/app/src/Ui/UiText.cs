@@ -246,6 +246,10 @@ namespace DeepslateWorks
             }
         }
 
+        /// <summary>3.5.3: a step and its first tick on one row: the green part and the muted part.</summary>
+        public static KeyValuePair<string, string> StepDone(string step, string tick)
+            => new KeyValuePair<string, string>("✓  " + step, string.IsNullOrEmpty(tick) ? "" : "  ·  " + tick);
+
         /// <summary>The exit code 2.0.x's engine would have ended with, for the log line "the install steps ended".</summary>
         public static int ExitCodeFor(Exception e)
         {
@@ -265,9 +269,15 @@ namespace DeepslateWorks
         }
 
         // ---- the Log tab ---------------------------------------------------------------------------------------------
-        static readonly Regex ErrorWords = new Regex("ERROR|FAIL|refused|could not", RegexOptions.IgnoreCase);
+        // "0 failed" is a count, not a failure (the extras' "check: 14 check(s), 0 failed"); "10 failed" still is
+        static readonly Regex ErrorWords = new Regex(@"ERROR|(?<!\b0 )FAIL|refused|could not", RegexOptions.IgnoreCase);
+        static readonly Regex GoodWords = new Regex(@"^\[[^\]]*\] (OK |=== done ===)|\b0 failed\b|Nothing to update");
         /// <summary>A log line shown red (Update-LogBox; -match is case-insensitive).</summary>
         public static bool IsErrorLine(string line) => ErrorWords.IsMatch(line ?? "");
+        /// <summary>A log line shown green: a step that went fine, a check with nothing failed.</summary>
+        public static bool IsGoodLine(string line) => !IsErrorLine(line) && GoodWords.IsMatch(line ?? "");
+        /// <summary>The Log tab's colour for a line: Red for errors, GreenText when all went well, else Muted (Fg when last).</summary>
+        public static string LogTone(string line, bool last) => IsErrorLine(line) ? "Red" : IsGoodLine(line) ? "GreenText" : last ? "Fg" : "Muted";
         /// <summary>The line Show details jumps to (the last one that says ERROR).</summary>
         public static bool IsDetailsLine(string line) => (line ?? "").IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0;
         /// <summary>The Log tab shows this many of the log's last lines.</summary>

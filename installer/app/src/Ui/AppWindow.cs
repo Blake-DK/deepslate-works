@@ -203,7 +203,7 @@ namespace DeepslateWorks
                 // 3.4.1 (docs/21 §11): the whole window at its own size, then at its smallest
                 ui.SimCheck(new Waiting { CheckedAt = at });
                 ui.SimHome(up, "ready");
-                ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "28-window-980x620.png")));
+                ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "28-window.png")));
                 var tall = w.Height; w.Width = w.MinWidth; w.Height = w.MinHeight;
                 ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "29-min-size-900x560.png")));
                 w.Width = wide; w.Height = tall;

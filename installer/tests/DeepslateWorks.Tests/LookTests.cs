@@ -86,10 +86,12 @@ namespace DeepslateWorks.Tests
                         Assert.Equal(340, F("PlayLeft").ActualWidth, 0);
                         Assert.True(At("PlayCard").Left >= At("PlayLeft").Right + 15, size + ": the card overlaps the left column");
                         Assert.True(At("ServerBox").Width >= 330, size + ": the server card does not fill its column");
-                        // 3.5.4: the cards keep their width; a long pinned news scrolls inside its own card, which stays in the column
+                        // 3.5.3: the cards keep their width, and the news card stays in the column
                         Assert.True(F("NewsBox").IsVisible && At("NewsBox").Bottom <= At("PlayLeft").Bottom + 0.5, size + ": the news runs off the column");
+                        // 3.5.5 (Alex, 2026-10-06): nothing scrolls: the window has grown to show the whole news (CI's screen has room)
                         var ns = (System.Windows.Controls.ScrollViewer)F("NewsScroll");
-                        Assert.True(ns.ExtentHeight <= ns.ViewportHeight + 0.5 || ns.ComputedVerticalScrollBarVisibility == Visibility.Visible, size + ": the news is cut off without a way to scroll it");
+                        Assert.True(ns.ExtentHeight <= ns.ViewportHeight + 0.5 || ScreenFull(w), size + ": the news needs scrolling and the window did not grow");
+                        Assert.True(w.ActualHeight >= size.Height - 0.5 && w.MinHeight >= AppUi.BaseMinHeight, size + ": the window shrank");
                         Assert.True(At("PlayRow").Top >= At("PlayLeft").Bottom + 11 && At("PlayRow").Top >= At("PlayCard").Bottom + 11, size + ": the row is not under both columns");
                         Assert.True(At("PlayButton").Right <= At("PlayRow").Right + 0.5, size + ": Play is cut off");
                     }
@@ -155,6 +157,24 @@ namespace DeepslateWorks.Tests
             }
         }
 
+        [WindowsFact] public void A_long_step_list_makes_the_window_taller_instead_of_scrolling()
+        {
+            // 3.5.5 (Alex, 2026-10-06): "I don't want to scroll on the Play page"
+            using (new Scratch())
+                WithWindow(ui =>
+                {
+                    Resize(ui, 980, 720);
+                    ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Waking)), "ready");
+                    ui.SimSteps(18);
+                    ui.Pump(); ui.Window.UpdateLayout(); ui.Pump(); ui.Window.UpdateLayout(); ui.Pump();
+                    var sv = (System.Windows.Controls.ScrollViewer)ui.Window.FindName("PlayScroll");
+                    // the screen decides how far it can grow (CI's is small): all of it shown, or the whole height used
+                    Assert.True(ui.Window.ActualHeight > 720 || ScreenFull(ui.Window), "the window did not grow: " + ui.Window.ActualHeight);
+                    Assert.True(sv.ExtentHeight <= sv.ViewportHeight + 0.5 || ScreenFull(ui.Window), "the steps still scroll: " + sv.ExtentHeight + " in " + sv.ViewportHeight);
+                    Assert.True(ui.Window.MinHeight >= ui.Window.ActualHeight - 0.5, "it can be dragged smaller than its text");
+                });
+        }
+
         [WindowsFact] public void Every_text_on_every_tab_reads_at_4_5_to_1_or_better()
         {
             // 3.5.4 (Alex, 2026-10-06, "that news black text is hard to read"): the tab strip set no text colour, so a
@@ -188,6 +208,8 @@ namespace DeepslateWorks.Tests
                     Assert.True(low.Count == 0, "hard to read:\n" + string.Join("\n", low.Distinct()));
                 });
         }
+
+        static bool ScreenFull(Window w) => w.ActualHeight >= SystemParameters.WorkArea.Height - 1;
 
         static bool InButton(DependencyObject d)
         {

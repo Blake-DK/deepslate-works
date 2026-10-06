@@ -158,6 +158,7 @@ namespace DeepslateWorks
                 if (e.OriginalSource != Tabs) return;
                 CancelCountdown("a tab switch");
                 if (reviewing && Tabs.SelectedItem != PlayTab) CloseReview("another tab");   // 3.3.1: answers not saved
+                if (Tabs.SelectedItem == PlayTab) Window.Dispatcher.BeginInvoke(new Action(FitPlayTab), DispatcherPriority.Loaded);   // 3.5.5: changes made while away
                 if (Tabs.SelectedItem == ExtrasTab) ShowExtras();
                 else if (Tabs.SelectedItem == SettingsTab) ShowSettingsTab();
                 else if (Tabs.SelectedItem == LogTab) UpdateLogBox();

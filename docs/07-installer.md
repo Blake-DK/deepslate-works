@@ -43,6 +43,13 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.5.5: the Play tab never scrolls (Alex, 2026-10-06)
+
+**Alex:** "I don't want to scroll on the play page; all text should be visible at all times, so the window should be made longer to show it all."
+
+- When the news or the steps are taller than their box (`NewsScroll` and `PlayScroll` report it through ScrollChanged, and again on coming back to the Play tab), `FitPlayTab` makes the window taller by what is missing, up to the screen's work area, moves it up if it would run off the bottom, and raises `MinHeight` to that height, so dragging it smaller cannot hide text. It only ever grows; a maximised window is left alone.
+- Only on a screen too small for it all does the news still scroll inside its card (the 3.5.4 thin bar). On a 768 px laptop screen the Play tab has room for the server card and about ten lines of news.
+
 ## 3.5.4: readable text, the whole news, Play through the vote (Alex, 2026-10-06)
 
 - **Text colour.** The `TabItem` style sets `Foreground` to Fg (a tab's content inherits from its TabItem, not from the strip). Before, every TextBlock inside a tab that set no colour of its own inherited Windows' control text colour, black: the server line and the pinned news were #000000 on Card #202226 (about 1.2:1; measured in CI's screenshot of 3.5.3). `LookTests.Every_text_on_every_tab_reads_at_4_5_to_1_or_better` walks every visible text on every tab against the first solid background behind it (WCAG AA, 4.5:1).

@@ -79,6 +79,11 @@ export const CHANGES: Change[] = [
       "Pressing Play while there is a vote to answer takes you to the vote. Once you've answered everything, the game starts by itself.",
     ],
   },
+  {
+    id: "2026-10-06-app-no-scrolling",
+    date: "2026-10-06",
+    lines: ["Nothing on the app's Play tab needs scrolling any more: the window grows to show the whole pinned news and every step, as far as your screen allows."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

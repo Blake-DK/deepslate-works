@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-05T07:57:19.067Z",
+  "at": "2026-10-06T18:25:49.504Z",
   "source": "logs/latest.log",
   "files": [
     {
@@ -207,7 +207,7 @@
       "nested": false
     },
     {
-      "filename": "Placebo-1.21.1-9.9.2.jar",
+      "filename": "Placebo-1.21.1-9.9.3.jar",
       "nested": false
     },
     {
@@ -256,6 +256,10 @@
     },
     {
       "filename": "waystones-neoforge-1.21.1-21.1.46.jar",
+      "nested": false
+    },
+    {
+      "filename": "worldedit-mod-7.3.8.jar",
       "nested": false
     },
     {

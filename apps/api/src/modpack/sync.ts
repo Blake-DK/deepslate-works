@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Env } from "../env.js";
 import type { Amp } from "../amp/client.js";
 import { sshCommand } from "./ssh.js";
+import { jarChangeLines, jarChanges } from "./jar-changes.js";
 
 // docs/06 + docs/13 §4: rsync dist/server/ into the AMP instance's Minecraft/ dir over the tunnel
 // (rrsync-restricted deploy key), then Core.Restart through the ADS proxy if the mod set changed.
@@ -36,15 +37,15 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; b
   if (dry.code !== 0) return { ok: false, lines: [...lines, `rsync dry-run failed (${dry.code}):`, ...dry.out.trim().split("\n").slice(-8)], restarted: false, dryRun };
   const changes = dry.out.split("\n").filter((l) => /^[<>ch*.]/.test(l) && !/^\.d/.test(l) && l.trim() !== "");
   const modsChanged = changes.length > 0;
-  lines.push(modsChanged ? `mods: ${changes.length} change(s)` : "mods: up to date");
+  // what the dry run found, which is also what decides the restart; a new version of a mod reads as "updated", not as
+  // one jar removed and another added
+  lines.push(...jarChangeLines(jarChanges(changes)));
   if (dryRun) {
-    for (const l of changes.slice(0, 60)) lines.push(`  ${l}`);
     lines.push(modsChanged ? "dry run: nothing written; a real sync would restart the server" : "dry run: nothing to do");
     return { ok: true, lines, restarted: false, dryRun };
   }
   const real = await run("rsync", ["-rlt", "--delete", "--itemize-changes", "-e", ssh, `${DIST_SERVER}/mods/`, `${target}mods/`], 900_000);
   if (real.code !== 0) return { ok: false, lines: [...lines, `rsync mods failed (${real.code}):`, ...real.out.trim().split("\n").slice(-8)], restarted: false, dryRun };
-  for (const l of real.out.split("\n").filter((l) => /^[<>ch*]/.test(l)).slice(0, 60)) lines.push(`  ${l}`);
   // 2. configs and server-only files: merged, never deleted
   for (const dir of ["config", "bluemap", "defaultconfigs"]) {
     try {

@@ -63,6 +63,16 @@ export async function removeClientPack(paths: { dist: string }, log: (s: string)
   }
 }
 
+/**
+ * "placebo" from "Placebo-1.21.1-9.9.2.jar": a jar's name up to the first part that is a version (or "mc1.21"), so
+ * that two versions of one mod are known as one. apps/api/src/modpack/jar-changes.ts has the same rule for Sync.
+ */
+export function jarStem(file: string): string {
+  const parts = file.replace(/\.jar$/i, "").split(/[-_+ ]/);
+  const i = parts.findIndex((p, n) => n > 0 && /^(v|mc)?\d/i.test(p));
+  return (i < 0 ? parts : parts.slice(0, i)).join("-").toLowerCase();
+}
+
 /** dist/server/mods + configs + server-only files; jars are downloaded and hash-checked. */
 export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: string; config: string; server: string; datapacks?: string }, log: (s: string) => void): Promise<string> {
   const out = path.join(paths.dist, "server");
@@ -79,7 +89,10 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
   for (const name of await readdir(modsDir)) {
     if (!wanted.has(name)) {
       await rm(path.join(modsDir, name));
-      log(`removed stale ${name}`);
+      // a new version of a mod reads as "updated", not as a jar removed (Alex, 2026-10-06)
+      const stem = jarStem(name);
+      const next = [...wanted].filter((w) => jarStem(w) === stem);
+      log(next.length === 1 ? `updated ${name} → ${next[0]}` : `removed ${name} (no longer in the lock)`);
     }
   }
   // Settings are copied fresh every time: a file taken out of modpack/config/ (or modpack/server/config/) must not

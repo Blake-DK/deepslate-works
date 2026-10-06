@@ -70,6 +70,15 @@ export const CHANGES: Change[] = [
       "The Log tab shows lines that went fine in green. Red is only for something that went wrong.",
     ],
   },
+  {
+    id: "2026-10-06-app-readable",
+    date: "2026-10-06",
+    lines: [
+      "Some text on the app's Play tab was black on a dark box and hard to read, the pinned news among it. It is light now, like the rest.",
+      "The pinned news always shows the whole message. A long one scrolls inside its box.",
+      "Pressing Play while there is a vote to answer takes you to the vote. Once you've answered everything, the game starts by itself.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

@@ -7,10 +7,10 @@ import { checkBridge, installerVersion, readVersionFile, stampInstallerVersion }
 const INSTALLER = path.resolve(__dirname, "..", "..", "..", "installer");
 
 describe("the app's version", () => {
-  it("is written once, in installer/VERSION (the app's, 3.5.3); the old launcher (2.2) is older, so it hands over", async () => {
+  it("is written once, in installer/VERSION (the app's, 3.5.4); the old launcher (2.2) is older, so it hands over", async () => {
     const v = readVersionFile(await readFile(path.join(INSTALLER, "VERSION"), "utf8"));
     const ps1 = await readFile(path.join(INSTALLER, "DeepslateWorks.ps1"), "utf8");
-    expect(v).toBe("3.5.3");
+    expect(v).toBe("3.5.4");
     expect(installerVersion(ps1)).toBe("2.2.0");
     expect(() => checkBridge(installerVersion(ps1), v)).not.toThrow();
     expect(() => checkBridge(v, v)).toThrow(/never offer the exe/);

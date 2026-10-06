@@ -259,7 +259,7 @@ namespace DeepslateWorks.Tests
                         ui.SimCheck(new Waiting { ModsChanged = 2, PackNew = true, CheckedAt = DateTime.Now });
                         ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "idle");
                         ui.Tick();
-                        Assert.False(ui.PlayOpen);
+                        Assert.True(ui.PlayOpen);   // 3.5.4: it goes to the vote
                         Assert.Equal("Vote first, it takes ten seconds", ui.PlayLabel);
                         Assert.True(ui.UpdateOpen);
                         Assert.Equal("● Update", ui.UpdateLabel);

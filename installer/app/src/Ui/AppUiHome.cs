@@ -42,6 +42,13 @@ namespace DeepslateWorks
         List<string> VotePicked = new List<string>();
         bool voteResults, voteBusy, ballotOpened;
         bool extrasAfter;                                // the Extras tab's download, once the waiting run has ended
+        bool playAfterVotes;                             // 3.5.4: Play was asked for while a vote waited: it starts once all are answered
+
+        void WantPlayAfterVotes(string why)
+        {
+            if (!playAfterVotes) Log.Line("window: Play asked for (" + why + ") with a vote to answer: the Vote tab, then the game");
+            playAfterVotes = true;
+        }
 
         public const int HomeEverySec = 10;
 
@@ -60,12 +67,11 @@ namespace DeepslateWorks
             VoteStep = F<TextBlock>("VoteStep"); VoteTitle = F<TextBlock>("VoteTitle"); VoteNote = F<TextBlock>("VoteNote"); VoteError = F<TextBlock>("VoteError");
             SiteLink.Click += (s, e) => OpenSite(SiteNow?.Site ?? Env.PortalUrl);
             // 3.5.3: the whole news card opens it on the site (the Votes page for news about a vote)
-            NewsBox.MouseLeftButtonUp += (s, e) => { var u = SiteHome.NewsUrl(SiteNow); Log.Line("window: news opened on the site"); OpenSite(u); };
-            PlayLeft = F<FrameworkElement>("PlayLeft");
-            PlayLeft.SizeChanged += (s, e) => FitNews();
-            ServerBox.SizeChanged += (s, e) => FitNews();
-            NewsBox.SizeChanged += (s, e) => FitNews();
-            F<FrameworkElement>("ChangedBox").SizeChanged += (s, e) => FitNews();
+            NewsBox.MouseLeftButtonUp += (s, e) =>
+            {
+                if (OnScrollBar(e.OriginalSource as DependencyObject)) return;   // scrolling a long news item is not a click on it
+                var u = SiteHome.NewsUrl(SiteNow); Log.Line("window: news opened on the site"); OpenSite(u);
+            };
             StartButton.Click += (s, e) => OnStartServer();
             VoteButton.Click += (s, e) => OnVoteButton();
             HomeTimer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromSeconds(HomeEverySec) };
@@ -74,27 +80,11 @@ namespace DeepslateWorks
             VoteNextTimer.Tick += (s, e) => NextVote();
         }
 
-        FrameworkElement PlayLeft;
-
-        /// <summary>3.5.3: the left column never scrolls. The news text gets the whole lines that fit under the cards above
-        /// it (at least one; WordEllipsis ends the last with "…"); the author and date line goes when two lines would not fit.</summary>
-        void FitNews()
+        static bool OnScrollBar(DependencyObject d)
         {
-            if (NewsBox.Visibility != Visibility.Visible || PlayLeft.ActualHeight <= 0) return;
-            try
-            {
-                const double MetaRoom = 22;   // NewsMeta: 11.5 pt and its 6 px margin
-                var lh = NewsText.LineHeight;
-                var top = NewsBox.TranslatePoint(new Point(0, 0), PlayLeft).Y;
-                var metaShown = NewsMeta.Visibility == Visibility.Visible;
-                var bare = NewsBox.ActualHeight - NewsText.ActualHeight - (metaShown ? NewsMeta.ActualHeight + NewsMeta.Margin.Top : 0);
-                var room = PlayLeft.ActualHeight - top - bare;
-                var wantMeta = !string.IsNullOrEmpty(NewsMeta.Text) && room - MetaRoom >= 2 * lh;
-                var max = Math.Max(1, Math.Floor((room - (wantMeta ? MetaRoom : 0)) / lh)) * lh;
-                if (wantMeta != metaShown) NewsMeta.Visibility = wantMeta ? Visibility.Visible : Visibility.Collapsed;
-                if (Math.Abs(NewsText.MaxHeight - max) > 0.5) NewsText.MaxHeight = max;
-            }
-            catch { }
+            for (; d != null; d = d is Visual || d is System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+                if (d is ScrollBar) return true;
+            return false;
         }
 
         void StartHome() { RefreshHome(); HomeTimer.Start(); }
@@ -164,10 +154,9 @@ namespace DeepslateWorks
             {
                 NewsText.Text = SiteHome.NewsShort(h.News.Body);
                 NewsMeta.Text = string.Join(" · ", new[] { h.News.Author, h.News.At }.Where(x => !string.IsNullOrEmpty(x)));
-                if (NewsMeta.Text.Length == 0) NewsMeta.Visibility = Visibility.Collapsed;   // else FitNews decides whether it fits
+                NewsMeta.Visibility = NewsMeta.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
                 NewsOpen.Text = SiteHome.NewsAction(SiteHome.NewsUrl(h));
                 NewsBox.Visibility = Visibility.Visible;
-                FitNews();
             }
             else NewsBox.Visibility = Visibility.Collapsed;
             VerServer = s.Line; UpdateAppFooter();
@@ -237,7 +226,8 @@ namespace DeepslateWorks
             if (!VotesBlock) return;
             if (Count != null && Count.Running) { CancelCountdown("a vote to answer"); HideCountdown(); }
             var label = SiteNow?.VoteFirstButton ?? SiteHome.VoteFirstButton;
-            if (PlayButton.IsEnabled || !Equals(PlayButton.Content, label)) { PlayButton.Content = label; PlayButton.IsEnabled = false; }
+            // 3.5.4 (Alex, 2026-10-06): the button stays pressable: it takes them to the vote, and the game starts after it
+            if (!PlayButton.IsEnabled || !Equals(PlayButton.Content, label)) { PlayButton.Content = label; PlayButton.IsEnabled = true; }
             if (PlayHint.Text != UiText.VoteFirstHint) PlayHint.Text = UiText.VoteFirstHint;
             PlayHint.Visibility = Visibility.Visible;
         }
@@ -462,7 +452,8 @@ namespace DeepslateWorks
             var total = NewText(string.Format("{0} {1} so far.", p.Voters, p.Voters == 1 ? "vote" : "votes"), 12, "Normal", "Muted"); total.Margin = new Thickness(0, 4, 0, 0);
             VoteBody.Children.Add(total);
             var more = PendingVotes.Count > 0;
-            VoteButton.Content = more ? UiText.NextVote : UiText.GoToPlay;
+            VoteButton.Content = more ? UiText.NextVote : playAfterVotes ? UiText.PlayNow : UiText.GoToPlay;
+            if (!more && playAfterVotes) VoteNote.Text = UiText.VoteThanksPlaying;
             VoteButton.IsEnabled = true;
             if (!homeSim) { VoteNextTimer.Stop(); VoteNextTimer.Start(); }
         }
@@ -487,7 +478,8 @@ namespace DeepslateWorks
             if (Mode == "idle" || Mode == "ready")
             {
                 PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true; PlayHint.Visibility = Visibility.Collapsed;
-                if (Mode == "ready" && runWaiting) OnReady();   // the game is ready: the countdown rules decide again
+                if (Mode == "ready" && runWaiting) OnReady();   // the game is ready: the countdown rules decide again (3.5.4: or Play was pressed: it starts)
+                else if (Mode == "idle" && playAfterVotes) { playAfterVotes = false; Log.Line("window: every vote answered: Play"); StartRun(); }
             }
             ShowWakeHint();
         }
@@ -502,12 +494,13 @@ namespace DeepslateWorks
         internal bool StartShown => StartButton.Visibility == Visibility.Visible;
         internal void Tick() => GatePlay();
         internal void Next() => NextVote();
+        internal bool PlaysAfterVotes => playAfterVotes;
 
         // ---- screenshots ------------------------------------------------------------------------------------------------
         /// <summary>Screenshots: the Play tab and the Vote tab as they would be with this answer from the site.</summary>
         public void SimHome(HomeInfo h, string mode = null)
         {
-            homeSim = true;
+            homeSim = true; playAfterVotes = false;
             if (mode == "ready") { Mode = "ready"; runWaiting = false; ClearPlayBody(); PlayTitle.Text = UiText.ReadyToPlayTitle; PlayStatus.Text = UiText.ReadyToPlayStatus; PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true; PlayHint.Visibility = Visibility.Collapsed; }
             if (mode == "idle") { ShowIdle(); PlayHint.Visibility = Visibility.Collapsed; }
             answered.Clear(); answeredThisRound = 0; VoteShown = null;
@@ -516,6 +509,6 @@ namespace DeepslateWorks
         }
         public void SimPick(params string[] ids) { foreach (var id in ids) OnPick(id, true); }
         public void SimVoted(PollInfo p) { if (VoteShown != null) { answered.Add(VoteShown.Id); answeredThisRound++; } ShowResults(p); }
-        public void SimDone() { homeSim = false; answered.Clear(); SiteNow = null; VoteTab.Visibility = Visibility.Collapsed; Tabs.SelectedItem = PlayTab; }
+        public void SimDone() { playAfterVotes = false; homeSim = false; answered.Clear(); SiteNow = null; VoteTab.Visibility = Visibility.Collapsed; Tabs.SelectedItem = PlayTab; }
     }
 }

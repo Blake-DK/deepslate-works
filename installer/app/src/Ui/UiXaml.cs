@@ -160,6 +160,7 @@ namespace DeepslateWorks
       </Setter.Value></Setter>
     </Style>
     <Style TargetType=""TabControl"" x:Key=""Strip"">
+      <Setter Property=""Foreground"" Value=""{DynamicResource Fg}""/>
       <Setter Property=""Template""><Setter.Value>
         <ControlTemplate TargetType=""TabControl"">
           <DockPanel>
@@ -174,6 +175,10 @@ namespace DeepslateWorks
       </Setter.Value></Setter>
     </Style>
     <Style TargetType=""TabItem"">
+      <!-- 3.5.4 (Alex, 2026-10-06): a tab's content takes its text colour from its TabItem, whose default is Windows'
+           control text colour, black: every TextBlock with no colour of its own (the server line, the pinned news,
+           the titles) was black on the dark cards. LookTests reads every text on every tab against its background. -->
+      <Setter Property=""Foreground"" Value=""{DynamicResource Fg}""/>
       <Setter Property=""FocusVisualStyle"" Value=""{x:Null}""/><Setter Property=""Cursor"" Value=""Hand""/>
       <Setter Property=""Template""><Setter.Value>
         <ControlTemplate TargetType=""TabItem"">
@@ -249,7 +254,7 @@ namespace DeepslateWorks
       <Grid x:Name=""PlayGrid"" Margin=""16,14,16,12"">
         <Grid.ColumnDefinitions><ColumnDefinition Width=""340""/><ColumnDefinition Width=""16""/><ColumnDefinition Width=""*""/></Grid.ColumnDefinitions>
         <Grid.RowDefinitions><RowDefinition Height=""*""/><RowDefinition Height=""12""/><RowDefinition Height=""Auto""/></Grid.RowDefinitions>
-        <!-- 3.5.3: no scrolling; the news card takes what room is left and ends in an ellipsis (a click shows it all on the site) -->
+        <!-- 3.5.4: the cards keep their width; the news card takes the room that is left, and only its text scrolls when it is longer -->
         <DockPanel x:Name=""PlayLeft"" Grid.Column=""0"" Grid.Row=""0"" LastChildFill=""True"" ClipToBounds=""True"">
           <Border x:Name=""ServerBox"" DockPanel.Dock=""Top"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
             <StackPanel>
@@ -288,8 +293,24 @@ namespace DeepslateWorks
                 <TextBlock x:Name=""NewsOpen"" DockPanel.Dock=""Right"" Foreground=""{DynamicResource Blue}"" FontSize=""12"" Text=""Read it on the site ›""/>
                 <TextBlock Text=""PINNED NEWS"" Foreground=""{DynamicResource Copper}"" FontSize=""11.5"" FontWeight=""SemiBold""/>
               </DockPanel>
-              <TextBlock x:Name=""NewsMeta"" DockPanel.Dock=""Bottom"" Foreground=""{DynamicResource Dim}"" FontSize=""11.5"" Margin=""0,6,0,0""/>
-              <TextBlock x:Name=""NewsText"" TextWrapping=""Wrap"" TextTrimming=""WordEllipsis"" FontSize=""13.5"" LineHeight=""20"" LineStackingStrategy=""BlockLineHeight"" Margin=""0,6,0,0""/>
+              <TextBlock x:Name=""NewsMeta"" DockPanel.Dock=""Bottom"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Margin=""0,6,0,0""/>
+              <ScrollViewer x:Name=""NewsScroll"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Disabled"" Margin=""0,6,0,0"" Focusable=""False"">
+                <ScrollViewer.Resources>
+                  <Style TargetType=""ScrollBar"">
+                    <Setter Property=""Width"" Value=""8""/><Setter Property=""MinWidth"" Value=""8""/><Setter Property=""Margin"" Value=""6,0,0,0""/><Setter Property=""Cursor"" Value=""Arrow""/>
+                    <Setter Property=""Template""><Setter.Value>
+                      <ControlTemplate TargetType=""ScrollBar"">
+                        <Border Background=""{DynamicResource Line}"" CornerRadius=""4"">
+                          <Track x:Name=""PART_Track"" Orientation=""Vertical"" IsDirectionReversed=""True"">
+                            <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType=""Thumb""><Border Background=""{DynamicResource BoxLine}"" CornerRadius=""4""/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+                          </Track>
+                        </Border>
+                      </ControlTemplate>
+                    </Setter.Value></Setter>
+                  </Style>
+                </ScrollViewer.Resources>
+                <TextBlock x:Name=""NewsText"" TextWrapping=""Wrap"" Foreground=""{DynamicResource Fg}"" FontSize=""14"" LineHeight=""21"" LineStackingStrategy=""BlockLineHeight""/>
+              </ScrollViewer>
             </DockPanel>
           </Border>
         </DockPanel>
@@ -324,7 +345,7 @@ namespace DeepslateWorks
     <TabItem x:Name=""VoteTab"" Visibility=""Collapsed"">
       <TabItem.Header>
         <StackPanel Orientation=""Horizontal"">
-          <TextBlock Text=""Vote""/>
+          <TextBlock Text=""Vote"" Foreground=""{Binding Path=(TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}""/>
           <Border x:Name=""VoteBadge"" Background=""{DynamicResource Copper}"" CornerRadius=""3"" Padding=""5,0"" Margin=""6,0,0,0"" VerticalAlignment=""Center"" Visibility=""Collapsed"">
             <TextBlock x:Name=""VoteBadgeText"" FontFamily=""Segoe UI"" FontSize=""12"" FontWeight=""SemiBold"" Foreground=""{DynamicResource OnCopper}""/>
           </Border>
@@ -478,7 +499,7 @@ namespace DeepslateWorks
             "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "Footer", "FooterApp", "FooterPack", "FooterServer",
             "StepLabel", "SettingsLink", "PlayHint",
             // 3.2.0 (planner 2026-10-02): the server on the Play tab, and the Vote tab
-            "ServerBox", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "StartButton", "SiteLink", "NewsBox", "NewsText", "NewsMeta", "NewsOpen",
+            "ServerBox", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "StartButton", "SiteLink", "NewsBox", "NewsText", "NewsMeta", "NewsOpen", "NewsScroll",
             "VoteTab", "VoteStep", "VoteTitle", "VoteNote", "VoteBody", "VoteButton", "VoteError",
             "UpdateButton", "UpdateLine",   // 3.3.0
             // 3.4.0 (docs/21): the ground, the banner with the server pill, the drawn logo, the Vote tab's badge, the card

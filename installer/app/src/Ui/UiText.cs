@@ -117,10 +117,11 @@ namespace DeepslateWorks
 
         // ---- the app as the front door, votes before play (3.2.0, planner 2026-10-02) ------------------------------
         public const string OpenedStatus = "Signing in, checking for updates and waking the server. Press Play when it's ready.";
-        public const string VoteFirstHint = "There's a vote to answer first: it's on the Vote tab.";
+        public const string VoteFirstHint = "There's a vote to answer first. Press the button: the game starts once you've voted.";
         public const string StartServerQuestion = "Start the server? It is switched off (or crashed), so joining won't wake it. This is the same Start as Admin \u2192 Server on the site.";
         public const string StartSent = "Start sent. The server is starting.";
-        public const string VoteButton = "Vote", VoteSaving = "Saving...", NextVote = "Next vote", GoToPlay = "Go to Play";
+        public const string VoteButton = "Vote", VoteSaving = "Saving...", NextVote = "Next vote", GoToPlay = "Go to Play", PlayNow = "Play now";
+        public const string VoteThanksPlaying = "Thanks, your vote is in. The game starts in a few seconds. Here's how it stands:";
         public const string VoteThanks = "Thanks, your vote is in. Here's how it stands:";
         public const string BallotNote = "The season's mod vote: tick the mods you want. It has a few questions, so it's on the site; it takes two minutes. Come back here when you've voted.";
         public const string BallotOpen = "Open the vote on the site", BallotDone = "I've voted";

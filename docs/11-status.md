@@ -15,7 +15,8 @@ Last updated 2026-10-06, latest: app 3.5.5, the Play tab never scrolls, the wind
 - **Sync** (`apps/api/src/modpack/jar-changes.ts`): the mods folder's changes in words, from the dry run (which is also what decides the restart): `mods: 1 updated, 1 added`, then `updated Placebo-1.21.1-9.9.2.jar → Placebo-1.21.1-9.9.3.jar`, `added …`, `removed …`, `sent again …`, `new date only …`. Two jars are one mod when their names agree up to the first version part (`jarStem`; all 76 jars of the lock have names of their own by it). Two old jars and one new of a name are not guessed at.
 - **Build** (`packages/modpack/src/build.ts`): `updated <old jar> → <new jar>` when the lock has a new jar of that name, else `removed <jar> (no longer in the lock)`.
 - **Checked:** `deploy/check.sh` green (modpack 162, api 615, web 498 tests).
-- **Still open:** the live checkout's Lock commit `e1738e25` (authored `Blakey108 <portal@deepslate.invalid>` by the site) is not on `origin/main`, so the next `deploy.sh` stops until it is.
+- **The Lock brought into `dev`** (Alex: yes): `e1738e25` copied as `chore(modpack): lock f652ffca (2 changes)`, the same change, authored Alex. With it, `modpack/server-loaded.json` from api's capture of the server's start at 18:25:49 UTC (the start after that Lock, Build and Sync): it loaded Placebo 9.9.3 and **WorldEdit 7.3.8**, and api found no problem (docs/37 Step 2: NeoForge loads WorldEdit with our mods, and nothing is missing on PCs for it). Without it CI's `check-sides` fails (the old file has Placebo 9.9.2, which the lock no longer has).
+- **The live checkout after the next `dev` → `main` merge:** it still has `e1738e25` on top of `main`, so `deploy.sh` stops ("commits that are not on origin/main"). `git cherry origin/main HEAD` then shows it as `-` (its change is on `main`); `git reset --keep origin/main` as ladm drops it, then deploy.
 
 ## `deploy/` as the example of the whole setup (2026-10-06, on `dev`)
 

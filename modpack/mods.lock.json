@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-05T09:21:56.000Z",
+  "generatedAt": "2026-10-06T18:24:48.116Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "350c292ab1a29bd87526cf8ac1c28f343f54913a6c11585eab95fdb67d5973bf",
+  "hash": "f652ffca38acc3600f9a990bb3a44586fe38ab7bb0c8df2a00ab01d9f3ef3eb7",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -1148,14 +1148,14 @@
       "slug": "placebo",
       "name": "Placebo",
       "projectId": "tCkE8p2N",
-      "versionId": "1Ypo4tf4",
-      "versionNumber": "1.21.1-9.9.2",
+      "versionId": "h326cnw1",
+      "versionNumber": "1.21.1-9.9.3",
       "versionType": "release",
-      "filename": "Placebo-1.21.1-9.9.2.jar",
-      "url": "https://cdn.modrinth.com/data/tCkE8p2N/versions/1Ypo4tf4/Placebo-1.21.1-9.9.2.jar",
-      "sha512": "e8b4ba06fdbcdef8f936c39e7ba18bbfd326fad8d2512fd6cec80c899001b506a501b1aeac5eef2a1c2d7dd98f89ae3d94fac357c243027d623e59622bd295b5",
-      "sha1": "d44335094cf2db64998cb3ee31e58d8c01e80b4a",
-      "size": 324058,
+      "filename": "Placebo-1.21.1-9.9.3.jar",
+      "url": "https://cdn.modrinth.com/data/tCkE8p2N/versions/h326cnw1/Placebo-1.21.1-9.9.3.jar",
+      "sha512": "bf6f770eef68c699e0f9c88be26ddc65015d067d9c99079a5312766906c6310e8cb4027007ff70b9da3bdc33aaafabf58a989b840ddd54a44f14cfd6cd572337",
+      "sha1": "37b1cf95c23a72caafc5d5c9671bbf1fa62bee14",
+      "size": 325017,
       "side": "both",
       "requiredBy": [
         "fastfurnace",
@@ -1440,6 +1440,25 @@
       "modrinth": {
         "client": "required",
         "server": "required"
+      }
+    },
+    {
+      "slug": "worldedit",
+      "name": "WorldEdit",
+      "projectId": "1u6JkXh5",
+      "versionId": "WTAFvuRx",
+      "versionNumber": "7.3.8",
+      "versionType": "release",
+      "filename": "worldedit-mod-7.3.8.jar",
+      "url": "https://cdn.modrinth.com/data/1u6JkXh5/versions/WTAFvuRx/worldedit-mod-7.3.8.jar",
+      "sha512": "e039492df0b486e7ce76d0eaf8cb11eadad2e78220600b8498ab8eef4642a29e310a6bcb4378257553b3639c6d0bc1ebf0f73df3a7a677c6af6baf86716b0bc7",
+      "sha1": "924fe181a29bd66be6783f6d589968ab0ee02250",
+      "size": 6222854,
+      "side": "server",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unknown",
+        "server": "unknown"
       }
     },
     {

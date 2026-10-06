@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/server/db";
+import { requireAdmin } from "@/server/auth/session";
 import { DEFAULT_QUESTIONS } from "@/server/vote/tally";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -29,10 +30,14 @@ const POLL_DONE: Record<string, string> = {
 type Mods = Array<{ slug: string; name: string }>;
 type RowValue = { id?: string; text?: string; link?: string | null; modId?: string | null; imageUrl?: string | null };
 
-/** One option's fields: text, a mod's card, a link and a picture. `id` ties an edited row to the option it was. */
-function OptionRow({ i, mods, value, testId }: { i: number; mods: Mods; value?: RowValue; testId?: string }) {
+/**
+ * One option's fields under its number: text, a mod's card, a link and a picture. `id` ties an edited row to the
+ * option it was; `note` follows the number (in the editor, its votes).
+ */
+function OptionRow({ i, mods, value, note, testId }: { i: number; mods: Mods; value?: RowValue; note?: string; testId?: string }) {
   return (
     <div className="grid gap-2 rounded-[4px] border p-2 sm:grid-cols-[1fr_1fr]" data-testid={testId}>
+      <p className="text-sm font-semibold sm:col-span-2">Option {i}{note && <span className="font-normal text-muted-foreground"> · {note}</span>}</p>
       {value?.id && <input type="hidden" name={`id${i}`} value={value.id} />}
       <Input name={`option${i}`} aria-label={`Option ${i}`} placeholder={value?.id ? "Empty to take it away" : i === 1 ? "Option 1, e.g. The Warden" : i === 2 ? "Option 2, e.g. A Lava Golem" : `Option ${i}`} defaultValue={value?.text ?? ""} maxLength={120} />
       <Select name={`mod${i}`} aria-label={`Option ${i}: a mod's card`} defaultValue={value?.modId ?? ""}>
@@ -55,6 +60,9 @@ function OptionRow({ i, mods, value, testId }: { i: number; mods: Mods; value?: 
 function EditPoll({ poll, mods }: { poll: PollView; mods: Mods }) {
   const current = poll.options.filter((o) => o.id !== DONT_MIND.id);
   const voted = new Map(poll.results?.counts.map((c) => [c.id, c.votes]) ?? []);
+  const total = poll.results?.voters ?? 0;
+  const dontMind = voted.get(DONT_MIND.id) ?? 0;
+  const count = (n: number) => (n === 0 ? "No votes" : `${n} ${n === 1 ? "vote" : "votes"}`);
   const free = MAX_OPTIONS - current.length;
   return (
     <details className="rounded-[4px] border p-3" data-testid="poll-edit">
@@ -63,17 +71,16 @@ function EditPoll({ poll, mods }: { poll: PollView; mods: Mods }) {
         <div><Label htmlFor={`q-${poll.id}`}>Question</Label><Input id={`q-${poll.id}`} name="question" defaultValue={poll.question} required minLength={3} maxLength={160} /></div>
         <fieldset className="space-y-2">
           <legend className="mb-1 text-sm font-medium">Options</legend>
-          {current.map((o, k) => (
-            <div key={o.id} className="space-y-1">
-              {(voted.get(o.id) ?? 0) > 0 && <p className="text-xs text-muted-foreground">{voted.get(o.id)} {voted.get(o.id) === 1 ? "vote" : "votes"}: it can be reworded, not taken away.</p>}
-              <OptionRow i={k + 1} mods={mods} value={{ id: o.id, text: o.text, link: o.link, modId: o.modId, imageUrl: o.imageUrl }} />
-            </div>
-          ))}
+          <p className="text-sm text-muted-foreground" data-testid="poll-edit-votes">{count(total)} so far{total > 0 && <>, {dontMind} of them &ldquo;{DONT_MIND.text}&rdquo; (added to every poll, so it isn&apos;t listed here)</>}.</p>
+          {current.map((o, k) => {
+            const n = voted.get(o.id) ?? 0;
+            return <OptionRow key={o.id} i={k + 1} mods={mods} note={n > 0 ? `${count(n)}: it can be reworded, not taken away` : count(n)} value={{ id: o.id, text: o.text, link: o.link, modId: o.modId, imageUrl: o.imageUrl }} />;
+          })}
           {free > 0 && (
             <details className="space-y-2">
               <summary className="cursor-pointer text-sm text-muted-foreground">Add an option ({free} more at most)</summary>
               <div className="mt-2 space-y-2">
-                {Array.from({ length: free }, (_, k) => current.length + k + 1).map((i) => <OptionRow key={i} i={i} mods={mods} />)}
+                {Array.from({ length: free }, (_, k) => current.length + k + 1).map((i) => <OptionRow key={i} i={i} mods={mods} note="new" />)}
               </div>
             </details>
           )}
@@ -99,9 +106,11 @@ const ERRORS: Record<string, string> = {
 /** `part` (docs/35): the quick polls are Admin → Votes, the season's mod vote is Modpack → Mod vote. */
 export default async function VotesSection({ searchParams, part }: { searchParams: Promise<{ error?: string; poll?: string }>; part: "polls" | "modvote" }) {
   const { error, poll: pollMsg } = await searchParams;
+  const admin = await requireAdmin();
   const [votes, polls, mods, members] = await Promise.all([
     db.vote.findMany({ orderBy: { opensAt: "desc" }, include: { _count: { select: { ballots: true } } } }),
-    listPolls({ id: "", role: "ADMIN" }, 20),
+    // as this admin, so their own vote (on the site or in Discord) shows as theirs
+    listPolls({ id: admin.id, role: "ADMIN" }, 20),
     getManifest().then(votableMods).catch(() => []),
     db.user.count(),
   ]);

@@ -29,6 +29,25 @@ namespace DeepslateWorks.Tests
             Assert.Equal("GreenHi", Theme.ToneKey(on.Server.Tone));   // 3.4.0: a Theme key, no colour outside Theme.cs
         }
 
+        [Fact] public void The_pinned_news_is_shown_whole_and_opens_on_the_site()
+        {
+            var up = H(HomeSamples.Up);
+            Assert.Equal("https://deepslate.dsw.test/votes", SiteHome.NewsUrl(up));
+            Assert.Equal("Vote on the site ›", SiteHome.NewsAction(SiteHome.NewsUrl(up)));
+            Assert.Contains("3. Which boss goes first?", SiteHome.NewsShort(up.News.Body));   // the whole of it, not cut at 280
+            // a link off the site is never opened: the site instead; no link (an older site): the site
+            up.News.Url = "https://example.com/x";
+            Assert.Equal("https://deepslate.dsw.test", SiteHome.NewsUrl(up));
+            var w = H(HomeSamples.Waking);
+            Assert.Equal("https://deepslate.dsw.test", SiteHome.NewsUrl(w));
+            Assert.Equal("Read it on the site ›", SiteHome.NewsAction("https://deepslate.dsw.test/#news-n2"));
+            // blank lines squeezed, a long one cut at a word
+            Assert.Equal("a\n\nb", SiteHome.NewsShort("a\r\n\r\n\r\n\r\nb"));
+            var cut = SiteHome.NewsShort(string.Join(" ", Enumerable.Repeat("word", 200)));
+            Assert.True(cut.Length <= SiteHome.NewsMax + 1);
+            Assert.EndsWith("word…", cut);
+        }
+
         [Fact] public void Only_an_admin_gets_Start_and_only_for_a_server_that_will_not_wake()
         {
             var off = H(HomeSamples.OffAdmin);

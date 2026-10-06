@@ -43,6 +43,12 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.5.3: the Play tab fits, the news opens the site (Alex, 2026-10-06)
+
+- **The window** opens 980×720 (less when the screen's work area is smaller; never under 900×560). On the Play tab a step and its first tick share one row: "✓  Finding Java 21 · Using the Java we downloaded last time". A second tick goes under it, indented.
+- **The pinned news** is a card of its own under the server card: up to 600 characters, cut at a word. The left column never scrolls: the text gets the whole lines that fit (`FitNews`, at least one) and ends in "…"; the author and date line goes when two lines would not fit. A click anywhere on it opens `news.url` from `/api/app/home` (`/votes` for news about a vote or poll, else `/#news-<id>` on Home), only when that link is on the site; otherwise the site itself.
+- **The Log tab** shows red only for errors (a count of "0 failed" is not one), and green for lines that went fine.
+
 ## 3.5.2: the newest app is required (Alex, 2026-10-06)
 
 **Alex:** the latest launcher is always the required one, and it must update when there is an update.

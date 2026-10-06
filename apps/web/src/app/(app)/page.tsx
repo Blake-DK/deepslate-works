@@ -89,7 +89,7 @@ export default async function HomePage() {
               <CardContent>
                 <ul className="space-y-3">
                   {news.map((n) => (
-                    <li key={n.id} className="text-sm">
+                    <li key={n.id} id={`news-${n.id}`} className="scroll-mt-20 text-sm">
                       <p className="whitespace-pre-line">{n.pinned && <Badge tone="warn" className="mr-2">Pinned</Badge>}{n.body}</p>
                       {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded picture, served by our own route */}
                       {n.image && <a href={n.image} target="_blank" rel="noreferrer" className="mt-2 block"><img src={n.image} alt="" loading="lazy" className="max-h-72 w-full rounded-[4px] border object-cover" data-testid="news-image" /></a>}

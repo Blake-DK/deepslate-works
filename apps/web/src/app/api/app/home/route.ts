@@ -2,6 +2,7 @@ import { bearer, userFromLauncherToken } from "@/server/launcher";
 import { getStatus } from "@/server/status";
 import { statusText } from "@/lib/server-status";
 import { getAnnouncements } from "@/server/announcements";
+import { newsLink } from "@/lib/news";
 import { forClient, pendingFor } from "@/server/polls";
 import { env } from "@/env";
 import { ukShort } from "@/lib/uk-time";
@@ -45,7 +46,8 @@ export async function GET(req: Request) {
       // docs/20 §7 (W1.6): the season in the same one line as the site's Home; null while there is none. Apps that do
       // not know the field ignore it
       season,
-      news: pinned ? { body: pinned.body, at: ukShort(pinned.createdAt), author: pinned.author, image: pinned.image ? `${site}${pinned.image}` : null } : null,
+      // url (app 3.5.3): where a click on the news card opens; older apps ignore it
+      news: pinned ? { body: pinned.body, at: ukShort(pinned.createdAt), author: pinned.author, image: pinned.image ? `${site}${pinned.image}` : null, url: newsLink(site, pinned) } : null,
       votes: {
         polls: pending.polls.map(forClient).map((p) => ({ ...p, options: p.options.map((o) => ({ ...o, imageUrl: o.imageUrl ? `${site}${o.imageUrl}` : null })) })),
         ballot: pending.ballot ? { ...pending.ballot, url: `${site}/pack?tab=vote` } : null,

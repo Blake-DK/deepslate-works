@@ -2,9 +2,9 @@ import { RowMenu } from "@/components/admin/row-menu";
 import { menuItem } from "@/components/admin/menu-item";
 import { ConfirmItem, LinkByName } from "@/components/admin/menu-actions";
 import Link from "next/link";
-import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setMinecraftNameAction, setOutsideAuthAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";
+import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setBuilderToolsAction, setMinecraftNameAction, setOutsideAuthAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";
 
-type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUsername: string | null; passwordSignIn?: boolean; discordId?: string | null; outsideAuth?: boolean };
+type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUsername: string | null; passwordSignIn?: boolean; discordId?: string | null; outsideAuth?: boolean; builderTools?: boolean };
 
 /** A member's admin menu: on People → Members and on their player page (docs/13 §11 layout). */
 export function MemberMenu({ u, meId }: { u: Member; meId: string }) {
@@ -24,6 +24,9 @@ export function MemberMenu({ u, meId }: { u: Member; meId: string }) {
       {admin && u.id !== meId && u.passwordSignIn && (
         <ConfirmItem action={turnOffPasswordSignInAction} fields={{ id: u.id }} question={`Turn password sign-in off for ${u.displayName}? Their Discord sign-in stays; sessions that came in by password end. Only they can set it up again.`}>Turn password sign-in off</ConfirmItem>
       )}
+      {admin && (u.builderTools
+        ? <ConfirmItem action={setBuilderToolsAction} fields={{ id: u.id, on: "0" }} question={`Take Builder tools away from ${u.displayName}? If they are in Builder mode on the server, they go back to survival now.`}>Take Builder tools away</ConfirmItem>
+        : <ConfirmItem action={setBuilderToolsAction} fields={{ id: u.id, on: "1" }} question={`Give ${u.displayName} Builder tools? They can then switch Builder mode on for themselves (creative, where WorldEdit works) to place uploaded builds.`}>Give Builder tools</ConfirmItem>)}
       {u.mcUsername && (
         <form action={clearMinecraftNameAction}>
           <input type="hidden" name="id" value={u.id} />

@@ -98,6 +98,9 @@ namespace DeepslateWorks
             AppWindow.PrepareAssets(Env.AppHome);   // 3.4.0: the banner, the tile and the display face (docs/21 §5)
             var w = AppWindow.Load(AppWindow.AppXaml);
             Window = w;
+            // 3.5.3 (Alex, 2026-10-06): 720 high, so the Play tab's steps fit without scrolling; less on a screen without room
+            var room = SystemParameters.WorkArea.Height - 16;
+            if (w.Height > room) w.Height = Math.Max(w.MinHeight, room);
             T Find<T>(string n) where T : class => w.FindName(n) as T ?? throw new InvalidOperationException("the window has no " + n);
             Tabs = Find<TabControl>("Tabs"); PlayTab = Find<TabItem>("PlayTab"); ExtrasTab = Find<TabItem>("ExtrasTab"); LogTab = Find<TabItem>("LogTab");
             PlayTitle = Find<TextBlock>("PlayTitle"); PlayStatus = Find<TextBlock>("PlayStatus"); PlayChanged = Find<TextBlock>("PlayChanged");
@@ -302,7 +305,28 @@ namespace DeepslateWorks
             PlayButton.IsEnabled = Asking.All(s => Answers.ContainsKey(s.Id));
         }
 
-        void ClearPlayBody() { PlayBody.Children.Clear(); PlayChanged.Visibility = Visibility.Collapsed; AllowRadios = new List<RadioButton>(); }
+        void ClearPlayBody() { PlayBody.Children.Clear(); PlayChanged.Visibility = Visibility.Collapsed; AllowRadios = new List<RadioButton>(); stepLine = null; }
+
+        // 3.5.3 (Alex, 2026-10-06): one row per step, so the list fits without scrolling. A step's first tick goes on the
+        // step's own row ("✓  Finding Java 21 · Using the Java we downloaded last time"); a second tick goes under it.
+        TextBlock stepLine; string stepTitle; bool stepTicked;
+        void ShowRunLine(string kind, string text, PlayLine show)
+        {
+            var last = PlayBody.Children.Count > 0 ? PlayBody.Children[PlayBody.Children.Count - 1] : null;
+            if (kind == "tick" && stepLine != null && !stepTicked && last == stepLine)
+            {
+                var row = UiText.StepDone(stepTitle, text);
+                stepLine.Inlines.Clear();
+                stepLine.Inlines.Add(new TextRun(row.Key) { Foreground = Theme.Brush("GreenText") });
+                stepLine.Inlines.Add(new TextRun(row.Value) { Foreground = Theme.Brush("Muted") });
+                stepTicked = true;
+                return;
+            }
+            var t = AddPlayLine(show.Text, show.Color, show.Weight);
+            if (kind == "step") { stepLine = t; stepTitle = text; stepTicked = false; }
+            else if (kind == "tick" && stepTicked && last != null) t.Margin = new Thickness(22, 2, 0, 2);
+            else if (kind != "tick") stepLine = null;
+        }
         TextBlock AddPlayLine(string text, string color = "Fg", string weight = "Normal")
         {
             var t = NewText(text, 13, weight, color); t.Margin = new Thickness(0, 2, 0, 2);
@@ -505,7 +529,7 @@ namespace DeepslateWorks
         {
             if (J.Str(o, "t") == "step") UpdateStep(J.Str(o, "text"));   // 3.3.0: under "Updating…"
             var show = UiText.LineFor(o);
-            if (show != null) AddPlayLine(show.Text, show.Color, show.Weight);
+            if (show != null) ShowRunLine(J.Str(o, "t"), J.Str(o, "text") ?? "", show);
             switch (J.Str(o, "t"))
             {
                 case "fail": LastFail = J.Str(o, "text"); break;
@@ -707,11 +731,11 @@ namespace DeepslateWorks
             }
         }
 
-        // ---- the Log tab: this PC's log, errors in red; Show details jumps to the last error ---------------------------
+        // ---- the Log tab: this PC's log, errors in red, what went fine in green; Show details jumps to the last error ----
         static TextBlock LogItem(string l)
         {
-            var t = new TextBlock { Text = l, TextWrapping = TextWrapping.NoWrap };
-            if (UiText.IsErrorLine(l)) { t.Foreground = NewBrush("Red"); t.FontWeight = FontWeights.SemiBold; } else t.Foreground = NewBrush("Muted");
+            var t = new TextBlock { Text = l, TextWrapping = TextWrapping.NoWrap, Foreground = NewBrush(UiText.LogTone(l, false)) };
+            if (UiText.IsErrorLine(l)) t.FontWeight = FontWeights.SemiBold;
             return t;
         }
 
@@ -1324,9 +1348,11 @@ namespace DeepslateWorks
             Guided = 0; StepLabel.Visibility = Visibility.Collapsed; ExtrasTab.IsEnabled = true; SettingsTab.IsEnabled = true;
             ClearPlayBody(); SetPromptButtons(false, false);
             Tabs.SelectedItem = PlayTab;
-            AddPlayLine("Checking for updates", "Muted");
-            AddPlayLine("\u2713  Signed in", "GreenText");
-            AddPlayLine("\u2713  All 61 mods checked", "GreenText");
+            foreach (var l in new[] { new[] { "Checking for updates", "Signed in" }, new[] { "Checking every mod before the game starts", "All 61 mods checked" } })
+            {
+                ShowRunLine("step", l[0], UiText.LineFor(J.O("t", "step", "text", l[0])));
+                ShowRunLine("tick", l[1], UiText.LineFor(J.O("t", "tick", "text", l[1])));
+            }
             Mode = "ready";
             PlayTitle.Text = UiText.ReadyToPlayTitle;
             if (countdown)

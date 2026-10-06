@@ -122,6 +122,10 @@ namespace DeepslateWorks.Tests
             var fail = UiText.LineFor(J.O("t", "fail", "text", "No internet."));
             Assert.Equal("No internet.", fail.Text); Assert.Equal("Red", fail.Color); Assert.Equal("SemiBold", fail.Weight);
             foreach (var t in new[] { "ask", "declined", "used", "changed", "extras", "done" }) Assert.Null(UiText.LineFor(J.O("t", t, "text", "x")));
+            // 3.5.3: a step and its first tick share a row
+            var row = UiText.StepDone("Finding Java 21", "Using the Java we downloaded last time");
+            Assert.Equal("✓  Finding Java 21", row.Key);
+            Assert.Equal("  ·  Using the Java we downloaded last time", row.Value);
         }
 
         [Fact] public void The_old_exit_codes_are_logged_for_each_ending()
@@ -177,6 +181,14 @@ namespace DeepslateWorks.Tests
             Assert.True(UiText.IsErrorLine("[2026-10-01T10:00:00] the token was refused"));
             Assert.True(UiText.IsErrorLine("[2026-10-01T10:00:00] could not remove x"));
             Assert.False(UiText.IsErrorLine("[2026-10-01T10:00:00] OK Signed in"));
+            Assert.False(UiText.IsErrorLine("[2026-10-06T21:10:59] extras: check: 14 check(s), 0 failed"));
+            Assert.True(UiText.IsErrorLine("[2026-10-06T21:10:59] extras: check: 14 check(s), 10 failed"));
+            Assert.True(UiText.IsErrorLine("[2026-10-06T21:10:59] game check failed: x"));
+            Assert.Equal("GreenText", UiText.LogTone("[2026-10-06T21:10:59] extras: check: 14 check(s), 0 failed", true));
+            Assert.Equal("GreenText", UiText.LogTone("[2026-10-06T21:10:37] OK Signed in", false));
+            Assert.Equal("Red", UiText.LogTone("[2026-10-06T21:10:37] FAIL The site is down.", true));
+            Assert.Equal("Muted", UiText.LogTone("[2026-10-06T21:10:37] STEP Finding Java 21", false));
+            Assert.Equal("Fg", UiText.LogTone("[2026-10-06T21:10:37] STEP Finding Java 21", true));
             Assert.True(UiText.IsDetailsLine("x: ERROR y"));
             Assert.False(UiText.IsDetailsLine("FAIL y"));
         }
@@ -249,7 +261,7 @@ namespace DeepslateWorks.Tests
             // 3.4.0: the look (docs/21 §8)
             "22-play-ready.png", "23-play-updating.png", "24-play-server-asleep.png", "25-vote.png", "26-extras.png", "27-question-card.png",
             // 3.4.1: the landscape window at its own size and at its smallest (docs/21 §11)
-            "28-window-980x620.png", "29-min-size-900x560.png",
+            "28-window.png", "29-min-size-900x560.png",
             // 3.5.0: the Settings tab at its own size, at its smallest, and with the game open (docs/30 §8)
             "30-settings.png", "31-settings-min-900x560.png", "32-settings-game-open.png" };
 

@@ -16,12 +16,39 @@ export async function setRoleAction(formData: FormData) {
   const admin = await requireAdmin();
   const parsed = z.object({ id: z.string().min(1), role: z.enum(["ADMIN", "PLAYER"]) }).safeParse(Object.fromEntries(formData));
   if (!parsed.success || parsed.data.id === admin.id) return;
-  await db.user.update({ where: { id: parsed.data.id }, data: { role: parsed.data.role } });
+  const before = await db.user.findUnique({ where: { id: parsed.data.id }, select: { builderTools: true } });
+  // docs/37: Builder tools are for admins only; made a player, they go, and Builder mode with them
+  await db.user.update({ where: { id: parsed.data.id }, data: { role: parsed.data.role, ...(parsed.data.role === "PLAYER" ? { builderTools: false } : {}) } });
+  if (parsed.data.role === "PLAYER" && before?.builderTools) await builderOff(admin.id, parsed.data.id);
   // Made a player (planner, 2026-10-01): password sign-in off and every session they have ended, at once.
   if (parsed.data.role === "PLAYER") await onDemoted(parsed.data.id);
   await audit({ userId: admin.id, action: "user.setRole", params: parsed.data, result: "OK" });
   revalidatePath("/admin/people");
   revalidatePath("/admin/joining");
+  revalidatePath("/players/[uuid]", "page");
+}
+
+/** Builder mode off for a member who loses Builder tools: survival, if they are on the server. Best effort. */
+async function builderOff(adminId: string, userId: string) {
+  await apiFetch("/builder/mode", { method: "POST", body: { on: false, userId }, caller: { id: adminId, role: "ADMIN" } }).catch(() => null);
+}
+
+/**
+ * docs/37 Step 2: Builder tools, for admins only and only the ones ticked. With them, the admin may switch Builder
+ * mode (creative, where WorldEdit works) on for themselves on Admin → Seasons → Builds. Unticked: Builder mode off.
+ */
+export async function setBuilderToolsAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const parsed = z.object({ id: z.string().min(1), on: z.enum(["1", "0"]) }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const on = parsed.data.on === "1";
+  const u = await db.user.findUnique({ where: { id: parsed.data.id }, select: { displayName: true, role: true } });
+  if (!u || (on && u.role !== "ADMIN")) return;
+  await db.user.update({ where: { id: parsed.data.id }, data: { builderTools: on } });
+  await audit({ userId: admin.id, action: "user.builderTools", params: { id: parsed.data.id, displayName: u.displayName, on }, result: "OK" });
+  if (!on) await builderOff(admin.id, parsed.data.id);
+  revalidatePath("/admin/people");
+  revalidatePath("/admin/seasons");
   revalidatePath("/players/[uuid]", "page");
 }
 

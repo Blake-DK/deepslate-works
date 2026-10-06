@@ -4,7 +4,7 @@ import { Check } from "@/components/ui/check";
 import { Input, Label, fieldClasses } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ukShort } from "@/lib/uk-time";
-import { buildCaptureAction, buildPlaceAction, buildRemoveAction, buildUploadAction } from "./actions";
+import { buildCaptureAction, buildLockAction, buildPlaceAction, buildRemoveAction, buildUploadAction, builderModeAction } from "./actions";
 import type { StoredBuild } from "@/server/builds";
 
 export type BuildsView = {
@@ -32,11 +32,11 @@ function needsLine(note: NonNullable<StoredBuild["note"]>, mods: Record<string, 
 
 const WORLD = (d: string) => (d === "minecraft:overworld" ? "the main world" : d.replace(/^deepslate:frontier_/, "the Frontier of "));
 
-function Num({ name, label }: { name: string; label: string }) {
+function Num({ name, label, id = `b-${name}` }: { name: string; label: string; id?: string }) {
   return (
     <div>
-      <Label htmlFor={`b-${name}`}>{label}</Label>
-      <Input id={`b-${name}`} name={name} type="number" step={1} required className="mt-1 h-9 w-24 text-sm" />
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} name={name} type="number" step={1} required className="mt-1 h-9 w-24 text-sm" />
     </div>
   );
 }
@@ -57,7 +57,7 @@ function Worlds({ id, frontiers }: { id: string; frontiers: string[] }) {
  * docs/34 §10: take something that stands in the world and use it again. Capture keeps a copy under a name; Place
  * puts a kept build somewhere and can lock its ground. Coordinates are read off F3 in the game.
  */
-export function BuildsCard({ view, files = [], frontiers, mods = {} }: { view: BuildsView | null; files?: StoredBuild[]; frontiers: string[]; /** dist/pack-blocks.json: the mods' names by namespace. */ mods?: Record<string, string> }) {
+export function BuildsCard({ view, files = [], frontiers, mods = {}, builder = null }: { view: BuildsView | null; files?: StoredBuild[]; frontiers: string[]; /** dist/pack-blocks.json: the mods' names by namespace. */ mods?: Record<string, string>; /** docs/37: the admin's Builder tools, when ticked. */ builder?: { mcUsername: string | null } | null }) {
   if (!view) return null;
   const ready = new Map((view.uploads ?? []).map((u) => [u.name, u]));
   const problems = new Map((view.problems ?? []).map((p) => [p.file, p.why]));
@@ -124,6 +124,39 @@ export function BuildsCard({ view, files = [], frontiers, mods = {} }: { view: B
             </ul>
           )}
           <p className="text-muted-foreground">Where to find builds: {SITES.map((s, i) => <span key={s.url}>{i > 0 && "; "}<a href={s.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{s.name}</a> ({s.note})</span>)}. Check what the builder allows before you use one, and say whose it is.</p>
+        </div>
+
+        <div className="space-y-2" data-testid="builder-mode">
+          <p className="font-medium">Place it where you stand (WorldEdit)</p>
+          {!builder ? (
+            <p className="text-muted-foreground">For admins with <strong>Builder tools</strong>, which an admin gives on People (a row&apos;s menu). Builder mode puts you in creative, the only way WorldEdit works on our server.</p>
+          ) : !builder.mcUsername ? (
+            <p className="text-muted-foreground">You have Builder tools, but no Minecraft account is linked to you yet.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <form action={builderModeAction}><input type="hidden" name="on" value="1" /><Button type="submit" size="sm" disabled={!view.running}>Builder mode on</Button></form>
+                <form action={builderModeAction}><input type="hidden" name="on" value="0" /><Button type="submit" size="sm" variant="secondary" disabled={!view.running}>Builder mode off</Button></form>
+                <span className="text-muted-foreground">for <span className="font-mono">{builder.mcUsername}</span>, who must be on the server</span>
+              </div>
+              <ol className="list-decimal space-y-0.5 pl-5 text-muted-foreground">
+                <li>Switch Builder mode on: you are in creative.</li>
+                <li>Stand where the build&apos;s corner should be (its lowest north-west corner lands on your feet) and type <span className="font-mono text-foreground">{`//schem load ${ready.size ? [...ready.keys()][0] : "name"}`}</span>.</li>
+                <li><span className="font-mono text-foreground">{"//rotate 90"}</span> to turn it first if you want, then <span className="font-mono text-foreground">{"//paste -a"}</span> (<span className="font-mono">-a</span> leaves its air out, so it doesn&apos;t dig into the ground).</li>
+                <li>Not right? <span className="font-mono text-foreground">{"//undo"}</span>, move, and paste again. Then lock its ground below if it is to stay, and switch Builder mode off.</li>
+              </ol>
+              <p className="text-muted-foreground">WorldEdit has every upload that has been through <strong>Build</strong> and <strong>Sync</strong>, by its name. A removed upload stays in WorldEdit&apos;s list until it is deleted from the server&apos;s config/worldedit/schematics.</p>
+            </>
+          )}
+          <form action={buildLockAction} className="space-y-2 pt-1">
+            <p className="text-muted-foreground">Lock the ground of something placed with WorldEdit: two opposite corners, read off F3.</p>
+            <div className="flex flex-wrap items-end gap-3">
+              <Worlds id="b-lock-world" frontiers={frontiers} />
+              <Num name="x1" id="b-lock-x1" label="Corner 1: X" /><Num name="z1" id="b-lock-z1" label="Z" />
+              <Num name="x2" id="b-lock-x2" label="Corner 2: X" /><Num name="z2" id="b-lock-z2" label="Z" />
+              <Button type="submit" size="sm" variant="secondary" disabled={!view.running}>Lock its ground</Button>
+            </div>
+          </form>
         </div>
 
         <form action={buildPlaceAction} className="space-y-2">

@@ -778,9 +778,14 @@ export const actions = {
     input: z.object({ dimension: BUILD_DIMENSION, x1: BUILD_COORD, z1: BUILD_COORD, x2: BUILD_COORD, z2: BUILD_COORD }).refine((i) => Math.abs(i.x2 - i.x1) <= 512 && Math.abs(i.z2 - i.z1) <= 512),
     build: (_ctx, { dimension, x1, z1, x2, z2 }) => [`oclaims server claim in ${dimension} ${Math.min(x1, x2)} ${Math.min(z1, z2)} ${Math.max(x1, x2)} ${Math.max(z1, z2)} anyway`],
   }),
+  // docs/37 Step 2: Builder mode. WorldEdit (use-in-creative=true) works for a player in creative and for nobody else
+  // but ops. The route (routes/builder.ts) lets an admin with Builder tools switch themselves on, and any admin
+  // switch anyone off. Survival at spawn turns into adventure by the spawn function (docs/27), as on any way in.
+  "builder.on": define({ name: "builder.on", role: "ADMIN", input: z.object({ player: MC_NAME }), build: (_ctx, { player }) => [`gamemode creative ${player}`] }),
+  "builder.off": define({ name: "builder.off", role: "ADMIN", input: z.object({ player: MC_NAME }), build: (_ctx, { player }) => [`gamemode survival ${player}`] }),
 };
 
 export type ActionName = keyof typeof actions;
 /** Admin actions with a route of their own, not reachable through POST /actions/:name. */
-export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify", "season.grant", "season.revoke", "season.reload", "build.capture", "build.place", "build.placeUpload", "build.lock"]);
+export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify", "season.grant", "season.revoke", "season.reload", "build.capture", "build.place", "build.placeUpload", "build.lock", "builder.on", "builder.off"]);
 export const ADMIN_ACTIONS: ActionName[] = (Object.keys(actions) as ActionName[]).filter((n) => actions[n].role === "ADMIN");

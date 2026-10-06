@@ -33,6 +33,7 @@ export const BUILDS_KEY = "_builds";
 const coord = z.number().int().min(-100_000).max(100_000);
 const block = z.object({ x: coord, y: z.number().int().min(-64).max(318), z: coord });
 const capture = z.object({ name: BUILD_NAME, dimension: BUILD_DIMENSION, from: block, to: block });
+const lock = z.object({ dimension: BUILD_DIMENSION, x1: coord, z1: coord, x2: coord, z2: coord });
 const place = z.object({ name: BUILD_NAME, dimension: BUILD_DIMENSION, at: block, lock: z.boolean().default(false), upload: z.boolean().default(false) });
 
 export function buildRoutes(app: FastifyInstance, d: { amp: Amp; tail: ConsoleTail; ctx: () => ActionCtx; book: BuildBook; uploads?: () => ReturnType<typeof readUploads>; now?: () => Date }) {
@@ -84,5 +85,18 @@ export function buildRoutes(app: FastifyInstance, d: { amp: Amp; tail: ConsoleTa
     let locked = false;
     if (body.data.lock) locked = (await runAction(d.amp, d.ctx(), "build.lock", { dimension, x1: at.x, z1: at.z, x2: at.x + build.size.x - 1, z2: at.z + build.size.z - 1 }, req.caller.userId)).ok;
     return { ok: true, pieces: buildPieces(build.size).length, locked };
+  });
+
+  // docs/37 Step 2: the ground of something placed by WorldEdit, which the site does not see: two corners typed in.
+  app.post("/builds/lock", async (req, reply) => {
+    if (!requireAdmin(req, reply)) return;
+    const body = lock.safeParse(req.body);
+    if (!body.success) return refuse(reply, 400, "validation", "A world and two corners (X and Z).");
+    const { x1, z1, x2, z2 } = body.data;
+    if (Math.abs(x2 - x1) > 512 || Math.abs(z2 - z1) > 512) return refuse(reply, 400, "too_large", "That is more than 512 blocks a side. Lock it in parts.");
+    if (!running()) return refuse(reply, 409, "server_offline", "The server is not running. Start it first.");
+    const r = await runAction(d.amp, d.ctx(), "build.lock", body.data, req.caller.userId);
+    if (!r.ok) return refuse(reply, 502, "amp_error", r.detail ?? "The server did not take the command.");
+    return { ok: true };
   });
 }

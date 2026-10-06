@@ -70,3 +70,5 @@ pnpm lint && pnpm typecheck
 ```
 
 Deploys are `deploy/deploy.sh` on the VPS and nothing else; the VPS never builds images. See [docs/09-ops.md](docs/09-ops.md).
+
+The whole server setup is in [`deploy/`](deploy/): the compose file, an example `.env` with every variable and a placeholder value, the WireGuard example and the scripts. [deploy/README.md](deploy/README.md) lists what each file is.

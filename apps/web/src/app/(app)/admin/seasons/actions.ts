@@ -100,11 +100,12 @@ export async function buildUploadAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) redirect(to("error", "Pick a file first"));
-  const stored = await storeBuild(name, file);
+  const stored = await storeBuild(name, file, { allowMissing: formData.get("allowMissing") === "on" });
   if (!stored.ok) redirect(to("error", stored.reason));
-  await audit({ userId: admin.id, action: "build.upload", params: { name, format: stored.build.format, kb: Math.round(stored.build.bytes / 1024) }, result: "OK" });
+  const { check } = stored.build.note!;
+  await audit({ userId: admin.id, action: "build.upload", params: { name, format: stored.build.format, kb: Math.round(stored.build.bytes / 1024), size: `${check.size.x}x${check.size.y}x${check.size.z}`, missing: check.missing }, result: "OK" });
   revalidatePath("/admin/seasons");
-  redirect(to("uploaded", name));
+  redirect(to("uploaded", `${name}, ${check.size.x} by ${check.size.y} by ${check.size.z} blocks${check.missing.length ? ", the missing mods' blocks will be air" : ""}`));
 }
 
 export async function buildRemoveAction(formData: FormData) {

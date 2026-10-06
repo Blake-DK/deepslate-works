@@ -27,7 +27,8 @@ export function PollCard({ poll: initial, showVoters = false, refreshAfter = fal
   const router = useRouter();
   const [poll, setPoll] = useState(initial);
   const [picked, setPicked] = useState<string[]>(initial.mine ?? []);
-  const [editing, setEditing] = useState(initial.mine === null && initial.open);
+  // Admin → Votes opens on the results and who voted for what; a member who has not voted opens on the options
+  const [editing, setEditing] = useState(initial.mine === null && initial.open && !(showVoters && initial.results));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +103,7 @@ export function PollCard({ poll: initial, showVoters = false, refreshAfter = fal
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
             {poll.mustVote && !poll.mine && <span className="text-sm text-muted-foreground">Play opens as soon as you&apos;ve voted.</span>}
-            {poll.mine && <Button type="button" variant="ghost" onClick={() => { setPicked(poll.mine ?? []); setEditing(false); }}>Cancel</Button>}
+            {(poll.mine || (showVoters && poll.results)) && <Button type="button" variant="ghost" onClick={() => { setPicked(poll.mine ?? []); setEditing(false); }}>Cancel</Button>}
             {/* the Vote block (docs/23 §5): the pixel face at 24 on Copper, text in --primary-foreground */}
             <Button type="button" variant="copper" size="lg" onClick={vote} disabled={busy || picked.length === 0} data-testid="poll-vote" className={cn("min-w-[150px]", shortLabel(voteLabel) ? "font-display text-[24px] font-bold" : "text-[15px]")}>{voteLabel}</Button>
           </div>
@@ -123,7 +124,7 @@ export function PollCard({ poll: initial, showVoters = false, refreshAfter = fal
           </ul>
           {poll.open && poll.mineVia === "discord" && <p className="text-sm" data-testid="poll-via-discord">You voted in Discord. It counts here too, so there&apos;s nothing more to do.</p>}
           <p className="text-xs text-muted-foreground">{results.voters} {results.voters === 1 ? "vote" : "votes"} so far{!poll.open && results.winners.length > 0 ? `. Result: ${results.winners.join(" and ")}` : ""}.</p>
-          {poll.open && poll.mine && <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>Change my vote</Button>}
+          {poll.open && <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>{poll.mine ? "Change my vote" : "Vote"}</Button>}
           {showVoters && poll.voters && poll.voters.length > 0 && (
             <details className="text-sm">
               <summary className="cursor-pointer text-muted-foreground">Who voted for what ({poll.voters.length})</summary>

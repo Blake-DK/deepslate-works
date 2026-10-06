@@ -77,6 +77,8 @@ export async function deleteVoteAction(formData: FormData) {
 
 const POLLS = "/admin/votes";
 const pollBack = (msg: string) => `${POLLS}?poll=${encodeURIComponent(msg)}#polls`;
+/** A problem with the New poll form reopens it (it is shown only after "New poll" is pressed); an edit's goes to the list. */
+const formBack = (formData: FormData, msg: string) => (formData.get("form") === "new" ? `${POLLS}?new=1&poll=${encodeURIComponent(msg)}#new-poll` : pollBack(msg));
 
 /** The form's option rows (text, picture, link or mod, and for an edit the option's id), in order. Stops at a bad picture. */
 async function readRows(formData: FormData): Promise<EditRow[]> {
@@ -91,7 +93,7 @@ async function readRows(formData: FormData): Promise<EditRow[]> {
     if (pic instanceof File && pic.size > 0 && (text.trim() || modId)) {
       // a picture without an option is dropped with its empty row
       const stored = await storePhoto(pic);
-      if (!stored.ok) redirect(pollBack(`Option ${i}: ${stored.reason}`));
+      if (!stored.ok) redirect(formBack(formData, `Option ${i}: ${stored.reason}`));
       image = stored.file;
     }
     // a mod option with no text of its own is called by the mod's name
@@ -100,7 +102,7 @@ async function readRows(formData: FormData): Promise<EditRow[]> {
       try {
         label = modBySlug(await getManifest()).get(modId)?.name ?? "";
       } catch {}
-      if (!label) redirect(pollBack(`Option ${i}: that mod isn't in mods.json.`));
+      if (!label) redirect(formBack(formData, `Option ${i}: that mod isn't in mods.json.`));
     }
     rows.push({ id, text: label, link, modId, image });
   }
@@ -109,14 +111,14 @@ async function readRows(formData: FormData): Promise<EditRow[]> {
 
 function readQuestion(formData: FormData): string {
   const question = String(formData.get("question") ?? "").replace(/[\r\n]+/g, " ").trim();
-  if (question.length < 3 || question.length > 160) redirect(pollBack("Give the poll a question (3 to 160 characters)."));
+  if (question.length < 3 || question.length > 160) redirect(formBack(formData, "Give the poll a question (3 to 160 characters)."));
   return question;
 }
 
 function readCloses(formData: FormData): Date | null {
   const closesRaw = String(formData.get("closesAt") ?? "").trim();
   const closesAt = closesRaw ? ukLocalToDate(closesRaw) : null;
-  if (closesRaw && (!closesAt || closesAt.getTime() <= Date.now() + 60_000)) redirect(pollBack("The closing date must be in the future (UK time)."));
+  if (closesRaw && (!closesAt || closesAt.getTime() <= Date.now() + 60_000)) redirect(formBack(formData, "The closing date must be in the future (UK time)."));
   return closesAt;
 }
 
@@ -131,7 +133,7 @@ export async function createPollAction(formData: FormData) {
   const admin = await requireAdmin();
   const question = readQuestion(formData);
   const made = makeOptions(await readRows(formData));
-  if (!made.ok) redirect(pollBack(made.reason));
+  if (!made.ok) redirect(formBack(formData, made.reason));
   const closesAt = readCloses(formData);
   await openPoll({ id: admin.id, role: "ADMIN" }, { question, options: made.options, multiple: formData.get("multiple") === "on", mustVote: formData.get("mustVote") === "on", closesAt });
   pollsChanged();

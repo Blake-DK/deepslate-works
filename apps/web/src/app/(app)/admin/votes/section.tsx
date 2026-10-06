@@ -104,8 +104,8 @@ const ERRORS: Record<string, string> = {
 };
 
 /** `part` (docs/35): the quick polls are Admin → Votes, the season's mod vote is Modpack → Mod vote. */
-export default async function VotesSection({ searchParams, part }: { searchParams: Promise<{ error?: string; poll?: string }>; part: "polls" | "modvote" }) {
-  const { error, poll: pollMsg } = await searchParams;
+export default async function VotesSection({ searchParams, part }: { searchParams: Promise<{ error?: string; poll?: string; new?: string }>; part: "polls" | "modvote" }) {
+  const { error, poll: pollMsg, new: newPoll } = await searchParams;
   const admin = await requireAdmin();
   const [votes, polls, mods, members] = await Promise.all([
     db.vote.findMany({ orderBy: { opensAt: "desc" }, include: { _count: { select: { ballots: true } } } }),
@@ -120,14 +120,20 @@ export default async function VotesSection({ searchParams, part }: { searchParam
       <h2 className="text-xl font-semibold">{part === "polls" ? "Polls" : "Mod vote"}</h2>
       {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
       {part === "polls" && (<>
-      <Card id="polls" data-testid="poll-editor">
+      <div id="polls" className="scroll-mt-20 space-y-4">
+        {pollMsg && (POLL_DONE[pollMsg] ? <Alert tone="success">{POLL_DONE[pollMsg]}</Alert> : <Alert tone="error">{pollMsg}</Alert>)}
+        {newPoll !== "1" && <Link href="/admin/votes?new=1#new-poll" className={buttonClasses("primary")} data-testid="poll-new">New poll</Link>}
+      </div>
+      {/* shown only after "New poll" is pressed (Alex, 2026-10-06) */}
+      {newPoll === "1" && (
+      <Card id="new-poll" className="scroll-mt-20" data-testid="poll-editor">
         <CardHeader>
           <CardTitle>New poll</CardTitle>
           <CardDescription>A quick single question, separate from the season&apos;s mod vote. It opens straight away, goes on the news, and anyone playing gets a chat line. &ldquo;I don&apos;t mind&rdquo; is added to every poll by itself.</CardDescription>
         </CardHeader>
         <CardContent>
-          {pollMsg && (POLL_DONE[pollMsg] ? <Alert tone="success" className="mb-3">{POLL_DONE[pollMsg]}</Alert> : <Alert tone="error" className="mb-3">{pollMsg}</Alert>)}
           <form action={createPollAction} className="space-y-4">
+            <input type="hidden" name="form" value="new" />
             <div><Label htmlFor="question">Question</Label><Input id="question" name="question" placeholder="What's the next boss?" required minLength={3} maxLength={160} /></div>
             <fieldset className="space-y-2">
               <legend className="mb-1 text-sm font-medium">Options <span className="font-normal text-muted-foreground">(2 to {MAX_OPTIONS}; a picture, a link or a mod from mods.json are optional)</span></legend>
@@ -145,10 +151,14 @@ export default async function VotesSection({ searchParams, part }: { searchParam
               <div><Label htmlFor="pollCloses">Closes (UK time, optional)</Label><Input id="pollCloses" name="closesAt" type="datetime-local" /></div>
             </div>
             <p className="text-xs text-muted-foreground">Must vote: members are asked in the app and on the site before Play, and the entrance room holds anyone who joins without voting. Somebody already playing is never kicked or held; it applies from their next join. Admins are asked too but never held.</p>
-            <Button type="submit" data-testid="poll-open">Open poll</Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" data-testid="poll-open">Open poll</Button>
+              <Link href="/admin/votes#polls" className={buttonClasses("ghost")}>Cancel</Link>
+            </div>
           </form>
         </CardContent>
       </Card>
+      )}
       {polls.open.length + polls.closed.length > 0 && (
         <Card>
           <CardHeader><CardTitle>Polls</CardTitle><CardDescription>{members} {members === 1 ? "member" : "members"}. Results and who voted for what are only shown to admins while a poll is open; members see the results once they have voted.</CardDescription></CardHeader>

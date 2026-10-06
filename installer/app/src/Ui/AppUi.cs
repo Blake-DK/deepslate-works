@@ -392,7 +392,7 @@ namespace DeepslateWorks
         void OnPlayButton()
         {
             if (Guided > 0) { OnGuidedButton(); return; }
-            if (VotesBlock && (Mode == "idle" || Mode == "ready")) { ShowVoteTab(); return; }   // 3.2.0: the vote first
+            if (VotesBlock && (Mode == "idle" || Mode == "ready")) { WantPlayAfterVotes("Play pressed"); ShowVoteTab(); return; }   // 3.2.0: the vote first; 3.5.4: then the game
             if (Mode == "ready") { Go(true); return; }   // 3.1.0: the game is ready; Play starts it
             if (Mode == "asking")
             {
@@ -646,7 +646,7 @@ namespace DeepslateWorks
         bool RequestPlay(string why)
         {
             Log.Line(string.Format("window: the game was asked for ({0}): through Play", why));
-            if (VotesBlock) { ShowVoteTab(); return false; }   // 3.2.0: the vote first
+            if (VotesBlock) { WantPlayAfterVotes(why); ShowVoteTab(); return false; }   // 3.2.0: the vote first; 3.5.4: then the game
             if (PlayWaitsForUpdate(why)) return true;          // 3.3.0: after the Update, once
             if (Mode == "ready") { Tabs.SelectedItem = PlayTab; Go(true); return true; }   // 3.1.0: ready and waiting: start it
             if (Mode != "idle") return false;
@@ -710,7 +710,7 @@ namespace DeepslateWorks
                     if (PlayWaitsForUpdate("the Play button on the website")) { }   // 3.3.0: it launches once the Update is done
                     else if (Mode == "idle" && Flow == null) StartRun(false, true);
                     else if (Mode == "ready" && (Count == null || !Count.Running)) { runFromWebsite = true; runPressed = false; OnReady(); }
-                    if (VotesBlock) ShowVoteTab();   // 3.2.0: the updates go on; the game waits for the vote
+                    if (VotesBlock) { WantPlayAfterVotes("the Play button on the website"); ShowVoteTab(); }   // 3.2.0: the updates go on; the game waits for the vote, then starts (3.5.4)
                 }
             }
             GatePlay();   // 3.2.0: Play stays shut while a vote waits
@@ -1079,6 +1079,8 @@ namespace DeepslateWorks
             runWaiting = true;
             PlayButton.Content = UiText.Play;
             PlayButton.IsEnabled = true;
+            // 3.5.4 (Alex, 2026-10-06): Play was pressed while a vote waited, and every vote is answered now: start it
+            if (playAfterVotes && !VotesBlock) { playAfterVotes = false; PlayTitle.Text = UiText.ReadyToPlayTitle; Log.Line("window: every vote answered: starting the game"); Go(true); return; }
             bool newExtras = false, queued = false;
             try
             {
@@ -1088,6 +1090,8 @@ namespace DeepslateWorks
             }
             catch (Exception e) { Log.Line("window: could not look at the extras: " + e.Message); }
             var d = PlayStart.Decide(runFromWebsite, runPressed, AppSettings.WebsitePlay(), firstRunAtOpen, handOverThisTime, false, newExtras, queued, VotesBlock);
+            // 3.5.4: what it would have done without the vote; a start (now or a countdown) waits for the vote and then goes
+            if (VotesBlock && PlayStart.Decide(runFromWebsite, runPressed, AppSettings.WebsitePlay(), firstRunAtOpen, handOverThisTime, false, newExtras, queued).Do != "wait") WantPlayAfterVotes("the run was started to play");
             Log.Line("window: the game is ready: " + d);
             PlayTitle.Text = UiText.ReadyToPlayTitle;
             if (d.Do == "now") { Go(true); return; }

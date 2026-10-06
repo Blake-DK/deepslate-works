@@ -9,6 +9,7 @@ import { fetchJar } from "./download";
 import { shortHash } from "./lock";
 import { jarChannels } from "./sides";
 import { openZipFile } from "./zip";
+import { installerVersion } from "./script-version";
 
 // docs/06 + docs/07: dist/server/, dist/config.zip, dist/installer.zip
 
@@ -195,9 +196,7 @@ export function checkBridge(bridge: string | null, app: string): void {
 }
 
 /** The version a script calls itself: `$InstallerVersion = "1.4.0"`. */
-export function installerVersion(ps1: string): string | null {
-  return /^\$InstallerVersion\s*=\s*"(\d{1,4}(?:\.\d{1,4}){1,3})"/m.exec(ps1)?.[1] ?? null;
-}
+export { installerVersion } from "./script-version";
 
 export async function sha256File(file: string): Promise<string> {
   const hash = createHash("sha256");

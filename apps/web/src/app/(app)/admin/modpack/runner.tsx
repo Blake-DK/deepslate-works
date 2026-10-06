@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { PACK_RAN } from "@/components/admin/pack-pending";
 
 type Cmd = "lock" | "build" | "sync" | "sync-dry";
 
@@ -39,6 +40,7 @@ export function Runner({ canBuild, canSync }: { canBuild: boolean; canSync: bool
     } finally {
       setBusy(null);
       router.refresh();
+      window.dispatchEvent(new Event(PACK_RAN));
     }
   }
 

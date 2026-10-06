@@ -58,7 +58,7 @@ A picture of the whole thing is in [docs/architecture.mmd](docs/architecture.mmd
 
 ## For whoever is building it
 
-- Start with [the working rules](the working rules) (the working rules), then [docs/00-overview.md](docs/00-overview.md) and the first section of [docs/11-status.md](docs/11-status.md).
+- Start with [docs/00-overview.md](docs/00-overview.md), then the first section of [docs/11-status.md](docs/11-status.md).
 - Work lands on the `dev` branch; `main` is what is deployed.
 - The review of 4 October 2026 and where each finding stands: [docs/31](docs/31-review-and-bug-list.md). The plan for building Season 1: [docs/34](docs/34-season-1-build-plan.md).
 

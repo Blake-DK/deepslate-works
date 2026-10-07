@@ -489,7 +489,8 @@ export function picture(grid: DesignGrid, blocks: BlockList, cut = Infinity): Pi
  */
 export function render(pic: Picture, opts: { turn?: number; tile?: number; background?: [number, number, number] } = {}): { width: number; height: number; rgba: Uint8ClampedArray } {
   const turn = (((opts.turn ?? 0) % 4) + 4) % 4;
-  const w = Math.max(4, Math.floor((opts.tile ?? 8) / 2) * 2);
+  // a multiple of 4: rows step by tile / 4, and anything else puts pixels at half places (docs/40 3c)
+  const w = Math.max(4, Math.floor((opts.tile ?? 8) / 4) * 4);
   const bg = opts.background ?? [30, 31, 36];
   const { x: sx0, y: sy, z: sz0 } = pic.size;
   const [sx, sz] = turn % 2 ? [sz0, sx0] : [sx0, sz0];

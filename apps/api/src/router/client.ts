@@ -34,7 +34,7 @@ const overviewSchema = z.object({
 });
 
 const eventsSchema = z.object({
-  events: z.array(z.object({ ts: str, event: str, status: str, server: str, player_name: str, client_host: str, error: str })),
+  events: z.array(z.object({ id: num, ts: str, event: str, status: str, server: str, player_name: str, player_uuid: str, client_host: str, error: str })),
 });
 
 export type RouterRoute = {
@@ -53,6 +53,9 @@ export type RouterView = {
   logins: RouterLogin[];
 };
 
+/** One login mc-router passed on (or failed to), for matching a game session to the address it came from. */
+export type RouterLoginEvent = { id: number; at: string; player: string | null; uuid: string | null; client: string | null; server: string | null; ok: boolean };
+
 /** The dashboard said no (4xx/5xx with its own words), or could not be reached at all (status 0). */
 export class RouterError extends Error {
   constructor(public status: number, message: string) {
@@ -64,6 +67,12 @@ export interface RouterDash {
   view(): Promise<RouterView>;
   addRoute(r: { hostname: string; port: number; label?: string }): Promise<void>;
   removeRoute(hostname: string): Promise<void>;
+  /** Logins from `since` on, newest first. */
+  loginsSince(since: Date): Promise<RouterLoginEvent[]>;
+}
+
+export function toLogins(events: unknown): RouterLoginEvent[] {
+  return eventsSchema.parse(events).events.flatMap((x) => (x.id !== null && x.ts ? [{ id: x.id, at: x.ts, player: x.player_name, uuid: x.player_uuid, client: x.client_host, server: x.server, ok: x.status === "success" }] : []));
 }
 
 export function toView(overview: unknown, events: unknown): RouterView {
@@ -131,6 +140,26 @@ export class HttpRouterDash implements RouterDash {
   async removeRoute(hostname: string) {
     await this.call("DELETE", `/api/routes/${encodeURIComponent(hostname)}`);
   }
+
+  /** Pages back with `before` (the dashboard answers newest first) until older than `since`; at most 20 pages of 500. */
+  async loginsSince(since: Date): Promise<RouterLoginEvent[]> {
+    const out: RouterLoginEvent[] = [];
+    let before: number | null = null;
+    for (let page = 0; page < 20; page++) {
+      let got: RouterLoginEvent[];
+      try {
+        got = toLogins(await this.call("GET", `/api/events?kind=login&limit=500${before === null ? "" : `&before=${before}`}`));
+      } catch (e) {
+        if (e instanceof RouterError) throw e;
+        throw new RouterError(502, "the router dashboard answered in a shape this site does not know");
+      }
+      for (const l of got) if (Date.parse(l.at) >= since.getTime()) out.push(l);
+      const last = got[got.length - 1];
+      if (got.length < 500 || !last || Date.parse(last.at) < since.getTime()) break;
+      before = last.id;
+    }
+    return out;
+  }
 }
 
 /** For AMP_MOCK=1 and the tests: one route per name, all of them up. */
@@ -150,5 +179,9 @@ export class MockRouterDash implements RouterDash {
   }
   async removeRoute(hostname: string) {
     if (!this.routes.delete(hostname)) throw new RouterError(404, "no such route");
+  }
+  logins: RouterLoginEvent[] = [];
+  async loginsSince(since: Date) {
+    return this.logins.filter((l) => Date.parse(l.at) >= since.getTime());
   }
 }

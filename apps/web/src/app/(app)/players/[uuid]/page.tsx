@@ -88,7 +88,8 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   // docs/31 B-36: "Players can see the Stats tab" off means a member does not see where and when another member
   // played here either. Admins always do; a member always sees their own.
   const stats = admin || member?.id === viewer.id || (await getSection("privacy")).analyticsForPlayers;
-  const countries = stats ? [...new Set(sessions.map((s) => s.country).filter((c): c is string => Boolean(c)))] : [];
+  // where they connect from: admins and the player themselves only (Alex, 2026-10-07; filled from mc-router's joins)
+  const countries = admin || member?.id === viewer.id ? [...new Set(sessions.map((s) => s.country).filter((c): c is string => Boolean(c)))] : [];
   const addresses = admin ? rows.filter((r) => r.ip).slice(0, 40) : [];
   const tabs = [
     { key: "overview", label: "Overview" },

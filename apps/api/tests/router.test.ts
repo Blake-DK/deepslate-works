@@ -116,7 +116,7 @@ describe("routes", () => {
   });
 
   it("says 503 when the dashboard cannot be reached", async () => {
-    const down: RouterDash = { view: async () => { throw new RouterError(0, "the router dashboard cannot be reached"); }, addRoute: async () => {}, removeRoute: async () => {} };
+    const down: RouterDash = { view: async () => { throw new RouterError(0, "the router dashboard cannot be reached"); }, addRoute: async () => {}, removeRoute: async () => {}, loginsSince: async () => [] };
     const { f, as } = app(down);
     const r = await f.inject({ method: "GET", url: "/router", headers: as("ADMIN") });
     expect(r.statusCode).toBe(503);
@@ -176,6 +176,20 @@ describe("HttpRouterDash", () => {
   it("gives up after the timeout, and says so", async () => {
     answer = () => {}; // never answers
     await expect(new HttpRouterDash(base, 200).view()).rejects.toMatchObject({ status: 0, message: "the router dashboard did not answer in time" });
+  });
+
+  it("pages back with before= until the logins are older than asked", async () => {
+    // 1200 logins, one a minute back from 12:00; the dashboard answers newest first, 500 at a time
+    const all = Array.from({ length: 1200 }, (_, i) => ({ id: 1200 - i, ts: new Date(Date.parse("2026-10-07T12:00:00Z") - i * 60_000).toISOString(), status: "success", kind: "login", client_host: "203.0.113.20", server: "mc.dsw.test", player_name: "Bramble09", player_uuid: null }));
+    answer = (req, res) => {
+      const u = new URL(req.url!, "http://x");
+      const before = u.searchParams.get("before");
+      const from = before ? all.findIndex((e) => e.id < Number(before)) : 0;
+      json(res, 200, { events: all.slice(from, from + Number(u.searchParams.get("limit"))) });
+    };
+    const got = await new HttpRouterDash(base).loginsSince(new Date("2026-10-07T00:00:00Z")); // 12 hours: 721 logins
+    expect(got).toHaveLength(721);
+    expect(seen.map((s) => s.url)).toEqual(["/api/events?kind=login&limit=500", "/api/events?kind=login&limit=500&before=701"]);
   });
 
   it("says when nothing listens", async () => {

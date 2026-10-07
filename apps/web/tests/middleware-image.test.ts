@@ -37,5 +37,7 @@ describe("middleware: /_next/image", () => {
   it("other pages still go through the sign-in check", () => {
     expect(run(request("/players", false)).status).toBe(307);
     expect(run(request("/api/health", false)).status).toBe(200);
+    expect(run(request("/api/health/live", false)).status).toBe(200); // Docker's healthcheck, no session
+    expect(run(request("/api/health/other", false)).status).toBe(401);
   });
 });

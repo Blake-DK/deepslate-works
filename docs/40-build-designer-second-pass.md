@@ -243,3 +243,30 @@ inside the stands; the watchtower stays 9 by 9 with its porch and gallery outsid
 
 Nothing in the instructions failed to compile or to hold: every example compiles, and all five answers kept to the
 rules (foundation, the portal frame of reinforced deepslate unlit and marked, no floating parts seen in the pictures).
+
+## Interiors and the 15-minute limit (Alex, 2026-10-07, after the 3b pictures; on `dev`, not deployed)
+
+- **Alex's words:** "i want the builder to be able to do intiors too"; then, with the five pictures seen, "yes do the
+  interiors, 15 minute limit". His choices: vanilla interior blocks and the pack's furniture mods; the instruction text
+  after the pictures.
+- **The block list** gains 165 interior blocks (435 in all): carpets, candles, doors, trapdoors, workstations,
+  ladders, campfires, pots, and Another Furniture, Handcrafted and Macaw's Furniture in oak, spruce and dark oak
+  (chairs, tables with cloths, benches, couches, sofas, fancy beds, shelves, shutters, curtains, lamps, trims,
+  trophies, crockery). Every property a kind allows was checked against the blocks' states in the jars; a furniture
+  block takes only what a designer chooses (facing, a cushion's or a cloth's colour, open, lit, a bed's or a door's
+  half) and the game sets its legs and joins (to be seen on the server). Left out: anything that stores items
+  (drawers, cabinets, wardrobes, cupboards, counters, ovens), sinks (they hold water), vanilla beds (drawn by the
+  game's code, so their states are not in the jar to check), the anvil (it falls). A mirror swaps a door's or a
+  shutter's hinge, as the game does.
+- **Which way furniture faces, read from the three mods' models:** for every chair, bench, sofa and couch, `facing`
+  is the way a person sitting in it looks (the back is on the other side); for Handcrafted's fancy bed, `facing`
+  points from the foot to the head, as for a vanilla bed.
+- **The instructions** gain "Rooms and furniture" between "How to make things" and "The recipe" (the planner's text
+  is unchanged): upper floors 5 or 6 apart with a stair hole, rooms behind inner walls, a one-block door allowed
+  between two small rooms (the 3 by 4 rule stays for the ways in and the main ways through), furniture where it would
+  stand and facing into the room, about a third of a floor furnished, each room furnished for its use, lights every 7,
+  which way furniture faces; four examples (a floor with its stairs, an inner wall with a door, a dining table, a
+  bed). A test now compiles every example in the instructions (14 blocks).
+- **Time:** the designer gives up at 900 s, web waits 930 s, a job (the first call and at most one send-back) is
+  given up at 32 minutes. The card says "about 10 minutes, up to 15".
+- The prompt is 34,800 bytes.

@@ -19,9 +19,10 @@ Last updated 2026-10-07, latest: the build designer's second pass, Parts 1 and 2
   aisles and a domed portal tower; an arena with towers, keep and gatehouse; a ruin with half its roof down). The
   600 s limit is too short for them (the forge hall took 612 s). Table and list in docs/40 "3b, as run".
 - **Interiors (Alex, 2026-10-07):** 165 interior blocks on the list (vanilla, and Another Furniture, Handcrafted and
-  Macaw's Furniture in three woods), every property checked against the jars; nothing that stores items. The
-  instruction text for rooms and furniture waits until Alex has seen the 3b pictures.
-- **Waiting for Alex:** his word on the five pictures; then the interiors text, a furnished test, and 3a's deploy.
+  Macaw's Furniture in three woods), every property checked against the jars; nothing that stores items. With the
+  pictures seen, Alex: "yes do the interiors, 15 minute limit". The instructions gain "Rooms and furniture"; the
+  designer's limit is 15 minutes. docs/40 "Interiors and the 15-minute limit".
+- **Waiting for Alex:** the furnished test's picture; then a `dev` → `main` PR for 3a and interiors on his word.
 
 ## Discord sign-in, sign-in alerts, healthcheck and deploy.sh (2026-10-07)
 

@@ -13,9 +13,9 @@ const BUILD_NAME = /^[a-z0-9_]{2,24}$/;
 export const DESIGN_LIMITS = {
   side: 128,
   /** steps as written, the ones inside repeat and mirror counted too */
-  steps: 300,
+  steps: 600, // docs/40 3a: 300 before; the planner's temple is 199
   /** steps after repeat and mirror are unrolled */
-  unrolled: 5_000,
+  unrolled: 20_000, // docs/40 3a: 5,000 before
   /** places in the finished build (air written by clear counted too) */
   blocks: 500_000,
   /** the recipe as JSON */

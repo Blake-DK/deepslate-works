@@ -51,7 +51,7 @@ describe("the prompt", () => {
 describe("the call", () => {
   it("has no tools, keeps no session, loads no MCP servers and no slash commands", () => {
     const args = designerArgs("some-model", "P");
-    expect(args).toEqual(["-p", "--output-format", "json", "--model", "some-model", "--system-prompt", "P", "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--disable-slash-commands"]);
+    expect(args).toEqual(["-p", "--output-format", "json", "--model", "some-model", "--effort", "max", "--system-prompt", "P", "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--disable-slash-commands"]);
     expect(args).not.toContain("--allowedTools");
   });
   it("says what to do: a new build, or a change to the recipe it is given", () => {
@@ -114,8 +114,8 @@ describe("the server", () => {
     expect(await r.json()).toEqual(answer);
     expect(seen).toHaveLength(1);
     expect(seen[0]!.input).toBe(userMessage({ name: "gate", ask: "a gate", recipe: null }));
-    expect(seen[0]!.args).toEqual(designerArgs("m", seen[0]!.args[6]!));
-    expect(seen[0]!.args[6]).toContain("## Blocks you may use");
+    expect(seen[0]!.args).toEqual(designerArgs("m", seen[0]!.args[8]!));
+    expect(seen[0]!.args[8]).toContain("## Blocks you may use");
     expect(seen[0]!.env).toEqual({ PATH: "/usr/bin" });
     expect((await call("/design", { method: "POST", body: JSON.stringify({ name: "x", ask: "a" }) })).status).toBe(400);
     expect((await call("/design", { method: "POST", body: "not json" })).status).toBe(400);

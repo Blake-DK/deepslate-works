@@ -8,8 +8,8 @@ import { designPrompt, recipeFrom } from "../src/design-cli";
 import { child, numberOf, readNbt, writeNbt } from "../src/nbt";
 
 // docs/39 Step 0: the recipe compiler. The recipes here are written by hand. modpack/designer/examples/ has two
-// written by hand (boss_hall, gate) and three the designer wrote in Step 0.4 (temple, boss_arena, watchtower): all
-// of them must always compile.
+// written by hand (boss_hall, gate), three the designer wrote in Step 0.4 (temple, boss_arena, watchtower) and the
+// planner's temple in the recipe language as it is (temple_b, docs/40): all of them must always compile.
 
 const ROOT = path.join(__dirname, "..", "..", "..", "modpack");
 const BLOCKS = JSON.parse(readFileSync(path.join(ROOT, "designer", "blocks.json"), "utf8")) as BlockList;
@@ -64,7 +64,7 @@ describe("the block list", () => {
 
 describe("parseRecipe", () => {
   it("takes every example recipe", () => {
-    expect(EXAMPLES).toEqual(["boss_arena", "boss_hall", "gate", "temple", "watchtower"]);
+    expect(EXAMPLES).toEqual(["boss_arena", "boss_hall", "gate", "temple", "temple_b", "watchtower"]);
     for (const name of EXAMPLES) {
       const r = parseRecipe(readFileSync(path.join(ROOT, "designer", "examples", `${name}.json`), "utf8"), BLOCKS);
       expect(r.name).toBe(name);
@@ -97,8 +97,8 @@ describe("parseRecipe", () => {
   it("keeps to the limits: steps as written, steps unrolled, blocks, bytes", () => {
     const one = { op: "set", at: [[0, 0, 0]], with: STONE };
     expect(refused(Array.from({ length: DESIGN_LIMITS.steps + 1 }, () => one))).toBe(`the recipe has more than ${DESIGN_LIMITS.steps} steps; use repeat and mirror`);
-    expect(refused([{ op: "repeat", times: 100, move: [0, 0, 0], steps: [{ op: "repeat", times: 51, move: [0, 0, 0], steps: [one] }] }])).toBe("the recipe has more than 5,000 steps once repeat and mirror are unrolled");
-    expect(refused([{ op: "repeat", times: 100, move: [0, 0, 0], steps: [{ op: "mirror", axis: "both", steps: [{ op: "repeat", times: 13, move: [0, 0, 0], steps: [one] }] }] }])).toBe("the recipe has more than 5,000 steps once repeat and mirror are unrolled");
+    expect(refused([{ op: "repeat", times: 128, move: [0, 0, 0], steps: [{ op: "repeat", times: 79, move: [0, 0, 0], steps: [one, one] }] }])).toBe("the recipe has more than 20,000 steps once repeat and mirror are unrolled");
+    expect(refused([{ op: "repeat", times: 128, move: [0, 0, 0], steps: [{ op: "mirror", axis: "both", steps: [{ op: "repeat", times: 40, move: [0, 0, 0], steps: [one] }] }] }])).toBe("the recipe has more than 20,000 steps once repeat and mirror are unrolled");
     expect(refused([{ op: "box", from: [0, 0, 0], to: [99, 50, 99], with: STONE }], { size: { x: 100, y: 51, z: 100 } })).toBe("the build has 510,000 blocks; the most is 500,000");
     expect(() => parseRecipe(JSON.stringify(recipe([one], { pad: "x".repeat(DESIGN_LIMITS.bytes) })), BLOCKS)).toThrow("the recipe is larger than 64 KB");
   });
@@ -183,7 +183,7 @@ describe("compile", () => {
       expect(blocks).toBeGreaterThan(100);
       expect(numberOf(readNbt(writeNbt(structure)), "DataVersion")).toBe(3955);
     }
-  });
+  }, 60_000); // temple_b is 133,000 places: writing its NBT alone takes about 2 s
 });
 
 describe("picture", () => {

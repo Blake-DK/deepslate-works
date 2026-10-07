@@ -54,6 +54,15 @@ describe("reading the designer's answer", () => {
     expect(a.recipe.name).toBe("front_gate");
     expect(a.recipe.size).toEqual({ x: 11, y: 13, z: 5 });
   });
+  it("takes the plan, the build's parts: 12 lines of 200 characters at most, anything else dropped (docs/40 3a)", () => {
+    const plan = ["A hall 23 by 26", 7, "", { part: "x" }, "  A   tower behind  ", "x".repeat(300), ...Array.from({ length: 12 }, (_, i) => `part ${i}`)];
+    const a = readAnswer(JSON.stringify({ say: "A gate.", plan, recipe: GATE }), "gate", BLOCKS);
+    if (a.kind !== "build") throw new Error(a.kind);
+    expect(a.plan).toHaveLength(12);
+    expect(a.plan.slice(0, 3)).toEqual(["A hall 23 by 26", "A tower behind", "x".repeat(200)]);
+    const none = readAnswer(JSON.stringify({ say: "A gate.", plan: "one line", recipe: GATE }), "gate", BLOCKS);
+    expect(none.kind === "build" && none.plan).toEqual([]);
+  });
   it("takes the object in a code fence too", () => {
     expect(readAnswer("```json\n" + JSON.stringify({ say: "A gate.", recipe: GATE }) + "\n```", "gate", BLOCKS).kind).toBe("build");
   });

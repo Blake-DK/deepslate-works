@@ -44,7 +44,8 @@ export function designName(typed: string, ask = "", taken: ReadonlySet<string> =
 export const titleOf = (typed: string): string | undefined => typed.trim().replace(/\s+/g, " ").slice(0, MAX_TITLE) || undefined;
 
 export type DesignTokens = { input: number; cacheWrite: number; cacheRead: number; output: number };
-export type DesignVersion = { n: number; at: string; ask: string; say: string; recipe: Recipe; ms: number; tokens: DesignTokens; fixed: boolean };
+/** `plan`: the build's parts as the designer wrote them before the recipe (docs/40 3a); none on versions made before. */
+export type DesignVersion = { n: number; at: string; ask: string; say: string; plan?: string[]; recipe: Recipe; ms: number; tokens: DesignTokens; fixed: boolean };
 /**
  * data/builds/designs/<name>.json: every version, which one is current, and which one was kept as an upload. `title`
  * is what the admin typed as the name (docs/40); designs made before have none and show the name.
@@ -58,7 +59,7 @@ export type DesignSummary = { name: string; title?: string; versions: number; cu
  * for). The admin's name for the build always wins over the one in the recipe.
  */
 export type Answer =
-  | { kind: "build"; say: string; recipe: Recipe }
+  | { kind: "build"; say: string; plan: string[]; recipe: Recipe }
   | { kind: "refused"; say: string; reason: string; recipe: unknown }
   | { kind: "none"; text: string };
 
@@ -74,18 +75,25 @@ export function readAnswer(text: string, name: string, blocks: BlockList): Answe
     return { kind: "none", text: text.slice(0, 4000) };
   }
   if (!v || typeof v !== "object" || Array.isArray(v)) return { kind: "none", text: text.slice(0, 4000) };
-  const o = v as { say?: unknown; recipe?: unknown };
+  const o = v as { say?: unknown; plan?: unknown; recipe?: unknown };
   const say = typeof o.say === "string" ? o.say.slice(0, 2000) : "";
+  const plan = planOf(o.plan);
   if (!o.recipe || typeof o.recipe !== "object" || Array.isArray(o.recipe)) return { kind: "none", text: say || text.slice(0, 4000) };
   const raw = { ...(o.recipe as Record<string, unknown>), name };
   try {
     const recipe = parseRecipe(raw, blocks);
     compileGrid(recipe, blocks); // the block count and the writes are only known once it is built
-    return { kind: "build", say, recipe };
+    return { kind: "build", say, plan, recipe };
   } catch (e) {
     if (e instanceof DesignError) return { kind: "refused", say, reason: e.message, recipe: raw };
     throw e;
   }
+}
+
+/** docs/40 3a: the build's parts, 12 lines of 200 characters at most; anything that is not a line of text is dropped. */
+export function planOf(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((x): x is string => typeof x === "string" && x.trim() !== "").map((x) => x.trim().replace(/\s+/g, " ").slice(0, 200)).slice(0, 12);
 }
 
 /** What goes back to the designer, once, when its recipe was refused. */

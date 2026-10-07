@@ -211,9 +211,13 @@ services:
     command: TCP-LISTEN:8100,fork,reuseaddr TCP:deepslate-wg:8100
     depends_on: [map-relay-inner]
 
-  # The mc-router dashboard on the AMP host (no login of its own), relayed like the map. Caddy lets admins only
-  # through (deploy/Caddyfile.snippet, web /api/auth/verify/admin) and never passes /hook.
+  # The mc-router dashboard on the AMP host (no login of its own), relayed like the map. Off: a deploy starts neither
+  # relay (profile `router`, never passed by deploy.sh). The outer relay sat on the shared `web` network, where every
+  # container of the other sites on this host could open the dashboard without passing Caddy's admin check; the inner
+  # one is reachable from `internal`. Until a design that checks the admin role on every request is built, the
+  # dashboard is reached on the AMP host's own network only. Started by hand: --profile router up -d.
   router-relay-inner:
+    profiles: [router]
     image: alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50
     container_name: deepslate-router-relay-inner
     restart: unless-stopped
@@ -225,6 +229,7 @@ services:
     depends_on: [wireguard]
 
   router-relay-outer:
+    profiles: [router]
     image: alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50
     container_name: deepslate-router-relay-outer
     restart: unless-stopped

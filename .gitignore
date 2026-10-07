@@ -14,7 +14,6 @@ deploy/wireguard/*.key
 deploy/wireguard/*.pub
 deploy/keys/
 deploy/wireguard/*
-!deploy/wireguard/wg0.conf.example
 *.tsbuildinfo
 # the portal's own data (uploads, screenshots), at the root of the repo; a datapack has a folder of that name too
 /data/

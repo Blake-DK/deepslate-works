@@ -10,7 +10,7 @@ Everything needed to run the stack is here; nothing else on the host is part of 
 |---|---|
 | `docker-compose.yml` | The whole stack: postgres, web, the WireGuard sidecar, api, the two map relays, the two mc-router dashboard relays and the nightly backups. Used as it is; no secrets in it, they all come from `.env` |
 | `.env.example` | Every variable the stack reads, each with a comment and a placeholder value. Copy it to `.env` (git-ignored) and replace every `replace-me-...` and all-zero id; `deploy.sh` refuses to run while one is left |
-| `wireguard/wg0.conf.example` | The tunnel to the homelab. Copy to `wireguard/wg_confs/wg0.conf` (git-ignored). Its drop rule lists 4000 and 8100; the live file also drops 8090 (below) |
+| `wg0.conf.example` | The tunnel to the homelab. Copy to `wireguard/wg_confs/wg0.conf`. The whole `wireguard/` folder is git-ignored and belongs to uid 1000, the tunnel container |
 | `Caddyfile.snippet` | The block to add to the host's Caddy for the site and the map |
 | `deploy.sh` | The one way to deploy (below) |
 | `check.sh` | Typecheck, lint and tests in a memory-capped container |
@@ -28,7 +28,7 @@ PostUp = iptables -I INPUT -i wg0 -p tcp -m multiport --dports 4000,8090,8100 -j
 PostDown = iptables -D INPUT -i wg0 -p tcp -m multiport --dports 4000,8090,8100 -j DROP
 ```
 
-A new listener in that namespace joins the list unless something on the homelab must reach it; then it gets an accept from that one address on wg0 only. `wireguard/wg0.conf.example` still lists 4000 and 8100 only: the folder belongs to uid 1000, so `git pull` as ladm cannot replace a file in it and a deploy stops half-applied. Change it only together with the owner, never through git alone.
+A new listener in that namespace joins the list unless something on the homelab must reach it; then it gets an accept from that one address on wg0 only. Git keeps nothing inside `wireguard/`: `deploy.sh` gives that folder to uid 1000 at every deploy, and `git pull` as ladm cannot write there.
 
 The VPS never builds images: a build here ran the box out of memory on 2026-09-29. Images come from GitHub Actions (`.github/workflows/ci.yml`) on every push to `main`. Never `docker compose up --build` on this host.
 

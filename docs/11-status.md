@@ -976,7 +976,7 @@ Refreshed on 2026-10-03 between 21:20 and 21:30 UTC against `main` `bc12ef3` and
 | Live site | https://deepslate.dsw.test · map host https://map.deepslate.dsw.test (DNS in place; without a session it sends to the sign-in page and back; BlueMap is served from the game server through the tunnel) |
 | Compose stack `deepslate` | `/home/ladm/Minecraft-site/deploy/docker-compose.yml` → `deepslate-web`, `deepslate-api` (in the tunnel namespace), `deepslate-wg` (WireGuard, udp 51820), `deepslate-map-relay-inner`/`-outer`, `deepslate-db`, `deepslate-backups` |
 | NFS to the NAS | Lives on the AMP host (same LAN as the NAS 10.0.10.122), not the VPS: the tunnel reaches only the AMP host (AllowedIPs `10.77.0.2/32`). VPS fstab lines removed 2026-10-03 (backup `/etc/fstab.bak-2026-10-03`) |
-| Secrets | `deploy/.env` (mode 600), `deploy/wireguard/wg_confs/wg0.conf` + `vps.key`, `deploy/keys/deploy.key` (all git-ignored; template `deploy/.env.example`, `deploy/wireguard/wg0.conf.example`) |
+| Secrets | `deploy/.env` (mode 600), `deploy/wireguard/wg_confs/wg0.conf` + `vps.key`, `deploy/keys/deploy.key` (all git-ignored; template `deploy/.env.example`, `deploy/wg0.conf.example`) |
 | Postgres data / dumps | `/root/docker/deepslate/postgres`, `/root/docker/deepslate/backups` (nightly, keep 7) |
 | Dumps before a migration | `/root/docker/deepslate/backups/pre-00NN-*.sql.gz`, the last `pre-0013-download-kind.sql.gz` |
 | The old world | `Minecraft/world-backup-20260929` on the AMP host, and `/root/docker/deepslate/backups/world-20260929-before-reset/` |

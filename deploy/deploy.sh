@@ -172,9 +172,9 @@ fi
 # `chown -R` over deploy/ takes them away from both (it happened on 2026-09-29: api lost rsync).
 for p in deploy/keys/deploy.key deploy/wireguard; do
   [ -e "$p" ] || continue
-  if [ -n "$(find "$p" ! -uid 1000 ! -name 'wg0.conf.example' -print -quit)" ]; then
+  if [ -n "$(find "$p" ! -uid 1000 -print -quit)" ]; then
     [ "$(id -u)" = 0 ] || die "$p must belong to uid 1000; run this once as root"
-    find "$p" ! -name 'wg0.conf.example' -exec chown 1000:1000 {} +
+    find "$p" -exec chown 1000:1000 {} +
     echo "$p given back to uid 1000"
   fi
 done

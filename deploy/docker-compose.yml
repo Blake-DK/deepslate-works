@@ -79,6 +79,10 @@ services:
       MAP_URL: ${MAP_URL:-}
       SERVER_ADDRESS: ${SERVER_ADDRESS:?SERVER_ADDRESS is the address players join; set it in deploy/.env}
       MODRINTH_USER_AGENT: ${MODRINTH_USER_AGENT:-deepslate-works/0.1}
+      # docs/39: the build designer, when it is set up (deploy.sh starts the `designer` service only then)
+      DESIGNER_URL: ${DESIGNER_URL:-}
+      DESIGNER_TOKEN: ${DESIGNER_TOKEN:-}
+      DESIGNER_DAILY: ${DESIGNER_DAILY:-80}
     volumes:
       # The manifest is edited by "apply results" and committed, so the live repo's modpack/ and .git are mounted.
       # Nothing else from the repo (no .env, no keys) is visible to the internet-facing container.
@@ -239,6 +243,50 @@ services:
     networks: [web, internal]
     command: TCP-LISTEN:8090,fork,reuseaddr TCP:deepslate-wg:8090
     depends_on: [router-relay-inner]
+
+  # docs/39 Step 1: the build designer. The host's CLI, run by tools/designer/server.mjs as the designer's own host
+  # user, signed in on Alex's plan. Profile `designer`: deploy.sh starts it only while DESIGNER_CMD is set in
+  # deploy/.env, and removes it when that is emptied. On `internal` only, no published port: web reaches it as
+  # deepslate-designer:4100 with DESIGNER_TOKEN. The CLI gets no tools and only HOME and PATH of the environment.
+  # The user's home is mounted read-write (the login and the CLI's own settings file are written back there when a
+  # token is refreshed); the CLI's program folders inside it are mounted again read-only over it, so it cannot change
+  # itself. The defaults only keep `docker compose` working while the variables are unset.
+  designer:
+    profiles: [designer]
+    image: node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+    container_name: deepslate-designer
+    restart: unless-stopped
+    logging: *logging
+    cap_drop: [ALL]
+    mem_limit: 768m                     # the CLI used under 300 MB in each call of Step 0.4
+    user: "${DESIGNER_UID:-65534}:${DESIGNER_GID:-65534}"
+    read_only: true
+    tmpfs: [/tmp]
+    networks: [internal]                # never on `web`
+    working_dir: /tmp
+    command: ["node", "/designer/server.mjs"]
+    environment:
+      HOME: ${DESIGNER_HOME:-/nonexistent}
+      PATH: ${DESIGNER_BIN_DIR:-/nonexistent}:/usr/local/bin:/usr/bin:/bin
+      DISABLE_AUTOUPDATER: "1"
+      DESIGNER_CMD: ${DESIGNER_CMD:-}
+      DESIGNER_MODEL: ${DESIGNER_MODEL:-}
+      DESIGNER_TOKEN: ${DESIGNER_TOKEN:-}
+      DESIGNER_CREDENTIALS: ${DESIGNER_CREDENTIALS:-}
+      DESIGNER_DATA: /designer-data
+    volumes:
+      - ${DEEPSLATE_DIR:-..}/tools/designer:/designer:ro          # server.mjs and the instructions; web cannot write here
+      - ${DEEPSLATE_DIR:-..}/modpack/designer:/designer-data:ro   # blocks.json
+      - ${DESIGNER_HOME:-/nonexistent}:${DESIGNER_HOME:-/nonexistent}
+      - ${DESIGNER_BIN_DIR:-/nonexistent/bin}:${DESIGNER_BIN_DIR:-/nonexistent/bin}:ro
+      - ${DESIGNER_VERSIONS_DIR:-/nonexistent/versions}:${DESIGNER_VERSIONS_DIR:-/nonexistent/versions}:ro
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(4100, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
 
   backups:
     image: postgres:16-alpine

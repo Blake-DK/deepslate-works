@@ -1,6 +1,7 @@
 import { loadCurrentUser } from "@/server/auth/session";
 import { apiFetch, ApiError } from "@/server/api-client";
 import { fromAnotherSite } from "@/server/same-origin";
+import { readJson, readJsonError } from "@/server/read-json";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,9 @@ export async function POST(req: Request) {
   if (!req.headers.get("content-type")?.startsWith("application/json") || fromAnotherSite(req)) {
     return Response.json({ error: { code: "forbidden", message: "same-site JSON only" } }, { status: 403 });
   }
-  const body = (await req.json().catch(() => null)) as { command?: unknown } | null;
+  const r = await readJson(req); // a console line is at most 1000 characters
+  if (!r.ok) return readJsonError(r);
+  const body = r.body as { command?: unknown } | null;
   if (typeof body?.command !== "string") return Response.json({ error: { code: "validation", message: "command" } }, { status: 400 });
   try {
     await apiFetch("/console/send", { method: "POST", body: { command: body.command }, caller: { id: user.id, role: "ADMIN" } });

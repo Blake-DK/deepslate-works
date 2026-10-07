@@ -1,5 +1,6 @@
 import { loadCurrentUser } from "@/server/auth/session";
 import { apiFetch, ApiError } from "@/server/api-client";
+import { readJson, readJsonError } from "@/server/read-json";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ name: s
   if (!req.headers.get("content-type")?.startsWith("application/json") || (origin && host && new URL(origin).host !== host)) return Response.json({ error: { code: "forbidden", message: "same-site JSON only" } }, { status: 403 });
   const { name } = await params;
   if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) return Response.json({ error: { code: "validation", message: "Minecraft name" } }, { status: 400 });
-  const body = await req.json().catch(() => null);
+  const r = await readJson(req);
+  if (!r.ok) return readJsonError(r);
+  const body = r.body;
   try {
     return Response.json(await apiFetch(`/players/${name}/inventory`, { method: "POST", body, caller: { id: user.id, role: "ADMIN" }, timeoutMs: 15_000 }));
   } catch (e) {

@@ -2,7 +2,7 @@
 FROM node:22-alpine AS base
 # APP_UID must match the owner of the bind-mounted repo (ladm on vps-01v) so "apply results" can write and commit mods.json.
 ARG APP_UID=1009
-RUN apk add --no-cache libc6-compat openssl git && npm install -g pnpm@10 \
+RUN apk upgrade --no-cache && apk add --no-cache libc6-compat openssl git && npm install -g pnpm@10 \
  && deluser node && addgroup -g ${APP_UID} app && adduser -D -u ${APP_UID} -G app app
 WORKDIR /app
 

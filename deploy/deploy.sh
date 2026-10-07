@@ -34,6 +34,19 @@ as_owner() {
 # docs/31 B-17: `web` can write this .git (Admin -> Lock commits there), and git runs here on the host. Whatever a
 # broken-into web might leave in .git/hooks or .git/config must not run: no hooks, no fsmonitor, no ssh command.
 git_here() { as_owner git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.sshCommand= "$@"; }
+# A `-c` above cannot undo a remote.origin.url, url.*.insteadOf or credential.helper line written into .git/config,
+# and those decide where the fetch below comes from and what runs to get its credential. So .git/config must match a
+# copy kept under /root, which web cannot reach; any difference stops the deploy before anything is fetched. Make the
+# copy once, as root, after reading .git/config by eye (deploy/README.md):
+#   runuser -u <owner> -- git config --local --list | sort > /root/.config/deepslate/git-config.expected
+GIT_CONFIG_EXPECTED="${GIT_CONFIG_EXPECTED:-/root/.config/deepslate/git-config.expected}"
+[ -s "$GIT_CONFIG_EXPECTED" ] || die "$GIT_CONFIG_EXPECTED is missing: read .git/config by eye, then
+  runuser -u $owner -- git config --local --list | sort > $GIT_CONFIG_EXPECTED
+Nothing was deployed."
+config_diff=$(diff <(sort "$GIT_CONFIG_EXPECTED") <(git_here config --local --list | sort) || true)
+[ -z "$config_diff" ] || die ".git/config is not the copy in $GIT_CONFIG_EXPECTED:
+$config_diff
+Look at .git/config before deploying. Update the copy only if the change is yours. Nothing was deployed."
 
 [ -f deploy/.env ] || die "deploy/.env is missing (copy deploy/.env.example)"
 grep -Eq '^GHCR_OWNER=[a-z0-9-]+$' deploy/.env || die "set GHCR_OWNER in deploy/.env (GitHub owner, lower case)"

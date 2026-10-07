@@ -8,6 +8,7 @@ const PUBLIC = [/^\/login(\/admin|\/once\/[A-Za-z0-9_-]{1,80})?$/, /^\/branding\
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
+  if (pathname.startsWith("/_next/image")) return new NextResponse(null, { status: 404 }); // the optimiser is off (next.config.ts)
   if (PUBLIC.some((re) => re.test(pathname))) return NextResponse.next();
   if (!req.auth?.user) {
     if (pathname.startsWith("/api/")) {
@@ -21,5 +22,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt|.*\\.(?:png|jpg|svg|webp|ico)$).*)"],
+  matcher: ["/((?!_next/static|favicon.ico|icon.svg|robots.txt|.*\\.(?:png|jpg|svg|webp|ico)$).*)"],
 };

@@ -179,6 +179,28 @@ services:
     command: TCP-LISTEN:8100,fork,reuseaddr TCP:deepslate-wg:8100
     depends_on: [map-relay-inner]
 
+  # The mc-router dashboard on the AMP host (no login of its own), relayed like the map. Caddy lets admins only
+  # through (deploy/Caddyfile.snippet, web /api/auth/verify/admin) and never passes /hook.
+  router-relay-inner:
+    image: alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50
+    container_name: deepslate-router-relay-inner
+    restart: unless-stopped
+    logging: *logging
+    mem_limit: 32m
+    network_mode: "service:wireguard"
+    command: TCP-LISTEN:8090,fork,reuseaddr TCP:10.77.0.2:8090
+    depends_on: [wireguard]
+
+  router-relay-outer:
+    image: alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50
+    container_name: deepslate-router-relay-outer
+    restart: unless-stopped
+    logging: *logging
+    mem_limit: 32m
+    networks: [web, internal]
+    command: TCP-LISTEN:8090,fork,reuseaddr TCP:deepslate-wg:8090
+    depends_on: [router-relay-inner]
+
   backups:
     image: postgres:16-alpine
     container_name: deepslate-backups

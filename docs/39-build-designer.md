@@ -375,3 +375,35 @@ echo "a temple for the boss portal at spawn, about 40 by 40, deepslate and coppe
 ```
 docker run --rm --memory=1g -u "$(id -u):$(id -g)" -v "$PWD":/app:ro -v /tmp:/tmp -w /app/packages/modpack -e MODPACK_DIR=/app/modpack node:22-alpine node_modules/.bin/tsx src/cli.ts design /tmp/temple.json /tmp/designs
 ```
+
+## Step 0.4, as run (2026-10-07)
+
+A host user of its own, `designer`, made by Alex, with the CLI installed, signed in on the plan and `{}` as its
+settings. The prompt from `modpack design-prompt` (15,365 bytes), one call per ask, `--tools ""`,
+`--no-session-persistence`, `--strict-mcp-config`, the strongest model on the plan, from a terminal.
+
+| ask | build | time | tokens in (written to cache / read from it) | tokens out | memory (max RSS) |
+|---|---|---|---|---|---|
+| a temple for the boss portal at spawn, about 40 by 40, deepslate and copper | 41 by 32 by 41, 9,379 blocks | 1:47 | 6,937 / 0 | 9,237 | 264 MB |
+| a round boss arena, about 35 across, a 25 by 25 clear floor, stands, the boss's spot marked | 37 by 14 by 37, 6,368 blocks | 1:54 | 568 / 6,403 | 9,401 | 258 MB |
+| a watchtower about 9 by 9 and 30 high, stone bricks and dark oak, stairs inside, a lookout | 13 by 35 by 13, 1,678 blocks | 3:46 | 555 / 6,403 | 14,871 | 299 MB |
+
+- **All three answers were clean JSON** (one object, no fence, no text around it) and **all three recipes passed
+  `parseRecipe` and `compile` the first time**: no refusal to send back. They are kept as
+  `modpack/designer/examples/temple.json`, `boss_arena.json` and `watchtower.json` (5.5 to 8.5 KB each, far under the
+  64 KB limit), and the tests compile every file in that folder.
+- **It kept to its instructions where the ask could not be met** and said so in `say`: the arena's clear floor is a
+  circle 27 across ("a full 25 by 25 square with corners would need the arena to be about 47 across"); the tower is
+  11 by 11, "because a 9 by 9 tower has no room for 3 wide stairs with proper turns". The temple has the portal frame
+  of reinforced deepslate on a dais, unlit and marked, as instructed.
+- **It used the pack's blocks unasked:** Create's cut deepslate, deepslate pillar and waxed copper shingles in the
+  temple.
+- **The prompt is cached between calls:** the first call wrote about 7,000 tokens to the cache, the next two read
+  them back. Most of the tokens out are the model working before it answers; the recipes themselves are 2,000 to
+  3,000 tokens.
+- **For Steps 1 and 2:** a call takes 2 to 4 minutes, not "a minute or two": the page says "this takes a few
+  minutes", and `server.mjs`'s 300 s timeout is too close to the slowest call (226 s): 420 s. The CLI's memory was
+  under 300 MB in all three, so `mem_limit: 768m` holds with room for `server.mjs`.
+- **For Step 1:** the CLI keeps a settings file of its own directly in the user's home, beside the login folder and
+  not in it. The compose service has to mount that file too (a variable of its own, `DESIGNER_LOGIN_FILE`), or each
+  call starts as a first run.

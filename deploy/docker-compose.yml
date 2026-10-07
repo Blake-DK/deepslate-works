@@ -126,10 +126,32 @@ services:
     logging: *logging
     mem_limit: 512m                     # also the cap for `modpack build`, which runs as a child of api
     network_mode: "service:wireguard"   # reachable as deepslate-wg:4000 on `internal` only
-    env_file: .env
+    # Like web, api gets the variables it reads (apps/api/src/env.ts) and no others: not the session secret, the
+    # database password on its own, the OAuth secret or the manifest key. A new variable for api goes here, in env.ts
+    # and in .env.example. Empty means unset (env.ts then takes its default).
     environment:
       DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
       PORTAL_URL: ${AUTH_URL}
+      API_SERVICE_TOKEN: ${API_SERVICE_TOKEN}
+      AMP_URL: ${AMP_URL:-}
+      AMP_INSTANCE_ID: ${AMP_INSTANCE_ID:-}
+      AMP_USERNAME: ${AMP_USERNAME:-}
+      AMP_PASSWORD: ${AMP_PASSWORD:-}
+      AMP_MOCK: ${AMP_MOCK:-}
+      AMP_TUNNEL_IP: ${AMP_TUNNEL_IP:-}
+      RSYNC_TARGET: ${RSYNC_TARGET:-}
+      DEPLOY_KEY_PATH: ${DEPLOY_KEY_PATH:-}
+      LIMBO_POS: ${LIMBO_POS:-}
+      SPAWN_POS: ${SPAWN_POS:-}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      DISCORD_WEBHOOK_FEED: ${DISCORD_WEBHOOK_FEED:-}
+      DISCORD_WEBHOOK_ADMIN: ${DISCORD_WEBHOOK_ADMIN:-}
+      DISCORD_WEBHOOK_UPDATES: ${DISCORD_WEBHOOK_UPDATES:-}
+      MODRINTH_USER_AGENT: ${MODRINTH_USER_AGENT:-}
+      GEOIP_DB: ${GEOIP_DB:-}
+      BACKUP_PUBLIC_KEY: ${BACKUP_PUBLIC_KEY:-}
     volumes:
       # the deploy key, and known_hosts beside it once it has been made (B-23: the AMP host's key is then pinned)
       - ${DEEPSLATE_DIR:-..}/deploy/keys:/run/keys:ro

@@ -189,7 +189,7 @@ export function DesignCard({ state, designs, blocks, initial, left, job: firstJo
         {job && !job.failed && (
           <Alert tone="info" data-testid="design-job">
             <p><strong>Designing {job.title ?? job.name}…</strong> started {clock(job.startedAt)}, {since(job.startedAt, now)}. {STAGE[job.stage]}</p>
-            <p className="mt-1 text-muted-foreground">This takes a few minutes. You may leave the page or close it: the design carries on, and is in the list above when it is done.</p>
+            <p className="mt-1 text-muted-foreground">A design takes about 10 minutes, up to 15. You may leave the page or close it: the design carries on, and is in the list above when it is done.</p>
           </Alert>
         )}
         {job?.failed && (

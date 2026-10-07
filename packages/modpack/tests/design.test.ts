@@ -62,6 +62,39 @@ describe("the block list", () => {
   });
 });
 
+describe("the instructions' examples", () => {
+  it("every example in How to make things and Rooms and furniture compiles, with the materials they name", () => {
+    const text = readFileSync(path.join(ROOT, "..", "tools", "designer", "instructions.md"), "utf8");
+    const part = text.slice(text.indexOf("## How to make things"), text.indexOf("## The recipe"));
+    const blocks = [...part.matchAll(/```\n([\s\S]*?)\n```/g)].map((m) => m[1]!);
+    expect(blocks.length).toBeGreaterThanOrEqual(14);
+    // each block is steps one after another, not a list: cut them where the braces close
+    const steps = (b: string) => {
+      const out: unknown[] = [];
+      let depth = 0;
+      let start = -1;
+      let inString = false;
+      for (let i = 0; i < b.length; i++) {
+        const c = b[i];
+        if (inString) {
+          if (c === "\\") i++;
+          else if (c === '"') inString = false;
+        } else if (c === '"') inString = true;
+        else if (c === "{") {
+          if (depth++ === 0) start = i;
+        } else if (c === "}" && --depth === 0) out.push(JSON.parse(b.slice(start, i + 1)));
+      }
+      return out;
+    };
+    const materials = { wall: "minecraft:deepslate_bricks", wall_low: "minecraft:cobbled_deepslate", wall_high: "create:cut_deepslate_bricks", trim: "create:polished_cut_deepslate" };
+    for (const b of blocks) {
+      const list = steps(b);
+      expect(list.length, b).toBeGreaterThan(0);
+      expect(() => compileGrid(parseRecipe({ name: "example", size: { x: 41, y: 55, z: 59 }, ground: 3, seed: 1, materials, steps: list }, BLOCKS), BLOCKS), b).not.toThrow();
+    }
+  });
+});
+
 describe("parseRecipe", () => {
   it("takes every example recipe", () => {
     expect(EXAMPLES).toEqual(["boss_arena", "boss_hall", "gate", "temple", "temple_b", "watchtower"]);

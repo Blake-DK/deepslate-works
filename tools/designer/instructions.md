@@ -162,6 +162,64 @@ A light on a bracket: an upside-down stair out of the wall and a hanging lantern
 A floor pattern: the floor in its mix, then a border one block in from the walls and a centre aisle in the trim,
 or rings under a dome from flat cylinders one inside the other.
 
+## Rooms and furniture
+
+Every roofed building is furnished inside for what it is for, unless the admin asks for an empty shell. Write the
+rooms in "plan" too: what each room is, on which floor.
+
+- Floors. A building taller than 10 blocks inside gets upper floors, 5 or 6 blocks apart, so a room is at least 4
+  high. Each floor is a layer of planks or stone across the inside of the walls, with a hole for the stairs. Stairs
+  between floors are 3 wide where there is room, or a ladder against a wall in a tower.
+- Rooms. Split a large floor into rooms with inner walls one block thick. A way between two small rooms may be one
+  door (two blocks: the lower half and the upper half on it); the rule of 3 wide and 4 high is for the ways in from
+  outside and the main ways through. Every room can be reached, and nothing blocks a door, a stair or a boss floor.
+- Furniture. Put it where it would stand: against walls, in groups, facing into the room. Chairs round a table face
+  it; a bed has its head against a wall; shelves and bookshelves line walls; a carpet lies under a table
+  or beside a bed. Leave a way 2 wide from the door across the room. Furnish about a third of the floor, not all of it.
+- Each room says what it is for: a hall gets long tables and benches and a hearth, a bedroom a bed, a side table, a
+  lamp and a carpet, a study bookshelves, a desk-like table and a lectern, a kitchen a stove-like campfire under a
+  hood, crockery and pots, a forge workstations and a hearth, a temple an altar on its raised floor and benches facing
+  it.
+- Lights inside still every 7 blocks: lamps on tables, candles, lanterns on chains or brackets.
+- Which way furniture faces. For a chair, a bench, a sofa or a couch, "facing" is the way a person sitting in it
+  looks: a chair west of a table faces east. For a bed, "facing" points from its foot to its head, and the head is
+  the next block that way: both halves get the same facing and color. Turn everything else so its front faces into
+  the room.
+
+A floor with its stair hole, and the stairs up to it from the floor below (walls inside x 10 to 30, z 14 to 36,
+ground floor at y 3, the upper floor at y 9):
+```
+{"op": "box", "from": [10,9,14], "to": [30,9,36], "with": "minecraft:spruce_planks"}
+{"op": "clear", "from": [27,9,31], "to": [29,9,35]}
+{"op": "stairs", "from": [27,4,35], "dir": "north", "length": 5, "width": 3, "with": "minecraft:spruce_stairs"}
+```
+
+An inner wall with a door:
+```
+{"op": "box", "from": [10,4,25], "to": [30,8,25], "with": "wall"}
+{"op": "clear", "from": [20,4,25], "to": [20,5,25]}
+{"op": "set", "at": [[20,4,25]], "with": "minecraft:spruce_door[facing=south,half=lower,hinge=left]"}
+{"op": "set", "at": [[20,5,25]], "with": "minecraft:spruce_door[facing=south,half=upper,hinge=left]"}
+```
+
+A dining table with chairs round it, crockery and a candle:
+```
+{"op": "box", "from": [14,4,18], "to": [15,4,21], "with": "handcrafted:oak_table[color=red]"}
+{"op": "line", "from": [13,4,18], "to": [13,4,21], "with": "handcrafted:oak_chair[facing=east,color=red]"}
+{"op": "line", "from": [16,4,18], "to": [16,4,21], "with": "handcrafted:oak_chair[facing=west,color=red]"}
+{"op": "set", "at": [[14,5,19], [15,5,20]], "with": "handcrafted:wood_crockery_combo[facing=north]"}
+{"op": "set", "at": [[15,5,18]], "with": "minecraft:candle[candles=3,lit=true]"}
+```
+
+A bed against the north wall of an upper room, with a side table, a lamp on it and a carpet:
+```
+{"op": "set", "at": [[26,10,15]], "with": "handcrafted:spruce_fancy_bed[facing=north,part=head,color=blue]"}
+{"op": "set", "at": [[26,10,16]], "with": "handcrafted:spruce_fancy_bed[facing=north,part=foot,color=blue]"}
+{"op": "set", "at": [[27,10,15]], "with": "handcrafted:spruce_side_table[facing=south,color=none]"}
+{"op": "set", "at": [[27,11,15]], "with": "another_furniture:white_lamp[facing=up,lit=true]"}
+{"op": "box", "from": [25,10,17], "to": [27,10,18], "with": "minecraft:blue_carpet"}
+```
+
 ## The recipe
 
 ```

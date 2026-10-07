@@ -24,9 +24,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (origin && host && new URL(origin).host !== host) return Response.json({ error: { code: "forbidden", message: "same-site only" } }, { status: 403 });
   }
   if (!limiter.allow(user.id)) return Response.json({ error: { code: "rate_limited", message: "Too many votes in a row. Wait a few minutes." } }, { status: 429 });
-  const r = await readJson(req);
-  if (!r.ok) return readJsonError(r);
-  const body = r.body as { choices?: unknown } | null;
+  const read = await readJson(req);
+  if (!read.ok) return readJsonError(read);
+  const body = read.body as { choices?: unknown } | null;
   const r = await answerPoll({ id: user.id, role: user.role }, (await params).id, body?.choices);
   if (!r.ok) return Response.json({ error: { code: r.code, message: r.message } }, { status: r.status });
   return Response.json({ poll: forClient(r.poll), changed: r.changed }, { headers: { "cache-control": "no-store" } });

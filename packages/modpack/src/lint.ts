@@ -1,4 +1,6 @@
 import { isPlayerFacing, manifestSchema, type Manifest } from "./schema";
+import type { LockFile } from "./lock";
+import { modUrlProblem } from "./mod-url";
 
 export type LintIssue = { level: "error" | "warn"; message: string };
 
@@ -44,4 +46,14 @@ export function lintManifest(raw: unknown): { manifest: Manifest | null; issues:
   }
   for (const [group, list] of enabledByGroup) if (list.length > 1) err(`exclusive group ${group} has more than one enabled mod: ${list.join(", ")}`);
   return { manifest: m, issues };
+}
+
+/** Every file in the lock must come from Modrinth's CDN (mod-url.ts). */
+export function lintLock(lock: Pick<LockFile, "files">): LintIssue[] {
+  const issues: LintIssue[] = [];
+  for (const f of lock.files ?? []) {
+    const bad = modUrlProblem(f.url);
+    if (bad) issues.push({ level: "error", message: `lock: ${f.slug}: ${bad}` });
+  }
+  return issues;
 }

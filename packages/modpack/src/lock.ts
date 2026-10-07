@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Manifest, Mod } from "./schema";
 import { getProject, getVersion, getVersions, NotFound, type ModrinthVersion } from "./modrinth";
 import { fetchJar } from "./download";
+import { modUrlProblem } from "./mod-url";
 import { jarChannels, sideFor, widenForDependents } from "./sides";
 import { openZipFile } from "./zip";
 import { hashConfigs, hashResourcePack } from "./hashes";
@@ -101,6 +102,8 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
     const version = pickVersion(versions, mod?.version, project.slug, warn);
     const file = version.files.find((f) => f.primary) ?? version.files[0];
     if (!file) throw new Error(`${project.slug}: version ${version.version_number} has no files`);
+    const bad = modUrlProblem(file.url);
+    if (bad) throw new Error(`${project.slug}: ${bad}`);
     // 2.1.0: mods.json may narrow a mod to one side, never away from a side Modrinth says requires it (sides.ts)
     const side = sideFor(project.slug, project, mod?.side);
     entries.set(project.id, {

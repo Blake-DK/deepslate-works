@@ -5,6 +5,7 @@ import path from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { LockEntry } from "./lock";
+import { modUrlProblem } from "./mod-url";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -21,6 +22,9 @@ export async function sha512File(file: string): Promise<string | null> {
 
 /** Downloads to `dest` unless it already exists with the right sha512. Streamed to a temp file, hashed on the way, renamed; 3 tries. */
 export async function fetchJar(entry: LockEntry, dest: string, log: (m: string) => void = () => {}): Promise<"cached" | "downloaded"> {
+  // before the cache too: a jar already on disk under a foreign address's name is no better
+  const bad = modUrlProblem(entry.url);
+  if (bad) throw new Error(`${entry.filename}: ${bad}`);
   if ((await sha512File(dest)) === entry.sha512) return "cached";
   await mkdir(path.dirname(dest), { recursive: true });
   const tmp = `${dest}.part`;

@@ -1,7 +1,7 @@
 import { readFile, rename, rm, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { checkSides, clientSet, type ServerLoaded } from "./sides";
-import { lintManifest } from "./lint";
+import { lintLock, lintManifest } from "./lint";
 import { verifyLinks } from "./verify-links";
 import { buildBranding } from "./branding";
 import { buildLock, diffLocks, type LockFile } from "./lock";
@@ -48,12 +48,15 @@ async function main() {
   switch (cmd) {
     case "lint": {
       const { manifest, issues } = lintManifest(JSON.parse(await readFile(P.manifest, "utf8")));
+      // the lock too, when there is one: every file it names is fetched by Build and by every PC
+      const lock = await loadLock();
+      if (lock) issues.push(...lintLock(lock));
       for (const i of issues) log(`${i.level.toUpperCase().padEnd(5)} ${i.message}`);
       // the season files too (docs/20 §4): a duplicate title or an unchecked entity stops CI as a bad mods.json does
       const seasons = await loadSeasons(P.seasons, P.items);
       for (const i of seasons.issues) log(`ERROR season ${i.season}: ${i.message}`);
       const errors = issues.filter((i) => i.level === "error").length + seasons.issues.length;
-      log(`${P.manifest}: ${manifest ? `${manifest.mods.length} mods, ` : ""}${errors} error(s), ${issues.length - issues.filter((i) => i.level === "error").length} warning(s); ${seasons.seasons.length} season file(s), current ${seasons.index.current ?? "none"}, to the server: ${seasons.index.ship.join(", ") || "none"}`);
+      log(`${P.manifest}: ${manifest ? `${manifest.mods.length} mods, ` : ""}${errors} error(s), ${issues.length - issues.filter((i) => i.level === "error").length} warning(s);${lock ? ` lock: ${lock.files.length} files;` : ""} ${seasons.seasons.length} season file(s), current ${seasons.index.current ?? "none"}, to the server: ${seasons.index.ship.join(", ") || "none"}`);
       process.exit(errors ? 1 : 0);
     }
     // falls through never

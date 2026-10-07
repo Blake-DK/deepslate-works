@@ -38,7 +38,7 @@ describe("buildServer", () => {
     await writeFile(path.join(mods, "Placebo-1.21.1-9.9.3.jar"), jar); // already in place: nothing is downloaded
     await writeFile(path.join(mods, "Placebo-1.21.1-9.9.2.jar"), "placebo 9.9.2");
     await writeFile(path.join(mods, "OldMod-1.0.jar"), "old");
-    const placebo = { slug: "placebo", filename: "Placebo-1.21.1-9.9.3.jar", side: "both", sha512: createHash("sha512").update(jar).digest("hex"), url: "https://cdn.invalid/p.jar" };
+    const placebo = { slug: "placebo", filename: "Placebo-1.21.1-9.9.3.jar", side: "both", sha512: createHash("sha512").update(jar).digest("hex"), url: "https://cdn.modrinth.com/data/CCCCCCCC/versions/DDDDDDDD/Placebo-1.21.1-9.9.3.jar" };
     const lines: string[] = [];
     await buildServer({ version: "0.0.1" } as Manifest, { files: [placebo], hash: "abcdef0123456789", neoforge: "21.1.252" } as unknown as LockFile, { dist: path.join(dir, "dist"), config: path.join(dir, "none"), server: path.join(dir, "none") }, (l) => lines.push(l));
     expect(lines).toContain("updated Placebo-1.21.1-9.9.2.jar → Placebo-1.21.1-9.9.3.jar");

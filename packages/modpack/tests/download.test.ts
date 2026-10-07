@@ -8,7 +8,7 @@ import type { LockEntry } from "../src/lock";
 
 const body = Buffer.alloc(3 * 1024 * 1024, 7);
 const sha512 = createHash("sha512").update(body).digest("hex");
-const entry = { filename: "a.jar", url: "https://cdn.example/a.jar", sha512 } as LockEntry;
+const entry = { filename: "a.jar", url: "https://cdn.modrinth.com/data/AAAAAAAA/versions/BBBBBBBB/a.jar", sha512 } as LockEntry;
 
 function chunked(buf: Buffer, size = 64 * 1024) {
   let at = 0;

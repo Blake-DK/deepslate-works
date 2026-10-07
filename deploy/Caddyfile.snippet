@@ -1,4 +1,5 @@
 # Blocks in /home/ladm/docker/web-proxy/etc/Caddyfile on vps-01v (edit as ladm; reload recipe in deploy/README.md).
+# The test site's block (the last) goes in only when the test server is set up (docs/42).
 
 deepslate.dsw.test {
 	import common
@@ -36,6 +37,45 @@ map.deepslate.dsw.test {
 		@unauth status 401
 		handle_response @unauth {
 			redir https://deepslate.dsw.test/login?next=https://map.deepslate.dsw.test{http.request.orig_uri}
+		}
+	}
+}
+
+# docs/42: the test server's site (web-test). Admins only: Caddy asks the live site who this is, as for the map, and only
+# a live admin's request reaches web-test. A member gets "Admins only", a stranger the live login; nobody else sees even
+# the test site's own sign-in page behind it. The live session cookie stays with the live site.
+test.deepslate.dsw.test {
+	import common
+	# the same body limit as the site's block
+	request_body {
+		max_size 50MB
+	}
+	header {
+		X-Frame-Options SAMEORIGIN
+		X-Robots-Tag "noindex, nofollow"
+	}
+	reverse_proxy deepslate-web:3000 {
+		method GET
+		rewrite /api/auth/verify/admin
+		header_up X-Forwarded-Method {method}
+		header_up X-Forwarded-Uri {uri}
+		@good status 2xx
+		handle_response @good {
+			# who did what on the test site: every request in the access log carries the live admin's user id
+			vars test_user {rp.header.X-User}
+			log_append user {vars.test_user}
+			reverse_proxy deepslate-web-test:3000 {
+				# the live session cookie (and its chunks .0, .1) never reaches web-test, which has a cookie of its own
+				header_up Cookie `(^|;\s*)__Secure-authjs\.session-token(\.\d+)?=[^;]*` ""
+			}
+		}
+		@unauth status 401
+		handle_response @unauth {
+			redir https://deepslate.dsw.test/login?next=https://test.deepslate.dsw.test{http.request.orig_uri}
+		}
+		@member status 403
+		handle_response @member {
+			respond "Admins only. This site is for the people who run the server." 403
 		}
 	}
 }

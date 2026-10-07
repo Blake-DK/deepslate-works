@@ -73,13 +73,21 @@ check_git_guards
 [ -f deploy/.env ] || die "deploy/.env is missing (copy deploy/.env.example)"
 grep -Eq '^GHCR_OWNER=[a-z0-9-]+$' deploy/.env || die "set GHCR_OWNER in deploy/.env (GitHub owner, lower case)"
 grep -Eq "^DEEPSLATE_DIR=$(pwd)\$" deploy/.env || die "set DEEPSLATE_DIR=$(pwd) in deploy/.env (absolute path of this checkout)"
+# docs/42: the test server's copy of the site (compose profile `test`) runs only while TEST_STACK=1. Its TEST_ lines
+# may keep their placeholders while it is off.
+test_on=0
+if grep -Eq '^TEST_STACK=1$' deploy/.env; then test_on=1; fi
 # `|| true`: a .env with no placeholder makes grep exit 1, and under `set -euo pipefail` that ended the whole deploy
 # without a word (2026-10-06, the first deploy after this check came in)
-placeholders=$(grep -E '^[A-Z_]+=(.*replace-me.*|0{17,}|00000000-0000-.*)$' deploy/.env | cut -d= -f1 | tr '\n' ' ' || true)
+placeholders=$(grep -E '^[A-Z_]+=(.*replace-me.*|0{17,}|00000000-0000-.*)$' deploy/.env | cut -d= -f1 | { if [ "$test_on" = 1 ]; then cat; else grep -v '^TEST_'; fi; } | tr '\n' ' ' || true)
 [ -z "$placeholders" ] || die "deploy/.env still has placeholder values from .env.example: ${placeholders}(fill them in, or leave optional ones empty)"
 # docs/39: the build designer runs only while DESIGNER_CMD is set in deploy/.env (compose profile `designer`)
 designer_on=0
 if grep -Eq '^DESIGNER_CMD=.+' deploy/.env; then designer_on=1; COMPOSE+=(--profile designer); fi
+if [ "$test_on" = 1 ]; then
+  . deploy/test-env.sh
+  test_env_check || die "TEST_STACK=1, but the test server is not set up yet (above). Set TEST_STACK=0 to deploy without it. Nothing was deployed."
+fi
 
 avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
 swap=$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)
@@ -181,7 +189,7 @@ fi
 
 # The deploy key is read by api and the WireGuard config by its container, both as uid 1000. A careless
 # `chown -R` over deploy/ takes them away from both (it happened on 2026-09-29: api lost rsync).
-for p in deploy/keys/deploy.key deploy/wireguard; do
+for p in deploy/keys/deploy.key deploy/keys-test/deploy.key deploy/wireguard; do
   [ -e "$p" ] || continue
   if [ -n "$(find "$p" ! -uid 1000 -print -quit)" ]; then
     [ "$(id -u)" = 0 ] || die "$p must belong to uid 1000; run this once as root"
@@ -306,7 +314,21 @@ fi
   docker exec deepslate-api ssh-keyscan -t ed25519 10.77.0.2 > deploy/keys/known_hosts && chmod 644 deploy/keys/known_hosts
 then compare its fingerprint with the AMP host's own (ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub there)."
 
+# docs/42: the test server's pair, after the live stack and its health gate, and never in their way. While TEST_STACK=1
+# its database is made when missing and the two are started (deploy/test-up.sh, without a pull: their images are pulled
+# by test-up.sh alone, after test-images.yml). A test pair that does not start is said at the end; the live deploy stands.
+test_problem=
+if [ "$test_on" = 1 ]; then
+  step "test server"
+  TEST_UP_FROM_DEPLOY=1 TEST_UP_PULL=0 deploy/test-up.sh || test_problem="the test server did not start (above); the live site is deployed. Fix it, then: sudo deploy/test-up.sh"
+else
+  for c in deepslate-api-test deepslate-web-test; do
+    if docker inspect "$c" >/dev/null 2>&1; then echo "TEST_STACK is not 1 in deploy/.env: removing $c"; docker rm -f "$c" >/dev/null; fi
+  done
+fi
+
 step "prune old images"
 docker image prune -f
+[ -z "$test_problem" ] || echo "deploy: $test_problem" >&2
 [ "$backups_stale" = 0 ] || die "everything else is deployed, but deepslate-backups does not run the checkout's backup-loop.sh (the nightly dumps): docker compose -f deploy/docker-compose.yml --env-file deploy/.env restart backups, then docker logs --tail 20 deepslate-backups"
 echo "deployed."

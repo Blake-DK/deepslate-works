@@ -9,10 +9,11 @@ import { Alert } from "@/components/ui/alert";
 import { getPackDrift } from "@/server/modpack/drift";
 import { driftLine } from "@/lib/pack-drift";
 import { PackPending } from "@/components/admin/pack-pending";
+import { packDrift, testRefusal } from "@/server/test-mode";
 
 export default async function ModpackAdminPage() {
   const { manifest, lock, issues, rows } = await modpackStatus();
-  const [installer, drift] = await Promise.all([distFile("installer.zip"), getPackDrift()]);
+  const [installer, drift, livePack] = await Promise.all([distFile("installer.zip"), getPackDrift(), packDrift()]);
   const driftSays = driftLine(drift);
   const tone = (s: string) => (s === "ok" ? "good" : s === "off" ? "neutral" : s === "beta" || s === "alpha" ? "warn" : "bad");
   return (
@@ -20,6 +21,9 @@ export default async function ModpackAdminPage() {
       <h2 className="text-xl font-semibold">Mods and build</h2>
       <PackPending />
       {driftSays && <Alert tone="warn" data-testid="pack-drift">{driftSays}</Alert>}
+      {/* docs/42 T4, the test site only */}
+      {livePack && <Alert tone="warn" data-testid="test-pack-differs">Your PC has the live pack. It will not match this server: the test checkout has pack {livePack.test}, the live site hands out {livePack.live}.</Alert>}
+      {testRefusal() && <p className="text-sm text-muted-foreground" data-testid="test-no-lock">This is the test site: Lock is refused here ({testRefusal()}). The lock is the test checkout&apos;s, brought to origin/dev by <span className="font-mono">deploy/test-pull.sh</span>.</p>}
       <Card>
         <CardHeader>
           <CardTitle>Pack {manifest.version}{lock ? `+${lock.hash.slice(0, 8)}` : ""}</CardTitle>

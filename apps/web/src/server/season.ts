@@ -2,6 +2,7 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { db } from "@/server/db";
+import { seasonNow } from "@/server/test-mode";
 import { ukDayTime } from "@/lib/uk-time";
 import { seasonGuide } from "@/lib/season-guide";
 import { goalProgress, scoreboard, seasonCurrent, seasonFileSchema, seasonIndexFileSchema, seasonLine, type Clear, type ClearKind, type SeasonCurrent, type SeasonFile, type SeasonResult, type SeasonState } from "@/shared/season";
@@ -39,7 +40,8 @@ async function currentFile(): Promise<SeasonFile | null> {
 const stateOf = (s: string): SeasonState => (STATES.includes(s) ? (s as SeasonState) : "upcoming");
 
 /** The current season in a few words, for Home, the nav and the app. `{ state: "none" }` when there is none to show. */
-export async function getSeasonCurrent(now = new Date()): Promise<SeasonCurrent> {
+export async function getSeasonCurrent(at?: Date): Promise<SeasonCurrent> {
+  const now = at ?? (await seasonNow()); // docs/42 §7.1: the test clock on the test site, the real time on live
   const file = await currentFile();
   if (!file) return { state: "none" };
   const row = await db.season.findUnique({ where: { id: file.id }, select: { state: true } }).catch(() => null);
@@ -91,7 +93,8 @@ export type SeasonPage = {
 };
 
 /** Everything the Season page shows of the current season; null when there is none. */
-export async function getSeasonPage(now = new Date()): Promise<SeasonPage | null> {
+export async function getSeasonPage(at?: Date): Promise<SeasonPage | null> {
+  const now = at ?? (await seasonNow());
   const file = await currentFile();
   if (!file) return null;
   const row = await db.season.findUnique({ where: { id: file.id }, select: { state: true, resultJson: true } }).catch(() => null);

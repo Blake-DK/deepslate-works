@@ -5,13 +5,16 @@ import { getBranding } from "@/server/branding";
 import { env } from "@/env";
 import { loadCurrentUser } from "@/server/auth/session";
 import { VersionFooter } from "@/components/version-footer";
+import { TestStripe } from "@/components/test-stripe";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const b = await getBranding();
+  // docs/42 T1: the test server's site says TEST in every tab's title
+  const name = env.TEST_MODE ? `TEST · ${b.name}` : b.name;
   return {
-    title: { default: b.name, template: `%s · ${b.name}` },
+    title: { default: name, template: `%s · ${name}` },
     description: b.tagline || "Private modded Minecraft server for friends.",
     robots: { index: false, follow: false },
     // a picked logo: the .ico and 32/192/512 PNGs and the 180 px apple-touch-icon (planner, 2026-10-01)
@@ -36,6 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en-GB">
       <body className="min-h-dvh flex flex-col">
+        <TestStripe />
         <AppFrame
           footer={
             <footer className="space-y-1 border-t bg-panel px-5 py-3 text-center text-[12.5px] text-dim">

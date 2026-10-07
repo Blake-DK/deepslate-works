@@ -18,6 +18,8 @@ import { statusText } from "@/lib/server-status";
 import type { PageQuery } from "@/components/tabs";
 import { BackupCard, consoleLines, Flash, HealthCard, HeldCard, loadBackup, loadHeld, loadPlayers, loadWatch, loadSchedule, loadTail, PowerCard, RestartCard } from "./server/cards";
 import { cn } from "@/lib/utils";
+import { env } from "@/env";
+import { TestServerCard } from "@/components/admin/test-server-card";
 
 export const metadata: Metadata = { title: "Control Room" };
 
@@ -98,6 +100,8 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
     inspector = (
       <div className="space-y-3" data-testid="inspector-server">
         <HealthCard view={watch} />
+        {/* docs/42 §8: the test server, on the live site only, once one has been set up */}
+        {!env.TEST_MODE && env.TEST_SITE_URL && <TestServerCard site={env.TEST_SITE_URL} />}
         {/* docs/39: a row only when the designer is set up and not well */}
         {designer && !designer.ok && (
           <p className="text-sm text-danger" data-testid="designer-problem">

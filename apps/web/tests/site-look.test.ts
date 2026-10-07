@@ -192,7 +192,7 @@ describe("the frame (docs/23 §4)", () => {
   });
   it("admin pages get the admin strip with the ten admin pages (docs/35)", () => {
     expect(hrefs(links.slice(links.indexOf("export function AdminStrip")))).toEqual(["/admin", "/admin/server", "/admin/joining", "/admin/people", "/admin/pack", "/admin/seasons", "/admin/news", "/admin/votes", "/admin/discord", "/admin/site"]);
-    expect(nav).toContain("{admin && <AdminStrip />}");
+    expect(nav).toContain("{admin && <AdminStrip other={env.otherSite} />}"); // docs/42 §8: Live | Test, only with a test server
   });
   it("the display face is on the banner's name and the drawn logo tile only", () => {
     expect((nav.match(/\bfont-display\b/g) ?? []).length).toBe(2);

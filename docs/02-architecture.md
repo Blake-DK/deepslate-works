@@ -28,6 +28,7 @@ Everything on the VPS runs from `deploy/docker-compose.yml` and joins the existi
 | `deepslate-map-relay-inner`, `-outer` | alpine/socat | 32 MB each | the map, in two hops |
 | `deepslate-db` | postgres:16-alpine | 256 MB | data in `/root/docker/deepslate/postgres` |
 | `deepslate-backups` | postgres:16-alpine | 64 MB | dumps in `/root/docker/deepslate/backups` |
+| `deepslate-web-test`, `deepslate-api-test` | the same two images, tag `test` (built from `dev` by hand, `.github/workflows/test-images.yml`) | 512 MB, 384 MB | docs/42: the test server's hidden copy of the site, only while `TEST_STACK=1`. Its own checkout (`TEST_DIR`), its own database `deepslate_test` in `deepslate-db`, `TEST_MODE=1`. `api-test` is `deepslate-wg:4001` in the tunnel namespace and talks to the AMP instance `DeepslateTest01` only; `web-test` is behind Caddy's live-admin check |
 
 The images are built by GitHub Actions and pulled; **the VPS never builds** (docs/09). Dockhand shows the stack from a mirror that `deploy/deploy.sh` refreshes; the repo is what counts.
 

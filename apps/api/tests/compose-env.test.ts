@@ -9,14 +9,32 @@ const compose = readFileSync(new URL("../../../deploy/docker-compose.yml", impor
 
 /** Set by the image itself, never from deploy/.env. */
 const FROM_THE_IMAGE = new Set(["PORT", "REPO_DIR", "MODPACK_PKG_DIR"]);
+/** docs/42: only the test server's api has these; the live one must not (TEST_MODE unset is what keeps live as it was). */
+const TEST_ONLY = new Set(["TEST_MODE", "TEST_SUMMARY_TOKEN", "SEASONS_SHIP"]);
+/** docs/42 §10: the test server has no bot. */
+const NOT_ON_TEST = new Set(["DISCORD_BOT_TOKEN", "DISCORD_CLIENT_ID"]);
+
+const block = (service: string) => {
+  const from = compose.slice(compose.indexOf(`\n  ${service}:`));
+  const env = from.slice(from.indexOf("\n    environment:"), from.indexOf("\n    volumes:"));
+  return new Set([...env.matchAll(/^ {6}([A-Z][A-Z0-9_]+):/gm)].map((m) => m[1]!));
+};
 
 describe("api's environment in compose", () => {
+  const read = [...envTs.matchAll(/^ {2}([A-Z][A-Z0-9_]+): z\./gm)].map((m) => m[1]!);
+
   it("passes every variable env.ts reads", () => {
-    const read = [...envTs.matchAll(/^ {2}([A-Z][A-Z0-9_]+): z\./gm)].map((m) => m[1]!);
     expect(read.length).toBeGreaterThan(20);
-    const api = compose.slice(compose.indexOf("\n  api:"));
-    const block = api.slice(api.indexOf("\n    environment:"), api.indexOf("\n    volumes:"));
-    const passed = new Set([...block.matchAll(/^ {6}([A-Z][A-Z0-9_]+):/gm)].map((m) => m[1]!));
-    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !passed.has(k))).toEqual([]);
+    const passed = block("api");
+    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !TEST_ONLY.has(k) && !passed.has(k))).toEqual([]);
+    expect([...TEST_ONLY].filter((k) => passed.has(k))).toEqual([]);
+  });
+
+  it("docs/42: the test server's api gets them too, TEST_MODE among them, and no bot", () => {
+    const passed = block("api-test");
+    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !NOT_ON_TEST.has(k) && !passed.has(k))).toEqual([]);
+    expect([...NOT_ON_TEST].filter((k) => passed.has(k))).toEqual([]);
+    expect(compose).toMatch(/\n {2}api-test:\n {4}profiles: \[test\]\n/);
+    expect(compose).toMatch(/\n {2}web-test:\n {4}profiles: \[test\]\n/);
   });
 });

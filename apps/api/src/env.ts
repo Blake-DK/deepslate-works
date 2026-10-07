@@ -38,6 +38,12 @@ const schema = z.object({
   MODRINTH_USER_AGENT: z.string().optional(),
   // GeoLite2-Country database for the analytics page; unset or missing = no countries
   GEOIP_DB: z.string().default("/geoip/GeoLite2-Country.mmdb"),
+  // docs/42: 1 only in deepslate-api-test, the test server's own api. Unset on live, where nothing below does anything.
+  TEST_MODE: z.enum(["0", "1"]).default("0"),
+  // docs/42 T9: the live site's token for GET /test/summary; it opens nothing else
+  TEST_SUMMARY_TOKEN: z.string().min(32, "TEST_SUMMARY_TOKEN must be at least 32 chars").optional(),
+  // docs/42 T5: the seasons a test Build makes datapacks of, in place of index.json's `ship` ("s1" or "s1,sample")
+  SEASONS_SHIP: z.string().regex(/^[a-z0-9_, ]{0,200}$/, "SEASONS_SHIP: season ids, separated by commas").optional(),
 });
 
 export type Env = z.infer<typeof schema>;

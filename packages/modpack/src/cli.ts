@@ -5,12 +5,12 @@ import { lintLock, lintManifest } from "./lint";
 import { verifyLinks } from "./verify-links";
 import { buildBranding } from "./branding";
 import { buildLock, diffLocks, type LockFile } from "./lock";
-import { buildConfigZip, buildInstaller, buildServer, removeClientPack } from "./build";
+import { applyTestOverlay, buildConfigZip, buildInstaller, buildServer, removeClientPack } from "./build";
 import { modpackPaths } from "./paths";
 import { buildItems } from "./items";
 import { lockExtras, prepareExtrasLock } from "./extras";
 import type { Manifest } from "./schema";
-import { buildSeasons, loadSeasons } from "./seasons";
+import { buildSeasons, loadSeasons, shipNotice } from "./seasons";
 import { buildBuilds } from "./builds";
 import { designFile, designPrompt } from "./design-cli";
 
@@ -121,6 +121,9 @@ async function main() {
     // falls through never
     case "build": {
       const what = rest[0] ?? "all";
+      // docs/42 T5: what SEASONS_SHIP does here is the build's first line
+      const ship = ["seasons", "server", "all"].includes(what) ? shipNotice(process.env) : null;
+      if (ship) log(ship);
       const loaded = await loadManifest();
       // PACK_NAME: the server's name from Admin → Branding, when the build runs inside api
       const manifest = process.env.PACK_NAME?.trim() ? { ...loaded, name: process.env.PACK_NAME.trim().slice(0, 40) } : loaded;
@@ -135,6 +138,8 @@ async function main() {
       // after the server's folder: buildServer makes datapacks/ afresh, the season datapacks go in on top
       if (what === "seasons" || what === "server" || what === "all") await buildSeasons(P, log);
       if (what === "builds" || what === "server" || what === "all") await buildBuilds(P, log);
+      // docs/42 T6: the test server's own differences, last, over everything above
+      if (process.env.TEST_MODE === "1" && (what === "server" || what === "all")) await applyTestOverlay(P, log);
       if (what === "installer" || what === "all") await buildInstaller(manifest, lock, P, portalUrl, log);
       // after the server jars: the item catalogue is read out of them (docs/13 §13)
       if (what === "items" || what === "all") await buildItems({ dist: P.dist, vanilla: P.items }, log);

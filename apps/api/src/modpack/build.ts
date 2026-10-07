@@ -33,6 +33,8 @@ export function buildCommand(env: Env, target: BuildTarget, packName?: string) {
       ...(env.MODRINTH_USER_AGENT ? { MODRINTH_USER_AGENT: env.MODRINTH_USER_AGENT } : {}),
       // Admin → Branding: the name the launcher profile and the pack are given
       ...(packName ? { PACK_NAME: packName } : {}),
+      // docs/42 T5, T6: the test server's build (SEASONS_SHIP, modpack/test-overlay/). Never passed on live.
+      ...(env.TEST_MODE === "1" ? { TEST_MODE: "1", ...(env.SEASONS_SHIP ? { SEASONS_SHIP: env.SEASONS_SHIP } : {}) } : {}),
     } as Record<string, string>,
   };
 }

@@ -33,7 +33,7 @@ export function Strip({ label, children }: { label: string; children: React.Reac
 }
 
 /** The admin pages' own strip, under the main one on /admin and below (docs/23 §4). */
-export function AdminStrip() {
+export function AdminStrip({ other = null }: { other?: { label: "Live" | "Test"; url: string } | null }) {
   const path = usePathname();
   if (path !== "/admin" && !path.startsWith("/admin/")) return null;
   return (
@@ -48,6 +48,14 @@ export function AdminStrip() {
       <NavLink href="/admin/votes">Votes</NavLink>
       <NavLink href="/admin/discord">Discord</NavLink>
       <NavLink href="/admin/site">Site</NavLink>
+      {/* docs/42 §8: Live | Test, the same page on the other site of the pair; only while there is a test server */}
+      {other && (
+        <>
+          <span className="min-w-4 flex-1" aria-hidden />
+          <span className={stripLink(true)} aria-current="page" data-testid="site-switch-here">{other.label === "Test" ? "Live" : "Test"}</span>
+          <a href={`${other.url}${path}`} className={stripLink(false)} data-testid="site-switch-other">{other.label}</a>
+        </>
+      )}
     </Strip>
   );
 }

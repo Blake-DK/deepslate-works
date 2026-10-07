@@ -72,3 +72,14 @@ export async function* apiStream<T>(path: string, opts: Opts = {}): AsyncGenerat
     await reader.cancel().catch(() => {});
   }
 }
+
+/**
+ * docs/42 T9, the live site only: the test server's api, for the Control Room card. Its own address and its own token
+ * (TEST_SUMMARY_TOKEN), which api-test takes for GET /test/summary and nothing else; null while the test server is off.
+ */
+export async function testServerSummary<T>(timeoutMs = 4000): Promise<T | null> {
+  if (env.TEST_MODE || !env.TEST_STACK || !env.TEST_SUMMARY_TOKEN) return null;
+  const res = await fetch(`${env.TEST_API_URL}/test/summary`, { headers: { authorization: `Bearer ${env.TEST_SUMMARY_TOKEN}`, accept: "application/json" }, signal: AbortSignal.timeout(timeoutMs), cache: "no-store" });
+  if (!res.ok) return fail("/test/summary", res);
+  return (await res.json()) as T;
+}

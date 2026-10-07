@@ -474,15 +474,42 @@ export async function writeSeasonDatapack(s: Season, outDir: string): Promise<st
   return root;
 }
 
+/** "s1, sample" or "s1 sample" as a list of season ids; anything that is not an id is left out. */
+export const parseShip = (raw: string): string[] => [...new Set(raw.split(/[\s,]+/).filter((id) => ID.test(id)))];
+
+/**
+ * docs/42 T5: the seasons a Build makes datapacks of. index.json's `ship`, except on the test server (TEST_MODE=1),
+ * where SEASONS_SHIP replaces it when set, so the real season can be tried there without a commit that would put it
+ * on the live server too. Anywhere else SEASONS_SHIP is ignored.
+ */
+export function shipFor(indexShip: string[], env: NodeJS.ProcessEnv): string[] {
+  const raw = env.SEASONS_SHIP?.trim();
+  return env.TEST_MODE === "1" && raw ? parseShip(raw) : indexShip;
+}
+
+/** The Build's first line about SEASONS_SHIP, when it is set: what it does here. Null when it is not set. */
+export function shipNotice(env: NodeJS.ProcessEnv): string | null {
+  const raw = env.SEASONS_SHIP?.trim();
+  if (!raw) return null;
+  const list = parseShip(raw).join(", ") || "none";
+  return env.TEST_MODE === "1"
+    ? `test server: the season datapacks built are SEASONS_SHIP's (${list}), not index.json's ship`
+    : `SEASONS_SHIP (${list}) is ignored: only the test server builds by it. index.json's ship decides`;
+}
+
 /**
  * `build seasons`, and the last step of `build server`: the datapacks of the seasons index.json's `ship` names go
  * into dist/server/datapacks/, which Sync puts into the world. A season's file with errors stops the build.
  * A season that is not in `ship` is not built there: the real one stays off the server until its opening day,
  * because a boss killed while its advancement exists cannot be earned again when the season starts (docs/34 §8).
  */
-export async function buildSeasons(paths: { seasons: string; dist: string; items?: string }, log: (s: string) => void): Promise<string[]> {
-  const { seasons, index, issues } = await loadSeasons(paths.seasons, paths.items);
+export async function buildSeasons(paths: { seasons: string; dist: string; items?: string }, log: (s: string) => void, env: NodeJS.ProcessEnv = process.env): Promise<string[]> {
+  const loaded = await loadSeasons(paths.seasons, paths.items);
+  const { seasons, issues } = loaded;
   if (issues.length) throw new Error(`season files have errors:\n${issues.map((i) => `  ${i.season}: ${i.message}`).join("\n")}`);
+  const index = { ...loaded.index, ship: shipFor(loaded.index.ship, env) };
+  const unknown = index.ship.filter((id) => !seasons.some((x) => x.id === id));
+  if (unknown.length) throw new Error(`SEASONS_SHIP names ${unknown.join(", ")}, and there is no such season file`);
   const out = path.join(paths.dist, "server", "datapacks");
   await mkdir(out, { recursive: true });
   // a season taken out of `ship` leaves dist/, so the next Sync does not carry it on

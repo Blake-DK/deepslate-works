@@ -14,6 +14,11 @@ import SettingsSection from "../settings/section";
 import { BlockedList } from "../users/section";
 import { setEarlyAccessAction } from "../users/actions";
 import { Flash, HeldCard, KickCard, loadHeld, loadPlayers, RoomCard } from "../server/cards";
+import { env } from "@/env";
+import { getTestState, type TestState } from "@/server/test-mode";
+import { Button } from "@/components/ui/button";
+import { Check } from "@/components/ui/check";
+import { testDoorAction } from "../seasons/test-actions";
 
 export const metadata: Metadata = { title: "Joining" };
 
@@ -74,8 +79,11 @@ export default async function JoiningAdminPage({ searchParams }: { searchParams:
     ]);
     const outside = outsideAll;
     const early = "While \"We're live\" is off, a member with early access can download, press Play and join like any player once it is on.";
+    const test = env.TEST_MODE ? await getTestState(true) : null;
     body = (
       <div className="space-y-4">
+        {env.TEST_MODE && flash}
+        {env.TEST_MODE && <TestDoorCard door={test?.door ?? null} />}
         <SettingsSection searchParams={asSectionQuery(q)} cards={["launch", "joining"]} />
         <Card data-testid="must-vote">
           <CardHeader>
@@ -130,5 +138,33 @@ export default async function JoiningAdminPage({ searchParams }: { searchParams:
     <TabbedPage title="Joining" intro="Who gets into the game: who is waiting at the door, the rules the door goes by, and the entrance room itself." base="/admin/joining" tabs={tabs} current={tab}>
       {body}
     </TabbedPage>
+  );
+}
+
+const DOOR_RULES = [
+  { key: "playFirst", label: "Play first", why: "Members press Play on the site before they join (with the window and the rule of the card below)." },
+  { key: "mustVote", label: "Vote first", why: "An open must-vote poll or vote holds whoever has not answered it." },
+  { key: "newestApp", label: "The newest app", why: "A run of Play counts only from the newest Deepslate Works app the site hands out." },
+] as const;
+
+/** docs/42 T8, the test site only: the door's three rules, off on a new test database, each switched on here to try it. */
+function TestDoorCard({ door }: { door: TestState["door"] | null }) {
+  return (
+    <Card data-testid="test-door">
+      <CardHeader>
+        <CardTitle>The test server&apos;s door</CardTitle>
+        <CardDescription>On the test server these three rules are off unless ticked here, so a tester only links once and is in. Linking itself is always on. Ticked, each works as on the live server.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!door ? <p className="text-sm text-muted-foreground">The test server&apos;s api does not answer, so its door cannot be read.</p> : (
+          <form action={testDoorAction} className="space-y-2 text-sm">
+            {DOOR_RULES.map((r) => (
+              <label key={r.key} className="flex items-start gap-2"><Check type="checkbox" name={r.key} defaultChecked={door[r.key]} /> <span><strong>{r.label}</strong>. <span className="text-muted-foreground">{r.why}</span></span></label>
+            ))}
+            <Button type="submit" size="sm">Save</Button>
+          </form>
+        )}
+      </CardContent>
+    </Card>
   );
 }

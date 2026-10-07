@@ -8,7 +8,7 @@ import { isKnownHarmless } from "../events/parse.js";
 import type { Attachment, Message, Sent, Webhook, Where } from "./webhook.js";
 import type { BotMessage, Component } from "./rest.js";
 import {
-  actionOf, advancementText, asPlayer, asServer, backText, chatText, crashAdminText, crashFeedText, deathRun, deathText, isStale,
+  actionOf, advancementText, asPlayer, asServer, backText, chatText, crashAdminText, crashFeedText, deathRun, deathText, escapeText, isStale,
   joinText, leaveText, LIVE_TITLE, liveText, metaOf, newsMessage, packText, paramsOf, postTitle, problemText, refusedText, reminderMessage,
   restartText, resultOf, seasonPost, seasonReply, stopText, TEST_TEXT, voteClosedText, voteMessage, welcomeText,
   type Brand, type Channel, type FeedEvent, type PollView, type SeasonInfo, type Switches,
@@ -483,13 +483,21 @@ export class Announcer {
         this.problemTimes = this.problemTimes.filter((x) => t - x < 60 * 60_000);
         // the health watch's own lines (meta.health) are never crowded out by the game's errors of the same hour
         const health = Boolean(metaOf(e).health);
-        if ((seen !== undefined && t - seen < PROBLEM_REPEAT_MS) || (!health && this.problemTimes.length >= PROBLEMS_PER_HOUR)) return true;
+        // the sign-in watch says it once per run of failures already, so a second outage the same day is told too
+        const once = metaOf(e).health === "signin";
+        if ((!once && seen !== undefined && t - seen < PROBLEM_REPEAT_MS) ||(!health && this.problemTimes.length >= PROBLEMS_PER_HOUR)) return true;
         const r = await this.send(e, 0, "admin", "problem", asServer(brand, problemText(e.message, 1)));
         if (r.ok) {
           this.problems.set(e.message, t);
           this.problemTimes.push(t);
         }
         return ok(r);
+      }
+      case "WARN": {
+        // the health watch's "well again" (status/health-watch.ts, signin-watch.ts), once per recovery; other WARN
+        // lines stay in the event log only
+        if (!metaOf(e).health || !sw.problems || !this.canAdmin()) return true;
+        return ok(await this.send(e, 0, "admin", "recovered", asServer(brand, escapeText(e.message))));
       }
       case "LINK": {
         if (actionOf(e) !== "link.bind" || resultOf(e) !== "OK" || !sw.firstJoin || !e.actor) return true;

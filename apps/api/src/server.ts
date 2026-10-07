@@ -54,6 +54,7 @@ import { makeBot, votePoster } from "./discord/wire.js";
 import { runAction } from "./actions/run.js";
 import { DumpPush } from "./backup/dump-push.js";
 import { allWell, HealthWatch } from "./status/health-watch.js";
+import { signInRoutes } from "./routes/signin.js";
 import { serverPack } from "./players/pack.js";
 import { currentSeason } from "./seasons/files.js";
 import { SeasonRecorder } from "./seasons/recorder.js";
@@ -73,7 +74,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   app.addHook("onRequest", viaDiscordHook);
   // docs/21 + docs/22: the Discord feed and the bot are made further down; /health reads them when asked
   // `checks` (docs/32 §7 item 3): what the health watch found at its last round; `watch` is false when any is wrong
-  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState(), discordBot: bot ? bot.state() : "off", watch: allWell(healthWatch.checks), checks: healthWatch.checks, checkedAt: healthWatch.lookedAt?.toISOString() ?? null }));
+  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState(), discordBot: bot ? bot.state() : "off", watch: allWell(healthWatch.checks) && healthWatch.signIns.view().failing.length === 0, checks: healthWatch.checks, signIn: healthWatch.signIns.view(), checkedAt: healthWatch.lookedAt?.toISOString() ?? null }));
   modpackRoutes(app, env, ampClient, deps.build, () => pregen.quiesce());
 
   // Console tail, status poller and the wait room run for the life of the process (docs/05, docs/14).
@@ -138,6 +139,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   poller.stateName = (live) => (wake.waking && live.stateCode !== 20 ? "Waking" : live.state);
   statusRoutes(app, ampClient, poller, tail, () => pings.current(), view);
   wakeRoutes(app, wake, view);
+  signInRoutes(app, healthWatch);
   const polls = new PollWatch(log);
   pollRoutes(app, ampClient, tail, () => limbo.actionCtx);
   playerRoutes(app, ampClient, tail, limbo, () => pregen.quiesce());

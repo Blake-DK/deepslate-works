@@ -84,6 +84,21 @@ export const CHANGES: Change[] = [
     date: "2026-10-06",
     lines: ["Nothing on the app's Play tab needs scrolling any more: the window grows to show the whole pinned news and every step, as far as your screen allows."],
   },
+  {
+    id: "2026-10-07-security-tune-up",
+    date: "2026-10-07",
+    lines: [
+      "Discord sign-in works again. Discord changed something on their side yesterday evening, and signing in with Discord failed until this morning. If you were already signed in, you were not affected.",
+      "We ran a full security review of the site and the server this week and have started shipping what it found. None of it changes how you play.",
+      "Tighter checks on who can do admin things: the part of the system that talks to the game server now checks an admin's role for itself.",
+      "Each part of the site now only holds the keys it needs for its own job.",
+      "Our services now run with fewer system permissions than before.",
+      "Admin authenticator codes are protected with their own separate key.",
+      "The site refuses oversized requests and has one fewer public feature that nobody used.",
+      "Our build and deploy pipeline is locked to exact, known versions of the tools it uses, and each deploy now checks that its own setup has not been tampered with before it runs.",
+      "More is on the way: signed launcher updates and encrypted off-site backups.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

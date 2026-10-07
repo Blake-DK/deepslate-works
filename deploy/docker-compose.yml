@@ -96,7 +96,8 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      # web and its database only, never the designer or api: waiting on them made web "unhealthy" (2026-10-07)
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health/live"]
       interval: 30s
       timeout: 5s
       retries: 3

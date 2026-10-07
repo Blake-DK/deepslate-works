@@ -27,10 +27,15 @@ ops_caller() {
 ops_lock() {
   local what=$1 me; me=$(ops_caller)
   mkdir -p "$(dirname "$OPS_LOCK")"
-  exec 9>>"$OPS_LOCK"
-  if ! flock -n 9; then
-    echo "busy, held by $(cat "$OPS_HOLDER" 2>/dev/null || echo 'an unnamed caller')" >&2
-    return 75
+  # deploy.sh running its pulled self (deploy/rerun.sh) still holds the lock on fd 9: keep it, never let go of it
+  if [ -n "${OPS_LOCK_INHERITED:-}" ] && { true >&9; } 2>/dev/null && flock -n 9; then
+    unset OPS_LOCK_INHERITED
+  else
+    exec 9>>"$OPS_LOCK"
+    if ! flock -n 9; then
+      echo "busy, held by $(cat "$OPS_HOLDER" 2>/dev/null || echo 'an unnamed caller')" >&2
+      return 75
+    fi
   fi
   echo "$me since $(date -u '+%Y-%m-%d %H:%M:%S UTC') ($what)" > "$OPS_HOLDER"
   trap ': > "$OPS_HOLDER"' EXIT

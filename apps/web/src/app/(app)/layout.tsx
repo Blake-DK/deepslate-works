@@ -8,5 +8,5 @@ import { AdminSignInNotice } from "@/components/admin-signin-notice";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireOnboardedUser();
   const early = earlyBanner(user, (await getSettings()).live);
-  return <>{early && <EarlyBanner />}{user.role === "ADMIN" && <AdminSignInNotice />}{children}</>;
+  return <>{early && <EarlyBanner />}{user.role === "ADMIN" && <AdminSignInNotice viewerId={user.id} />}{children}</>;
 }

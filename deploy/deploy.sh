@@ -39,32 +39,36 @@ git_here() { as_owner git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core
 # copy kept under /root, which web cannot reach; any difference stops the deploy before anything is fetched. Make the
 # copy once, as root, after reading .git/config by eye (deploy/README.md):
 #   runuser -u <owner> -- git config --local --list | sort > /root/.config/deepslate/git-config.expected
-GIT_CONFIG_EXPECTED="${GIT_CONFIG_EXPECTED:-/root/.config/deepslate/git-config.expected}"
-[ -s "$GIT_CONFIG_EXPECTED" ] || die "$GIT_CONFIG_EXPECTED is missing: read .git/config by eye, then
+. deploy/git-guard.sh
+. deploy/rerun.sh
+check_git_guards() {
+  GIT_CONFIG_EXPECTED="${GIT_CONFIG_EXPECTED:-/root/.config/deepslate/git-config.expected}"
+  [ -s "$GIT_CONFIG_EXPECTED" ] || die "$GIT_CONFIG_EXPECTED is missing: read .git/config by eye, then
   runuser -u $owner -- git config --local --list | sort > $GIT_CONFIG_EXPECTED
 Nothing was deployed."
-config_diff=$(diff <(sort "$GIT_CONFIG_EXPECTED") <(git_here config --local --list | sort) || true)
-[ -z "$config_diff" ] || die ".git/config is not the copy in $GIT_CONFIG_EXPECTED:
+  config_diff=$(diff <(sort "$GIT_CONFIG_EXPECTED") <(git_here config --local --list | sort) || true)
+  [ -z "$config_diff" ] || die ".git/config is not the copy in $GIT_CONFIG_EXPECTED:
 $config_diff
 Look at .git/config before deploying. Update the copy only if the change is yours. Nothing was deployed."
 
-# The same for .git/hooks (deploy/git-guard.sh): only the hooks listed, with their sha256, in a file under /root, and
-# no core.hooksPath anywhere git would read it, since that would point every other git command at another folder.
-# Make the list once, as root, after reading each hook by eye:
-#   (cd .git/hooks && sha256sum pre-push) > /root/.config/deepslate/git-hooks.expected
-. deploy/git-guard.sh
-GIT_HOOKS_EXPECTED="${GIT_HOOKS_EXPECTED:-/root/.config/deepslate/git-hooks.expected}"
-[ -s "$GIT_HOOKS_EXPECTED" ] || die "$GIT_HOOKS_EXPECTED is missing: read each hook in .git/hooks by eye, then
+  # The same for .git/hooks (deploy/git-guard.sh): only the hooks listed, with their sha256, in a file under /root, and
+  # no core.hooksPath anywhere git would read it, since that would point every other git command at another folder.
+  # Make the list once, as root, after reading each hook by eye:
+  #   (cd .git/hooks && sha256sum pre-push) > /root/.config/deepslate/git-hooks.expected
+  GIT_HOOKS_EXPECTED="${GIT_HOOKS_EXPECTED:-/root/.config/deepslate/git-hooks.expected}"
+  [ -s "$GIT_HOOKS_EXPECTED" ] || die "$GIT_HOOKS_EXPECTED is missing: read each hook in .git/hooks by eye, then
   (cd .git/hooks && sha256sum pre-push) > $GIT_HOOKS_EXPECTED
 Nothing was deployed."
-hooks_diff=$(git_hooks_problems .git/hooks "$GIT_HOOKS_EXPECTED")
-[ -z "$hooks_diff" ] || die ".git/hooks is not what $GIT_HOOKS_EXPECTED lists:
+  hooks_diff=$(git_hooks_problems .git/hooks "$GIT_HOOKS_EXPECTED")
+  [ -z "$hooks_diff" ] || die ".git/hooks is not what $GIT_HOOKS_EXPECTED lists:
 $hooks_diff
 Look at .git/hooks before deploying. Update the list only if the change is yours. Nothing was deployed."
-hooks_path=$(as_owner git config --show-origin --get-all core.hooksPath || true)
-[ -z "$hooks_path" ] || die "core.hooksPath is set, so git on this host runs hooks from another folder:
+  hooks_path=$(as_owner git config --show-origin --get-all core.hooksPath || true)
+  [ -z "$hooks_path" ] || die "core.hooksPath is set, so git on this host runs hooks from another folder:
 $hooks_path
 Remove it before deploying. Nothing was deployed."
+}
+check_git_guards
 
 [ -f deploy/.env ] || die "deploy/.env is missing (copy deploy/.env.example)"
 grep -Eq '^GHCR_OWNER=[a-z0-9-]+$' deploy/.env || die "set GHCR_OWNER in deploy/.env (GitHub owner, lower case)"
@@ -101,9 +105,13 @@ if [[ "$running_web" =~ ^[0-9a-f]{40}$ ]] && git_here cat-file -e "${running_web
 else
   migrations_before=unknown
 fi
+before_pull=$(git_here rev-parse HEAD)
 git_here pull --ff-only
 echo "at $(git_here log -1 --format='%h %s')"
 head_sha=$(git_here rev-parse HEAD)
+# Fix 2 (2026-10-07): a pull that changed this script runs the new one, once (deploy/rerun.sh). The first deploy of
+# the build designer ran the old copy, which did not start the designer that the new compose file expected.
+deploy_rerun_if_changed "$before_pull" "$head_sha"
 migrations_after=$(git_here rev-parse -q --verify 'HEAD:apps/web/prisma/migrations' || echo none)
 # CI builds nothing for a push that changes only docs/ or Markdown files at the top (paths-ignore in ci.yml, the same
 # two patterns), so a commit like that has no images of its own: then the images are those of the last commit before

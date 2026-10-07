@@ -3,6 +3,7 @@ import path from "node:path";
 import type { Amp } from "../amp/client.js";
 import { newestDump } from "../backup/dump-push.js";
 import { readBackups } from "../routes/server.js";
+import { SignInWatch, type SignInMethod } from "./signin-watch.js";
 
 // docs/32 §7 item 3 (planner, 2026-10-04): the things that fail without anybody being told. On 2026-10-04 the
 // site handed out a pack the server refused for hours (docs/31 B-01), no database dump had ever left the VPS
@@ -131,6 +132,17 @@ export class HealthWatch {
   stop() {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+  }
+
+  /** Sign-in outcomes from web, told at once (signin-watch.ts). */
+  readonly signIns = new SignInWatch();
+
+  async signInOutcome(method: SignInMethod, ok: boolean): Promise<void> {
+    const now = (this.d.now ?? (() => new Date()))();
+    const a = this.signIns.record(method, ok, now);
+    if (!a) return;
+    await this.d.addEvent({ at: now, kind: a.level, actor: null, message: a.message, meta: { health: "signin", method } }).catch((err) => this.d.log({ err: String(err) }, "health: could not write the event"));
+    this.d.log({ check: "signin", method, level: a.level }, a.message);
   }
 
   /** A failed wake is told at once, not at the next ten-minute round. */

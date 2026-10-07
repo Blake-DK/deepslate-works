@@ -1,0 +1,35 @@
+{
+  "name": "gate",
+  "size": { "x": 11, "y": 13, "z": 5 },
+  "ground": 3,
+  "seed": 3,
+  "materials": {
+    "base": "minecraft:cobbled_deepslate",
+    "wall": [["minecraft:deepslate_bricks", 5], ["minecraft:cracked_deepslate_bricks", 1], ["minecraft:deepslate_tiles", 1]],
+    "trim": "minecraft:polished_deepslate",
+    "path": "minecraft:deepslate_tiles",
+    "copper": "minecraft:waxed_weathered_cut_copper",
+    "light": "minecraft:lantern[hanging=true]"
+  },
+  "steps": [
+    { "op": "box", "from": [0, 0, 0], "to": [10, 2, 4], "with": "base" },
+    { "op": "box", "from": [3, 3, 0], "to": [7, 3, 4], "with": "path" },
+    { "op": "box", "from": [3, 8, 0], "to": [7, 11, 4], "with": "wall" },
+    { "op": "mirror", "axis": "z", "steps": [
+      { "op": "box", "from": [3, 8, 0], "to": [7, 8, 0], "with": "copper" }
+    ] },
+    { "op": "mirror", "axis": "x", "steps": [
+      { "op": "box", "from": [0, 3, 0], "to": [2, 11, 4], "with": "wall" },
+      { "op": "line", "from": [0, 3, 0], "to": [0, 11, 0], "with": "trim" },
+      { "op": "line", "from": [2, 3, 0], "to": [2, 11, 0], "with": "trim" },
+      { "op": "line", "from": [0, 3, 4], "to": [0, 11, 4], "with": "trim" },
+      { "op": "line", "from": [2, 3, 4], "to": [2, 11, 4], "with": "trim" },
+      { "op": "set", "at": [[3, 7, 0], [3, 7, 4]], "with": "minecraft:polished_deepslate_stairs[facing=west,half=top]" }
+    ] },
+    { "op": "repeat", "times": 6, "move": [2, 0, 0], "steps": [
+      { "op": "set", "at": [[0, 12, 0], [0, 12, 4]], "with": "trim" }
+    ] },
+    { "op": "set", "at": [[5, 7, 1], [5, 7, 3]], "with": "light" }
+  ],
+  "markers": [{ "name": "way through", "at": [5, 4, 2], "note": "5 wide and 4 high, running north to south" }]
+}

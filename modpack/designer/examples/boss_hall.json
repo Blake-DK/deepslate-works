@@ -1,0 +1,42 @@
+{
+  "name": "boss_hall",
+  "size": { "x": 25, "y": 18, "z": 25 },
+  "ground": 3,
+  "seed": 11,
+  "materials": {
+    "base": [["minecraft:cobbled_deepslate", 3], ["minecraft:deepslate", 1]],
+    "wall": [["minecraft:deepslate_bricks", 6], ["minecraft:cracked_deepslate_bricks", 2], ["minecraft:deepslate_tiles", 2]],
+    "trim": "minecraft:polished_blackstone_bricks",
+    "floor": [["minecraft:polished_deepslate", 5], ["minecraft:deepslate_tiles", 1]],
+    "roof": [["minecraft:deepslate_tiles", 3], ["minecraft:cracked_deepslate_tiles", 1]],
+    "light": "minecraft:shroomlight"
+  },
+  "steps": [
+    { "op": "box", "from": [0, 0, 0], "to": [24, 2, 24], "with": "base" },
+    { "op": "box", "from": [1, 3, 1], "to": [23, 3, 23], "with": "floor" },
+    { "op": "walls", "from": [1, 4, 1], "to": [23, 13, 23], "with": "wall" },
+    { "op": "mirror", "axis": "both", "steps": [
+      { "op": "line", "from": [1, 4, 1], "to": [1, 13, 1], "with": "trim" },
+      { "op": "line", "from": [1, 4, 7], "to": [1, 13, 7], "with": "trim" },
+      { "op": "line", "from": [7, 4, 1], "to": [7, 13, 1], "with": "trim" },
+      { "op": "repeat", "times": 3, "move": [6, 0, 0], "steps": [
+        { "op": "box", "from": [6, 9, 1], "to": [6, 11, 1], "with": "minecraft:iron_bars" }
+      ] },
+      { "op": "repeat", "times": 3, "move": [0, 0, 6], "steps": [
+        { "op": "box", "from": [1, 9, 6], "to": [1, 11, 6], "with": "minecraft:iron_bars" }
+      ] }
+    ] },
+    { "op": "pyramid", "from": [0, 14, 0], "to": [24, 17, 24], "with": "roof", "hollow": true },
+    { "op": "box", "from": [10, 4, 1], "to": [14, 8, 1], "with": "trim" },
+    { "op": "clear", "from": [11, 4, 1], "to": [13, 7, 1] },
+    { "op": "repeat", "times": 4, "move": [6, 0, 0], "steps": [
+      { "op": "repeat", "times": 4, "move": [0, 0, 6], "steps": [
+        { "op": "set", "at": [[3, 3, 3]], "with": "light" }
+      ] }
+    ] }
+  ],
+  "markers": [
+    { "name": "boss", "at": [12, 4, 12], "note": "the boss's spot, the middle of the floor" },
+    { "name": "door", "at": [12, 4, 1], "note": "the way in, 3 wide and 4 high, facing north" }
+  ]
+}

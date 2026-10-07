@@ -7,12 +7,12 @@ const body = z.object({ view: z.number().int(), sim: z.number().int(), apply: z.
 
 export function distanceRoutes(app: FastifyInstance, distances: Distances) {
   app.get("/server/distance", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     return distances.read();
   });
 
   app.post("/server/distance", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const b = body.safeParse(req.body);
     if (!b.success) return reply.code(400).send({ error: { code: "validation", message: "view, sim: whole numbers; apply: now or next" } });
     try {

@@ -3,7 +3,6 @@ import Fastify from "fastify";
 import { motdValue, brandingRoutes, MOTD_NODE } from "../src/routes/branding.js";
 import type { Amp } from "../src/amp/client.js";
 import type { Env } from "../src/env.js";
-
 // Branding (planner, 2026-10-01): the MOTD goes to AMP's ServerMOTD, the logo is made by `modpack build branding`.
 
 describe("the server description", () => {
@@ -26,7 +25,7 @@ describe("the server description", () => {
     } as unknown as Amp;
     const app = Fastify();
     app.addHook("onRequest", async (req) => {
-      (req as unknown as { caller: unknown }).caller = { role: "ADMIN", userId: null };
+      (req as unknown as { caller: unknown }).caller = { role: "ADMIN", userId: "u1" };
     });
     brandingRoutes(app, { REPO_DIR: "/nonexistent" } as Env, amp);
     const post = () => app.inject({ method: "POST", url: "/branding/motd", payload: { line1: "a", line2: "b" } });
@@ -39,7 +38,7 @@ describe("the server description", () => {
   it("takes only a picked option or an upload as the logo's name", async () => {
     const app = Fastify();
     app.addHook("onRequest", async (req) => {
-      (req as unknown as { caller: unknown }).caller = { role: "ADMIN", userId: null };
+      (req as unknown as { caller: unknown }).caller = { role: "ADMIN", userId: "u1" };
     });
     brandingRoutes(app, { REPO_DIR: "/nonexistent" } as Env, {} as Amp);
     const send = (choice: string, kind = "svg", data = Buffer.from("<svg viewBox='0 0 1 1'></svg>").toString("base64")) => app.inject({ method: "POST", url: "/branding/logo", payload: { choice, kind, data } });

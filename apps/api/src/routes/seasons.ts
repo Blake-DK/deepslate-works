@@ -40,7 +40,7 @@ export function seasonRoutes(app: FastifyInstance, d: SeasonRouteDeps) {
   const event = (file: SeasonFile, message: string, meta: Record<string, unknown>) => d.addEvent({ at: now(), kind: "SEASON", actor: null, message, meta: { season: file.id, ...meta } });
 
   app.get("/seasons", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const file = await d.file();
     if (!file) return { file: null, row: null, clears: 0, members: [], online: [] };
     const row = await d.store.season(file.id);
@@ -56,7 +56,7 @@ export function seasonRoutes(app: FastifyInstance, d: SeasonRouteDeps) {
   });
 
   app.post("/seasons/:op", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const op = (req.params as { op: string }).op;
     const by = req.caller.userId;
     const file = await d.file();

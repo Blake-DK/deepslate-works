@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { callerFromHeaders, tokenMatches } from "../src/auth.js";
+import Fastify from "fastify";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { callerFromHeaders, requireAdmin, serviceAuth, setRoleLookup, tokenMatches } from "../src/auth.js";
 import { instancePath } from "../src/amp/paths.js";
 import { buildServer } from "../src/server.js";
 import { loadEnv } from "../src/env.js";
@@ -36,5 +37,44 @@ describe("server", () => {
     expect(ok.statusCode).toBe(200);
     expect(ok.json().state).toBe("Running");
     await app.close();
+  });
+});
+
+describe("requireAdmin reads the role from the database", () => {
+  const lookup = vi.fn(async (id: string) => ({ "u-admin": "ADMIN", "u-player": "PLAYER" } as Record<string, "ADMIN" | "PLAYER">)[id] ?? null);
+  afterEach(() => {
+    setRoleLookup(async () => "ADMIN"); // back to tests/setup-roles.ts
+    lookup.mockClear();
+  });
+  function app() {
+    setRoleLookup(lookup);
+    const a = Fastify();
+    a.addHook("onRequest", serviceAuth(TOKEN));
+    a.get("/admin-thing", async (req, reply) => {
+      if (!(await requireAdmin(req, reply))) return;
+      return { ok: true };
+    });
+    return a;
+  }
+  const ask = (a: ReturnType<typeof app>, h: Record<string, string>) => a.inject({ method: "GET", url: "/admin-thing", headers: { authorization: `Bearer ${TOKEN}`, ...h } });
+
+  it("refuses the token plus x-user-role ADMIN with a player's id, and lets an admin's id through", async () => {
+    const a = app();
+    expect((await ask(a, { "x-user-role": "ADMIN", "x-user-id": "u-player" })).statusCode).toBe(403);
+    expect((await ask(a, { "x-user-role": "ADMIN", "x-user-id": "u-admin" })).statusCode).toBe(200);
+  });
+
+  it("refuses a missing or unknown id, and a PLAYER header whatever the id", async () => {
+    const a = app();
+    expect((await ask(a, { "x-user-role": "ADMIN" })).statusCode).toBe(403);
+    expect((await ask(a, { "x-user-role": "ADMIN", "x-user-id": "u-nobody" })).statusCode).toBe(403);
+    expect((await ask(a, { "x-user-role": "PLAYER", "x-user-id": "u-admin" })).statusCode).toBe(403);
+  });
+
+  it("asks the database once per member within a few seconds", async () => {
+    const a = app();
+    await ask(a, { "x-user-role": "ADMIN", "x-user-id": "u-admin" });
+    await ask(a, { "x-user-role": "ADMIN", "x-user-id": "u-admin" });
+    expect(lookup).toHaveBeenCalledTimes(1);
   });
 });

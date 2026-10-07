@@ -20,7 +20,7 @@ export function inviteLink(clientId: string, guild: string): string {
 // card gets their state, the bot's name, the server's channels to pick from and the last 20 messages sent.
 export function discordRoutes(app: FastifyInstance, feed: Announcer, bot: Bot | null, env: Env) {
   app.get("/discord", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const cfg = botConfig(env);
     const b = bot?.overview() ?? null;
     return {
@@ -29,7 +29,7 @@ export function discordRoutes(app: FastifyInstance, feed: Announcer, bot: Bot | 
     };
   });
   app.post("/discord/test", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const body = z.object({ channel: z.enum(["feed", "admin", "updates"]) }).safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "channel: feed|admin|updates" } });
     return feed.test(body.data.channel);

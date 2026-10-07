@@ -71,12 +71,12 @@ export async function* consoleStream(tail: ConsoleTail, since: number, opts: { m
 
 export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, restarts: RestartSchedule, backups: BackupWatch) {
   app.get("/server/schedule", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     return { restart: restarts.current };
   });
 
   app.post("/server/restart-in", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const body = z.object({ minutes: z.number().int().min(1).max(120) }).safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "minutes: 1 to 120" } });
     if (tail.state !== 20) return reply.code(409).send({ error: { code: "server_offline", message: "The server isn't running" } });
@@ -84,12 +84,12 @@ export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
   });
 
   app.delete("/server/schedule", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     return { cancelled: await restarts.cancel(req.caller.userId) };
   });
 
   app.get("/server/backup", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const has = (node: string) => (amp.hasPermission ? amp.hasPermission(node) : amp.call<boolean>("Core", "CurrentSessionHasPermission", { PermissionNode: node }).then((v) => v === true)).catch(() => false);
     const [allowed, canList] = await Promise.all([has(BACKUP_PERMISSION), has(BACKUP_LIST_PERMISSION)]);
     const stops = canList ? await amp.call<unknown>("LocalFileBackupPlugin", "BackupWillStopServer").catch(() => null) : null;
@@ -98,7 +98,7 @@ export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
   });
 
   app.post("/server/backup", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const allowed = await (amp.hasPermission ? amp.hasPermission(BACKUP_PERMISSION) : amp.call<boolean>("Core", "CurrentSessionHasPermission", { PermissionNode: BACKUP_PERMISSION })).catch(() => false);
     if (allowed !== true) {
       await audit({ userId: req.caller.userId, action: "server.backup", params: {}, result: "DENIED", detail: "AMP permission missing" });
@@ -118,7 +118,7 @@ export function serverRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
 
   // Newline-delimited JSON, one console entry per line. Admin only; players never reach the console.
   app.get("/console/stream", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const since = Math.max(0, Number((req.query as { since?: string }).since ?? 0) || 0);
     async function* ndjson() {
       for await (const e of consoleStream(tail, since)) yield `${JSON.stringify(e)}\n`;

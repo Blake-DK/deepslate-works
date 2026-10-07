@@ -15,7 +15,7 @@ function fail(reply: FastifyReply, e: unknown) {
 
 export function fileRoutes(app: FastifyInstance, amp: Amp) {
   app.get("/files/list", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     try {
       const f = await getSection("files");
       return await list(amp, (req.query as { dir?: string }).dir ?? "", f.denied);
@@ -25,7 +25,7 @@ export function fileRoutes(app: FastifyInstance, amp: Amp) {
   });
 
   app.get("/files/read", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     try {
       const f = await getSection("files");
       return await preview(amp, (req.query as { path?: string }).path, f.denied, f.maxPreviewKb * 1024);
@@ -35,7 +35,7 @@ export function fileRoutes(app: FastifyInstance, amp: Amp) {
   });
 
   app.get("/files/download", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const asked = (req.query as { path?: string }).path ?? "";
     try {
       const f = await getSection("files");

@@ -42,13 +42,13 @@ export function buildRoutes(app: FastifyInstance, d: { amp: Amp; tail: ConsoleTa
   const running = () => d.tail.state === 20;
 
   app.get("/builds", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const up = await uploads();
     return { builds: await d.book.load(), uploads: up.builds, problems: up.problems, running: running(), max: { side: MAX_BUILD_SIDE, pieces: MAX_BUILD_PIECES } };
   });
 
   app.post("/builds/capture", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const body = capture.safeParse(req.body);
     if (!body.success) return refuse(reply, 400, "validation", "A name (small letters, digits and _), a world and two corners.");
     if (!running()) return refuse(reply, 409, "server_offline", "The server is not running. Start it first.");
@@ -63,7 +63,7 @@ export function buildRoutes(app: FastifyInstance, d: { amp: Amp; tail: ConsoleTa
   });
 
   app.post("/builds/place", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const body = place.safeParse(req.body);
     if (!body.success) return refuse(reply, 400, "validation", "A build, a world and a position.");
     if (!running()) return refuse(reply, 409, "server_offline", "The server is not running. Start it first.");
@@ -89,7 +89,7 @@ export function buildRoutes(app: FastifyInstance, d: { amp: Amp; tail: ConsoleTa
 
   // docs/37 Step 2: the ground of something placed by WorldEdit, which the site does not see: two corners typed in.
   app.post("/builds/lock", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const body = lock.safeParse(req.body);
     if (!body.success) return refuse(reply, 400, "validation", "A world and two corners (X and Z).");
     const { x1, z1, x2, z2 } = body.data;

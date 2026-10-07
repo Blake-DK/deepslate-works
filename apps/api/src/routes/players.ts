@@ -17,11 +17,11 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
 
   // Admin → Control Room, "who is held and why" (docs/32 §7 item 10): the list, and Release for a linked member.
   app.get("/held", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     return { state: tail.state, held: limbo.heldList() };
   });
   app.post("/held/release", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const body = z.object({ name: z.string().regex(/^[A-Za-z0-9_]{3,16}$/) }).safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "name" } });
     const r = await limbo.adminRelease(body.data.name, req.caller.userId);
@@ -45,7 +45,7 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
   });
 
   app.post("/actions/:name", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const name = (req.params as { name: string }).name as ActionName;
     if (!ADMIN_ACTIONS.includes(name) || OWN_ROUTE.has(name)) return reply.code(404).send({ error: { code: "validation", message: "unknown action" } });
     if (tail.state !== 20) return reply.code(409).send({ error: { code: "server_offline", message: "The server isn't running" } });
@@ -56,13 +56,13 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
   app.get("/actions", async () => ADMIN_ACTIONS.map((n) => ({ name: n, role: actions[n].role })));
 
   app.get("/console/tail", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const n = Math.min(300, Math.max(1, Number((req.query as { lines?: string }).lines ?? 200) || 200));
     return { state: tail.state, lines: tail.lines.slice(-n), entries: tail.entries.slice(-n).map((e) => ({ seq: e.seq, text: e.text })) };
   });
 
   app.post("/server/:op", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const op = (req.params as { op: string }).op;
     // `kill` is for a server that hangs while it shuts down (2026-09-29: stuck at "Saving worlds" for ten minutes,
     // AMP in "Stopping" and deaf to Stop). What had not been saved is lost. For an admin, and only while the server

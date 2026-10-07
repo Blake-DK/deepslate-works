@@ -34,7 +34,7 @@ export function brandingRoutes(app: FastifyInstance, env: Env, amp: Amp, build: 
   let busy = false;
 
   app.post("/branding/logo", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const b = logoBody.safeParse(req.body);
     if (!b.success) return reply.code(400).send({ error: { code: "validation", message: "choice, kind (svg|png), data (base64)" } });
     const data = Buffer.from(b.data.data, "base64");
@@ -70,13 +70,13 @@ export function brandingRoutes(app: FastifyInstance, env: Env, amp: Amp, build: 
   const may = () => (amp.hasPermission ? amp.hasPermission(MOTD_PERMISSION) : amp.call<unknown>("Core", "CurrentSessionHasPermission", { PermissionNode: MOTD_PERMISSION }).then((v) => v === true)).catch(() => null);
 
   app.get("/branding/motd", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const [v, allowed] = await Promise.all([amp.call<{ CurrentValue?: unknown }>("Core", "GetConfig", { node: MOTD_NODE }).catch(() => null), may()]);
     return { current: typeof v?.CurrentValue === "string" ? v.CurrentValue : null, allowed, permission: MOTD_PERMISSION };
   });
 
   app.post("/branding/motd", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const b = z.object({ line1: z.string().max(120), line2: z.string().max(120) }).safeParse(req.body);
     if (!b.success) return reply.code(400).send({ error: { code: "validation", message: "line1, line2" } });
     const value = motdValue(b.data.line1, b.data.line2);

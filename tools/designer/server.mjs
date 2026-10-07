@@ -73,6 +73,23 @@ const WHAT = {
   lantern: "Lanterns (hanging)",
   wall_torch: "Torches on a wall (facing: the direction the torch points away from its wall)",
   leaves: "Leaves (they never decay)",
+  carpet: "Carpets (a thin layer on a floor)",
+  small: "Small things: pots, cushions, small tables (no properties)",
+  candle: "Candles (candles: how many on the block; lit)",
+  trapdoor: "Trapdoors: shutters, table tops, low shelves (facing, half, open)",
+  door: "Doors: two blocks, the lower half and the upper half on it, with the same facing and hinge",
+  facing: "Workstations and ladders (facing)",
+  campfire: "Campfires: a hearth (facing, lit)",
+  furniture: "Furniture (facing: the way a chair or a sofa faces; legs, joins and shapes are set by the game)",
+  shutter: "Window shutters (facing, open, hinge)",
+  seat: "Chairs, benches and side tables with a cushion (facing; color: the cushion, none for bare wood)",
+  couch: "Couches (facing, color; they join up by themselves)",
+  cloth: "Tables with a cloth (color, none for bare wood; they join up by themselves)",
+  fancy_bed: "Beds: two blocks, the foot and the head next to it in the direction it faces, with the same facing and color",
+  corner_trim: "Corner trims (facing; half: bottom on a floor, top under a ceiling; trim: how thick)",
+  pillar_trim: "Pillar trims (face: floor, wall or ceiling; facing; trim: how thick)",
+  curtain: "Curtains (facing, open)",
+  lamp: "Lamps (facing: up on a floor, or the side it hangs from; lit)",
 };
 
 /** The block list as the designer reads it: the same text as blockListText in packages/modpack/src/design.ts. */

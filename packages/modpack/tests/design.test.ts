@@ -48,9 +48,9 @@ describe("the block list", () => {
   it("has only blocks the game knows (the vanilla ones are its items, wall torches aside) and none of the refused kinds", () => {
     for (const b of BLOCKS.blocks.filter((x) => x.id.startsWith("minecraft:"))) {
       const name = b.id.slice("minecraft:".length);
-      if (b.kind !== "wall_torch") expect(VANILLA.has(name), b.id).toBe(true);
+      if (b.kind !== "wall_torch" && !name.startsWith("potted_")) expect(VANILLA.has(name), b.id).toBe(true);
     }
-    const refusedKinds = /(^|_)(lava|water|tnt|command_block|structure_block|structure_void|jigsaw|spawner|chest|barrel|shulker_box|hopper|dispenser|dropper|piston|observer|lever|button|pressure_plate|repeater|comparator|redstone|portal|bedrock|obsidian|door|trapdoor|bed|sand|red_sand|gravel|concrete_powder|anvil|bulb)$/;
+    const refusedKinds = /(^|_)(lava|water|tnt|command_block|structure_block|structure_void|jigsaw|spawner|chest|barrel|shulker_box|hopper|dispenser|dropper|piston|observer|lever|button|pressure_plate|repeater|comparator|redstone|portal|bedrock|obsidian|sand|red_sand|gravel|concrete_powder|anvil|bulb|drawer|cabinet|wardrobe|cupboard|counter|sink|oven|furnace|smoker)$/;
     for (const b of BLOCKS.blocks) expect(b.id.slice(b.id.indexOf(":") + 1), b.id).not.toMatch(refusedKinds);
     // the season's portal frame (docs/34 §10) is on it, so a frame can be designed into a temple
     expect(BLOCKS.blocks.some((b) => b.id === "minecraft:reinforced_deepslate")).toBe(true);
@@ -149,6 +149,19 @@ describe("compile", () => {
     expect([at(g, 7, 0, 1), at(g, 6, 0, 1), at(g, 5, 0, 1)]).toEqual(["minecraft:oak_stairs[facing=west]", "minecraft:wall_torch[facing=east]", "minecraft:oak_stairs[facing=north]"]);
     const b = grid([{ op: "mirror", axis: "both", steps: [{ op: "set", at: [[0, 0, 0]], with: "minecraft:oak_stairs[facing=north,half=top]" }] }]);
     expect([at(b, 0, 0, 0), at(b, 7, 0, 0), at(b, 0, 0, 7), at(b, 7, 0, 7)]).toEqual(["minecraft:oak_stairs[facing=north,half=top]", "minecraft:oak_stairs[facing=north,half=top]", "minecraft:oak_stairs[facing=south,half=top]", "minecraft:oak_stairs[facing=south,half=top]"]);
+  });
+  it("a mirror hangs a door or a shutter on the other side, and keeps a door's two halves together (docs/40, interiors)", () => {
+    const g = grid([{ op: "mirror", axis: "x", steps: [
+      { op: "set", at: [[1, 0, 0]], with: "minecraft:oak_door[facing=north,half=lower,hinge=left]" },
+      { op: "set", at: [[1, 1, 0]], with: "minecraft:oak_door[facing=north,half=upper,hinge=left]" },
+      { op: "set", at: [[2, 0, 3]], with: "another_furniture:oak_shutter[facing=east,hinge=right,open=true]" },
+    ] }]);
+    expect([at(g, 6, 0, 0), at(g, 6, 1, 0), at(g, 5, 0, 3)]).toEqual(["minecraft:oak_door[facing=north,half=lower,hinge=right]", "minecraft:oak_door[facing=north,half=upper,hinge=right]", "another_furniture:oak_shutter[facing=west,hinge=left,open=true]"]);
+  });
+  it("furniture takes only what a designer chooses: the way it faces, a cushion's colour; the game sets its joins", () => {
+    expect(at(grid([{ op: "set", at: [[0, 0, 0]], with: "handcrafted:oak_chair[facing=south,color=red]" }]), 0, 0, 0)).toBe("handcrafted:oak_chair[color=red,facing=south]");
+    expect(refused([{ op: "set", at: [[0, 0, 0]], with: "mcwfurnitures:oak_table[north=true]" }])).toBe('step 1: mcwfurnitures:oak_table has no property "north" (it takes none)');
+    expect(refused([{ op: "set", at: [[0, 0, 0]], with: "another_furniture:oak_drawer" }])).toBe("step 1: another_furniture:oak_drawer is not on the block list");
   });
   it("repeat moves its steps each time, nested too", () => {
     const g = grid([{ op: "repeat", times: 3, move: [3, 0, 0], steps: [{ op: "repeat", times: 2, move: [0, 0, 4], steps: [{ op: "line", from: [0, 0, 0], to: [0, 3, 0], with: STONE }] }] }]);

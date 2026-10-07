@@ -15,6 +15,9 @@ import { ukDayTime } from "@/lib/uk-time";
 import { seasonOpAction, seasonTickAction } from "./actions";
 import { BuildsCard, type BuildsView } from "./builds-card";
 import { listBuilds, readPackBlocks } from "@/server/builds";
+import { DesignCard, type DesignCardState } from "./design-card";
+import { designCalls, designerSetUp, isDesignerOwner, listDesigns, loadBlockList, readDesign } from "@/server/designer";
+import { env } from "@/env";
 
 export const metadata: Metadata = { title: "Seasons" };
 
@@ -64,6 +67,11 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
   const view = await apiFetch<View>("/seasons", { caller: { id: admin.id, role: "ADMIN" } }).catch(() => null);
   // docs/37 Step 2: the admin's own Builder tools, for the Builds card's switch
   const me = await db.user.findUnique({ where: { id: admin.id }, select: { builderTools: true, mcUsername: true } });
+  // docs/39 Step 2: the designer card; ?design=<name> opens that design (the uploads list links to it)
+  const designState: DesignCardState = !designerSetUp() ? "off" : isDesignerOwner(admin) ? "ready" : "notOwner";
+  const designs = designState === "ready" ? await listDesigns() : [];
+  const designOpen = designState === "ready" && typeof q.design === "string" ? await readDesign(q.design) : null;
+  const designLeft = designState === "ready" ? await designCalls().then((c) => ({ hour: Math.max(0, 30 - c.hour), day: Math.max(0, env.DESIGNER_DAILY - c.day) })) : null;
   const builds = await apiFetch<BuildsView>("/builds", { caller: { id: admin.id, role: "ADMIN" } }).catch(() => null);
   const file = view?.file ?? null;
   const state = view?.row?.state ?? null;
@@ -161,7 +169,8 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
           )}
         </div>
       )}
-      <BuildsCard view={builds} files={await listBuilds()} mods={(await readPackBlocks())?.namespaces ?? {}} builder={me?.builderTools ? { mcUsername: me.mcUsername } : null} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
+      <DesignCard state={designState} designs={designs} blocks={designState === "ready" ? await loadBlockList() : { kinds: {}, blocks: [] }} initial={designOpen} left={designLeft} />
+      <BuildsCard view={builds} files={await listBuilds()} designed={designs.map((d) => d.name)} mods={(await readPackBlocks())?.namespaces ?? {}} builder={me?.builderTools ? { mcUsername: me.mcUsername } : null} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
     </TabbedPage>
   );
 }

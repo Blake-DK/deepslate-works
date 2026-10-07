@@ -147,6 +147,9 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "build.upload": (p) => `uploaded the build "${s(p.name)}" (${s(p.format)}, ${s(p.kb)} KB)`,
   "build.uploadRemove": (p) => `removed the uploaded build "${s(p.name)}"`,
   "build.lock": (p) => `locked the ground of a build in ${s(p.dimension)} (a server claim)`,
+  // docs/39: the build designer; one event per call to it, which the hourly and daily limits count
+  "build.design": (p) => `asked the build designer for "${s(p.name)}"${p.retry ? " again, to fix its recipe" : ""}${p.passed ? "" : ": no build came back"}`,
+  "build.design.keep": (p) => `kept version ${s(p.version)} of the design "${s(p.name)}" as an upload`,
   // docs/37 Step 2: Builder tools (a tick per admin) and Builder mode (creative, where WorldEdit works)
   "user.builderTools": (p) => (p.on ? `gave ${s(p.displayName, "an admin")} Builder tools` : `took Builder tools away from ${s(p.displayName, "an admin")}`),
   "builder.on": (p) => `switched Builder mode on for ${s(p.player)} (creative, WorldEdit)`,

@@ -16,6 +16,10 @@ export const env = {
   MANIFEST_KEY: str("MANIFEST_KEY"),
   MAP_URL: str("MAP_URL"),
   SERVER_ADDRESS: str("SERVER_ADDRESS", "mc.dsw.test"),
+  // docs/39: the build designer's container; without DESIGNER_URL the card says "Not set up"
+  DESIGNER_URL: str("DESIGNER_URL"),
+  DESIGNER_TOKEN: str("DESIGNER_TOKEN"),
+  DESIGNER_DAILY: Math.max(1, Number.parseInt(str("DESIGNER_DAILY", "80"), 10) || 80),
   isProd: process.env.NODE_ENV === "production",
   get discordEnabled() {
     return Boolean(this.DISCORD_CLIENT_ID && this.DISCORD_CLIENT_SECRET);

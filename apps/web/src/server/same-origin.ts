@@ -6,8 +6,11 @@ import "server-only";
  * member's cookie. No Origin (curl, the app with its token) is not another site.
  */
 export function fromAnotherSite(req: Request): boolean {
-  const origin = req.headers.get("origin");
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  return originIsForeign(req.headers.get("origin"), req.headers.get("x-forwarded-host") ?? req.headers.get("host"));
+}
+
+/** The same check on an Origin and Host already read, for server actions (headers() rather than a Request). */
+export function originIsForeign(origin: string | null, host: string | null): boolean {
   if (!origin || !host) return false;
   try {
     return new URL(origin).host !== host;

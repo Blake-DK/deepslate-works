@@ -74,6 +74,7 @@ model User {
   earlyAccess  Boolean  @default(false) // docs/13: uses the portal as if it were live while it is not
   builderTools Boolean  @default(false) // docs/37: an admin who may switch Builder mode (creative, WorldEdit) on
   sessionVersion Int    @default(0) // raised to end every session the member has (made a player, password sign-in turned off)
+  signInNoticeSeenAt DateTime? // an admin's "seen up to" for the password sign-in notice: sign-ins at or before it are not shown to them
   adminLogin   AdminLogin?
   oneTimeLogins OneTimeLogin[]
   pollAnswers  PollAnswer[]

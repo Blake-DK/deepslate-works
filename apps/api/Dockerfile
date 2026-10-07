@@ -1,6 +1,6 @@
 # Build context is the repo root (pnpm workspace). Built by CI and pushed to GHCR; never built on the VPS.
 FROM node:22-alpine AS base
-RUN apk add --no-cache openssh-client rsync && npm install -g pnpm@10
+RUN apk upgrade --no-cache && apk add --no-cache openssh-client rsync && npm install -g pnpm@10
 WORKDIR /app
 
 FROM base AS deps

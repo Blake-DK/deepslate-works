@@ -59,6 +59,7 @@ services:
     environment:
       DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
       AUTH_SECRET: ${AUTH_SECRET}
+      TOTP_SEAL_KEY: ${TOTP_SEAL_KEY:-}
       AUTH_URL: ${AUTH_URL}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}

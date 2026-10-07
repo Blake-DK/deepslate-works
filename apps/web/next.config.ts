@@ -32,12 +32,9 @@ const nextConfig: NextConfig = {
       to("/admin/branding", "/admin/site"),
     ];
   },
-  images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "mc-heads.net" },
-      { protocol: "https", hostname: "i.ytimg.com" },
-    ],
-  },
+  // Nothing on the site uses next/image, so the optimiser stays off and the middleware answers 404 for /_next/image:
+  // an open optimiser would fetch and cache any picture from the allowed hosts for anyone who asks.
+  images: { unoptimized: true },
 };
 
 export default nextConfig;

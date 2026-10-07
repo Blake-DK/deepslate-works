@@ -163,3 +163,30 @@ is how the two would meet.
 - That longer recipes still come back as clean JSON that passes the checks the first time.
 - That work started with `after` outlives the response here.
 - That a call under the new instructions stays under 600 s.
+
+## Parts 1 and 2 and 3c's tile fix, as built (2026-10-07, on `dev`, in the `dev` → `main` PR)
+
+- **Part 1.** `nameOf`, `designName` and `titleOf` in `apps/web/src/lib/designer.ts`. Letters that do not come apart
+  into a letter and an accent are spelled out (ø o, æ ae, œ oe, ß ss, đ and ð d, þ th, ł l, ı i): "Ødegård's Smedje"
+  is `odegard_s_smedje`. The card shows "Saved as …" from the names of designs and uploads it is given with the page;
+  `designAction` works it out again from the files. The list of designs shows the title too. **Upload:** an empty
+  name is the file's own name. **Capture** keeps `required`: an empty name there would be `build` and replace the
+  last capture called that without a word.
+- **Part 2, a promise held at module level, not `after`.** `web` is one long-lived node process: a promise nobody
+  awaits runs to its end whatever happens to the request that started it, and the action now answers before the
+  work begins, so the page has nothing to hold. `after` would have needed proving and adds nothing here. The process
+  id (`boot`) and the running promises live on `globalThis`: Next can load a module once per route bundle, and a
+  module-level id could differ between the action that wrote the job and the route that reads it, which would show a
+  live job as dead (test: a fresh import of the module has the same id). `src/server/design-jobs.ts`,
+  `GET /api/admin/designer/job`, `jobAction` and `clearJobAction`.
+- **What differs in the details:** the refusal of a second start says the day too ("started Wed 7 Oct, 14:02"); the
+  card's running line says the stage in words; the work writes the new version over the design as it is when the
+  answer comes (read again then), not over the copy it started from. There is no `revalidatePath` in the background
+  (no request there); the card refreshes the page itself when the job ends. The time limits (600 s, 630 s) went in
+  with Part 2.
+- **3c's tile fix:** `render` rounds `tile` down to a multiple of 4. The test draws a box of 41 by 59 at tiles 4, 6,
+  8, 10 and 12 and checks every drawn pixel lies inside the box's outline: with the old rounding it found 27,519
+  pixels outside at tile 6; none now.
+- **Change log:** `2026-10-07-build-designer`.
+- **Not seen yet:** the card in a browser, mid-design, with the page left and opened again, and the other cards
+  working meanwhile. That needs the deploy.

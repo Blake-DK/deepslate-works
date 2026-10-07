@@ -19,7 +19,7 @@ export function builderRoutes(app: FastifyInstance, d: { amp: Amp; tail: Console
   const refuse = (reply: FastifyReply, status: number, code: string, message: string) => reply.code(status).send({ error: { code, message } });
 
   app.post("/builder/mode", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const b = body.safeParse(req.body);
     if (!b.success) return refuse(reply, 400, "validation", "On or off.");
     const target = b.data.userId ?? req.caller.userId;

@@ -1,0 +1,595 @@
+{
+  "name": "watchtower",
+  "size": {
+    "x": 13,
+    "y": 35,
+    "z": 13
+  },
+  "ground": 3,
+  "seed": 7,
+  "materials": {
+    "wall": [
+      [
+        "minecraft:stone_bricks",
+        7
+      ],
+      [
+        "minecraft:cracked_stone_bricks",
+        2
+      ],
+      [
+        "minecraft:mossy_stone_bricks",
+        1
+      ]
+    ],
+    "found": [
+      [
+        "minecraft:cobblestone",
+        3
+      ],
+      [
+        "minecraft:stone_bricks",
+        2
+      ],
+      [
+        "minecraft:mossy_cobblestone",
+        1
+      ]
+    ],
+    "floor": [
+      [
+        "minecraft:stone_bricks",
+        3
+      ],
+      [
+        "minecraft:polished_andesite",
+        1
+      ]
+    ],
+    "wood": "minecraft:dark_oak_planks",
+    "roof": [
+      [
+        "minecraft:dark_oak_planks",
+        3
+      ],
+      [
+        "minecraft:spruce_planks",
+        1
+      ]
+    ],
+    "post": "minecraft:dark_oak_log[axis=y]",
+    "beam_x": "minecraft:dark_oak_log[axis=x]",
+    "beam_z": "minecraft:dark_oak_log[axis=z]",
+    "step": "minecraft:dark_oak_stairs",
+    "rail": "minecraft:dark_oak_fence",
+    "pane": "minecraft:glass_pane",
+    "lamp": "minecraft:lantern[hanging=false]",
+    "hang": "minecraft:lantern[hanging=true]"
+  },
+  "steps": [
+    {
+      "op": "box",
+      "from": [
+        1,
+        0,
+        1
+      ],
+      "to": [
+        11,
+        2,
+        11
+      ],
+      "with": "found"
+    },
+    {
+      "op": "box",
+      "from": [
+        2,
+        3,
+        2
+      ],
+      "to": [
+        10,
+        3,
+        10
+      ],
+      "with": "floor"
+    },
+    {
+      "op": "walls",
+      "from": [
+        1,
+        3,
+        1
+      ],
+      "to": [
+        11,
+        22,
+        11
+      ],
+      "with": "wall"
+    },
+    {
+      "op": "mirror",
+      "axis": "both",
+      "steps": [
+        {
+          "op": "line",
+          "from": [
+            1,
+            3,
+            1
+          ],
+          "to": [
+            1,
+            22,
+            1
+          ],
+          "with": "post"
+        }
+      ]
+    },
+    {
+      "op": "repeat",
+      "times": 2,
+      "move": [
+        0,
+        10,
+        0
+      ],
+      "steps": [
+        {
+          "op": "mirror",
+          "axis": "z",
+          "steps": [
+            {
+              "op": "line",
+              "from": [
+                2,
+                12,
+                1
+              ],
+              "to": [
+                10,
+                12,
+                1
+              ],
+              "with": "beam_x"
+            }
+          ]
+        },
+        {
+          "op": "mirror",
+          "axis": "x",
+          "steps": [
+            {
+              "op": "line",
+              "from": [
+                1,
+                12,
+                2
+              ],
+              "to": [
+                1,
+                12,
+                10
+              ],
+              "with": "beam_z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "repeat",
+      "times": 2,
+      "move": [
+        0,
+        6,
+        0
+      ],
+      "steps": [
+        {
+          "op": "mirror",
+          "axis": "both",
+          "steps": [
+            {
+              "op": "line",
+              "from": [
+                6,
+                10,
+                1
+              ],
+              "to": [
+                6,
+                11,
+                1
+              ],
+              "with": "pane"
+            },
+            {
+              "op": "line",
+              "from": [
+                1,
+                10,
+                6
+              ],
+              "to": [
+                1,
+                11,
+                6
+              ],
+              "with": "pane"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "clear",
+      "from": [
+        5,
+        4,
+        11
+      ],
+      "to": [
+        7,
+        7,
+        11
+      ]
+    },
+    {
+      "op": "mirror",
+      "axis": "x",
+      "steps": [
+        {
+          "op": "line",
+          "from": [
+            4,
+            4,
+            11
+          ],
+          "to": [
+            4,
+            7,
+            11
+          ],
+          "with": "post"
+        }
+      ]
+    },
+    {
+      "op": "line",
+      "from": [
+        4,
+        8,
+        11
+      ],
+      "to": [
+        8,
+        8,
+        11
+      ],
+      "with": "beam_x"
+    },
+    {
+      "op": "stairs",
+      "from": [
+        5,
+        4,
+        2
+      ],
+      "dir": "east",
+      "length": 3,
+      "width": 3,
+      "with": "step"
+    },
+    {
+      "op": "box",
+      "from": [
+        8,
+        7,
+        2
+      ],
+      "to": [
+        10,
+        7,
+        4
+      ],
+      "with": "wood"
+    },
+    {
+      "op": "stairs",
+      "from": [
+        8,
+        8,
+        5
+      ],
+      "dir": "south",
+      "length": 3,
+      "width": 3,
+      "with": "step"
+    },
+    {
+      "op": "box",
+      "from": [
+        8,
+        11,
+        8
+      ],
+      "to": [
+        10,
+        11,
+        10
+      ],
+      "with": "wood"
+    },
+    {
+      "op": "stairs",
+      "from": [
+        7,
+        12,
+        8
+      ],
+      "dir": "west",
+      "length": 3,
+      "width": 3,
+      "with": "step"
+    },
+    {
+      "op": "box",
+      "from": [
+        2,
+        15,
+        8
+      ],
+      "to": [
+        4,
+        15,
+        10
+      ],
+      "with": "wood"
+    },
+    {
+      "op": "stairs",
+      "from": [
+        2,
+        16,
+        7
+      ],
+      "dir": "north",
+      "length": 3,
+      "width": 3,
+      "with": "step"
+    },
+    {
+      "op": "box",
+      "from": [
+        2,
+        19,
+        2
+      ],
+      "to": [
+        4,
+        19,
+        4
+      ],
+      "with": "wood"
+    },
+    {
+      "op": "stairs",
+      "from": [
+        5,
+        20,
+        2
+      ],
+      "dir": "east",
+      "length": 3,
+      "width": 3,
+      "with": "step"
+    },
+    {
+      "op": "box",
+      "from": [
+        1,
+        23,
+        1
+      ],
+      "to": [
+        11,
+        23,
+        11
+      ],
+      "with": "wood"
+    },
+    {
+      "op": "clear",
+      "from": [
+        5,
+        23,
+        2
+      ],
+      "to": [
+        7,
+        23,
+        4
+      ]
+    },
+    {
+      "op": "walls",
+      "from": [
+        1,
+        24,
+        1
+      ],
+      "to": [
+        11,
+        24,
+        11
+      ],
+      "with": "rail"
+    },
+    {
+      "op": "line",
+      "from": [
+        4,
+        24,
+        2
+      ],
+      "to": [
+        4,
+        24,
+        5
+      ],
+      "with": "rail"
+    },
+    {
+      "op": "line",
+      "from": [
+        5,
+        24,
+        5
+      ],
+      "to": [
+        7,
+        24,
+        5
+      ],
+      "with": "rail"
+    },
+    {
+      "op": "mirror",
+      "axis": "both",
+      "steps": [
+        {
+          "op": "line",
+          "from": [
+            1,
+            24,
+            1
+          ],
+          "to": [
+            1,
+            28,
+            1
+          ],
+          "with": "post"
+        }
+      ]
+    },
+    {
+      "op": "pyramid",
+      "from": [
+        0,
+        28,
+        0
+      ],
+      "to": [
+        12,
+        34,
+        12
+      ],
+      "with": "roof",
+      "hollow": true
+    },
+    {
+      "op": "set",
+      "at": [
+        [
+          10,
+          8,
+          2
+        ],
+        [
+          10,
+          12,
+          10
+        ],
+        [
+          2,
+          16,
+          10
+        ],
+        [
+          2,
+          20,
+          2
+        ],
+        [
+          6,
+          25,
+          1
+        ],
+        [
+          6,
+          25,
+          11
+        ],
+        [
+          1,
+          25,
+          6
+        ],
+        [
+          11,
+          25,
+          6
+        ]
+      ],
+      "with": "lamp"
+    },
+    {
+      "op": "line",
+      "from": [
+        6,
+        14,
+        6
+      ],
+      "to": [
+        6,
+        22,
+        6
+      ],
+      "with": "minecraft:chain[axis=y]"
+    },
+    {
+      "op": "set",
+      "at": [
+        [
+          6,
+          13,
+          6
+        ],
+        [
+          6,
+          33,
+          6
+        ]
+      ],
+      "with": "hang"
+    },
+    {
+      "op": "set",
+      "at": [
+        [
+          2,
+          5,
+          6
+        ]
+      ],
+      "with": "minecraft:wall_torch[facing=east]"
+    },
+    {
+      "op": "set",
+      "at": [
+        [
+          10,
+          5,
+          6
+        ]
+      ],
+      "with": "minecraft:wall_torch[facing=west]"
+    }
+  ],
+  "markers": []
+}

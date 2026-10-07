@@ -30,6 +30,11 @@ services:
     container_name: deepslate-db
     restart: unless-stopped
     logging: *logging
+    # Started as the image's own postgres user (70), which owns the data folder, so the entrypoint never needs root
+    # to chown or switch users and the container keeps no Linux capabilities. A fresh data folder must be made 70:70
+    # (or 70:0) with mode 700 before the first start.
+    user: "70:70"
+    cap_drop: [ALL]
     mem_limit: 256m
     command: ["postgres", "-c", "shared_buffers=128MB"]
     networks: [internal]
@@ -51,6 +56,7 @@ services:
     container_name: deepslate-web
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]                     # runs as an unprivileged user and needs no Linux capabilities
     mem_limit: 768m
     networks: [web, internal]
     # docs/31 B-18: the internet-facing container gets the variables it reads and no others. It used to get all of
@@ -59,6 +65,7 @@ services:
     environment:
       DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
       AUTH_SECRET: ${AUTH_SECRET}
+      TOTP_SEAL_KEY: ${TOTP_SEAL_KEY:-}
       AUTH_URL: ${AUTH_URL}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
@@ -124,12 +131,35 @@ services:
     container_name: deepslate-api
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]                     # runs as an unprivileged user and needs no Linux capabilities
     mem_limit: 512m                     # also the cap for `modpack build`, which runs as a child of api
     network_mode: "service:wireguard"   # reachable as deepslate-wg:4000 on `internal` only
-    env_file: .env
+    # Like web, api gets the variables it reads (apps/api/src/env.ts) and no others: not the session secret, the
+    # database password on its own, the OAuth secret or the manifest key. A new variable for api goes here, in env.ts
+    # and in .env.example. Empty means unset (env.ts then takes its default).
     environment:
       DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
       PORTAL_URL: ${AUTH_URL}
+      API_SERVICE_TOKEN: ${API_SERVICE_TOKEN}
+      AMP_URL: ${AMP_URL:-}
+      AMP_INSTANCE_ID: ${AMP_INSTANCE_ID:-}
+      AMP_USERNAME: ${AMP_USERNAME:-}
+      AMP_PASSWORD: ${AMP_PASSWORD:-}
+      AMP_MOCK: ${AMP_MOCK:-}
+      AMP_TUNNEL_IP: ${AMP_TUNNEL_IP:-}
+      RSYNC_TARGET: ${RSYNC_TARGET:-}
+      DEPLOY_KEY_PATH: ${DEPLOY_KEY_PATH:-}
+      LIMBO_POS: ${LIMBO_POS:-}
+      SPAWN_POS: ${SPAWN_POS:-}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      DISCORD_WEBHOOK_FEED: ${DISCORD_WEBHOOK_FEED:-}
+      DISCORD_WEBHOOK_ADMIN: ${DISCORD_WEBHOOK_ADMIN:-}
+      DISCORD_WEBHOOK_UPDATES: ${DISCORD_WEBHOOK_UPDATES:-}
+      MODRINTH_USER_AGENT: ${MODRINTH_USER_AGENT:-}
+      GEOIP_DB: ${GEOIP_DB:-}
+      BACKUP_PUBLIC_KEY: ${BACKUP_PUBLIC_KEY:-}
     volumes:
       # the deploy key, and known_hosts beside it once it has been made (B-23: the AMP host's key is then pinned)
       - ${DEEPSLATE_DIR:-..}/deploy/keys:/run/keys:ro
@@ -164,6 +194,7 @@ services:
     container_name: deepslate-map-relay-inner
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]
     mem_limit: 32m
     network_mode: "service:wireguard"
     command: TCP-LISTEN:8100,fork,reuseaddr TCP:10.77.0.2:8100
@@ -174,28 +205,36 @@ services:
     container_name: deepslate-map-relay-outer
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]
     mem_limit: 32m
     networks: [web, internal]
     command: TCP-LISTEN:8100,fork,reuseaddr TCP:deepslate-wg:8100
     depends_on: [map-relay-inner]
 
-  # The mc-router dashboard on the AMP host (no login of its own), relayed like the map. Caddy lets admins only
-  # through (deploy/Caddyfile.snippet, web /api/auth/verify/admin) and never passes /hook.
+  # The mc-router dashboard on the AMP host (no login of its own), relayed like the map. Off: a deploy starts neither
+  # relay (profile `router`, never passed by deploy.sh). The outer relay sat on the shared `web` network, where every
+  # container of the other sites on this host could open the dashboard without passing Caddy's admin check; the inner
+  # one is reachable from `internal`. Until a design that checks the admin role on every request is built, the
+  # dashboard is reached on the AMP host's own network only. Started by hand: --profile router up -d.
   router-relay-inner:
+    profiles: [router]
     image: alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50
     container_name: deepslate-router-relay-inner
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]
     mem_limit: 32m
     network_mode: "service:wireguard"
     command: TCP-LISTEN:8090,fork,reuseaddr TCP:10.77.0.2:8090
     depends_on: [wireguard]
 
   router-relay-outer:
+    profiles: [router]
     image: alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50
     container_name: deepslate-router-relay-outer
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]
     mem_limit: 32m
     networks: [web, internal]
     command: TCP-LISTEN:8090,fork,reuseaddr TCP:deepslate-wg:8090
@@ -206,6 +245,7 @@ services:
     container_name: deepslate-backups
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]
     mem_limit: 64m
     networks: [internal]
     environment:

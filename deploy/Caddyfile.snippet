@@ -36,6 +36,8 @@ map.deepslate.dsw.test {
 	}
 }
 
+# NOT LOADED, do not add it to the live Caddyfile: both router relays are off (profile `router` in
+# docker-compose.yml) until the dashboard has a design that checks the admin role on every request.
 # mc-router dashboard (on the AMP host, via the WireGuard tunnel relays). Admins only (Alex, 2026-10-07): it has no
 # login of its own, it shows players' addresses and its POST/DELETE calls change live game routes.
 router.deepslate.dsw.test {

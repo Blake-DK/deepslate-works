@@ -12,6 +12,7 @@ import { lockExtras, prepareExtrasLock } from "./extras";
 import type { Manifest } from "./schema";
 import { buildSeasons, loadSeasons } from "./seasons";
 import { buildBuilds } from "./builds";
+import { designFile, designPrompt } from "./design-cli";
 
 const [cmd = "help", ...rest] = process.argv.slice(2);
 const P = modpackPaths();
@@ -145,12 +146,27 @@ async function main() {
       process.exit(0);
     }
     // falls through never
+    // docs/39 Step 0: a recipe file into <name>.nbt and two pictures; the designer's whole system prompt
+    case "design": {
+      if (!rest[0]) {
+        console.error("usage: modpack design <recipe.json> [out dir]");
+        process.exit(1);
+      }
+      const base = process.env.INIT_CWD ?? process.cwd(); // pnpm runs the CLI in packages/modpack
+      await designFile(path.resolve(base, rest[0]), rest[1] ? path.resolve(base, rest[1]) : path.join(P.dist, "designs"), P.root, log);
+      process.exit(0);
+    }
+    // falls through never
+    case "design-prompt":
+      process.stdout.write(await designPrompt(P.root));
+      process.exit(0);
+    // falls through never
     case "sync-server":
       log("sync-server runs inside the api container (it owns the tunnel and the deploy key): POST /modpack/sync via the admin page.");
       process.exit(2);
     // falls through never
     default:
-      log(`usage: modpack <lint|verify-links|lock [--force]|check-sides|build [config|server|installer|items|seasons|all]> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
+      log(`usage: modpack <lint|verify-links|lock [--force]|check-sides|build [config|server|installer|items|seasons|all]|design <recipe.json> [out]|design-prompt> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
       process.exit(cmd === "help" ? 0 : 1);
   }
 }

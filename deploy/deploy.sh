@@ -48,6 +48,24 @@ config_diff=$(diff <(sort "$GIT_CONFIG_EXPECTED") <(git_here config --local --li
 $config_diff
 Look at .git/config before deploying. Update the copy only if the change is yours. Nothing was deployed."
 
+# The same for .git/hooks (deploy/git-guard.sh): only the hooks listed, with their sha256, in a file under /root, and
+# no core.hooksPath anywhere git would read it, since that would point every other git command at another folder.
+# Make the list once, as root, after reading each hook by eye:
+#   (cd .git/hooks && sha256sum pre-push) > /root/.config/deepslate/git-hooks.expected
+. deploy/git-guard.sh
+GIT_HOOKS_EXPECTED="${GIT_HOOKS_EXPECTED:-/root/.config/deepslate/git-hooks.expected}"
+[ -s "$GIT_HOOKS_EXPECTED" ] || die "$GIT_HOOKS_EXPECTED is missing: read each hook in .git/hooks by eye, then
+  (cd .git/hooks && sha256sum pre-push) > $GIT_HOOKS_EXPECTED
+Nothing was deployed."
+hooks_diff=$(git_hooks_problems .git/hooks "$GIT_HOOKS_EXPECTED")
+[ -z "$hooks_diff" ] || die ".git/hooks is not what $GIT_HOOKS_EXPECTED lists:
+$hooks_diff
+Look at .git/hooks before deploying. Update the list only if the change is yours. Nothing was deployed."
+hooks_path=$(as_owner git config --show-origin --get-all core.hooksPath || true)
+[ -z "$hooks_path" ] || die "core.hooksPath is set, so git on this host runs hooks from another folder:
+$hooks_path
+Remove it before deploying. Nothing was deployed."
+
 [ -f deploy/.env ] || die "deploy/.env is missing (copy deploy/.env.example)"
 grep -Eq '^GHCR_OWNER=[a-z0-9-]+$' deploy/.env || die "set GHCR_OWNER in deploy/.env (GitHub owner, lower case)"
 grep -Eq "^DEEPSLATE_DIR=$(pwd)\$" deploy/.env || die "set DEEPSLATE_DIR=$(pwd) in deploy/.env (absolute path of this checkout)"
@@ -154,9 +172,9 @@ fi
 # `chown -R` over deploy/ takes them away from both (it happened on 2026-09-29: api lost rsync).
 for p in deploy/keys/deploy.key deploy/wireguard; do
   [ -e "$p" ] || continue
-  if [ -n "$(find "$p" ! -uid 1000 ! -name 'wg0.conf.example' -print -quit)" ]; then
+  if [ -n "$(find "$p" ! -uid 1000 -print -quit)" ]; then
     [ "$(id -u)" = 0 ] || die "$p must belong to uid 1000; run this once as root"
-    find "$p" ! -name 'wg0.conf.example' -exec chown 1000:1000 {} +
+    find "$p" -exec chown 1000:1000 {} +
     echo "$p given back to uid 1000"
   fi
 done

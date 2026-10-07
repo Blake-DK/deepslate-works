@@ -22,7 +22,7 @@ const LOG_TAIL = 400; // lines; the whole log with ?full=1
 
 export function installRoutes(app: FastifyInstance) {
   app.get("/installs", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const q = list.safeParse(req.query ?? {});
     if (!q.success) return reply.code(400).send({ error: { code: "validation", message: q.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") } });
     const { limit, user, since, until, outcome, mode } = q.data;
@@ -45,7 +45,7 @@ export function installRoutes(app: FastifyInstance) {
   });
 
   app.get("/installs/:id", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const id = z.string().regex(/^[a-z0-9]{8,40}$/).safeParse((req.params as { id?: string }).id);
     if (!id.success) return reply.code(400).send({ error: { code: "validation", message: "id" } });
     const r = await db.installReport.findUnique({ where: { id: id.data }, include: { user: { select: { displayName: true, mcUsername: true } } } });

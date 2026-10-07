@@ -1,0 +1,15 @@
+# Copy to deploy/wireguard/wg_confs/wg0.conf (git-ignored). Keys: `docker run --rm --entrypoint wg lscr.io/linuxserver/wireguard genkey`.
+[Interface]
+Address = 10.77.0.1/24
+ListenPort = 51820
+# The tunnel is for api to reach the AMP host, never the other way: what arrives on wg0 for api (4000), the inner map
+# relay (8100) or the inner mc-router dashboard relay (8090) is dropped. All three listen on 0.0.0.0 inside this
+# namespace; nothing on the homelab end opens a connection to them (deploy/README.md).
+PostUp = iptables -I INPUT -i wg0 -p tcp -m multiport --dports 4000,8090,8100 -j DROP
+PostDown = iptables -D INPUT -i wg0 -p tcp -m multiport --dports 4000,8090,8100 -j DROP
+PrivateKey = <vps private key>
+
+[Peer]
+# AMP host (homelab). It initiates; no Endpoint here.
+PublicKey = <amp host public key>
+AllowedIPs = 10.77.0.2/32

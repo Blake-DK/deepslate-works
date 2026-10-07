@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { db } from "../db.js";
+import { requireAdmin } from "../auth.js";
 import { audit } from "../audit.js";
 import type { Amp } from "../amp/client.js";
 import type { ConsoleTail } from "../amp/console.js";
@@ -57,7 +58,7 @@ export class PollWatch {
 /** POST /polls/opened {question}: the chat line for whoever is playing (the site calls it when an admin opens a poll). */
 export function pollRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, ctx: () => ActionCtx) {
   app.post("/polls/opened", async (req, reply) => {
-    if (req.caller.role !== "ADMIN") return reply.code(403).send({ error: { code: "forbidden", message: "admins only" } });
+    if (!(await requireAdmin(req, reply))) return;
     const question = String((req.body as { question?: unknown } | null)?.question ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, 200);
     if (!question) return reply.code(400).send({ error: { code: "bad_request", message: "question missing" } });
     if (tail.state !== 20 || tail.online.size === 0) return { told: 0 };

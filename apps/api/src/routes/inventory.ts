@@ -26,7 +26,7 @@ type Saved = { savedAt: number };
 
 export function inventoryRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, ctx: () => ActionCtx, saved: Saved, wait = (ms: number) => new Promise((r) => setTimeout(r, ms)), editor?: InventoryEditor, limit = new RateLimit()) {
   app.get("/players/:uuid/data", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const uuid = z.string().uuid().safeParse((req.params as { uuid: string }).uuid);
     if (!uuid.success) return reply.code(400).send({ error: { code: "validation", message: "uuid" } });
     const id = uuid.data.toLowerCase();
@@ -70,7 +70,7 @@ export function inventoryRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTai
 
   // docs/13 §13: change an online player's inventory or ender chest. Admins only, 5 changes a second at most.
   app.post("/players/:name/inventory", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     if (!editor) return reply.code(503).send({ error: { code: "unconfigured", message: "no editor" } });
     const name = MC_NAME.safeParse((req.params as { name: string }).name);
     if (!name.success) return reply.code(400).send({ error: { code: "validation", message: "Minecraft name" } });

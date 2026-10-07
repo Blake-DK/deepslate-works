@@ -85,7 +85,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const serverMods = new ServerMods(ampClient, env.REPO_DIR, log);
   serverMods.start(tail);
   app.get("/modpack/server-mods", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     if ((req.query as { fresh?: string }).fresh === "1") await serverMods.capture();
     return (await db.setting.findUnique({ where: { key: SERVER_MODS_KEY } }))?.value ?? null;
   });

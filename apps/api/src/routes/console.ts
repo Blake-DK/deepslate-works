@@ -13,7 +13,7 @@ import { RateLimit } from "../console/limit.js";
 // no AMP settings, no files.
 export function consoleRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, ctx: () => ActionCtx, limit = new RateLimit()) {
   app.post("/console/send", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const who = req.caller.userId ?? "service";
     if (!limit.take(who)) {
       const typed = (req.body as { command?: unknown } | null)?.command;

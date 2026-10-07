@@ -16,7 +16,7 @@ const busy = new OneAtATime();
 
 export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: typeof runBuild = runBuild, beforeRestart: () => Promise<unknown> = async () => undefined) {
   app.post("/modpack/sync", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const body = z.object({ packVersion: z.string().max(64).optional(), dryRun: z.boolean().optional() }).safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "bad body" } });
     const held = busy.take("sync", req.caller.userId);
@@ -34,7 +34,7 @@ export function modpackRoutes(app: FastifyInstance, env: Env, amp: Amp, build: t
 
   // Streams newline-delimited JSON: {"line": "..."} as the CLI prints, then {"done": true, "ok", "code"}.
   app.post("/modpack/build", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const body = z.object({ target: z.enum(BUILD_TARGETS).default("all") }).safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "target: all|config|server|installer|items" } });
     const held = busy.take("build", req.caller.userId);

@@ -46,7 +46,7 @@ export function pregenRoutes(app: FastifyInstance, tail: ConsoleTail, pregen: Pr
   });
 
   app.post("/pregen/on", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     const body = on.safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: { code: "validation", message: body.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ").slice(0, 300) } });
     try {
@@ -59,20 +59,20 @@ export function pregenRoutes(app: FastifyInstance, tail: ConsoleTail, pregen: Pr
   });
 
   app.post("/pregen/off", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     await pregen.turnOff("asked", req.caller.userId);
     return view();
   });
 
   // BlueMap's config read again (render threads): `bluemap reload`, and a render in hand is asked for again.
   app.post("/pregen/map-reload", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     if (!(await pregen.reloadMap(req.caller.userId))) return reply.code(409).send({ error: { code: "server_offline", message: "The server isn't running, or BlueMap did not take the command." } });
     return view();
   });
 
   app.post("/pregen/cancel", async (req, reply) => {
-    if (!requireAdmin(req, reply)) return;
+    if (!(await requireAdmin(req, reply))) return;
     await pregen.cancel(req.caller.userId);
     return view();
   });

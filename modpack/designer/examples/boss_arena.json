@@ -1,0 +1,361 @@
+{
+  "name": "boss_arena",
+  "size": {
+    "x": 37,
+    "y": 14,
+    "z": 37
+  },
+  "ground": 3,
+  "seed": 7,
+  "materials": {
+    "found": [
+      [
+        "minecraft:cobbled_deepslate",
+        3
+      ],
+      [
+        "minecraft:stone",
+        2
+      ]
+    ],
+    "floor": [
+      [
+        "minecraft:polished_andesite",
+        5
+      ],
+      [
+        "minecraft:andesite",
+        3
+      ],
+      [
+        "minecraft:smooth_stone",
+        2
+      ]
+    ],
+    "wall": [
+      [
+        "minecraft:stone_bricks",
+        6
+      ],
+      [
+        "minecraft:cracked_stone_bricks",
+        2
+      ],
+      [
+        "minecraft:mossy_stone_bricks",
+        1
+      ]
+    ],
+    "stands": [
+      [
+        "minecraft:polished_andesite",
+        3
+      ],
+      [
+        "minecraft:stone_bricks",
+        2
+      ]
+    ],
+    "trim": "minecraft:chiseled_stone_bricks",
+    "edge": "minecraft:stone_bricks",
+    "rail": "minecraft:stone_brick_wall",
+    "steps": "minecraft:stone_brick_stairs",
+    "light": "minecraft:sea_lantern"
+  },
+  "steps": [
+    {
+      "op": "cylinder",
+      "base": [
+        18,
+        0,
+        18
+      ],
+      "radius": 18,
+      "height": 3,
+      "with": "found"
+    },
+    {
+      "op": "cylinder",
+      "base": [
+        18,
+        3,
+        18
+      ],
+      "radius": 18,
+      "height": 1,
+      "with": "floor"
+    },
+    {
+      "op": "set",
+      "at": [
+        [
+          18,
+          3,
+          18
+        ]
+      ],
+      "with": "light"
+    },
+    {
+      "op": "mirror",
+      "axis": "both",
+      "steps": [
+        {
+          "op": "set",
+          "at": [
+            [
+              24,
+              3,
+              18
+            ],
+            [
+              18,
+              3,
+              24
+            ],
+            [
+              24,
+              3,
+              24
+            ],
+            [
+              30,
+              3,
+              18
+            ],
+            [
+              18,
+              3,
+              30
+            ],
+            [
+              27,
+              3,
+              27
+            ]
+          ],
+          "with": "light"
+        }
+      ]
+    },
+    {
+      "op": "cylinder",
+      "base": [
+        18,
+        4,
+        18
+      ],
+      "radius": 14,
+      "height": 3,
+      "with": "wall",
+      "hollow": true
+    },
+    {
+      "op": "cylinder",
+      "base": [
+        18,
+        4,
+        18
+      ],
+      "radius": 15,
+      "height": 3,
+      "with": "stands",
+      "hollow": true
+    },
+    {
+      "op": "cylinder",
+      "base": [
+        18,
+        4,
+        18
+      ],
+      "radius": 16,
+      "height": 4,
+      "with": "stands",
+      "hollow": true
+    },
+    {
+      "op": "cylinder",
+      "base": [
+        18,
+        4,
+        18
+      ],
+      "radius": 17,
+      "height": 5,
+      "with": "stands",
+      "hollow": true
+    },
+    {
+      "op": "cylinder",
+      "base": [
+        18,
+        4,
+        18
+      ],
+      "radius": 18,
+      "height": 6,
+      "with": "wall",
+      "hollow": true
+    },
+    {
+      "op": "cylinder",
+      "base": [
+        18,
+        10,
+        18
+      ],
+      "radius": 18,
+      "height": 1,
+      "with": "trim",
+      "hollow": true
+    },
+    {
+      "op": "cylinder",
+      "base": [
+        18,
+        7,
+        18
+      ],
+      "radius": 14,
+      "height": 1,
+      "with": "rail",
+      "hollow": true
+    },
+    {
+      "op": "mirror",
+      "axis": "z",
+      "steps": [
+        {
+          "op": "clear",
+          "from": [
+            17,
+            4,
+            31
+          ],
+          "to": [
+            19,
+            7,
+            36
+          ]
+        }
+      ]
+    },
+    {
+      "op": "mirror",
+      "axis": "x",
+      "steps": [
+        {
+          "op": "clear",
+          "from": [
+            31,
+            4,
+            17
+          ],
+          "to": [
+            35,
+            12,
+            19
+          ]
+        },
+        {
+          "op": "box",
+          "from": [
+            32,
+            4,
+            17
+          ],
+          "to": [
+            35,
+            4,
+            19
+          ],
+          "with": "edge"
+        },
+        {
+          "op": "box",
+          "from": [
+            33,
+            5,
+            17
+          ],
+          "to": [
+            35,
+            5,
+            19
+          ],
+          "with": "edge"
+        },
+        {
+          "op": "box",
+          "from": [
+            34,
+            6,
+            17
+          ],
+          "to": [
+            35,
+            6,
+            19
+          ],
+          "with": "edge"
+        },
+        {
+          "op": "box",
+          "from": [
+            35,
+            7,
+            17
+          ],
+          "to": [
+            35,
+            7,
+            19
+          ],
+          "with": "edge"
+        },
+        {
+          "op": "stairs",
+          "from": [
+            31,
+            4,
+            17
+          ],
+          "dir": "east",
+          "length": 5,
+          "width": 3,
+          "with": "steps"
+        }
+      ]
+    }
+  ],
+  "markers": [
+    {
+      "name": "boss",
+      "at": [
+        18,
+        4,
+        18
+      ],
+      "note": "boss spawn point, centre of the fighting floor"
+    },
+    {
+      "name": "north_gate",
+      "at": [
+        18,
+        4,
+        1
+      ],
+      "note": "gate 3 wide, 4 high"
+    },
+    {
+      "name": "south_gate",
+      "at": [
+        18,
+        4,
+        35
+      ],
+      "note": "gate 3 wide, 4 high"
+    }
+  ]
+}

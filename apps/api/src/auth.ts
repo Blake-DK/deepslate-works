@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { db } from "./db.js";
 
 export const MC_USERNAME_RE = /^[A-Za-z0-9_]{3,16}$/;
 export type Role = "ADMIN" | "PLAYER";
@@ -39,10 +40,36 @@ export function serviceAuth(token: string) {
   };
 }
 
-export function requireAdmin(req: FastifyRequest, reply: FastifyReply) {
-  if (req.caller.role !== "ADMIN") {
-    reply.code(403).send({ error: { code: "forbidden", message: "admin only" } });
-    return false;
-  }
-  return true;
+/** A member's role as the database has it; null for an id that is no member. Replaced in tests (setRoleLookup). */
+export type RoleLookup = (userId: string) => Promise<Role | null>;
+const fromDb: RoleLookup = async (id) => (await db.user.findUnique({ where: { id }, select: { role: true } }))?.role ?? null;
+let lookupRole: RoleLookup = fromDb;
+const ROLE_TTL_MS = 5_000;
+const roles = new Map<string, { role: Role | null; at: number }>();
+
+export function setRoleLookup(f: RoleLookup | null) {
+  lookupRole = f ?? fromDb;
+  roles.clear();
+}
+
+async function roleOf(userId: string): Promise<Role | null> {
+  const now = Date.now();
+  const hit = roles.get(userId);
+  if (hit && now - hit.at < ROLE_TTL_MS) return hit.role;
+  const role = await lookupRole(userId);
+  if (roles.size > 1000) roles.clear();
+  roles.set(userId, { role, at: now });
+  return role;
+}
+
+/**
+ * Admin only. The x-user-role header is web's word, so it is not enough on its own: the member named by x-user-id must
+ * be an admin in the database too (read at most every 5 s per member). A missing or unknown id is refused. Keep this
+ * check here, in api, whatever web already checked.
+ */
+export async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<boolean> {
+  const id = req.caller.userId;
+  if (req.caller.role === "ADMIN" && id && (await roleOf(id)) === "ADMIN") return true;
+  reply.code(403).send({ error: { code: "forbidden", message: "admin only" } });
+  return false;
 }

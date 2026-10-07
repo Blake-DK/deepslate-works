@@ -1,5 +1,5 @@
 import "server-only";
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { hash as argonHash, verify as argonVerify } from "@node-rs/argon2";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
@@ -9,10 +9,13 @@ import { base32Encode, verifyTotp } from "./totp";
 import { adminLockouts } from "./lockout";
 import type { LoginRecord, RecoveryEntry, SignInDeps, SignInOutcome } from "./admin-core";
 import { normaliseRecovery } from "./admin-core";
+import { openSecret, resealed, sealSecret } from "./seal";
+
+export { openSecret, sealSecret };
 
 // Admin password sign-in (planner, 2026-10-01): storage. The password is hashed with argon2id; the authenticator
-// secret is encrypted with a key made from AUTH_SECRET (a copy of the database alone cannot make codes); recovery
-// codes are kept only as an HMAC.
+// secret is encrypted (seal.ts: with TOTP_SEAL_KEY when set, else a key made from AUTH_SECRET; a copy of the
+// database alone cannot make codes); recovery codes are kept only as an HMAC.
 
 // OWASP's argon2id settings: 19 MiB, 2 passes, 1 lane. @node-rs/argon2 uses argon2id unless told otherwise.
 const ARGON = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
@@ -25,26 +28,6 @@ function key(purpose: string): Buffer {
   const secret = process.env.AUTH_SECRET;
   if (!secret) throw new Error("AUTH_SECRET is not set");
   return createHash("sha256").update(`deepslate:${purpose}:${secret}`).digest();
-}
-
-export function sealSecret(plain: string): string {
-  const iv = randomBytes(12);
-  const c = createCipheriv("aes-256-gcm", key("totp"), iv);
-  const ct = Buffer.concat([c.update(plain, "utf8"), c.final()]);
-  return `v1:${iv.toString("base64url")}:${c.getAuthTag().toString("base64url")}:${ct.toString("base64url")}`;
-}
-
-export function openSecret(sealed: string | null): string | null {
-  if (!sealed) return null;
-  const [v, iv, tag, ct] = sealed.split(":");
-  if (v !== "v1" || !iv || !tag || !ct) return null;
-  try {
-    const d = createDecipheriv("aes-256-gcm", key("totp"), Buffer.from(iv, "base64url"));
-    d.setAuthTag(Buffer.from(tag, "base64url"));
-    return Buffer.concat([d.update(Buffer.from(ct, "base64url")), d.final()]).toString("utf8");
-  } catch {
-    return null;
-  }
 }
 
 export const hashRecovery = (code: string) => createHmac("sha256", key("recovery")).update(normaliseRecovery(code)).digest("hex");
@@ -77,6 +60,7 @@ export const signInDeps: SignInDeps = {
   },
   async acceptStep(userId, step) {
     const r = await db.adminLogin.updateMany({ where: { userId, OR: [{ lastStep: null }, { lastStep: { lt: step } }] }, data: { lastStep: step } });
+    if (r.count === 1) await resealOld(userId);
     return r.count === 1;
   },
   async useRecovery(userId, index) {
@@ -92,6 +76,17 @@ export const signInDeps: SignInDeps = {
   hashRecovery,
   now: () => Date.now(),
 };
+
+/** After a good code: a secret sealed the old way (from AUTH_SECRET) is sealed again with TOTP_SEAL_KEY (seal.ts). */
+async function resealOld(userId: string): Promise<void> {
+  const row = await db.adminLogin.findUnique({ where: { userId }, select: { totpSecret: true, pendingSecret: true } });
+  for (const field of ["totpSecret", "pendingSecret"] as const) {
+    const old = row?.[field] ?? null;
+    const next = resealed(old);
+    // only while the row still holds what was read: a new authenticator set up meanwhile is not overwritten
+    if (old && next) await db.adminLogin.updateMany({ where: { userId, [field]: old }, data: { [field]: next } });
+  }
+}
 
 /**
  * The current code of the member's own authenticator checks out (for changes that need one). Uses up the code.

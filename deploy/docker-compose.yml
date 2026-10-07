@@ -152,6 +152,9 @@ services:
       AMP_PASSWORD: ${AMP_PASSWORD:-}
       AMP_MOCK: ${AMP_MOCK:-}
       AMP_TUNNEL_IP: ${AMP_TUNNEL_IP:-}
+      ROUTER_DASH_URL: ${ROUTER_DASH_URL:-}
+      # Admin → Server → Router never removes the route players join by; without it here, that guard is off
+      SERVER_ADDRESS: ${SERVER_ADDRESS:-}
       RSYNC_TARGET: ${RSYNC_TARGET:-}
       DEPLOY_KEY_PATH: ${DEPLOY_KEY_PATH:-}
       LIMBO_POS: ${LIMBO_POS:-}

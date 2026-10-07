@@ -16,6 +16,10 @@ concurrency:
   group: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'installer-main' || format('installer-{0}', github.run_id) }}
   cancel-in-progress: false
 
+# The token every job gets reads the repository and nothing else; a job that pushes an image says so in its own block.
+permissions:
+  contents: read
+
 jobs:
   # 2.0.x: the PowerShell app. Its self test runs where it was written for, pwsh on Linux (it pretends Windows with
   # scratch files); the window then on a real Windows desktop: Setup.bat's hand-over, no console window, in front,
@@ -24,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Self test (pwsh)
         run: pwsh -NoProfile -File installer/DeepslateWorks.ps1 -SelfTest
 
@@ -32,12 +36,12 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: The window on a Windows desktop
         timeout-minutes: 8
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-smoke.ps1 -Out shots
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: installer-2-windows
@@ -51,7 +55,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Version
         id: v
         shell: pwsh
@@ -91,7 +95,7 @@ jobs:
         timeout-minutes: 10
         shell: pwsh
         run: dotnet test installer/tests/DeepslateWorks.Tests/DeepslateWorks.Tests.csproj -c Release --logger "trx;LogFileName=tests.trx" --logger "console;verbosity=normal" --results-directory shots/tests
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: deepslate-works-${{ steps.v.outputs.version }}
@@ -110,7 +114,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: deepslate-works-*
           merge-multiple: true

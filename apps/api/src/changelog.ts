@@ -99,6 +99,14 @@ export const CHANGES: Change[] = [
       "More is on the way: signed launcher updates and encrypted off-site backups.",
     ],
   },
+  {
+    id: "2026-10-07-build-designer",
+    date: "2026-10-07",
+    lines: [
+      "New buildings are on the way. The site now has a build designer for Alex: a building described in words is drawn from every side, changed on request and kept when it is right.",
+      "A build's name can now be written any way you like (\"Boss Temple\" becomes boss_temple), and a design carries on by itself while the page is closed.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

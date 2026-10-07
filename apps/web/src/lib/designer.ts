@@ -5,12 +5,52 @@ import { compileGrid, DesignError, parseRecipe, type BlockList, type Recipe } fr
 
 export const DESIGN_NAME = /^[a-z0-9_]{2,24}$/;
 export const MAX_ASK = 2000;
+export const MAX_TITLE = 60;
+
+/** Letters that do not come apart into a plain letter and an accent. */
+const SPELL: Record<string, string> = { ø: "o", æ: "ae", œ: "oe", ß: "ss", đ: "d", ð: "d", þ: "th", ł: "l", ı: "i" };
+
+/** Anything as small letters, digits and single `_`: accents off, every other run of characters one `_`, 24 at most. */
+export function nameOf(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[øæœßđðþłı]/g, (c) => SPELL[c] ?? "_")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 24)
+    .replace(/_+$/, "");
+}
+
+/**
+ * docs/40 Part 1: the name a design (or an upload, or a capture) is kept under, from whatever was typed. Nothing usable
+ * typed: the first three words of the ask longer than two letters; still nothing: "build". A name in `taken` gets
+ * _2, _3 … (cut to fit). The card shows it as it is typed; the action works it out again and never trusts the card.
+ */
+export function designName(typed: string, ask = "", taken: ReadonlySet<string> = new Set()): string {
+  let n = nameOf(typed);
+  if (n.length < 2) n = nameOf(nameOf(ask).split("_").filter((w) => w.length > 2).slice(0, 3).join("_"));
+  if (n.length < 2) n = "build";
+  if (!taken.has(n)) return n;
+  for (let i = 2; ; i++) {
+    const end = `_${i}`;
+    const c = `${n.slice(0, 24 - end.length).replace(/_+$/, "")}${end}`;
+    if (!taken.has(c)) return c;
+  }
+}
+
+/** What was typed, kept as the design's title (the card's heading): trimmed, 60 characters at most, or none. */
+export const titleOf = (typed: string): string | undefined => typed.trim().replace(/\s+/g, " ").slice(0, MAX_TITLE) || undefined;
 
 export type DesignTokens = { input: number; cacheWrite: number; cacheRead: number; output: number };
 export type DesignVersion = { n: number; at: string; ask: string; say: string; recipe: Recipe; ms: number; tokens: DesignTokens; fixed: boolean };
-/** data/builds/designs/<name>.json: every version, which one is current, and which one was kept as an upload. */
-export type DesignFile = { name: string; current: number; versions: DesignVersion[]; kept: { version: number; at: string } | null };
-export type DesignSummary = { name: string; versions: number; current: number; kept: number | null; at: string };
+/**
+ * data/builds/designs/<name>.json: every version, which one is current, and which one was kept as an upload. `title`
+ * is what the admin typed as the name (docs/40); designs made before have none and show the name.
+ */
+export type DesignFile = { name: string; title?: string; current: number; versions: DesignVersion[]; kept: { version: number; at: string } | null };
+export type DesignSummary = { name: string; title?: string; versions: number; current: number; kept: number | null; at: string };
 
 /**
  * The designer's text read: a recipe that passes our checks ("build"), one that does not ("refused", with the reason,
@@ -52,17 +92,18 @@ export function readAnswer(text: string, name: string, blocks: BlockList): Answe
 export const fixAsk = (reason: string) => `The recipe you returned was refused by the checks: ${reason}. Fix that, keep everything else, and return the whole recipe.`;
 
 /** A design with a new version, which becomes the current one. */
-export function withVersion(design: DesignFile | null, name: string, v: Omit<DesignVersion, "n">): DesignFile {
+export function withVersion(design: DesignFile | null, name: string, v: Omit<DesignVersion, "n">, title?: string): DesignFile {
   const versions = design?.versions ?? [];
   const n = versions.reduce((m, x) => Math.max(m, x.n), 0) + 1;
-  return { name, current: n, versions: [...versions, { ...v, n }], kept: design?.kept ?? null };
+  const t = design ? design.title : title;
+  return { name, ...(t ? { title: t } : {}), current: n, versions: [...versions, { ...v, n }], kept: design?.kept ?? null };
 }
 
 export const currentVersion = (d: DesignFile): DesignVersion => d.versions.find((v) => v.n === d.current) ?? d.versions[d.versions.length - 1]!;
 
 export function summary(d: DesignFile): DesignSummary {
   const last = d.versions[d.versions.length - 1];
-  return { name: d.name, versions: d.versions.length, current: d.current, kept: d.kept?.version ?? null, at: last?.at ?? "" };
+  return { name: d.name, ...(d.title ? { title: d.title } : {}), versions: d.versions.length, current: d.current, kept: d.kept?.version ?? null, at: last?.at ?? "" };
 }
 
 /** The designer's own 429 (tools/designer/server.mjs) in the words of web's limit message. */

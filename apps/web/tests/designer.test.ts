@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BlockList } from "modpack/design";
-import { currentVersion, designerRefusal, fixAsk, overLimit, readAnswer, summary, withVersion, type DesignFile } from "@/lib/designer";
+import { currentVersion, designerRefusal, designName, fixAsk, nameOf, overLimit, readAnswer, summary, titleOf, withVersion, type DesignFile } from "@/lib/designer";
 
 // docs/39 Step 2: the build designer from the site. The designer's answers are read and checked here, the versions
 // kept; the container is a small local server standing in for deepslate-designer.
@@ -15,6 +15,35 @@ const MODPACK = path.resolve(__dirname, "..", "..", "..", "modpack");
 const BLOCKS = JSON.parse(readFileSync(path.join(MODPACK, "designer", "blocks.json"), "utf8")) as BlockList;
 const GATE = JSON.parse(readFileSync(path.join(MODPACK, "designer", "examples", "gate.json"), "utf8")) as Record<string, unknown>;
 const TOKEN = "k".repeat(40);
+
+describe("any name (docs/40 Part 1)", () => {
+  it("is made into small letters, digits and single _, accents off, 24 at most", () => {
+    expect(designName("Boss Temple")).toBe("boss_temple");
+    expect(designName("  Café  du   Nord!! ")).toBe("cafe_du_nord");
+    expect(designName("Ødegård's Smedje")).toBe("odegard_s_smedje");
+    expect(designName("Straße / Tor")).toBe("strasse_tor");
+    expect(designName("The Great Hall of the Mountain King")).toBe("the_great_hall_of_the_mo");
+    expect(designName("a-very-long-name-ending-in-a-dash-")).toBe("a_very_long_name_ending");
+    expect(nameOf("___")).toBe("");
+  });
+  it("nothing usable typed: three words of the ask longer than two letters, else build", () => {
+    expect(designName("", "A temple for the boss portal at spawn")).toBe("temple_for_the");
+    expect(designName("!", "a 40 by 40 hall")).toBe("hall");
+    expect(designName("x", "a b")).toBe("build");
+  });
+  it("a name a design or an upload has gets _2, _3 …, cut to fit", () => {
+    expect(designName("Boss Temple", "", new Set(["boss_temple"]))).toBe("boss_temple_2");
+    expect(designName("Boss Temple", "", new Set(["boss_temple", "boss_temple_2"]))).toBe("boss_temple_3");
+    expect(designName("abcdefghijklmnopqrstuvwx", "", new Set(["abcdefghijklmnopqrstuvwx"]))).toBe("abcdefghijklmnopqrstuv_2");
+  });
+  it("keeps what was typed as the title, 60 characters at most", () => {
+    expect(titleOf("  Boss   Temple ")).toBe("Boss Temple");
+    expect(titleOf("   ")).toBeUndefined();
+    expect(titleOf("x".repeat(80))).toHaveLength(60);
+    const d = withVersion(null, "boss_temple", { at: "2026-10-07T08:00:00.000Z", ask: "a", say: "", recipe: GATE as never, ms: 1, tokens: { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 }, fixed: false }, "Boss Temple");
+    expect([d.title, withVersion(d, "boss_temple", currentVersion(d)).title, summary(d).title]).toEqual(["Boss Temple", "Boss Temple", "Boss Temple"]);
+  });
+});
 
 describe("reading the designer's answer", () => {
   it("takes one JSON object with a recipe that passes, under the admin's name for it", () => {

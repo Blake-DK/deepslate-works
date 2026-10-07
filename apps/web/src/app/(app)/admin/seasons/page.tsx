@@ -17,6 +17,7 @@ import { BuildsCard, type BuildsView } from "./builds-card";
 import { listBuilds, readPackBlocks } from "@/server/builds";
 import { DesignCard, type DesignCardState } from "./design-card";
 import { designCalls, designerSetUp, isDesignerOwner, listDesigns, loadBlockList, readDesign } from "@/server/designer";
+import { currentJob } from "@/server/design-jobs";
 import { env } from "@/env";
 
 export const metadata: Metadata = { title: "Seasons" };
@@ -72,6 +73,8 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
   const designs = designState === "ready" ? await listDesigns() : [];
   const designOpen = designState === "ready" && typeof q.design === "string" ? await readDesign(q.design) : null;
   const designLeft = designState === "ready" ? await designCalls().then((c) => ({ hour: Math.max(0, 30 - c.hour), day: Math.max(0, env.DESIGNER_DAILY - c.day) })) : null;
+  const designJob = designState === "ready" ? await currentJob() : null; // docs/40 Part 2: a design that carries on
+  const uploads = await listBuilds();
   const builds = await apiFetch<BuildsView>("/builds", { caller: { id: admin.id, role: "ADMIN" } }).catch(() => null);
   const file = view?.file ?? null;
   const state = view?.row?.state ?? null;
@@ -169,8 +172,8 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
           )}
         </div>
       )}
-      <DesignCard state={designState} designs={designs} blocks={designState === "ready" ? await loadBlockList() : { kinds: {}, blocks: [] }} initial={designOpen} left={designLeft} />
-      <BuildsCard view={builds} files={await listBuilds()} designed={designs.map((d) => d.name)} mods={(await readPackBlocks())?.namespaces ?? {}} builder={me?.builderTools ? { mcUsername: me.mcUsername } : null} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
+      <DesignCard state={designState} designs={designs} blocks={designState === "ready" ? await loadBlockList() : { kinds: {}, blocks: [] }} initial={designOpen} left={designLeft} job={designJob} taken={[...designs.map((d) => d.name), ...uploads.map((b) => b.name)]} />
+      <BuildsCard view={builds} files={uploads} designed={designs.map((d) => d.name)} mods={(await readPackBlocks())?.namespaces ?? {}} builder={me?.builderTools ? { mcUsername: me.mcUsername } : null} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
     </TabbedPage>
   );
 }

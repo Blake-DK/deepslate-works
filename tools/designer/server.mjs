@@ -24,7 +24,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
-export const LIMITS = { ask: 2000, recipe: 64 * 1024, body: 80 * 1024, output: 2 * 1024 * 1024, timeoutMs: 420_000 };
+export const LIMITS = { ask: 2000, recipe: 64 * 1024, body: 80 * 1024, output: 2 * 1024 * 1024, timeoutMs: 600_000 };
 export const RATE = { hourly: 30, daily: 80 };
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;

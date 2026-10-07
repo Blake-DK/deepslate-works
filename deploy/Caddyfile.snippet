@@ -2,10 +2,10 @@
 
 deepslate.dsw.test {
 	import common
-	# No request body above what the biggest server action takes (26 MB of poll pictures, next.config.ts); the routes
-	# that read JSON hold their own, smaller limit (apps/web/src/server/read-json.ts).
+	# No request body above 50 MB (Alex, 2026-10-07): room above the biggest server action (26 MB of poll pictures,
+	# next.config.ts). The routes that read JSON hold their own, smaller limit (apps/web/src/server/read-json.ts).
 	request_body {
-		max_size 30MB
+		max_size 50MB
 	}
 	header X-Frame-Options SAMEORIGIN
 	reverse_proxy deepslate-web:3000
@@ -14,6 +14,10 @@ deepslate.dsw.test {
 # Live map (BlueMap on the AMP host, via the WireGuard tunnel relays). Login enforced by the portal.
 map.deepslate.dsw.test {
 	import common
+	# the same body limit as the site's block; the map only ever reads
+	request_body {
+		max_size 50MB
+	}
 	# Only the portal may show the map inside its own pages (Alex, 2026-09-29).
 	header {
 		Content-Security-Policy "frame-ancestors https://deepslate.dsw.test"

@@ -270,3 +270,11 @@ rules (foundation, the portal frame of reinforced deepslate unlit and marked, no
 - **Time:** the designer gives up at 900 s, web waits 930 s, a job (the first call and at most one send-back) is
   given up at 32 minutes. The card says "about 10 minutes, up to 15".
 - The prompt is 34,800 bytes.
+- **The furnished test** (the same container run as 3b, `high` effort, 900 s allowed): "a two-storey dwarven inn in
+  deepslate and dark oak: a tavern hall with long tables, benches and a big hearth on the ground floor, and four
+  bedrooms upstairs". 738 s, 70,226 tokens out, 153 MB, a recipe that passed the checks the first time: 41 by 44 by
+  41, 8,958 blocks, 16 parts; the upper floor of dark oak planks at y 10 with its stair hole; 212 furniture and fitting
+  blocks of 49 kinds (long tables with cloths, benches facing them, crockery, candles, a hearth with a trophy and a
+  couch, a bar, a kitchen with a campfire under a hood, four bedrooms each with a bed, side table, lamp, carpet,
+  table, candle and chair). The picture still draws furniture as whole cubes (3c, not built), so the rooms read by
+  colour only.

@@ -6,15 +6,15 @@ import { env } from "@/env";
 import { db } from "@/server/db";
 import { BUILDS_DIR } from "@/server/builds";
 import { P } from "@/server/modpack/lock";
-import { DESIGN_NAME, summary, type DesignFile, type DesignSummary, type DesignTokens } from "@/lib/designer";
+import { DESIGN_NAME, designerRefusal, summary, type DesignFile, type DesignSummary, type DesignTokens } from "@/lib/designer";
 
 // docs/39 Step 2: the build designer from the site. web calls the `designer` container (docs/39 Step 1) on the
 // `internal` network with DESIGNER_TOKEN; it never sees the login. Designs are kept as data/builds/designs/<name>.json
 // (not in git, like the uploads); api's Build reads only the top of data/builds, so it never sees them.
 
 export const DESIGNS_DIR = path.join(BUILDS_DIR, "designs");
-/** A call takes 2 to 4 minutes (docs/39 Step 0.4); the container gives up at 7. */
-const CALL_TIMEOUT_MS = 450_000;
+/** A call took 2 to 4 minutes in docs/39 Step 0.4; the container gives up at 10 (docs/40 Part 2), web half a minute later. */
+const CALL_TIMEOUT_MS = 630_000;
 
 export const designerSetUp = () => Boolean(env.DESIGNER_URL && env.DESIGNER_TOKEN);
 
@@ -79,9 +79,10 @@ export async function askDesigner(body: { name: string; ask: string; recipe: Rec
       cache: "no-store",
     });
   } catch (e) {
-    return { ok: false, error: e instanceof Error && e.name === "TimeoutError" ? "The designer did not answer within 7 minutes." : "The designer does not answer. Is deepslate-designer running?" };
+    return { ok: false, error: e instanceof Error && e.name === "TimeoutError" ? "The designer did not answer within 10 minutes." : "The designer does not answer. Is deepslate-designer running?" };
   }
-  const v = (await res.json().catch(() => ({}))) as { text?: string; ms?: number; usage?: DesignTokens; error?: string };
+  const v = (await res.json().catch(() => ({}))) as { text?: string; ms?: number; usage?: DesignTokens; error?: string; limit?: string; count?: number };
+  if (res.status === 429) return { ok: false, error: designerRefusal(v) };
   if (res.status === 409) return { ok: false, busy: true, error: "The designer is busy with another build. Try again in a few minutes." };
   if (res.status === 401) return { ok: false, error: "The designer turned the site away: DESIGNER_TOKEN is not the same for web and designer." };
   if (!res.ok || typeof v.text !== "string") return { ok: false, error: `The designer failed: ${v.error ?? `HTTP ${res.status}`}` };

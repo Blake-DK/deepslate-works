@@ -7,7 +7,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { blockListText as tsBlockListText, type BlockList } from "../src/design";
 import { designPrompt } from "../src/design-cli";
-import { blockListText, checkRequest, createHandler, designerArgs, runDesigner, systemPrompt, userMessage, type RunInput, type RunResult } from "../../../tools/designer/server.mjs";
+import { blockListText, callLimiter, checkRequest, createHandler, designerArgs, runDesigner, systemPrompt, userMessage, type Limiter, type RunInput, type RunResult } from "../../../tools/designer/server.mjs";
 
 // docs/39 Step 1: the designer container's one file. The CLI itself is never run here: a small node script stands in
 // for it, and the handler is given a stub.
@@ -86,9 +86,9 @@ describe("the call", () => {
 });
 
 describe("the server", () => {
-  async function serve(runStub: (i: RunInput) => Promise<RunResult>, credentials: string | null = null) {
+  async function serve(runStub: (i: RunInput) => Promise<RunResult>, credentials: string | null = null, limiter?: Limiter) {
     const dataDir = path.join(ROOT, "designer");
-    const handler = createHandler({ token: TOKEN, cmd: process.execPath, model: "m", dataDir, credentials, childEnv: { PATH: "/usr/bin" }, run: runStub, instructionsFile: path.join(REPO, "tools", "designer", "instructions.md") });
+    const handler = createHandler({ token: TOKEN, cmd: process.execPath, model: "m", dataDir, credentials, childEnv: { PATH: "/usr/bin" }, run: runStub, instructionsFile: path.join(REPO, "tools", "designer", "instructions.md"), limiter });
     const server = createServer((req, res) => void handler(req, res));
     servers.push(server);
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
@@ -119,6 +119,48 @@ describe("the server", () => {
     expect(seen[0]!.env).toEqual({ PATH: "/usr/bin" });
     expect((await call("/design", { method: "POST", body: JSON.stringify({ name: "x", ask: "a" }) })).status).toBe(400);
     expect((await call("/design", { method: "POST", body: "not json" })).status).toBe(400);
+  });
+  it("keeps its own limits: the 31st call in an hour is refused, and a call after the hour has passed goes through", async () => {
+    let clock = Date.parse("2026-10-07T12:00:00Z");
+    let runs = 0;
+    const call = await serve(async () => (runs++, answer), null, callLimiter({ daily: 80, now: () => clock }));
+    const design = () => call("/design", { method: "POST", body: JSON.stringify({ name: "gate", ask: "a gate" }) });
+    for (let i = 0; i < 30; i++) {
+      expect((await design()).status).toBe(200);
+      clock += 60_000;
+    }
+    const refused = await design();
+    expect(refused.status).toBe(429);
+    expect(await refused.json()).toEqual({ error: "the most calls for an hour", limit: "hour", count: 30 });
+    expect(runs).toBe(30);
+    clock += 31 * 60_000; // the first call is now more than an hour old
+    expect((await design()).status).toBe(200);
+    expect(runs).toBe(31);
+  });
+  it("keeps its own limits: the call past DESIGNER_DAILY in a day is refused until the day has passed", async () => {
+    let clock = Date.parse("2026-10-07T00:00:00Z");
+    let runs = 0;
+    const call = await serve(async () => (runs++, answer), null, callLimiter({ daily: 5, now: () => clock }));
+    const design = () => call("/design", { method: "POST", body: JSON.stringify({ name: "gate", ask: "a gate" }) });
+    for (let i = 0; i < 5; i++) {
+      expect((await design()).status).toBe(200);
+      clock += 2 * 3_600_000;
+    }
+    const refused = await design();
+    expect(refused.status).toBe(429);
+    expect(await refused.json()).toMatchObject({ limit: "day", count: 5 });
+    expect(runs).toBe(5);
+    clock = Date.parse("2026-10-08T00:00:01Z"); // the first call is a day old
+    expect((await design()).status).toBe(200);
+    expect(runs).toBe(6);
+  });
+  it("a request it turns away (bad body, no token) is not counted", async () => {
+    const clock = Date.parse("2026-10-07T12:00:00Z");
+    const call = await serve(async () => answer, null, callLimiter({ hourly: 1, daily: 80, now: () => clock }));
+    expect((await call("/design", { method: "POST", body: "not json" })).status).toBe(400);
+    expect((await call("/design", { method: "POST", token: null, body: "{}" })).status).toBe(401);
+    expect((await call("/design", { method: "POST", body: JSON.stringify({ name: "gate", ask: "a gate" }) })).status).toBe(200);
+    expect((await call("/design", { method: "POST", body: JSON.stringify({ name: "gate", ask: "a gate" }) })).status).toBe(429);
   });
   it("one call at a time: a second caller is told busy at once", async () => {
     let release: () => void = () => {};

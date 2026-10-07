@@ -10,6 +10,8 @@ Alex's ask (2026-10-07): put a designer on the Builds page, run the way his note
 describes (a container that calls the host's assistant CLI as a subprocess, signed in with his own plan, no API
 key), with custom instructions so that it only designs and builds.
 
+**Second pass: see docs/40** (any name, designing in the background, better builds).
+
 This spec is the plan. Nothing of it is built. **Step 0 comes first and decides whether the rest is worth building.**
 
 ## The idea in one paragraph

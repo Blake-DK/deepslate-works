@@ -76,7 +76,7 @@ export function BuildsCard({ view, files = [], frontiers, mods = {}, builder = n
           <div className="flex flex-wrap items-end gap-3">
             <div>
               <Label htmlFor="b-name">Name</Label>
-              <Input id="b-name" name="name" required pattern="[a-z0-9_]{2,24}" placeholder="boss_temple" className="mt-1 h-9 w-40 text-sm" />
+              <Input id="b-name" name="name" required maxLength={60} placeholder="Boss temple" className="mt-1 h-9 w-40 text-sm" />
             </div>
             <Worlds id="b-cap-world" frontiers={frontiers} />
             <Num name="x1" label="Corner 1: X" /><Num name="y1" label="Y" /><Num name="z1" label="Z" />
@@ -86,7 +86,7 @@ export function BuildsCard({ view, files = [], frontiers, mods = {}, builder = n
             <label className="flex items-center gap-2"><Check type="checkbox" name="sure" /> I&apos;m sure</label>
             <Button type="submit" size="sm" disabled={!view.running}>Capture</Button>
           </div>
-          <p className="text-muted-foreground">Up to {view.max.side} blocks a side. Chests are copied with what is in them, so empty them first; animals and mobs are left out. The two blocks straight above the lowest corner&apos;s column are used for a moment and left as air. A name used before is overwritten.</p>
+          <p className="text-muted-foreground">Up to {view.max.side} blocks a side. Chests are copied with what is in them, so empty them first; animals and mobs are left out. The two blocks straight above the lowest corner&apos;s column are used for a moment and left as air. Any name will do: &quot;Boss Temple&quot; is kept as boss_temple. A name used before is overwritten.</p>
         </form>
 
         <div className="space-y-2">
@@ -94,7 +94,7 @@ export function BuildsCard({ view, files = [], frontiers, mods = {}, builder = n
           <form action={buildUploadAction} className="flex flex-wrap items-end gap-3">
             <div>
               <Label htmlFor="b-up-name">Name</Label>
-              <Input id="b-up-name" name="name" required pattern="[a-z0-9_]{2,24}" placeholder="sky_temple" className="mt-1 h-9 w-40 text-sm" />
+              <Input id="b-up-name" name="name" maxLength={60} placeholder="Sky temple" className="mt-1 h-9 w-40 text-sm" />
             </div>
             <div>
               <Label htmlFor="b-up-file">File (.litematic, .schem or .nbt)</Label>
@@ -103,7 +103,7 @@ export function BuildsCard({ view, files = [], frontiers, mods = {}, builder = n
             <label className="flex h-9 items-center gap-2"><Check type="checkbox" name="allowMissing" /> The missing blocks become air</label>
             <Button type="submit" size="sm" variant="secondary">Upload</Button>
           </form>
-          <p className="text-muted-foreground">The file is read as you upload it: you see how big it is and which mods its blocks come from. One with blocks from a mod we don&apos;t have is turned away and the blocks are named; tick <strong>The missing blocks become air</strong> to take it anyway, with holes where they were. {Object.keys(mods).length === 0 && <>No Build has run yet, so the mods are listed but not checked. </>}Then press <strong>Build</strong> and <strong>Sync</strong> on the Modpack page; after the server&apos;s next restart (or a reload of its datapacks) it can be placed. Up to 256 blocks a side and 8 MB. Not taken: the old .schematic; open it in the game and save it again with a structure block.</p>
+          <p className="text-muted-foreground">Any name will do (&quot;Sky Temple&quot; is kept as sky_temple); left empty, the file&apos;s own name. The file is read as you upload it: you see how big it is and which mods its blocks come from. One with blocks from a mod we don&apos;t have is turned away and the blocks are named; tick <strong>The missing blocks become air</strong> to take it anyway, with holes where they were. {Object.keys(mods).length === 0 && <>No Build has run yet, so the mods are listed but not checked. </>}Then press <strong>Build</strong> and <strong>Sync</strong> on the Modpack page; after the server&apos;s next restart (or a reload of its datapacks) it can be placed. Up to 256 blocks a side and 8 MB. Not taken: the old .schematic; open it in the game and save it again with a structure block.</p>
           {files.length > 0 && (
             <ul className="divide-y">
               {files.map((f) => {

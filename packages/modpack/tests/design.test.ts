@@ -196,6 +196,42 @@ describe("picture", () => {
     expect(picture(glass, BLOCKS).blocks).toHaveLength(27);
     expect(picture(g, BLOCKS).colours).toEqual([BLOCKS.blocks.find((b) => b.id === STONE)!.colour]);
   });
+  it("puts no block outside the build's outline at any tile size (docs/40 3c: tiles of 6 and 10 put half a row)", () => {
+    const g = grid([{ op: "box", from: [0, 0, 0], to: [40, 5, 58], with: STONE }], { size: { x: 41, y: 6, z: 59 } });
+    const pic = picture(g, BLOCKS);
+    for (const tile of [4, 6, 8, 10, 12]) {
+      const { width, height, rgba } = render(pic, { tile });
+      const w = Math.floor(tile / 4) * 4;
+      const [sx, sy, sz] = [41, 6, 59];
+      const offX = (sz - 1) * (w / 2);
+      const offY = (sy - 1) * (w / 2);
+      const at = (x: number, y: number, z: number): [number, number] => [(x - z) * (w / 2) + offX, (x + z) * (w / 4) - y * (w / 2) + offY];
+      // the box's outline: six corners of the cubes at its ends
+      const poly: Array<[number, number]> = [
+        [at(0, sy - 1, 0)[0] + w / 2, at(0, sy - 1, 0)[1]],
+        [at(sx - 1, sy - 1, 0)[0] + w, at(sx - 1, sy - 1, 0)[1] + w / 4],
+        [at(sx - 1, 0, 0)[0] + w, at(sx - 1, 0, 0)[1] + w - w / 4],
+        [at(sx - 1, 0, sz - 1)[0] + w / 2, at(sx - 1, 0, sz - 1)[1] + w],
+        [at(0, 0, sz - 1)[0], at(0, 0, sz - 1)[1] + w - w / 4],
+        [at(0, sy - 1, sz - 1)[0], at(0, sy - 1, sz - 1)[1] + w / 4],
+      ];
+      // inside a convex outline (clockwise on screen), a pixel's centre is on the inner side of every edge
+      const inside = (px: number, py: number) => poly.every(([ax, ay], i) => {
+        const [bx, by] = poly[(i + 1) % poly.length]!;
+        return (bx - ax) * (py - ay) - (by - ay) * (px - ax) >= -1.5 * Math.hypot(bx - ax, by - ay);
+      });
+      let drawn = 0;
+      let outside = 0;
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        if (rgba[i] === 30 && rgba[i + 1] === 31 && rgba[i + 2] === 36) continue;
+        drawn++;
+        if (!inside(x + 0.5, y + 0.5)) outside++;
+      }
+      expect([tile, outside]).toEqual([tile, 0]);
+      expect(drawn).toBeGreaterThan(width * height * 0.3);
+    }
+  });
   it("draws four turns of a build", () => {
     const g = grid([{ op: "box", from: [0, 0, 0], to: [3, 1, 1], with: STONE }], { markers: [{ name: "boss", at: [1, 1, 1] }] });
     const pic = picture(g, BLOCKS);

@@ -6,6 +6,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { apiFetch, ApiError } from "@/server/api-client";
 import { audit } from "@/server/events";
 import { removeBuild, storeBuild } from "@/server/builds";
+import { designName } from "@/lib/designer";
 
 // docs/34 §6 (W1.4): Admin → Seasons. Every button is a named call to api, which checks, acts and writes the event
 // log. Which button was pressed travels as a bound argument, never as the button's own value.
@@ -61,8 +62,9 @@ const fields = (formData: FormData, names: string[]) => Object.fromEntries(names
 
 export async function buildCaptureAction(formData: FormData) {
   const admin = await requireAdmin();
-  const f = captureForm.safeParse(fields(formData, ["name", "dimension", "x1", "y1", "z1", "x2", "y2", "z2"]));
-  if (!f.success) redirect(to("error", "A name in small letters, digits and _ (2 to 24), and whole numbers for both corners"));
+  // docs/40 Part 1: any name, made into the form a build's name takes ("Boss Temple" is boss_temple)
+  const f = captureForm.safeParse({ ...fields(formData, ["dimension", "x1", "y1", "z1", "x2", "y2", "z2"]), name: designName(String(formData.get("name") ?? "")) });
+  if (!f.success) redirect(to("error", "Whole numbers for both corners"));
   if (formData.get("sure") !== "on") redirect(to("confirm"));
   const { name, x1, y1, z1, x2, y2, z2 } = f.data;
   let r: { pieces?: number };
@@ -97,9 +99,10 @@ export async function buildPlaceAction(formData: FormData) {
 /** A build file from the admin's PC, kept under a name. It reaches the server with the next Build and Sync. */
 export async function buildUploadAction(formData: FormData) {
   const admin = await requireAdmin();
-  const name = String(formData.get("name") ?? "").trim();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) redirect(to("error", "Pick a file first"));
+  // docs/40 Part 1: any name, made into the form a build's name takes; none typed, the file's own name
+  const name = designName(String(formData.get("name") ?? ""), file.name.replace(/\.[a-z]+$/i, ""));
   const stored = await storeBuild(name, file, { allowMissing: formData.get("allowMissing") === "on" });
   if (!stored.ok) redirect(to("error", stored.reason));
   const { check } = stored.build.note!;

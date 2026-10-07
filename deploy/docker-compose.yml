@@ -30,6 +30,11 @@ services:
     container_name: deepslate-db
     restart: unless-stopped
     logging: *logging
+    # Started as the image's own postgres user (70), which owns the data folder, so the entrypoint never needs root
+    # to chown or switch users and the container keeps no Linux capabilities. A fresh data folder must be made 70:70
+    # (or 70:0) with mode 700 before the first start.
+    user: "70:70"
+    cap_drop: [ALL]
     mem_limit: 256m
     command: ["postgres", "-c", "shared_buffers=128MB"]
     networks: [internal]

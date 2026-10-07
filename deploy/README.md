@@ -37,4 +37,6 @@ docker exec deepslate-web node apps/web/scripts/invite.mjs "for Alex"
 Caddy: add the block from `deploy/Caddyfile.snippet` to `/home/ladm/docker/web-proxy/etc/Caddyfile`, then as ladm `docker exec caddy caddy validate --config /etc/caddy/Caddyfile` and `docker exec caddy caddy reload --config /etc/caddy/Caddyfile` (more in /home/ladm/docker/HOSTING.md).
 Update: `deploy/check.sh` first, push to `main` as `ladm` (`runuser -u ladm -- git push`), wait for the `ci` workflow to go green, `sudo deploy/deploy.sh`. Migrations run on container start; dump the database before one (docs/09).
 Roll back: `sudo IMAGE_TAG=<commit sha> deploy/deploy.sh`.
+`.git/config` check: `deploy.sh` stops before the fetch when `.git/config` differs from `/root/.config/deepslate/git-config.expected` (a copy `web` cannot reach, since `web` can write `.git`), and prints the difference.
+When the change is yours (a new remote, a credential helper you set), read `.git/config` by eye and remake the copy as root: `install -d -m 700 /root/.config/deepslate && runuser -u ladm -- git -C /home/ladm/Minecraft-site config --local --list | sort > /root/.config/deepslate/git-config.expected && chmod 600 /root/.config/deepslate/git-config.expected`.
 Logs: `docker logs -f deepslate-web`. Health: `https://deepslate.dsw.test/api/health`.

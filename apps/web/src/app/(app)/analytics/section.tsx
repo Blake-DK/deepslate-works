@@ -46,7 +46,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const points = series(sessions, range, now);
   const showPlayers = q.show === "players";
   const players = sortPlayers(byPlayer(sessions, range.from, range.to, now), q.sort, q.dir);
-  const countries = byCountry(sessions, range.from, range.to, now);
+  const countries = admin ? byCountry(sessions, range.from, range.to, now) : { rows: [], unknown: 0 };
   const pairs = together(sessions, range.from, range.to, now, 8);
   const grid = heatmap(sessions, range.from, range.to, now);
   const nameOf = (uuid: string) => people.get(uuid)?.mcUsername ?? sessions.findLast((s) => s.mcUuid === uuid)?.mcName ?? "someone";
@@ -97,11 +97,13 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+        {/* Admins only (Alex, 2026-10-07): among a few friends a country points at a person. Filled from mc-router's
+            record of each join (apps/api/src/router/addresses.ts); the game server itself only sees mc-router. */}
+        {admin && <Card>
           <CardHeader>
             <CardTitle>Countries</CardTitle>
             <CardDescription>
-              {privacy.geo ? <>Where people connect from. <Link href={href({ view: q.view === "map" ? undefined : "map" })} className="underline">{q.view === "map" ? "Show the table" : "Show the map"}</Link></> : "Location off."}
+              {privacy.geo ? <>Where people connect from, for admins only. <Link href={href({ view: q.view === "map" ? undefined : "map" })} className="underline">{q.view === "map" ? "Show the table" : "Show the map"}</Link></> : "Location off."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -119,8 +121,8 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
               </div>
             )}
           </CardContent>
-        </Card>
-        <Card>
+        </Card>}
+        <Card className={admin ? undefined : "lg:col-span-2"}>
           <CardHeader><CardTitle>Busiest hours</CardTitle><CardDescription>When the server is in use through the week.</CardDescription></CardHeader>
           <CardContent><Heatmap grid={grid} /></CardContent>
         </Card>

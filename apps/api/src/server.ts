@@ -2,7 +2,8 @@ import Fastify from "fastify";
 import { CHANGES } from "./changelog.js";
 import { AmpClient, MockAmp, type Amp } from "./amp/client.js";
 import { HttpRouterDash, MockRouterDash, type RouterDash } from "./router/client.js";
-import { routerRoutes } from "./routes/router.js";
+import { protectedHost, routerRoutes } from "./routes/router.js";
+import { fillAddresses, prismaAddressStore } from "./router/addresses.js";
 import { installRoutes } from "./routes/installs.js";
 import { BACKUP_JOB_KEY, BackupWatch, type BackupJob } from "./status/backup-watch.js";
 import { serviceAuth } from "./auth.js";
@@ -167,7 +168,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   groundRoutes(app, ground);
   partyRoutes(app, new PartyBook(ampClient));
   fileRoutes(app, ampClient);
-  routerRoutes(app, deps.router ?? (env.AMP_MOCK === "1" ? new MockRouterDash() : new HttpRouterDash(env.ROUTER_DASH_URL)), env.SERVER_ADDRESS); // Admin → Server → Router
+  const routerDash = deps.router ?? (env.AMP_MOCK === "1" ? new MockRouterDash() : new HttpRouterDash(env.ROUTER_DASH_URL));
+  routerRoutes(app, routerDash, env.SERVER_ADDRESS); // Admin → Server → Router
   consoleRoutes(app, ampClient, tail, () => limbo.actionCtx);
   const editor = new InventoryEditor(ampClient, tail, () => limbo.actionCtx, new Catalogue(`${env.REPO_DIR}/dist/items/catalogue.json`), (a) => audit(a as Parameters<typeof audit>[0]));
   inventoryRoutes(app, ampClient, tail, () => limbo.actionCtx, pregenWatch, undefined, editor);
@@ -213,6 +215,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   let watching: NodeJS.Timeout | null = null;
   let seasonClock: NodeJS.Timeout | null = null;
   let seasonFiles: NodeJS.Timeout | null = null;
+  let addresses: NodeJS.Timeout | null = null;
 
   app.addHook("onReady", async () => {
     if (env.AMP_MOCK === "1") return;
@@ -281,6 +284,19 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     const keepHouse = () => void runRetentionIfDue(log).catch((err) => log({ err: String(err) }, "retention failed"));
     housekeeping = setInterval(keepHouse, 30 * 60_000);
     setTimeout(keepHouse, 60_000).unref();
+    // Where sessions came from, from mc-router's logins (router/addresses.ts); a failure is logged once an hour at most.
+    let quietUntil = 0;
+    const fillFromRouter = () => void (async () => {
+      const [privacy, retention] = await Promise.all([getSection("privacy"), getSection("retention")]);
+      const filled = await fillAddresses({ dash: routerDash, store: prismaAddressStore, host: protectedHost(env.SERVER_ADDRESS), ipDays: retention.ipDays, geo: privacy.geo, country: (ip) => countryOf(ip, env.GEOIP_DB) });
+      if (filled) log({ filled }, "session addresses from mc-router");
+    })().catch((err) => {
+      if (Date.now() < quietUntil) return;
+      quietUntil = Date.now() + 3600_000;
+      log({ err: String(err) }, "session addresses from mc-router failed");
+    });
+    addresses = setInterval(fillFromRouter, 2 * 60_000);
+    setTimeout(fillFromRouter, 20_000).unref();
   });
   app.addHook("onClose", async () => {
     tail.stop();
@@ -300,6 +316,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     if (watching) clearInterval(watching);
     if (seasonClock) clearInterval(seasonClock);
     if (seasonFiles) clearInterval(seasonFiles);
+    if (addresses) clearInterval(addresses);
   });
   return app;
 }

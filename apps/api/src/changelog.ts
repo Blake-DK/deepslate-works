@@ -107,6 +107,11 @@ export const CHANGES: Change[] = [
       "A build's name can now be written any way you like (\"Boss Temple\" becomes boss_temple), and a design carries on by itself while the page is closed.",
     ],
   },
+  {
+    id: "2026-10-07-countries-admins-only",
+    date: "2026-10-07",
+    lines: ["Which country you play from is now seen only by you and the admins: the Countries card on Stats is for admins, and other players no longer see it on your page."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

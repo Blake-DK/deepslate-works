@@ -1,11 +1,14 @@
 import { z } from "zod";
-import { BUILD_NAME, paletteEntry } from "./builds";
-import { compound, int, ints, list, type Tag } from "./nbt";
 
 // docs/39: the build designer. A recipe is a short list of shapes ("a hollow box of deepslate bricks from here to
 // there, a dome on top, clear a doorway"); this file checks one (parseRecipe), turns it into the same structure file
 // builds.ts writes (compile) and into the blocks a picture shows (picture, render). Nothing in a recipe becomes
 // anything but blocks from modpack/designer/blocks.json, inside the size, within the limits below.
+// This file runs in the browser too (the Builds page draws the picture there), so it imports nothing of node's: the
+// structure file is written by design-nbt.ts.
+
+/** The same rule as builds.ts's BUILD_NAME, kept here so this file needs nothing of node's. */
+const BUILD_NAME = /^[a-z0-9_]{2,24}$/;
 
 export const DESIGN_LIMITS = {
   side: 128,
@@ -188,7 +191,7 @@ function reach(s: Step): { lo: Point; hi: Point } | null {
  */
 export function parseRecipe(input: string | unknown, blocks: BlockList): Recipe {
   const text = typeof input === "string" ? input : JSON.stringify(input);
-  if (Buffer.byteLength(text, "utf8") > DESIGN_LIMITS.bytes) throw new DesignError(`the recipe is larger than ${DESIGN_LIMITS.bytes / 1024} KB`);
+  if (new TextEncoder().encode(text).length > DESIGN_LIMITS.bytes) throw new DesignError(`the recipe is larger than ${DESIGN_LIMITS.bytes / 1024} KB`);
   let raw: unknown = input;
   if (typeof input === "string") {
     try {
@@ -429,36 +432,6 @@ export function compileGrid(recipe: Recipe, blocks: BlockList): DesignGrid {
   return { size: recipe.size, ground: recipe.ground, palette, cells, markers: recipe.markers ?? [] };
 }
 
-/** A grid as the game's structure file (the same Tag builds.ts writes). A place no step wrote is left out. */
-export function gridToStructure(grid: DesignGrid): Tag {
-  const { x: sx, y: sy, z: sz } = grid.size;
-  const used = new Set<number>();
-  for (const c of grid.cells) if (c >= 0) used.add(c);
-  const order = [...used].sort((a, b) => a - b);
-  const renumber = new Map(order.map((c, i) => [c, i]));
-  const blocks: Tag[] = [];
-  for (let y = 0; y < sy; y++) for (let z = 0; z < sz; z++) for (let x = 0; x < sx; x++) {
-    const c = grid.cells[x + sx * (z + sz * y)]!;
-    if (c >= 0) blocks.push(compound({ pos: ints([x, y, z]), state: int(renumber.get(c)!) }));
-  }
-  return compound({
-    DataVersion: int(3955), // 1.21.1
-    size: ints([sx, sy, sz]),
-    palette: list(10, order.map((c) => paletteEntry(grid.palette[c]!))),
-    blocks: list(10, blocks),
-    entities: list(10, []),
-  });
-}
-
-/** A checked recipe as the game's structure file, and its grid for the picture. */
-export function compile(recipe: Recipe, blocks: BlockList): { structure: Tag; grid: DesignGrid; blocks: number } {
-  const grid = compileGrid(recipe, blocks);
-  const structure = gridToStructure(grid);
-  let n = 0;
-  for (const c of grid.cells) if (c > 0) n++;
-  return { structure, grid, blocks: n };
-}
-
 /** How many of each block the build has (air left out), most first. */
 export function blockCounts(grid: DesignGrid): Array<{ block: string; count: number }> {
   const n = new Array<number>(grid.palette.length).fill(0);
@@ -514,7 +487,7 @@ export function picture(grid: DesignGrid, blocks: BlockList, cut = Infinity): Pi
  * above one corner. `turn` 0 to 3 walks the viewer a quarter round each time (0 looks from the south-east, so the
  * south and east faces show). The foundation, below `ground`, is drawn darker; markers are magenta dots.
  */
-export function render(pic: Picture, opts: { turn?: number; tile?: number; background?: [number, number, number] } = {}): { width: number; height: number; rgba: Buffer } {
+export function render(pic: Picture, opts: { turn?: number; tile?: number; background?: [number, number, number] } = {}): { width: number; height: number; rgba: Uint8ClampedArray } {
   const turn = (((opts.turn ?? 0) % 4) + 4) % 4;
   const w = Math.max(4, Math.floor((opts.tile ?? 8) / 2) * 2);
   const bg = opts.background ?? [30, 31, 36];
@@ -527,7 +500,7 @@ export function render(pic: Picture, opts: { turn?: number; tile?: number; backg
   const offX = (sz - 1) * (w / 2);
   const offY = (sy - 1) * (w / 2);
   const height = offY + (sx + sz - 2) * (w / 4) + w;
-  const rgba = Buffer.alloc(width * height * 4);
+  const rgba = new Uint8ClampedArray(width * height * 4);
   for (let i = 0; i < width * height; i++) rgba.set([bg[0], bg[1], bg[2], 255], i * 4);
 
   // the cube's pixels: 0 nothing, 1 top, 2 left (the south face at turn 0), 3 right (east); +4 on a face's edge
@@ -581,9 +554,9 @@ export function render(pic: Picture, opts: { turn?: number; tile?: number; backg
       const py = oy + Math.floor(i / w);
       if (px < 0 || py < 0 || px >= width || py >= height) continue;
       const at = (py * width + px) * 4;
-      rgba[at] = Math.min(255, Math.round(base[0] * k));
-      rgba[at + 1] = Math.min(255, Math.round(base[1] * k));
-      rgba[at + 2] = Math.min(255, Math.round(base[2] * k));
+      rgba[at] = base[0] * k;
+      rgba[at + 1] = base[1] * k;
+      rgba[at + 2] = base[2] * k;
     }
   }
   for (const m of pic.markers) {
@@ -604,19 +577,19 @@ export function render(pic: Picture, opts: { turn?: number; tile?: number; backg
 }
 
 /** The four turns of a picture side by side in two rows, as RGBA pixels. */
-export function renderTurns(pic: Picture, tile: number): { width: number; height: number; rgba: Buffer } {
+export function renderTurns(pic: Picture, tile: number): { width: number; height: number; rgba: Uint8ClampedArray } {
   const views = [0, 1, 2, 3].map((turn) => render(pic, { turn, tile }));
   const gap = 8;
   const cw = Math.max(...views.map((v) => v.width));
   const ch = Math.max(...views.map((v) => v.height));
   const width = cw * 2 + gap * 3;
   const height = ch * 2 + gap * 3;
-  const rgba = Buffer.alloc(width * height * 4);
+  const rgba = new Uint8ClampedArray(width * height * 4);
   for (let i = 0; i < width * height; i++) rgba.set([18, 18, 22, 255], i * 4);
   views.forEach((v, n) => {
     const ox = gap + (n % 2) * (cw + gap) + Math.floor((cw - v.width) / 2);
     const oy = gap + Math.floor(n / 2) * (ch + gap) + (ch - v.height);
-    for (let y = 0; y < v.height; y++) v.rgba.copy(rgba, ((oy + y) * width + ox) * 4, y * v.width * 4, (y + 1) * v.width * 4);
+    for (let y = 0; y < v.height; y++) rgba.set(v.rgba.subarray(y * v.width * 4, (y + 1) * v.width * 4), ((oy + y) * width + ox) * 4);
   });
   return { width, height, rgba };
 }

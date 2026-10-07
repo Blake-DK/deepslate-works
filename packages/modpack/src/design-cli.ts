@@ -1,7 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { writeNbt } from "./nbt";
-import { blockCounts, blockListText, compile, DesignError, parseRecipe, picture, renderTurns, type BlockList } from "./design";
+import { blockCounts, blockListText, DesignError, parseRecipe, picture, renderTurns, type BlockList } from "./design";
+import { compile } from "./design-nbt";
 
 // docs/39 Step 0: `modpack design <file>` and `modpack design-prompt`, to prove the recipe compiler and the designer
 // from a terminal before any page is built.
@@ -10,10 +11,13 @@ export async function loadBlockList(modpackRoot: string): Promise<BlockList> {
   return JSON.parse(await readFile(path.join(modpackRoot, "designer", "blocks.json"), "utf8")) as BlockList;
 }
 
-/** The designer's whole system prompt: its instructions, then the block list. */
-export async function designPrompt(modpackRoot: string): Promise<string> {
-  const instructions = await readFile(path.join(modpackRoot, "designer", "instructions.md"), "utf8");
-  return `${instructions.trimEnd()}\n\n${blockListText(await loadBlockList(modpackRoot))}`;
+/**
+ * The designer's whole system prompt: its instructions (tools/designer/instructions.md, out of web's reach, docs/39
+ * Step 1), then the block list. tools/designer/server.mjs makes the same text for each call.
+ */
+export async function designPrompt(paths: { root: string; repo: string }): Promise<string> {
+  const instructions = await readFile(path.join(paths.repo, "tools", "designer", "instructions.md"), "utf8");
+  return `${instructions.trimEnd()}\n\n${blockListText(await loadBlockList(paths.root))}`;
 }
 
 /**
@@ -50,7 +54,7 @@ export async function designFile(file: string, out: string, modpackRoot: string,
   const sharp = (await import("sharp")).default;
   const png = async (name: string, cut?: number) => {
     const img = renderTurns(picture(grid, blocks, cut), tile);
-    await sharp(img.rgba, { raw: { width: img.width, height: img.height, channels: 4 } }).png({ compressionLevel: 9 }).toFile(path.join(out, name));
+    await sharp(Buffer.from(img.rgba.buffer, img.rgba.byteOffset, img.rgba.byteLength), { raw: { width: img.width, height: img.height, channels: 4 } }).png({ compressionLevel: 9 }).toFile(path.join(out, name));
   };
   await png(`${recipe.name}.png`);
   await png(`${recipe.name}-inside.png`, recipe.ground + 2);

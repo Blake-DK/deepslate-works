@@ -8,7 +8,7 @@ Everything needed to run the stack is here; nothing else on the host is part of 
 
 | File | What it is |
 |---|---|
-| `docker-compose.yml` | The whole stack: postgres, web, the WireGuard sidecar, api, the two map relays, the two mc-router dashboard relays and the nightly backups. Used as it is; no secrets in it, they all come from `.env` |
+| `docker-compose.yml` | The whole stack: postgres, web, the WireGuard sidecar, api, the two map relays, the two mc-router dashboard relays, the build designer (docs/39, only while `DESIGNER_CMD` is set) and the nightly backups. Used as it is; no secrets in it, they all come from `.env` |
 | `.env.example` | Every variable the stack reads, each with a comment and a placeholder value. Copy it to `.env` (git-ignored) and replace every `replace-me-...` and all-zero id; `deploy.sh` refuses to run while one is left |
 | `wg0.conf.example` | The tunnel to the homelab. Copy to `wireguard/wg_confs/wg0.conf`. The whole `wireguard/` folder is git-ignored and belongs to uid 1000, the tunnel container |
 | `Caddyfile.snippet` | The block to add to the host's Caddy for the site and the map |

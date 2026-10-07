@@ -407,3 +407,61 @@ settings. The prompt from `modpack design-prompt` (15,365 bytes), one call per a
 - **For Step 1:** the CLI keeps a settings file of its own directly in the user's home, beside the login folder and
   not in it. The compose service has to mount that file too (a variable of its own, `DESIGNER_LOGIN_FILE`), or each
   call starts as a first run.
+
+## Steps 1 and 2, as built (2026-10-07, on `dev`, not deployed)
+
+Alex's word, the same day: build Steps 1 and 2 while the temple is tried in the Frontier (Step 0.5).
+
+**Where it differs from the plan, and why:**
+
+- **The instructions moved to `tools/designer/instructions.md`.** `web` mounts `modpack/` read-write (Admin → Lock
+  commits there), so a broken-into `web` could have rewritten instructions kept in `modpack/designer/`, and with them
+  what the designer is. `web` cannot reach `tools/`. The block list stays in `modpack/designer/blocks.json` (Build and
+  the page read it), so `server.mjs` takes from it only plain block ids, the kinds it knows and plain property values:
+  anything else in that file never reaches the prompt (tested).
+- **The designer's whole home folder is mounted read-write, the CLI's program folders read-only over it.** The CLI
+  keeps a settings file directly in the home, beside its login folder, and writes it back on a call (seen in the
+  container test below); a single-file mount breaks when a file is replaced, so the plan's "login folder" mount became
+  the home. The two program folders are mounted again read-only on top, so the CLI cannot change itself.
+  Variables: `DESIGNER_HOME`, `DESIGNER_BIN_DIR`, `DESIGNER_VERSIONS_DIR`, `DESIGNER_UID`, `DESIGNER_GID`,
+  `DESIGNER_CREDENTIALS` (the login's file, for `/health`'s "signed in"); `DESIGNER_LOGIN_DIR` and `DESIGNER_AUTH` are
+  not used (only the plan's login is built).
+- **The call:** `--tools ""` (not `--allowedTools ""`), `--no-session-persistence`, `--strict-mcp-config` and
+  `--disable-slash-commands` (so an ask that starts with `/` is words, not a command). The CLI gets only `HOME`,
+  `PATH`, `DISABLE_AUTOUPDATER` and `LANG` of the environment, never the token. Timeout 420 s (the slowest call in
+  Step 0.4 took 226 s); `web` waits 450 s.
+- **The container runs with a read-only root, `/tmp` in memory, no Linux capabilities**, as the designer's user.
+  `deploy.sh` passes the compose profile `designer` only while `DESIGNER_CMD` is set, removes the container when it
+  is emptied, and restarts it when `tools/designer/server.mjs` is newer than the container (the folder is mounted, so
+  it sees the new file but keeps running the old one).
+- **The limits count the `build.design` events** in the event log (one per call, a call sent back to be fixed
+  included), not a table of their own.
+- **The picture is drawn in the browser** with the same code the Step 0 command uses: `design.ts` was split so it
+  imports nothing of node's (the structure file is written by `design-nbt.ts`), and `render` gives a
+  `Uint8ClampedArray`.
+
+**As built:**
+
+- `tools/designer/server.mjs` (one file, no dependencies) and `server.d.mts` (its types, for the tests);
+  `packages/modpack/tests/designer-server.test.ts`: the prompt is the same text as `modpack design-prompt`, the
+  block list cannot carry other text, the flags, the request checks, a stand-in CLI's JSON read back (time, tokens,
+  an error answer, output that is not JSON, a failed or slow command), the token on both routes, one call at a time
+  (409), health without a call.
+- `deploy/docker-compose.yml`: the `designer` service (stock `node:22-bookworm-slim` by digest, `internal` only, no
+  port, 768 MB); `web` gets `DESIGNER_URL`, `DESIGNER_TOKEN`, `DESIGNER_DAILY`. `deploy/deploy.sh`, `.env.example`.
+- `apps/web/src/server/designer.ts` (the calls, health, the files under `data/builds/designs/`, the owner check, the
+  counts), `src/lib/designer.ts` (the answer read and checked, versions, the limits),
+  `app/(app)/admin/seasons/design-actions.ts` (design or change, sent back once when refused; open; back to a
+  version; keep), `design-card.tsx` and `design-picture.tsx` (four turns, the floor slider, the block counts).
+  Uploads kept from a design show "designed", a link back to its versions. `/api/health` gains `designer`
+  (admins and the host only); Admin → Overview shows a line when it is set up and not well. Events
+  `build.design` and `build.design.keep`. `apps/web/tests/designer.test.ts`.
+- **Checked:** `deploy/check.sh` green for modpack (203 tests) and web (543); `next build` in a capped container.
+  **The container itself, run by hand as compose will run it** (the pinned image, uid 1010, read-only root, the three
+  mounts, no capabilities): `/health` answered `{"cli": …, "signedIn": true, "busy": false}` and 401 without the
+  token; one real ask ("a small shrine, 7 by 7 …") came back in 22 s, 2,045 tokens out, as a recipe that compiles
+  (290 blocks), while a second caller got 409; the container used 130 MB. The call left no session file in the
+  designer's home. It does refresh the account's synced skills and plugins there on each call; with no tools and slash
+  commands off they cannot do anything.
+- **Not done:** the API key mode and the per-admin "Designer" tick (Step 3, if wanted). The card has not been seen in
+  a browser: it needs the `dev` → `main` PR and a deploy.

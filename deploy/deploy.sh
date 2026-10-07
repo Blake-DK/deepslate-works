@@ -73,6 +73,9 @@ grep -Eq "^DEEPSLATE_DIR=$(pwd)\$" deploy/.env || die "set DEEPSLATE_DIR=$(pwd) 
 # without a word (2026-10-06, the first deploy after this check came in)
 placeholders=$(grep -E '^[A-Z_]+=(.*replace-me.*|0{17,}|00000000-0000-.*)$' deploy/.env | cut -d= -f1 | tr '\n' ' ' || true)
 [ -z "$placeholders" ] || die "deploy/.env still has placeholder values from .env.example: ${placeholders}(fill them in, or leave optional ones empty)"
+# docs/39: the build designer runs only while DESIGNER_CMD is set in deploy/.env (compose profile `designer`)
+designer_on=0
+if grep -Eq '^DESIGNER_CMD=.+' deploy/.env; then designer_on=1; COMPOSE+=(--profile designer); fi
 
 avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
 swap=$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)
@@ -200,6 +203,21 @@ fi
 
 step "up"
 "${COMPOSE[@]}" up -d --remove-orphans
+
+# docs/39: deepslate-designer has tools/designer mounted as a folder, so it sees a new server.mjs at once but keeps
+# running the one it started with; it is restarted when the file is newer than the container (a design in progress
+# is lost, and the page says so). With DESIGNER_CMD emptied, `up` leaves the container running (its service is still
+# in the file, under a profile not passed), so it is removed here.
+if [ "$designer_on" = 1 ]; then
+  designer_started=$(date -d "$(docker inspect -f '{{.State.StartedAt}}' deepslate-designer 2>/dev/null)" +%s 2>/dev/null || echo 0)
+  if [ "$(stat -c %Y tools/designer/server.mjs)" -gt "$designer_started" ]; then
+    echo "tools/designer/server.mjs is newer than deepslate-designer; restarting it"
+    "${COMPOSE[@]}" restart designer
+  fi
+elif docker inspect deepslate-designer >/dev/null 2>&1; then
+  echo "DESIGNER_CMD is empty in deploy/.env: removing deepslate-designer"
+  docker rm -f deepslate-designer >/dev/null
+fi
 
 # docs/35 R-19: backup-loop.sh is mounted into `backups` as one file. git replaces a changed file with a new one, the
 # container keeps the old one it was started with, and `up -d` sees nothing to recreate: a fixed script would not

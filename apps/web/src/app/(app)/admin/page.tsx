@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
+import { designerHealth } from "@/server/designer";
 import { getStatus } from "@/server/status";
 import { formatDate } from "@/lib/utils";
 import { timeAgo } from "@/lib/series";
@@ -84,7 +85,7 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
       </div>
     );
   } else {
-    const [schedule, backup, heldNow, watch, members, invites, recent] = await Promise.all([
+    const [schedule, backup, heldNow, watch, members, invites, recent, designer] = await Promise.all([
       loadSchedule(caller),
       loadBackup(caller),
       loadHeld(caller),
@@ -92,10 +93,17 @@ export default async function ControlRoom({ searchParams }: { searchParams: Page
       db.user.count(),
       db.invite.count({ where: { usedBy: null, expiresAt: { gt: new Date() } } }),
       db.event.findMany({ where: { kind: { in: ["ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP"] } }, orderBy: { at: "desc" }, take: 10, select: { id: true, at: true, kind: true, message: true, meta: true } }),
+      designerHealth(),
     ]);
     inspector = (
       <div className="space-y-3" data-testid="inspector-server">
         <HealthCard view={watch} />
+        {/* docs/39: a row only when the designer is set up and not well */}
+        {designer && !designer.ok && (
+          <p className="text-sm text-danger" data-testid="designer-problem">
+            {designer.signedIn === false ? "The build designer is signed out: sign in on the VPS as its own user (no restart needed)." : `The build designer is not well: ${designer.error ?? "its CLI does not answer"}.`}
+          </p>
+        )}
         <PowerCard status={status} players={players} back="/admin" />
         <HeldCard held={heldNow?.held ?? null} back="/admin" />
         <RestartCard schedule={schedule} running={status.server === "online"} back="/admin" />

@@ -57,7 +57,7 @@ function Worlds({ id, frontiers }: { id: string; frontiers: string[] }) {
  * docs/34 §10: take something that stands in the world and use it again. Capture keeps a copy under a name; Place
  * puts a kept build somewhere and can lock its ground. Coordinates are read off F3 in the game.
  */
-export function BuildsCard({ view, files = [], frontiers, mods = {}, builder = null }: { view: BuildsView | null; files?: StoredBuild[]; frontiers: string[]; /** dist/pack-blocks.json: the mods' names by namespace. */ mods?: Record<string, string>; /** docs/37: the admin's Builder tools, when ticked. */ builder?: { mcUsername: string | null } | null }) {
+export function BuildsCard({ view, files = [], frontiers, mods = {}, builder = null, designed = [] }: { view: BuildsView | null; files?: StoredBuild[]; frontiers: string[]; /** docs/39: uploads that were kept from a design, linked back to its versions. */ designed?: string[]; /** dist/pack-blocks.json: the mods' names by namespace. */ mods?: Record<string, string>; /** docs/37: the admin's Builder tools, when ticked. */ builder?: { mcUsername: string | null } | null }) {
   if (!view) return null;
   const ready = new Map((view.uploads ?? []).map((u) => [u.name, u]));
   const problems = new Map((view.problems ?? []).map((p) => [p.file, p.why]));
@@ -112,7 +112,7 @@ export function BuildsCard({ view, files = [], frontiers, mods = {}, builder = n
                 return (
                   <li key={f.name} className="flex flex-wrap items-center gap-2 py-1.5">
                     <span className="min-w-0 flex-1">
-                      <span className="font-mono">{f.name}</span> <span className="text-muted-foreground">.{f.format}, {Math.max(1, Math.round(f.bytes / 1024))} KB, {ukShort(f.at)}
+                      <span className="font-mono">{f.name}</span>{designed.includes(f.name) && <> <a href={`/admin/seasons?design=${f.name}#design`} className="text-xs text-primary underline">designed</a></>} <span className="text-muted-foreground">.{f.format}, {Math.max(1, Math.round(f.bytes / 1024))} KB, {ukShort(f.at)}
                         {f.note && <> · {f.note.check.size.x} by {f.note.check.size.y} by {f.note.check.size.z}, {needsLine(f.note, mods)}</>}
                         {f.note && f.note.check.missing.length > 0 && <> · <span className="text-warn">{f.note.check.missing.map((ns) => mods[ns] ?? ns).join(", ")} not in the pack: those blocks will be air</span></>}
                         {" · "}{why ? <span className="text-danger">Build left it out: {why}</span> : on ? `built${on.airFor ? `, ${on.airFor.toLocaleString("en-GB")} blocks made air` : ""}` : "not built yet"}</span>

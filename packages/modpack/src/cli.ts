@@ -158,7 +158,7 @@ async function main() {
     }
     // falls through never
     case "design-prompt":
-      process.stdout.write(await designPrompt(P.root));
+      process.stdout.write(await designPrompt(P));
       process.exit(0);
     // falls through never
     case "sync-server":

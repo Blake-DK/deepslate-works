@@ -2,7 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { readBuild, structureInfo } from "../src/builds";
-import { blockCounts, blockListText, compile, compileGrid, DESIGN_LIMITS, DesignError, gridToStructure, parseRecipe, picture, render, renderTurns, type BlockList, type DesignGrid } from "../src/design";
+import { blockCounts, blockListText, compileGrid, DESIGN_LIMITS, DesignError, parseRecipe, picture, render, renderTurns, type BlockList, type DesignGrid } from "../src/design";
+import { compile, gridToStructure } from "../src/design-nbt";
 import { designPrompt, recipeFrom } from "../src/design-cli";
 import { child, numberOf, readNbt, writeNbt } from "../src/nbt";
 
@@ -219,7 +220,7 @@ describe("the command", () => {
     expect(() => recipeFrom(JSON.stringify({ say: "I only design builds. Tell me what to build or what to change." }))).toThrow("the designer did not return a build: I only design builds.");
   });
   it("the system prompt is the instructions and then the block list", async () => {
-    const prompt = await designPrompt(ROOT);
+    const prompt = await designPrompt({ root: ROOT, repo: path.join(ROOT, "..") });
     expect(prompt.startsWith("You are the build designer for a Minecraft 1.21.1 server.")).toBe(true);
     expect(prompt).toContain("## The steps");
     expect(prompt.indexOf("## Blocks you may use")).toBeGreaterThan(prompt.indexOf("## Limits"));

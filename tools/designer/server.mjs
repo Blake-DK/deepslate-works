@@ -55,11 +55,12 @@ const ID = /^[a-z0-9_.-]+:[a-z0-9_/.-]+$/;
 const WORD = /^[a-z0-9_]{1,24}$/;
 
 /**
- * The flags every call gets: JSON out, no tools, no session kept on disk, no MCP servers, no slash commands, and the
- * most thought before it answers (docs/40 3a: the highest effort the CLI has).
+ * The flags every call gets: JSON out, no tools, no session kept on disk, no MCP servers, no slash commands, and much
+ * thought before it answers. docs/40 3a asked for the CLI's highest effort; at `max` a design ran past 40 minutes and
+ * gave nothing (docs/40 3b), at `high` the five came back in 8 to 10 minutes.
  */
 export function designerArgs(model, prompt) {
-  return ["-p", "--output-format", "json", "--model", model, "--effort", "max", "--system-prompt", prompt, "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--disable-slash-commands"];
+  return ["-p", "--output-format", "json", "--model", model, "--effort", "high", "--system-prompt", prompt, "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--disable-slash-commands"];
 }
 
 const WHAT = {

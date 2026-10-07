@@ -51,7 +51,7 @@ describe("the prompt", () => {
 describe("the call", () => {
   it("has no tools, keeps no session, loads no MCP servers and no slash commands", () => {
     const args = designerArgs("some-model", "P");
-    expect(args).toEqual(["-p", "--output-format", "json", "--model", "some-model", "--effort", "max", "--system-prompt", "P", "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--disable-slash-commands"]);
+    expect(args).toEqual(["-p", "--output-format", "json", "--model", "some-model", "--effort", "high", "--system-prompt", "P", "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--disable-slash-commands"]);
     expect(args).not.toContain("--allowedTools");
   });
   it("says what to do: a new build, or a change to the recipe it is given", () => {

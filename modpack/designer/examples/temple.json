@@ -1,0 +1,527 @@
+{
+  "name": "temple",
+  "size": {
+    "x": 41,
+    "y": 32,
+    "z": 41
+  },
+  "ground": 3,
+  "seed": 7,
+  "materials": {
+    "found": [
+      [
+        "minecraft:cobbled_deepslate",
+        3
+      ],
+      [
+        "minecraft:polished_deepslate",
+        1
+      ]
+    ],
+    "floor": [
+      [
+        "minecraft:polished_deepslate",
+        5
+      ],
+      [
+        "minecraft:deepslate_tiles",
+        3
+      ],
+      [
+        "minecraft:cracked_deepslate_tiles",
+        1
+      ]
+    ],
+    "wall": [
+      [
+        "minecraft:deepslate_bricks",
+        6
+      ],
+      [
+        "minecraft:cracked_deepslate_bricks",
+        2
+      ],
+      [
+        "create:small_deepslate_bricks",
+        2
+      ]
+    ],
+    "trim": "create:polished_cut_deepslate",
+    "pillar": "create:deepslate_pillar[axis=y]",
+    "copper": [
+      [
+        "minecraft:waxed_cut_copper",
+        3
+      ],
+      [
+        "minecraft:waxed_exposed_cut_copper",
+        1
+      ]
+    ],
+    "roof": [
+      [
+        "create:waxed_copper_shingles",
+        5
+      ],
+      [
+        "create:waxed_oxidized_copper_shingles",
+        3
+      ],
+      [
+        "minecraft:waxed_weathered_cut_copper",
+        2
+      ]
+    ],
+    "window": "minecraft:waxed_oxidized_copper_grate",
+    "glow": "minecraft:ochre_froglight[axis=y]",
+    "lamp": "minecraft:lantern[hanging=false]"
+  },
+  "steps": [
+    {
+      "op": "clear",
+      "from": [
+        0,
+        4,
+        0
+      ],
+      "to": [
+        40,
+        31,
+        40
+      ]
+    },
+    {
+      "op": "box",
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        40,
+        2,
+        40
+      ],
+      "with": "found"
+    },
+    {
+      "op": "box",
+      "from": [
+        0,
+        3,
+        0
+      ],
+      "to": [
+        40,
+        3,
+        40
+      ],
+      "with": "floor"
+    },
+    {
+      "op": "box",
+      "from": [
+        18,
+        3,
+        0
+      ],
+      "to": [
+        22,
+        3,
+        5
+      ],
+      "with": "trim"
+    },
+    {
+      "op": "walls",
+      "from": [
+        3,
+        4,
+        5
+      ],
+      "to": [
+        37,
+        13,
+        35
+      ],
+      "with": "wall"
+    },
+    {
+      "op": "walls",
+      "from": [
+        3,
+        4,
+        5
+      ],
+      "to": [
+        37,
+        4,
+        35
+      ],
+      "with": "trim"
+    },
+    {
+      "op": "walls",
+      "from": [
+        3,
+        12,
+        5
+      ],
+      "to": [
+        37,
+        12,
+        35
+      ],
+      "with": "copper"
+    },
+    {
+      "op": "walls",
+      "from": [
+        3,
+        13,
+        5
+      ],
+      "to": [
+        37,
+        13,
+        35
+      ],
+      "with": "trim"
+    },
+    {
+      "op": "pyramid",
+      "from": [
+        3,
+        14,
+        5
+      ],
+      "to": [
+        37,
+        29,
+        35
+      ],
+      "with": "roof",
+      "hollow": true
+    },
+    {
+      "op": "line",
+      "from": [
+        20,
+        30,
+        20
+      ],
+      "to": [
+        20,
+        31,
+        20
+      ],
+      "with": "minecraft:waxed_oxidized_copper"
+    },
+    {
+      "op": "mirror",
+      "axis": "both",
+      "steps": [
+        {
+          "op": "line",
+          "from": [
+            2,
+            4,
+            4
+          ],
+          "to": [
+            2,
+            13,
+            4
+          ],
+          "with": "pillar"
+        },
+        {
+          "op": "set",
+          "at": [
+            [
+              2,
+              14,
+              4
+            ]
+          ],
+          "with": "lamp"
+        },
+        {
+          "op": "repeat",
+          "times": 2,
+          "move": [
+            6,
+            0,
+            0
+          ],
+          "steps": [
+            {
+              "op": "line",
+              "from": [
+                8,
+                4,
+                4
+              ],
+              "to": [
+                8,
+                12,
+                4
+              ],
+              "with": "pillar"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "mirror",
+      "axis": "x",
+      "steps": [
+        {
+          "op": "repeat",
+          "times": 4,
+          "move": [
+            0,
+            0,
+            6
+          ],
+          "steps": [
+            {
+              "op": "line",
+              "from": [
+                38,
+                4,
+                11
+              ],
+              "to": [
+                38,
+                12,
+                11
+              ],
+              "with": "pillar"
+            }
+          ]
+        },
+        {
+          "op": "repeat",
+          "times": 5,
+          "move": [
+            0,
+            0,
+            6
+          ],
+          "steps": [
+            {
+              "op": "box",
+              "from": [
+                37,
+                6,
+                7
+              ],
+              "to": [
+                37,
+                10,
+                9
+              ],
+              "with": "window"
+            }
+          ]
+        },
+        {
+          "op": "line",
+          "from": [
+            16,
+            4,
+            4
+          ],
+          "to": [
+            16,
+            11,
+            4
+          ],
+          "with": "pillar"
+        },
+        {
+          "op": "set",
+          "at": [
+            [
+              16,
+              12,
+              4
+            ]
+          ],
+          "with": "lamp"
+        },
+        {
+          "op": "line",
+          "from": [
+            17,
+            4,
+            5
+          ],
+          "to": [
+            17,
+            10,
+            5
+          ],
+          "with": "trim"
+        }
+      ]
+    },
+    {
+      "op": "clear",
+      "from": [
+        18,
+        4,
+        5
+      ],
+      "to": [
+        22,
+        9,
+        5
+      ]
+    },
+    {
+      "op": "box",
+      "from": [
+        17,
+        10,
+        5
+      ],
+      "to": [
+        23,
+        11,
+        5
+      ],
+      "with": "copper"
+    },
+    {
+      "op": "repeat",
+      "times": 5,
+      "move": [
+        6,
+        0,
+        0
+      ],
+      "steps": [
+        {
+          "op": "repeat",
+          "times": 5,
+          "move": [
+            0,
+            0,
+            6
+          ],
+          "steps": [
+            {
+              "op": "set",
+              "at": [
+                [
+                  8,
+                  3,
+                  8
+                ]
+              ],
+              "with": "glow"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "box",
+      "from": [
+        14,
+        4,
+        27
+      ],
+      "to": [
+        26,
+        4,
+        33
+      ],
+      "with": "trim"
+    },
+    {
+      "op": "stairs",
+      "from": [
+        17,
+        4,
+        26
+      ],
+      "dir": "south",
+      "length": 1,
+      "width": 7,
+      "with": "minecraft:polished_deepslate_stairs"
+    },
+    {
+      "op": "set",
+      "at": [
+        [
+          15,
+          4,
+          30
+        ],
+        [
+          25,
+          4,
+          30
+        ],
+        [
+          20,
+          4,
+          28
+        ],
+        [
+          15,
+          4,
+          33
+        ],
+        [
+          25,
+          4,
+          33
+        ]
+      ],
+      "with": "glow"
+    },
+    {
+      "op": "box",
+      "from": [
+        19,
+        5,
+        31
+      ],
+      "to": [
+        22,
+        9,
+        31
+      ],
+      "with": "minecraft:reinforced_deepslate"
+    },
+    {
+      "op": "clear",
+      "from": [
+        20,
+        6,
+        31
+      ],
+      "to": [
+        21,
+        8,
+        31
+      ]
+    }
+  ],
+  "markers": [
+    {
+      "name": "portal",
+      "at": [
+        20,
+        6,
+        31
+      ],
+      "note": "boss portal frame x19-22, y5-9, z31, facing north toward the door; not lit"
+    }
+  ]
+}

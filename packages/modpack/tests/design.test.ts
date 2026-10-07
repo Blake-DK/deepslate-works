@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { readBuild, structureInfo } from "../src/builds";
@@ -6,8 +6,9 @@ import { blockCounts, blockListText, compile, compileGrid, DESIGN_LIMITS, Design
 import { designPrompt, recipeFrom } from "../src/design-cli";
 import { child, numberOf, readNbt, writeNbt } from "../src/nbt";
 
-// docs/39 Step 0: the recipe compiler. The recipes here are written by hand; the two in modpack/designer/examples/
-// are the ones whose pictures Alex looks at, so they must always compile.
+// docs/39 Step 0: the recipe compiler. The recipes here are written by hand. modpack/designer/examples/ has two
+// written by hand (boss_hall, gate) and three the designer wrote in Step 0.4 (temple, boss_arena, watchtower): all
+// of them must always compile.
 
 const ROOT = path.join(__dirname, "..", "..", "..", "modpack");
 const BLOCKS = JSON.parse(readFileSync(path.join(ROOT, "designer", "blocks.json"), "utf8")) as BlockList;
@@ -31,6 +32,7 @@ const refused = (steps: unknown[], more: Json = {}) => {
   throw new Error("not refused");
 };
 const STONE = "minecraft:stone";
+const EXAMPLES = readdirSync(path.join(ROOT, "designer", "examples")).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5)).sort();
 
 describe("the block list", () => {
   it("names each block once, with a colour and a kind it defines", () => {
@@ -60,8 +62,9 @@ describe("the block list", () => {
 });
 
 describe("parseRecipe", () => {
-  it("takes the two example recipes", () => {
-    for (const name of ["boss_hall", "gate"]) {
+  it("takes every example recipe", () => {
+    expect(EXAMPLES).toEqual(["boss_arena", "boss_hall", "gate", "temple", "watchtower"]);
+    for (const name of EXAMPLES) {
       const r = parseRecipe(readFileSync(path.join(ROOT, "designer", "examples", `${name}.json`), "utf8"), BLOCKS);
       expect(r.name).toBe(name);
     }
@@ -169,11 +172,11 @@ describe("compile", () => {
   it("leaves are always written persistent", () => {
     expect(at(grid([{ op: "set", at: [[0, 0, 0]], with: "minecraft:oak_leaves" }]), 0, 0, 0)).toBe("minecraft:oak_leaves[persistent=true]");
   });
-  it("the example recipes give structure files the upload check takes, with every block on the list", () => {
-    for (const name of ["boss_hall", "gate"]) {
+  it("every example recipe gives a structure file the upload check takes, with every block on the list", () => {
+    for (const name of EXAMPLES) {
       const r = parseRecipe(readFileSync(path.join(ROOT, "designer", "examples", `${name}.json`), "utf8"), BLOCKS);
       const { structure, blocks } = compile(r, BLOCKS);
-      const { check } = readBuild(writeNbt(structure), "nbt", { builtAt: "", namespaces: { minecraft: "Minecraft" } });
+      const { check } = readBuild(writeNbt(structure), "nbt", { builtAt: "", namespaces: { minecraft: "Minecraft", create: "Create", createdeco: "Create Deco" } });
       expect(check.size).toEqual(r.size);
       expect(check.missing).toEqual([]);
       expect(blocks).toBeGreaterThan(100);

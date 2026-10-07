@@ -51,6 +51,7 @@ services:
     container_name: deepslate-web
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]                     # runs as an unprivileged user and needs no Linux capabilities
     mem_limit: 768m
     networks: [web, internal]
     # docs/31 B-18: the internet-facing container gets the variables it reads and no others. It used to get all of
@@ -125,6 +126,7 @@ services:
     container_name: deepslate-api
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]                     # runs as an unprivileged user and needs no Linux capabilities
     mem_limit: 512m                     # also the cap for `modpack build`, which runs as a child of api
     network_mode: "service:wireguard"   # reachable as deepslate-wg:4000 on `internal` only
     # Like web, api gets the variables it reads (apps/api/src/env.ts) and no others: not the session secret, the
@@ -187,6 +189,7 @@ services:
     container_name: deepslate-map-relay-inner
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]
     mem_limit: 32m
     network_mode: "service:wireguard"
     command: TCP-LISTEN:8100,fork,reuseaddr TCP:10.77.0.2:8100
@@ -197,6 +200,7 @@ services:
     container_name: deepslate-map-relay-outer
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]
     mem_limit: 32m
     networks: [web, internal]
     command: TCP-LISTEN:8100,fork,reuseaddr TCP:deepslate-wg:8100
@@ -209,6 +213,7 @@ services:
     container_name: deepslate-router-relay-inner
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]
     mem_limit: 32m
     network_mode: "service:wireguard"
     command: TCP-LISTEN:8090,fork,reuseaddr TCP:10.77.0.2:8090
@@ -219,6 +224,7 @@ services:
     container_name: deepslate-router-relay-outer
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]
     mem_limit: 32m
     networks: [web, internal]
     command: TCP-LISTEN:8090,fork,reuseaddr TCP:deepslate-wg:8090
@@ -229,6 +235,7 @@ services:
     container_name: deepslate-backups
     restart: unless-stopped
     logging: *logging
+    cap_drop: [ALL]
     mem_limit: 64m
     networks: [internal]
     environment:

@@ -39,7 +39,7 @@ Signing in is one thing, using the site another. Until "We're live" is switched 
 - `web` → `api` calls carry `Authorization: Bearer <API_SERVICE_TOKEN>` plus who is asking, from the verified session (`X-User-Id`, `X-User-Role` and, where there is one, `X-Mc-Username`); `api` rejects anything without the token and checks the role for every route. `src/server/api-client.ts` is the only place that makes such a call.
 - Leaving the Discord server: `guildMember` is looked at again at every Discord sign-in, and, if `DISCORD_BOT_TOKEN` is set (it is not, 2026-09-29), by `api` every five minutes for whoever is on the server. Somebody who has left is sent back to the entrance room at their next join, unless an invite brought them (`outsideAuth`, above).
 - Session lifetime 30 days, refreshed on activity; 12 hours for admin password and break-glass sessions (below).
-- `GET /api/auth/verify` returns 200 if the request carries a valid session, 401 otherwise. Caddy's `forward_auth` uses it for BlueMap. `GET /api/auth/verify/admin` is the same for the mc-router dashboard host, with 403 for a member who is not an admin (docs/02). Both live in `src/server/auth/verify.ts`.
+- `GET /api/auth/verify` returns 200 if the request carries a valid session, 401 otherwise. Caddy's `forward_auth` uses it for BlueMap. It lives in `src/server/auth/verify.ts`.
 
 ## Admin password sign-in (planner, 2026-10-01)
 
@@ -57,7 +57,7 @@ For admins only, for the day Discord is down or an admin's Discord account is go
 
 ## Ending sessions
 
-Sessions are signed cookies, so ending one means refusing it: `loadCurrentUser()` (`src/server/auth/session.ts`) checks every session against the database with `sessionProblem()` (`session-check.ts`). Pages, server actions and the admin API routes all go through it. `GET /api/auth/verify` and `/api/auth/verify/admin` (Caddy's `forward_auth` for the map and the mc-router dashboard) go through it as well (docs/35 R-11), with one answer per session kept for 30 seconds: an ended session, or an admin made a player, keeps the map or the dashboard for at most that long.
+Sessions are signed cookies, so ending one means refusing it: `loadCurrentUser()` (`src/server/auth/session.ts`) checks every session against the database with `sessionProblem()` (`session-check.ts`). Pages, server actions and the admin API routes all go through it. `GET /api/auth/verify` (Caddy's `forward_auth` for the map) goes through it as well (docs/35 R-11), with one answer per session kept for 30 seconds: an ended session keeps the map for at most that long.
 
 ## Admin bootstrap
 

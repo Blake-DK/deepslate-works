@@ -8,7 +8,7 @@ Everything needed to run the stack is here; nothing else on the host is part of 
 
 | File | What it is |
 |---|---|
-| `docker-compose.yml` | The whole stack: postgres, web, the WireGuard sidecar, api, the two map relays, the two mc-router dashboard relays, the build designer (docs/39, only while `DESIGNER_CMD` is set) and the nightly backups. Used as it is; no secrets in it, they all come from `.env` |
+| `docker-compose.yml` | The whole stack: postgres, web, the WireGuard sidecar, api, the two map relays, the build designer (docs/39, only while `DESIGNER_CMD` is set) and the nightly backups. Used as it is; no secrets in it, they all come from `.env` |
 | `.env.example` | Every variable the stack reads, each with a comment and a placeholder value. Copy it to `.env` (git-ignored) and replace every `replace-me-...` and all-zero id; `deploy.sh` refuses to run while one is left |
 | `wg0.conf.example` | The tunnel to the homelab. Copy to `wireguard/wg_confs/wg0.conf`. The whole `wireguard/` folder is git-ignored and belongs to uid 1000, the tunnel container |
 | `Caddyfile.snippet` | The block to add to the host's Caddy for the site and the map |
@@ -21,7 +21,7 @@ Everything needed to run the stack is here; nothing else on the host is part of 
 
 Placeholders in `.env.example`: `replace-me-...` for secrets (where one is generated, the comment gives the command), all zeros for Discord and AMP ids, `*.dsw.test` for domains, `10.77.0.x` (tunnel) and `100.64.0.x` (tailnet) for addresses. The real values live only in `deploy/.env` on the VPS.
 
-**The tunnel takes no connections from the homelab.** api (4000), the inner map relay (8100) and the inner mc-router dashboard relay (8090) all listen on 0.0.0.0 in the tunnel's namespace. Their callers reach them over `internal` (eth0); each relay calls the homelab out over wg0 and the replies come back on that connection. Nothing on the homelab end opens one, so the live `wg_confs/wg0.conf` drops all three on wg0:
+**The tunnel takes no connections from the homelab.** api (4000) and the inner map relay (8100) listen on 0.0.0.0 in the tunnel's namespace. Their callers reach them over `internal` (eth0); each calls the homelab out over wg0 and the replies come back on that connection. Nothing on the homelab end opens one, so the live `wg_confs/wg0.conf` drops them on wg0 (8090 is from the mc-router dashboard relay, taken out on 2026-10-07; api reads that dashboard itself now, and the rule is harmless):
 
 ```
 PostUp = iptables -I INPUT -i wg0 -p tcp -m multiport --dports 4000,8090,8100 -j DROP

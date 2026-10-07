@@ -12,6 +12,7 @@ import { BrandingForm } from "../branding/form";
 import { BrandingSaved, brandingValues } from "../branding/section";
 import { saveBrandingAction } from "../branding/actions";
 import { getFrontiers } from "@/server/season";
+import { loadRouter, RouterPage } from "./router";
 import { BackupCard, consoleLines, DistanceCard, EntityCountsCard, Flash, GroundClearCard, loadGround, loadBackup, loadDistance, loadPlayers, loadPregen, loadSchedule, loadTail, MapCard, PowerCard, PregenCard, RestartCard } from "./cards";
 
 export const metadata: Metadata = { title: "Server" };
@@ -25,6 +26,7 @@ const TABS = [
   { key: "world", label: "World & map" },
   { key: "console", label: "Console" },
   { key: "files", label: "Files" },
+  { key: "router", label: "Router" },
 ] as const;
 
 // docs/35: tabs that were renamed or moved; their old addresses are sent on.
@@ -81,6 +83,8 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
         <CardContent><LiveConsole initial={consoleLines(tail)} height="h-[28rem]" /></CardContent>
       </Card>
     );
+  } else if (tab === "router") {
+    body = <RouterPage load={await loadRouter(caller)} />;
   } else {
     body = <div className="space-y-4"><FilesSection searchParams={asSectionQuery(q)} /><SettingsSection searchParams={asSectionQuery(q)} cards={["files"]} /></div>;
   }

@@ -13,7 +13,7 @@ import { photoInUse } from "@/server/polls";
 const ops = z.enum(["start", "stop", "restart"]);
 // Where to go after an action: the tab it belongs to, or the Control Room when its form says so. The form only
 // picks from this list; an address it sends is never used as such.
-const TABS = { power: "/admin/server", settings: "/admin/server?tab=performance", backups: "/admin/server?tab=backups", pregen: "/admin/server?tab=world", room: "/admin/joining?tab=room", news: "/admin/news" } as const;
+const TABS = { power: "/admin/server", settings: "/admin/server?tab=performance", backups: "/admin/server?tab=backups", pregen: "/admin/server?tab=world", router: "/admin/server?tab=router", room: "/admin/joining?tab=room", news: "/admin/news" } as const;
 function place(formData: FormData | undefined, tab: keyof typeof TABS) {
   const back = formData?.get("back");
   const base = back === "/admin" || back === "/" || back === "/admin/joining" ? back : TABS[tab];
@@ -300,4 +300,39 @@ export async function groundPlanAction(formData: FormData) {
   }
   revalidatePath("/admin/server");
   redirect(to("groundPlan"));
+}
+
+/**
+ * Admin → Server → Router: a game address (hostname) to a port on the AMP host, in mc-router. api checks the admin
+ * again, checks the input, refuses to remove the address players join by, and audits both (apps/api/src/routes/router.ts).
+ */
+export async function routerAddAction(formData: FormData) {
+  const to = place(formData, "router");
+  const admin = await requireAdmin();
+  const label = blank(formData.get("label"));
+  const route = z.object({ hostname: z.string().trim().min(3).max(253), port: z.coerce.number().int().min(1024).max(65535) }).safeParse({ hostname: formData.get("hostname"), port: formData.get("port") });
+  if (!route.success) redirect(to("error", "Give an address such as play.example.com and a port number"));
+  try {
+    await apiFetch("/router/routes", { method: "POST", body: { ...route.data, ...(label ? { label } : {}) }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 20_000 });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/server");
+  redirect(to("routeAdded", route.data.hostname.toLowerCase()));
+}
+
+export async function routerRemoveAction(formData: FormData) {
+  const to = place(formData, "router");
+  const admin = await requireAdmin();
+  const hostname = z.string().trim().min(3).max(253).safeParse(formData.get("hostname"));
+  if (!hostname.success) redirect(to("error", "Unknown address"));
+  try {
+    await apiFetch(`/router/routes/${encodeURIComponent(hostname.data)}`, { method: "DELETE", caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 20_000 });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/server");
+  redirect(to("routeRemoved", hostname.data));
 }

@@ -274,10 +274,13 @@ services:
       DESIGNER_MODEL: ${DESIGNER_MODEL:-}
       DESIGNER_TOKEN: ${DESIGNER_TOKEN:-}
       DESIGNER_CREDENTIALS: ${DESIGNER_CREDENTIALS:-}
+      DESIGNER_DAILY: ${DESIGNER_DAILY:-80}   # the designer keeps its own count too (tools/designer/server.mjs)
       DESIGNER_DATA: /designer-data
     volumes:
       - ${DEEPSLATE_DIR:-..}/tools/designer:/designer:ro          # server.mjs and the instructions; web cannot write here
-      - ${DEEPSLATE_DIR:-..}/modpack/designer:/designer-data:ro   # blocks.json
+      # blocks.json. web CAN write this: it mounts modpack/ read-write (above). server.mjs takes only plain ids, known
+      # kinds and plain property values from it, and drops anything else (blockListText).
+      - ${DEEPSLATE_DIR:-..}/modpack/designer:/designer-data:ro
       - ${DESIGNER_HOME:-/nonexistent}:${DESIGNER_HOME:-/nonexistent}
       - ${DESIGNER_BIN_DIR:-/nonexistent/bin}:${DESIGNER_BIN_DIR:-/nonexistent/bin}:ro
       - ${DESIGNER_VERSIONS_DIR:-/nonexistent/versions}:${DESIGNER_VERSIONS_DIR:-/nonexistent/versions}:ro

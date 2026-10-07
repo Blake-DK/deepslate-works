@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BlockList } from "modpack/design";
-import { currentVersion, fixAsk, overLimit, readAnswer, summary, withVersion, type DesignFile } from "@/lib/designer";
+import { currentVersion, designerRefusal, fixAsk, overLimit, readAnswer, summary, withVersion, type DesignFile } from "@/lib/designer";
 
 // docs/39 Step 2: the build designer from the site. The designer's answers are read and checked here, the versions
 // kept; the container is a small local server standing in for deepslate-designer.
@@ -55,6 +55,10 @@ describe("a design's versions", () => {
     expect(overLimit(29, 79, 80)).toBeNull();
     expect(overLimit(30, 40, 80)).toMatch(/30 times in the last hour/);
     expect(overLimit(3, 80, 80)).toMatch(/80 times today/);
+  });
+  it("the designer's own 429 reads as the same limit message", () => {
+    expect(designerRefusal({ limit: "hour", count: 30 })).toBe(overLimit(30, 0, 80));
+    expect(designerRefusal({ limit: "day", count: 80 })).toBe(overLimit(0, 80, 80));
   });
 });
 

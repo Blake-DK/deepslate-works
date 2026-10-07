@@ -65,6 +65,12 @@ export function summary(d: DesignFile): DesignSummary {
   return { name: d.name, versions: d.versions.length, current: d.current, kept: d.kept?.version ?? null, at: last?.at ?? "" };
 }
 
+/** The designer's own 429 (tools/designer/server.mjs) in the words of web's limit message. */
+export function designerRefusal(v: { limit?: unknown; count?: unknown }): string {
+  const count = Number(v.count) || 0;
+  return v.limit === "hour" ? overLimit(count, 0, Infinity, count)! : (overLimit(0, count, count) ?? "The designer has been asked the most times for a day. Try again tomorrow.");
+}
+
 /** Calls in the last hour and the last day against the limits: what to say when one is used up, or null. */
 export function overLimit(lastHour: number, lastDay: number, daily: number, hourly = 30): string | null {
   if (lastDay >= daily) return `The designer has been asked ${lastDay} times today, the most for a day (DESIGNER_DAILY). It counts against the same plan as everything else; try again tomorrow.`;

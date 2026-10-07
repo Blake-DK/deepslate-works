@@ -3,8 +3,11 @@
 // back the text. Nothing from a request becomes an argument: the command, the flags and the instructions are fixed
 // here, and the request's words go to the CLI on stdin only.
 //
-//   POST /design  {name, ask, recipe?}   one call at a time; a second caller gets 409 at once
+//   POST /design  {name, ask, recipe?}   one call at a time; a second caller gets 409 at once; 429 past the limits
 //   GET  /health                         {cli, signedIn, busy}, without calling the model
+//
+// The limits (30 calls in an hour, DESIGNER_DAILY in a day) are kept here as well as in web: web holds the token, so
+// its own count could be skipped by anyone who broke into web. Counted in memory: a restart starts the count again.
 //
 // Both want the header x-designer-token. Listens on 4100 on the `internal` network; no port is published.
 //
@@ -22,6 +25,31 @@ import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 export const LIMITS = { ask: 2000, recipe: 64 * 1024, body: 80 * 1024, output: 2 * 1024 * 1024, timeoutMs: 420_000 };
+export const RATE = { hourly: 30, daily: 80 };
+const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
+
+/**
+ * The calls that reached the model in the last day. `over()` says which limit is used up, with the count, or null;
+ * `take()` counts one call. The windows roll, as web's count does (designCalls in apps/web/src/server/designer.ts).
+ */
+export function callLimiter({ hourly = RATE.hourly, daily = RATE.daily, now = () => Date.now() } = {}) {
+  let calls = [];
+  return {
+    over() {
+      const t = now();
+      calls = calls.filter((x) => t - x < DAY_MS);
+      if (calls.length >= daily) return { limit: "day", count: calls.length };
+      const hour = calls.filter((x) => t - x < HOUR_MS).length;
+      if (hour >= hourly) return { limit: "hour", count: hour };
+      return null;
+    },
+    take() {
+      calls.push(now());
+    },
+  };
+}
+
 const NAME = /^[a-z0-9_]{2,24}$/;
 const ID = /^[a-z0-9_.-]+:[a-z0-9_/.-]+$/;
 const WORD = /^[a-z0-9_]{1,24}$/;
@@ -160,7 +188,7 @@ const sameToken = (given, token) => {
  * The request handler. `run` is runDesigner (a stub in tests). `childEnv` is all the CLI gets of the environment:
  * HOME, PATH and DISABLE_AUTOUPDATER, never the token.
  */
-export function createHandler({ token, cmd, model, dataDir, credentials, childEnv, run = runDesigner, instructionsFile }) {
+export function createHandler({ token, cmd, model, dataDir, credentials, childEnv, run = runDesigner, instructionsFile, limiter = callLimiter() }) {
   let busy = false;
   let version = { at: 0, value: null };
   const cliVersion = () => {
@@ -211,6 +239,9 @@ export function createHandler({ token, cmd, model, dataDir, credentials, childEn
       } catch (e) {
         return send(res, 500, { error: `the instructions could not be read: ${e instanceof Error ? e.message : String(e)}` });
       }
+      const over = limiter.over();
+      if (over) return send(res, 429, { error: `the most calls for ${over.limit === "day" ? "a day" : "an hour"}`, ...over });
+      limiter.take();
       const r = await run({ cmd, args: designerArgs(model, prompt), input: userMessage(checked), env: childEnv });
       return send(res, r.error ? 502 : 200, r);
     } finally {
@@ -233,6 +264,7 @@ async function main() {
     dataDir: e.DESIGNER_DATA ?? "/designer-data",
     credentials: e.DESIGNER_CREDENTIALS || null,
     childEnv: { HOME: e.HOME ?? "/tmp", PATH: e.PATH ?? "/usr/bin:/bin", DISABLE_AUTOUPDATER: "1", LANG: "C.UTF-8" },
+    limiter: callLimiter({ daily: Math.max(1, Number.parseInt(e.DESIGNER_DAILY ?? "", 10) || RATE.daily) }),
   });
   createServer((req, res) => {
     handler(req, res).catch((err) => {

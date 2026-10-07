@@ -12,8 +12,16 @@ Last updated 2026-10-07, latest: the build designer's second pass, Parts 1 and 2
   from before a restart, or older than 12 minutes, is shown as failed), 3c's tile fix (`render` rounds to a multiple
   of 4; at tile 6 the old one put 27,519 pixels outside the build). The work runs as a promise held in the process,
   not `after`: docs/40 "as built" says why. Change log `2026-10-07-build-designer`.
-- **Next, on `dev` and not deployed:** 3a (the planner's new instructions, `plan`, larger limits, the highest effort)
-  and 3b (five designs from a terminal), then stop for Alex's word on the pictures.
+- **3a on `dev` after the PR (not pushed while #15 is open), not deployed:** the planner's instructions word for word,
+  `temple_b.json`, `plan` shown as "The parts", 600 and 20,000 steps, `--effort high`.
+- **3b run:** at `max` effort no design finished (10 minutes, then 40); at `high` all five came back, each passing the
+  checks the first time, in 480 to 612 s with 45,000 to 55,000 tokens out. The pictures are plainly fuller (a nave with
+  aisles and a domed portal tower; an arena with towers, keep and gatehouse; a ruin with half its roof down). The
+  600 s limit is too short for them (the forge hall took 612 s). Table and list in docs/40 "3b, as run".
+- **Interiors (Alex, 2026-10-07):** 165 interior blocks on the list (vanilla, and Another Furniture, Handcrafted and
+  Macaw's Furniture in three woods), every property checked against the jars; nothing that stores items. The
+  instruction text for rooms and furniture waits until Alex has seen the 3b pictures.
+- **Waiting for Alex:** his word on the five pictures; then the interiors text, a furnished test, and 3a's deploy.
 
 ## Discord sign-in, sign-in alerts, healthcheck and deploy.sh (2026-10-07)
 

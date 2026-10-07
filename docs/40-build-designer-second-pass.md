@@ -190,3 +190,56 @@ is how the two would meet.
 - **Change log:** `2026-10-07-build-designer`.
 - **Not seen yet:** the card in a browser, mid-design, with the page left and opened again, and the other cards
   working meanwhile. That needs the deploy.
+
+## 3a, as built (2026-10-07, on `dev` after the PR, not deployed)
+
+- `tools/designer/instructions.md` is the planner's file, word for word. Every example in "How to make things"
+  compiles: 10 blocks, 29 steps, in a build of 41 by 55 by 59 with the materials they name (`wall`, `wall_low`,
+  `wall_high`, `trim`).
+- `modpack/designer/examples/temple_b.json` as handed over: 199 steps as written, as the plan says, but 15.2 KB on
+  disk, not 17.5. It compiles to 133,000 places (its first step clears the whole box, so air is written everywhere);
+  writing that as NBT takes about 2 s (`writeNbt` makes a small buffer for every number), so the test that compiles
+  every example has 60 s.
+- `plan`: `planOf` in `apps/web/src/lib/designer.ts` (12 lines of 200 characters, anything that is not a line of
+  text dropped), kept on the version, shown as "The parts" over the picture; `modpack design` prints it.
+- `DESIGN_LIMITS.steps` 600, `unrolled` 20,000.
+- **The highest effort:** the CLI has `--effort` (low, medium, high, xhigh, max); every call now has `--effort max`.
+- The prompt with the new instructions and the block list is 23,886 bytes (15,365 before).
+- Not pushed while the PR for Parts 1 and 2 is open (its head is `dev`); pushed after it is merged.
+
+## 3b, as run (2026-10-07)
+
+Run in the designer's own container (the pinned image, as its user, read-only root, no capabilities: what compose
+runs), one call at a time, with the new prompt (23,886 bytes: the new instructions and the block list as it was
+before the interior blocks) and the message `server.mjs` sends for a new build.
+
+**At `--effort max` nothing came back.** The temple, the arena, the watchtower and the gatehouse were each stopped at
+610 s with no answer. One more temple at `max` with 40 minutes allowed was stopped at 2,400 s, still with no answer.
+
+**At `--effort high`, all five came back, each a recipe that passed `parseRecipe` and `compile` the first time:**
+
+| ask | build | time | tokens out | memory peak | the designer's estimate, at API prices |
+|---|---|---|---|---|---|
+| temple, about 40 by 40, deepslate and copper | 41 by 54 by 49, 12,500 blocks, 10 parts | 491 s | 46,227 | 137 MB | $0.93 |
+| round boss arena, about 35 across, 25 by 25 clear floor | 49 by 46 by 61, 26,984 blocks, 10 parts | 585 s | 53,430 | 145 MB | $1.08 |
+| watchtower about 9 by 9 and 30 high | 21 by 38 by 21, 2,590 blocks, 9 parts | 480 s | 44,686 | 134 MB | $0.90 |
+| ruined gatehouse over a road | 41 by 40 by 33, 6,988 blocks, 7 parts | 496 s | 46,323 | 135 MB | $0.93 |
+| dwarven forge hall in a hillside | 49 by 50 by 52, 26,511 blocks, 10 parts | 612 s | 54,827 | 145 MB | $1.10 |
+
+(Step 0.4, the old instructions: 107 to 224 s, 9,237 to 14,871 tokens out.) The recipes kept their own sizes where
+the ask could not be met and said so: the arena is 47 across because a 25 by 25 square needs a round floor 35 across
+inside the stands; the watchtower stays 9 by 9 with its porch and gallery outside it.
+
+**What proved wrong in docs/40 and in the instructions:**
+
+1. "This call uses its highest" effort: at `max` no design finished, in 10 minutes or in 40. `server.mjs` asks for
+   `high`.
+2. "That a call under the new instructions stays under 600 s": two of five took 585 s and 612 s, so the forge hall
+   would have failed on the site. The designer's limit should be about 900 s and web's wait 930 s, with a dead job
+   at 17 minutes; not changed here, for the planner and Alex.
+3. `temple_b.json` is 15.2 KB, not 17.5 KB (199 steps, as said).
+4. A design now costs four to five times the tokens of docs/39's (45,000 to 55,000 out, most of it thought before
+   the answer), so `DESIGNER_DAILY` at 80 is a larger share of the plan than it was.
+
+Nothing in the instructions failed to compile or to hold: every example compiles, and all five answers kept to the
+rules (foundation, the portal frame of reinforced deepslate unlit and marked, no floating parts seen in the pictures).

@@ -18,6 +18,7 @@ import { audit } from "@/server/events";
 import { checkAdminSignIn } from "@/server/auth/admin-core";
 import { auditSignIn, countryOf, signInDeps } from "@/server/auth/admin-login";
 import { adminLockouts } from "@/server/auth/lockout";
+import { logAuthError, reportSignIn } from "@/server/auth/signin-report";
 
 class RateLimited extends CredentialsSignin {
   code = "rate_limited";
@@ -123,6 +124,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  // sign-in failures raise an alert in the admin channel (server/auth/signin-report.ts): outcomes only
+  logger: { error: logAuthError },
+  events: { signIn: ({ account }) => reportSignIn(account?.provider, true) },
   callbacks: {
     ...authConfig.callbacks,
     async signIn({ user, account, profile }) {

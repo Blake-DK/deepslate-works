@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Announcer, type FeedState, type FeedStore, type PostRow } from "../src/discord/announcer.js";
 import { Webhook } from "../src/discord/webhook.js";
-import type { FeedEvent, PollView, Switches } from "../src/discord/lines.js";
+import { escapeText, type FeedEvent, type PollView, type Switches } from "../src/discord/lines.js";
 import { modsChanged } from "../src/players/pack.js";
 import { REAL } from "./fixtures/discord-events.js";
 
@@ -236,6 +236,25 @@ describe("Discord feed (docs/21 §3, §11)", () => {
     expect(t.sent().map((c) => [c.url.includes("223456789012345678") ? "admin" : "feed", c.body.content])).toEqual([
       ["admin", "The server crashed at 19:00. Open Admin → Server: https://deepslate.dsw.test/admin/server"],
       ["feed", "The server fell over. Alex has been told."],
+    ]);
+  });
+
+  it("sign-in failing and working again: each told once in the admin channel, a second outage the same day too", async () => {
+    const t = setup({ admin: ADMIN });
+    const failing = "Health: Discord sign-in is failing: 3 failed in the last 30 minutes and none worked. The site's log has the reason under [auth][error]";
+    const working = "Health, well again: Discord sign-in works again (3 failed while it was broken)";
+    const meta = { health: "signin", method: "discord" };
+    t.add({ kind: "ERROR", message: failing, meta });
+    t.add({ kind: "WARN", message: working, meta });
+    t.add({ kind: "WARN", message: "Health, well again: there is a fresh database dump", meta: { health: "dump" } });
+    await t.a.round();
+    t.tick(60 * 60_000);
+    t.add({ kind: "ERROR", message: failing, meta });
+    await t.a.round();
+    expect(t.sent().map((c) => [c.url.includes("223456789012345678") ? "admin" : "feed", c.body.content])).toEqual([
+      ["admin", `Problem: ${escapeText(failing)}`],
+      ["admin", escapeText(working)],
+      ["admin", `Problem: ${escapeText(failing)}`],
     ]);
   });
 

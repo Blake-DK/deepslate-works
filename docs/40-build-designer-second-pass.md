@@ -190,3 +190,91 @@ is how the two would meet.
 - **Change log:** `2026-10-07-build-designer`.
 - **Not seen yet:** the card in a browser, mid-design, with the page left and opened again, and the other cards
   working meanwhile. That needs the deploy.
+
+## 3a, as built (2026-10-07, on `dev` after the PR, not deployed)
+
+- `tools/designer/instructions.md` is the planner's file, word for word. Every example in "How to make things"
+  compiles: 10 blocks, 29 steps, in a build of 41 by 55 by 59 with the materials they name (`wall`, `wall_low`,
+  `wall_high`, `trim`).
+- `modpack/designer/examples/temple_b.json` as handed over: 199 steps as written, as the plan says, but 15.2 KB on
+  disk, not 17.5. It compiles to 133,000 places (its first step clears the whole box, so air is written everywhere);
+  writing that as NBT takes about 2 s (`writeNbt` makes a small buffer for every number), so the test that compiles
+  every example has 60 s.
+- `plan`: `planOf` in `apps/web/src/lib/designer.ts` (12 lines of 200 characters, anything that is not a line of
+  text dropped), kept on the version, shown as "The parts" over the picture; `modpack design` prints it.
+- `DESIGN_LIMITS.steps` 600, `unrolled` 20,000.
+- **The highest effort:** the CLI has `--effort` (low, medium, high, xhigh, max); every call now has `--effort max`.
+- The prompt with the new instructions and the block list is 23,886 bytes (15,365 before).
+- Not pushed while the PR for Parts 1 and 2 is open (its head is `dev`); pushed after it is merged.
+
+## 3b, as run (2026-10-07)
+
+Run in the designer's own container (the pinned image, as its user, read-only root, no capabilities: what compose
+runs), one call at a time, with the new prompt (23,886 bytes: the new instructions and the block list as it was
+before the interior blocks) and the message `server.mjs` sends for a new build.
+
+**At `--effort max` nothing came back.** The temple, the arena, the watchtower and the gatehouse were each stopped at
+610 s with no answer. One more temple at `max` with 40 minutes allowed was stopped at 2,400 s, still with no answer.
+
+**At `--effort high`, all five came back, each a recipe that passed `parseRecipe` and `compile` the first time:**
+
+| ask | build | time | tokens out | memory peak | the designer's estimate, at API prices |
+|---|---|---|---|---|---|
+| temple, about 40 by 40, deepslate and copper | 41 by 54 by 49, 12,500 blocks, 10 parts | 491 s | 46,227 | 137 MB | $0.93 |
+| round boss arena, about 35 across, 25 by 25 clear floor | 49 by 46 by 61, 26,984 blocks, 10 parts | 585 s | 53,430 | 145 MB | $1.08 |
+| watchtower about 9 by 9 and 30 high | 21 by 38 by 21, 2,590 blocks, 9 parts | 480 s | 44,686 | 134 MB | $0.90 |
+| ruined gatehouse over a road | 41 by 40 by 33, 6,988 blocks, 7 parts | 496 s | 46,323 | 135 MB | $0.93 |
+| dwarven forge hall in a hillside | 49 by 50 by 52, 26,511 blocks, 10 parts | 612 s | 54,827 | 145 MB | $1.10 |
+
+(Step 0.4, the old instructions: 107 to 224 s, 9,237 to 14,871 tokens out.) The recipes kept their own sizes where
+the ask could not be met and said so: the arena is 47 across because a 25 by 25 square needs a round floor 35 across
+inside the stands; the watchtower stays 9 by 9 with its porch and gallery outside it.
+
+**What proved wrong in docs/40 and in the instructions:**
+
+1. "This call uses its highest" effort: at `max` no design finished, in 10 minutes or in 40. `server.mjs` asks for
+   `high`.
+2. "That a call under the new instructions stays under 600 s": two of five took 585 s and 612 s, so the forge hall
+   would have failed on the site. The designer's limit should be about 900 s and web's wait 930 s, with a dead job
+   at 17 minutes; not changed here, for the planner and Alex.
+3. `temple_b.json` is 15.2 KB, not 17.5 KB (199 steps, as said).
+4. A design now costs four to five times the tokens of docs/39's (45,000 to 55,000 out, most of it thought before
+   the answer), so `DESIGNER_DAILY` at 80 is a larger share of the plan than it was.
+
+Nothing in the instructions failed to compile or to hold: every example compiles, and all five answers kept to the
+rules (foundation, the portal frame of reinforced deepslate unlit and marked, no floating parts seen in the pictures).
+
+## Interiors and the 15-minute limit (Alex, 2026-10-07, after the 3b pictures; on `dev`, not deployed)
+
+- **Alex's words:** "i want the builder to be able to do intiors too"; then, with the five pictures seen, "yes do the
+  interiors, 15 minute limit". His choices: vanilla interior blocks and the pack's furniture mods; the instruction text
+  after the pictures.
+- **The block list** gains 165 interior blocks (435 in all): carpets, candles, doors, trapdoors, workstations,
+  ladders, campfires, pots, and Another Furniture, Handcrafted and Macaw's Furniture in oak, spruce and dark oak
+  (chairs, tables with cloths, benches, couches, sofas, fancy beds, shelves, shutters, curtains, lamps, trims,
+  trophies, crockery). Every property a kind allows was checked against the blocks' states in the jars; a furniture
+  block takes only what a designer chooses (facing, a cushion's or a cloth's colour, open, lit, a bed's or a door's
+  half) and the game sets its legs and joins (to be seen on the server). Left out: anything that stores items
+  (drawers, cabinets, wardrobes, cupboards, counters, ovens), sinks (they hold water), vanilla beds (drawn by the
+  game's code, so their states are not in the jar to check), the anvil (it falls). A mirror swaps a door's or a
+  shutter's hinge, as the game does.
+- **Which way furniture faces, read from the three mods' models:** for every chair, bench, sofa and couch, `facing`
+  is the way a person sitting in it looks (the back is on the other side); for Handcrafted's fancy bed, `facing`
+  points from the foot to the head, as for a vanilla bed.
+- **The instructions** gain "Rooms and furniture" between "How to make things" and "The recipe" (the planner's text
+  is unchanged): upper floors 5 or 6 apart with a stair hole, rooms behind inner walls, a one-block door allowed
+  between two small rooms (the 3 by 4 rule stays for the ways in and the main ways through), furniture where it would
+  stand and facing into the room, about a third of a floor furnished, each room furnished for its use, lights every 7,
+  which way furniture faces; four examples (a floor with its stairs, an inner wall with a door, a dining table, a
+  bed). A test now compiles every example in the instructions (14 blocks).
+- **Time:** the designer gives up at 900 s, web waits 930 s, a job (the first call and at most one send-back) is
+  given up at 32 minutes. The card says "about 10 minutes, up to 15".
+- The prompt is 34,800 bytes.
+- **The furnished test** (the same container run as 3b, `high` effort, 900 s allowed): "a two-storey dwarven inn in
+  deepslate and dark oak: a tavern hall with long tables, benches and a big hearth on the ground floor, and four
+  bedrooms upstairs". 738 s, 70,226 tokens out, 153 MB, a recipe that passed the checks the first time: 41 by 44 by
+  41, 8,958 blocks, 16 parts; the upper floor of dark oak planks at y 10 with its stair hole; 212 furniture and fitting
+  blocks of 49 kinds (long tables with cloths, benches facing them, crockery, candles, a hearth with a trophy and a
+  couch, a bar, a kitchen with a campfire under a hood, four bedrooms each with a bed, side table, lamp, carpet,
+  table, candle and chair). The picture still draws furniture as whole cubes (3c, not built), so the rooms read by
+  colour only.

@@ -50,7 +50,7 @@ const MSG: Record<string, string> = {
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
   groundClear: "Players have been warned in chat; items on the ground are cleared in 60 seconds.", groundPlan: "Saved.",
   distanceNow: "Saved. The server restarts in 1 minute; players have been warned.", distanceNext: "Saved. It takes effect at the next restart.",
-  released: "Let in:", error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup asked of AMP. It counts once AMP lists it; a big world takes a quarter of an hour or more.", announced: "Announcement posted",
+  released: "Let in:", routeAdded: "Address added:", routeRemoved: "Address removed:", error: "That didn't work:", scheduled: "Restart planned in", cancelled: "The planned restart is called off.", backup: "Backup asked of AMP. It counts once AMP lists it; a big world takes a quarter of an hour or more.", announced: "Announcement posted",
 };
 
 /** The line an action leaves behind (`?msg=…&detail=…`). */

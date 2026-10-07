@@ -60,12 +60,13 @@ describe("a design job", () => {
     await jobs.clearJobs();
     expect(await jobs.currentJob()).toBeNull();
   });
-  it("one the site did not start in this run, or older than 12 minutes, is dead and shown as failed", async () => {
+  it("one the site did not start in this run, or older than 32 minutes, is dead and shown as failed", async () => {
     const t = Date.parse("2026-10-07T14:00:00Z");
     const base = { ...job, stage: "designing" as const, startedAt: new Date(t).toISOString(), boot: jobs.BOOT };
     expect(jobs.deadReason(base, jobs.BOOT, t + 60_000)).toBeNull();
     expect(jobs.deadReason({ ...base, boot: "another" }, jobs.BOOT, t + 60_000)).toBe("The site restarted while it was designing. Start it again.");
-    expect(jobs.deadReason(base, jobs.BOOT, t + 13 * 60_000)).toBe("It took longer than 12 minutes and was given up. Start it again.");
+    expect(jobs.deadReason(base, jobs.BOOT, t + 31 * 60_000)).toBeNull();
+    expect(jobs.deadReason(base, jobs.BOOT, t + 33 * 60_000)).toBe("It took longer than 32 minutes and was given up. Start it again.");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "boss_temple.job.json"), JSON.stringify({ ...base, boot: "another", startedAt: new Date().toISOString() }));
     expect(await jobs.currentJob()).toMatchObject({ failed: "The site restarted while it was designing. Start it again." });

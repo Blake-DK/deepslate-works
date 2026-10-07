@@ -93,7 +93,7 @@ async function designWork(j: { adminId: string; name: string; title?: string; as
 
   // read again: a Back or a Keep pressed while it was designing must not be undone by writing an old copy
   const now = await readDesign(j.name);
-  const design = withVersion(now ?? j.existing, j.name, { at: new Date().toISOString(), ask: j.ask, say: answer.say, recipe: answer.recipe, ms: r.ms, tokens: r.tokens, fixed }, j.title);
+  const design = withVersion(now ?? j.existing, j.name, { at: new Date().toISOString(), ask: j.ask, say: answer.say, ...(answer.plan.length ? { plan: answer.plan } : {}), recipe: answer.recipe, ms: r.ms, tokens: r.tokens, fixed }, j.title);
   await writeDesign(design);
   return { ok: true };
 }

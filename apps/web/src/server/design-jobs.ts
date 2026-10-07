@@ -12,7 +12,7 @@ import { DESIGNS_DIR } from "@/server/designer";
 // The work is a promise held at module level (globalThis, so every bundle of this process shares it), not `after`:
 // `web` is one long-lived node process, so a promise nobody awaits runs to its end whether or not the page that
 // started it is still open. A job written by another process (the site restarted mid-design) can never finish, so a
-// job whose `boot` is not this process's, or that is older than 12 minutes, is shown as failed.
+// job whose `boot` is not this process's, or that is older than 32 minutes (two calls of 15, the second a send-back), is shown as failed.
 
 export type JobStage = "designing" | "fixing" | "checking";
 export type DesignJob = {
@@ -34,8 +34,8 @@ const g = globalThis as typeof globalThis & { __designerBoot?: string; __designe
 /** This process's id: made once when web starts. */
 export const BOOT = (g.__designerBoot ??= randomUUID());
 const runs = (g.__designerRuns ??= new Map<string, Promise<void>>());
-/** Longer than the designer's own 10 minutes, a send-back included in most cases. */
-export const JOB_DEAD_MS = 12 * 60_000;
+/** Longer than two of the designer's calls of 15 minutes each: the first and the one send-back. */
+export const JOB_DEAD_MS = 32 * 60_000;
 
 const jobFile = (name: string) => path.join(DESIGNS_DIR, `${name}.job.json`);
 
@@ -69,7 +69,7 @@ async function readAll(): Promise<DesignJob[]> {
 export function deadReason(job: DesignJob, boot: string, now = Date.now()): string | null {
   if (job.failed) return null;
   if (job.boot !== boot) return "The site restarted while it was designing. Start it again.";
-  if (now - Date.parse(job.startedAt) > JOB_DEAD_MS) return "It took longer than 12 minutes and was given up. Start it again.";
+  if (now - Date.parse(job.startedAt) > JOB_DEAD_MS) return "It took longer than 32 minutes and was given up. Start it again.";
   return null;
 }
 

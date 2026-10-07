@@ -189,7 +189,7 @@ export function DesignCard({ state, designs, blocks, initial, left, job: firstJo
         {job && !job.failed && (
           <Alert tone="info" data-testid="design-job">
             <p><strong>Designing {job.title ?? job.name}…</strong> started {clock(job.startedAt)}, {since(job.startedAt, now)}. {STAGE[job.stage]}</p>
-            <p className="mt-1 text-muted-foreground">This takes a few minutes. You may leave the page or close it: the design carries on, and is in the list above when it is done.</p>
+            <p className="mt-1 text-muted-foreground">A design takes about 10 minutes, up to 15. You may leave the page or close it: the design carries on, and is in the list above when it is done.</p>
           </Alert>
         )}
         {job?.failed && (
@@ -231,6 +231,12 @@ export function DesignCard({ state, designs, blocks, initial, left, job: firstJo
               {design.kept && <Badge tone={design.kept.version === v.n ? "good" : "neutral"}>kept: version {design.kept.version}</Badge>}
             </div>
             {v.say && <blockquote className="border-l-2 border-edge pl-3 whitespace-pre-wrap">{v.say}</blockquote>}
+            {v.plan && v.plan.length > 0 && (
+              <div>
+                <p className="font-medium">The parts</p>
+                <ul className="list-disc pl-5 text-muted-foreground">{v.plan.map((p, i) => <li key={i}>{p}</li>)}</ul>
+              </div>
+            )}
             <DesignPicture recipe={v.recipe} blocks={blocks} />
             {v.recipe.materials && Object.keys(v.recipe.materials).length > 0 && (
               <div>

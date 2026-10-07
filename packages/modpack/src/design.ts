@@ -13,9 +13,9 @@ const BUILD_NAME = /^[a-z0-9_]{2,24}$/;
 export const DESIGN_LIMITS = {
   side: 128,
   /** steps as written, the ones inside repeat and mirror counted too */
-  steps: 300,
+  steps: 600, // docs/40 3a: 300 before; the planner's temple is 199
   /** steps after repeat and mirror are unrolled */
-  unrolled: 5_000,
+  unrolled: 20_000, // docs/40 3a: 5,000 before
   /** places in the finished build (air written by clear counted too) */
   blocks: 500_000,
   /** the recipe as JSON */
@@ -149,13 +149,19 @@ function withProps(paint: Paint, set: Record<string, string>, blocks: BlockList)
 
 const FLIP: Record<"x" | "z", Record<string, string>> = { x: { east: "west", west: "east" }, z: { north: "south", south: "north" } };
 
-/** The paint as its mirror image shows it: a stair facing east faces west in the mirror about x. */
+/**
+ * The paint as its mirror image shows it: a stair facing east faces west in the mirror about x, and a door or a
+ * shutter hung on the left is hung on the right (the game swaps the hinge in every mirror too).
+ */
 function flipped(paint: Paint, axis: "x" | "z"): Paint {
   return {
     total: paint.total,
     choices: paint.choices.map(({ block, weight }) => {
-      const facing = block.props.facing;
-      return { block: facing && FLIP[axis][facing] ? blockAt(block.id, { ...block.props, facing: FLIP[axis][facing]! }) : block, weight };
+      const { facing, hinge } = block.props;
+      const props = { ...block.props };
+      if (facing && FLIP[axis][facing]) props.facing = FLIP[axis][facing]!;
+      if (hinge) props.hinge = hinge === "left" ? "right" : "left";
+      return { block: props.facing !== facing || props.hinge !== hinge ? blockAt(block.id, props) : block, weight };
     }),
   };
 }
@@ -442,7 +448,7 @@ export function blockCounts(grid: DesignGrid): Array<{ block: string; count: num
 /** The blocks a picture shows: only those with a side open to the air, each with its colour. */
 export type Picture = { size: Recipe["size"]; ground: number; colours: string[]; blocks: Array<[x: number, y: number, z: number, colour: number]>; markers: Marker[] };
 
-const SEE_THROUGH_KINDS = new Set(["pane", "fence", "wall", "lantern", "wall_torch", "leaves", "stairs", "slab"]);
+const SEE_THROUGH_KINDS = new Set(["pane", "fence", "wall", "lantern", "wall_torch", "leaves", "stairs", "slab", "carpet", "small", "candle", "trapdoor", "door", "facing", "campfire", "furniture", "shutter", "seat", "couch", "cloth", "fancy_bed", "corner_trim", "pillar_trim", "curtain", "lamp"]);
 const SEE_THROUGH_IDS = /glass|grate|torch|chain|carpet/;
 
 /**
@@ -613,6 +619,23 @@ export function blockListText(blocks: BlockList): string {
     lantern: "Lanterns (hanging)",
     wall_torch: "Torches on a wall (facing: the direction the torch points away from its wall)",
     leaves: "Leaves (they never decay)",
+    carpet: "Carpets (a thin layer on a floor)",
+    small: "Small things: pots, cushions, small tables (no properties)",
+    candle: "Candles (candles: how many on the block; lit)",
+    trapdoor: "Trapdoors: shutters, table tops, low shelves (facing, half, open)",
+    door: "Doors: two blocks, the lower half and the upper half on it, with the same facing and hinge",
+    facing: "Workstations and ladders (facing)",
+    campfire: "Campfires: a hearth (facing, lit)",
+    furniture: "Furniture (facing: the way a chair or a sofa faces; legs, joins and shapes are set by the game)",
+    shutter: "Window shutters (facing, open, hinge)",
+    seat: "Chairs, benches and side tables with a cushion (facing; color: the cushion, none for bare wood)",
+    couch: "Couches (facing, color; they join up by themselves)",
+    cloth: "Tables with a cloth (color, none for bare wood; they join up by themselves)",
+    fancy_bed: "Beds: two blocks, the foot and the head next to it in the direction it faces, with the same facing and color",
+    corner_trim: "Corner trims (facing; half: bottom on a floor, top under a ceiling; trim: how thick)",
+    pillar_trim: "Pillar trims (face: floor, wall or ceiling; facing; trim: how thick)",
+    curtain: "Curtains (facing, open)",
+    lamp: "Lamps (facing: up on a floor, or the side it hangs from; lit)",
   };
   const lines = ["## Blocks you may use", ""];
   for (const [k, ids] of by) {

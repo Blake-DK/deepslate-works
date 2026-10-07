@@ -10,6 +10,10 @@ const schema = z.object({
   AMP_PASSWORD: z.string().default(""),
   AMP_MOCK: z.enum(["0", "1"]).default("0"),
   AMP_TUNNEL_IP: z.string().default("10.77.0.2"),
+  // the mc-router dashboard on the AMP host (Admin → Server → Router), over the tunnel; it has no login of its own
+  ROUTER_DASH_URL: z.string().url().default("http://10.77.0.2:8090"),
+  // the address players join by (also web's); its route is never removed from Admin → Server → Router
+  SERVER_ADDRESS: z.string().optional(),
   RSYNC_TARGET: z.string().default("amp@10.77.0.2:"),
   DEPLOY_KEY_PATH: z.string().default("/run/keys/deploy.key"),
   DATABASE_URL: z.string().min(1),

@@ -176,6 +176,9 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "modpack.sync": "synced the mods to the server",
   "modpack.serverMods": (p) => `At its start the server loaded mods that PCs are not given: ${Array.isArray(p.problems) ? p.problems.map((x) => s(x)).join("; ") : "?"}`,
   "modpack.sync-dry": "checked what a mod sync would change",
+  // Admin → Server → Router: mc-router's routes on the AMP host
+  "router.routeAdd": (p) => `added the game address ${s(p.hostname)} → port ${s(p.port)}${typeof p.label === "string" && p.label ? ` (${p.label})` : ""}`,
+  "router.routeRemove": (p) => (p.refused === "server_address" ? `tried to remove the game address ${s(p.hostname)}, the one players join by` : `removed the game address ${s(p.hostname)}`),
   "server.start": "started the server",
   "server.stop": "stopped the server",
   "world.pregenOn": (p) => p.refused

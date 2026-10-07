@@ -24,7 +24,7 @@ export async function designPrompt(paths: { root: string; repo: string }): Promi
  * The recipe in a file: a recipe on its own, the designer's answer ({"say", "recipe"}) or the command's whole JSON
  * output with the answer as text in "result". Returns the recipe and the designer's words, if any.
  */
-export function recipeFrom(text: string): { recipe: unknown; say?: string } {
+export function recipeFrom(text: string): { recipe: unknown; say?: string; plan?: string[] } {
   let v: unknown;
   try {
     v = JSON.parse(text);
@@ -32,7 +32,10 @@ export function recipeFrom(text: string): { recipe: unknown; say?: string } {
     throw new DesignError("the file is not JSON");
   }
   if (v && typeof v === "object" && "result" in v && typeof v.result === "string") return recipeFrom(v.result);
-  if (v && typeof v === "object" && "recipe" in v) return { recipe: v.recipe, say: "say" in v && typeof v.say === "string" ? v.say : undefined };
+  if (v && typeof v === "object" && "recipe" in v) {
+    const plan = "plan" in v && Array.isArray(v.plan) ? v.plan.filter((x): x is string => typeof x === "string") : undefined;
+    return { recipe: v.recipe, say: "say" in v && typeof v.say === "string" ? v.say : undefined, ...(plan ? { plan } : {}) };
+  }
   if (v && typeof v === "object" && "say" in v && typeof v.say === "string") throw new DesignError(`the designer did not return a build: ${v.say}`);
   return { recipe: v };
 }
@@ -40,7 +43,7 @@ export function recipeFrom(text: string): { recipe: unknown; say?: string } {
 /** A recipe file into <out>/<name>.nbt, <name>.png (four turns) and <name>-inside.png (cut above the walking floor). */
 export async function designFile(file: string, out: string, modpackRoot: string, log: (s: string) => void): Promise<void> {
   const blocks = await loadBlockList(modpackRoot);
-  const { recipe: raw, say } = recipeFrom(await readFile(file, "utf8"));
+  const { recipe: raw, say, plan } = recipeFrom(await readFile(file, "utf8"));
   const started = Date.now();
   const recipe = parseRecipe(raw, blocks);
   const { structure, grid, blocks: count } = compile(recipe, blocks);
@@ -60,6 +63,7 @@ export async function designFile(file: string, out: string, modpackRoot: string,
   await png(`${recipe.name}-inside.png`, recipe.ground + 2);
 
   if (say) log(`designer: ${say}`);
+  for (const p of plan ?? []) log(`  part: ${p}`);
   log(`${recipe.name}: ${x} by ${y} by ${z}, ground ${recipe.ground}, ${count.toLocaleString("en-GB")} blocks (compiled in ${ms} ms)`);
   for (const c of blockCounts(grid)) log(`  ${String(c.count).padStart(7)}  ${c.block}`);
   for (const m of recipe.markers ?? []) log(`  marker ${m.name} at ${m.at.join(", ")}${m.note ? `: ${m.note}` : ""}`);

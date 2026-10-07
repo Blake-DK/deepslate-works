@@ -13,8 +13,8 @@ import { DESIGN_NAME, designerRefusal, summary, type DesignFile, type DesignSumm
 // (not in git, like the uploads); api's Build reads only the top of data/builds, so it never sees them.
 
 export const DESIGNS_DIR = path.join(BUILDS_DIR, "designs");
-/** A call took 2 to 4 minutes in docs/39 Step 0.4; the container gives up at 10 (docs/40 Part 2), web half a minute later. */
-const CALL_TIMEOUT_MS = 630_000;
+/** A call takes 8 to 10 minutes (docs/40 3b); the container gives up at 15 (Alex, 2026-10-07), web half a minute later. */
+const CALL_TIMEOUT_MS = 930_000;
 
 export const designerSetUp = () => Boolean(env.DESIGNER_URL && env.DESIGNER_TOKEN);
 
@@ -79,7 +79,7 @@ export async function askDesigner(body: { name: string; ask: string; recipe: Rec
       cache: "no-store",
     });
   } catch (e) {
-    return { ok: false, error: e instanceof Error && e.name === "TimeoutError" ? "The designer did not answer within 10 minutes." : "The designer does not answer. Is deepslate-designer running?" };
+    return { ok: false, error: e instanceof Error && e.name === "TimeoutError" ? "The designer did not answer within 15 minutes." : "The designer does not answer. Is deepslate-designer running?" };
   }
   const v = (await res.json().catch(() => ({}))) as { text?: string; ms?: number; usage?: DesignTokens; error?: string; limit?: string; count?: number };
   if (res.status === 429) return { ok: false, error: designerRefusal(v) };

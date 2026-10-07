@@ -1,6 +1,8 @@
 import Fastify from "fastify";
 import { CHANGES } from "./changelog.js";
 import { AmpClient, MockAmp, type Amp } from "./amp/client.js";
+import { HttpRouterDash, MockRouterDash, type RouterDash } from "./router/client.js";
+import { routerRoutes } from "./routes/router.js";
 import { installRoutes } from "./routes/installs.js";
 import { BACKUP_JOB_KEY, BackupWatch, type BackupJob } from "./status/backup-watch.js";
 import { serviceAuth } from "./auth.js";
@@ -64,7 +66,7 @@ import { seasonRoutes } from "./routes/seasons.js";
 import { BUILDS_KEY, buildRoutes, readUploads, type SavedBuild } from "./routes/builds.js";
 import { builderRoutes } from "./routes/builder.js";
 
-export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild } = {}) {
+export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild; router?: RouterDash } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
   const ampClient: Amp = amp ?? (env.AMP_MOCK === "1"
     ? new MockAmp()
@@ -165,6 +167,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   groundRoutes(app, ground);
   partyRoutes(app, new PartyBook(ampClient));
   fileRoutes(app, ampClient);
+  routerRoutes(app, deps.router ?? (env.AMP_MOCK === "1" ? new MockRouterDash() : new HttpRouterDash(env.ROUTER_DASH_URL)), env.SERVER_ADDRESS); // Admin → Server → Router
   consoleRoutes(app, ampClient, tail, () => limbo.actionCtx);
   const editor = new InventoryEditor(ampClient, tail, () => limbo.actionCtx, new Catalogue(`${env.REPO_DIR}/dist/items/catalogue.json`), (a) => audit(a as Parameters<typeof audit>[0]));
   inventoryRoutes(app, ampClient, tail, () => limbo.actionCtx, pregenWatch, undefined, editor);

@@ -17,7 +17,7 @@
 /root/.config/deepslate/                                        root only: helper and test scripts of the building sessions
 ```
 
-`deploy/docker-compose.yml` (no `build:` sections, `pull_policy: always` on our two images) services: `web`, `api`, `wireguard`, `map-relay-inner`, `map-relay-outer`, `postgres`, `backups`. Caddy is the existing `web-proxy` stack; the app publishes no ports except UDP 51820 (WireGuard). AMP stays on the homelab.
+`deploy/docker-compose.yml` (no `build:` sections, `pull_policy: always` on our two images) services: `web`, `api`, `wireguard`, `map-relay-inner`, `map-relay-outer`, `router-relay-inner`, `router-relay-outer`, `postgres`, `backups`. Caddy is the existing `web-proxy` stack; the app publishes no ports except UDP 51820 (WireGuard). AMP stays on the homelab.
 
 ## Deploying (the only way)
 
@@ -125,7 +125,7 @@ map.deepslate.dsw.test {
 }
 ```
 
-The map host also sends `Content-Security-Policy: frame-ancestors https://deepslate.dsw.test` (added 2026-09-29), so only the portal can show the map inside a page; the full block is in `deploy/Caddyfile.snippet`. Reload recipe in `deploy/README.md`. BlueMap has been in the pack since Phase 3; the map host answers 502 only while the game server is asleep or stopped, because BlueMap runs inside it.
+The map host also sends `Content-Security-Policy: frame-ancestors https://deepslate.dsw.test` (added 2026-09-29), so only the portal can show the map inside a page; the full block is in `deploy/Caddyfile.snippet`. So is `router.deepslate.dsw.test`, the mc-router dashboard for admins only (docs/02). Reload recipe in `deploy/README.md`. BlueMap has been in the pack since Phase 3; the map host answers 502 only while the game server is asleep or stopped, because BlueMap runs inside it.
 
 ## `.env.example`
 

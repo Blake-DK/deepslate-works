@@ -24,14 +24,15 @@ Everything on the VPS runs from `deploy/docker-compose.yml` and joins the existi
 |---|---|---|---|
 | `deepslate-web` | `ghcr.io/<owner>/deepslate-web` (built by CI) | 768 MB | the site. Mounts `modpack/` and `.git` (the admin UI edits and commits the mod list), `dist/` read-only (what `/downloads` serves), `data/` (uploaded pictures: branding, news) |
 | `deepslate-api` | `ghcr.io/<owner>/deepslate-api` (built by CI) | 512 MB, which is also the cap for a modpack build | everything that talks to the homelab. Mounts the deploy key read-only, `dist/` (it builds into it), `modpack/` and `installer/` read-only, the GeoIP database read-only |
-| `deepslate-wg` | linuxserver/wireguard | 128 MB | the tunnel; `api` and `map-relay-inner` live in its network namespace. UDP 51820 is the one port the stack opens on the host |
+| `deepslate-wg` | linuxserver/wireguard | 128 MB | the tunnel; `api`, `map-relay-inner` and `router-relay-inner` live in its network namespace. UDP 51820 is the one port the stack opens on the host |
 | `deepslate-map-relay-inner`, `-outer` | alpine/socat | 32 MB each | the map, in two hops |
+| `deepslate-router-relay-inner`, `-outer` | alpine/socat | 32 MB each | the mc-router dashboard (docs/17), the same way, admins only |
 | `deepslate-db` | postgres:16-alpine | 256 MB | data in `/root/docker/deepslate/postgres` |
 | `deepslate-backups` | postgres:16-alpine | 64 MB | dumps in `/root/docker/deepslate/backups` |
 
 The images are built by GitHub Actions and pulled; **the VPS never builds** (docs/09). Dockhand shows the stack from a mirror that `deploy/deploy.sh` refreshes; the repo is what counts.
 
-**Security boundary.** `web` is internet-facing and has no route to the homelab and no AMP credentials. `api` is the only code that talks to AMP, BlueMap or rsync; it runs inside the WireGuard container's network namespace (`network_mode: service:wireguard`), which is on `internal` only, so `api:4000` is reachable from `web` (bearer service token) and nothing on the `web` network. The map is relayed in two hops (`map-relay-inner` in the tunnel namespace → `map-relay-outer` on `web`+`internal`) so the tunnel namespace never joins `web`. See docs/13 §3.
+**Security boundary.** `web` is internet-facing and has no route to the homelab and no AMP credentials. `api` is the only code that talks to AMP, BlueMap or rsync; it runs inside the WireGuard container's network namespace (`network_mode: service:wireguard`), which is on `internal` only, so `api:4000` is reachable from `web` (bearer service token) and nothing on the `web` network. The map is relayed in two hops (`map-relay-inner` in the tunnel namespace → `map-relay-outer` on `web`+`internal`) so the tunnel namespace never joins `web`; the mc-router dashboard (`10.77.0.2:8090`) goes the same way through `router-relay-inner` and `-outer`. See docs/13 §3.
 
 ## Stack and why
 
@@ -127,6 +128,14 @@ The images are built by GitHub Actions and pulled; **the VPS never builds** (doc
 - BlueMap on the AMP host listens on `10.77.0.2:8100` (tunnel address only).
 - Caddy serves `map.deepslate.dsw.test` with `forward_auth deepslate-web:3000 { uri /api/auth/verify }` and proxies to `deepslate-map-relay-outer:8100`, which forwards to the tunnel namespace, which forwards to BlueMap. 401 → redirect to the portal login with `next`.
 - The session cookie is scoped to `.deepslate.dsw.test`, so the dashboard iframe and the map host share it.
+
+## mc-router dashboard behind admin login (Alex, 2026-10-07)
+
+- The AMP host runs a small dashboard for mc-router (routes, who is connecting, free ports; docs/17) on `10.77.0.2:8090`. It has no login of its own, shows players' addresses, and its `POST`/`DELETE` calls add and remove live game routes.
+- Caddy serves `router.deepslate.dsw.test`: `/api/auth/verify/admin` first (200 for an admin, 403 "Admins only" for a member, 401 → the portal login), then `deepslate-router-relay-outer:8090` → `deepslate-wg:8090` → `10.77.0.2:8090`. The portal's cookie is not passed on.
+- `/hook` (mc-router's webhook, loopback on the AMP host) is never passed (404). A `POST` or `DELETE` needs `Origin: https://router.deepslate.dsw.test`, so a form on another site under the cookie's domain cannot change routes.
+- The audit of route changes is Caddy's access log: every request on that host carries the admin's user id as `user` (Alex chose this over registered `api` actions, 2026-10-07). The site's own event log does not see them.
+- The AMP host's `wg0` nftables (`/etc/wireguard/wg0-acl.nft`) let `10.77.0.1` in on tcp 8090 since 2026-10-07; the dashboard's own table (`inet mc_dash`) allows the same.
 
 ## Environments
 

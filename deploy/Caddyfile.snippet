@@ -2,6 +2,11 @@
 
 deepslate.dsw.test {
 	import common
+	# No request body above what the biggest server action takes (26 MB of poll pictures, next.config.ts); the routes
+	# that read JSON hold their own, smaller limit (apps/web/src/server/read-json.ts).
+	request_body {
+		max_size 30MB
+	}
 	header X-Frame-Options SAMEORIGIN
 	reverse_proxy deepslate-web:3000
 }

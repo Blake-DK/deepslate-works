@@ -22,6 +22,7 @@ export const authConfig = {
         Discord({
           clientId: env.DISCORD_CLIENT_ID,
           clientSecret: env.DISCORD_CLIENT_SECRET,
+          issuer: "https://discord.com", // the iss Discord sends on its callback; the endpoints stay explicit, so no discovery
           authorization: { params: { scope: env.DISCORD_GUILD_ID ? "identify guilds" : "identify" } },
         }),
       ]

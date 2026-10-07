@@ -246,7 +246,7 @@ describe("Discord feed (docs/21 §3, §11)", () => {
     const meta = { health: "signin", method: "discord" };
     t.add({ kind: "ERROR", message: failing, meta });
     t.add({ kind: "WARN", message: working, meta });
-    t.add({ kind: "WARN", message: "Health, well again: there is a fresh database dump", meta: { health: "dump" } });
+    t.add({ kind: "WARN", message: "Clock drift noticed", meta: {} });
     await t.a.round();
     t.tick(60 * 60_000);
     t.add({ kind: "ERROR", message: failing, meta });
@@ -256,6 +256,21 @@ describe("Discord feed (docs/21 §3, §11)", () => {
       ["admin", escapeText(working)],
       ["admin", `Problem: ${escapeText(failing)}`],
     ]);
+  });
+
+  it("the dump, backup and pack checks' well again: each told once in the admin channel", async () => {
+    const t = setup({ admin: ADMIN });
+    const lines = {
+      dump: "Health, well again: there is a fresh database dump",
+      backup: "Health, well again: there is a fresh world backup",
+      pack: "Health, well again: the site and the server are on the same pack",
+    };
+    for (const [health, message] of Object.entries(lines)) t.add({ kind: "WARN", message, meta: { health } });
+    await t.a.round();
+    await t.a.round();
+    expect(t.sent().map((c) => [c.url.includes("223456789012345678") ? "admin" : "feed", c.body.content])).toEqual(
+      Object.values(lines).map((m) => ["admin", escapeText(m)]),
+    );
   });
 
   it("server up and down: a planned restart and the server back; sleeping and waking are not posted", async () => {

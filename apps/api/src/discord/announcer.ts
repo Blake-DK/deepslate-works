@@ -494,8 +494,9 @@ export class Announcer {
         return ok(r);
       }
       case "WARN": {
-        // the sign-in watch's "works again" (status/signin-watch.ts); other WARN lines stay in the event log only
-        if (metaOf(e).health !== "signin" || !sw.problems || !this.canAdmin()) return true;
+        // the health watch's "well again" (status/health-watch.ts, signin-watch.ts), once per recovery; other WARN
+        // lines stay in the event log only
+        if (!metaOf(e).health || !sw.problems || !this.canAdmin()) return true;
         return ok(await this.send(e, 0, "admin", "recovered", asServer(brand, escapeText(e.message))));
       }
       case "LINK": {

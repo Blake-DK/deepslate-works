@@ -38,7 +38,17 @@ Last updated 2026-10-08, latest: the test server silent on Discord (first sectio
   webhooks even when set, and a feed built as `server.ts` builds it sends no request for one event of every
   `EVENT_KINDS` kind; marked: bot, webhooks and posts as before; private webhooks only when not marked);
   `compose-env.test.ts` knows the live-only and test-only variables. api 695 tests green.
-- **Verify:** pending, see the next lines as they are run.
+- **Verify (19:21 to 19:38 UTC), with the emptied webhooks; the gate's images (`5f48c966`, test-images green) are
+  built but `api-test` still ran `7e25e50c` (`sudo deploy/test-up.sh` not yet run):**
+  - Test server: start 19:36:35, a join 19:36:51, a leave 19:37:06 in `deepslate_test`. The players' feed channel and
+    the updates forum, read through the live bot (read only): **no message since 19:21**; the newest is 19:20:57.
+  - Not seen on test in this window: a chat line, a death, a stop. A restart showed only its start.
+  - Live: feed on, bot on; a run of deaths at 19:19, 19:20:54 and 19:22:47 went to the feed as one message, edited
+    within the five-minute run (as designed). Live runs the code from before the gate until the next deploy.
+  - Discord game chat to the servers: no chat from Discord recorded on either server in the window; the test api has
+    no bot, so nothing can reach the test server that way.
+  - Still to do with the gate running: the same on test (`test-up.sh` first), and on live after the deploy that carries
+    `DISCORD_TALKS=1` (PR #19).
 
 ## Join room: the book only while held, the kit on the first release (docs/25 §8, 2026-10-08, on `dev`)
 

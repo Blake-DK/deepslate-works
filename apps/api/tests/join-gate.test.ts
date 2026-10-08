@@ -59,7 +59,7 @@ describe("the commands", () => {
   });
   it("hold in the room like anyone who waits there", () => {
     const cmds = actions["limbo.holdPlay"].build(ctx, { name: "bramble09" });
-    expect(cmds[0]).toBe("tag bramble09 remove verified");
+    expect(cmds.slice(0, 2)).toEqual(["tag @a[name=bramble09,tag=verified] add deepslate.released", "tag bramble09 remove verified"]);
     expect(cmds.some((c) => c === "execute in deepslate:limbo run tp bramble09 0.5 65 0.5")).toBe(true);
   });
   it("put a member back where they stood, in the dimension they were in", () => {
@@ -127,7 +127,7 @@ describe("the door checks live or early access before anything else (docs/13 §9
     const parts = JSON.parse(closedTellraw("bramble09").replace(/^tellraw bramble09 /, "")) as Array<string | { text: string }>;
     expect(parts.map((p) => (typeof p === "string" ? p : p.text)).join("")).toBe("Not open yet. You'll be let in when the server goes live.");
     const cmds = actions["limbo.holdClosed"].build(ctx, { name: "bramble09" });
-    expect(cmds[0]).toBe("tag bramble09 remove verified");
+    expect(cmds.slice(0, 2)).toEqual(["tag @a[name=bramble09,tag=verified] add deepslate.released", "tag bramble09 remove verified"]);
     expect(cmds).toContain("execute in deepslate:limbo run tp bramble09 0.5 65 0.5");
     expect(cmds).toContain("gamemode adventure bramble09");
     expect(actions["limbo.remindClosed"].build(ctx, { name: "bramble09" })).toEqual([...screenCommands("bramble09", "closed", ctx.portalUrl), closedTellraw("bramble09")]);

@@ -52,14 +52,16 @@ describe("the book", () => {
     expect(cmds[0]).toBe(`clear @a[name=Pabulum,tag=!verified] ${TAGGED}`);
     expect(cmds[1]).toBe(`execute as @a[name=Pabulum,tag=!verified] if items entity @s weapon.mainhand * run give @s ${bookItem(URL_, "ABC234")}`);
     expect(cmds[2]).toBe(`execute as @a[name=Pabulum,tag=!verified] unless items entity @s weapon.mainhand * run item replace entity @s weapon.mainhand with ${bookItem(URL_, "ABC234")}`);
-    expect(cmds.length).toBe(3);
+    expect(cmds[3]).toBe(`execute as @a[name=Pabulum,tag=!verified] at @s run kill @e[type=minecraft:item,distance=..4,nbt={Item:{components:{"minecraft:custom_data":{${BOOK_TAG}:1b}}}}]`); // a full inventory: none on the floor
+    expect(cmds.length).toBe(4);
   });
 
   it("comes with the hold, after they are put in the room and before the prompt", () => {
     const hold = actions["limbo.hold"].build(ctx, { name: "Pabulum", code: "ABC234" });
     const give = actions["limbo.giveBook"].build(ctx, { name: "Pabulum", code: "ABC234" });
     const at = hold.indexOf(give[0]!);
-    expect(hold.slice(at, at + 3)).toEqual(give);
+    expect(hold.slice(at, at + give.length)).toEqual(give);
+    expect(give).toHaveLength(4); // take the old one, hand or inventory, and no copy left on the floor
     expect(at).toBeGreaterThan(hold.findIndex((c) => c.includes("run tp Pabulum")));
     expect(at).toBeLessThan(hold.findIndex((c) => c.startsWith("title")));
   });
@@ -67,7 +69,7 @@ describe("the book", () => {
   it("is given again when it is gone from the inventory and the off hand; looked for by the tag, nothing cleared", () => {
     const cmds = actions["limbo.bookCheck"].build(ctx, { name: "Pabulum", code: "ABC234" });
     expect(cmds[0]).toBe(`execute as @a[name=Pabulum,tag=!verified] unless items entity @s container.* ${TAGGED} unless items entity @s weapon.offhand ${TAGGED} run tag @s add deepslate_nobook`);
-    expect(cmds.slice(1, 3).every((c) => c.startsWith("execute as @a[name=Pabulum,tag=!verified,tag=deepslate_nobook] "))).toBe(true);
+    expect(cmds.slice(1, 4).every((c) => c.startsWith("execute as @a[name=Pabulum,tag=!verified,tag=deepslate_nobook] "))).toBe(true);
     expect(cmds.at(-1)).toBe("execute as @a[name=Pabulum,tag=deepslate_nobook] run tag @s remove deepslate_nobook");
     expect(cmds.some((c) => c.startsWith("clear"))).toBe(false);
   });

@@ -76,3 +76,25 @@ At the reset, whichever way inventories are emptied, no player may keep the `dee
 - [ ] docs/11 says what was seen, with the backpack's id as checked.
 
 Alex's part: join after the reset and look in the inventory.
+
+## 8. Change, 2026-10-08 (Alex): the kit comes with the first release, and the room holds the book only
+
+Seen on the test server: a player held in the entrance room had the whole kit beside the sign-in book. The kit had been
+given correctly at an earlier release; the account was then unlinked and held again, and the hold never touched the
+inventory. Alex: while held, the book is the only item; the kit belongs to the moment the player reaches the world.
+
+- **The kit is given on the first release from the room, not on the first join.** It still keys on `verified` (which
+  only a release sets) without `deepslate.kit`, and now also never in the room's dimension `deepslate:limbo`. Given
+  once: `deepslate.kit` is set last. The book is taken back by the release before `verified` is set, so the book goes
+  first and the kit comes one tick later.
+- **A second mark, `deepslate.released`:** anyone who has ever been let out. Set every tick for anyone `verified`
+  (kit/tick) and by every hold before it takes `verified` away. Like `deepslate.kit` it is a tag in the player's data
+  in the world: it survives a relog, a restart and a second release, and a new world starts without it.
+- **A hold** (`intoRoom` in `apps/api/src/actions/registry.ts`): a player with neither mark (never let out) has the
+  whole inventory cleared before the book is given, so the book is all they hold. A player with either mark (let out
+  before, held again for the link, Play first, a new installer) keeps everything; the book goes into the hand or the
+  inventory, and when the inventory is full the copy that would drop at their feet is taken away. The release takes
+  the book back and nothing else; no second kit.
+- **Someone who never passes through the room** (a linked member on their first join is let in at once) gets the kit
+  on that first arrival, as before.
+- A player who had the kit and was then held is "let out before" by these rules: their inventory is kept.

@@ -90,12 +90,44 @@ describe("the starter kit in deepslate-tools (docs/25)", () => {
     expect(ids.length).toBeGreaterThan(0);
     for (const id of ids) expect([id, id in known]).toEqual([id, true]);
   });
-  it("marks the player last, and only gives to verified players without the mark", async () => {
+  it("marks the player last, and only gives to verified players without the mark, outside the room's dimension", async () => {
     expect((await commands("give")).at(-1)).toBe("tag @s add deepslate.kit");
-    const [tick, ...rest] = await commands("tick");
-    expect(rest).toEqual([]);
-    const selector = /@a\[([^\]]*)\]/.exec(tick!)?.[1]?.split(",").map((s) => s.trim()) ?? [];
+    const tick = await commands("tick");
+    expect(tick).toHaveLength(2);
+    const give = tick.find((c) => c.endsWith("run function deepslate:kit/give"))!;
+    const selector = /@a\[([^\]]*)\]/.exec(give)?.[1]?.split(",").map((s) => s.trim()) ?? [];
     expect(selector).toEqual(expect.arrayContaining(["tag=verified", "tag=!deepslate.kit"]));
+    expect(give).toContain("at @s unless dimension deepslate:limbo run");
+  });
+  // docs/25, 2026-10-08: the decision, run against the players it is for
+  it("decides the kit: never let out, let out, let out before, already marked", async () => {
+    const tick = await commands("tick");
+    type P = { tags: Set<string>; dimension: string; kits: number };
+    const matches = (sel: string, p: P) =>
+      sel.split(",").every((a) => { const [k, v] = a.split("=") as [string, string]; return k !== "tag" || (v.startsWith("!") ? !p.tags.has(v.slice(1)) : p.tags.has(v)); });
+    const runTick = (p: P) => {
+      for (const c of tick) {
+        const sel = /@a\[([^\]]*)\]/.exec(c)![1]!;
+        if (!matches(sel, p)) continue;
+        const tag = /^tag @a\[[^\]]*\] add (\S+)$/.exec(c);
+        if (tag) { p.tags.add(tag[1]!); continue; }
+        if (c.includes("unless dimension deepslate:limbo") && p.dimension === "deepslate:limbo") continue;
+        p.kits += 1;
+        p.tags.add("deepslate.kit"); // give's last line
+      }
+    };
+    const p = (tags: string[], dimension = "minecraft:overworld"): P => ({ tags: new Set(tags), dimension, kits: 0 });
+    const held = p([], "deepslate:limbo"); // never let out, in the room
+    const freed = p(["verified"]); // first release, at spawn
+    const again = p(["verified", "deepslate.kit", "deepslate.released"]); // released before, relogged
+    const revoked = p(["deepslate.kit", "deepslate.released"], "deepslate:limbo"); // held again
+    for (let t = 0; t < 40; t++) for (const x of [held, freed, again, revoked]) runTick(x); // two seconds of ticks
+    expect([held.kits, freed.kits, again.kits, revoked.kits]).toEqual([0, 1, 0, 0]);
+    expect(freed.tags.has("deepslate.released")).toBe(true); // marked for good
+    expect(held.tags.has("deepslate.released")).toBe(false);
+    const inRoom = p(["verified"], "deepslate:limbo"); // verified but standing in the room's dimension: not there
+    runTick(inRoom);
+    expect(inRoom.kits).toBe(0);
   });
   it("keeps the backpack in a file of its own, while Sophisticated Backpacks is in the pack", async () => {
     expect(await commands("backpack")).toEqual(["give @s sophisticatedbackpacks:backpack 1"]);

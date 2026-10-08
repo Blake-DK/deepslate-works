@@ -122,12 +122,18 @@ const ow = (cmd: string) => inDim("minecraft:overworld", cmd);
 const toRoom = (ctx: ActionCtx, who: string) => inDim(ctx.limbo.dimension, `tp ${who} ${at(ctx.limbo)}`);
 /** Into the room, whatever they wait for: adventure mode, and they cannot walk or jump. */
 const intoRoom = (ctx: ActionCtx, name: string) => [
+  // docs/25 (2026-10-08): someone let out before keeps that mark for good, set here before the hold takes `verified`
+  // (the datapack's kit tick sets it too, every tick, for anyone verified)
+  `tag @a[name=${name},tag=verified] add ${RELEASED_TAG}`,
   `tag ${name} remove verified`,
   `gamemode adventure ${name}`,
   toRoom(ctx, name),
   `effect give ${name} minecraft:slowness infinite 255 true`,
   `effect give ${name} minecraft:jump_boost infinite 250 true`,
   takeBook(name), // a sign-in book from an earlier wait; limbo.hold gives a new one
+  // never let out (no mark, no kit): nothing in the inventory but the book that comes next. Anyone let out before keeps
+  // everything they carry (left the Discord, Play first, a new installer)
+  neverReleasedClear(name),
 ];
 
 /** Only what is safe to show in chat: the name comes from a settings page, not from code. */
@@ -196,15 +202,26 @@ export function bookItem(portalUrl: string, code: string): string {
 
 /**
  * Into their hand if it is empty, otherwise into the inventory. `who` is a held player's selector. The order matters:
- * a book put into an empty hand first would make the hand full for the second line.
+ * a book put into an empty hand first would make the hand full for the second line. A full inventory gets no book: the
+ * copy `give` drops at their feet is taken away again (docs/25, 2026-10-08: never touch what someone let out before
+ * carries), and the chat link and the code still work.
  */
 const placeBook = (who: string, item: string) => [
   `execute as ${who} if items entity @s weapon.mainhand * run give @s ${item}`,
   `execute as ${who} unless items entity @s weapon.mainhand * run item replace entity @s weapon.mainhand with ${item}`,
+  `execute as ${who} at @s run kill @e[type=minecraft:item,distance=..4,nbt={Item:{components:{"minecraft:custom_data":{${BOOK_TAG}:1b}}}}]`,
 ];
 
 /** Our book out of their inventory, and nothing else: matched by its tag. */
 export const takeBook = (who: string) => `clear ${who} ${BOOK_MATCH}`;
+
+// ---- the starter kit and the room (docs/25, 2026-10-08) ------------------------------------------------------------
+// The kit is the datapack's (deepslate-tools kit/tick): given once, one tick after the first release, marked with
+// KIT_TAG. RELEASED_TAG marks anyone ever let out of the room. Both live in the player's data in the world.
+export const KIT_TAG = "deepslate.kit";
+export const RELEASED_TAG = "deepslate.released";
+/** A held player never let out: the whole inventory goes (the book is given after). Anyone with either mark is left alone. */
+export const neverReleasedClear = (name: string) => `clear @a[name=${name},tag=!verified,tag=!${RELEASED_TAG},tag=!${KIT_TAG}]`;
 
 /** The book, replacing any earlier one of ours (a new code, a rejoin): never two. */
 export function giveBookCommands(name: string, portalUrl: string, code: string): string[] {

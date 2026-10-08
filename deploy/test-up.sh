@@ -53,7 +53,14 @@ fi
 tag=$(envval TEST_IMAGE_TAG); tag=${tag:-test}
 if [ "${TEST_UP_PULL:-1}" = 1 ]; then
   echo "images: deepslate-web and deepslate-api tagged $tag"
-  TEST_IMAGE_TAG=$tag "${COMPOSE[@]}" pull web-test api-test || die "no images tagged $tag: run the workflow test-images on GitHub (Actions → test-images → Run workflow), then this again"
+  # docker pull, not `compose pull`: the two services have pull_policy: missing (a live deploy never waits on them), and
+  # compose honours that on a pull too, so a `test` tag already on the host was never refreshed (2026-10-08: the test
+  # pair kept running the morning's images after two runs of test-images). `up` below recreates a container whose
+  # image changed.
+  owner_gh=$(envval GHCR_OWNER)
+  for svc in web api; do
+    docker pull -q "ghcr.io/${owner_gh}/deepslate-${svc}:${tag}" >/dev/null || die "no image deepslate-${svc}:${tag}: run the workflow test-images on GitHub (Actions → test-images → Run workflow), then this again"
+  done
 fi
 
 wait_healthy() {

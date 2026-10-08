@@ -49,6 +49,11 @@ Last updated 2026-10-08, latest: the test server silent on Discord (first sectio
     no bot, so nothing can reach the test server that way.
   - Still to do with the gate running: the same on test (`test-up.sh` first), and on live after the deploy that carries
     `DISCORD_TALKS=1` (PR #19).
+  - **Found on the way: `test-up.sh` never refreshed the test images.** It pulled with `docker compose pull`, and the
+    test services have `pull_policy: missing`, which compose honours on a pull too: "Image is already present
+    locally", skipped. So both runs of test-images today (`985d151f`, `5f48c966`) never reached the test pair, which
+    kept `7e25e50c` from the morning (test-up said so: "images 7e25e50c4b24, checkout 5f48c966e485"). Fixed on `dev`:
+    `docker pull` of each image, then `up` as before. The live checkout has the old script until the next deploy.
 
 ## Join room: the book only while held, the kit on the first release (docs/25 §8, 2026-10-08, on `dev`)
 

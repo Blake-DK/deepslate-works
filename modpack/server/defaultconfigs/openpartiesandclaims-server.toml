@@ -29,5 +29,5 @@
 			# right-click a body (Corpse) in any claim, spawn included; Corpse's own rule still decides whose body opens.
 			# Interaction only: no break$ prefix, so nobody can destroy a body. minecraft:minecart is OPAC's default.
 			forcedEntityProtectionExceptionList = ["minecraft:minecart", "corpse:corpse"]
-			# a backpack in your hand opens anywhere
-			itemUseProtectionExceptionList = ["minecraft:firework_rocket", "sophisticatedbackpacks:backpack", "sophisticatedbackpacks:copper_backpack", "sophisticatedbackpacks:iron_backpack", "sophisticatedbackpacks:gold_backpack", "sophisticatedbackpacks:diamond_backpack", "sophisticatedbackpacks:netherite_backpack"]
+			# a backpack in your hand opens anywhere; so does a written book (the join room's sign-in book, in the server claim)
+			itemUseProtectionExceptionList = ["minecraft:firework_rocket", "sophisticatedbackpacks:backpack", "sophisticatedbackpacks:copper_backpack", "sophisticatedbackpacks:iron_backpack", "sophisticatedbackpacks:gold_backpack", "sophisticatedbackpacks:diamond_backpack", "sophisticatedbackpacks:netherite_backpack", "minecraft:written_book"]

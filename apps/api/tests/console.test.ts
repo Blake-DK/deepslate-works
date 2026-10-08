@@ -34,7 +34,8 @@ describe("actions", () => {
   const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
   it("builds the hold sequence with a clickable link", () => {
     const cmds = actions["limbo.hold"].build(ctx, { name: "Bramble09", code: "ABC234" });
-    expect(cmds[0]).toBe("tag Bramble09 remove verified");
+    expect(cmds[0]).toBe("tag @a[name=Bramble09,tag=verified] add deepslate.released"); // docs/25: remembered before the tag goes
+    expect(cmds[1]).toBe("tag Bramble09 remove verified");
     expect(cmds.some((c) => c === "execute in deepslate:limbo run tp Bramble09 0.5 65 0.5")).toBe(true);
     expect(cmds.at(-1)).toContain('"action":"open_url","value":"https://deepslate.dsw.test/link/ABC234"');
   });

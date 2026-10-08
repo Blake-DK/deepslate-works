@@ -95,7 +95,7 @@ describe("what a held player sees", () => {
     ];
     expect(remind).toEqual([...screen, linkTellraw("Pabulum", URL_, "ABC234")]);
     expect(hold.slice(-5)).toEqual(remind);
-    expect(hold[0]).toBe("tag Pabulum remove verified");
+    expect(hold.slice(0, 2)).toEqual(["tag @a[name=Pabulum,tag=verified] add deepslate.released", "tag Pabulum remove verified"]);
     expect(hold.filter((c) => c.startsWith("tellraw")).length).toBe(1); // one line, not a wall
   });
 

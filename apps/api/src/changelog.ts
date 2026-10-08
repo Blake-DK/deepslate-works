@@ -112,6 +112,15 @@ export const CHANGES: Change[] = [
     date: "2026-10-07",
     lines: ["Which country you play from is now seen only by you and the admins: the Countries card on Stats is for admins, and other players no longer see it on your page."],
   },
+  {
+    id: "2026-10-08-entrance-room",
+    date: "2026-10-08",
+    lines: [
+      "The sign-in book in the entrance room opens again with a right-click. The claims mod was refusing it.",
+      "Waiting in the entrance room for the first time, the sign-in book is now the only thing you carry. The starter kit (backpack, tools, bread, torches and a bed) arrives when you are let into the world, once.",
+      "If you have played before and are asked to wait in the room again, everything you carry stays as it is.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

@@ -54,6 +54,7 @@ import { prismaFeedStore } from "./discord/store.js";
 import { Webhook } from "./discord/webhook.js";
 import { discordRoutes } from "./routes/discord.js";
 import { makeBot, votePoster } from "./discord/wire.js";
+import { discordOutlets } from "./discord/gate.js";
 import { runAction } from "./actions/run.js";
 import { DumpPush } from "./backup/dump-push.js";
 import { allWell, HealthWatch } from "./status/health-watch.js";
@@ -142,8 +143,11 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   });
   const hook = (url: string | undefined) => (url ? new Webhook(url, { botToken: env.DISCORD_BOT_TOKEN }) : null);
   const portal = env.PORTAL_URL.replace(/\/+$/, "");
+  // docs/42a: the only webhooks there are; an instance not marked DISCORD_TALKS=1 gets a private channel's or none
+  const outlets = discordOutlets(env);
+  if (!outlets.talks) log({ private: Boolean(outlets.feed || outlets.admin || outlets.updates) }, "discord: this instance does not talk to the players' Discord (DISCORD_TALKS is not 1)");
   const feed = new Announcer({
-    store: prismaFeedStore(portal, env.REPO_DIR), feed: hook(env.DISCORD_WEBHOOK_FEED), admin: hook(env.DISCORD_WEBHOOK_ADMIN), updates: hook(env.DISCORD_WEBHOOK_UPDATES),
+    store: prismaFeedStore(portal, env.REPO_DIR), feed: hook(outlets.feed), admin: hook(outlets.admin), updates: hook(outlets.updates),
     // docs/42 §3: the test server posts no change log
     bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: testMode ? [] : CHANGES, portal, log: (o, m) => app.log.info(o, m),
   });

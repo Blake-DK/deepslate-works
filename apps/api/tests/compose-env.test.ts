@@ -10,9 +10,11 @@ const compose = readFileSync(new URL("../../../deploy/docker-compose.yml", impor
 /** Set by the image itself, never from deploy/.env. */
 const FROM_THE_IMAGE = new Set(["PORT", "REPO_DIR", "MODPACK_PKG_DIR"]);
 /** docs/42: only the test server's api has these; the live one must not (TEST_MODE unset is what keeps live as it was). */
-const TEST_ONLY = new Set(["TEST_MODE", "TEST_SUMMARY_TOKEN", "SEASONS_SHIP"]);
+// docs/42a (2026-10-08): and a private Discord channel's webhooks, which the live api never reads (it talks to the players')
+const TEST_ONLY = new Set(["TEST_MODE", "TEST_SUMMARY_TOKEN", "SEASONS_SHIP", "DISCORD_PRIVATE_WEBHOOK_FEED", "DISCORD_PRIVATE_WEBHOOK_ADMIN", "DISCORD_PRIVATE_WEBHOOK_UPDATES"]);
 /** docs/42 §10: the test server has no bot. */
-const NOT_ON_TEST = new Set(["DISCORD_BOT_TOKEN", "DISCORD_CLIENT_ID"]);
+// docs/42a (2026-10-08): silent on Discord: no bot, not marked as the one that talks to it, none of the players' webhooks
+const NOT_ON_TEST = new Set(["DISCORD_BOT_TOKEN", "DISCORD_CLIENT_ID", "DISCORD_TALKS", "DISCORD_WEBHOOK_FEED", "DISCORD_WEBHOOK_ADMIN", "DISCORD_WEBHOOK_UPDATES"]);
 
 const block = (service: string) => {
   const from = compose.slice(compose.indexOf(`\n  ${service}:`));

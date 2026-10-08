@@ -66,14 +66,23 @@ import { listAdvancementFiles, readAdvancements } from "./seasons/advancements.j
 import { seasonRoutes } from "./routes/seasons.js";
 import { BUILDS_KEY, buildRoutes, readUploads, type SavedBuild } from "./routes/builds.js";
 import { builderRoutes } from "./routes/builder.js";
+import { CLOCK_KEY, SeasonClock, type StoredClock } from "./test-mode/clock.js";
+import { checkoutCommit } from "./test-mode/checkout.js";
+import { DOOR_KEY } from "./test-mode/door.js";
+import { testRoutes } from "./test-mode/routes.js";
+import { build as apiBuild } from "./status/versions.js";
+import { sitePack } from "./status/health-watch.js";
 
 export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild; router?: RouterDash } = {}) {
   const app = Fastify({ logger: { level: "info" }, trustProxy: false });
+  // docs/42: the test server's own api. Everything it changes is behind this one flag; on live it is false.
+  const testMode = env.TEST_MODE === "1";
+  if (testMode && env.TEST_SUMMARY_TOKEN === env.API_SERVICE_TOKEN) throw new Error("api: TEST_SUMMARY_TOKEN must not be the service token: it would open every route");
   const ampClient: Amp = amp ?? (env.AMP_MOCK === "1"
     ? new MockAmp()
     : new AmpClient({ url: env.AMP_URL, username: env.AMP_USERNAME, password: env.AMP_PASSWORD, instanceId: env.AMP_INSTANCE_ID }));
 
-  app.addHook("onRequest", serviceAuth(env.API_SERVICE_TOKEN));
+  app.addHook("onRequest", serviceAuth(env.API_SERVICE_TOKEN, testMode && env.TEST_SUMMARY_TOKEN ? { "/test/summary": env.TEST_SUMMARY_TOKEN } : {}));
   app.addHook("onRequest", viaDiscordHook);
   // docs/21 + docs/22: the Discord feed and the bot are made further down; /health reads them when asked
   // `checks` (docs/32 §7 item 3): what the health watch found at its last round; `watch` is false when any is wrong
@@ -111,7 +120,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const healthWatch = new HealthWatch({
     amp: ampClient, dumpsDir: process.env.DB_DUMPS_DIR ?? "/dbdumps", repoDir: env.REPO_DIR,
     copied: () => dumpPush.last, serverPack, wake: () => wake.view(),
-    addEvent: (e) => prismaRecorderStore.addEvent(e), log,
+    addEvent: (e) => prismaRecorderStore.addEvent(e), log, testServer: testMode,
   });
   const view = new ServerView({ poller, wake, lastDown: () => recorder.lastDown, sleep: () => ({ on: pregen.sleep.on, delayMin: pregen.sleep.delayMin }), tunnelUp: () => tunnelUp });
   // docs/22: the bot (only with DISCORD_BOT_TOKEN and DISCORD_GUILD_ID), and docs/21's feed, which posts its votes
@@ -135,7 +144,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const portal = env.PORTAL_URL.replace(/\/+$/, "");
   const feed = new Announcer({
     store: prismaFeedStore(portal, env.REPO_DIR), feed: hook(env.DISCORD_WEBHOOK_FEED), admin: hook(env.DISCORD_WEBHOOK_ADMIN), updates: hook(env.DISCORD_WEBHOOK_UPDATES),
-    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: CHANGES, portal, log: (o, m) => app.log.info(o, m),
+    // docs/42 §3: the test server posts no change log
+    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: testMode ? [] : CHANGES, portal, log: (o, m) => app.log.info(o, m),
   });
   discordRoutes(app, feed, bot, env);
   installRoutes(app);
@@ -169,7 +179,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   partyRoutes(app, new PartyBook(ampClient));
   fileRoutes(app, ampClient);
   const routerDash = deps.router ?? (env.AMP_MOCK === "1" ? new MockRouterDash() : new HttpRouterDash(env.ROUTER_DASH_URL));
-  routerRoutes(app, routerDash, env.SERVER_ADDRESS); // Admin → Server → Router
+  routerRoutes(app, routerDash, env.SERVER_ADDRESS, testMode); // Admin → Server → Router; read only on the test server
   consoleRoutes(app, ampClient, tail, () => limbo.actionCtx);
   const editor = new InventoryEditor(ampClient, tail, () => limbo.actionCtx, new Catalogue(`${env.REPO_DIR}/dist/items/catalogue.json`), (a) => audit(a as Parameters<typeof audit>[0]));
   inventoryRoutes(app, ampClient, tail, () => limbo.actionCtx, pregenWatch, undefined, editor);
@@ -187,6 +197,14 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   // docs/34 §4 (W1.3): the season's clears and what a season says, from the same console lines. It does nothing
   // until a Season row says "running" (Admin → Seasons, W1.4).
   const seasonFile = currentSeason(env.REPO_DIR, log);
+  // docs/42 §7.1: the season's time. On live it is the real time; on the test server the test clock, once set.
+  const clock = new SeasonClock(testMode, {
+    load: async () => (await db.setting.findUnique({ where: { key: CLOCK_KEY } }))?.value ?? null,
+    save: async (v: StoredClock | null) => {
+      if (v) await db.setting.upsert({ where: { key: CLOCK_KEY }, create: { key: CLOCK_KEY, value: v }, update: { value: v } });
+      else await db.setting.deleteMany({ where: { key: CLOCK_KEY } });
+    },
+  });
   buildRoutes(app, {
     amp: ampClient, tail, ctx: () => limbo.actionCtx,
     uploads: () => readUploads(`${env.REPO_DIR}/dist`),
@@ -198,7 +216,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     },
   });
   builderRoutes(app, { amp: ampClient, tail, ctx: () => limbo.actionCtx, findUser: (id) => db.user.findUnique({ where: { id }, select: { id: true, role: true, builderTools: true, mcUsername: true } }) }); // docs/37
-  seasonRoutes(app, { amp: ampClient, tail, ctx: () => limbo.actionCtx, file: seasonFile, store: prismaSeasonStore, addEvent: (e) => prismaRecorderStore.addEvent(e), settle: () => seasons.settle() }); // settle: docs/35 R-15
+  seasonRoutes(app, { amp: ampClient, tail, ctx: () => limbo.actionCtx, file: seasonFile, store: prismaSeasonStore, addEvent: (e) => prismaRecorderStore.addEvent(e), settle: () => seasons.settle(), now: clock.now }); // settle: docs/35 R-15
   const seasons = new SeasonRecorder({
     file: seasonFile,
     store: prismaSeasonStore,
@@ -210,6 +228,25 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
       return files ? (uuid) => readAdvancements(ampClient, uuid, files.get(uuid) ?? 0, log) : null;
     },
     log,
+    now: clock.now,
+    seasonTime: clock.shift,
+  });
+  testRoutes(app, {
+    on: testMode, amp: ampClient, tail, ctx: () => limbo.actionCtx, clock, file: seasonFile, store: prismaSeasonStore,
+    server: () => ({ state: view.state(), players: poller.fresh()?.players ?? [] }),
+    address: env.SERVER_ADDRESS ?? null,
+    commits: async () => ({ images: apiBuild().commit, checkout: await checkoutCommit(env.REPO_DIR) }),
+    pack: async () => ({ site: await sitePack(env.REPO_DIR), server: await serverPack() }),
+    door: {
+      load: async () => (await db.setting.findUnique({ where: { key: DOOR_KEY } }))?.value ?? null,
+      save: async (v) => {
+        await db.setting.upsert({ where: { key: DOOR_KEY }, create: { key: DOOR_KEY, value: v }, update: { value: v } });
+      },
+    },
+    dropSeason: async (id) => {
+      await db.season.deleteMany({ where: { id } });
+    },
+    forget: () => seasons.forget(),
   });
   let housekeeping: NodeJS.Timeout | null = null;
   let watching: NodeJS.Timeout | null = null;
@@ -218,6 +255,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   let addresses: NodeJS.Timeout | null = null;
 
   app.addHook("onReady", async () => {
+    await clock.load().catch((err) => log({ err: String(err) }, "could not read the test clock"));
     if (env.AMP_MOCK === "1") return;
     await recorder.init().catch((err) => log({ err: String(err) }, "could not load open sessions"));
     tail.on(recorder.onConsole);
@@ -268,7 +306,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     }, 10_000);
     tail.start();
     poller.start();
-    dumpPush.start();
+    if (!testMode) dumpPush.start(); // docs/42 T7: the test server has no dumps to copy
     healthWatch.start();
     limbo.start();
     pings.start();

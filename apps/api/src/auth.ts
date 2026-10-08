@@ -31,8 +31,20 @@ declare module "fastify" {
   }
 }
 
-export function serviceAuth(token: string) {
+/**
+ * `own`: paths that take a token of their own instead of the service token, and only that one (docs/42 T9: the test
+ * server's /test/summary takes the live site's TEST_SUMMARY_TOKEN). Such a request is nobody: web's caller headers
+ * are not read.
+ */
+export function serviceAuth(token: string, own: Readonly<Record<string, string>> = {}) {
   return async (req: FastifyRequest, reply: FastifyReply) => {
+    const path = req.url.split("?")[0] ?? "";
+    const its = Object.hasOwn(own, path) ? own[path] : undefined;
+    if (its !== undefined) {
+      if (!tokenMatches(req.headers.authorization, its)) return reply.code(401).send({ error: { code: "unauthorized", message: "this path's own token required" } });
+      req.caller = { userId: null, role: null, mcUsername: null };
+      return;
+    }
     if (!tokenMatches(req.headers.authorization, token)) {
       return reply.code(401).send({ error: { code: "unauthorized", message: "service token required" } });
     }

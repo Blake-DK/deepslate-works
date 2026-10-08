@@ -15,6 +15,18 @@ export const tokenExpired = (t: AppToken, now: number = Date.now()) => typeof t.
 
 const secure = env.secureCookies;
 
+/**
+ * docs/42 T2: the test site's session cookie has a name of its own and belongs to its own host. The live site's cookie
+ * is set for the parent domain, so the browser sends it to the test host too; under its own name the test site never
+ * reads it (and Caddy strips it before the request gets there). Unset TEST_MODE: the cookies are as they always were.
+ */
+export function sessionCookie(o: { testMode: boolean; secure: boolean; cookieDomain?: string }) {
+  if (o.testMode) return { sessionToken: { name: `${o.secure ? "__Secure-" : ""}dswtest.session-token`, options: { httpOnly: true, sameSite: "lax" as const, path: "/", secure: o.secure } } };
+  if (o.cookieDomain) return { sessionToken: { name: `${o.secure ? "__Secure-" : ""}authjs.session-token`, options: { httpOnly: true, sameSite: "lax" as const, path: "/", secure: o.secure, domain: o.cookieDomain } } };
+  return null;
+}
+const cookies = sessionCookie({ testMode: env.TEST_MODE, secure, cookieDomain: env.COOKIE_DOMAIN });
+
 export const authConfig = {
   trustHost: true,
   providers: env.discordEnabled
@@ -29,16 +41,7 @@ export const authConfig = {
     : [],
   pages: { signIn: "/login", error: "/login" },
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60, updateAge: 24 * 60 * 60 },
-  ...(env.COOKIE_DOMAIN
-    ? {
-        cookies: {
-          sessionToken: {
-            name: `${secure ? "__Secure-" : ""}authjs.session-token`,
-            options: { httpOnly: true, sameSite: "lax" as const, path: "/", secure, domain: env.COOKIE_DOMAIN },
-          },
-        },
-      }
-    : {}),
+  ...(cookies ? { cookies } : {}),
   callbacks: {
     jwt({ token }) {
       return tokenExpired(token as AppToken) ? null : token;

@@ -101,6 +101,16 @@ const RECOVERED: Record<CheckName, string> = {
   wake: "the server woke",
 };
 
+/**
+ * docs/42 T7: the test server has no nightly dump, copies none to the AMP host, and its world is thrown away at will,
+ * so AMP's backups are not looked for. Those three are "not looked at" there: never an alert. The pack and the wake
+ * are looked at as on live.
+ */
+export function forTestServer(c: Checks): Checks {
+  const skip: Check = { ok: null, text: "Not looked at on the test server" };
+  return { ...c, dump: skip, dumpCopy: skip, backup: skip };
+}
+
 /** One-word summary for /health: false when any check is wrong, true when none is (unknowns do not count). */
 export const allWell = (c: Checks | null): boolean => !c || Object.values(c).every((x) => x.ok !== false);
 
@@ -114,6 +124,8 @@ type Deps = {
   addEvent: (e: { at: Date; kind: "ERROR" | "WARN"; actor: null; message: string; meta: Record<string, unknown> }) => Promise<unknown>;
   log: (o: unknown, m: string) => void;
   now?: () => Date;
+  /** docs/42 T7: the test server's api (forTestServer) */
+  testServer?: boolean;
 };
 
 export class HealthWatch {
@@ -179,7 +191,8 @@ export class HealthWatch {
     this.busy = true;
     try {
       const now = (this.d.now ?? (() => new Date()))();
-      const next = evaluate(await this.gather(), now);
+      const looked = evaluate(await this.gather(), now);
+      const next = this.d.testServer ? forTestServer(looked) : looked;
       for (const a of alerts(this.checks, next)) {
         await this.d.addEvent({ at: now, kind: a.level, actor: null, message: a.message, meta: { health: a.check } }).catch((err) => this.d.log({ err: String(err) }, "health: could not write the event"));
         this.d.log({ check: a.check, level: a.level }, a.message);

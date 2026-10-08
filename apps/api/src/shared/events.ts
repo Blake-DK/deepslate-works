@@ -141,6 +141,10 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "season.start": (p) => `started ${s(p.name, "the season")}`,
   "season.end": (p) => `ended ${s(p.name, "the season")}: its result is frozen`,
   "season.reload": "had the server read its datapacks again (reload)",
+  // docs/42 §7: the test server's season tools, and its door (T8)
+  "season.testReset": (p) => `reset the season test of ${s(p.name, "the season")}${typeof p.clears === "number" ? `: ${p.clears} ${p.clears === 1 ? "tick" : "ticks"} taken back` : ""}`,
+  "test.clock": (p) => (p.clear ? "set the test clock back to the real time" : `set the test clock to ${s(p.at)}`),
+  "test.door": (p) => `set the test server's door: Play first ${p.playFirst ? "on" : "off"}, vote first ${p.mustVote ? "on" : "off"}, the newest app ${p.newestApp ? "on" : "off"}`,
   // docs/34 §10: builds taken from the world and put somewhere else
   "build.capture": (p) => `captured the build "${s(p.name)}" in ${s(p.dimension)}`,
   "build.place": (p) => `placed the build "${s(p.name)}" in ${s(p.dimension)}`,
@@ -177,8 +181,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "modpack.serverMods": (p) => `At its start the server loaded mods that PCs are not given: ${Array.isArray(p.problems) ? p.problems.map((x) => s(x)).join("; ") : "?"}`,
   "modpack.sync-dry": "checked what a mod sync would change",
   // Admin → Server → Router: mc-router's routes on the AMP host
-  "router.routeAdd": (p) => `added the game address ${s(p.hostname)} → port ${s(p.port)}${typeof p.label === "string" && p.label ? ` (${p.label})` : ""}`,
-  "router.routeRemove": (p) => (p.refused === "server_address" ? `tried to remove the game address ${s(p.hostname)}, the one players join by` : `removed the game address ${s(p.hostname)}`),
+  "router.routeAdd": (p) => (p.refused === "test_server" ? `tried to add the game address ${s(p.hostname)} from the test site, which never changes mc-router` : `added the game address ${s(p.hostname)} → port ${s(p.port)}${typeof p.label === "string" && p.label ? ` (${p.label})` : ""}`),
+  "router.routeRemove": (p) => (p.refused === "server_address" ? `tried to remove the game address ${s(p.hostname)}, the one players join by` : p.refused === "test_server" ? `tried to remove the game address ${s(p.hostname)} from the test site, which never changes mc-router` : `removed the game address ${s(p.hostname)}`),
   "server.start": "started the server",
   "server.stop": "stopped the server",
   "world.pregenOn": (p) => p.refused

@@ -16,6 +16,8 @@ const APPLIED: Record<string, { tone: "success" | "error" | "info"; text: string
   nocommit: { tone: "error", text: "mods.json was updated but the git commit failed. See the audit log on the admin page." },
   nothing: { tone: "info", text: "Nothing to change: the mod list already matches the results." },
   "not-closed": { tone: "error", text: "Close the vote before applying results." },
+  // docs/42 T3
+  test: { tone: "error", text: "The test site never writes to git. Apply a vote's results on the live site." },
 };
 
 const TIER_LABEL = { LOW: "weak PC", MID: "mid PC", HIGH: "strong PC", UNKNOWN: "unknown" } as const;

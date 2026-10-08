@@ -10,6 +10,7 @@ import { getSection } from "@/server/site-settings";
 import { AdminStrip, BannerBox, NavLink, Strip, TabBadge } from "./nav-link";
 import { stripLink } from "./strip-link";
 import { getSeasonCurrent } from "@/server/season";
+import { env } from "@/env";
 
 const DOT = { up: "bg-play-hi", waking: "bg-primary", asleep: "bg-dim", down: "bg-danger" } as const;
 
@@ -112,7 +113,7 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
         <NavLink href="/me">Me</NavLink>
         {signOutForm}
       </Strip>
-      {admin && <AdminStrip />}
+      {admin && <AdminStrip other={env.otherSite} />}
       <main className="mx-auto w-full max-w-6xl flex-1 px-5 pt-[26px] pb-[34px]">{children}</main>
       {footer}
     </>

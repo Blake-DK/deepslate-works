@@ -43,6 +43,8 @@ export const pieceName = (name: string, p: Pick<Piece, "ix" | "iy" | "iz">) => `
 
 /** The id of a season, a boss or a trial, as the season files have them. */
 export const SEASON_ID = z.string().regex(/^[a-z0-9_]{1,32}$/);
+/** The score a season's datapack counts a boss's "woke" by (packages/modpack seasonDatapack: 16 characters at most). */
+export const seasonWakeObjective = (season: string) => `dw_${season}_wake`.slice(0, 16);
 const POS = /^(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)$/;
 const DIMENSION = /^[a-z0-9_.-]{1,64}:[a-z0-9_./-]{1,64}$/;
 
@@ -717,6 +719,23 @@ export const actions = {
   // Reads every datapack again, the season one among them. On a server with this many mods it can hold the game
   // for some seconds (docs/34 §8, decision 3: timed at the rehearsal).
   "season.reload": define({ name: "season.reload", role: "ADMIN", input: z.object({}), build: () => ["reload"] }),
+  // docs/42 §7.2, the test server only (its route refuses elsewhere): Reset the season test. Every advancement of the
+  // season is taken back from everyone on the server (`from` the root takes its children with it), and the tags and
+  // the score its datapack sets are cleared, so the next kill is first on the server again. The names must agree with
+  // packages/modpack's seasonDatapack (a test compares them). The world, inventories and the datapack stay.
+  "season.testReset": define({
+    name: "season.testReset",
+    role: "ADMIN",
+    input: z.object({ season: SEASON_ID, bosses: z.array(SEASON_ID).max(64) }),
+    gapMs: 200,
+    build: (_ctx, { season, bosses }) => [
+      `advancement revoke @a from deepslate:${season}/root`,
+      ...bosses.map((b) => `tag @a remove dw.${season}.t.${b}`),
+      `tag @a remove dw.${season}.woke`,
+      "tag @a remove dw.credit",
+      `scoreboard players reset * ${seasonWakeObjective(season)}`,
+    ],
+  }),
   // ---- builds (docs/34 §10, T2 to T4): take something that stands in the world, put it somewhere else, lock the ground.
   // The game has no console command that saves a structure, so a structure block in SAVE mode is set above each
   // piece and powered with a redstone block; both are taken away again. The file lands in
@@ -787,5 +806,5 @@ export const actions = {
 
 export type ActionName = keyof typeof actions;
 /** Admin actions with a route of their own, not reachable through POST /actions/:name. */
-export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify", "season.grant", "season.revoke", "season.reload", "build.capture", "build.place", "build.placeUpload", "build.lock", "builder.on", "builder.off"]);
+export const OWN_ROUTE: ReadonlySet<string> = new Set(["console.send", "inv.read", "inv.set", "inv.clear", "inv.give", "inv.notify", "season.grant", "season.revoke", "season.reload", "season.testReset", "build.capture", "build.place", "build.placeUpload", "build.lock", "builder.on", "builder.off"]);
 export const ADMIN_ACTIONS: ActionName[] = (Object.keys(actions) as ActionName[]).filter((n) => actions[n].role === "ADMIN");

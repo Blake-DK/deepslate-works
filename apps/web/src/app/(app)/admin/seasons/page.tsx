@@ -19,6 +19,8 @@ import { DesignCard, type DesignCardState } from "./design-card";
 import { designCalls, designerSetUp, isDesignerOwner, listDesigns, loadBlockList, readDesign } from "@/server/designer";
 import { currentJob } from "@/server/design-jobs";
 import { env } from "@/env";
+import { getTestState } from "@/server/test-mode";
+import { TestTools } from "./test-tools";
 
 export const metadata: Metadata = { title: "Seasons" };
 
@@ -55,6 +57,10 @@ const MSG: Record<string, string> = {
   placedLocked: "Placed, and its ground is locked:",
   placedNotLocked: "Placed, but the lock was not taken by the server. Lock it by hand:",
   error: "That didn't work:",
+  // docs/42 §7, the test site only
+  clockSet: "The test clock is set. The season's lines follow it within a minute.",
+  clockCleared: "Back to the real time.",
+  reset: "Reset. Every tick of the season is gone, on the site and in the game: announce and start it again, and the next kill is first on the server.",
 };
 const STATE: Record<string, { label: string; tone: "neutral" | "good" | "info" }> = { upcoming: { label: "Announced, not started", tone: "info" }, running: { label: "Running", tone: "good" }, ended: { label: "Ended", tone: "neutral" } };
 
@@ -82,6 +88,7 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
     <TabbedPage title="Seasons" intro="Announce, start and end the current season, and put a missed boss kill or trial right." base="/admin/seasons" tabs={[]} current="">
       {msg && <Alert tone={msg === "error" || msg === "confirm" ? "error" : "success"}>{MSG[msg] ?? msg} {detail && <span className="font-mono">{detail}</span>}</Alert>}
       {!view && <Alert tone="error">The portal&apos;s backend did not answer. Try again in a moment.</Alert>}
+      {env.TEST_MODE && <TestTools state={await getTestState(true)} />}
       {view && !file && (
         <Card>
           <CardHeader>

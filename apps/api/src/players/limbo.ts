@@ -15,6 +15,7 @@ import { unvotedFor } from "./polls.js";
 import { doorRule, type Member } from "../shared/access.js";
 import { CODE_TTL_MS, makeCode } from "../shared/join-code.js";
 import { prismaHeldStore, type HeldRow, type HeldStore } from "./held-store.js";
+import { DOOR_KEY, readTestDoor, testDoorInputs } from "../test-mode/door.js";
 
 // docs/14: the white room. Unlinked joins are held in the room with a clickable link; linking releases them.
 
@@ -322,7 +323,11 @@ export class Limbo {
       requiredApp(),
     ]);
     const [modsMissing, unvoted] = await Promise.all([modsMissingFor(user.id, run), user.role === "ADMIN" ? Promise.resolve(0) : unvotedFor(user.id)]);
-    return doorReason(user, { live, requirePlay: joining.requirePlay, windowMin: joining.windowMin, run, pack, now: new Date(), minInstaller: required, modsMissing, unvoted });
+    // docs/42 T8: on the test server, Play first, must-vote and the newest-app rule are off until switched on there
+    const rules = this.env.TEST_MODE === "1"
+      ? testDoorInputs(readTestDoor((await db.setting.findUnique({ where: { key: DOOR_KEY } }).catch(() => null))?.value), { requirePlay: joining.requirePlay, minInstaller: required, unvoted })
+      : { requirePlay: joining.requirePlay, minInstaller: required, unvoted };
+    return doorReason(user, { live, windowMin: joining.windowMin, run, pack, now: new Date(), modsMissing, ...rules });
   }
 
   /** Asks the server where they are and waits for the answer; null when none comes. */

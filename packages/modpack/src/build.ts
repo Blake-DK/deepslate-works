@@ -123,6 +123,37 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
   return out;
 }
 
+/** Every file under `dir`, as paths relative to it. */
+async function filesUnder(dir: string, rel = ""): Promise<string[]> {
+  const out: string[] = [];
+  for (const e of await readdir(path.join(dir, rel), { withFileTypes: true })) {
+    const r = rel ? `${rel}/${e.name}` : e.name;
+    if (e.isDirectory()) out.push(...(await filesUnder(dir, r)));
+    else if (e.isFile()) out.push(r);
+  }
+  return out;
+}
+
+/**
+ * docs/42 T6: on the test server, modpack/test-overlay/ goes over dist/server/ at the end of the build: what the test
+ * instance must have differently from live (BlueMap off, voice chat on a port nothing forwards). Run only when
+ * TEST_MODE=1; the files are copied every time, because the server's build makes config/ afresh.
+ */
+export async function applyTestOverlay(paths: { dist: string; testOverlay: string }, log: (s: string) => void): Promise<string[]> {
+  if (!(await exists(paths.testOverlay))) {
+    log("test server: no modpack/test-overlay/, nothing laid over the server's files");
+    return [];
+  }
+  const files = (await filesUnder(paths.testOverlay)).filter((f) => !f.endsWith(".md")).sort();
+  const out = path.join(paths.dist, "server");
+  for (const f of files) {
+    await mkdir(path.dirname(path.join(out, f)), { recursive: true });
+    await cp(path.join(paths.testOverlay, f), path.join(out, f));
+  }
+  log(`test server: laid ${files.length} file(s) from modpack/test-overlay/ over the server's: ${files.join(", ")}`);
+  return files;
+}
+
 /** The texture pack everyone gets (villager skin etc.), as it sits in config.zip; the installer unpacks it into resourcepacks/. */
 export const RESOURCE_PACK_ZIP = "deepslate-textures.zip";
 

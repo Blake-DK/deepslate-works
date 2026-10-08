@@ -4,6 +4,7 @@ import { buildLock, diffLocks, lintManifest, lockExtras, type LockFile } from "m
 import { getManifest, commitManifest } from "./manifest";
 import { getLock, P } from "./lock";
 import { apiFetch, apiStream } from "@/server/api-client";
+import { testRefusal } from "@/server/test-mode";
 
 export type Cmd = "lock" | "build" | "sync" | "sync-dry";
 export const CMDS: Cmd[] = ["lock", "build", "sync", "sync-dry"];
@@ -19,6 +20,11 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
   }
   running = cmd;
   try {
+    // docs/42 T3: the lock on the test site is whatever its checkout has
+    if (cmd === "lock" && testRefusal()) {
+      yield `${testRefusal()}: the lock here is the test checkout's (deploy/test-pull.sh brings it to origin/dev)`;
+      return;
+    }
     if (cmd === "lock") {
       const m = await getManifest();
       const prev = await getLock();

@@ -18,7 +18,10 @@ export type SeasonDeps = {
   /** A player's advancements file as data, for the safety net; null when it cannot be read. Absent: no safety net. */
   advancements?: () => Promise<((uuid: string) => Promise<unknown>) | null>;
   log: (o: unknown, m: string) => void;
+  /** The season's time (docs/42 §7.1: the test clock on the test server; the real time on live). */
   now?: () => Date;
+  /** A time the game wrote, on the season's clock (the test clock's `shift`); unchanged when absent. */
+  seasonTime?: (real: Date) => Date;
   /** How long the first clear of a boss or trial waits for the rest of the group (docs/21 §6). */
   groupMs?: number;
   later?: (fn: () => void, ms: number) => void;
@@ -58,6 +61,12 @@ export class SeasonRecorder {
     const at = this.now();
     this.enqueue(() => this.advancement(e.name, e.title, at));
   };
+
+  /** docs/42 §7.2, Reset on the test server: the groups still waiting and the bosses woken lately are forgotten. */
+  forget() {
+    this.pending.clear();
+    this.woke.clear();
+  }
 
   /** Resolves when everything queued so far has been written. */
   idle(): Promise<void> {
@@ -240,7 +249,8 @@ export class SeasonRecorder {
         if (!data) continue;
         for (const i of items) {
           if (have.has(`${i.kind}:${i.id}:${m.mcUuid}`)) continue;
-          const done = doneAt(data, advancementKey(file.id, i.kind, i.id));
+          const written = doneAt(data, advancementKey(file.id, i.kind, i.id));
+          const done = written && this.d.seasonTime ? this.d.seasonTime(written) : written;
           if (!done || done.getTime() < start) continue; // before the season: nothing is recorded
           if (revoked.has(`${i.kind}:${i.id}:${m.mcUuid}`)) continue;
           const key = `${i.kind}:${i.id}`;

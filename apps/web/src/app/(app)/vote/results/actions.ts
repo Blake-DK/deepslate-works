@@ -7,6 +7,7 @@ import { closeVote, tallyVote } from "@/server/vote/votes";
 import { getManifest, votableMods, writeManifest, commitManifest } from "@/server/modpack/manifest";
 import { decide } from "@/server/vote/tally";
 import { audit } from "@/server/events";
+import { testRefusal } from "@/server/test-mode";
 
 export async function closeVoteAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -19,6 +20,7 @@ export async function closeVoteAction(formData: FormData) {
 export async function applyResultsAction(formData: FormData) {
   const admin = await requireAdmin();
   const voteId = String(formData.get("voteId") ?? "");
+  if (testRefusal()) redirect("/pack?tab=results&applied=test"); // docs/42 T3: the test site never writes to git
   const threshold = Math.min(100, Math.max(1, Number(formData.get("threshold") ?? 50) || 50));
   const vote = await db.vote.findUnique({ where: { id: voteId } });
   if (!vote || vote.status !== "CLOSED") redirect("/pack?tab=results&applied=not-closed");

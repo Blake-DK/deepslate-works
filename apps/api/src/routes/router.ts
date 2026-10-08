@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { audit } from "../audit.js";
 import { requireAdmin } from "../auth.js";
@@ -30,8 +30,17 @@ function refuse(reply: FastifyReply, e: unknown) {
   return reply.code(502).send({ error: { code: "router_failed", message: e.message } });
 }
 
-export function routerRoutes(app: FastifyInstance, dash: RouterDash, serverAddress?: string) {
+/** docs/42: the test server's api reads the one mc-router both servers share, and never changes it. */
+const TEST_READ_ONLY = "The test site never changes mc-router, which the live server shares: add or remove addresses on the live site.";
+
+export function routerRoutes(app: FastifyInstance, dash: RouterDash, serverAddress?: string, readOnly = false) {
   const keep = protectedHost(serverAddress);
+  const readOnlyHere = async (req: FastifyRequest, reply: FastifyReply, action: string, params: Record<string, string | number>) => {
+    if (!readOnly) return false;
+    await audit({ userId: req.caller.userId, action, params: { ...params, refused: "test_server" }, result: "DENIED" });
+    reply.code(409).send({ error: { code: "test_server", message: TEST_READ_ONLY } });
+    return true;
+  };
 
   app.get("/router", async (req, reply) => {
     if (!(await requireAdmin(req, reply))) return;
@@ -47,6 +56,7 @@ export function routerRoutes(app: FastifyInstance, dash: RouterDash, serverAddre
     const b = addBody.safeParse(req.body ?? {});
     if (!b.success) return reply.code(400).send({ error: { code: "validation", message: b.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ").slice(0, 300) } });
     const params = { hostname: b.data.hostname, port: b.data.port, ...(b.data.label ? { label: b.data.label } : {}) };
+    if (await readOnlyHere(req, reply, "router.routeAdd", params)) return;
     try {
       await dash.addRoute(params);
     } catch (e) {
@@ -62,6 +72,7 @@ export function routerRoutes(app: FastifyInstance, dash: RouterDash, serverAddre
     const h = hostnameSchema.safeParse(req.params.hostname);
     if (!h.success) return reply.code(400).send({ error: { code: "validation", message: "hostname: a hostname such as play.example.com" } });
     const params = { hostname: h.data };
+    if (await readOnlyHere(req, reply, "router.routeRemove", params)) return;
     if (keep && h.data === keep) {
       await audit({ userId: req.caller.userId, action: "router.routeRemove", params: { ...params, refused: "server_address" }, result: "DENIED" });
       return reply.code(409).send({ error: { code: "server_address", message: "This is the address players join Deepslate Works by; the site never removes it." } });

@@ -46,6 +46,7 @@ export const loadPregen = (caller: Caller) => apiFetch<Pregen>("/pregen", { call
 export const consoleLines = (tail: Tail | null) => tail?.entries ?? (tail?.lines ?? []).map((text, i) => ({ seq: i - (tail?.lines.length ?? 0), text }));
 
 const MSG: Record<string, string> = {
+  testDoor: "Saved. The test server's door goes by these rules from the next join.", // docs/42 T8
   pregenOn: "Pre-generation is on.", pregenPaused: "Pre-generation stopped; where it got to is kept.", pregenOff: "The area is called off.", killed: "The server's process has been ended.", mapReloaded: "BlueMap read its settings again; a render in hand is asked for again.",
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
   groundClear: "Players have been warned in chat; items on the ground are cleared in 60 seconds.", groundPlan: "Saved.",

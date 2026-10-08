@@ -3,6 +3,7 @@ import { forViewer, getVersions } from "@/server/versions";
 import { ukShort } from "@/lib/uk-time";
 import { getStatus } from "@/server/status";
 import { STATE_LABEL } from "@/shared/server-state";
+import { getTestState } from "@/server/test-mode";
 
 // The footer's versions (planner, 2026-10-01): every number comes from getVersions(), none is written here (a test
 // fails the build if a version number appears in this file). Each item links to what it describes.
@@ -38,6 +39,17 @@ export async function VersionFooter({ admin, member }: { admin: boolean; member:
   if (v.app) items.push(<Link key="app" href="/help" className="hover:underline" data-testid="v-app">App <Val>{v.app}</Val></Link>);
   if (status) items.push(<span key="server" data-testid="v-server">Server <Val copper={status.server !== "online"}>{STATE_LABEL[status.server].toLowerCase()}</Val></span>);
   if (v.server) items.push(<a key="nf" href="https://neoforged.net/" className="hover:underline" target="_blank" rel="noreferrer noopener" data-testid="v-neoforge" title={`Minecraft ${v.server.minecraft}`}>NeoForge <Val>{v.server.neoforge}</Val>{v.server.from === "pack" ? " (from the pack)" : ""}</a>);
+  // docs/42 §5.3: the test site says what it runs, the images' commit and the test checkout's, and when they differ
+  const t = admin ? await getTestState() : null;
+  if (t) {
+    const differs = Boolean(t.images && t.checkout && t.images !== t.checkout);
+    items.push(
+      <span key="test" data-testid="v-test">
+        test images <Val>{short(t.images) ?? "?"}</Val>, checkout <Val copper={differs}>{short(t.checkout) ?? "?"}</Val>
+        {differs && <span className="text-primary" data-testid="v-test-differs"> (not the same commit: new code needs the test images built again)</span>}
+      </span>,
+    );
+  }
   if (admin && web.startedAt) items.push(<span key="deploy" data-testid="v-deployed">deployed <Val>{ukShort(new Date(web.startedAt))}</Val></span>);
   return (
     <p className="flex flex-wrap justify-center gap-x-1.5 gap-y-0.5 tabular-nums" data-testid="versions" title="Pixel lettering: Pixelify Sans, SIL Open Font License (/brand/fonts/OFL-PixelifySans.txt)">

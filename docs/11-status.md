@@ -29,8 +29,18 @@ Last updated 2026-10-08, latest: the starter kit on the first release, the book 
 - **Rule 5 (a player who got the kit before being held):** by the logs no account got the kit inside the room; the
   test account got it at a release. As Alex asked, that one account is reset on test by hand (below) so it starts
   from rule 1. On live nobody can be in that state: the kit has only ever come with `verified`.
-- **Applied:** see the next lines as they are done. Live needs the api change, which reaches it only through the next
-  `dev` → `main` PR and deploy; the datapack goes with the same Sync. Until then live behaves as before.
+- **Applied on test (18:20 to 18:24 UTC):** test images for `985d151f` built (run 37822650614, green) but **not yet
+  started**: `deepslate-api-test` still ran `7e25e50c` (needs `sudo deploy/test-up.sh`). Build and Sync put the new
+  `kit/tick` into the test world at 18:22, after the server's 18:21 start, so the old tick was still loaded. The test
+  account was reset by hand from the test console (`deepslate.kit` removed; `clear` took 39 items), held with the
+  book only, and released at 18:23:36 (book taken, `verified` set). That proves the reset and one release, which the
+  old code does as well.
+- **Verify steps, not yet run on the new code:** fresh join book only (the hold's clear), sign in (book gone, kit, at
+  spawn), relog and restart (no second kit), revoke and rejoin (inventory kept plus the book, release returns it
+  unchanged). To run after `test-up.sh` and a restart of the test server, before the `dev` → `main` PR is merged.
+- **Live:** gets the api change and the datapack only through the `dev` → `main` PR (opened 2026-10-08 at Alex's
+  word, with the change log entry `2026-10-08-entrance-room`), its deploy and a Sync, then a restart with nobody on so
+  the new tick loads. Until then live behaves as before.
 
 ## Join room: the sign-in book opens again (OPAC, 2026-10-08, on `dev`)
 

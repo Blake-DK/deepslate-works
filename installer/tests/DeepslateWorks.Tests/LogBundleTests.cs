@@ -26,7 +26,7 @@ namespace DeepslateWorks.Tests
                 Report.SetPersonal(new[] { "bramble09" });
                 var text = LogBundle.CleanGameLog(new[]
                 {
-                    "[09:41:20] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [CHAT] <Pabulum> meet me at the base, code 4417",
+                    "[09:41:20] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [CHAT] <samoyedx> meet me at the base, code 4417",
                     "[09:41:21] [Server thread/INFO] [minecraft/MinecraftServer]: <KaneFinch> hello",
                     "[09:41:22] [main/ERROR] [net.neoforged.fml.ModLoader/]: Failed to create mod instance. ModID: sodium",
                     "[09:41:23] [main/INFO]: Loading from C:\\Users\\bramble09\\AppData\\Roaming\\.minecraft-deepslate-works",
@@ -45,7 +45,7 @@ namespace DeepslateWorks.Tests
             using (var s = new Scratch())
             {
                 File.WriteAllLines(Env.LogFile, new[] { "[2026-10-03T09:41:05] started: Deepslate Works 3.4.2", "[2026-10-03T09:41:06] ERROR: something" });
-                GameLog("[09:41:22] [main/ERROR]: Failed to create mod instance", "[09:41:23] [CHAT] <Pabulum> private");
+                GameLog("[09:41:22] [main/ERROR]: Failed to create mod instance", "[09:41:23] [CHAT] <samoyedx> private");
                 Directory.CreateDirectory(Path.Combine(GameDir, "crash-reports"));
                 File.WriteAllText(Path.Combine(GameDir, "crash-reports", "crash-2026-10-03_09.41.30-client.txt"), "---- Minecraft Crash Report ----");
                 var path = LogBundle.Save(s.P("Downloads"), new DateTime(2026, 10, 3, 9, 45, 0));

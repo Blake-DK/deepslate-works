@@ -101,7 +101,7 @@ docs/20 gains one event kind, `SEASON`, visible to players on `/events` (added t
 | Trial opens | at its `opensAt` | "**Trial opened: The Small Gate** · 15 points" and its hint |
 | **Boss awoken** | see below | "**Ignis has awoken.** samoyedx and m1owl are in the fight." |
 | Boss falls, first on the server | first `SeasonClear` for that boss | "**The Elder Guardian has fallen**, first on the server, to samoyedx, m1owl and Bramble09. 10 points each." with the three heads |
-| Boss falls again | a later clear | a plain line, no embed: "Pabulum beat the Elder Guardian" |
+| Boss falls again | a later clear | a plain line, no embed: "Rowan beat the Elder Guardian" |
 | Trial done, first | first clear | "**samoyedx** is first through **The Small Gate**" |
 | Server goal | at 25, 50, 75 and 100 % | "Server goal: 50 of 100 boss kills. Half way." |
 | New leader | the top of the scoreboard changes hands, at most once a day | "**m1owl** takes the lead with 85 points" |

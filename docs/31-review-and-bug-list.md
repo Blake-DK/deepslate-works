@@ -222,7 +222,7 @@ Newer versions on Modrinth for NeoForge 1.21.1: only the two Sophisticated mods 
 - `docs/28` §4.4, §4.7: the `backups` settings section and the `/dbdumps` mount do not exist yet (not built, rather than drift).
 - `the working rules`: "SendConsoleInput"; the call is `Core.SendConsoleMessage`. `.env.example`: `SERVER_ADDRESS` "What Pangolin publishes".
 - `ROADMAP.md` "In progress" still lists the 2026-09-29 items as not started (docs/10 item 13), and neither it nor `docs/11` records the "We're live" click.
-- `docs/10` P0 item 4 (Pabulum): after go-live one Play should move him on; not confirmed.
+- `docs/10` P0 item 4 (Rowan): after go-live one Play should move him on; not confirmed.
 - 71 remote branches, among them the throwaway `work/options-fixture` with a workflow that has `contents: write`.
 
 ## Needs root on the VPS (read-only, for the next session that has it)

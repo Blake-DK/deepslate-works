@@ -124,9 +124,16 @@ export class Limbo {
     // A join read from old lines is not a join: nobody is moved or greeted because of it (see `resync`).
     if (e.type === "join" && !info.replay) {
       const now = Date.now();
-      const last = this.lastJoin.get(e.name) ?? 0;
-      this.lastJoin.set(e.name, now);
-      if (now - last >= SAME_JOIN_MS) await this.onJoin(e.name);
+      const last = this.lastJoin.get(e.name);
+      if (last !== undefined && now - last >= SAME_JOIN_MS) {
+        // 3.6.1: still in, and no leave since (a leave, or a `list` without them, forgets the join): the same visit, read
+        // again. A new AMP session makes AMP send its last lines again, and one this run had not seen was taken for a
+        // new join, so the door let the player in twice.
+        this.log({ name: e.name, since: new Date(last).toISOString() }, "join: already in, with no leave since: not a new visit");
+      } else {
+        this.lastJoin.set(e.name, now);
+        if (last === undefined) await this.onJoin(e.name);
+      }
     }
     if (e.type === "pos" && !info.replay) this.lastPos.set(e.name, { x: e.x, y: e.y, z: e.z, at: Date.now() });
     if (e.type === "dimension" && !info.replay) this.lastDim.set(e.name, { dimension: e.dimension, at: Date.now() });
@@ -148,6 +155,8 @@ export class Limbo {
     }
     if (e.type === "list") {
       for (const name of [...this.held.keys()]) if (!e.names.includes(name)) this.held.delete(name);
+      // 3.6.1: the server's live answer says they are gone: their leave, if its line was never read
+      if (!info.replay) for (const name of [...this.lastJoin.keys()]) if (!e.names.includes(name)) this.lastJoin.delete(name);
       if (!info.replay && this.resyncDue) {
         this.resyncDue = false;
         await this.resync(e.names);
@@ -186,12 +195,16 @@ export class Limbo {
       }
       this.tail.uuidByName.set(name, uuid);
       const decision = decideJoin(user);
-      this.log({ name, uuid, decision }, "resync");
-      if (decision.action === "hold") await this.hold(name, uuid, decision.reason);
-      else if (user && !(await this.sawJoin(name, uuid))) {
-        this.log({ name, uuid }, "resync: joined while nobody was listening, at the door now");
-        await this.admit(name, uuid, user);
+      if (decision.action === "hold") {
+        this.log({ name, uuid, decision }, "resync");
+        await this.hold(name, uuid, decision.reason);
+        continue;
       }
+      // 3.6.1: a member the door already let in is left alone, and nothing is said: the log used to read "release,
+      // linked member" for every one of them at every new AMP session, as if the door let them in again
+      if (!user || (await this.sawJoin(name, uuid))) continue;
+      this.log({ name, uuid, decision }, "resync: joined while nobody was listening, at the door now");
+      await this.admit(name, uuid, user);
     }
   }
 

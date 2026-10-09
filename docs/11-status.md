@@ -45,6 +45,30 @@ Last updated 2026-10-09, latest: the launcher's Test section (docs/45) deployed 
     desktop, from the site's Play link and with the live server off, with CI screenshots of the Test tab in each.
   - "Live server" on the Play tab, "Test server" on the Test tab.
   - The Play tab's Start button says it starts the **live** server (Alex started live by accident at 13:15 UTC).
+- **Rehearsal on the test copy through Play test (13:34 to now, UTC).** Alex joined 13:37:48 as a linked member
+  (door decision "release, linked member"; admin, verified, guild member on test), so straight in. C checks done:
+  relog 13:41, chat 13:42, fall death 13:42 (on purpose). To come: unlink and rejoin, the restart check.
+  - After counts (13:52, from the test world's files, per player in the private file beside the before counts):
+    8 players, the same set. Seven unchanged in every count: they have not joined the test copy, so their files still
+    hold their season items (6 between them) until they log in; the server strips them on load. Alex's file: season
+    3 to 0, and his other items mostly on the ground from the deliberate death (53 to 2 in the file), plus the
+    `deepslate.released` tag. Backpacks unchanged (season 2): a backpack is rewritten only when it is opened.
+  - The test run wrote its own launcher profile (`deepslate-works-test`, gameDir `.minecraft-deepslate-works-test`):
+    the profile entry is keyed by the manifest's id; the live entry is left alone. The log line says "Profile 'Deepslate
+    Works'" because it prints `Env.PackName`, not the profile's name (3.6.1).
+  - No extra depends on a removed mod: none of the eight extras jars' `neoforge.mods.toml` names curios, geckolib,
+    cataclysm, mowziesmobs, lionfishapi or the end-fight mod, nor does Modrinth.
+  - Items lost from storage, by item, counted from "Tried to load invalid item" lines for the whole rehearsal.
+- **For 3.6.1 (Alex and the planner, from Play test):** the game check counts `library`/`gamelibrary` files and mods
+  found by their own locator (Sodium) as loaded, with a test on a real game log; each tab shows only its own run's
+  result; the test folder gets the same extras as live, and the extras step never says "on" for a jar not in the
+  mods folder it launched (today it reported 8 on and the test game had none: the extras code is pinned to the live
+  folder); settings such as render distance carry over to the test folder; "wake: not started (unreachable)" while
+  the test server was coming back; the profile line names the profile written; the door's resync re-admits a player
+  it already logged; the test instance's AMP session drops every 60 to 90 s.
+- **For the live steps:** after the removal, Alex's first live Play under early access: his report and game log show
+  his extras still on. Before the removal: each of the 8 players' logout positions checked for removed-mod blocks
+  under or around them.
 - **For the list (3.6.x):**
   - **Play test is disabled, not only grey, while a live run waits for Play.** The site's Play link starts a live run;
     stopping its countdown leaves it at "Waiting for you to press Play", the worker alive, and the Test tab sets

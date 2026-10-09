@@ -30,6 +30,11 @@ Last updated 2026-10-09, latest: the planner's answers of 2026-10-09 (first sect
   `apps/api/tests/server-state.test.ts` already asserts both. Anything that waits for "asleep" again reads the api's
   `/status` state instead of AMP's number.
 - **S3 backups (item 7):** confirmed by Alex in the bucket on 2026-10-09: eight files, matching AMP's list.
+- **The Minecraft role (planner D, docs/22 §14), on `dev`:** `DISCORD_PLAYER_ROLE_ID` (empty: off), live api only;
+  a reconciler at start, daily and after each link or unlink event; event log lines; once-only admin alert; state in
+  health and on Admin → Discord. Tests `discord-role.test.ts` (link adds, unlink removes, backfill both ways and
+  idempotent, not-in-server and no-Discord members skipped, removed member's role taken, refusal raised once and again
+  after a clean run, no role sync on an unmarked api). api 708, web 589 tests green.
 - **Waiting:** docs/42a (Alex passes the AMP host's brief and final report), docs/41 (the planner's paste),
   housekeeping (Alex's word), the remaining test checks in the log, Build and Sync on live, and the live checks after
   the first live join.

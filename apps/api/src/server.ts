@@ -53,7 +53,7 @@ import { Announcer } from "./discord/announcer.js";
 import { prismaFeedStore } from "./discord/store.js";
 import { Webhook } from "./discord/webhook.js";
 import { discordRoutes } from "./routes/discord.js";
-import { makeBot, votePoster } from "./discord/wire.js";
+import { makeBot, makeRoleSync, votePoster } from "./discord/wire.js";
 import { discordOutlets } from "./discord/gate.js";
 import { runAction } from "./actions/run.js";
 import { DumpPush } from "./backup/dump-push.js";
@@ -87,7 +87,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   app.addHook("onRequest", viaDiscordHook);
   // docs/21 + docs/22: the Discord feed and the bot are made further down; /health reads them when asked
   // `checks` (docs/32 §7 item 3): what the health watch found at its last round; `watch` is false when any is wrong
-  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState(), discordBot: bot ? bot.state() : "off", watch: allWell(healthWatch.checks) && healthWatch.signIns.view().failing.length === 0, checks: healthWatch.checks, signIn: healthWatch.signIns.view(), checkedAt: healthWatch.lookedAt?.toISOString() ?? null }));
+  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState(), discordBot: bot ? bot.state() : "off", discordRole: roles?.view() ?? { state: "off" }, watch: allWell(healthWatch.checks) && healthWatch.signIns.view().failing.length === 0, checks: healthWatch.checks, signIn: healthWatch.signIns.view(), checkedAt: healthWatch.lookedAt?.toISOString() ?? null }));
   modpackRoutes(app, env, ampClient, deps.build, () => pregen.quiesce());
 
   // Console tail, status poller and the wait room run for the life of the process (docs/05, docs/14).
@@ -151,7 +151,9 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     // docs/42 §3: the test server posts no change log
     bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: testMode ? [] : liveChanges(CHANGES), portal, log: (o, m) => app.log.info(o, m),
   });
-  discordRoutes(app, feed, bot, env);
+  // planner 2026-10-09: the Minecraft role on everyone who plays; only with the bot and DISCORD_PLAYER_ROLE_ID (role.ts)
+  const roles = makeRoleSync(env, log);
+  discordRoutes(app, feed, bot, env, roles);
   installRoutes(app);
   poller.stateName = (live) => (wake.waking && live.stateCode !== 20 ? "Waking" : live.state);
   statusRoutes(app, ampClient, poller, tail, () => pings.current(), view);
@@ -318,6 +320,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     ground.start();
     polls.start();
     feed.start();
+    roles?.start();
     bot?.start();
     serverVersions.start();
     online.start();

@@ -104,7 +104,7 @@ export async function removeUserAction(formData: FormData) {
     } catch {}
   }
   if (removed) {
-    await audit({ userId: admin.id, action: "user.remove", params: { id, displayName: removed.displayName, mcUsername: removed.mcUsername, blocked }, result: "OK" });
+    await audit({ userId: admin.id, action: "user.remove", params: { id, displayName: removed.displayName, mcUsername: removed.mcUsername, blocked, discordId: removed.discordId }, result: "OK" });
   }
   revalidatePath("/admin/people");
   revalidatePath("/admin/joining");

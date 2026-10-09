@@ -34,6 +34,8 @@ const schema = z.object({
   // docs/42a (2026-10-08): "1" marks the one instance that talks to the players' Discord (the bot and the three webhooks
   // above). Absent: silent (discord/gate.ts). The live api's compose service sets it; nothing else does.
   DISCORD_TALKS: z.string().optional(),
+  // planner 2026-10-09: the Discord role on everyone who plays (discord/role.ts). Empty: the feature is off.
+  DISCORD_PLAYER_ROLE_ID: z.string().optional(),
   // A private channel for an instance that is not marked (the test server), set through deploy/.env; empty: silent.
   DISCORD_PRIVATE_WEBHOOK_FEED: z.string().optional(),
   DISCORD_PRIVATE_WEBHOOK_ADMIN: z.string().optional(),

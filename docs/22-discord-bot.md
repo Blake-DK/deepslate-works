@@ -217,3 +217,22 @@ Two places, and this section also re-routes docs/21's lines. `lines.ts` already 
 - **Chat from Discord into the game is read from #game-chat only.** What people write in the forum's posts stays in Discord.
 - The card's switches stay as they are; each now shows where its lines go ("to #game-chat", "to season-updates").
 - Done when, added to §11: a vote opened on the site appears as a new post in season-updates with buttons and its result lands in the same post; a boss woken and killed is one post with two replies; a death shows in #game-chat and not in the forum; nothing written in a forum post reaches the game.
+
+## 14. The Minecraft role (planner, 2026-10-09)
+
+A Discord role, "Minecraft", on everyone who has linked their game, so Alex can mention just the people who play.
+
+- **Setting:** `DISCORD_PLAYER_ROLE_ID` in `deploy/.env`, the role's id. Empty: off, nothing changes. Read only by
+  the api marked `DISCORD_TALKS=1` (docs/42 §13); the test stack never adds or removes a role. In Discord the bot's
+  role sits directly above Minecraft and the bot has Manage Roles (now also in the "Add the bot" link).
+- **Who holds it:** a member with a Discord id and a linked Minecraft account. Members who came in by an invite
+  without Discord are skipped; members not in the server are skipped quietly.
+- **How:** one reconciler (`apps/api/src/discord/role.ts`) reads each member from Discord and adds or removes the
+  role where it is wrong. It runs at start, once a day, and within 30 s of a link or an unlink in the event log (the
+  door's release, Admin → People's unlink and remove, a revoke), so every path is covered and running it again
+  changes nothing. A removed member's Discord id is now in the remove's event, so their role goes too.
+- **Every add and remove** is in the event log ("gave … the Minecraft role in Discord", "took … from …").
+- **Refusals** (the role above the bot, no Manage Roles, a wrong id) never stop a link. They are logged, and said once
+  on the admin channel with the fix in plain words; again only after a clean run, if it breaks again.
+- **State:** `/api/health` (admins and the host) and Admin → Discord: on or off, how many members hold the role, when
+  it last ran, the last problem.

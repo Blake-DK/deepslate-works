@@ -168,6 +168,7 @@ services:
       # docs/42a: this api is the one instance that talks to the players' Discord (the bot and the webhooks below).
       # No other service sets it; without it an api is silent on Discord (apps/api/src/discord/gate.ts).
       DISCORD_TALKS: "1"
+      DISCORD_PLAYER_ROLE_ID: ${DISCORD_PLAYER_ROLE_ID:-}   # the Minecraft role on everyone who plays; empty: off
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}

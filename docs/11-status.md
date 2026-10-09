@@ -30,6 +30,23 @@ Last updated 2026-10-09, latest: the launcher's Test section (docs/45) deployed 
   - **For a fix (wording):** with two servers in the app, the Play tab's card should say "Live server: switched off"
     and the Test tab "Test server: online"; an admin also sees Start on that card, which starts **live**.
   - The test api lost its AMP login for about 30 s at 13:13 ("AMP login failed: unknown", then a new session).
+- **Live was started and stopped from Alex's account (13:15 to 13:23 UTC).** Event log: an admin `server.start` at
+  13:15:02 (not from the 3.6.0 window open then: its log has no "Start sent"; the site's Admin → Server Start or another
+  app window); online 13:15:29; asleep 13:20:01; woken by the site's Play 13:20:19; online 13:20:43; stopped by Alex
+  13:22:56; AMP state 0 (Stopped, not asleep) at 13:23:22. No join, leave, chat or refused join in the event log in
+  that time, and no player online at the stop. The Play tab was right; it showed live, not the test server.
+- **For the list (3.6.x):**
+  - **Play test is disabled, not only grey, while a live run waits for Play.** The site's Play link starts a live run;
+    stopping its countdown leaves it at "Waiting for you to press Play", the worker alive, and the Test tab sets
+    `IsEnabled = false` while a worker runs. Fix: Play test ends a live run that is only waiting (no game started)
+    and starts the test run; until then the tab says why the button is off.
+  - **The game check almost never finds a game.** NeoForge's `latest.log` starts `[22:51:16] [main/INFO]`, a time
+    with no date (the four stored game-check logs show it); `ReadGameSession` only reads `[ddMMMyyyy HH:mm:ss]`, so it
+    falls back to the file's creation time, which Windows keeps from the first `latest.log` when the game renames it
+    and makes a new one within 15 s (file-system tunnelling). The session looks older than the launch and is skipped,
+    and after 30 minutes the app logs "no game session seen". In 10 days: about 100 Plays reported ok, 4 game checks,
+    all failures, likely all a PC's first launch, where the file was new. Fix: read the time-only form against the
+    log's local date (yesterday if it would be in the future), with a test on a real first line.
 
 
 ## App 3.5.6: readable words on the Extras tab (2026-10-09, on `dev`, not deployed)

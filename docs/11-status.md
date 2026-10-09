@@ -35,6 +35,16 @@ Last updated 2026-10-09, latest: the launcher's Test section (docs/45) deployed 
   app window); online 13:15:29; asleep 13:20:01; woken by the site's Play 13:20:19; online 13:20:43; stopped by Alex
   13:22:56; AMP state 0 (Stopped, not asleep) at 13:23:22. No join, leave, chat or refused join in the event log in
   that time, and no player online at the stop. The Play tab was right; it showed live, not the test server.
+- **Queued: app 3.6.1, the first job after live is back up (planner, 2026-10-09). No 3.6.x to any player or tester
+  until it is done and Alex has checked it.** Workaround in 3.6.0 (it worked for Alex): Play on the Play tab, close
+  the Minecraft Launcher, then Play test on the Test tab.
+  - Play test works while a live run only waits for Play (it ends that run without the game and without touching the
+    live folder, then starts the test run), and live Play likewise while a test run waits. Disabled only while a game
+    is really being installed or launched.
+  - Real-window tests (the app's own window in the Windows CI job, against the fake site) for the app opened from the
+    desktop, from the site's Play link and with the live server off, with CI screenshots of the Test tab in each.
+  - "Live server" on the Play tab, "Test server" on the Test tab.
+  - The Play tab's Start button says it starts the **live** server (Alex started live by accident at 13:15 UTC).
 - **For the list (3.6.x):**
   - **Play test is disabled, not only grey, while a live run waits for Play.** The site's Play link starts a live run;
     stopping its countdown leaves it at "Waiting for you to press Play", the worker alive, and the Test tab sets

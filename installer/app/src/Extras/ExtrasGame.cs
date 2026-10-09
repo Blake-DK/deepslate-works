@@ -27,7 +27,7 @@ namespace DeepslateWorks
     {
         public string GameDir;
         public GameControl(string gameDir = null) { GameDir = gameDir; }
-        public List<int> Find() => Extras.FindGame(GameDir ?? Env.DataDir, Extras.JavaProcesses()).Select(p => p.Id).ToList();
+        public List<int> Find() => Extras.FindGame(GameDir ?? Env.LiveDataDir, Extras.JavaProcesses()).Select(p => p.Id).ToList();
         public void Close(IList<int> ids) => Extras.SendGameClose(ids);
         public bool Gone(IList<int> ids) => Extras.GameGone(ids);
         public void Force(IList<int> ids) => Extras.StopGameForce(ids);
@@ -63,7 +63,7 @@ namespace DeepslateWorks
         }
 
         /// <summary>Is the Deepslate game running now (the window looks every 2 s)?</summary>
-        public static bool GameRunning() => FindGame(Env.DataDir, JavaProcesses()).Count > 0;
+        public static bool GameRunning() => FindGame(Env.LiveDataDir, JavaProcesses()).Count > 0;
 
         static Process Alive(int id)
         {
@@ -203,7 +203,7 @@ namespace DeepslateWorks
                                         ExtrasPaths paths = null, string statePath = null, Func<DateTime> now = null)
         {
             st.Queued = null;
-            var f = new RestartFlow(m, paths ?? Extras.GetPaths(Env.DataDir), statePath ?? Env.ExtrasStatePath, st, pick, relaunch, game, now);
+            var f = new RestartFlow(m, paths ?? Extras.GetPaths(Env.LiveDataDir), statePath ?? Env.ExtrasStatePath, st, pick, relaunch, game, now);
             f.Ids = f.game.Find();
             Extras.XLog(string.Format("restart: game {0}", f.Ids.Count > 0 ? "found (process " + string.Join(", ", f.Ids) + ")" : "not found: nothing to close"));
             f.Progress.Add("Closing the game...");

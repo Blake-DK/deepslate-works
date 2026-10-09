@@ -9,7 +9,7 @@ import { modsMissingSince, type PlayRun } from "../shared/join-gate.js";
  */
 export async function modsMissingFor(userId: string, run: PlayRun | null): Promise<boolean> {
   const [mods, refused] = await Promise.all([
-    db.installReport.findFirst({ where: { userId, mods: { not: Prisma.DbNull } }, orderBy: { at: "desc" }, select: { at: true, mods: true } }),
+    db.installReport.findFirst({ where: { userId, mods: { not: Prisma.DbNull }, mode: { not: "test_play" } }, orderBy: { at: "desc" }, select: { at: true, mods: true } }),
     db.event.findFirst({ where: { kind: "JOIN_BLOCKED", actor: userId, meta: { path: ["params", "reason"], equals: "missing mods" } }, orderBy: { at: "desc" }, select: { at: true } }),
   ]);
   const ok = (mods?.mods as { ok?: unknown } | null)?.ok;

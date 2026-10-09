@@ -88,7 +88,7 @@ namespace DeepslateWorks
     public static partial class Extras
     {
         /// <summary>The game folder's extras paths (Get-ExtrasPaths $DataDir).</summary>
-        public static ExtrasPaths Paths => GetPaths(Env.DataDir);
+        public static ExtrasPaths Paths => GetPaths(Env.LiveDataDir);   // docs/45: the Extras tab is the live game's
 
         /// <summary>Hooks the extras into the report (Report.ExtrasBlock = the Extras tab's state, Get-ReportExtras).</summary>
         public static void Wire() => Report.ExtrasBlock = ReportExtras;

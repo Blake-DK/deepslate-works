@@ -192,3 +192,10 @@ webhook, or empty" stands, but only as an override; empty is the default and mea
   `DISCORD_PRIVATE_WEBHOOK_*` can post, from `TEST_DISCORD_WEBHOOK_*` in `deploy/.env`, for a private channel; empty by
   default. `deploy.sh` and `test-up.sh` refuse a `TEST_DISCORD_WEBHOOK_*` equal to a live webhook.
 - **Not affected:** the door's "still in the Discord server" check and Discord sign-in only read; they work as before.
+
+## 14. Starting and stopping the test instance (planner, 2026-10-09)
+
+Through the test site only (Admin → Server), so every start and stop is in the test site's log with who did it. The
+test instance's own AMP panel is for emergencies. On 2026-10-08 and 09 the test server was stopped and started several
+times outside the site (AMP as `webapp` from the VPS session for the OPAC change and to restart it; once from the AMP
+panel at 2026-10-09 06:35): none of those is in the test site's log.

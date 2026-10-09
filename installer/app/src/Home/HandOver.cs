@@ -209,9 +209,9 @@ namespace DeepslateWorks
                 if (string.IsNullOrEmpty(t)) { r.Problem = "the sign-in file is there but has no sign-in in it"; return r; }
                 r.SignedIn = true; bits.Add("your sign-in");
             }
-            if (File.Exists(Env.InstalledFile))
+            if (File.Exists(Env.LiveInstalledFile))
             {
-                r.Pack = J.Str(Json.ReadFile(Env.InstalledFile), "version");
+                r.Pack = J.Str(Json.ReadFile(Env.LiveInstalledFile), "version");
                 if (string.IsNullOrEmpty(r.Pack)) { r.Problem = "installed.json is there but says no pack"; return r; }
                 bits.Add("pack " + r.Pack);
             }

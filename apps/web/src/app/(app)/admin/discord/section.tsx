@@ -19,7 +19,9 @@ type Channel = { id: string; name: string };
 type BotView =
   | { state: "unset" | "no_guild" }
   | { state: "connecting" | "on" | "reconnecting" | "refused" | "stopped"; tag: string | null; refused: string | null; missingIntents: boolean; inGuild: boolean; textChannels: Channel[]; forums: Channel[]; invite: string | null };
-type Overview = { feed: Hook; admin: Hook; updates?: Hook; bot?: BotView; recent: Array<{ at: string; channel: "feed" | "admin" | "updates"; what: string; ok: boolean; error?: string }> };
+// planner 2026-10-09: the Minecraft role on everyone who plays (api discord/role.ts)
+type RoleView = { state: "off" } | { state: "on"; holders: number | null; lastRunAt: string | null; lastError: string | null };
+type Overview = { feed: Hook; admin: Hook; updates?: Hook; bot?: BotView; role?: RoleView; recent: Array<{ at: string; channel: "feed" | "admin" | "updates"; what: string; ok: boolean; error?: string }> };
 
 /** docs/22 §7: the bot's state in one line. */
 function botLine(b: BotView | undefined): React.ReactNode {
@@ -88,6 +90,18 @@ export default async function DiscordSection({ searchParams, tab }: { searchPara
               <dd>{!overview.updates || overview.updates.state === "unset" ? <>No webhook set{overview.bot && overview.bot.state !== "unset" ? <>: votes, news and the season are not posted. Ask the VPS session to add <span className="font-mono">DISCORD_WEBHOOK_UPDATES</span>.</> : <> (optional): votes and news go to #game-chat as before.</>}</> : where(overview.updates, "DISCORD_WEBHOOK_UPDATES")}</dd>
               <dt className="font-medium">Admin channel</dt>
               <dd>{overview.admin.state === "unset" ? <>None. Pick a private channel as the admin channel on the Channels &amp; bot tab; crashes and problems are not posted until then.</> : where(overview.admin, "DISCORD_WEBHOOK_ADMIN")}</dd>
+              <dt className="font-medium">Minecraft role</dt>
+              <dd>
+                {!overview.role || overview.role.state === "off" ? (
+                  <>Off. Ask the VPS session to add <span className="font-mono">DISCORD_PLAYER_ROLE_ID</span>; then everyone who has linked their game gets the role.</>
+                ) : (
+                  <>
+                    On: {overview.role.holders === null ? "not checked yet" : `${overview.role.holders} ${overview.role.holders === 1 ? "member holds" : "members hold"} it`}
+                    {overview.role.lastRunAt ? `, checked ${new Date(overview.role.lastRunAt).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" })}` : ""}.
+                    {overview.role.lastError && <span className="block text-danger">{overview.role.lastError}</span>}
+                  </>
+                )}
+              </dd>
             </dl>
           )}
           <form action={testDiscordAction.bind(null, "feed")} className="flex flex-wrap gap-2">

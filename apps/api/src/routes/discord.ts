@@ -5,10 +5,12 @@ import type { Announcer } from "../discord/announcer.js";
 import type { Bot } from "../discord/bot.js";
 import type { Env } from "../env.js";
 import { botConfig } from "../discord/wire.js";
+import type { RoleSync } from "../discord/role.js";
 
 // View Channels, Send Messages, Send Messages in Threads, Embed Links, Read Message History, Add Reactions (docs/22 §7),
-// plus Create Public Threads (a forum post is a thread) and Manage Messages (to pin the season's post, docs/22 §13).
-const PERMISSIONS = (1n << 10n) | (1n << 11n) | (1n << 38n) | (1n << 14n) | (1n << 16n) | (1n << 6n) | (1n << 35n) | (1n << 13n);
+// plus Create Public Threads (a forum post is a thread), Manage Messages (to pin the season's post, docs/22 §13) and
+// Manage Roles (the Minecraft role, planner 2026-10-09).
+const PERMISSIONS = (1n << 10n) | (1n << 11n) | (1n << 38n) | (1n << 14n) | (1n << 16n) | (1n << 6n) | (1n << 35n) | (1n << 13n) | (1n << 28n);
 
 /** "Add the bot to the server": the OAuth link for this app, with the scopes and permissions the bot needs. */
 export function inviteLink(clientId: string, guild: string): string {
@@ -18,7 +20,7 @@ export function inviteLink(clientId: string, guild: string): string {
 
 // docs/21 §7 and docs/22 §7: Admin → Site settings → Discord. The webhook addresses and the token never leave api; the
 // card gets their state, the bot's name, the server's channels to pick from and the last 20 messages sent.
-export function discordRoutes(app: FastifyInstance, feed: Announcer, bot: Bot | null, env: Env) {
+export function discordRoutes(app: FastifyInstance, feed: Announcer, bot: Bot | null, env: Env, roles: RoleSync | null = null) {
   app.get("/discord", async (req, reply) => {
     if (!(await requireAdmin(req, reply))) return;
     const cfg = botConfig(env);
@@ -26,6 +28,7 @@ export function discordRoutes(app: FastifyInstance, feed: Announcer, bot: Bot | 
     return {
       ...(await feed.overview()),
       bot: b ? { ...b, invite: cfg?.clientId && cfg.guild ? inviteLink(cfg.clientId, cfg.guild) : null } : { state: env.DISCORD_BOT_TOKEN ? "no_guild" : "unset" },
+      role: roles?.view() ?? { state: "off" },
     };
   });
   app.post("/discord/test", async (req, reply) => {

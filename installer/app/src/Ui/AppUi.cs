@@ -68,6 +68,7 @@ namespace DeepslateWorks
         bool runWaiting;                       // a run has the game ready and waits for Go (Review may be open meanwhile)
         bool keepScreen;                       // the run was ended from a screen that stays (Stopped)
         bool runFromWebsite, runPressed;       // how the run in hand was started: the website, or Play/Continue pressed
+        bool runTest, watchTest;               // docs/45: the run in hand (and the game check after it) is the Test section's
         bool firstRunAtOpen, handOverThisTime; // no countdown on a first run, or after the move from the old launcher
         public Countdown Count;
         DispatcherTimer CountTimer;
@@ -169,6 +170,7 @@ namespace DeepslateWorks
             Timer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromMilliseconds(250) };
             Timer.Tick += (s, e) => OnTick();
             WireHome();   // 3.2.0: the server on the Play tab, and the Vote tab
+            WireTest();   // docs/45: the Test section, admins only
             WireUpdate(); // 3.3.0: the Update button
             WireLook();   // 3.4.0: the ground, the banner, the badge (docs/21)
             WireLogButtons();   // 3.4.2: Save log, Send to Alex
@@ -260,8 +262,8 @@ namespace DeepslateWorks
             sp.Children.Add(body);
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             var group = "consent-" + step.Id;
-            var allow = new RadioButton { Content = UiText.Allow, GroupName = group, Margin = new Thickness(0, 0, 18, 0) };
-            var no = new RadioButton { Content = UiText.NotNow, GroupName = group };
+            var allow = new RadioButton { Content = UiText.Allow, GroupName = group, Style = (Style)Window.FindResource("Choice"), Margin = new Thickness(0, 0, 18, 0) };
+            var no = new RadioButton { Content = UiText.NotNow, GroupName = group, Style = (Style)Window.FindResource("Choice"), Margin = new Thickness(0) };
             var warn = NewText("", 12, "Normal", "Red"); warn.Margin = new Thickness(0, 6, 0, 0); warn.Visibility = Visibility.Collapsed;
             var id = step.Id;
             allow.Checked += (s, e) => { Answers[id] = "allow"; warn.Visibility = Visibility.Collapsed; UpdateContinueButton(); };
@@ -477,17 +479,18 @@ namespace DeepslateWorks
         /// <summary>fromWebsite: started by deepslate://play (the countdown may follow); atOpen (3.2.0): the app was opened
         /// from the desktop or the Start Menu, so it gets the game ready and waits for Play; otherwise Play or Continue was
         /// pressed, which starts the game as soon as it is ready.</summary>
-        void StartRun(bool noLaunch = false, bool fromWebsite = false, bool atOpen = false, bool updateOnly = false)
+        void StartRun(bool noLaunch = false, bool fromWebsite = false, bool atOpen = false, bool updateOnly = false, bool test = false)
         {
             if (worker != null && worker.IsAlive) return;   // one run at a time (2.0.x only ever had one engine)
+            runTest = test; watchTest = test;   // docs/45: a Play from the Test section
             runFromWebsite = fromWebsite; runPressed = !fromWebsite && !atOpen; runWaiting = false; keepScreen = false;
             goAnswer = false; goEvent.Reset();
             HideCountdown();
             Mode = "running";
             ClearPlayBody();
             SetPromptButtons(false, false);
-            PlayTitle.Text = UiText.RunningTitle;
-            PlayStatus.Text = noLaunch ? UiText.RunningExtrasStatus : atOpen ? UiText.OpenedStatus : UiText.RunningStatus;
+            PlayTitle.Text = test ? UiText.TestRunningTitle : UiText.RunningTitle;
+            PlayStatus.Text = test ? UiText.TestRunningStatus : noLaunch ? UiText.RunningExtrasStatus : atOpen ? UiText.OpenedStatus : UiText.RunningStatus;
             PlayButton.Content = UiText.Working;
             PlayButton.IsEnabled = false;
             if (updateOnly) UpdateStarted(); else UpdateButton.IsEnabled = false;   // 3.3.0: one run at a time
@@ -496,6 +499,7 @@ namespace DeepslateWorks
             var isFirst = !firstUsed;
             var run = NewRun(noLaunch);
             run.OpenedOnly = atOpen;
+            if (test) run.Target = "test";
             if (updateOnly)
             {
                 // 3.3.0: no launcher, no countdown, no wake; an app update on the way restarts it straight into the Update
@@ -538,6 +542,8 @@ namespace DeepslateWorks
                 case "changed": Changed = J.Str(o, "text"); ChangedDetailText = J.Str(o, "detail"); break;
                 case "launched": Launched = DateTime.UtcNow; break;
                 case "ready": RefreshHome(); OnReady(); break;   // 3.1.0: the game is ready; the run waits for Go (3.2.0: votes looked at again)
+                case "versions" when runTest: break;   // docs/45: the footer is the live pack's
+                case "installed" when runTest: RefreshTestSection(); break;
                 case "versions": { var a = J.Str(o, "app"); var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(a)) VerApp = a; if (!string.IsNullOrEmpty(p)) VerCurrent = p; UpdateAppFooter(); break; }
                 case "installed": { var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(p)) VerLocal = p; UpdateAppFooter(); if (!updating) CheckUpdates(); break; }
             }
@@ -661,11 +667,12 @@ namespace DeepslateWorks
         {
             if (!WatchSince.HasValue) return;
             if (DateTime.UtcNow > WatchUntil) { Log.Line("game check: no game session seen within 30 minutes of the launch"); WatchSince = null; return; }
-            var list = Engine.ReadPackList(Engine.PackListPath);
+            // docs/45: after a Play from the Test section the game to look for is the test one, in the test folder
+            var list = Engine.ReadPackList(watchTest ? Engine.TestPackListPath : Engine.LivePackListPath);
             var files = J.Arr(list, "files");
             if (files.Count == 0) { WatchSince = null; return; }
             var host = (J.Str(list, "server") ?? "").Split(':')[0];
-            var found = Engine.FindGameSession(Env.DataDir, Env.Minecraft, WatchSince.Value, host);
+            var found = Engine.FindGameSession(watchTest ? System.IO.Path.Combine(Env.Root, Env.TestDirName) : Env.LiveDataDir, Env.Minecraft, WatchSince.Value, host);
             if (found == null) return;
             WatchSince = null;
             var c = Engine.TestGameMods(found.Session, files, found.Elsewhere);
@@ -858,7 +865,7 @@ namespace DeepslateWorks
                 sp.Children.Add(row);
                 XStatus[x.Id] = new StatusRow { Badge = sb, Restart = rb, Details = dl };
                 g.Children.Add(sp);
-                var cb = new CheckBox { Content = "On", VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12, 2, 0, 0), IsChecked = chosen != null && chosen.On(x.Id) };
+                var cb = new CheckBox { Content = "On", Style = (Style)Window.FindResource("Switch"), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12, 2, 0, 0), IsChecked = chosen != null && chosen.On(x.Id) };
                 Grid.SetColumn(cb, 2); g.Children.Add(cb);
                 XBoxes[x.Id] = cb;
                 var outer = new StackPanel();
@@ -870,7 +877,7 @@ namespace DeepslateWorks
                     srow.Children.Add(NewText("Shaders:  ", 13, "SemiBold"));
                     foreach (var opt in ExtrasText.ShaderOptions)
                     {
-                        var r = new RadioButton { Content = opt.Value, GroupName = "shaders", Margin = new Thickness(0, 0, 14, 0), IsChecked = string.Equals(chosen?.Shader, opt.Key, StringComparison.OrdinalIgnoreCase) };
+                        var r = new RadioButton { Content = opt.Value, GroupName = "shaders", Style = (Style)Window.FindResource("Choice"), Margin = new Thickness(0, 0, 14, 0), IsChecked = string.Equals(chosen?.Shader, opt.Key, StringComparison.OrdinalIgnoreCase) };
                         var sx = o.Manifest.Extras.FirstOrDefault(e => string.Equals(e.Shader, opt.Key, StringComparison.OrdinalIgnoreCase));
                         if (sx != null && Weak && !string.Equals(sx.Fps, "Low", StringComparison.OrdinalIgnoreCase)) r.ToolTip = ExtrasText.WeakShaderTip;
                         srow.Children.Add(r);

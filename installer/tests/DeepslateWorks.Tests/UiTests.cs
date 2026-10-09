@@ -259,7 +259,7 @@ namespace DeepslateWorks.Tests
             // 3.3.1: Review permissions and the Play row at the smallest width
             "20-review-permissions-min-width.png", "21-play-row-min-width.png",
             // 3.4.0: the look (docs/21 §8)
-            "22-play-ready.png", "23-play-updating.png", "24-play-server-asleep.png", "25-vote.png", "26-extras.png", "27-question-card.png",
+            "22-play-ready.png", "23-play-updating.png", "24-play-server-asleep.png", "25-vote.png", "26-extras.png", "26b-extras-iris-off.png", "27-question-card.png",
             // 3.4.1: the landscape window at its own size and at its smallest (docs/21 §11)
             "28-window.png", "29-min-size-900x560.png",
             // 3.5.0: the Settings tab at its own size, at its smallest, and with the game open (docs/30 §8)

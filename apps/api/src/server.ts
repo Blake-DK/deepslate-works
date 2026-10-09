@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import { CHANGES } from "./changelog.js";
+import { CHANGES, liveChanges } from "./changelog.js";
 import { AmpClient, MockAmp, type Amp } from "./amp/client.js";
 import { HttpRouterDash, MockRouterDash, type RouterDash } from "./router/client.js";
 import { protectedHost, routerRoutes } from "./routes/router.js";
@@ -53,7 +53,7 @@ import { Announcer } from "./discord/announcer.js";
 import { prismaFeedStore } from "./discord/store.js";
 import { Webhook } from "./discord/webhook.js";
 import { discordRoutes } from "./routes/discord.js";
-import { makeBot, votePoster } from "./discord/wire.js";
+import { makeBot, makeRoleSync, votePoster } from "./discord/wire.js";
 import { discordOutlets } from "./discord/gate.js";
 import { runAction } from "./actions/run.js";
 import { DumpPush } from "./backup/dump-push.js";
@@ -71,6 +71,7 @@ import { CLOCK_KEY, SeasonClock, type StoredClock } from "./test-mode/clock.js";
 import { checkoutCommit } from "./test-mode/checkout.js";
 import { DOOR_KEY } from "./test-mode/door.js";
 import { testRoutes } from "./test-mode/routes.js";
+import { TEST_APP_PATHS, testAppRoutes } from "./test-mode/app-routes.js";
 import { build as apiBuild } from "./status/versions.js";
 import { sitePack } from "./status/health-watch.js";
 
@@ -79,15 +80,18 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   // docs/42: the test server's own api. Everything it changes is behind this one flag; on live it is false.
   const testMode = env.TEST_MODE === "1";
   if (testMode && env.TEST_SUMMARY_TOKEN === env.API_SERVICE_TOKEN) throw new Error("api: TEST_SUMMARY_TOKEN must not be the service token: it would open every route");
+  // docs/45: the launcher's Test section; a token of its own, never the service or the summary token
+  const appToken = testMode && env.TEST_APP_TOKEN && env.TEST_APP_TOKEN.length >= 32 ? env.TEST_APP_TOKEN : null;
+  if (appToken && (appToken === env.API_SERVICE_TOKEN || appToken === env.TEST_SUMMARY_TOKEN)) throw new Error("api: TEST_APP_TOKEN must be a token of its own");
   const ampClient: Amp = amp ?? (env.AMP_MOCK === "1"
     ? new MockAmp()
     : new AmpClient({ url: env.AMP_URL, username: env.AMP_USERNAME, password: env.AMP_PASSWORD, instanceId: env.AMP_INSTANCE_ID }));
 
-  app.addHook("onRequest", serviceAuth(env.API_SERVICE_TOKEN, testMode && env.TEST_SUMMARY_TOKEN ? { "/test/summary": env.TEST_SUMMARY_TOKEN } : {}));
+  app.addHook("onRequest", serviceAuth(env.API_SERVICE_TOKEN, { ...(testMode && env.TEST_SUMMARY_TOKEN ? { "/test/summary": env.TEST_SUMMARY_TOKEN } : {}), ...(appToken ? Object.fromEntries(TEST_APP_PATHS.map((p) => [p, appToken])) : {}) }));
   app.addHook("onRequest", viaDiscordHook);
   // docs/21 + docs/22: the Discord feed and the bot are made further down; /health reads them when asked
   // `checks` (docs/32 §7 item 3): what the health watch found at its last round; `watch` is false when any is wrong
-  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState(), discordBot: bot ? bot.state() : "off", watch: allWell(healthWatch.checks) && healthWatch.signIns.view().failing.length === 0, checks: healthWatch.checks, signIn: healthWatch.signIns.view(), checkedAt: healthWatch.lookedAt?.toISOString() ?? null }));
+  app.get("/health", async () => ({ ...(await health(env, ampClient)), discordFeed: feed.feedState(), discordBot: bot ? bot.state() : "off", discordRole: roles?.view() ?? { state: "off" }, watch: allWell(healthWatch.checks) && healthWatch.signIns.view().failing.length === 0, checks: healthWatch.checks, signIn: healthWatch.signIns.view(), checkedAt: healthWatch.lookedAt?.toISOString() ?? null }));
   modpackRoutes(app, env, ampClient, deps.build, () => pregen.quiesce());
 
   // Console tail, status poller and the wait room run for the life of the process (docs/05, docs/14).
@@ -149,9 +153,11 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const feed = new Announcer({
     store: prismaFeedStore(portal, env.REPO_DIR), feed: hook(outlets.feed), admin: hook(outlets.admin), updates: hook(outlets.updates),
     // docs/42 §3: the test server posts no change log
-    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: testMode ? [] : CHANGES, portal, log: (o, m) => app.log.info(o, m),
+    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: testMode ? [] : liveChanges(CHANGES), portal, log: (o, m) => app.log.info(o, m),
   });
-  discordRoutes(app, feed, bot, env);
+  // planner 2026-10-09: the Minecraft role on everyone who plays; only with the bot and DISCORD_PLAYER_ROLE_ID (role.ts)
+  const roles = makeRoleSync(env, log);
+  discordRoutes(app, feed, bot, env, roles);
   installRoutes(app);
   poller.stateName = (live) => (wake.waking && live.stateCode !== 20 ? "Waking" : live.state);
   statusRoutes(app, ampClient, poller, tail, () => pings.current(), view);
@@ -252,6 +258,17 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     },
     forget: () => seasons.forget(),
   });
+  // docs/45: the launcher's Test section asks for these through the live web (TEST_APP_TOKEN)
+  if (appToken) {
+    testAppRoutes(app, {
+      repoDir: env.REPO_DIR,
+      server: () => ({ state: view.state(), players: poller.fresh()?.players ?? [] }),
+      address: env.SERVER_ADDRESS ?? null,
+      pack: async () => ({ site: await sitePack(env.REPO_DIR), server: await serverPack() }),
+      wake,
+      memberByDiscord: (discordId) => db.user.findUnique({ where: { discordId }, select: { id: true, displayName: true } }),
+    });
+  }
   let housekeeping: NodeJS.Timeout | null = null;
   let watching: NodeJS.Timeout | null = null;
   let seasonClock: NodeJS.Timeout | null = null;
@@ -318,6 +335,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     ground.start();
     polls.start();
     feed.start();
+    roles?.start();
     bot?.start();
     serverVersions.start();
     online.start();

@@ -12,6 +12,8 @@ import { serverPack } from "../players/pack.js";
 import { stateLine, type ServerState } from "../shared/server-state.js";
 import { Bot } from "./bot.js";
 import { BotRest } from "./rest.js";
+import { RoleSync } from "./role.js";
+import { prismaRecorderStore } from "../events/store.js";
 import type { CommandDeps, Member } from "./commands.js";
 import { pressVote, voteComponents } from "./votes.js";
 import type { VotePoster } from "./announcer.js";
@@ -98,7 +100,7 @@ export function makeBot(w: BotWiring): Bot | null {
       const sessions = u?.mcUuid ? await db.session.findMany({ where: { mcUuid: u.mcUuid, OR: [{ leftAt: null }, { leftAt: { gte: monthStart } }] }, select: { joinedAt: true, leftAt: true } }) : [];
       const last = u?.mcUuid ? await db.session.findFirst({ where: { mcUuid: u.mcUuid }, orderBy: { joinedAt: "desc" }, select: { joinedAt: true, leftAt: true } }) : null;
       const ms = sessions.reduce((t, s) => t + Math.max(0, (s.leftAt ?? new Date()).getTime() - Math.max(s.joinedAt.getTime(), monthStart.getTime())), 0);
-      const report = await db.installReport.findFirst({ where: { userId, outcome: "ok" }, orderBy: { at: "desc" }, select: { installerVersion: true, packVersion: true } });
+      const report = await db.installReport.findFirst({ where: { userId, outcome: "ok", mode: { not: "test_play" } }, orderBy: { at: "desc" }, select: { installerVersion: true, packVersion: true } });
       return {
         mcName: u?.mcUsername ?? null,
         lastPlayed: last ? (last.leftAt ?? last.joinedAt) : null,
@@ -170,4 +172,41 @@ export function votePoster(bot: Bot): VotePoster {
     components: (poll, closed) => voteComponents(poll, closed),
     pollShape: (id) => db.poll.findUnique({ where: { id }, select: { id: true, options: true, multiple: true } }),
   };
+}
+
+/**
+ * The Minecraft role (role.ts): only with the bot (so only on the api marked DISCORD_TALKS=1) and a role id set.
+ * Members without a Discord id (an invite without Discord) are never read.
+ */
+export function makeRoleSync(env: Env, log: (o: unknown, m: string) => void): RoleSync | null {
+  const cfg = botConfig(env);
+  const role = isId(env.DISCORD_PLAYER_ROLE_ID);
+  if (!cfg || !role) return null;
+  const rest = new BotRest(cfg.token);
+  return new RoleSync({
+    rest,
+    guild: cfg.guild,
+    role,
+    log,
+    async users() {
+      const rows = await db.user.findMany({ where: { discordId: { not: null } }, select: { id: true, discordId: true, displayName: true, mcUuid: true } });
+      return rows.map((u) => ({ id: u.id, discordId: u.discordId!, name: u.displayName, linked: Boolean(u.mcUuid) }));
+    },
+    async linkEvents(after) {
+      const rows = await db.event.findMany({ where: { id: { gt: after }, kind: { in: ["LINK", "REVOKE"] } }, orderBy: { id: "asc" }, take: 500, select: { id: true, meta: true } });
+      return rows.map((r) => {
+        const p = ((r.meta as { params?: Record<string, unknown> } | null)?.params ?? {}) as Record<string, unknown>;
+        return { id: r.id, discordId: typeof p.discordId === "string" && /^\d{5,25}$/.test(p.discordId) ? p.discordId : null };
+      });
+    },
+    async newestEventId() {
+      return (await db.event.findFirst({ orderBy: { id: "desc" }, select: { id: true } }))?.id ?? 0n;
+    },
+    async audit(e) {
+      await audit({ action: e.action, params: { userId: e.userId, name: e.name }, result: e.ok ? "OK" : "FAILED", detail: e.error ?? null });
+    },
+    async raise(message) {
+      await prismaRecorderStore.addEvent({ at: new Date(), kind: "ERROR", actor: null, message, meta: { discordRole: true } });
+    },
+  });
 }

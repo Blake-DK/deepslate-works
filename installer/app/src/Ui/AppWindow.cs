@@ -194,7 +194,31 @@ namespace DeepslateWorks
                 ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "25-vote.png")));
                 ui.SimDone();
                 ui.Tabs.SelectedItem = ui.ExtrasTab; ui.XRendered = false; ui.ShowExtras();
-                ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "26-extras.png")));
+                if (m != null)
+                {
+                    ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "26-extras.png")));
+                    ui.XRendered = false; ui.ShowExtras(false, ExtrasSamples.State(false), false, false);
+                    ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "26b-extras-iris-off.png")));
+                }
+                else
+                {
+                    // 3.5.6: no extras list on this PC (CI's): the cards drawn from a sample, so the pictures show them
+                    var realHome = Env.AppHome; var realConsent = ui.Consent;
+                    var xsample = Path.Combine(Env.Temp, "deepslate-extras-sample");
+                    try
+                    {
+                        Env.AppHome = xsample;
+                        Directory.CreateDirectory(xsample);
+                        File.WriteAllText(Env.ExtrasManifestPath, ExtrasSamples.Manifest);
+                        ui.Consent = new Dictionary<string, ConsentAnswer>(realConsent ?? new Dictionary<string, ConsentAnswer>());
+                        Consents.SetAnswer(ui.Consent, "extras", "allow", 1);
+                        ui.XRendered = false; ui.ShowExtras(false, ExtrasSamples.State(true), false, false);
+                        ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "26-extras.png")));
+                        ui.XRendered = false; ui.ShowExtras(false, ExtrasSamples.State(false), false, false);
+                        ui.Pump(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "26b-extras-iris-off.png")));
+                    }
+                    finally { Env.AppHome = realHome; ui.Consent = realConsent; try { Directory.Delete(xsample, true); } catch { } }
+                }
                 ui.Tabs.SelectedItem = ui.PlayTab;
                 ui.Consent = new Dictionary<string, ConsentAnswer>();
                 ui.ShowFirstRun();

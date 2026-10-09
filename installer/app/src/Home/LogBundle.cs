@@ -26,7 +26,7 @@ namespace DeepslateWorks
         /// <summary>The game log's lines kept: its end, where a failure is.</summary>
         public const int GameLines = 4000;
 
-        static string GameDir => Env.DataDir;
+        static string GameDir => Env.LiveDataDir;
 
         /// <summary>The last n lines of a file another process may be writing (the app, the game).</summary>
         public static List<string> ReadTail(string path, int n)

@@ -35,8 +35,8 @@ namespace DeepslateWorks
         readonly Dictionary<string, Action<int>> SPut = new Dictionary<string, Action<int>>(StringComparer.Ordinal);
         readonly Dictionary<string, Action> SRowNotes = new Dictionary<string, Action>(StringComparer.Ordinal);
         // where the tab reads and writes (the real files; the screenshots point them at samples)
-        string SOptions => sSim?.Options ?? GameSettings.OptionsPath;
-        string SPack => sSim?.Pack ?? GameSettings.VillagerPackPath;
+        string SOptions => sSim?.Options ?? GameSettings.LiveOptionsPath;
+        string SPack => sSim?.Pack ?? GameSettings.LiveVillagerPackPath;
         string SSettings => sSim?.Settings ?? AppSettings.Path;
         SimFiles sSim;
         sealed class SimFiles { public string Options, Pack, Settings; public object PackList; public int TotalGb; public bool Weak; public bool Running; }
@@ -98,7 +98,7 @@ namespace DeepslateWorks
             try
             {
                 if (sTotalGb < 0) sTotalGb = sSim?.TotalGb ?? Memory.TotalGb();
-                var packList = sSim != null ? sSim.PackList : Engine.ReadPackList(Engine.PackListPath);
+                var packList = sSim != null ? sSim.PackList : Engine.ReadPackList(Engine.LivePackListPath);
                 SModel = SettingsModel.Load(SOptions, SPack, SSettings, packList, sSim?.TotalGb ?? sTotalGb, sSim?.Weak ?? Weak);
             }
             catch (Exception e)

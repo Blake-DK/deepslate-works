@@ -34,6 +34,8 @@ const schema = z.object({
   // docs/42a (2026-10-08): "1" marks the one instance that talks to the players' Discord (the bot and the three webhooks
   // above). Absent: silent (discord/gate.ts). The live api's compose service sets it; nothing else does.
   DISCORD_TALKS: z.string().optional(),
+  // planner 2026-10-09: the Discord role on everyone who plays (discord/role.ts). Empty: the feature is off.
+  DISCORD_PLAYER_ROLE_ID: z.string().optional(),
   // A private channel for an instance that is not marked (the test server), set through deploy/.env; empty: silent.
   DISCORD_PRIVATE_WEBHOOK_FEED: z.string().optional(),
   DISCORD_PRIVATE_WEBHOOK_ADMIN: z.string().optional(),
@@ -49,6 +51,8 @@ const schema = z.object({
   TEST_MODE: z.enum(["0", "1"]).default("0"),
   // docs/42 T9: the live site's token for GET /test/summary; it opens nothing else
   TEST_SUMMARY_TOKEN: z.string().min(32, "TEST_SUMMARY_TOKEN must be at least 32 chars").optional(),
+  // docs/45: the live web's token for the launcher's Test section (/test/app/*), on the test server only; opens nothing else
+  TEST_APP_TOKEN: z.string().optional(),
   // docs/42 T5: the seasons a test Build makes datapacks of, in place of index.json's `ship` ("s1" or "s1,sample")
   SEASONS_SHIP: z.string().regex(/^[a-z0-9_, ]{0,200}$/, "SEASONS_SHIP: season ids, separated by commas").optional(),
 });

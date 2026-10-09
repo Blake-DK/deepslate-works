@@ -35,7 +35,10 @@ namespace DeepslateWorks
     public static partial class Engine
     {
         public const string PackListName = "pack.json";   // the client set of the last mod list, for the game check
-        public static string PackListPath => Path.Combine(Env.AppHome, PackListName);
+        public static string PackListPath => Env.TestTarget ? TestPackListPath : LivePackListPath;
+        public static string LivePackListPath => Path.Combine(Env.AppHome, PackListName);
+        /// <summary>docs/45: the test pack's own list, so a test run never changes what the live game check compares.</summary>
+        public static string TestPackListPath => Path.Combine(Env.AppHome, "pack-test.json");
 
         /// <summary>The mods PCs get: everything but server-only.</summary>
         public static List<object> PackFiles(object manifest) => J.Arr(manifest, "files").Where(f => f != null && J.Str(f, "side") != "server").ToList();

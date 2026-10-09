@@ -1,7 +1,123 @@
 # 11 · Status and handover
 
-Last updated 2026-10-08, latest: the test server silent on Discord (first section below). Before that: the starter kit on the first release, the book alone in the join room (second section below). Before that: the join room's sign-in book unblocked in OPAC (second section below). Before that: `main` (PR #18) deployed and the test server brought up (second section below). Before that: the test server (docs/42), S0 and S3 to S6, built (second section below). Before that: countries from mc-router's joins on the admin-only stats, on `dev` (second section below). Before that: mc-router on Admin → Server → Router, through api, on `dev`, not deployed (second section below). Before that: the build designer's second pass, Parts 1 and 2 (docs/40), in a `dev` → `main` PR (second section below). Before that: Discord sign-in fixed (PR #13, deployed), then PR #14 merged to `main`, not deployed: sign-in alerts, the healthcheck and deploy.sh fixes, the 7 October change log (first section below). Before that, the same day: the admin sign-in notice can be acknowledged (second section below). Before that, the same day: the build designer, Steps 1 and 2 (docs/39: the `designer` container and the "Design a build" card on Admin → Seasons → Builds), on `dev`, not deployed (second section below). Before that, the same day: its Step 0, items 1 to 4 (first section below).  Before that, the same day: the security register (docs/38) on `dev`, with the open findings, the first fix spec and the build order moved to a private place (first section below). Before that: 2026-10-06, latest: app 3.5.5, the Play tab never scrolls, the window grows to show it all, on `dev`, not deployed (second section below). Before that, the same day: Build and Sync say "updated" for a new version of a mod (second section). Before that, the same day: placeholder values in `deploy/.env.example` and a list of `deploy/` in its README (third section). Before that, the same day: the `dev` image tag undone, `dev` builds no images again (fourth section). Before that, the same day: app 3.5.4, readable text, the whole news, Play through the vote, merged to `main` in PR #5 (fifth section). Before that, the same day: importing builds, the plan (docs/37), its Step 1 and Step 2, on `dev`, not deployed (third section). Before that, the same day: app 3.5.3, the Play tab fits without scrolling, the news card opens the site, the Log tab's green lines, merged to `main` in PR #4 (fourth section). Before that, the same day: Discord votes say they are the site vote, polls can be edited and made must-vote, on `dev`, not deployed (fifth section). Before that, the same day: the "out of date" box on Admin → Modpack, on `dev`, not deployed (sixth section). Before that, the same day: the newest app is required to join, app 3.5.2, deployed (second section). Before that: 2026-10-05, latest: the worlds plan (docs/36) and what CI measured of it (first section below). Before that, the same day: the season's mods are listed to admins only, and the "no videos" warnings are gone (first section below). Before that, the same day: Xaero's maps pinned back after every PC failed to load (first section below). Before that, the same day: a code review (docs/35) and the control panel reorganised on `dev`, not deployed (first section below). Before that: 2026-10-04, latest: the `createdeco:placard` recipe ERROR has a fix in `deepslate-tools` (first section below). Before that: 2026-10-04, later still: an invite now stands in for the Discord server (first section below). Before that: 2026-10-04, late: Season 1's recording, Season page, Admin → Seasons, Discord moments and the Frontier's datapack are built on `dev` (first section below). Before that: 2026-10-04, 15:20 UTC: PR B, C and D running (deployed 14:50 by the old script), the first root checks after them (first section below). Before that: 2026-10-04 evening: We're live pressed 2026-10-04, PR A (B-01) deployed, the planner's fix order (first section below). Before that: 2026-10-04, 12:50 UTC for the review and the seasons roadmap (docs/31, docs/32; docs only, first section below). Before that: 2026-10-04, about 12:00 UTC: app 3.5.0, the Settings tab, is on its branch, not merged (its section is the first below). Before that: 2026-10-04, 11:10 UTC for the Activity page (docs/29: `main` `bf5e9d3` deployed, section below). Before that: 2026-10-03, 21:30 UTC (`main` `bc12ef3`, images `ac2bfe4` deployed with the signed-in check; pack `0.1.0+d7521da9`, app 3.4.2; the five fixes after the state-of-development check and their follow-ups are live: dated nightly dumps, a backup counts once AMP lists it, the Discord card shows the last real send, install reports readable through api, `server-loaded.json` from the 19:33 start). Read the first section below first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes, with "Open items, by priority" at its end; `ROADMAP.md` is the same for people who are not building it.
+Last updated 2026-10-09, latest: Season 1 mods off live until the season opens, the fallback on `dev` (first section below). Before that: app 3.5.6, readable words on the Extras tab, on `dev` (first section below). Before that: the planner's answers of 2026-10-09 (second section below). Before that: `main` at PR #20 deployed (second section below). Before that: the test server silent on Discord (second section below). Before that: the starter kit on the first release, the book alone in the join room (second section below). Before that: the join room's sign-in book unblocked in OPAC (second section below). Before that: `main` (PR #18) deployed and the test server brought up (second section below). Before that: the test server (docs/42), S0 and S3 to S6, built (second section below). Before that: countries from mc-router's joins on the admin-only stats, on `dev` (second section below). Before that: mc-router on Admin → Server → Router, through api, on `dev`, not deployed (second section below). Before that: the build designer's second pass, Parts 1 and 2 (docs/40), in a `dev` → `main` PR (second section below). Before that: Discord sign-in fixed (PR #13, deployed), then PR #14 merged to `main`, not deployed: sign-in alerts, the healthcheck and deploy.sh fixes, the 7 October change log (first section below). Before that, the same day: the admin sign-in notice can be acknowledged (second section below). Before that, the same day: the build designer, Steps 1 and 2 (docs/39: the `designer` container and the "Design a build" card on Admin → Seasons → Builds), on `dev`, not deployed (second section below). Before that, the same day: its Step 0, items 1 to 4 (first section below).  Before that, the same day: the security register (docs/38) on `dev`, with the open findings, the first fix spec and the build order moved to a private place (first section below). Before that: 2026-10-06, latest: app 3.5.5, the Play tab never scrolls, the window grows to show it all, on `dev`, not deployed (second section below). Before that, the same day: Build and Sync say "updated" for a new version of a mod (second section). Before that, the same day: placeholder values in `deploy/.env.example` and a list of `deploy/` in its README (third section). Before that, the same day: the `dev` image tag undone, `dev` builds no images again (fourth section). Before that, the same day: app 3.5.4, readable text, the whole news, Play through the vote, merged to `main` in PR #5 (fifth section). Before that, the same day: importing builds, the plan (docs/37), its Step 1 and Step 2, on `dev`, not deployed (third section). Before that, the same day: app 3.5.3, the Play tab fits without scrolling, the news card opens the site, the Log tab's green lines, merged to `main` in PR #4 (fourth section). Before that, the same day: Discord votes say they are the site vote, polls can be edited and made must-vote, on `dev`, not deployed (fifth section). Before that, the same day: the "out of date" box on Admin → Modpack, on `dev`, not deployed (sixth section). Before that, the same day: the newest app is required to join, app 3.5.2, deployed (second section). Before that: 2026-10-05, latest: the worlds plan (docs/36) and what CI measured of it (first section below). Before that, the same day: the season's mods are listed to admins only, and the "no videos" warnings are gone (first section below). Before that, the same day: Xaero's maps pinned back after every PC failed to load (first section below). Before that, the same day: a code review (docs/35) and the control panel reorganised on `dev`, not deployed (first section below). Before that: 2026-10-04, latest: the `createdeco:placard` recipe ERROR has a fix in `deepslate-tools` (first section below). Before that: 2026-10-04, later still: an invite now stands in for the Discord server (first section below). Before that: 2026-10-04, late: Season 1's recording, Season page, Admin → Seasons, Discord moments and the Frontier's datapack are built on `dev` (first section below). Before that: 2026-10-04, 15:20 UTC: PR B, C and D running (deployed 14:50 by the old script), the first root checks after them (first section below). Before that: 2026-10-04 evening: We're live pressed 2026-10-04, PR A (B-01) deployed, the planner's fix order (first section below). Before that: 2026-10-04, 12:50 UTC for the review and the seasons roadmap (docs/31, docs/32; docs only, first section below). Before that: 2026-10-04, about 12:00 UTC: app 3.5.0, the Settings tab, is on its branch, not merged (its section is the first below). Before that: 2026-10-04, 11:10 UTC for the Activity page (docs/29: `main` `bf5e9d3` deployed, section below). Before that: 2026-10-03, 21:30 UTC (`main` `bc12ef3`, images `ac2bfe4` deployed with the signed-in check; pack `0.1.0+d7521da9`, app 3.4.2; the five fixes after the state-of-development check and their follow-ups are live: dated nightly dumps, a backup counts once AMP lists it, the Discord card shows the last real send, install reports readable through api, `server-loaded.json` from the 19:33 start). Read the first section below first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes, with "Open items, by priority" at its end; `ROADMAP.md` is the same for people who are not building it.
 
+
+## App 3.5.6: readable words on the Extras tab (2026-10-09, on `dev`, not deployed)
+
+- **Found** (Alex's screenshot of 3.5.5): the "On" beside every extra and the shader choices None / Light / Full were
+  black on the dark card, in stock white Windows boxes. Four controls in `installer/app/src/Ui/AppUi.cs` had no
+  `Style`: the extras' `CheckBox`, the shader `RadioButton`s, and Allow / Not now on the permission cards. WPF's own
+  style sets the system's black text instead of inheriting the window's. No other `CheckBox` or `RadioButton` in
+  `installer/app/src` lacks a style (the vote's options use `PickBox`; Settings uses `Switch` and `Choice`).
+- **Why the test missed it.** `LookTests.Every_text_on_every_tab_reads_at_4_5_to_1_or_better` walked the Extras tab in a
+  scratch home with no extras list, so the tab drew only its download card: no extras cards, no "On", no shader row.
+  Its window had every permission answered, so the permission cards were never on screen. `InButton` was not the
+  cause (a check box or radio button is a `ToggleButton`, never a `Button`); it now says so explicitly.
+- **Changed.** The four controls use `Switch` and `Choice`, margins as before. The test writes a sample extras list
+  and walks the Extras tab with Iris on and with Iris off, shows the permission cards for one Play walk, fails when
+  "On", the three shader choices, Allow or Not now were never seen, fails on any visible `CheckBox` or `RadioButton`
+  without a style, and reports all of it in one failure. The `-Screenshots` run draws the Extras tab from a sample list
+  when the PC has none (CI's), with the app's home moved into a folder of its own: `26-extras.png` (Iris on) and the
+  new `26b-extras-iris-off.png`. `installer/VERSION` 3.5.6, docs/07 "3.5.6", change log entry
+  `2026-10-09-app-extras-readable` (no `live` yet: set it once 3.5.6 is what the site hands out).
+- **Disabled text.** With Iris off the shader row is disabled and both styles draw its words in Dim: #908D85 on Card
+  #202226 is **4.81:1** (ThemeTests' pair; WPF's own grey there was about 3.1:1).
+- **CI** (installer workflow dispatched on `dev`; it runs on its own only for PRs and `main`):
+  - run 37899929934 on `5aa81039`, the new test with the 3.5.5 code: **failed** as intended, listing all six
+    controls (extras "On", None, Light, Full; play Allow, Not now) as Windows' own. That run stopped at the style
+    check, so it did not print the contrast list too; the test now reports both together.
+  - run 37899966979 on `4b2a0767` (the fix) and run 37900639618 on `144ccfd7` (sample screenshots): **success**,
+    270 of 270 tests.
+  - **Screenshots** (run 37900639618, artifact `deepslate-works-3.5.6`, `window/`): `26-extras.png` shows four cards
+    with "On" in light text beside drawn boxes (Iris and Falling Leaves ticked in copper) and the shader choices
+    readable with Light picked; `26b-extras-iris-off.png` shows the shader row greyed in Dim, still legible.
+    `27-question-card.png` shows Allow / Not now as drawn rings with light text.
+- **Still to do:** the `dev` → `main` PR when Alex wants a deploy, then `live: true` on the change log entry.
+
+## Season 1 mods off live until the season opens (Alex and the planner, 2026-10-09, on `dev`)
+
+- **Decision:** the six Season 1 mods come off the live server and players' PCs until the season opens, and stay on
+  the test server. Live is stopped on purpose; no Build, Sync or start of live until Alex says go.
+- **The six:** L_Ender's Cataclysm, lionfish-api, Mowzie's Mobs, geckolib, EDF Remastered, curios. The three libraries
+  were added on 2026-10-02 for the bosses only. Every server jar's declared dependencies were checked: only Create Big
+  Cannons names curios, and only as optional. The portal mod and its library stay.
+- **Fallback, as built:** `enabled: false` with the versions pinned and a note in `mods.json`. The lock was trimmed by
+  hand: the six entries out, nothing re-resolved, `packHash` recomputed (the reimplementation reproduced the old hash
+  first). Lock 77 files to 71, hash `f652ffca` to `d44eb2ba`. Tests: modpack 217, api 708, web 589 green.
+- **Players' PCs:** on every Play the app deletes any jar that is not in the manifest, except the player's own Extras
+  (`installer/app/src/Engine/Engine.cs`). The removed mods leave each PC at its next Play.
+- **What players held** (read-only from the live world with live stopped, counts only; the detail went to Alex in
+  chat and is kept outside the repo): 4 of 8 players, 8 stacks and 9 items, plus 2 stacks inside a backpack and 1 item
+  in a curios slot. One item is a boss drop. Alex gives the swaps from the live console once live is back.
+- **After the live change, for the door, the pack hash and the app:** the pack version becomes `0.1.0+d44eb2ba` once
+  live is synced. The app's update check offers the 71-file set and removes the five client-side jars (EDF is
+  server-only). With Play first off on live (`joining.requirePlay = false`), the door does not compare pack versions
+  or reported mods, so nobody is held as missing mods. A PC that skips the app's Play and keeps the old jars may be
+  refused by the server for mods it does not have. Players always start through the app, so that is the edge case.
+  Do not run Lock on live: it would re-resolve every unpinned mod. The trimmed lock reaches live by the deploy.
+- **The proper mechanism:** docs/44, to land before more season work goes to test.
+- **Held off main (Alex and the planner, 2026-10-09):** the launcher's Test section has to reach live through a
+  `dev` → `main` PR, and that PR must not carry the removal. So `mods.json` and the lock on `dev` are back to main's
+  objects (lock `16dbfce4`, 77 files, hash `f652ffca`). The removal comes back on Alex's go by re-applying the files of
+  `89099a8d` (lock object `8650125f`, 71 files, hash `d44eb2ba`; `mods.json` object `7b325696`), not by a new trim.
+- **The test checkout is held on purpose at `86bdcc5`** (the trimmed pack) while the test images move ahead with new
+  code. `deploy/test-pull.sh` now refuses a checkout with `.git/deepslate-hold` in it and prints why; the file is in
+  place (never committed). The live checkout's copy of the script learns this at the next deploy; until then, do not
+  run `test-pull.sh` from the live checkout.
+- **Rehearsal and live:** see the next lines as they are done.
+
+## The planner's answers of 2026-10-09
+
+- **No existing live player can lose items to the new hold rule (item 1).** Read-only, 07:40 UTC, from the live
+  world's `playerdata/` through the live deploy key (the server asleep with nobody on before and after; no command
+  sent): 8 players with data, the same number as linked members. All 8 carry `deepslate.kit` and `verified`; 0 carry
+  `deepslate.released` (the new tick is not in the live world yet); 0 have neither tag; none has an empty inventory
+  (10 to 40 stacks each). A hold marks a `verified` player `deepslate.released` before it takes `verified`, and the
+  whole-inventory clear skips anyone with `deepslate.kit`, so none of the 8 can be cleared. A member with no player
+  data has never been in the world and has nothing to lose. The copies were deleted after counting.
+  The planner's paste said the new kit tick is synced to live: it is not. The live world's `kit/tick.mcfunction` is
+  the one of 2026-10-07. Build and Sync on the live site are still to do.
+- **Change log rule (item 3):** an entry posts only once the change is live for players and its live check passed.
+  `Change.live` (changelog.ts): a new entry goes in without it; a later commit sets `live: true` after the live check;
+  the bot sees only `liveChanges(CHANGES)`. `2026-10-08-entrance-room` was posted at 2026-10-09 07:24 UTC, before the
+  rule, and is marked live. Test in `discord-changelog.test.ts`; api 697 tests green.
+- **Test instance starts and stops (item 5):** through the test site only; noted in docs/42 §14 with the starts and
+  stops made outside it on 8 and 9 October.
+- **Test world (item 6):** the AMP host's final report: deleted before the first Sync and regenerated with the pack on
+  the live seed at the 2026-10-09 start. Closed. Enforce Whitelist on the test instance: Alex unticks it.
+- **`SPAWN_POS` on the test world (item 7):** read from `world/region/r.0.0.mca` of both worlds without starting the
+  test server: at x 107, z 87 the block at y 125 is grass and y 126 to 128 are air, on test and on live. A released
+  player stands on solid ground with room above.
+- **The asleep watcher (item 7):** it was a one-off script of this session outside the repo, waiting for AMP state 30;
+  it is stopped. The repo's own mapping already counts 30 and 50 as asleep (`shared/server-state.ts`, both apps) and
+  `apps/api/tests/server-state.test.ts` already asserts both. Anything that waits for "asleep" again reads the api's
+  `/status` state instead of AMP's number.
+- **S3 backups (item 7):** confirmed by Alex in the bucket on 2026-10-09: eight files, matching AMP's list.
+- **The Minecraft role (planner D, docs/22 §14), on `dev`:** `DISCORD_PLAYER_ROLE_ID` (empty: off), live api only;
+  a reconciler at start, daily and after each link or unlink event; event log lines; once-only admin alert; state in
+  health and on Admin → Discord. Tests `discord-role.test.ts` (link adds, unlink removes, backfill both ways and
+  idempotent, not-in-server and no-Discord members skipped, removed member's role taken, refusal raised once and again
+  after a clean run, no role sync on an unmarked api). api 708, web 589 tests green.
+- **Waiting:** docs/42a (Alex passes the AMP host's brief and final report), docs/41 (the planner's paste),
+  housekeeping (Alex's word), the remaining test checks in the log, Build and Sync on live, and the live checks after
+  the first live join.
+
+## Deployed 2026-10-09: `main` at PR #20 (`7a88d0ad`), with PR #19
+
+- **PRs:** #19 (book only in the entrance room, kit on first release, OPAC default, change log entry
+  `2026-10-08-entrance-room`), merged 2026-10-08 18:32 UTC; #20 (Discord gate, `test-up.sh` pull fix, docs), merged
+  2026-10-09 07:18 UTC. One deploy by Alex after #20.
+- **First try refused:** `.git/config` held `branch.work/opac-written-book.remote` and `.merge`, written by
+  `git worktree add -b` from this session. Removed with `git branch --unset-upstream`; the expected copy under `/root`
+  was right and was not touched. The second run deployed.
+- **After:** web and api on `7a88d0ad` and report it; health ok (tunnel, AMP, rsync); Discord feed on, bot on; the live
+  api has `DISCORD_TALKS=1` and does not log the "does not talk" line, the test api has no mark and does; migrations
+  31 of 31, none new. The test pair stayed up (`api-test` recreated on `5f48c966`).
+- **Live server:** asleep with nobody on at the deploy. The OPAC exception is in its `config/` since 06:29.
+- **Still to do:** Build and Sync on the live site (puts the new `kit/tick` into the world); no restart is needed
+  while it sleeps, the next wake loads it. After the first live join: a join still posts to the feed, the book opens
+  in the room, a new player holds the book only and gets the kit once.
 
 ## The test server is silent on Discord (docs/42 §13, 2026-10-08, on `dev`)
 

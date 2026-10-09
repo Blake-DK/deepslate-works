@@ -19,6 +19,9 @@ namespace DeepslateWorks
 
         public static string OptionsPath => Path.Combine(Env.DataDir, "options.txt");
         public static string VillagerPackPath => Path.Combine(Env.DataDir, "resourcepacks", VillagerPack);
+        /// <summary>docs/45: what the Settings tab reads and writes: the live game's, whatever run is going.</summary>
+        public static string LiveOptionsPath => Path.Combine(Env.LiveDataDir, "options.txt");
+        public static string LiveVillagerPackPath => Path.Combine(Env.LiveDataDir, "resourcepacks", VillagerPack);
 
         public static bool VillagersOn(string options) => GameOptions.HasResourcePack(options, VillagerId);
 

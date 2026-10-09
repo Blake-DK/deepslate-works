@@ -43,6 +43,35 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.0: the Test section, admins only (Alex and the planner, 2026-10-09; docs/45)
+
+- A **Test** tab, shown only when the live site answers `GET /api/app/test` for the signed-in member (admins; anyone else
+  gets "not found" and the tab stays hidden). It says plainly it is the test server, shows its state, address and test
+  pack, and has **Play test**.
+- **Play test** is the Play tab's run with its target set to "test" (`Run.Target`, `Env.Target` for the run's length):
+  the test manifest from `/api/app/test/manifest`, the wake through `/api/app/test/wake`, the game folder
+  `.minecraft-deepslate-works-test` and the launcher profile "Deepslate Works TEST" from that manifest, its own
+  `installed.json` and `pack-test.json`. Jars not in the test manifest are removed from the test folder only; the Extras
+  are kept as for live. Java and NeoForge are reused (a Java the live folder downloaded is read, never written).
+- Everything the window reads for itself names the live paths (`LiveDataDir`, `LiveInstalledFile`, `LivePackListPath`,
+  the Settings tab's `options.txt`, the Extras tab, the hand-over, the log bundle), so the live game is never touched
+  by a test Play, and the test folder never by a live one. The sign-in (`launcher.json`) is shared.
+- Reports of a test Play have the mode `test_play`; the site keeps them out of the live figures.
+- The app still updates itself from the live channel only.
+- Tests: `TestSectionTests` (paths follow the target and come back; the report mode; a test Play installs the test pack
+  into its own folder and removes a jar it does not list while the live mods, `installed.json` and pack list stay as
+  they were; a live Play after it leaves the test folder alone).
+- Not for players until Alex has tried it; the live site keeps handing out 3.5.5 (`INSTALLER_TAG=3.5.5` on deploy).
+
+## 3.5.6: readable words on the Extras tab (Alex, 2026-10-09)
+
+**Alex** (screenshot of 3.5.5): the "On" beside every extra and the shader choices were black on the dark card, in white Windows boxes.
+
+- **Cause.** Four places in `AppUi.cs` made a `CheckBox` or `RadioButton` with no `Style`: the extras' "On", the shader choices None / Light / Full, and Allow / Not now on the permission cards. WPF's own style sets `Foreground` to the system text colour (black) instead of inheriting the window's, and draws the stock white box. They now use the Settings tab's `Switch` (check box) and `Choice` (radio button) styles, margins as before. No other check box or radio button in `installer/app/src` is without a style (the vote's options use `PickBox`).
+- **Disabled.** With Iris off the shader row is disabled, and both styles then draw the words in Dim: #908D85 on Card #202226, **4.81:1** (ThemeTests' pair Dim on Card). Before, WPF's grey there was about 3.1:1.
+- **Why the test missed it.** `LookTests.Every_text_on_every_tab_reads_at_4_5_to_1_or_better` walked the Extras tab in a scratch home with no extras list, so the tab showed only its download card: no extras cards, no "On", no shader row. And the window it opens has every permission answered, so the permission cards were never drawn. `InButton` was not the cause (a check box or radio button is a `ToggleButton`, not a `Button`), but it now says so explicitly. The test now writes a sample extras list (the 2.0.1 list: Iris, the two shader packs, Fresh Animations, Falling Leaves) and walks the Extras tab with Iris on, then with Iris off; shows the permission cards for one walk of the Play tab; fails when "On", the three shader choices, Allow or Not now were never seen; and fails on any visible `CheckBox` or `RadioButton` without a style.
+- **Screenshots.** On a PC with no extras list (CI's) `-Screenshots` draws the Extras tab from a sample (`ExtrasSamples`, part of modpack/extras.json, with the app's home moved into a folder of its own): `26-extras.png` with Iris on, `26b-extras-iris-off.png` with the shader choices disabled.
+
 ## 3.5.5: the Play tab never scrolls (Alex, 2026-10-06)
 
 **Alex:** "I don't want to scroll on the play page; all text should be visible at all times, so the window should be made longer to show it all."

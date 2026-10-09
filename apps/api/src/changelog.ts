@@ -4,8 +4,17 @@
 // Add an entry, at the end, with every dev → main pull request that changes something a player can see. Plain
 // English, British spelling, for the friend who has never played modded. An entry's id never changes once deployed:
 // it is how the bot knows the entry has been posted. A deploy without a new entry posts nothing.
+//
+// Planner, 2026-10-09: an entry is posted only once the change is really live for players: deployed, synced, loaded
+// by the server and its live check passed; not at merge. So a new entry goes in without `live`, and a later commit
+// sets `live: true` once the live check has passed; the deploy after that posts it. Without it the bot never sees it.
 
-export type Change = { id: string; date: string; lines: string[] };
+export type Change = { id: string; date: string; lines: string[]; live?: true };
+
+/** What the bot may post: only entries marked live (liveChanges(CHANGES) in server.ts). */
+export function liveChanges(all: Change[]): Change[] {
+  return all.filter((c) => c.live === true);
+}
 
 export const CHANGES: Change[] = [
   {
@@ -115,11 +124,25 @@ export const CHANGES: Change[] = [
   {
     id: "2026-10-08-entrance-room",
     date: "2026-10-08",
+    live: true, // posted 2026-10-09 07:24 UTC, before the rule above; marked so it is not lost
     lines: [
       "The sign-in book in the entrance room opens again with a right-click. The claims mod was refusing it.",
       "Waiting in the entrance room for the first time, the sign-in book is now the only thing you carry. The starter kit (backpack, tools, bread, torches and a bed) arrives when you are let into the world, once.",
       "If you have played before and are asked to wait in the room again, everything you carry stays as it is.",
     ],
+  },
+  {
+    id: "2026-10-09-app-extras-readable",
+    date: "2026-10-09",
+    lines: [
+      "On the app's Extras tab, the \"On\" beside each extra and the shader choices (None, Light, Full) were black on the dark card and hard to read. They are light now, with the app's own boxes instead of white ones. The Allow / Not now choices on permission questions got the same fix.",
+    ],
+  },
+  {
+    // planner 2026-10-09: no mod and no season named. Set `live: true` only after the live check (see the rule above).
+    id: "2026-10-09-pack-tidy",
+    date: "2026-10-09",
+    lines: ["A small pack update and a tidy-up of the world. Press Play as usual: the app brings your game up to date by itself."],
   },
 ];
 

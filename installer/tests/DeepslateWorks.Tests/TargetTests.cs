@@ -262,6 +262,33 @@ namespace DeepslateWorks.Tests
             Assert.True(Engine.FoundUnderOwnLocator(s, "sodium-neoforge-0.8.13+mc1.21.1.jar"));
             Assert.False(Engine.FoundUnderOwnLocator(s, "sodium-neoforge-0.8.14+mc1.21.1.jar"));   // another version is not it
             Assert.False(Engine.FoundUnderOwnLocator(s, "iris-neoforge-1.8.12+mc1.21.1.jar"));
+            // two pack files that share part of a name: only the one whose whole name it is
+            var t = new GameSession();
+            t.FoundByOwnLocator.Add("org.example.oculus-iris-1.8.12+mc1.21.1-mod.jar");
+            Assert.False(Engine.FoundUnderOwnLocator(t, "iris-1.8.12+mc1.21.1.jar"));          // inside a longer name
+            Assert.True(Engine.FoundUnderOwnLocator(t, "oculus-iris-1.8.12+mc1.21.1.jar"));
+            var u = new GameSession();
+            u.FoundByOwnLocator.Add("net.caffeinemc.sodium-neoforge-0.8.13+mc1.21.1-mod.jar");
+            Assert.False(Engine.FoundUnderOwnLocator(u, "sodium-neoforge-0.8.13+mc1.21.1-extra.jar"));   // the name plus more
+            Assert.False(Engine.FoundUnderOwnLocator(u, "neoforge-0.8.13+mc1.21.1.jar"));               // the tail of it
+        }
+
+        [WindowsFact] public void On_the_real_log_a_pack_file_the_game_did_not_load_is_missing_even_beside_one_its_name_overlaps()
+        {
+            using (var s = new Scratch())
+            {
+                var game = Path.Combine(Env.Root, "game"); var logs = Path.Combine(game, "logs"); Directory.CreateDirectory(logs);
+                var log = Path.Combine(logs, "latest.log");
+                File.Copy(RealLog(), log);
+                File.SetLastWriteTime(log, DateTime.Now);
+                var found = Engine.FindGameSession(game, null, Extras.StartFromTime("20:26:09", DateTime.Now).AddMinutes(-1), "");
+                Assert.NotNull(found);
+                // absent from the log altogether, and two that share part of the name of one that is there (Sodium's)
+                var files = new[] { "sodium-neoforge-0.8.13+mc1.21.1.jar", "sodium-extra-neoforge-0.6.0+mc1.21.1.jar", "sodium-neoforge-0.8.13+mc1.21.1-addon.jar", "absent-mod-2.0.jar" }.Select(PackFile).ToList();
+                var c = Engine.TestGameMods(found.Session, files);
+                Assert.False(c.Ok);
+                Assert.Equal(new[] { "sodium-extra-neoforge-0.6.0+mc1.21.1.jar", "sodium-neoforge-0.8.13+mc1.21.1-addon.jar", "absent-mod-2.0.jar" }, c.Missing.Select(m => m.Filename).ToArray());
+            }
         }
 
         [Fact] public void A_test_games_check_has_its_own_mode()

@@ -114,27 +114,51 @@ jobs:
             shots
           if-no-files-found: ignore
 
-  # 3.6.1, the reopening day: the real app 3.5.5 (built from 04c0e59f, whose app code is the 3.5.5 players have)
-  # updates itself to this build against a stand-in site, then plays. Both exes carry the stand-in's address
-  # (http://127.0.0.1:47555): an app that updates itself restarts without -Root. Run by hand only.
-  update:
+  # 3.6.1, the reopening day: the exact 3.5.5 exe the site hands out (the image deepslate-installer:3.5.5, checked
+  # against its sha256 in the live dist/) updates itself to this build against a stand-in site, then plays. Run by
+  # hand only.
+  old-exe:
     if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: The 3.5.5 the site hands out
+        env:
+          WANT: 626bdb2a8dd754021518d12927405372f599b74a29bbd1356ecc1185957204fc   # dist/DeepslateWorks.exe on 2026-10-09
+        run: |
+          set -eu
+          img="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/deepslate-installer:3.5.5"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker pull -q "$img"
+          id=$(docker create "$img" /none)
+          mkdir -p old && docker cp "$id:/DeepslateWorks.exe" old/ && docker rm "$id" >/dev/null
+          got=$(sha256sum old/DeepslateWorks.exe | cut -d' ' -f1)
+          echo "image $img: sha256 $got"
+          [ "$got" = "$WANT" ] || { echo "not the exe the site hands out (want $WANT)"; exit 1; }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: old-exe-3.5.5
+          path: old/DeepslateWorks.exe
+
+  update:
+    needs: old-exe
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          fetch-depth: 0
-      - name: This app and 3.5.5, both pointed at the stand-in site
+          name: old-exe-3.5.5
+          path: old
+      - name: This app, pointed at the stand-in site (an app that updates itself restarts without -Root)
         shell: pwsh
-        run: |
-          dotnet build installer/app/DeepslateWorks.csproj -c Release -o new "-p:PortalUrl=http://127.0.0.1:47555"
-          git -c advice.detachedHead=false worktree add old355 04c0e59f
-          dotnet build old355/installer/app/DeepslateWorks.csproj -c Release -o old "-p:PortalUrl=http://127.0.0.1:47555"
-      - name: 3.5.5 updates itself and plays, in its own window
+        run: dotnet build installer/app/DeepslateWorks.csproj -c Release -o new "-p:PortalUrl=http://127.0.0.1:47555"
+      - name: The site's 3.5.5 updates itself and plays, in its own window
         timeout-minutes: 15
         shell: powershell
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-update.ps1 -Old old/DeepslateWorks.exe -New new/DeepslateWorks.exe -Out shots
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-update.ps1 -Old old/DeepslateWorks.exe -New new/DeepslateWorks.exe -Out shots -SiteExe
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:

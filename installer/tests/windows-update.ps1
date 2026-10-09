@@ -5,7 +5,10 @@
 # Both exes are built in this job with the stand-in site's address built in (http://127.0.0.1:47555): an app that
 # updates itself restarts without -Root, so a -Root run could not follow it. The runner's own profile is the PC; it
 # is thrown away with the runner. The real site is never asked. Exit 1 when a check fails.
-param([Parameter(Mandatory = $true)][string]$Old, [Parameter(Mandatory = $true)][string]$New, [string]$Out = "shots", [int]$Port = 47555)
+# -SiteExe: $Old is the exe the site hands out (the real site's address built in). It is pointed at the stand-in the
+# only way it can be: a test run (-Root) with DEEPSLATE_PORTAL_URL. -Root is the runner's own %APPDATA%, so the paths
+# are the same as without it, and the new copy it starts after updating (no -Root) finds the same game folder.
+param([Parameter(Mandatory = $true)][string]$Old, [Parameter(Mandatory = $true)][string]$New, [string]$Out = "shots", [int]$Port = 47555, [switch]$SiteExe)
 $ErrorActionPreference = "Stop"
 $Shots = Join-Path $Out "update"
 [void][IO.Directory]::CreateDirectory($Shots)
@@ -34,8 +37,14 @@ $keptSha = (Get-FileHash -InputStream (New-Object IO.MemoryStream(,$kept)) -Algo
 [IO.File]::WriteAllText((Join-Path $game "mods\removed-boss-1.0.jar"), "a mod the pack no longer has")
 [IO.File]::WriteAllText((Join-Path $game "installed.json"), '{"version":"0.1.0+old","hash":"old","renderDistance":12}')
 $steps = [ordered]@{}; foreach ($s in @("signin", "launcher", "java", "neoforge", "mods", "profile", "shortcuts", "reports", "extras")) { $steps[$s] = [ordered]@{ answer = "allow"; level = 2; at = "2026-10-09T12:00:00" } }
-[IO.File]::WriteAllText((Join-Path $appHome "consent.json"), (ConvertTo-Json -InputObject ([ordered]@{ version = 1; steps = $steps }) -Depth 4))
-[IO.File]::WriteAllText((Join-Path $appHome "settings.json"), '{"version":2,"websitePlay":"wait"}')
+$homes = @($appHome)
+if ($SiteExe) { $homes += Join-Path $roaming "LocalAppData\DeepslateWorks" }   # where a -Root run keeps its answers
+foreach ($h in $homes) {
+  [void][IO.Directory]::CreateDirectory($h)
+  [IO.File]::WriteAllText((Join-Path $h "consent.json"), (ConvertTo-Json -InputObject ([ordered]@{ version = 1; steps = $steps }) -Depth 4))
+  [IO.File]::WriteAllText((Join-Path $h "settings.json"), '{"version":2,"websitePlay":"wait"}')
+}
+Write-Host ("old exe sha256 " + (Get-FileHash $Old -Algorithm SHA256).Hash.ToLower())
 $homeExe = Join-Path $appHome "DeepslateWorks.exe"
 Copy-Item $Old $homeExe -Force
 
@@ -83,7 +92,10 @@ $savedPath = $env:PATH
 if ($env:JAVA_HOME_21_X64) { $env:PATH = (Join-Path $env:JAVA_HOME_21_X64 "bin") + ";" + $env:PATH }
 try {
   Write-Host "The app 3.5.5 opened from the desktop, the site offering $newVer"
-  Start-Process -FilePath $homeExe -ArgumentList @("-From", "desktop") | Out-Null
+  if ($SiteExe) {
+    $env:DEEPSLATE_PORTAL_URL = "http://127.0.0.1:$Port"
+    Start-Process -FilePath $homeExe -ArgumentList @("-Root", ('"{0}"' -f $roaming), "-From", "desktop") | Out-Null
+  } else { Start-Process -FilePath $homeExe -ArgumentList @("-From", "desktop") | Out-Null }
   Check "3.5.5 started its run" (Wait-Log 'Deepslate Works 3\.5\.5 .* start' 90)
   Check "it saw the new app and updated itself" (Wait-Log ("Updating Deepslate Works 3\.5\.5 .* " + [regex]::Escape($newVer)) 120)
   Shot "1-updating.png"

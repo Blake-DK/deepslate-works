@@ -154,12 +154,17 @@ namespace DeepslateWorks
             return c;
         }
 
-        /// <summary>3.6.1 (item 4a): a pack file a mod's own locator loaded under another name: the pack's name without
-        /// ".jar" inside a file that locator reported (Sodium: "net.caffeinemc." + the name + "-mod.jar").</summary>
+        /// <summary>3.6.1 (item 4a): a pack file a mod's own locator loaded under another name. The name that locator
+        /// reported must be the pack file's name without ".jar", whole: at the start or after a dot (a package prefix,
+        /// "net.caffeinemc."), and followed only by "-mod.jar" or ".jar". So "net.caffeinemc.sodium-neoforge-0.8.13+mc1.21.1-mod.jar"
+        /// is the pack's "sodium-neoforge-0.8.13+mc1.21.1.jar", and a name that only contains another (another version,
+        /// "oculus-iris-…" for "iris-…", "…-extra") is not.</summary>
         public static bool FoundUnderOwnLocator(GameSession s, string filename)
         {
             var stem = Regex.Replace(filename ?? "", @"\.jar$", "", RegexOptions.IgnoreCase);
-            return stem.Length >= 6 && s.FoundByOwnLocator.Any(x => x.IndexOf(stem, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (stem.Length < 6) return false;
+            var whole = new Regex(@"(^|\.)" + Regex.Escape(stem) + @"(-mod)?\.jar$", RegexOptions.IgnoreCase);
+            return s.FoundByOwnLocator.Any(x => whole.IsMatch(x));
         }
 
         public sealed class FoundSession { public GameSession Session; public bool Elsewhere; }

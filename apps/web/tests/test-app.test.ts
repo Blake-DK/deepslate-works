@@ -34,16 +34,37 @@ const routes = async () => ({
 
 beforeEach(() => { calls.list = []; });
 
-describe("a member who is not an admin, or nobody", () => {
+describe("a member who is not an admin, or nobody (answered as a path that does not exist)", () => {
   for (const user of [null, { id: "u1", role: "PLAYER", displayName: "Bramble09", discordId: "123456789012345678", pcTier: null }]) {
-    it(`${user ? "a player" : "no token"}: every Test section route answers as a missing page, and the test stack is never asked`, async () => {
+    it(`${user ? "a player's app" : "an app with no valid token"}: every route gives the middleware's 401 for an unknown path, and the test stack is never asked`, async () => {
       who.user = user;
       const r = await routes();
-      for (const [name, call] of [["section", () => r.section(req("/api/app/test"))], ["manifest", () => r.manifest(req("/api/app/test/manifest"))], ["config", () => r.config(req("/api/app/test/config.zip"))], ["wake", () => r.wake(req("/api/app/test/wake", "POST"))]] as const)
-        await expect([name, await call().then(() => "answered", (e: Error) => e.message)]).toEqual([name, "NEXT_NOT_FOUND"]);
+      for (const res of [await r.section(req("/api/app/test")), await r.manifest(req("/api/app/test/manifest")), await r.config(req("/api/app/test/config.zip")), await r.wake(req("/api/app/test/wake", "POST"))]) {
+        expect(res.status).toBe(401);
+        expect(await res.json()).toEqual({ error: { code: "unauthorized", message: "Sign in first" } });
+      }
       expect(calls.list).toEqual([]);
     });
   }
+  it("a signed-in browser (a session cookie) gets the 404 of a missing page", async () => {
+    who.user = null;
+    const r = await routes();
+    const withCookie = new Request("https://deepslate.dsw.test/api/app/test", { headers: { cookie: "__Secure-authjs.session-token=abc" } });
+    await expect(r.section(withCookie)).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+});
+
+describe("the middleware's door for the Test section", () => {
+  it("lets an app's request (a launcher token) through to the four routes, and nothing else", async () => {
+    const { appTokenRequest } = await import("@/lib/test-app-paths");
+    const tok = "Bearer " + "t".repeat(40);
+    for (const p of ["/api/app/test", "/api/app/test/manifest", "/api/app/test/config.zip", "/api/app/test/wake"]) {
+      expect(appTokenRequest(p, tok)).toBe(true);
+      expect(appTokenRequest(p, null)).toBe(false);
+      expect(appTokenRequest(p, "Bearer short")).toBe(false);
+    }
+    for (const p of ["/api/app/test/other", "/api/app/testx", "/api/admin/console/send"]) expect(appTokenRequest(p, tok)).toBe(false);
+  });
 });
 
 describe("an admin", () => {

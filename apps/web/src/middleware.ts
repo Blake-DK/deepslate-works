@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import { authConfig } from "@/auth.config";
+import { appTokenRequest } from "@/lib/test-app-paths";
 
 const { auth } = NextAuth(authConfig);
 
@@ -10,6 +11,9 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   if (pathname.startsWith("/_next/image")) return new NextResponse(null, { status: 404 }); // the optimiser is off (next.config.ts)
   if (PUBLIC.some((re) => re.test(pathname))) return NextResponse.next();
+  // docs/45: the launcher's Test section. Only an app's request (a launcher token) goes through to the routes, which
+  // check the token's user is an admin and answer anyone else as this middleware answers a path that does not exist.
+  if (appTokenRequest(pathname, req.headers.get("authorization"))) return NextResponse.next();
   if (!req.auth?.user) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: { code: "unauthorized", message: "Sign in first" } }, { status: 401 });

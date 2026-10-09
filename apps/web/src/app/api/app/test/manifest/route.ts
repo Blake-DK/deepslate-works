@@ -1,11 +1,10 @@
-import { notFound } from "next/navigation";
 import type { LockFile, Manifest } from "modpack";
 import { env } from "@/env";
 import { audit } from "@/server/events";
 import { testAppCall } from "@/server/api-client";
 import { getBranding, readLogoBase64 } from "@/server/branding";
 import { getInstaller } from "@/server/modpack/lock";
-import { appAdmin, testAppConfigured, testManifest } from "@/server/test-app";
+import { appAdmin, asMissing, testAppConfigured, testManifest } from "@/server/test-app";
 import { installerFor } from "@/shared/installer-info";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +14,7 @@ export const dynamic = "force-dynamic";
 // logo are the live site's, so the app stays on the live channel.
 export async function GET(req: Request) {
   const admin = await appAdmin(req);
-  if (!admin) notFound();
+  if (!admin) return asMissing(req);
   if (!testAppConfigured()) return Response.json({ error: { code: "test_off", message: "The test server is switched off." } }, { status: 503 });
   const [packRes, stateRes] = await Promise.all([testAppCall("/test/app/pack"), testAppCall("/test/app/state", { timeoutMs: 5000 })]);
   if (!packRes || !packRes.ok) return Response.json({ error: { code: "test_unreachable", message: "The site can't reach the test server right now." } }, { status: 503 });

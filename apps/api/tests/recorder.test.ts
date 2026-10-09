@@ -320,7 +320,7 @@ describe("audit entries as events", () => {
   it("writes a line a person can read", () => {
     const alex = { role: "ADMIN" as const, name: "Bramble09" };
     expect(describeAction("server.restart.scheduled", alex, { minutes: 5 })).toBe("Bramble09 planned a restart in 5 minutes");
-    expect(describeAction("user.remove", alex, { displayName: "Pabulum" })).toBe("Bramble09 removed Pabulum from the group");
+    expect(describeAction("user.remove", alex, { displayName: "KaneFinch" })).toBe("Bramble09 removed KaneFinch from the group");
     expect(describeAction("auth.login", { role: null, name: null }, { email: "x@y.z" }, "DENIED")).toBe("Someone tried to sign in (refused)");
     expect(describeAction("limbo.held", { role: "system", name: null }, { name: "m1_owl" })).toBe("M1_owl is waiting in the entrance room");
     expect(describeAction("server.restart", alex, { scheduled: true }, "FAILED")).toBe("The planned restart went ahead (failed)");

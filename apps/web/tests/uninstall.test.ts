@@ -14,9 +14,9 @@ describe("an uninstall report", () => {
     expect(r.success && r.data).toMatchObject({ mode: "uninstall", system: { ramGb: null } });
   });
   it("reads as such in the event log", () => {
-    expect(describeAction("installer.report", { role: "PLAYER", name: "Pabulum" }, { mode: "uninstall", outcome: "ok" }, "OK")).toBe("Pabulum removed Deepslate Works from their PC");
-    expect(describeAction("installer.report", { role: "PLAYER", name: "Pabulum" }, { mode: "uninstall", outcome: "failed" }, "FAILED")).toBe("Pabulum tried to remove Deepslate Works from their PC");
-    expect(describeAction("launcher.revoke.self", { role: "PLAYER", name: "Pabulum" }, {}, "OK")).toBe("Pabulum signed this PC's installer out (uninstall)");
+    expect(describeAction("installer.report", { role: "PLAYER", name: "Bramble09" }, { mode: "uninstall", outcome: "ok" }, "OK")).toBe("Bramble09 removed Deepslate Works from their PC");
+    expect(describeAction("installer.report", { role: "PLAYER", name: "Bramble09" }, { mode: "uninstall", outcome: "failed" }, "FAILED")).toBe("Bramble09 tried to remove Deepslate Works from their PC");
+    expect(describeAction("launcher.revoke.self", { role: "PLAYER", name: "Bramble09" }, {}, "OK")).toBe("Bramble09 signed this PC's installer out (uninstall)");
   });
 });
 

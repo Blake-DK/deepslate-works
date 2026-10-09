@@ -56,7 +56,7 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
     serverPack(),
     getStatus(),
   ]);
-  const latest = await db.installReport.findFirst({ where: { userId: user.id }, orderBy: { at: "desc" }, select: { mode: true, outcome: true, installerVersion: true } });
+  const latest = await db.installReport.findFirst({ where: { userId: user.id, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, select: { mode: true, outcome: true, installerVersion: true } });   // 3.6.1: the live game's, never a test run's
   const installed = installedNow(latest);
   const tooOld = tooOldToUpdate(latest);
   const said = statusText(status, user.role === "ADMIN");

@@ -38,8 +38,9 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   const n = (o: string) => counts.find((c) => c.outcome === o)?._count._all ?? 0;
   const total = counts.reduce((a, c) => a + c._count._all, 0);
   const now = new Date();
-  // The group's PCs: each member's latest report, whatever the filter above says.
-  const latest = await db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, userId: true, at: true, system: true, tierMeasured: true, mode: true, outcome: true, extras: true, user: { select: { displayName: true, mcUuid: true } } } });
+  // The group's PCs: each member's latest report, whatever the filter above says. 3.6.1: never a test run's (an admin's
+  // test Play or test game check is not their PC's latest, and has no measured tier)
+  const latest = await db.installReport.findMany({ where: { mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, userId: true, at: true, system: true, tierMeasured: true, mode: true, outcome: true, extras: true, user: { select: { displayName: true, mcUuid: true } } } });
   // 3.5.0 (docs/30 §6): the memory the game got on each member's PC, and whether they chose it, from their latest report
   // that says (a ping, a game check and apps before 3.5.0 do not)
   const memory = new Map(

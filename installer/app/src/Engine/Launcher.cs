@@ -201,6 +201,7 @@ namespace DeepslateWorks
         public static bool OpenLauncher()
         {
             Log.Line("launching");
+            if (Env.StandIn) { Log.Line("test run: the Minecraft Launcher is not opened (the stand-in site)"); return true; }
             foreach (var exe in LauncherExes())
             {
                 if (File.Exists(exe)) { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true }); return true; }

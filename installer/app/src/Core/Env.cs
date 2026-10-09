@@ -86,6 +86,9 @@ namespace DeepslateWorks
         public static string Root { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         /// <summary>A test run (-Root given): nothing is copied, registered or linked outside Root.</summary>
         public static bool CustomRoot { get; set; }
+        /// <summary>3.6.1: a test run against the stand-in site on this PC (windows-tabs.ps1): -Root, and the site on
+        /// 127.0.0.1. Such a run never opens the Minecraft Launcher (Launcher.OpenLauncher).</summary>
+        public static bool StandIn => CustomRoot && System.Text.RegularExpressions.Regex.IsMatch(PortalUrl, @"^http://127\.0\.0\.1:\d{2,5}$");
         static string _appHome;
         /// <summary>%LOCALAPPDATA%\DeepslateWorks: the exe, consent.json, extras.json, logs\.</summary>
         public static string AppHome

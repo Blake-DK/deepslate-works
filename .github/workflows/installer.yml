@@ -53,7 +53,7 @@ jobs:
   # from a fresh download on the runner's desktop, with pictures.
   app:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Version
@@ -90,6 +90,16 @@ jobs:
         timeout-minutes: 10
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-smoke-3.ps1 -Exe publish/DeepslateWorks.exe -Out shots
+      # 3.6.1: the Play tab and the Test tab in the app's own window against a stand-in site on 127.0.0.1, opened four
+      # ways (desktop, the Play link, live switched off, a member), pictures side by side and both game folders listed
+      # before and after each kind of run. PORTAL_URL only so that no kept file can name the real site.
+      - name: The Play tab and the Test tab, in the app's own window
+        if: success() || failure()
+        timeout-minutes: 20
+        shell: powershell
+        env:
+          PORTAL_URL: ${{ secrets.PORTAL_URL }}
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-tabs.ps1 -Exe publish/DeepslateWorks.exe -Out shots
       - name: Tests (the self test, ported)
         if: success() || failure()
         timeout-minutes: 10

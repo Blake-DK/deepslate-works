@@ -502,6 +502,8 @@ namespace DeepslateWorks
                 try { go = run.WaitForGo(); } catch (Exception e) { Log.Line("ready: " + e.Message); go = false; }
                 if (!go)
                 {
+                    // 3.6.1 (item 1): ended for the other server's Play: not a cancel, so no report
+                    if (run.Switched) { Log.Line("ready: ended so the other server's game could start: no report"); run.Reported = true; return false; }
                     Log.Line("ready: the game was not started (the window was closed)");
                     // 3.2.0: opening the app and closing it again, with nothing updated, is not a press of Play
                     if (run.OpenedOnly && run.Mode == "play") { Log.Line("ready: opened without playing, nothing changed: no report"); run.Reported = true; }

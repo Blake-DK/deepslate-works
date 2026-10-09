@@ -29,16 +29,48 @@ namespace DeepslateWorks
         public Window Window;
         public TabControl Tabs;
         public TabItem PlayTab, ExtrasTab, LogTab;
-        TextBlock PlayTitle, PlayStatus, PlayChanged, HeadlineText, ErrorLine, ExtrasStatus, ChecksTitle;
-        TextBlock StepLabel, PlayHint;   // 3.1.0: the guided setup's step; "Click anywhere to stop" under the countdown
-        Hyperlink ReviewLink, DetailsLink, SettingsLink;
-        Button ResetButton, AllowAllButton, PlayButton, HeadlineButton, CheckButton, ApplyButton;
-        StackPanel PlayBody, ProgressBox, ExtrasBody, ChecksBody;
+        TextBlock HeadlineText, ErrorLine, ExtrasStatus, ChecksTitle;
+        Hyperlink DetailsLink;
+        Button HeadlineButton, CheckButton, ApplyButton;
+        StackPanel ProgressBox, ExtrasBody, ChecksBody;
         Border HeadlineBox;
         TextRun ErrorText;
         ListBox LogList;
         StackPanel BrandBar; Image BrandLogo; TextBlock BrandName, BrandTagline, FooterApp, FooterPack, FooterServer;   // 2.1.1 / 2.1.2
-        string VerApp = Env.Version, VerLocal, VerCurrent, VerServer;   // the footer's sources (2.1.2)
+        string VerApp = Env.Version;   // the footer's sources (2.1.2); the pack and the server are the shown tab's (3.6.1)
+
+        // 3.6.1: one Play view per server (PlayPane). The Play code below works on P: the pane whose button was pressed,
+        // whose run sent the line, whose countdown ticked (On). Everywhere else P is the live one.
+        public PlayPane LivePane, TestPane;
+        public PlayPane P;
+        /// <summary>Runs a handler for one pane: P is that pane meanwhile, and the live one again after.</summary>
+        void On(PlayPane pane, Action a)
+        {
+            if (pane == null) return;
+            var was = P; P = pane;
+            try { a(); } finally { P = was; }
+        }
+        IEnumerable<PlayPane> Panes => TestPane == null ? new[] { LivePane } : new[] { LivePane, TestPane };
+        PlayPane Other(PlayPane p) => p == LivePane ? TestPane : LivePane;
+        /// <summary>The pane on screen: the Test tab's while it is shown, else the live one (the footer and the banner follow it).</summary>
+        PlayPane ShownPane => TestPane != null && TestTab != null && Tabs.SelectedItem == TestTab ? TestPane : LivePane;
+        bool AnyRunning => Panes.Any(p => p.Mode == "running");
+
+        // the pane's controls, by the names they had before 3.6.1
+        TextBlock PlayTitle => P.PlayTitle;
+        TextBlock PlayStatus => P.PlayStatus;
+        TextBlock PlayChanged => P.PlayChanged;
+        TextBlock StepLabel => P.StepLabel;   // 3.1.0: the guided setup's step
+        TextBlock PlayHint => P.PlayHint;     // "Click anywhere to stop" under the countdown
+        Hyperlink ReviewLink => P.ReviewLink;
+        Hyperlink SettingsLink => P.SettingsLink;
+        Button ResetButton => P.ResetButton;
+        Button AllowAllButton => P.AllowAllButton;
+        Button PlayButton => P.PlayButton;
+        StackPanel PlayBody => P.PlayBody;
+        string VerLocal { get => P.VerLocal; set => P.VerLocal = value; }
+        string VerCurrent { get => P.VerCurrent; set => P.VerCurrent = value; }
+        string VerServer { get => P.VerServer; set => P.VerServer = value; }
 
         // the state
         readonly Run first;            // what Program made: copied into each run (UpdatedFrom only into the first)
@@ -46,14 +78,16 @@ namespace DeepslateWorks
         public Dictionary<string, ConsentAnswer> Consent;
         Dictionary<string, string> Answers = new Dictionary<string, string>();
         List<RadioButton> AllowRadios = new List<RadioButton>();
-        string Mode = "idle";          // idle | asking | running
+        string Mode { get => P.Mode; set => P.Mode = value; }   // idle | asking | running | ready, the pane's
         List<ConsentStep> Asking = new List<ConsentStep>();
         int AskLevel = 1;
-        readonly Dictionary<string, int> Used = new Dictionary<string, int>();
-        string LastFail, Changed;
-        DateTime? Launched;                 // 2.1.0: when the engine opened the launcher (after checking every mod)
-        DateTime? WatchSince, WatchUntil;   // 2.1.0: the game's log is watched for the session this launch starts
-        ModsCheck GameProblem;
+        Dictionary<string, int> Used => P.Used;
+        string LastFail { get => P.LastFail; set => P.LastFail = value; }
+        string Changed { get => P.Changed; set => P.Changed = value; }
+        DateTime? Launched { get => P.Launched; set => P.Launched = value; }       // 2.1.0: when the engine opened the launcher (after checking every mod)
+        DateTime? WatchSince { get => P.WatchSince; set => P.WatchSince = value; } // 2.1.0: the game's log is watched for the session this launch starts
+        DateTime? WatchUntil { get => P.WatchUntil; set => P.WatchUntil = value; }
+        ModsCheck GameProblem { get => P.GameProblem; set => P.GameProblem = value; }
         RestartFlow Flow;              // the Apply -> restart flow in progress (planner H)
         bool GameRunning;
         DateTime NextGameCheck = DateTime.MinValue;
@@ -63,15 +97,15 @@ namespace DeepslateWorks
         public bool FromWebsite;               // 3.1.0: this window was opened by deepslate://play
 
         // 3.1.0, Play with a countdown (planner B): the run gets the game ready, then waits here for the go-ahead
-        readonly ManualResetEvent goEvent = new ManualResetEvent(false);
-        volatile bool goAnswer;
-        bool runWaiting;                       // a run has the game ready and waits for Go (Review may be open meanwhile)
-        bool keepScreen;                       // the run was ended from a screen that stays (Stopped)
-        bool runFromWebsite, runPressed;       // how the run in hand was started: the website, or Play/Continue pressed
-        bool runTest, watchTest;               // docs/45: the run in hand (and the game check after it) is the Test section's
+        ManualResetEvent goEvent => P.GoEvent;
+        bool goAnswer { get => P.GoAnswer; set => P.GoAnswer = value; }
+        bool runWaiting { get => P.Waiting; set => P.Waiting = value; }          // a run has the game ready and waits for Go (Review may be open meanwhile)
+        bool keepScreen { get => P.KeepScreen; set => P.KeepScreen = value; }    // the run was ended from a screen that stays (Stopped)
+        bool runFromWebsite { get => P.FromWebsite; set => P.FromWebsite = value; }   // how the run in hand was started: the website,
+        bool runPressed { get => P.Pressed; set => P.Pressed = value; }               // or Play/Continue pressed
         bool firstRunAtOpen, handOverThisTime; // no countdown on a first run, or after the move from the old launcher
-        public Countdown Count;
-        DispatcherTimer CountTimer;
+        public Countdown Count { get => P.Count; set => P.Count = value; }
+        DispatcherTimer CountTimer { get => P.CountTimer; set => P.CountTimer = value; }
         // 3.1.0, the guided setup after the old launcher (planner A3): 0 = not in it, else the step on screen
         public int Guided;
         List<MoveItem> MoveItems;
@@ -104,9 +138,10 @@ namespace DeepslateWorks
             if (w.Height > room) w.Height = Math.Max(w.MinHeight, room);
             T Find<T>(string n) where T : class => w.FindName(n) as T ?? throw new InvalidOperationException("the window has no " + n);
             Tabs = Find<TabControl>("Tabs"); PlayTab = Find<TabItem>("PlayTab"); ExtrasTab = Find<TabItem>("ExtrasTab"); LogTab = Find<TabItem>("LogTab");
-            PlayTitle = Find<TextBlock>("PlayTitle"); PlayStatus = Find<TextBlock>("PlayStatus"); PlayChanged = Find<TextBlock>("PlayChanged");
-            ReviewLink = Find<Hyperlink>("ReviewLink"); ResetButton = Find<Button>("ResetButton"); AllowAllButton = Find<Button>("AllowAllButton");
-            PlayButton = Find<Button>("PlayButton"); PlayBody = Find<StackPanel>("PlayBody");
+            // 3.6.1: the Play tab's view, the live server's (the Test tab's is made for an admin only, CreateTestTab)
+            LivePane = PlayPane.Load(PlayPane.Live);
+            P = LivePane;
+            PlayTab.Content = LivePane.Root;
             BrandBar = Find<StackPanel>("BrandBar"); BrandLogo = Find<Image>("BrandLogo"); BrandName = Find<TextBlock>("BrandName"); BrandTagline = Find<TextBlock>("BrandTagline");
             LogoFallback = Find<Border>("LogoFallback");
             FooterApp = Find<TextBlock>("FooterApp"); FooterPack = Find<TextBlock>("FooterPack"); FooterServer = Find<TextBlock>("FooterServer");
@@ -115,7 +150,6 @@ namespace DeepslateWorks
             ProgressBox = Find<StackPanel>("ProgressBox"); CheckButton = Find<Button>("CheckButton"); ApplyButton = Find<Button>("ApplyButton");
             ExtrasStatus = Find<TextBlock>("ExtrasStatus"); ExtrasBody = Find<StackPanel>("ExtrasBody"); ChecksTitle = Find<TextBlock>("ChecksTitle");
             ChecksBody = Find<StackPanel>("ChecksBody"); LogList = Find<ListBox>("LogList");
-            StepLabel = Find<TextBlock>("StepLabel"); PlayHint = Find<TextBlock>("PlayHint"); SettingsLink = Find<Hyperlink>("SettingsLink");
             SettingsLink.Inlines.Clear(); SettingsLink.Inlines.Add(UiText.SettingsLink);
             try { w.Title = string.Format("{0} {1}", Env.PackName, Env.Version); } catch { }
             try
@@ -152,14 +186,15 @@ namespace DeepslateWorks
             SettingsLink.Click += (s, e) => OpenSettingsTab();   // 3.5.0: the Settings tab (docs/30 §3)
             // 3.1.0: any click anywhere, any key, a tab switch or a setting stops the countdown, for good (planner B3).
             // The click that stops it does nothing else (it never reaches the Play button under it).
-            w.PreviewMouseDown += (s, e) => { if (CancelCountdown("a click")) e.Handled = true; };
-            w.PreviewKeyDown += (s, e) => { if (CancelCountdown("a key")) e.Handled = true; };
+            w.PreviewMouseDown += (s, e) => { if (CancelCountdowns("a click")) e.Handled = true; };
+            w.PreviewKeyDown += (s, e) => { if (CancelCountdowns("a key")) e.Handled = true; };
             Tabs.SelectionChanged += (s, e) =>
             {
                 if (e.OriginalSource != Tabs) return;
-                CancelCountdown("a tab switch");
+                CancelCountdowns("a tab switch");
                 if (reviewing && Tabs.SelectedItem != PlayTab) CloseReview("another tab");   // 3.3.1: answers not saved
-                if (Tabs.SelectedItem == PlayTab) Window.Dispatcher.BeginInvoke(new Action(FitPlayTab), DispatcherPriority.Loaded);   // 3.5.5: changes made while away
+                if (Tabs.SelectedItem == PlayTab || (TestTab != null && Tabs.SelectedItem == TestTab)) Window.Dispatcher.BeginInvoke(new Action(FitPlayTab), DispatcherPriority.Loaded);   // 3.5.5: changes made while away
+                UpdateAppFooter(); ShowHeroFor(ShownPane);   // 3.6.1: the footer and the banner's pill follow the tab in view
                 if (Tabs.SelectedItem == ExtrasTab) ShowExtras();
                 else if (Tabs.SelectedItem == SettingsTab) ShowSettingsTab();
                 else if (Tabs.SelectedItem == LogTab) UpdateLogBox();
@@ -204,11 +239,11 @@ namespace DeepslateWorks
             };
             Window.Closing += (s, e) =>
             {
-                if (runWaiting)
+                var waiting = Panes.FirstOrDefault(p => p.Waiting);
+                if (waiting != null)
                 {
                     // the game was ready but not started: the run reports that, then ends
-                    CancelCountdown("closing the window");
-                    Go(false);
+                    On(waiting, () => { CancelCountdown("closing the window"); Go(false); });
                     try { worker?.Join(TimeSpan.FromSeconds(5)); } catch { }
                     return;
                 }
@@ -218,7 +253,7 @@ namespace DeepslateWorks
                     if (r != MessageBoxResult.Yes) { e.Cancel = true; return; }
                 }
                 if (Guided > 0 && Guided <= 2 && !moveReported) SendMoveReport("cancelled", true);
-                if (Mode == "running" || Flow != null)
+                if (AnyRunning || Flow != null)
                 {
                     var r = MessageBox.Show(Window, UiText.CloseWhileBusy, Env.PackName, MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (r != MessageBoxResult.Yes) { e.Cancel = true; return; }
@@ -312,7 +347,9 @@ namespace DeepslateWorks
 
         // 3.5.3 (Alex, 2026-10-06): one row per step, so the list fits without scrolling. A step's first tick goes on the
         // step's own row ("✓  Finding Java 21 · Using the Java we downloaded last time"); a second tick goes under it.
-        TextBlock stepLine; string stepTitle; bool stepTicked;
+        TextBlock stepLine { get => P.StepLine; set => P.StepLine = value; }
+        string stepTitle { get => P.StepTitle; set => P.StepTitle = value; }
+        bool stepTicked { get => P.StepTicked; set => P.StepTicked = value; }
         void ShowRunLine(string kind, string text, PlayLine show)
         {
             var last = PlayBody.Children.Count > 0 ? PlayBody.Children[PlayBody.Children.Count - 1] : null;
@@ -394,7 +431,8 @@ namespace DeepslateWorks
 
         void OnPlayButton()
         {
-            if (Guided > 0) { OnGuidedButton(); return; }
+            if (Guided > 0 && P.IsLive) { OnGuidedButton(); return; }
+            if (P.HeldByOther) return;   // 3.6.1: the other server's game is being got ready; the hint says so
             if (VotesBlock && (Mode == "idle" || Mode == "ready")) { WantPlayAfterVotes("Play pressed"); ShowVoteTab(); return; }   // 3.2.0: the vote first; 3.5.4: then the game
             if (Mode == "ready") { Go(true); return; }   // 3.1.0: the game is ready; Play starts it
             if (Mode == "asking")
@@ -413,11 +451,38 @@ namespace DeepslateWorks
                     Go(true);
                     return;
                 }
-                if (resumeUpdate) { resumeUpdate = false; StartRun(true, false, false, true); return; }   // 3.3.0: the Update goes on
-                StartRun();
+                if (resumeUpdate && P.IsLive) { resumeUpdate = false; StartRun(true, false, false, true); return; }   // 3.3.0: the Update goes on
+                PlayHere();
                 return;
             }
-            if (Mode == "idle") StartRun();
+            if (Mode == "idle") PlayHere();
+        }
+
+        /// <summary>Play on this pane's server: its run, which starts the game once ready. 3.6.1 (item 1): a run of the
+        /// other server's that only waits for Play (nothing being installed or started) is ended first, without a
+        /// "cancelled" report and without writing anything more to its folder; this one starts when it has.</summary>
+        void PlayHere(bool fromWebsite = false)
+        {
+            var pane = P;
+            Action start = () => On(pane, () => StartRun(false, fromWebsite, test: !pane.IsLive));
+            if (!EndWaitingOther(pane, start)) start();
+        }
+
+        /// <summary>When the other pane's run only waits for Play: ends it and runs next once it has. False when there is no
+        /// such run (then nothing was done).</summary>
+        bool EndWaitingOther(PlayPane pane, Action next)
+        {
+            var o = Other(pane);
+            if (o == null || !o.Waiting || o.Mode != "ready") return false;
+            Log.Line(string.Format("window: Play on the {0} server: ending the {1} run that waited for Play", pane.Target, o.Target));
+            On(o, () =>
+            {
+                CancelCountdown("Play on the other tab");
+                if (o.Run != null) o.Run.Switched = true;
+                o.After = next;
+                Go(false);
+            });
+            return true;
         }
 
         void ShowStopped(ConsentStep step)
@@ -445,7 +510,8 @@ namespace DeepslateWorks
                 PretendRunning = first.PretendRunning ?? new string[0], RestartArgs = first.RestartArgs ?? new string[0], EntryPoint = first.EntryPoint ?? "",
             };
             // 3.1.0: once the game is ready the run waits for the window's go-ahead (OnReady), then reports and starts it
-            if (!r.NoLaunch && !r.DryRun) r.WaitForGo = () => { goEvent.WaitOne(); return goAnswer; };
+            var pane = P;   // 3.6.1: the run waits for its own pane's Play
+            if (!r.NoLaunch && !r.DryRun) r.WaitForGo = () => { pane.GoEvent.WaitOne(); return pane.GoAnswer; };
             foreach (var kv in Consent) r.Consent[kv.Key] = new ConsentAnswer { Answer = kv.Value.Answer, Level = kv.Value.Level, At = kv.Value.At };
             if (!firstUsed)
             {
@@ -481,8 +547,12 @@ namespace DeepslateWorks
         /// pressed, which starts the game as soon as it is ready.</summary>
         void StartRun(bool noLaunch = false, bool fromWebsite = false, bool atOpen = false, bool updateOnly = false, bool test = false)
         {
+            // 3.6.1: a run belongs to its pane: the Test tab's for a test run, the Play tab's otherwise
+            var pane = test ? TestPane : LivePane;
+            if (pane == null) return;
+            if (P != pane) { On(pane, () => StartRun(noLaunch, fromWebsite, atOpen, updateOnly, test)); return; }
             if (worker != null && worker.IsAlive) return;   // one run at a time (2.0.x only ever had one engine)
-            runTest = test; watchTest = test;   // docs/45: a Play from the Test section
+            P.After = null; P.HeldByOther = false;
             runFromWebsite = fromWebsite; runPressed = !fromWebsite && !atOpen; runWaiting = false; keepScreen = false;
             goAnswer = false; goEvent.Reset();
             HideCountdown();
@@ -493,13 +563,14 @@ namespace DeepslateWorks
             PlayStatus.Text = test ? UiText.TestRunningStatus : noLaunch ? UiText.RunningExtrasStatus : atOpen ? UiText.OpenedStatus : UiText.RunningStatus;
             PlayButton.Content = UiText.Working;
             PlayButton.IsEnabled = false;
-            if (updateOnly) UpdateStarted(); else UpdateButton.IsEnabled = false;   // 3.3.0: one run at a time
+            if (updateOnly) UpdateStarted(); else LivePane.UpdateButton.IsEnabled = false;   // 3.3.0: one run at a time
             Used.Clear();
             LastFail = null; Changed = null; ChangedDetailText = null; Launched = null; WatchSince = null; WatchUntil = null; GameProblem = null;
             var isFirst = !firstUsed;
             var run = NewRun(noLaunch);
             run.OpenedOnly = atOpen;
-            if (test) run.Target = "test";
+            if (test) run.Target = PlayPane.Test;
+            P.Run = run;
             if (updateOnly)
             {
                 // 3.3.0: no launcher, no countdown, no wake; an app update on the way restarts it straight into the Update
@@ -509,7 +580,7 @@ namespace DeepslateWorks
             Run.Current = run;
             Log.Line("window: starting the install steps" + (noLaunch ? " (extras only, no launcher)" : ""));
             var d = Window.Dispatcher;
-            run.Sink = line => d.BeginInvoke(new Action(() => OnStatusLine(line)));
+            run.Sink = line => d.BeginInvoke(new Action(() => On(pane, () => OnStatusLine(line))));
             worker = new Thread(() =>
             {
                 string outcome = null; Exception err = null;
@@ -524,7 +595,7 @@ namespace DeepslateWorks
                     outcome = Engine.Execute(run);
                 }
                 catch (Exception e) { err = e; }
-                d.BeginInvoke(new Action(() => OnRunEnded(outcome, err)));   // after every status line it sent
+                d.BeginInvoke(new Action(() => On(pane, () => OnRunEnded(outcome, err))));   // after every status line it sent
             }) { IsBackground = true, Name = "install steps" };
             worker.Start();
         }
@@ -532,7 +603,7 @@ namespace DeepslateWorks
         // Read-StatusLines: what each line from the install steps does here.
         void OnStatusLine(JObj o)
         {
-            if (J.Str(o, "t") == "step") UpdateStep(J.Str(o, "text"));   // 3.3.0: under "Updating…"
+            if (P.IsLive && J.Str(o, "t") == "step") UpdateStep(J.Str(o, "text"));   // 3.3.0: under "Updating…"
             var show = UiText.LineFor(o);
             if (show != null) ShowRunLine(J.Str(o, "t"), J.Str(o, "text") ?? "", show);
             switch (J.Str(o, "t"))
@@ -541,11 +612,10 @@ namespace DeepslateWorks
                 case "used": var id = J.Str(o, "step"); if (id != null) Used[id] = J.Int(o, "level", 1); break;
                 case "changed": Changed = J.Str(o, "text"); ChangedDetailText = J.Str(o, "detail"); break;
                 case "launched": Launched = DateTime.UtcNow; break;
-                case "ready": RefreshHome(); OnReady(); break;   // 3.1.0: the game is ready; the run waits for Go (3.2.0: votes looked at again)
-                case "versions" when runTest: break;   // docs/45: the footer is the live pack's
-                case "installed" when runTest: RefreshTestSection(); break;
+                case "ready": if (P.IsLive) RefreshHome(); else RefreshTestSection(); OnReady(); break;   // 3.1.0: the game is ready; the run waits for Go (3.2.0: votes looked at again)
+                // 3.6.1: the pack this pane's run is for, and the one now in its folder: the footer while its tab is shown
                 case "versions": { var a = J.Str(o, "app"); var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(a)) VerApp = a; if (!string.IsNullOrEmpty(p)) VerCurrent = p; UpdateAppFooter(); break; }
-                case "installed": { var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(p)) VerLocal = p; UpdateAppFooter(); if (!updating) CheckUpdates(); break; }
+                case "installed": { var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(p)) VerLocal = p; UpdateAppFooter(); if (P.IsLive && !updating) CheckUpdates(); break; }
             }
         }
 
@@ -559,7 +629,17 @@ namespace DeepslateWorks
             foreach (var kv in Used) Consents.SetUsed(Consent, kv.Key, kv.Value);
             if (Used.Count > 0) Consents.Save(Env.ConsentPath, Consent);
             Log.Line(string.Format("window: the install steps ended, exit code {0}{1}", UiText.ExitCodeFor(err), outcome == "updated" ? " (updated)" : ""));
-            if (UpdateEnded(outcome, err)) return;   // 3.3.0: the Update button's run
+            P.Run = null;
+            // 3.6.1 (item 1): the run only waited for Play and was ended for the other server's Play: that one starts now
+            if (outcome == "not_launched" && P.After != null)
+            {
+                var next = P.After; P.After = null; keepScreen = false;
+                ShowIdle(UiText.SwitchedStatus(!P.IsLive));
+                try { worker?.Join(TimeSpan.FromSeconds(3)); } catch { }   // its last act was handing this over
+                next();
+                return;
+            }
+            if (P.IsLive && UpdateEnded(outcome, err)) return;   // 3.3.0: the Update button's run
             if (outcome == "not_launched" && updateAfter)
             {
                 updateAfter = false; keepScreen = false; Mode = "idle";
@@ -644,7 +724,8 @@ namespace DeepslateWorks
         void UpdateAppFooter()
         {
             if (FooterApp == null) return;
-            var f = Footer.Parts(VerApp, VerLocal, VerCurrent, VerServer);
+            var p = ShownPane;   // 3.6.1: the pack and the server of the tab in view
+            var f = p.IsLive ? Footer.Parts(VerApp, p.VerLocal, p.VerCurrent, p.VerServer) : Footer.TestParts(VerApp, p.VerLocal, p.VerCurrent, p.VerServer);
             FooterLine(FooterApp, f.App, null); FooterLine(FooterPack, f.Pack, f.PackTone); FooterLine(FooterServer, f.Server, null);
         }
 
@@ -658,7 +739,7 @@ namespace DeepslateWorks
             if (Mode == "ready") { Tabs.SelectedItem = PlayTab; Go(true); return true; }   // 3.1.0: ready and waiting: start it
             if (Mode != "idle") return false;
             Tabs.SelectedItem = PlayTab;
-            StartRun();
+            PlayHere();   // 3.6.1: a test run that only waits is ended first
             return true;
         }
 
@@ -668,11 +749,11 @@ namespace DeepslateWorks
             if (!WatchSince.HasValue) return;
             if (DateTime.UtcNow > WatchUntil) { Log.Line("game check: no game session seen within 30 minutes of the launch"); WatchSince = null; return; }
             // docs/45: after a Play from the Test section the game to look for is the test one, in the test folder
-            var list = Engine.ReadPackList(watchTest ? Engine.TestPackListPath : Engine.LivePackListPath);
+            var list = Engine.ReadPackList(P.IsLive ? Engine.LivePackListPath : Engine.TestPackListPath);
             var files = J.Arr(list, "files");
             if (files.Count == 0) { WatchSince = null; return; }
             var host = (J.Str(list, "server") ?? "").Split(':')[0];
-            var found = Engine.FindGameSession(watchTest ? System.IO.Path.Combine(Env.Root, Env.TestDirName) : Env.LiveDataDir, Env.Minecraft, WatchSince.Value, host);
+            var found = Engine.FindGameSession(P.IsLive ? Env.LiveDataDir : System.IO.Path.Combine(Env.Root, Env.TestDirName), Env.Minecraft, WatchSince.Value, host);
             if (found == null) return;
             WatchSince = null;
             var c = Engine.TestGameMods(found.Session, files, found.Elsewhere);
@@ -695,7 +776,7 @@ namespace DeepslateWorks
             if (c.Elsewhere) AddPlayLine("The Minecraft Launcher started another profile. Play puts Deepslate Works back as the one it starts.", "Amber");
             foreach (var m in c.Missing.Take(8)) if (!string.IsNullOrEmpty(m.Name)) AddPlayLine("\u2717  " + m.Name, "Red");
             PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true;
-            Tabs.SelectedItem = PlayTab;
+            Tabs.SelectedItem = P.IsLive ? PlayTab : TestTab;   // 3.6.1: on the tab of the game that was checked
             ShowFront("the game is missing mods");
         }
 
@@ -716,12 +797,13 @@ namespace DeepslateWorks
                 {
                     Tabs.SelectedItem = PlayTab;
                     if (PlayWaitsForUpdate("the Play button on the website")) { }   // 3.3.0: it launches once the Update is done
-                    else if (Mode == "idle" && Flow == null) StartRun(false, true);
+                    else if (Mode == "idle" && Flow == null) PlayHere(true);   // 3.6.1: a test run that only waits is ended first
                     else if (Mode == "ready" && (Count == null || !Count.Running)) { runFromWebsite = true; runPressed = false; OnReady(); }
                     if (VotesBlock) { WantPlayAfterVotes("the Play button on the website"); ShowVoteTab(); }   // 3.2.0: the updates go on; the game waits for the vote, then starts (3.5.4)
                 }
             }
             GatePlay();   // 3.2.0: Play stays shut while a vote waits
+            SyncPanes();  // 3.6.1: Play shut only while the other server's game is being got ready
             SyncSettingsTab();   // 3.5.0: shut while the install steps run
             UpdateTick(); // 3.3.0: an Update waiting for the game finishes when it closes
             SyncUpdateRow(); // 3.3.1: the Update button and its line only in the Play view
@@ -732,8 +814,9 @@ namespace DeepslateWorks
                 NextGameCheck = DateTime.Now.AddSeconds(2);
                 var was = GameRunning;
                 GameRunning = Extras.GameRunning();
-                if (WatchSince.HasValue) { try { WatchGame(); } catch (Exception e) { Log.Line("game check failed: " + e.Message); WatchSince = null; } }
-                var done = Extras.InstallQueuedIfClosed(GameRunning, Mode == "running");
+                foreach (var p in Panes.ToList())
+                    if (p.WatchSince.HasValue) On(p, () => { try { WatchGame(); } catch (Exception e) { Log.Line("game check failed: " + e.Message); WatchSince = null; } });
+                var done = Extras.InstallQueuedIfClosed(GameRunning, AnyRunning);
                 if (done != null) AfterInstall(done);
                 else if (Tabs.SelectedItem == ExtrasTab && (was != GameRunning || DateTime.Now.Second % 6 < 2)) ShowExtras(true);
             }
@@ -954,6 +1037,7 @@ namespace DeepslateWorks
                     // 3.2.0: the app opens straight into a run that waits for Play; that run ends first (the game not
                     // started), then the extras are fetched
                     if (runWaiting) { extrasAfter = true; keepScreen = true; Go(false); return; }
+                    if (EndWaitingOther(LivePane, () => StartRun(true))) return;   // 3.6.1: a test run that only waits, likewise
                     StartRun(true);
                 };
             }
@@ -985,7 +1069,7 @@ namespace DeepslateWorks
         // Apply (planner H): asks first, touches files only while the game is closed.
         void OnApply()
         {
-            if (Mode == "running" || Flow != null) { ExtrasStatus.Text = ExtrasText.Busy; return; }
+            if (AnyRunning || Flow != null) { ExtrasStatus.Text = ExtrasText.Busy; return; }
             var m = XManifest; if (m == null) return;
             var pick = ReadExtrasChoices();
             GameRunning = Extras.GameRunning();
@@ -1074,8 +1158,8 @@ namespace DeepslateWorks
             ClearPlayBody();
             SetPromptButtons(false, false);
             HideCountdown();
-            PlayTitle.Text = UiText.IdleTitle;
-            PlayStatus.Text = status ?? UiText.IdleStatus;
+            PlayTitle.Text = P.IsLive ? UiText.IdleTitle : UiText.TestIdleTitle;
+            PlayStatus.Text = status ?? (P.IsLive ? UiText.IdleStatus : UiText.TestIdleStatus);
             PlayButton.Content = UiText.Play;
             PlayButton.IsEnabled = true;
         }
@@ -1136,12 +1220,13 @@ namespace DeepslateWorks
             PlayHint.Visibility = Visibility.Visible;
             CountTimer?.Stop();
             CountTimer = new DispatcherTimer(DispatcherPriority.Normal, Window.Dispatcher) { Interval = TimeSpan.FromSeconds(1) };
-            CountTimer.Tick += (s, e) =>
+            var pane = P;   // 3.6.1: the countdown is its pane's
+            CountTimer.Tick += (s, e) => On(pane, () =>
             {
                 if (Count == null || !Count.Running) { CountTimer?.Stop(); return; }
                 if (Count.Tick()) { CountTimer.Stop(); Log.Line("window: the countdown reached 0"); Go(true); return; }
                 PlayButton.Content = Count.ButtonText;
-            };
+            });
             CountTimer.Start();
             Log.Line(string.Format("window: starting the game in {0} s unless stopped", Count.Left));
         }
@@ -1157,6 +1242,14 @@ namespace DeepslateWorks
             PlayStatus.Text = UiText.CountdownStopped;
             Log.Line("window: the countdown was stopped by " + by);
             return true;
+        }
+
+        /// <summary>3.6.1: a click, a key or a tab switch anywhere stops a countdown on either tab. False when none ran.</summary>
+        bool CancelCountdowns(string by)
+        {
+            var any = false;
+            foreach (var p in Panes.ToList()) On(p, () => { if (CancelCountdown(by)) any = true; });
+            return any;
         }
 
         void HideCountdown()

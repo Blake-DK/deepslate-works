@@ -78,7 +78,7 @@ namespace DeepslateWorks
         /// <summary>Shut in the guided setup and while the install steps run (docs/30 §3).</summary>
         void SyncSettingsTab()
         {
-            var busy = Mode == "running" || updating;
+            var busy = AnyRunning || updating;   // 3.6.1: either tab's run
             var on = Guided == 0 && !busy;
             if (SettingsTab.IsEnabled != on) SettingsTab.IsEnabled = on;
             var tip = Guided == 0 && busy ? UiText.SettingsBusy : null;

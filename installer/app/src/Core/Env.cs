@@ -50,7 +50,9 @@ namespace DeepslateWorks
             set { _portal = value == null ? null : value.TrimEnd('/'); }
         }
         public static string ManifestUrl => TestTarget ? PortalUrl + "/api/app/test/manifest" : PortalUrl + "/api/modpack/manifest";
-        public static string WakeUrl => TestTarget ? PortalUrl + "/api/app/test/wake" : PortalUrl + "/api/play/wake";
+        public static string WakeUrl => WakeUrlFor(Target);
+        /// <summary>3.6.1: the wake of a named server, for the window: it never reads Target, which a waiting run holds.</summary>
+        public static string WakeUrlFor(string target) => target == "test" ? PortalUrl + "/api/app/test/wake" : PortalUrl + "/api/play/wake";
         /// <summary>docs/45: the Test section asks here whether to show itself (admins only; anyone else: not found).</summary>
         public static string TestSectionUrl => PortalUrl + "/api/app/test";
 

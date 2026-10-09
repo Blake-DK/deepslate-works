@@ -96,10 +96,23 @@ namespace DeepslateWorks
             return f;
         }
 
-        /// <summary>The pack on this PC: installed.json's version, or null.</summary>
-        public static string InstalledPack()
+        /// <summary>3.6.1: the footer while the Test tab is shown: the test pack in its own folder, and the test server.</summary>
+        public static FooterParts TestParts(string app, string local, string current, string server)
         {
-            try { return File.Exists(Env.LiveInstalledFile) ? J.Str(Json.ReadFile(Env.LiveInstalledFile), "version") : null; } catch { return null; }
+            var f = Parts(app, local, current, server);
+            f.Pack = !string.IsNullOrEmpty(local) ? "Test pack " + local + (!string.IsNullOrEmpty(current) && current != local ? "  ·  " + current + " available" : "")
+                : !string.IsNullOrEmpty(current) ? "Test pack " + current + ", not installed yet" : "Test pack not installed yet";
+            f.Server = string.IsNullOrEmpty(server) ? "Test server: ?" : "Test server: " + server;
+            return f;
+        }
+
+        /// <summary>The pack on this PC: installed.json's version, or null.</summary>
+        public static string InstalledPack() => InstalledPack(Env.LiveInstalledFile);
+
+        /// <summary>3.6.1: the pack in a named installed.json (the Test tab's footer reads the test folder's).</summary>
+        public static string InstalledPack(string file)
+        {
+            try { return File.Exists(file) ? J.Str(Json.ReadFile(file), "version") : null; } catch { return null; }
         }
     }
 }

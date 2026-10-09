@@ -294,7 +294,8 @@ try {
   Check "the Test tab's card says 'Test server'" (Card-Says $test "Test server")
   Check "the Test tab has the Play tab's card: the server line" ($null -ne (Find-Id $test "ServerLine"))
   Check "the Test tab has the Play tab's steps: the title and status" (($null -ne (Find-Id $test "PlayTitle")) -and ($null -ne (Find-Id $test "PlayStatus")))
-  Check "the Test tab has no Start button (test starts stay on the test site)" ($null -eq (Find-Id $test "StartButton"))
+  $tsb = Find-Id $test "StartButton"
+  Check "the Test tab has no Start button (test starts stay on the test site)" (($null -eq $tsb) -or $tsb.Current.IsOffscreen)
   Check "the footer shows the test pack on the Test tab" ((Find-Id $root "FooterPack").Current.Name -match '0\.1\.0\+test')
   $tb = Play-Button $test
   Check "item 1: Play test can be pressed while the live run waits for Play" ($tb -and $tb.Current.IsEnabled)

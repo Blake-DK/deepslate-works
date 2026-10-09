@@ -20,8 +20,9 @@ namespace DeepslateWorks
         Rectangle GroundTile, HeroShade;
         Border HeroStatus, LogoFallback, VoteBadge;
         Ellipse HeroDot;
-        TextBlock HeroLine, VoteBadgeText, PlayChangedDetail;
-        string ChangedDetailText;   // the files a run changed, by name (Engine.ChangedDetail)
+        TextBlock HeroLine, VoteBadgeText;
+        TextBlock PlayChangedDetail => P.PlayChangedDetail;
+        string ChangedDetailText { get => P.ChangedDetail; set => P.ChangedDetail = value; }   // the files a run changed, by name (Engine.ChangedDetail)
         TextBlock lastLog;          // the Log tab's last line, drawn in Fg
 
         void WireLook()
@@ -31,20 +32,26 @@ namespace DeepslateWorks
             Hero = F<Grid>("Hero"); HeroImage = F<Image>("HeroImage"); GroundTile = F<Rectangle>("GroundTile"); HeroShade = F<Rectangle>("HeroShade");
             HeroStatus = F<Border>("HeroStatus"); VoteBadge = F<Border>("VoteBadge");
             HeroDot = F<Ellipse>("HeroDot"); HeroLine = F<TextBlock>("HeroLine"); VoteBadgeText = F<TextBlock>("VoteBadgeText");
-            PlayChangedDetail = F<TextBlock>("PlayChangedDetail");
             HeroShade.Fill = Theme.HeroShade;
             LogoFallback.Background = Theme.LogoFace;
             var tile = AppWindow.Picture(Assets.PathOf(Env.AppHome, Assets.Tile));
             if (tile != null) GroundTile.Fill = new ImageBrush(tile) { TileMode = TileMode.Tile, Viewport = new Rect(0, 0, 48, 48), ViewportUnits = BrushMappingMode.Absolute, Stretch = Stretch.Fill };
             HeroImage.Source = AppWindow.Picture(Assets.PathOf(Env.AppHome, Assets.Hero));
             // Play and Vote in the display face; a long label ("Vote first, it takes ten seconds") in Segoe UI so the row fits
-            var content = DependencyPropertyDescriptor.FromProperty(ContentControl.ContentProperty, typeof(Button));
-            foreach (var b in new[] { PlayButton, VoteButton }) { var btn = b; content.AddValueChanged(btn, (s, e) => FitBlock(btn)); FitBlock(btn); }
+            foreach (var b in new[] { PlayButton, VoteButton }) FitBlockOn(b);
             SetHero(null, "Dim", "Asking the site...");
         }
 
         /// <summary>Labels up to this long are drawn in the display face; longer ones in Segoe UI SemiBold 15.</summary>
         public const int BlockFaceMaxChars = 14;
+
+        /// <summary>The button's face fitted to its label now and whenever the label changes (3.6.1: the Test tab's Play too).</summary>
+        static void FitBlockOn(Button b)
+        {
+            var content = DependencyPropertyDescriptor.FromProperty(ContentControl.ContentProperty, typeof(Button));
+            content.AddValueChanged(b, (s, e) => FitBlock(b));
+            FitBlock(b);
+        }
 
         static void FitBlock(Button b)
         {
@@ -58,6 +65,14 @@ namespace DeepslateWorks
         {
             HeroDot.Fill = Theme.Brush(dot ?? SiteHome.HeroDot(h));
             HeroLine.Text = line ?? SiteHome.HeroLine(h);
+        }
+
+        /// <summary>3.6.1: the pill follows the tab in view: the live server's, or on the Test tab the test server's.</summary>
+        void ShowHeroFor(PlayPane p)
+        {
+            if (p == null || p.IsLive) { if (SiteNow != null) SetHero(SiteNow); return; }
+            var h = new HomeInfo { SignedIn = true, Server = p.Server ?? new ServerInfo() };
+            SetHero(h, null, SiteHome.HeroLine(h, p.Players, UiText.TestServerName));
         }
 
         /// <summary>The Vote tab's badge: how many votes wait, hidden when none.</summary>

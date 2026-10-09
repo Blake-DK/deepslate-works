@@ -51,6 +51,9 @@ namespace DeepslateWorks
         /// <summary>3.2.0: started by opening the app (desktop, Start Menu), not by Play: the game waits for Play, and a
         /// window closed before that sends no report when nothing changed (it is not "pressed Play and closed it").</summary>
         public bool OpenedOnly;
+        /// <summary>3.6.1 (item 1): the run only waited for Play and was ended so the other server's Play could start. Not a
+        /// cancel: no report, and nothing more is written to its folder.</summary>
+        public volatile bool Switched;
         /// <summary>3.3.0, the Update button: everything Play runs before the launch, then stop. No launcher, no game,
         /// no countdown, no wake; the report says "update_only"; with the game running it waits for it (UpdateDeferred).</summary>
         public bool UpdateOnly;

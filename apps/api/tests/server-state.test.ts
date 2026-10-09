@@ -93,7 +93,7 @@ function setup(o: { state?: number | null; crashed?: boolean; member?: { role: "
   let current: LiveStatus | null = o.state === null ? null : live(o.state ?? 30);
   const poller = { fresh: () => current, lastError: o.state === null ? "AMP login failed: unknown" : null };
   const view = new ServerView({ poller: poller as never, wake, lastDown: () => (o.crashed ? "crash" : null), sleep: () => ({ on: true, delayMin: 5 }), tunnelUp: () => true, now });
-  const deps: WakeDeps = { member: async () => (o.member === null ? null : { role: "PLAYER", earlyAccess: false, displayName: "Pabulum", ...(o.member ?? {}) }), live: async () => { if (o.liveAfterMs) await new Promise((r) => setTimeout(r, o.liveAfterMs)); return o.live ?? true; } };
+  const deps: WakeDeps = { member: async () => (o.member === null ? null : { role: "PLAYER", earlyAccess: false, displayName: "Bramble09", ...(o.member ?? {}) }), live: async () => { if (o.liveAfterMs) await new Promise((r) => setTimeout(r, o.liveAfterMs)); return o.live ?? true; } };
   const f = Fastify();
   f.addHook("onRequest", serviceAuth("secret"));
   wakeRoutes(f, wake, view, deps);
@@ -107,13 +107,13 @@ describe("POST /server/wake", () => {
     const r = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: {} });
     expect([r.statusCode, r.json().result, r.json().wake.phase, r.json().wake.leftS]).toEqual([202, "started", "waking", 30]);
     expect(t.calls).toEqual(["Start"]);
-    expect(t.audits).toEqual([{ userId: "u1", action: "server.wake", params: { name: "Pabulum", via: "play" }, result: "OK" }]);
+    expect(t.audits).toEqual([{ userId: "u1", action: "server.wake", params: { name: "Bramble09", via: "play" }, result: "OK" }]);
   });
   it("says (app) when Deepslate Works asked: on opening, or on its Play (planner 2026-10-02)", async () => {
     const t = setup({ state: 30 });
     const r = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: { via: "app" } });
     expect([r.statusCode, r.json().result]).toEqual([202, "started"]);
-    expect(t.audits).toEqual([{ userId: "u1", action: "server.wake", params: { name: "Pabulum", via: "app" }, result: "OK" }]);
+    expect(t.audits).toEqual([{ userId: "u1", action: "server.wake", params: { name: "Bramble09", via: "app" }, result: "OK" }]);
     const again = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: { via: "app" } }); // opened, then Play pressed
     expect([again.statusCode, again.json().result]).toEqual([200, "already"]);
     expect(t.calls).toEqual(["Start"]); // one start, however often
@@ -172,16 +172,16 @@ describe("POST /server/wake", () => {
 describe("Wake", () => {
   it("is ready once AMP reports Running", async () => {
     const t = setup({ state: 30 });
-    await t.wake.start("u1", "Pabulum");
+    await t.wake.start("u1", "Bramble09");
     await t.wake.update(10);
     expect(t.wake.view().phase).toBe("waking");
     t.tick(25_000);
     await t.wake.update(20);
-    expect(t.wake.view()).toMatchObject({ phase: "ready", by: "Pabulum" });
+    expect(t.wake.view()).toMatchObject({ phase: "ready", by: "Bramble09" });
   });
   it("fails after three minutes without Running, and logs the failed wake", async () => {
     const t = setup({ state: 30 });
-    await t.wake.start("u1", "Pabulum");
+    await t.wake.start("u1", "Bramble09");
     t.tick(179_000);
     await t.wake.update(10);
     expect(t.wake.view().phase).toBe("waking");

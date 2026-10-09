@@ -31,7 +31,7 @@ const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, port
 
 async function room() {
   const { Limbo } = await import("../src/players/limbo.js");
-  const tail = { online: new Set(["pabulum"]), uuidByName: new Map([["pabulum", "uuid-p"]]), state: 20, on() {}, onResync() {} };
+  const tail = { online: new Set(["kanefinch"]), uuidByName: new Map([["kanefinch", "uuid-p"]]), state: 20, on() {}, onResync() {} };
   const env = { LIMBO_POS: "deepslate:limbo 0.5 65 0.5", SPAWN_POS: "", PORTAL_URL: URL_ } as never;
   const limbo = new Limbo(env, {} as never, tail as never, () => {});
   const sent: number[] = [];
@@ -47,16 +47,16 @@ describe("the prompt, again and again", () => {
 
   it("goes every 15 seconds while they are held, never sooner", async () => {
     const { limbo, sent } = await room();
-    limbo.held.set("pabulum", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "link" }); // the hold itself prompted at 0 s
+    limbo.held.set("kanefinch", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "link" }); // the hold itself prompted at 0 s
     for (let t = 0; t <= 46_000; t += 1000) await limbo.promptRound(T0 + t); // the timer runs every second
     expect(sent.map((t) => t - T0)).toEqual([15_000, 30_000, 45_000]);
   });
 
   it("goes at once when they say anything, and the 15 seconds start from there", async () => {
     const { limbo, sent } = await room();
-    limbo.held.set("pabulum", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "link" });
+    limbo.held.set("kanefinch", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "link" });
     vi.spyOn(Date, "now").mockReturnValue(T0 + 7_000);
-    await limbo.onEvent({ type: "chat", name: "pabulum", text: "how do I get in?" });
+    await limbo.onEvent({ type: "chat", name: "kanefinch", text: "how do I get in?" });
     vi.restoreAllMocks();
     expect(sent.map((t) => t - T0)).toEqual([7_000]);
     for (let t = 8_000; t <= 23_000; t += 1000) await limbo.promptRound(T0 + t);
@@ -65,19 +65,19 @@ describe("the prompt, again and again", () => {
 
   it("ignores chat that is history, and chat from anybody who is not held", async () => {
     const { limbo, sent } = await room();
-    limbo.held.set("pabulum", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "play" });
-    await limbo.onEvent({ type: "chat", name: "pabulum", text: "old line" }, { replay: true });
+    limbo.held.set("kanefinch", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "play" });
+    await limbo.onEvent({ type: "chat", name: "kanefinch", text: "old line" }, { replay: true });
     await limbo.onEvent({ type: "chat", name: "bramble09", text: "hello" });
     expect(sent).toEqual([]);
   });
 
   it("sends nothing while the server is not running, and nothing to somebody who has left", async () => {
     const { limbo, sent, tail } = await room();
-    limbo.held.set("pabulum", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "closed" });
+    limbo.held.set("kanefinch", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "closed" });
     tail.state = 30;
     await limbo.promptRound(T0 + 20_000);
     tail.state = 20;
-    await limbo.onEvent({ type: "leave", name: "pabulum", reason: null });
+    await limbo.onEvent({ type: "leave", name: "kanefinch", reason: null });
     await limbo.promptRound(T0 + 40_000);
     expect(sent).toEqual([]);
   });
@@ -85,22 +85,22 @@ describe("the prompt, again and again", () => {
 
 describe("what a held player sees", () => {
   it("at 0 s (the hold) and every 15 s after (the reminder): a title that stays, the subtitle, the action bar and one chat line", () => {
-    const hold = actions["limbo.hold"].build(ctx, { name: "Pabulum", code: "ABC234" });
-    const remind = actions["limbo.remind"].build(ctx, { name: "Pabulum", code: "ABC234" });
+    const hold = actions["limbo.hold"].build(ctx, { name: "KaneFinch", code: "ABC234" });
+    const remind = actions["limbo.remind"].build(ctx, { name: "KaneFinch", code: "ABC234" });
     const screen = [
-      "title @a[name=Pabulum,tag=!verified] times 0 400 0",
-      'title @a[name=Pabulum,tag=!verified] subtitle {"text":"Right-click the book, or go to deepslate.dsw.test/join and enter ABC-234","color":"white"}',
-      'title @a[name=Pabulum,tag=!verified] title {"text":"Sign in to play","color":"gold"}',
-      'title @a[name=Pabulum,tag=!verified] actionbar {"text":"Click the link in chat or right-click the book in your hand, or go to deepslate.dsw.test/join and enter ABC-234","color":"yellow"}',
+      "title @a[name=KaneFinch,tag=!verified] times 0 400 0",
+      'title @a[name=KaneFinch,tag=!verified] subtitle {"text":"Right-click the book, or go to deepslate.dsw.test/join and enter ABC-234","color":"white"}',
+      'title @a[name=KaneFinch,tag=!verified] title {"text":"Sign in to play","color":"gold"}',
+      'title @a[name=KaneFinch,tag=!verified] actionbar {"text":"Click the link in chat or right-click the book in your hand, or go to deepslate.dsw.test/join and enter ABC-234","color":"yellow"}',
     ];
-    expect(remind).toEqual([...screen, linkTellraw("Pabulum", URL_, "ABC234")]);
+    expect(remind).toEqual([...screen, linkTellraw("KaneFinch", URL_, "ABC234")]);
     expect(hold.slice(-5)).toEqual(remind);
-    expect(hold.slice(0, 2)).toEqual(["tag @a[name=Pabulum,tag=verified] add deepslate.released", "tag Pabulum remove verified"]);
+    expect(hold.slice(0, 2)).toEqual(["tag @a[name=KaneFinch,tag=verified] add deepslate.released", "tag KaneFinch remove verified"]);
     expect(hold.filter((c) => c.startsWith("tellraw")).length).toBe(1); // one line, not a wall
   });
 
   it("one chat line, all of it a link to /link/<code>, with the code for /join in it", () => {
-    const parts = JSON.parse(linkTellraw("Pabulum", URL_, "ABC234").slice("tellraw Pabulum ".length)) as Array<{ text: string; clickEvent?: { action: string; value: string } }>;
+    const parts = JSON.parse(linkTellraw("KaneFinch", URL_, "ABC234").slice("tellraw KaneFinch ".length)) as Array<{ text: string; clickEvent?: { action: string; value: string } }>;
     expect(parts.map((p) => p.text).join("")).toBe("Click here to sign in, or right-click the book in your hand, or go to deepslate.dsw.test/join and enter ABC-234");
     expect(parts[0]!.clickEvent).toEqual({ action: "open_url", value: "https://deepslate.dsw.test/link/ABC234" }); // the parent: every part inherits it
     expect(parts.slice(1).every((p) => !p.clickEvent)).toBe(true);
@@ -109,22 +109,22 @@ describe("what a held player sees", () => {
   it("their own words while they wait for Play first, or for the server to open", () => {
     expect(screenText("play", URL_)).toEqual({ title: "Press Play first", subtitle: "Press Play on deepslate.dsw.test and you'll be let in" });
     expect(screenText("closed", URL_)).toEqual({ title: "Not open yet", subtitle: "You'll be let in when the server goes live" });
-    expect(actions["limbo.remindPlay"].build(ctx, { name: "Pabulum" }).slice(0, 4)).toEqual(screenCommands("Pabulum", "play", URL_));
-    expect(actions["limbo.holdClosed"].build(ctx, { name: "Pabulum" })).toEqual(expect.arrayContaining(screenCommands("Pabulum", "closed", URL_)));
-    expect(actions["limbo.remindClosed"].build(ctx, { name: "Pabulum" }).length).toBe(5);
+    expect(actions["limbo.remindPlay"].build(ctx, { name: "KaneFinch" }).slice(0, 4)).toEqual(screenCommands("KaneFinch", "play", URL_));
+    expect(actions["limbo.holdClosed"].build(ctx, { name: "KaneFinch" })).toEqual(expect.arrayContaining(screenCommands("KaneFinch", "closed", URL_)));
+    expect(actions["limbo.remindClosed"].build(ctx, { name: "KaneFinch" }).length).toBe(5);
   });
 
   it("the action bar between two prompts", () => {
-    expect(actions["limbo.bar"].build(ctx, { name: "Pabulum", kind: "link", code: "ABC234" })).toEqual(['title @a[name=Pabulum,tag=!verified] actionbar {"text":"Click the link in chat or right-click the book in your hand, or go to deepslate.dsw.test/join and enter ABC-234","color":"yellow"}']);
-    expect(actions["limbo.bar"].input.safeParse({ name: "Pabulum", kind: "link", code: "ABC23" }).success).toBe(false);
+    expect(actions["limbo.bar"].build(ctx, { name: "KaneFinch", kind: "link", code: "ABC234" })).toEqual(['title @a[name=KaneFinch,tag=!verified] actionbar {"text":"Click the link in chat or right-click the book in your hand, or go to deepslate.dsw.test/join and enter ABC-234","color":"yellow"}']);
+    expect(actions["limbo.bar"].input.safeParse({ name: "KaneFinch", kind: "link", code: "ABC23" }).success).toBe(false);
   });
 
   it("all three gone the moment they are let in, before they are marked", () => {
-    for (const cmds of [actions["link.release"].build(ctx, { name: "Pabulum" }), actions["limbo.releaseBack"].build(ctx, { name: "Pabulum", back: null })]) {
-      const clear = ["title @a[name=Pabulum,tag=!verified] clear", "title @a[name=Pabulum,tag=!verified] reset", 'title @a[name=Pabulum,tag=!verified] actionbar ""'];
+    for (const cmds of [actions["link.release"].build(ctx, { name: "KaneFinch" }), actions["limbo.releaseBack"].build(ctx, { name: "KaneFinch", back: null })]) {
+      const clear = ["title @a[name=KaneFinch,tag=!verified] clear", "title @a[name=KaneFinch,tag=!verified] reset", 'title @a[name=KaneFinch,tag=!verified] actionbar ""'];
       expect(cmds).toEqual(expect.arrayContaining(clear));
-      expect(cmds.indexOf(clear[0]!)).toBeLessThan(cmds.indexOf("tag Pabulum add verified"));
-      expect(cmds.at(-1)).toBe("tag Pabulum add verified");
+      expect(cmds.indexOf(clear[0]!)).toBeLessThan(cmds.indexOf("tag KaneFinch add verified"));
+      expect(cmds.at(-1)).toBe("tag KaneFinch add verified");
     }
   });
 
@@ -169,12 +169,12 @@ describe("the join code", () => {
     it("is made anew on every join: the one from before stops working", async () => {
       const { limbo } = await room();
       const codeFor = (limbo as unknown as { codeFor: (u: string, n: string, fresh?: boolean, now?: Date) => Promise<string> }).codeFor.bind(limbo);
-      const first = await codeFor("uuid-p", "pabulum", true, now);
+      const first = await codeFor("uuid-p", "kanefinch", true, now);
       expect(first).toMatch(CODE_RE);
       expect(codes.rows[0]!.expiresAt).toEqual(new Date(now.getTime() + CODE_TTL_MS));
       const later = new Date(now.getTime() + 60_000);
-      expect(await codeFor("uuid-p", "pabulum", false, later)).toBe(first); // still in the room: the same code
-      const rejoin = await codeFor("uuid-p", "pabulum", true, later); // left and joined again
+      expect(await codeFor("uuid-p", "kanefinch", false, later)).toBe(first); // still in the room: the same code
+      const rejoin = await codeFor("uuid-p", "kanefinch", true, later); // left and joined again
       expect(rejoin).not.toBe(first);
       expect(codeUsable(codes.rows.find((r) => r.code === first)!, "u1", later)).toBe(false);
       expect(codeUsable(codes.rows.find((r) => r.code === rejoin)!, "u1", later)).toBe(true);
@@ -183,9 +183,9 @@ describe("the join code", () => {
     it("is replaced when it runs out while they wait", async () => {
       const { limbo } = await room();
       const codeFor = (limbo as unknown as { codeFor: (u: string, n: string, fresh?: boolean, now?: Date) => Promise<string> }).codeFor.bind(limbo);
-      const first = await codeFor("uuid-p", "pabulum", true, now);
+      const first = await codeFor("uuid-p", "kanefinch", true, now);
       const after = new Date(now.getTime() + CODE_TTL_MS + 1);
-      const next = await codeFor("uuid-p", "pabulum", false, after);
+      const next = await codeFor("uuid-p", "kanefinch", false, after);
       expect(next).not.toBe(first);
       expect(codes.rows.find((r) => r.code === next)!.expiresAt).toEqual(new Date(after.getTime() + CODE_TTL_MS));
     });

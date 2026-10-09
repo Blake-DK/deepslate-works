@@ -100,7 +100,7 @@ Players (`/admin/users`), Installs and Invites are tables with fixed columns: on
 ### The download log (Alex, 2026-09-29: "add a download log on the event system")
 - Event kind **Download** (`DOWNLOAD`, migration `0013_download_kind`), admins only, a filter of its own on `/admin/events`.
 - Written when somebody fetches from the site: the installer (`/downloads/installer.zip`, with its version and size), the pack's settings (`/downloads/config.zip`), the mod list (`/api/modpack/manifest`, with the pack's version and how many mods it names for a PC). It says who, and whether it was the site or the installer that asked. With the pack's key there is nobody to name and the line says so.
-- **Refusals are written too**: "Pabulum was refused the installer: the site is not open yet and they have no early access". Somebody who is not signed in is sent to the sign-in page and not written down.
+- **Refusals are written too**: "Rowan was refused the installer: the site is not open yet and they have no early access". Somebody who is not signed in is sent to the sign-in page and not written down.
 - The same person fetching the same thing again within two minutes is counted on the line that is there (`count`), not written again.
 - **The mods' own files are not in it and cannot be**: they come from Modrinth straight to the player's PC. The mod list is what names them; a run that went through is in the install reports.
 - Files an admin takes from the server (Admin → Files, `files.download`) are of this kind too from now on; older ones stay under Admin.

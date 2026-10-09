@@ -116,8 +116,8 @@ describe("what they see", () => {
   it("is in the event log when it is given and when it is taken away", async () => {
     const { describeAction } = await import("@/shared/events");
     const alex = { role: "ADMIN" as const, name: "Bramble09" };
-    expect(describeAction("user.earlyAccess", alex, { displayName: "Pabulum", on: true })).toBe("Bramble09 gave Pabulum early access");
-    expect(describeAction("user.earlyAccess", alex, { displayName: "Pabulum", on: false })).toBe("Bramble09 took early access away from Pabulum");
+    expect(describeAction("user.earlyAccess", alex, { displayName: "KaneFinch", on: true })).toBe("Bramble09 gave KaneFinch early access");
+    expect(describeAction("user.earlyAccess", alex, { displayName: "KaneFinch", on: false })).toBe("Bramble09 took early access away from KaneFinch");
   });
 });
 

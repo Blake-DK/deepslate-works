@@ -48,46 +48,46 @@ describe("the book", () => {
   });
 
   it("is given in place of an earlier one of ours: cleared by the tag first, then into an empty hand or else the inventory", () => {
-    const cmds = actions["limbo.giveBook"].build(ctx, { name: "Pabulum", code: "ABC234" });
-    expect(cmds[0]).toBe(`clear @a[name=Pabulum,tag=!verified] ${TAGGED}`);
-    expect(cmds[1]).toBe(`execute as @a[name=Pabulum,tag=!verified] if items entity @s weapon.mainhand * run give @s ${bookItem(URL_, "ABC234")}`);
-    expect(cmds[2]).toBe(`execute as @a[name=Pabulum,tag=!verified] unless items entity @s weapon.mainhand * run item replace entity @s weapon.mainhand with ${bookItem(URL_, "ABC234")}`);
-    expect(cmds[3]).toBe(`execute as @a[name=Pabulum,tag=!verified] at @s run kill @e[type=minecraft:item,distance=..4,nbt={Item:{components:{"minecraft:custom_data":{${BOOK_TAG}:1b}}}}]`); // a full inventory: none on the floor
+    const cmds = actions["limbo.giveBook"].build(ctx, { name: "Bramble09", code: "ABC234" });
+    expect(cmds[0]).toBe(`clear @a[name=Bramble09,tag=!verified] ${TAGGED}`);
+    expect(cmds[1]).toBe(`execute as @a[name=Bramble09,tag=!verified] if items entity @s weapon.mainhand * run give @s ${bookItem(URL_, "ABC234")}`);
+    expect(cmds[2]).toBe(`execute as @a[name=Bramble09,tag=!verified] unless items entity @s weapon.mainhand * run item replace entity @s weapon.mainhand with ${bookItem(URL_, "ABC234")}`);
+    expect(cmds[3]).toBe(`execute as @a[name=Bramble09,tag=!verified] at @s run kill @e[type=minecraft:item,distance=..4,nbt={Item:{components:{"minecraft:custom_data":{${BOOK_TAG}:1b}}}}]`); // a full inventory: none on the floor
     expect(cmds.length).toBe(4);
   });
 
   it("comes with the hold, after they are put in the room and before the prompt", () => {
-    const hold = actions["limbo.hold"].build(ctx, { name: "Pabulum", code: "ABC234" });
-    const give = actions["limbo.giveBook"].build(ctx, { name: "Pabulum", code: "ABC234" });
+    const hold = actions["limbo.hold"].build(ctx, { name: "Bramble09", code: "ABC234" });
+    const give = actions["limbo.giveBook"].build(ctx, { name: "Bramble09", code: "ABC234" });
     const at = hold.indexOf(give[0]!);
     expect(hold.slice(at, at + give.length)).toEqual(give);
     expect(give).toHaveLength(4); // take the old one, hand or inventory, and no copy left on the floor
-    expect(at).toBeGreaterThan(hold.findIndex((c) => c.includes("run tp Pabulum")));
+    expect(at).toBeGreaterThan(hold.findIndex((c) => c.includes("run tp Bramble09")));
     expect(at).toBeLessThan(hold.findIndex((c) => c.startsWith("title")));
   });
 
   it("is given again when it is gone from the inventory and the off hand; looked for by the tag, nothing cleared", () => {
-    const cmds = actions["limbo.bookCheck"].build(ctx, { name: "Pabulum", code: "ABC234" });
-    expect(cmds[0]).toBe(`execute as @a[name=Pabulum,tag=!verified] unless items entity @s container.* ${TAGGED} unless items entity @s weapon.offhand ${TAGGED} run tag @s add deepslate_nobook`);
-    expect(cmds.slice(1, 4).every((c) => c.startsWith("execute as @a[name=Pabulum,tag=!verified,tag=deepslate_nobook] "))).toBe(true);
-    expect(cmds.at(-1)).toBe("execute as @a[name=Pabulum,tag=deepslate_nobook] run tag @s remove deepslate_nobook");
+    const cmds = actions["limbo.bookCheck"].build(ctx, { name: "Bramble09", code: "ABC234" });
+    expect(cmds[0]).toBe(`execute as @a[name=Bramble09,tag=!verified] unless items entity @s container.* ${TAGGED} unless items entity @s weapon.offhand ${TAGGED} run tag @s add deepslate_nobook`);
+    expect(cmds.slice(1, 4).every((c) => c.startsWith("execute as @a[name=Bramble09,tag=!verified,tag=deepslate_nobook] "))).toBe(true);
+    expect(cmds.at(-1)).toBe("execute as @a[name=Bramble09,tag=deepslate_nobook] run tag @s remove deepslate_nobook");
     expect(cmds.some((c) => c.startsWith("clear"))).toBe(false);
   });
 
   it("is taken back on release, by the tag, before they are marked; and when they are put in the room for another wait", () => {
-    for (const cmds of [actions["link.release"].build(ctx, { name: "Pabulum" }), actions["limbo.releaseBack"].build(ctx, { name: "Pabulum", back: null })]) {
-      const take = `clear @a[name=Pabulum,tag=!verified] ${TAGGED}`;
+    for (const cmds of [actions["link.release"].build(ctx, { name: "Bramble09" }), actions["limbo.releaseBack"].build(ctx, { name: "Bramble09", back: null })]) {
+      const take = `clear @a[name=Bramble09,tag=!verified] ${TAGGED}`;
       expect(cmds).toContain(take);
-      expect(cmds.indexOf(take)).toBeLessThan(cmds.indexOf("tag Pabulum add verified"));
+      expect(cmds.indexOf(take)).toBeLessThan(cmds.indexOf("tag Bramble09 add verified"));
       expect(cmds.filter((c) => c.startsWith("clear"))).toEqual([take]); // nothing else in the inventory
     }
-    expect(actions["limbo.holdPlay"].build(ctx, { name: "Pabulum" })).toContain(`clear Pabulum ${TAGGED}`);
+    expect(actions["limbo.holdPlay"].build(ctx, { name: "Bramble09" })).toContain(`clear Bramble09 ${TAGGED}`);
   });
 
   it("takes only a name and a code of the right shape", () => {
     for (const a of ["limbo.giveBook", "limbo.bookCheck"] as const) {
-      expect(actions[a].input.safeParse({ name: "Pabulum", code: "ABC234" }).success).toBe(true);
-      expect(actions[a].input.safeParse({ name: "Pabulum", code: "ABC23'" }).success).toBe(false);
+      expect(actions[a].input.safeParse({ name: "Bramble09", code: "ABC234" }).success).toBe(true);
+      expect(actions[a].input.safeParse({ name: "Bramble09", code: "ABC23'" }).success).toBe(false);
       expect(actions[a].input.safeParse({ name: "@a", code: "ABC234" }).success).toBe(false);
       expect(actions[a].role).toBe("system");
     }
@@ -98,14 +98,14 @@ describe("the room hands out books", () => {
   const T0 = 1_790_000_000_000;
   async function room() {
     const { Limbo } = await import("../src/players/limbo.js");
-    const tail = { online: new Set(["pabulum"]), uuidByName: new Map([["pabulum", "uuid-p"]]), state: 20, on() {}, onResync() {} };
+    const tail = { online: new Set(["bramble09"]), uuidByName: new Map([["bramble09", "uuid-p"]]), state: 20, on() {}, onResync() {} };
     const env = { LIMBO_POS: "deepslate:limbo 0.5 65 0.5", SPAWN_POS: "", PORTAL_URL: URL_ } as never;
     return new Limbo(env, {} as never, tail as never, () => {});
   }
 
   it("a new book when the code has changed at a reminder, none when it is the same", async () => {
     const limbo = await room();
-    limbo.held.set("pabulum", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "link" });
+    limbo.held.set("bramble09", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "link" });
     sent.list = [];
     codes.next = "ABC234";
     await limbo.promptRound(T0 + 15_000);
@@ -113,17 +113,17 @@ describe("the room hands out books", () => {
     sent.list = [];
     codes.next = "XYZ789"; // the 30 minutes ran out
     await limbo.promptRound(T0 + 30_000);
-    expect(sent.list).toEqual([{ name: "limbo.giveBook", input: { name: "pabulum", code: "XYZ789" } }, { name: "limbo.remind", input: { name: "pabulum", code: "XYZ789" } }]);
+    expect(sent.list).toEqual([{ name: "limbo.giveBook", input: { name: "bramble09", code: "XYZ789" } }, { name: "limbo.remind", input: { name: "bramble09", code: "XYZ789" } }]);
   });
 
   it("looks for the book every round of the room (5 s), only for someone waiting to sign in", async () => {
     const limbo = await room();
-    limbo.held.set("pabulum", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "link" });
+    limbo.held.set("bramble09", { uuid: "uuid-p", code: "ABC234", since: T0, lastReminder: T0, kind: "link" });
     sent.list = [];
     vi.spyOn(Date, "now").mockReturnValue(T0 + 5_000);
     await (limbo as unknown as { tick: () => Promise<void> }).tick();
     vi.restoreAllMocks();
     expect(sent.list.map((s) => s.name)).toContain("limbo.bookCheck");
-    expect(sent.list.find((s) => s.name === "limbo.bookCheck")!.input).toEqual({ name: "pabulum", code: "ABC234" });
+    expect(sent.list.find((s) => s.name === "limbo.bookCheck")!.input).toEqual({ name: "bramble09", code: "ABC234" });
   });
 });

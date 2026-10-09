@@ -237,3 +237,25 @@ Filed on `dev` as 46: number 45 was already `45-launcher-test-section.md`. Check
   pre-removal backup, the 5,287-file copy check, the "incompatible client" refusal, the trim dry run (21,773 chunks,
   109 s) and the trimmed copy's path. docs/42 §3 still says the test instance has `white-list=true`; the line above is
   the newer state.
+
+## Correction note, 2026-10-09 evening (Alex and the planner)
+
+Corrections to the rehearsal record in §4, from the AMP host session's reports and Alex's checks. The body above is
+left as written.
+
+- **The copy-back is done.** The trimmed world was copied back onto the test instance at 13:33:19 UTC on 2026-10-09 and
+  again at 14:01:19, by the AMP host's script 21. §4 lists it under "Still to do". Everything Alex checked on test from
+  13:37 was on the trimmed world.
+- **The trim ran on the copy at 13:18 UTC**, not at 10:33. The copy's name (`…-103336`) carries the time it was copied
+  out, not the time of the trim.
+- **The trim also drops 25 overworld poi files:** the tool removes a file when it deletes its last chunk. They come back
+  on their own as the server refills those regions.
+- **Passed on the trimmed world, checked by Alex in the game:** unlink and sign in again through the entrance room with
+  everything kept; a restart with no second kit; a tour of the six structure sites in §4, all normal ground with no
+  structure. Spawn and his base untouched.
+- **A start on the trimmed world** logs new errors only from the six removed mods, none about chunk, region or poi files.
+- **The refill was not rehearsed on test** (Alex's decision). On live it runs through the site's pre-generation after
+  reopening: the overworld centre 0 0, radius 10176; the Nether centre 80 576, radius 432. §4's radius 10200 would also
+  generate a ring of new chunks beyond the edge of the world. The rounding of 10176 is unverified, so a check runs after
+  the live refill.
+- **Removed-mod structures inside the kept 512-block square** stay as ruins; their mod blocks turn to air.

@@ -185,7 +185,7 @@ Print both in `11-status.md` so Alex can copy them:
 
 - When the site is live the flag changes nothing. It is kept all the same.
 - The flag on an admin changes nothing either; it counts from the moment they are made a player.
-- Giving and taking away are in the event log ("Bramble09 gave Pabulum early access").
+- Giving and taking away are in the event log ("Bramble09 gave Rowan early access").
 - A report that a run "went through" is refused (403 `not_live`) from a player the portal is not open for: they cannot have fetched the mod list, and the report would open the door. Found by the live test on the day it was built. Reports of failed runs are taken from every member.
 - The rules are one file, `apps/web/src/shared/access.ts` (the same in `api`), and one table of tests, `apps/web/tests/access.test.ts`.
 

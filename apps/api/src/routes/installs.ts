@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAdmin } from "../auth.js";
 import { db } from "../db.js";
+import { TEST_MODES } from "../shared/join-gate.js";
 
 // Install reports, read-only, for admins and for the VPS session (api.sh), which has no browser and does not read
 // the production database (Alex, 2026-10-03). The site's own view is Admin → People → Installs, which reads the
@@ -30,7 +31,7 @@ export function installRoutes(app: FastifyInstance) {
       where: {
         ...(since || until ? { at: { ...(since ? { gte: new Date(since) } : {}), ...(until ? { lte: new Date(until) } : {}) } } : {}),
         ...(outcome ? { outcome } : {}),
-        ...(mode ? { mode } : { mode: { not: "test_play" } }), // docs/45: test Plays only when asked for by mode
+        ...(mode ? { mode } : { mode: { notIn: TEST_MODES } }), // docs/45: test Plays (and 3.6.1 their game checks) only when asked for by mode
         ...(user ? { user: { OR: [{ displayName: { contains: user, mode: "insensitive" } }, { mcUsername: { equals: user, mode: "insensitive" } }] } } : {}),
       },
       orderBy: { at: "desc" },

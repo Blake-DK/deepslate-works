@@ -14,6 +14,8 @@ export const GATE_REASONS = ["no report", "old installer", "missing mods", "stal
  */
 // App 3.3.0: the Update button's run counts too: it proves the right pack is on the PC (planner 2026-10-02).
 export const PLAY_MODES = ["play", "install", "first_install", "update", "update_only"] as const; // not already_running: that run did nothing
+/** docs/45, 3.6.1: the app's runs and game checks for the test server: never in a live figure, never for the door. */
+export const TEST_MODES = ["test_play", "test_game_check"];
 export type GateReason = (typeof GATE_REASONS)[number];
 
 /** `installerVersion`: which installer made the run ("unknown" from installers that did not say). */

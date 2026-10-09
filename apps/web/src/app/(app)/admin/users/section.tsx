@@ -18,6 +18,7 @@ import { blockedList } from "@/server/auth/blocked";
 import { MemberMenu } from "./member-menu";
 import { stripLink } from "@/components/strip-link";
 import { fieldClasses } from "@/components/ui/input";
+import { TEST_MODES } from "@/shared/join-gate";
 
 const ERRORS: Record<string, string> = {
   name: "Minecraft names are 3 to 16 letters, numbers or underscores.",
@@ -38,10 +39,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     db.user.findMany({ orderBy: [{ role: "asc" }, { createdAt: "asc" }], include: { adminLogin: { select: { enabled: true } } } }),
     getSettings(),
     // the installer each member used last: their latest report
-    db.installReport.findMany({ where: { mode: { not: "test_play" } }, orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, installerVersion: true, mode: true, outcome: true } }),
+    db.installReport.findMany({ where: { mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, installerVersion: true, mode: true, outcome: true } }),
     getInstaller(),
     // installer 1.5.6: the latest report that says whether the Play button has a working link on their PC
-    db.installReport.findMany({ where: { playLinkMissing: { not: null }, mode: { not: "test_play" } }, orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, playLinkMissing: true } }),
+    db.installReport.findMany({ where: { playLinkMissing: { not: null }, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, playLinkMissing: true } }),
   ]);
   const current = installer?.current ?? null;
   const noPlayLink = new Set(linkRuns.filter((r) => r.playLinkMissing).map((r) => r.userId));

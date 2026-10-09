@@ -19,6 +19,7 @@ import { clock } from "@/lib/utils";
 import { getInstaller } from "@/server/modpack/lock";
 import { mustDownloadAgain } from "@/lib/installer-version";
 import { Alert } from "@/components/ui/alert";
+import { TEST_MODES } from "@/shared/join-gate";
 
 export const metadata: Metadata = { title: "Me" };
 
@@ -33,10 +34,10 @@ export default async function MePage() {
     getManifest(),
     getSettings(),
     // their own last install report: the outcome and the date, nothing else
-    db.installReport.findFirst({ where: { userId: user.id, mode: { not: "test_play" } }, orderBy: { at: "desc" }, select: { at: true, outcome: true, packVersion: true, failedStep: true, installerVersion: true, mode: true } }),
+    db.installReport.findFirst({ where: { userId: user.id, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, select: { at: true, outcome: true, packVersion: true, failedStep: true, installerVersion: true, mode: true } }),
     getInstaller(),
     // installer 1.5.6: the latest report that says whether the Play button has a working link on their PC
-    db.installReport.findFirst({ where: { userId: user.id, playLinkMissing: { not: null }, mode: { not: "test_play" } }, orderBy: { at: "desc" }, select: { playLinkMissing: true } }),
+    db.installReport.findFirst({ where: { userId: user.id, playLinkMissing: { not: null }, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, select: { playLinkMissing: true } }),
   ]);
   // Their last run came from an older installer than the site hands out: until a report from a new one arrives.
   const oldInstaller = install && install.mode !== "uninstall" && installer && mustDownloadAgain(install.installerVersion, installer.current) ? installer.current : null;

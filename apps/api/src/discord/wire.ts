@@ -20,6 +20,7 @@ import type { VotePoster } from "./announcer.js";
 import { currentSeason } from "../seasons/files.js";
 import { prismaSeasonStore } from "../seasons/store.js";
 import { scoreboard, seasonCurrent, seasonLine } from "../shared/season.js";
+import { TEST_MODES } from "../shared/join-gate.js";
 
 export type BotWiring = {
   app: FastifyInstance;
@@ -100,7 +101,7 @@ export function makeBot(w: BotWiring): Bot | null {
       const sessions = u?.mcUuid ? await db.session.findMany({ where: { mcUuid: u.mcUuid, OR: [{ leftAt: null }, { leftAt: { gte: monthStart } }] }, select: { joinedAt: true, leftAt: true } }) : [];
       const last = u?.mcUuid ? await db.session.findFirst({ where: { mcUuid: u.mcUuid }, orderBy: { joinedAt: "desc" }, select: { joinedAt: true, leftAt: true } }) : null;
       const ms = sessions.reduce((t, s) => t + Math.max(0, (s.leftAt ?? new Date()).getTime() - Math.max(s.joinedAt.getTime(), monthStart.getTime())), 0);
-      const report = await db.installReport.findFirst({ where: { userId, outcome: "ok", mode: { not: "test_play" } }, orderBy: { at: "desc" }, select: { installerVersion: true, packVersion: true } });
+      const report = await db.installReport.findFirst({ where: { userId, outcome: "ok", mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, select: { installerVersion: true, packVersion: true } });
       return {
         mcName: u?.mcUsername ?? null,
         lastPlayed: last ? (last.leftAt ?? last.joinedAt) : null,

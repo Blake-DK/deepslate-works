@@ -137,15 +137,23 @@ export class AmpClient implements Amp {
     return { answer, session };
   }
 
-  private lastFresh = 0;
+  /** The session number each permission was last refused on (3.6.1). */
+  private readonly refused = new Map<string, number>();
 
+  /**
+   * Asked over the session there is. A refusal is remembered for that session, and never answered with a new login
+   * (3.6.1): until 2026-10-09 a "no" threw the session away and logged in again, at most once a minute, so that a
+   * permission granted meanwhile was seen. The test site asks for a backup list its AMP user may not see every 30 s,
+   * so the test api's session was replaced every 60 to 90 s: each new session makes AMP send its last console lines
+   * again, the door resyncs, and the poller was without a session in between ("unreachable"). A permission granted in
+   * AMP is now seen from the api's next session (a restart or a deploy).
+   */
   async hasPermission(node: string): Promise<boolean> {
-    if ((await this.call<unknown>("Core", "CurrentSessionHasPermission", { PermissionNode: node })) === true) return true;
-    if (Date.now() - this.lastFresh < 60_000) return false;
-    this.lastFresh = Date.now();
-    this.sessionId = null;
-    await this.login();
-    return (await this.call<unknown>("Core", "CurrentSessionHasPermission", { PermissionNode: node })) === true;
+    if (this.sessionId && this.refused.get(node) === this.sessions) return false;
+    const { answer, session } = await this.callTagged<unknown>("Core", "CurrentSessionHasPermission", { PermissionNode: node });
+    if (answer === true) { this.refused.delete(node); return true; }
+    this.refused.set(node, session);
+    return false;
   }
 
   async ping() {

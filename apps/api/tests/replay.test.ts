@@ -186,15 +186,51 @@ describe("a session AMP has forgotten", () => {
   });
 });
 
-describe("a permission granted while the portal was logged in", () => {
-  it("is seen: on a no, the client logs in again and asks once more, once a minute at most", async () => {
+describe("a permission the portal's AMP user does not have", () => {
+  it("is remembered: a refusal never costs a new login, however often it is asked (the test api's session drops, 3.6.1)", async () => {
+    const real = globalThis.fetch;
+    let logins = 0, asked = 0;
+    globalThis.fetch = (async (url: string | URL) => {
+      const u = String(url).replace(/^.*\/API\//, "");
+      let answer: unknown = {};
+      if (u.endsWith("Core/Login")) answer = { success: true, sessionID: `s${++logins}` };
+      else if (u.endsWith("Core/CurrentSessionHasPermission")) { asked++; answer = false; }
+      return new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      const amp = new AmpClient({ url: "http://amp.invalid", username: "webapp", password: "x", instanceId: "0a1b2c3d-test" });
+      const now = Date.now;
+      let t = now();
+      Date.now = () => t;
+      try {
+        // the test site's Control Room, every 30 s for ten minutes: the backup permissions, refused
+        for (let i = 0; i < 20; i++) {
+          expect(await amp.hasPermission("LocalFileBackupPlugin.Backups.ViewBackups")).toBe(false);
+          expect(await amp.hasPermission("LocalFileBackupPlugin.Backups.CreateBackup")).toBe(false);
+          t += 30_000;
+        }
+      } finally {
+        Date.now = now;
+      }
+      expect(logins).toBe(1); // the one session, all along
+      expect(amp.sessions).toBe(1);
+      expect(asked).toBe(2); // each refusal asked once on that session
+      const { session } = await amp.callTagged("Core", "GetStatus");
+      expect(session).toBe(1);
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+
+  it("asks again on a new session: a permission granted in AMP is seen after the api's next login", async () => {
     const real = globalThis.fetch;
     let logins = 0;
     const granted = new Set<string>(); // sessions that were opened after the grant
-    let grantedNow = false;
+    let grantedNow = false, expire = false;
     globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
       const u = String(url).replace(/^.*\/API\//, "");
       const sid = new Headers(init?.headers).get("authorization")?.replace(/^Bearer /, "");
+      if (expire && !u.endsWith("Core/Login")) { expire = false; return new Response("", { status: 401 }); }
       let answer: unknown = {};
       if (u.endsWith("Core/Login")) {
         const id = `s${++logins}`;
@@ -205,22 +241,17 @@ describe("a permission granted while the portal was logged in", () => {
     }) as typeof fetch;
     try {
       const amp = new AmpClient({ url: "http://amp.invalid", username: "webapp", password: "x", instanceId: "0a1b2c3d-test" });
-      expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(false); // not granted: asked twice, one fresh login
+      expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(false); // not granted
+      expect(logins).toBe(1);
+      grantedNow = true; // granted in AMP while the portal is logged in
+      expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(false); // the same session: remembered, no login
+      expect(logins).toBe(1);
+      expire = true; // the session runs out (or the api restarts): the next call logs in
+      await amp.call("Core", "GetStatus");
       expect(logins).toBe(2);
-      grantedNow = true;
-      expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(false); // within the minute: no third login
+      expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(true); // asked again on the new session
+      expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(true); // a yes costs nothing
       expect(logins).toBe(2);
-      const later = Date.now() + 61_000;
-      const now = Date.now;
-      Date.now = () => later;
-      try {
-        expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(true);
-        expect(logins).toBe(3);
-        expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(true); // a yes costs nothing
-        expect(logins).toBe(3);
-      } finally {
-        Date.now = now;
-      }
     } finally {
       globalThis.fetch = real;
     }

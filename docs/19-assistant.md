@@ -10,7 +10,7 @@ Planner spec, 2026-09-29. An admin-only chat in the portal that can look at the 
 
 ## Where
 
-Admin → **Assistant** (new tab), plus an "Ask about this" button on Admin → Overview, Server, Events and Installs that opens the assistant with that page's context pre-loaded (e.g. "the install report from Pabulum at 14:02").
+Admin → **Assistant** (new tab), plus an "Ask about this" button on Admin → Overview, Server, Events and Installs that opens the assistant with that page's context pre-loaded (e.g. "the install report from Rowan at 14:02").
 
 ## Tools (all read-only, all admin-gated, all logged)
 

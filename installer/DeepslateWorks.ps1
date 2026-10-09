@@ -114,7 +114,7 @@ function Step($msg) {
 }
 function Tick($msg) { if (-not $Quiet) { Write-Host ("   [OK] {0}" -f $msg) -ForegroundColor Green }; Log "OK $msg"; Emit ([ordered]@{ t = "tick"; text = [string]$msg }) }
 # Every file operation takes its path literally (-LiteralPath): with -Path PowerShell reads [ ] in a path as a pattern
-# and can fail to resolve a user folder at all (Pabulum's PC, 2026-09-29, installer 1.4.1).
+# and can fail to resolve a user folder at all (Bramble09's PC, 2026-09-29, installer 1.4.1).
 function Remove-Temp($path) {
   # A leftover temporary file is never a reason to stop.
   try { if ($path -and [IO.File]::Exists($path)) { [IO.File]::Delete($path) } } catch { Log ("could not remove " + $path + ": " + $_.Exception.Message) }
@@ -3868,7 +3868,7 @@ if ($SelfTest) {
   $s = Select-Java (Join-Path $dir "no-launcher-java.exe") "" $noJre
   Check "no Java anywhere: Java 21 is downloaded" (($s.path -eq $null) -and ($s.passedOver -eq $null))
   Write-Host "Self test: a user folder PowerShell would read as a pattern (1.4.2)" -ForegroundColor White
-  $odd = Join-Path $dir "Pab [x] PABULU~1"
+  $odd = Join-Path $dir "Bra [x] BRAMBL~1"
   [void][IO.Directory]::CreateDirectory($odd)
   $jarOdd = Join-Path $odd "neoforge-21.1.252-installer.jar"
   [IO.File]::WriteAllText($jarOdd, "jar")

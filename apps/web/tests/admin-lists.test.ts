@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { memberRows } from "@/lib/admin-lists";
 
 const m = (displayName: string, mcUsername: string | null, earlyAccess = false) => ({ displayName, mcUsername, earlyAccess });
-const all = [m("Bramble09", "bramble09"), m("Pabulum", null, true), m("Maximilian_Featherstonehaugh_032", "Maximilian_F_032", true), m("Bertie", null)];
+const all = [m("Bramble09", "bramble09"), m("KaneFinch", null, true), m("Maximilian_Featherstonehaugh_032", "Maximilian_F_032", true), m("Bertie", null)];
 
 describe("memberRows", () => {
   it("shows everyone, those with early access, or those without", () => {
     expect(memberRows(all, undefined, undefined).rows.length).toBe(4);
-    expect(memberRows(all, "early", undefined).rows.map((r) => r.displayName)).toEqual(["Pabulum", "Maximilian_Featherstonehaugh_032"]);
+    expect(memberRows(all, "early", undefined).rows.map((r) => r.displayName)).toEqual(["KaneFinch", "Maximilian_Featherstonehaugh_032"]);
     expect(memberRows(all, "rest", undefined).rows.map((r) => r.displayName)).toEqual(["Bramble09", "Bertie"]);
     expect(memberRows(all, "nonsense", undefined).only).toBe("all");
   });
@@ -23,8 +23,8 @@ describe("memberRows", () => {
     expect(memberRows(all, "rest", "max").rows).toEqual([]);
   });
   it("shows those whose latest run came from an outdated installer, and nothing odd for a made-up filter", () => {
-    const some = [{ ...m("Pabulum", null, true), installerOutdated: true }, m("Bertie", null), { ...m("Bramble09", "bramble09"), installerOutdated: false }];
-    expect(memberRows(some, "outdated", undefined).rows.map((r) => r.displayName)).toEqual(["Pabulum"]);
+    const some = [{ ...m("KaneFinch", null, true), installerOutdated: true }, m("Bertie", null), { ...m("Bramble09", "bramble09"), installerOutdated: false }];
+    expect(memberRows(some, "outdated", undefined).rows.map((r) => r.displayName)).toEqual(["KaneFinch"]);
     expect(memberRows(some, undefined, undefined).count.outdated).toBe(1);
     expect(memberRows(some, "outdated", "bert").rows).toEqual([]);
     expect(memberRows(some, "toString", undefined).only).toBe("all");

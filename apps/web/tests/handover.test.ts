@@ -58,7 +58,7 @@ describe("hand-over reports", () => {
     expect(PLAY_MODES as readonly string[]).not.toContain("handover");
   });
   it("read as what happened, from either side", () => {
-    const say = (p: Record<string, unknown>) => describeAction("installer.report", { role: "PLAYER", name: "Pabulum" }, { mode: "handover", ...p });
+    const say = (p: Record<string, unknown>) => describeAction("installer.report", { role: "PLAYER", name: "Bramble09" }, { mode: "handover", ...p });
     expect(say({ installerVersion: "2.2.0", outcome: "ok" })).toContain("said Update now");
     expect(say({ installerVersion: "2.2.0", outcome: "skipped" })).toContain("said Not now");
     expect(say({ installerVersion: "2.2.0", outcome: "failed", updateProblem: "the checksum did not match" })).toContain("the checksum did not match");

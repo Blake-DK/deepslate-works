@@ -8,12 +8,12 @@ const s = (mcUuid: string, join: string, left: string | null, country: string | 
 const SESSIONS: S[] = [
   s("alex", "2026-09-29T09:00:00Z", "2026-09-29T10:30:00Z"), // 90 min
   s("owly", "2026-09-29T09:30:00Z", "2026-09-29T10:00:00Z", "DK"), // 30 min, inside alex's
-  s("pab", "2026-09-29T09:45:00Z", "2026-09-29T09:46:00Z", "GB"), // 1 min: a bounce
+  s("samoyedx", "2026-09-29T09:45:00Z", "2026-09-29T09:46:00Z", "GB"), // 1 min: a bounce
   s("alex", "2026-09-29T11:30:00Z", null), // still on: 30 min so far
   s("owly", "2026-09-25T18:00:00Z", "2026-09-25T20:00:00Z", "DK"), // 2 h, four days ago
   s("old", "2026-08-20T18:00:00Z", "2026-08-20T19:00:00Z", null), // before the 30-day window
 ];
-const FIRST = new Map([["alex", at("2026-09-29T09:00:00Z")], ["owly", at("2026-09-25T18:00:00Z")], ["pab", at("2026-09-29T09:45:00Z")], ["old", at("2026-08-20T18:00:00Z")]]);
+const FIRST = new Map([["alex", at("2026-09-29T09:00:00Z")], ["owly", at("2026-09-25T18:00:00Z")], ["samoyedx", at("2026-09-29T09:45:00Z")], ["old", at("2026-08-20T18:00:00Z")]]);
 
 describe("rangeFor", () => {
   it("defaults to 30 days and knows the window before", () => {
@@ -40,7 +40,7 @@ describe("totals", () => {
     const t = totals(SESSIONS, r.from, r.to, NOW, FIRST);
     expect(t.sessions).toBe(4);
     expect(t.players).toBe(3);
-    expect(t.newPlayers).toBe(2); // alex and pab; owly first played four days ago
+    expect(t.newPlayers).toBe(2); // alex and samoyedx; owly first played four days ago
     expect(t.playMs).toBe((90 + 30 + 1 + 30) * 60_000);
     expect(t.bounceRate).toBe(0.25);
     expect(t.avgMs).toBe((151 / 4) * 60_000);
@@ -64,7 +64,7 @@ describe("totals", () => {
 
 describe("peakConcurrent", () => {
   it("finds the most people on at once", () => {
-    expect(peakConcurrent(SESSIONS, at("2026-09-29T00:00:00Z"), NOW, NOW)).toBe(3); // 09:45: alex, owly, pab
+    expect(peakConcurrent(SESSIONS, at("2026-09-29T00:00:00Z"), NOW, NOW)).toBe(3); // 09:45: alex, owly, samoyedx
     expect(peakConcurrent(SESSIONS, at("2026-09-29T11:00:00Z"), NOW, NOW)).toBe(1);
     expect(peakConcurrent([], at("2026-09-29T00:00:00Z"), NOW, NOW)).toBe(0);
   });
@@ -148,7 +148,7 @@ describe("players", () => {
   it("adds up each player and their share", () => {
     const r = rangeFor("7d", NOW, null);
     const rows = byPlayer(SESSIONS, r.from, r.to, NOW);
-    expect(rows.map((x) => [x.mcUuid, x.sessions, x.playMs / 60_000])).toEqual([["owly", 2, 150], ["alex", 2, 120], ["pab", 1, 1]]);
+    expect(rows.map((x) => [x.mcUuid, x.sessions, x.playMs / 60_000])).toEqual([["owly", 2, 150], ["alex", 2, 120], ["samoyedx", 1, 1]]);
     expect(rows[0]!.share).toBeCloseTo(150 / 271);
     expect(rows.find((x) => x.mcUuid === "alex")!.lastSeen).toEqual(NOW); // still on
     expect(rows.reduce((n, x) => n + x.share, 0)).toBeCloseTo(1);
@@ -161,11 +161,11 @@ describe("players", () => {
   it("sorts by any column, either way", () => {
     const r = rangeFor("7d", NOW, null);
     const rows = byPlayer(SESSIONS, r.from, r.to, NOW);
-    expect(sortPlayers(rows, "time", undefined).map((x) => x.mcUuid)).toEqual(["owly", "alex", "pab"]);
-    expect(sortPlayers(rows, "time", "asc").map((x) => x.mcUuid)).toEqual(["pab", "alex", "owly"]);
-    expect(sortPlayers(rows, "name", "asc").map((x) => x.mcUuid)).toEqual(["alex", "owly", "pab"]);
+    expect(sortPlayers(rows, "time", undefined).map((x) => x.mcUuid)).toEqual(["owly", "alex", "samoyedx"]);
+    expect(sortPlayers(rows, "time", "asc").map((x) => x.mcUuid)).toEqual(["samoyedx", "alex", "owly"]);
+    expect(sortPlayers(rows, "name", "asc").map((x) => x.mcUuid)).toEqual(["alex", "owly", "samoyedx"]);
     expect(sortPlayers(rows, "seen", undefined)[0]!.mcUuid).toBe("alex");
-    expect(sortPlayers(rows, "bogus", "bogus").map((x) => x.mcUuid)).toEqual(["owly", "alex", "pab"]);
+    expect(sortPlayers(rows, "bogus", "bogus").map((x) => x.mcUuid)).toEqual(["owly", "alex", "samoyedx"]);
   });
 });
 
@@ -186,7 +186,7 @@ describe("countries", () => {
 describe("heatmap", () => {
   it("puts minutes in the hour of the week they were played, UK time", () => {
     const g = heatmap(SESSIONS, at("2026-09-29T00:00:00Z"), NOW, NOW);
-    expect(g[1]![10]).toBe(60 + 30 + 1); // Tuesday 10:00 to 11:00: alex 60, owly 30, pab 1
+    expect(g[1]![10]).toBe(60 + 30 + 1); // Tuesday 10:00 to 11:00: alex 60, owly 30, samoyedx 1
     expect(g[1]![11]).toBe(30); // alex until 11:30
     expect(g[1]![12]).toBe(30); // alex again from 12:30
     expect(g.flat().reduce((a, b) => a + b, 0)).toBe(151);
@@ -200,7 +200,7 @@ describe("heatmap", () => {
 
 describe("together", () => {
   it("ranks pairs by the minutes they overlapped", () => {
-    expect(together(SESSIONS, at("2026-09-29T00:00:00Z"), NOW, NOW)).toEqual([{ a: "alex", b: "owly", minutes: 30 }, { a: "alex", b: "pab", minutes: 1 }, { a: "owly", b: "pab", minutes: 1 }]);
+    expect(together(SESSIONS, at("2026-09-29T00:00:00Z"), NOW, NOW)).toEqual([{ a: "alex", b: "owly", minutes: 30 }, { a: "alex", b: "samoyedx", minutes: 1 }, { a: "owly", b: "samoyedx", minutes: 1 }]);
   });
   it("never pairs someone with themselves", () => {
     expect(together([s("a", "2026-09-29T09:00:00Z", "2026-09-29T10:00:00Z"), s("a", "2026-09-29T09:30:00Z", "2026-09-29T10:30:00Z")], at("2026-09-29T00:00:00Z"), NOW, NOW)).toEqual([]);

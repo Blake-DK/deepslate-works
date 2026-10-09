@@ -35,7 +35,7 @@ vi.mock("../src/db.js", () => {
   return {
     db: {
       user: {
-        findFirst: async () => ({ id: "u1", role: state.role, earlyAccess: true, verifiedAt: new Date(), guildMember: true, mcUsername: "pabulum" }),
+        findFirst: async () => ({ id: "u1", role: state.role, earlyAccess: true, verifiedAt: new Date(), guildMember: true, mcUsername: "bramble09" }),
         findUnique: async () => ({ id: "u1", role: state.role, earlyAccess: true }),
         update: async () => ({}),
       },
@@ -106,31 +106,31 @@ describe("the door, in its new order: linked → open for them → votes answere
   it("says so in the room: a title that stays, and the planner's line in chat with the site as a link", () => {
     expect(waitFor("vote")).toBe("vote");
     expect(screenText("vote", ctx.portalUrl)).toEqual({ title: "There's a new vote", subtitle: "Open Deepslate Works or deepslate.dsw.test to vote, then you're in" });
-    const cmds = actions["limbo.holdVote"].build(ctx, { name: "pabulum" });
-    expect(cmds).toContain("execute in deepslate:limbo run tp pabulum 0.5 65 0.5");
-    expect(cmds).toContain('title @a[name=pabulum,tag=!verified] title {"text":"There\'s a new vote","color":"gold"}');
-    const chat = JSON.parse(voteTellraw("pabulum", ctx.portalUrl).replace(/^tellraw pabulum /, "")) as Array<string | { text: string }>;
+    const cmds = actions["limbo.holdVote"].build(ctx, { name: "bramble09" });
+    expect(cmds).toContain("execute in deepslate:limbo run tp bramble09 0.5 65 0.5");
+    expect(cmds).toContain('title @a[name=bramble09,tag=!verified] title {"text":"There\'s a new vote","color":"gold"}');
+    const chat = JSON.parse(voteTellraw("bramble09", ctx.portalUrl).replace(/^tellraw bramble09 /, "")) as Array<string | { text: string }>;
     expect(chat.map((p) => (typeof p === "string" ? p : p.text)).join("")).toBe("There's a new vote. Open Deepslate Works or deepslate.dsw.test to vote, then you're in.");
     expect(VOTE_FIRST_TEXT("deepslate.dsw.test")).toBe("There's a new vote. Open Deepslate Works or deepslate.dsw.test to vote, then you're in.");
-    expect(actions["limbo.remindVote"].build(ctx, { name: "pabulum" })).toEqual(cmds.slice(-5));
-    expect(actions["limbo.kickIdleVote"].build(ctx, { name: "pabulum" })).toEqual(["kick pabulum There's a new vote. Open Deepslate Works or deepslate.dsw.test to vote, then you're in."]);
+    expect(actions["limbo.remindVote"].build(ctx, { name: "bramble09" })).toEqual(cmds.slice(-5));
+    expect(actions["limbo.kickIdleVote"].build(ctx, { name: "bramble09" })).toEqual(["kick bramble09 There's a new vote. Open Deepslate Works or deepslate.dsw.test to vote, then you're in."]);
   });
 
   it("is in the event log", () => {
     expect(kindOf("join.blocked", "PLAYER")).toBe("JOIN_BLOCKED");
-    expect(describeAction("join.blocked", { role: "PLAYER", name: "Pabulum" }, { name: "pabulum", reason: "vote" })).toBe("Pabulum was held in the entrance room: they have not answered the new vote yet");
-    expect(describeAction("join.ready", { role: "PLAYER", name: "Pabulum" }, { name: "pabulum", was: "vote", back: true })).toBe("Pabulum voted and was let in, back to where they were");
+    expect(describeAction("join.blocked", { role: "PLAYER", name: "Bramble09" }, { name: "bramble09", reason: "vote" })).toBe("Bramble09 was held in the entrance room: they have not answered the new vote yet");
+    expect(describeAction("join.ready", { role: "PLAYER", name: "Bramble09" }, { name: "bramble09", was: "vote", back: true })).toBe("Bramble09 voted and was let in, back to where they were");
     expect(kindOf("limbo.kickIdleVote", "system")).toBe("LINK");
-    expect(describeAction("poll.vote", { role: "PLAYER", name: "Pabulum" }, { question: "Next boss", choices: ["The Warden"] })).toBe('Pabulum voted in "Next boss"'); // the choice stays in meta, for admins
-    expect(describeAction("poll.vote", { role: "PLAYER", name: "Pabulum" }, { question: "Next boss", changed: true })).toBe('Pabulum changed their vote in "Next boss"');
-    expect(describeAction("server.wake", { role: "PLAYER", name: "Pabulum" }, { name: "Pabulum", via: "app" })).toBe("Pabulum woke the server (app)");
-    expect(describeAction("server.wake", { role: "PLAYER", name: "Pabulum" }, { name: "Pabulum" })).toBe("Pabulum woke the server (Play)");
+    expect(describeAction("poll.vote", { role: "PLAYER", name: "Bramble09" }, { question: "Next boss", choices: ["The Warden"] })).toBe('Bramble09 voted in "Next boss"'); // the choice stays in meta, for admins
+    expect(describeAction("poll.vote", { role: "PLAYER", name: "Bramble09" }, { question: "Next boss", changed: true })).toBe('Bramble09 changed their vote in "Next boss"');
+    expect(describeAction("server.wake", { role: "PLAYER", name: "Bramble09" }, { name: "Bramble09", via: "app" })).toBe("Bramble09 woke the server (app)");
+    expect(describeAction("server.wake", { role: "PLAYER", name: "Bramble09" }, { name: "Bramble09" })).toBe("Bramble09 woke the server (Play)");
   });
 });
 
 async function room() {
   const { Limbo } = await import("../src/players/limbo.js");
-  const tail = { online: new Set(["pabulum"]), uuidByName: new Map([["pabulum", "uuid-p"]]), state: 20, on() {}, onResync() {} };
+  const tail = { online: new Set(["bramble09"]), uuidByName: new Map([["bramble09", "uuid-p"]]), state: 20, on() {}, onResync() {} };
   const env = { LIMBO_POS: "deepslate:limbo 0.5 65 0.5", SPAWN_POS: "", PORTAL_URL: "https://deepslate.dsw.test" } as never;
   const limbo = new Limbo(env, {} as never, tail as never, () => {});
   (limbo as unknown as { where: () => Promise<null> }).where = async () => null; // nobody to ask in a test
@@ -153,17 +153,17 @@ describe("in the room", () => {
     state.polls = [poll("p1")];
     expect(await unvotedFor("u1")).toBe(1);
     const { limbo, tick } = await room();
-    await limbo.onJoin("pabulum");
+    await limbo.onJoin("bramble09");
     expect(names()).toEqual(["limbo.holdVote"]);
-    expect(limbo.held.get("pabulum")?.kind).toBe("vote");
+    expect(limbo.held.get("bramble09")?.kind).toBe("vote");
     expect(state.audits.at(-1)).toMatchObject({ action: "join.blocked", params: { reason: "vote" } });
     state.ran = [];
     await tick(); // still not voted: they stay
-    expect(limbo.held.has("pabulum")).toBe(true);
+    expect(limbo.held.has("bramble09")).toBe(true);
     state.polls[0]!.answers.push({ userId: "u1", choices: ["o1"] }); // they vote in the app
     await tick(); // the next round, within 5 s
     expect(names()).toEqual(["limbo.releaseBack"]);
-    expect(limbo.held.has("pabulum")).toBe(false);
+    expect(limbo.held.has("bramble09")).toBe(false);
     expect(state.audits.at(-1)).toMatchObject({ action: "join.ready", params: { was: "vote" } });
   });
 
@@ -171,27 +171,27 @@ describe("in the room", () => {
     state.role = "ADMIN";
     state.polls = [poll("p1")];
     const { limbo } = await room();
-    await limbo.onJoin("pabulum");
+    await limbo.onJoin("bramble09");
     expect(names()).toEqual(["link.release"]);
     expect(limbo.held.size).toBe(0);
   });
 
   it("does not hold or kick someone already playing when a poll opens: one chat line, and it applies from their next join", async () => {
     const { limbo, tick } = await room();
-    await limbo.onJoin("pabulum"); // in, nothing open
+    await limbo.onJoin("bramble09"); // in, nothing open
     expect(names()).toEqual(["link.release"]);
     state.ran = [];
     state.polls = [poll("p1")]; // an admin opens a must-vote poll now
     await tick();
-    await limbo.onEvent({ type: "chat", name: "pabulum", text: "a new vote?" });
+    await limbo.onEvent({ type: "chat", name: "bramble09", text: "a new vote?" });
     expect(names()).toEqual([]); // nothing done to them
     expect(limbo.held.size).toBe(0);
     const line = actions["server.pollOpened"].build(ctx, { question: "What's the next boss?" });
     expect(line).toEqual([pollChat("What's the next boss?", ctx.portalUrl)]);
     expect(line[0]).toMatch(/^tellraw @a\[tag=verified\] /); // whoever is in the world, never the room
     expect(line[0]).not.toMatch(/kick|tp /);
-    await limbo.onEvent({ type: "leave", name: "pabulum" });
-    await limbo.onJoin("pabulum"); // the next join
+    await limbo.onEvent({ type: "leave", name: "bramble09" });
+    await limbo.onJoin("bramble09"); // the next join
     expect(names()).toEqual(["limbo.holdVote"]);
   });
 
@@ -204,7 +204,7 @@ describe("in the room", () => {
     expect(state.news).toEqual(["Vote closed: What's the next boss? Result: no clear answer (0 votes)."]);
     expect(state.audits.at(-1)).toMatchObject({ action: "poll.close", params: { auto: true } });
     const { limbo } = await room();
-    await limbo.onJoin("pabulum");
+    await limbo.onJoin("bramble09");
     expect(names()).toEqual(["link.release"]);
   });
 

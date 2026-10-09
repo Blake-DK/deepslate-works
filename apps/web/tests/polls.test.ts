@@ -104,7 +104,7 @@ describe("the results", () => {
 });
 
 describe("voting", () => {
-  const me = { id: "pabulum", role: "PLAYER" as const };
+  const me = { id: "bramble09", role: "PLAYER" as const };
   beforeEach(() => {
     db.poll = { id: "p1", question: "Next boss", options: readOptions([{ id: "o1", text: "The Warden" }, { id: "o2", text: "A Lava Golem" }]), multiple: false, mustVote: true, status: "OPEN", openedAt: new Date(Date.now() - 60_000), closesAt: null, closedAt: null };
     db.answers = [];
@@ -120,7 +120,7 @@ describe("voting", () => {
     expect(r.ok && r.poll.voters).toBeNull(); // who voted for what: admins only
     expect(r.ok && r.poll.mineVia).toBe("site");
     expect(db.answers[0]).toMatchObject({ via: "site" });
-    expect(db.audits).toEqual([{ userId: "pabulum", action: "poll.vote", params: { pollId: "p1", question: "Next boss", choices: ["The Warden"], changed: false }, result: "OK" }]);
+    expect(db.audits).toEqual([{ userId: "bramble09", action: "poll.vote", params: { pollId: "p1", question: "Next boss", choices: ["The Warden"], changed: false }, result: "OK" }]);
   });
 
   it("lets them change their vote until the poll closes, and not after", async () => {
@@ -149,7 +149,7 @@ describe("voting", () => {
     const { answerPoll, getPoll } = await import("@/server/polls");
     await answerPoll(me, "p1", ["o2"]);
     const v = await getPoll("p1", { id: "alex", role: "ADMIN" });
-    expect(v?.voters?.map((x) => [x.name, x.choices])).toEqual([["pabulum", ["o2"]]]);
+    expect(v?.voters?.map((x) => [x.name, x.choices])).toEqual([["bramble09", ["o2"]]]);
     expect(v?.results?.voters).toBe(1);
   });
 });

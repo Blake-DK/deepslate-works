@@ -5,18 +5,28 @@
 - **Still true:** live is stopped on purpose; no start, stop, wake, Build, Sync or Lock of either server; no deploy;
   no `test-pull.sh`; the test checkout stays held at `86bdcc5c` until Alex moves it. Nothing merges to `dev` or `main`
   until Alex says go. CI builds only; commits as Alex; public-repo rules.
-- **The one PR to `main`, on Alex's go, carries five things in this order into `dev`:** the name fix and docs
-  (`work/names`), the mod removal re-applied from `89099a8d` (lock object `8650125f`, 71 files, hash `d44eb2ba`), the
-  test packs' removal, the server fixes (`work/app-3-6-1-server`), the app (`work/app-3-6-1`, 3.6.1). 3.6.1 goes to
-  players with the reopening (`INSTALLER_TAG=3.6.1`).
+- **The one PR to `main`, on Alex's go, carries four things and nothing else, in this order into `dev`:** the name fix
+  and docs (`work/names`), the mod removal re-applied from `89099a8d` (lock object `8650125f`, 71 files, hash
+  `d44eb2ba`), the server fixes (`work/app-3-6-1-server`), the app (`work/app-3-6-1`, 3.6.1). 3.6.1 goes to players
+  with the reopening (`INSTALLER_TAG=3.6.1`). The app branch is frozen at the build to try: it changes only for a fault
+  Alex or the planner reports, or one that would hurt a player; anything smaller is listed for a 3.6.2.
+- **The test packs are out of this window (Alex, 2026-10-09 late evening).** The AMP host found that the live world's
+  `level.dat` stores the three test dimensions and lists the four packs as enabled, so taking them off needs a
+  `level.dat` edit on the live world. The whole job moves to a later quiet restart. `work/test-packs-off` (`9514ce65`,
+  test only) stays local and parked; nothing on a branch that goes to `main` changes `"frontiers"` or removes the
+  datapack folders.
+- **The trim, as approved (Alex, 2026-10-09 late evening; overrides "visited sites stay as ruins" below and in docs/46):**
+  every boss-mod structure chunk is cleared on live whatever its player time, the 29 visited sites, the desert cluster
+  and those inside the square around spawn included. Spared: the two chunks holding Alex's own base storage beside the
+  chamber near spawn, and the chunks that hold players' property (graves, crates, chests players have used), about 27
+  chunks in all; the rest of each site is cleared. The approved set is about 22,000 overworld chunks and 48 in the
+  Nether; the AMP host holds the exact counts and checksums and records the approval. The live scripts were rewritten
+  after a read of their code and are dress-rehearsed on the test instance from the untrimmed test world before live,
+  the way back included.
 - **Alex's answers:** "Alex_1" (a test) is made up and joins the placeholder list. The server fixes go on the test stack
   now. The wake watch in the app's log and a test game-check report are checked by Alex at the live step, before any
   player is let in. The pre-push hook (the name check) waits until after live is back, then comes as one numbered root
-  script; nothing that `deploy.sh` checks changes before the reopening deploy. The test packs come off live in the same
-  maintenance window but with their own stop and start, after the mod removal has loaded clean; the repo change rides
-  in the one PR; the test-only commit for the test checkout is prepared but not put there; the AMP host first checks the
-  world (the four packs, their dimension folders, whether `level.dat` stores those dimensions, player data pointing
-  into them) and the planner sends the result.
+  script; nothing that `deploy.sh` checks changes before the reopening deploy. (The test packs: superseded, see above.)
 - **The app 3.6.1 build for Alex to try:** run 37968006515, sha256 `b37bc489…be46f2` (`work/app-3-6-1`, docs/11 there).
 - **Alex's two checks at the live step, after the reopening deploy and before any player is let in** (they need the live
   web with the server branch; the test stack alone cannot show them):
@@ -44,13 +54,13 @@
 - **The refill** was not rehearsed (Alex). On live, after reopening, through the site's pre-generation: overworld
   centre 0 0 radius 10176, Nether centre 80 576 radius 432 (10200 would also generate past the world's edge; the
   rounding of 10176 is checked after the live refill). Removed-mod structures inside the kept 512-block square stay as
-  ruins, their mod blocks air.
+  ruins, their mod blocks air. *Superseded late evening: the square is no longer kept; see "The trim, as approved".*
 - **Alex's decisions, 2026-10-09 evening:**
   - Play first goes back on at the live restart, after Alex's own join has worked.
   - View distance: 20 is the truth; the docs and `mods.json` are corrected at the later quiet restart, not now.
   - The MOTD: the portal's Branding setting is the truth; applied at the later quiet restart.
   - The sample Frontier and the three worldgen test packs come off live in the same restart as the mod removal, after
-    a rehearsal on test (plan: this session's report).
+    a rehearsal on test. *Superseded later the same evening: moved to a later quiet restart (`level.dat` stores them).*
   - Before the live trim the AMP host scans the fresh copy of live for removed-mod items in containers and lists them
     by location.
   - The structure coordinates stay in docs/46.

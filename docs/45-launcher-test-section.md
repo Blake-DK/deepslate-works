@@ -20,6 +20,12 @@ found by a throwaway non-admin probe on the test web before any player app was g
 | `GET /api/app/test/manifest`: the test pack in the live manifest's shape | `GET /test/app/pack`, `GET /test/app/state` |
 | `GET /api/app/test/config.zip`: the test settings bundle | `GET /test/app/config.zip` (stream) |
 | `POST /api/app/test/wake` | `POST /test/app/wake` |
+| `GET /api/app/test/wake` (3.6.1): how the wake is going, watched every 5 s | `GET /test/app/wake` |
+
+3.6.1 (`work/app-3-6-1-server`): `GET /api/app/test` also sends `server`, the test server in the site's words in the
+home's shape (a state the site's list does not know goes as it is). The test api asks AMP once more before it answers
+a wake "unreachable". The game check after a test Play has the mode `test_game_check`, left out wherever `test_play` is
+(`TEST_MODES`).
 
 - **The token:** `TEST_APP_TOKEN` in `deploy/.env`, passed to the live web and to `api-test` only. `api-test` takes it
   on these four paths and on nothing else, and refuses to start if it equals the service or the summary token. It never
@@ -34,6 +40,14 @@ found by a throwaway non-admin probe on the test web before any player app was g
   admin "through the app's Test section".
 
 ## The app
+
+**3.6.1 (what is built now; docs/07 "3.6.1").** The Test tab is the Play tab pointed at the test server: the same view
+and code with the target "test" (card, steps, Play, countdown), made only when the home says the sign-in is an admin's.
+Play on either tab ends a run of the other's that only waits. Extras, settings, the game check and the launcher profile
+follow the target as docs/07 says. **Corrections to version one below:** 3.6.0 did write into the live folder during a
+test Play (the extras were synced there; the Settings tab's waiting changes were used up by the test game), its game
+check counted in the live figures, and a member's app asked `/api/app/test` every 10 s. The text below is version
+one's, kept for the record.
 
 - A Test section, shown only when `GET /api/app/test` answers. It shows the test pack's version and says plainly it is
   the test server. When the stack is off or cannot be reached it says so and does nothing else.

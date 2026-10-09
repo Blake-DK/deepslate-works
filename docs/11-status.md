@@ -17,7 +17,20 @@
   in the one PR; the test-only commit for the test checkout is prepared but not put there; the AMP host first checks the
   world (the four packs, their dimension folders, whether `level.dat` stores those dimensions, player data pointing
   into them) and the planner sends the result.
-- **The app 3.6.1 build for Alex to try:** run 37966023431, sha256 `ebd3a77f…f5af0dd` (`work/app-3-6-1`, docs/11 there).
+- **The app 3.6.1 build for Alex to try:** run 37968006515, sha256 `b37bc489…be46f2` (`work/app-3-6-1`, docs/11 there).
+- **Alex's two checks at the live step, after the reopening deploy and before any player is let in** (they need the live
+  web with the server branch; the test stack alone cannot show them):
+  1. *The wake watch.* With the test server asleep (it sleeps 5 minutes after the last player leaves), press Play test
+     in app 3.6.1. In the app's Log tab, in order: `wake: the server is waking` (the wake was asked for), then within
+     about 30 to 90 s `wake: server ready` (the watch saw it up; before 3.6.1 the watch had no route and ended with
+     `wake: stopped watching` after 200 s). The test site's event log has one `server.wake` naming him "(live admin,
+     through the app's Test section)". If the test server was online already: `wake: the test server is up, nothing to
+     wake (awake)`.
+  2. *A test game check filed in its own mode.* After that Play test the game starts and joins the test server. Within
+     about 2 minutes of the game reaching the main menu, the Log tab has `game check: the game started with all N mods`
+     and `game check sent to the site`. On the live site: the event log (Admin → Events) has the line "started the test
+     game with every mod of the test pack"; Admin → Installs (its list, its counts and "The group's PCs") does not show
+     it; his player page and `/me` show no new install and no "mods missing".
 
 ## Today's state and decisions, 2026-10-09 evening (Alex and the planner)
 

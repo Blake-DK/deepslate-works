@@ -131,6 +131,13 @@ export const CHANGES: Change[] = [
       "If you have played before and are asked to wait in the room again, everything you carry stays as it is.",
     ],
   },
+  {
+    id: "2026-10-09-app-extras-readable",
+    date: "2026-10-09",
+    lines: [
+      "On the app's Extras tab, the \"On\" beside each extra and the shader choices (None, Light, Full) were black on the dark card and hard to read. They are light now, with the app's own boxes instead of white ones. The Allow / Not now choices on permission questions got the same fix.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

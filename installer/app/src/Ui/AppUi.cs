@@ -260,8 +260,8 @@ namespace DeepslateWorks
             sp.Children.Add(body);
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             var group = "consent-" + step.Id;
-            var allow = new RadioButton { Content = UiText.Allow, GroupName = group, Margin = new Thickness(0, 0, 18, 0) };
-            var no = new RadioButton { Content = UiText.NotNow, GroupName = group };
+            var allow = new RadioButton { Content = UiText.Allow, GroupName = group, Style = (Style)Window.FindResource("Choice"), Margin = new Thickness(0, 0, 18, 0) };
+            var no = new RadioButton { Content = UiText.NotNow, GroupName = group, Style = (Style)Window.FindResource("Choice"), Margin = new Thickness(0) };
             var warn = NewText("", 12, "Normal", "Red"); warn.Margin = new Thickness(0, 6, 0, 0); warn.Visibility = Visibility.Collapsed;
             var id = step.Id;
             allow.Checked += (s, e) => { Answers[id] = "allow"; warn.Visibility = Visibility.Collapsed; UpdateContinueButton(); };
@@ -858,7 +858,7 @@ namespace DeepslateWorks
                 sp.Children.Add(row);
                 XStatus[x.Id] = new StatusRow { Badge = sb, Restart = rb, Details = dl };
                 g.Children.Add(sp);
-                var cb = new CheckBox { Content = "On", VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12, 2, 0, 0), IsChecked = chosen != null && chosen.On(x.Id) };
+                var cb = new CheckBox { Content = "On", Style = (Style)Window.FindResource("Switch"), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12, 2, 0, 0), IsChecked = chosen != null && chosen.On(x.Id) };
                 Grid.SetColumn(cb, 2); g.Children.Add(cb);
                 XBoxes[x.Id] = cb;
                 var outer = new StackPanel();
@@ -870,7 +870,7 @@ namespace DeepslateWorks
                     srow.Children.Add(NewText("Shaders:  ", 13, "SemiBold"));
                     foreach (var opt in ExtrasText.ShaderOptions)
                     {
-                        var r = new RadioButton { Content = opt.Value, GroupName = "shaders", Margin = new Thickness(0, 0, 14, 0), IsChecked = string.Equals(chosen?.Shader, opt.Key, StringComparison.OrdinalIgnoreCase) };
+                        var r = new RadioButton { Content = opt.Value, GroupName = "shaders", Style = (Style)Window.FindResource("Choice"), Margin = new Thickness(0, 0, 14, 0), IsChecked = string.Equals(chosen?.Shader, opt.Key, StringComparison.OrdinalIgnoreCase) };
                         var sx = o.Manifest.Extras.FirstOrDefault(e => string.Equals(e.Shader, opt.Key, StringComparison.OrdinalIgnoreCase));
                         if (sx != null && Weak && !string.Equals(sx.Fps, "Low", StringComparison.OrdinalIgnoreCase)) r.ToolTip = ExtrasText.WeakShaderTip;
                         srow.Children.Add(r);

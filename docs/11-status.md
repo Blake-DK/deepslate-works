@@ -91,6 +91,12 @@ Last updated 2026-10-08, latest: the test server silent on Discord (first sectio
   account was reset by hand from the test console (`deepslate.kit` removed; `clear` took 39 items), held with the
   book only, and released at 18:23:36 (book taken, `verified` set). That proves the reset and one release, which the
   old code does as well.
+- **Verified on the new code (2026-10-09, test server, `api-test` `5f48c966`):** the test account reset to a new player
+  (unlinked in `deepslate_test`; `verified`, `deepslate.kit`, `deepslate.released` removed; inventory cleared).
+  07:06:36 join: put in the room, the sign-in book in hand and nothing else. 07:08:00 sign-in: the book taken (1
+  item), `verified` set, at spawn. Read back from the server: tags `deepslate.kit` and `deepslate.released`; the
+  inventory is exactly the kit once (stone sword, pickaxe, axe, shovel, 16 bread, 16 torches, a white bed, a
+  backpack). Relog, restart, and revoke and rejoin: Alex reports them fine; not yet in the server log at 07:08 UTC.
 - **Verify steps, not yet run on the new code:** fresh join book only (the hold's clear), sign in (book gone, kit, at
   spawn), relog and restart (no second kit), revoke and rejoin (inventory kept plus the book, release returns it
   unchanged). To run after `test-up.sh` and a restart of the test server, before the `dev` → `main` PR is merged.

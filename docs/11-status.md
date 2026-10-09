@@ -49,13 +49,15 @@ Last updated 2026-10-09, latest: the launcher's Test section (docs/45) deployed 
     left (items 5 and 6, and the harness could not read the Start question); 2 unit tests broken by the change (fixed).
   - run 37953724562 on `6697b555` (items 4 to 9): **all 47 window checks and 293 unit tests pass.**
   - run 37956740006 on `211477bb`: all 49 window checks and 293 unit tests pass (superseded below).
-  - **the 3.6.1 build Alex tries:** run 37966023431 on `21f5f7e9`, artifact `deepslate-works-3.6.1`, **all 49 window
-    checks and 295 unit tests pass** (item 4 on Alex's real game log, fixture
-    `neoforge-21.1.253-client-latest.txt`); `DeepslateWorks.exe` 3.6.1, 837,120 bytes, sha256
-    `ebd3a77f7c8f02f9ac3e8866f4936501e88e9f9190a68264248eecce5f5af0dd`. For Alex only, from that run's page.
-  - the same run's `update` job: the real app 3.5.5 (built from `04c0e59f`) updated itself to this build against a
-    stand-in site, removed the jar the mod list no longer has, kept the one it has, played and reported as 3.6.1 with
-    `updatedFrom 3.5.5`; all 13 checks pass (artifact `update-from-3.5.5`).
+  - run 37966023431 on `21f5f7e9` (sha256 `ebd3a77f…`): superseded by the next line.
+  - **the 3.6.1 build Alex tries:** run 37968006515 on `76f580f8`, artifact `deepslate-works-3.6.1`, **all 49 window
+    checks and 296 unit tests pass** (item 4 on Alex's real game log, fixture `neoforge-21.1.253-client-latest.txt`;
+    a mod's own locator counts only for a pack file whose whole name it reports); `DeepslateWorks.exe` 3.6.1,
+    837,120 bytes, sha256 `b37bc4891cd29c68ffe51e2e39afb9e45d677562e9b687aa2ed1808d94be46f2`. For Alex only.
+  - the same run's `update` job: **the exact 3.5.5 exe the site hands out** (image `deepslate-installer:3.5.5`,
+    sha256 `626bdb2a…04fc`, the live `dist/DeepslateWorks.exe`), run with `-Root` and the stand-in address, updated
+    itself to this build, removed the jar the mod list no longer has, kept the one it has, played and reported as 3.6.1
+    with `updatedFrom 3.5.5`; all 13 checks pass (artifact `update-from-3.5.5`).
 - **Item 4 on the real log:** Alex's test game's `latest.log` (NeoForge 21.1.253 client) starts "[20:26:09] [main/INFO]"
   (no date); Custom Window Title is a "Found gamelibrary file", KotlinLangForge and Scalable Cats Force "Found library
   file"; Sodium's own locator reports `net.caffeinemc.sodium-neoforge-0.8.13+mc1.21.1-mod.jar` and the pack's name is

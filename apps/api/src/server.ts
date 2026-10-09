@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import { CHANGES } from "./changelog.js";
+import { CHANGES, liveChanges } from "./changelog.js";
 import { AmpClient, MockAmp, type Amp } from "./amp/client.js";
 import { HttpRouterDash, MockRouterDash, type RouterDash } from "./router/client.js";
 import { protectedHost, routerRoutes } from "./routes/router.js";
@@ -149,7 +149,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const feed = new Announcer({
     store: prismaFeedStore(portal, env.REPO_DIR), feed: hook(outlets.feed), admin: hook(outlets.admin), updates: hook(outlets.updates),
     // docs/42 §3: the test server posts no change log
-    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: testMode ? [] : CHANGES, portal, log: (o, m) => app.log.info(o, m),
+    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: testMode ? [] : liveChanges(CHANGES), portal, log: (o, m) => app.log.info(o, m),
   });
   discordRoutes(app, feed, bot, env);
   installRoutes(app);

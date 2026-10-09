@@ -175,3 +175,18 @@ describe("the entries in the repo", () => {
     }
   });
 });
+
+describe("an entry posts only once it is live (planner, 2026-10-09)", () => {
+  it("passes on entries marked live and nothing else", async () => {
+    const { liveChanges } = await import("../src/changelog.js");
+    const list: Change[] = [
+      { id: "a", date: "2026-10-09", lines: ["merged, deployed, not checked yet"] },
+      { id: "b", date: "2026-10-09", lines: ["checked live"], live: true },
+    ];
+    expect(liveChanges(list).map((c) => c.id)).toEqual(["b"]);
+    expect(liveChanges([])).toEqual([]);
+  });
+  it("keeps the entry posted on 2026-10-09 marked live", () => {
+    expect(CHANGES.find((c) => c.id === "2026-10-08-entrance-room")?.live).toBe(true);
+  });
+});

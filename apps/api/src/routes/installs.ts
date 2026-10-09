@@ -30,7 +30,7 @@ export function installRoutes(app: FastifyInstance) {
       where: {
         ...(since || until ? { at: { ...(since ? { gte: new Date(since) } : {}), ...(until ? { lte: new Date(until) } : {}) } } : {}),
         ...(outcome ? { outcome } : {}),
-        ...(mode ? { mode } : {}),
+        ...(mode ? { mode } : { mode: { not: "test_play" } }), // docs/45: test Plays only when asked for by mode
         ...(user ? { user: { OR: [{ displayName: { contains: user, mode: "insensitive" } }, { mcUsername: { equals: user, mode: "insensitive" } }] } } : {}),
       },
       orderBy: { at: "desc" },

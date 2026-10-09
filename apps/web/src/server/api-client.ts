@@ -83,3 +83,19 @@ export async function testServerSummary<T>(timeoutMs = 4000): Promise<T | null> 
   if (!res.ok) return fail("/test/summary", res);
   return (await res.json()) as T;
 }
+
+/**
+ * docs/45, the live site only: the launcher's Test section, asked of the test server's api on behalf of an admin's app.
+ * Its own token (TEST_APP_TOKEN), which api-test takes for /test/app/* and nothing else. The answer is passed back as it
+ * is (a stream for config.zip). Null while the test server is off or the token is not set; never on the test site.
+ */
+export async function testAppCall(pathname: "/test/app/pack" | "/test/app/config.zip" | "/test/app/state" | "/test/app/wake", init: { method?: "GET" | "POST"; body?: unknown; timeoutMs?: number } = {}): Promise<Response | null> {
+  if (env.TEST_MODE || !env.TEST_STACK || !env.TEST_APP_TOKEN || env.TEST_APP_TOKEN.length < 32) return null;
+  return fetch(`${env.TEST_API_URL}${pathname}`, {
+    method: init.method ?? "GET",
+    headers: { authorization: `Bearer ${env.TEST_APP_TOKEN}`, accept: "application/json", ...(init.body === undefined ? {} : { "content-type": "application/json" }) },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    signal: AbortSignal.timeout(init.timeoutMs ?? 15_000),
+    cache: "no-store",
+  }).catch(() => null);
+}

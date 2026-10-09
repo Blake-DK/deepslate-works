@@ -240,6 +240,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "download.modlist.key": (p) => modlist(p, true),
   "retention.prune": (p) => `old entries cleared: ${s(p.events, "0")} events, ${s(p.ips, "0")} addresses${p.installs ? `, ${s(p.installs)} install reports` : ""}`,
   "discord.test": (p) => `sent a test message to the Discord ${p.channel === "admin" ? "admin channel" : "feed"}${p.ok === false ? ` (${s(p.error, "it was not taken")})` : ""}`,
+  "test.app.manifest": (p) => `fetched the test pack ${s(p.version)} in the app's Test section`,
+  "test.app.wake": (p) => `woke the test server from the app's Test section${p.result ? ` (${s(p.result)})` : ""}`,
   "discord.roleAdd": (p) => `gave ${s(p.name)} the Minecraft role in Discord`,
   "discord.roleRemove": (p) => `took the Minecraft role in Discord from ${s(p.name)}`,
   "discord.settings": (p) => (p.paused === true ? "paused the Discord feed" : p.paused === false && p.wasPaused ? "switched the Discord feed back on" : "changed what the Discord feed posts"),

@@ -50,7 +50,7 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
     getLock(),
     getInstaller(),
     canDownload(user),
-    db.installReport.findFirst({ where: { userId: user.id, outcome: "ok", mode: { not: "uninstall" } }, orderBy: { at: "desc" }, select: { packVersion: true, at: true } }),
+    db.installReport.findFirst({ where: { userId: user.id, outcome: "ok", mode: { notIn: ["uninstall", "test_play"] } }, orderBy: { at: "desc" }, select: { packVersion: true, at: true } }),
     getSection("joining"),
     db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { packVersion: true, at: true, installerVersion: true } }),
     serverPack(),
@@ -72,7 +72,7 @@ export async function getPlayInfo(user: NonNullable<GateUser> & { id: string; ro
  */
 export async function modsMissingFor(userId: string, run: { at: Date; packVersion: string } | null): Promise<boolean> {
   const [mods, refused] = await Promise.all([
-    db.installReport.findFirst({ where: { userId, mods: { not: Prisma.DbNull } }, orderBy: { at: "desc" }, select: { at: true, mods: true } }),
+    db.installReport.findFirst({ where: { userId, mods: { not: Prisma.DbNull }, mode: { not: "test_play" } }, orderBy: { at: "desc" }, select: { at: true, mods: true } }),
     db.event.findFirst({ where: { kind: "JOIN_BLOCKED", actor: userId, meta: { path: ["params", "reason"], equals: "missing mods" } }, orderBy: { at: "desc" }, select: { at: true } }),
   ]);
   const ok = (mods?.mods as { ok?: unknown } | null)?.ok;

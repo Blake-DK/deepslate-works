@@ -16,7 +16,9 @@ export type Outcome = (typeof OUTCOMES)[number];
 // its guided setup. Not a Play: it does not count for Play first (join-gate PLAY_MODES).
 // 3.3.0: update_only = the app's Update button: everything Play runs before the launch, no game. It counts for Play
 // first like an install (it proves the right pack is on the PC). "update" stays a Play that brought a new pack.
-export const MODES = ["install", "play", "first_install", "update", "already_running", "uninstall", "game_check", "handover", "update_only", "log_sent", "unfinished"] as const;
+// "test_play" (docs/45): a Play of the launcher's Test section, on the test server; not in PLAY_MODES, so the door and
+// the live figures never count it
+export const MODES = ["test_play", "install", "play", "first_install", "update", "already_running", "uninstall", "game_check", "handover", "update_only", "log_sent", "unfinished"] as const;
 /** What a run of each kind is called on the admin pages. */
 export const MODE_LABEL: Record<string, string> = { install: "Setup.bat", play: "Play", first_install: "First install", update: "Play (new pack)", already_running: "Already running", uninstall: "Uninstall", game_check: "Game check", handover: "Hand-over", update_only: "Update", log_sent: "Log sent", unfinished: "Unfinished run" };
 export type Mode = (typeof MODES)[number];

@@ -26,6 +26,9 @@ test_env_check() {
   token=$(envval TEST_API_SERVICE_TOKEN); summary=$(envval TEST_SUMMARY_TOKEN); live_token=$(envval API_SERVICE_TOKEN)
   [ "${#token}" -ge 32 ] || say "TEST_API_SERVICE_TOKEN: at least 32 characters (openssl rand -hex 32)"
   [ "${#summary}" -ge 32 ] || say "TEST_SUMMARY_TOKEN: at least 32 characters (openssl rand -hex 32)"
+  # docs/45: optional; when set, a token of its own
+  local apptok; apptok=$(envval TEST_APP_TOKEN)
+  if [ -n "$apptok" ]; then [ "${#apptok}" -ge 32 ] || say "TEST_APP_TOKEN: at least 32 characters (openssl rand -hex 32)"; { [ "$apptok" != "$live_token" ] && [ "$apptok" != "$token" ] && [ "$apptok" != "$summary" ]; } || say "TEST_APP_TOKEN must be a token of its own"; fi
   { [ "$token" != "$live_token" ] && [ "$summary" != "$live_token" ] && [ "$summary" != "$token" ]; } || say "TEST_API_SERVICE_TOKEN, TEST_SUMMARY_TOKEN and API_SERVICE_TOKEN must be three different tokens"
   [ -n "$(envval TEST_SERVER_ADDRESS)" ] || say "TEST_SERVER_ADDRESS: the test server's game address on mc-router"
   # docs/42a (2026-10-08): the test server never posts to the players' channels. On 2026-10-08 the live webhooks were

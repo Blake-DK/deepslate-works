@@ -100,7 +100,7 @@ export function makeBot(w: BotWiring): Bot | null {
       const sessions = u?.mcUuid ? await db.session.findMany({ where: { mcUuid: u.mcUuid, OR: [{ leftAt: null }, { leftAt: { gte: monthStart } }] }, select: { joinedAt: true, leftAt: true } }) : [];
       const last = u?.mcUuid ? await db.session.findFirst({ where: { mcUuid: u.mcUuid }, orderBy: { joinedAt: "desc" }, select: { joinedAt: true, leftAt: true } }) : null;
       const ms = sessions.reduce((t, s) => t + Math.max(0, (s.leftAt ?? new Date()).getTime() - Math.max(s.joinedAt.getTime(), monthStart.getTime())), 0);
-      const report = await db.installReport.findFirst({ where: { userId, outcome: "ok" }, orderBy: { at: "desc" }, select: { installerVersion: true, packVersion: true } });
+      const report = await db.installReport.findFirst({ where: { userId, outcome: "ok", mode: { not: "test_play" } }, orderBy: { at: "desc" }, select: { installerVersion: true, packVersion: true } });
       return {
         mcName: u?.mcUsername ?? null,
         lastPlayed: last ? (last.leftAt ?? last.joinedAt) : null,

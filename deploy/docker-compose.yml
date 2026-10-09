@@ -89,6 +89,7 @@ services:
       TEST_SITE_URL: ${TEST_AUTH_URL:-}
       TEST_API_URL: http://deepslate-wg:4001
       TEST_SUMMARY_TOKEN: ${TEST_SUMMARY_TOKEN:-}
+      TEST_APP_TOKEN: ${TEST_APP_TOKEN:-}   # docs/45: the launcher's Test section (live web and api-test only)
     volumes:
       # The manifest is edited by "apply results" and committed, so the live repo's modpack/ and .git are mounted.
       # Nothing else from the repo (no .env, no keys) is visible to the internet-facing container.
@@ -364,6 +365,7 @@ services:
       GEOIP_DB: ${GEOIP_DB:-}
       TEST_MODE: "1"
       TEST_SUMMARY_TOKEN: ${TEST_SUMMARY_TOKEN:-}
+      TEST_APP_TOKEN: ${TEST_APP_TOKEN:-}   # docs/45: the launcher's Test section (live web and api-test only)
       SEASONS_SHIP: ${TEST_SEASONS_SHIP:-}
     volumes:
       - ${DEEPSLATE_DIR:-..}/deploy/keys-test:/run/keys:ro

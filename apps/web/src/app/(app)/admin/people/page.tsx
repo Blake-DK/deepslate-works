@@ -15,7 +15,7 @@ export default async function PeopleAdminPage({ searchParams }: { searchParams: 
   const [members, invites, installs] = await Promise.all([
     db.user.count(),
     db.invite.count({ where: { usedBy: null, expiresAt: { gt: new Date() } } }),
-    db.installReport.count(),
+    db.installReport.count({ where: { mode: { not: "test_play" } } }),
   ]);
   const tabs = [{ key: "members", label: "Members", count: members }, { key: "invites", label: "Invites", count: invites || null }, { key: "installs", label: "Installs", count: installs || null }] as const;
   const q = await searchParams;

@@ -30,6 +30,8 @@ export const env = {
   TEST_SITE_URL: str("TEST_SITE_URL").replace(/\/+$/, ""),
   TEST_API_URL: str("TEST_API_URL", "http://deepslate-wg:4001"),
   TEST_SUMMARY_TOKEN: str("TEST_SUMMARY_TOKEN"),
+  // docs/45: the launcher's Test section; the live web's own token for the test api's /test/app/*, never sent to the app
+  TEST_APP_TOKEN: str("TEST_APP_TOKEN"),
   isProd: process.env.NODE_ENV === "production",
   get discordEnabled() {
     return Boolean(this.DISCORD_CLIENT_ID && this.DISCORD_CLIENT_SECRET);

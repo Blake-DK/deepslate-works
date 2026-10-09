@@ -52,9 +52,9 @@
   everything kept; a restart, no second kit; the six structure sites are normal ground; spawn and his base untouched.
   A start logs new errors only from the six removed mods. The trim also dropped 25 overworld poi files (a file goes
   with its last chunk); they come back as the regions refill.
-- **The refill** was not rehearsed (Alex). On live, after reopening, through the site's pre-generation: overworld
-  centre 0 0 radius 10176, Nether centre 80 576 radius 432 (10200 would also generate past the world's edge; the
-  rounding of 10176 is checked after the live refill). Removed-mod structures inside the kept 512-block square stay as
+- **The refill** was not rehearsed (Alex). On live, after reopening, through the site's pre-generation: the centres
+  and radii of the overworld and the Nether are figures to follow from the AMP host, after its trim. The overworld's
+  edge is checked after the live refill. Removed-mod structures inside the kept 512-block square stay as
   ruins, their mod blocks air. *Superseded late evening: the square is no longer kept; see "The trim, as approved".*
 - **Alex's decisions, 2026-10-09 evening:**
   - Play first goes back on at the live restart, after Alex's own join has worked.

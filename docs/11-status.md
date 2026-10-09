@@ -49,6 +49,10 @@ Last updated 2026-10-08, latest: the test server silent on Discord (first sectio
     no bot, so nothing can reach the test server that way.
   - Still to do with the gate running: the same on test (`test-up.sh` first), and on live after the deploy that carries
     `DISCORD_TALKS=1` (PR #19).
+  - 2026-10-08 19:43 UTC: the test pair runs `5f48c966` (images pulled by hand, then `test-up.sh`), and api-test logs
+    at start that it does not talk to the players' Discord. As of 2026-10-09 06:27 UTC the test server has not run
+    since it went to sleep at 19:42 (no join, chat, death or start in its log or in `deepslate_test`), so the Discord
+    checks and the kit checks of docs/25 §8 have **not yet been run on the new code**.
   - **Found on the way: `test-up.sh` never refreshed the test images.** It pulled with `docker compose pull`, and the
     test services have `pull_policy: missing`, which compose honours on a pull too: "Image is already present
     locally", skipped. So both runs of test-images today (`985d151f`, `5f48c966`) never reached the test pair, which
@@ -120,9 +124,11 @@ Last updated 2026-10-08, latest: the test server silent on Discord (first sectio
 - **Test server:** stopped through AMP as the test `webapp` user (17:55 UTC, Alex on it in the room, told in chat),
   the one line changed in `config/`, read back identical, started; OPAC loaded it without correcting it (the file is
   byte for byte what was written after the start).
-- **Live server:** affected (same file, same server claim over the room). Applied by a watcher on the VPS only once
-  live is asleep (AMP state 30, the server process stopped) with nobody on for a minute, and only if the file is still
-  the one compared above; then read back. Live is never restarted for it; the next wake reads the file.
+- **Live server:** affected (same file, same server claim over the room). **Applied 2026-10-09 06:29 UTC** while live
+  was asleep with nobody on (asleep since 04:05, "Server asleep (nobody on)"), after checking the file was still the
+  one compared above; written and read back identical. Not restarted; the next wake reads it. The first try, a
+  watcher waiting for AMP state 30, never fired: this AMP reports a sleeping instance as **state 50**, so it missed
+  the sleeps of 23:09 to 02:37 and from 04:05; stopped and done by hand instead.
 - **Step 4 (Alex, test server, an account that is not OP and not linked):** pending: the book opens in the room, its
   sign-in link is clickable, and a bucket or flint and steel is still refused in the claim.
 

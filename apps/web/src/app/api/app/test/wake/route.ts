@@ -19,3 +19,14 @@ export async function POST(req: Request) {
   await audit({ userId: admin.id, action: "test.app.wake", params: { status, result: (body as { result?: string }).result ?? null }, result: res && res.ok ? "OK" : "FAILED" });
   return Response.json(body, { status });
 }
+
+// 3.6.1 (item 7): how the wake is going, which the app asks every 5 s after a wake until the test server is up. The app
+// has always asked here with GET; until 3.6.1 there was no GET, so it never saw the test server come up.
+export async function GET(req: Request) {
+  const user = await userFromLauncherToken(bearer(req));
+  if (!user || user.role !== "ADMIN") return asMissing(req);
+  if (!testAppConfigured()) return Response.json({ error: { code: "test_off", message: "The test server is switched off." } }, { status: 503 });
+  const res = await testAppCall("/test/app/wake");
+  if (!res) return Response.json({ error: { code: "test_unreachable", message: "The site can't reach the test server right now." } }, { status: 503 });
+  return Response.json(await res.json().catch(() => ({})), { status: res.status, headers: { "cache-control": "no-store" } });
+}

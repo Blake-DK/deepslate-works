@@ -15,6 +15,7 @@ import type { Wake } from "../status/wake.js";
 //   GET  /test/app/config.zip  the test Build's settings bundle (dist/config.zip of the test checkout)
 //   GET  /test/app/state       the test server's state, players, game address and pack
 //   POST /test/app/wake        start the test server when it is asleep; who asked is said in the body
+//   GET  /test/app/wake        how that wake is going (3.6.1: the app watches it)
 
 export const TEST_APP_PATHS = ["/test/app/pack", "/test/app/config.zip", "/test/app/state", "/test/app/wake"] as const;
 
@@ -24,6 +25,8 @@ export type TestAppDeps = {
   address: string | null;
   pack: () => Promise<{ site: string | null; server: string | null }>;
   wake: Pick<Wake, "start" | "view">;
+  /** Ask AMP once now (the status poller's poll); the wake does before it answers "unreachable" (3.6.1). */
+  refresh?: () => Promise<void>;
   /** The test site's own member for a live admin, by Discord id, for the event log; null when there is none. */
   memberByDiscord: (discordId: string) => Promise<{ id: string; displayName: string } | null>;
 };
@@ -55,10 +58,19 @@ export function testAppRoutes(app: FastifyInstance, d: TestAppDeps) {
     return { state: s.state, players: s.players, address: d.address, pack: await d.pack(), wake: d.wake.view() };
   });
 
+  // 3.6.1 (item 7): what the app watches after a wake, every 5 s until the server is up (its "wake.phase")
+  app.get("/test/app/wake", async () => ({ server: d.server().state, wake: d.wake.view() }));
+
   app.post("/test/app/wake", async (req, reply) => {
     const body = wakeBody.safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "name required" } });
-    const state = d.server().state;
+    let state = d.server().state;
+    // 3.6.1 (item 7): no fresh word from AMP is not an answer yet. The poller may only be between two reads (its
+    // session was being replaced, or the server is coming back): AMP is asked once more before "unreachable" is said
+    if (state === "unreachable" && d.refresh) {
+      await d.refresh().catch(() => undefined);
+      state = d.server().state;
+    }
     // an admin asks: the door's "open for them" is always true; asleep is the only state a wake starts from
     const decision = wakeDecision({ member: true, openFor: true, state });
     if (decision === "start") {

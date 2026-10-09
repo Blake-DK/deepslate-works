@@ -15,8 +15,9 @@ const LOCK = { generatedAt: "2026-10-09T08:00:00Z", minecraft: "1.21.1", neoforg
   files: [{ slug: "create", name: "Create", filename: "create.jar", url: "https://cdn.modrinth.com/create.jar", sha512: "1".repeat(128), size: 10, side: "both" }, { slug: "worldedit", name: "WorldEdit", filename: "we.jar", url: "https://cdn.modrinth.com/we.jar", sha512: "2".repeat(128), size: 10, side: "server" }] };
 const MODS = JSON.parse(readFileSync(new URL("../../../modpack/mods.json", import.meta.url), "utf8")) as { name: string; version: string; profile: { dir: string } };
 vi.mock("@/server/api-client", () => ({
-  testAppCall: async (p: string) => {
+  testAppCall: async (p: string, init?: { method?: string }) => {
     calls.list.push(p);
+    if (p === "/test/app/wake" && (init?.method ?? "GET") === "GET") return new Response(JSON.stringify({ server: "waking", wake: { phase: "waking" } }), { status: 200 });
     if (p === "/test/app/pack") return new Response(JSON.stringify({ mods: MODS, lock: LOCK }), { status: 200 });
     if (p === "/test/app/state") return new Response(JSON.stringify({ state: "asleep", players: [], address: "lab.dsw.test", pack: { site: "0.1.0+d44eb2ba", server: "0.1.0+d44eb2ba" } }), { status: 200 });
     if (p === "/test/app/wake") return new Response(JSON.stringify({ result: "started" }), { status: 202 });
@@ -30,6 +31,7 @@ const routes = async () => ({
   manifest: (await import("@/app/api/app/test/manifest/route")).GET,
   config: (await import("@/app/api/app/test/config.zip/route")).GET,
   wake: (await import("@/app/api/app/test/wake/route")).POST,
+  watch: (await import("@/app/api/app/test/wake/route")).GET,
 });
 
 beforeEach(() => { calls.list = []; });
@@ -39,7 +41,7 @@ describe("a member who is not an admin, or nobody (answered as a path that does 
     it(`${user ? "a player's app" : "an app with no valid token"}: every route gives the middleware's 401 for an unknown path, and the test stack is never asked`, async () => {
       who.user = user;
       const r = await routes();
-      for (const res of [await r.section(req("/api/app/test")), await r.manifest(req("/api/app/test/manifest")), await r.config(req("/api/app/test/config.zip")), await r.wake(req("/api/app/test/wake", "POST"))]) {
+      for (const res of [await r.section(req("/api/app/test")), await r.manifest(req("/api/app/test/manifest")), await r.config(req("/api/app/test/config.zip")), await r.wake(req("/api/app/test/wake", "POST")), await r.watch(req("/api/app/test/wake"))]) {
         expect(res.status).toBe(401);
         expect(await res.json()).toEqual({ error: { code: "unauthorized", message: "Sign in first" } });
       }
@@ -51,6 +53,15 @@ describe("a member who is not an admin, or nobody (answered as a path that does 
     const r = await routes();
     const withCookie = new Request("https://deepslate.dsw.test/api/app/test", { headers: { cookie: "__Secure-authjs.session-token=abc" } });
     await expect(r.section(withCookie)).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+});
+
+describe("the test server in the site's words (3.6.1)", () => {
+  it("a known state reads as the home's card does; one the site does not know yet goes as it came", async () => {
+    const { testServerText } = await import("@/lib/server-status");
+    expect(testServerText("online", 2)).toMatchObject({ state: "online", line: "Online, 2 playing", label: "Online", canStart: false });
+    expect(testServerText("off", 0)).toMatchObject({ line: "Switched off", hint: "The server is switched off, so joining won't wake it. Start it here.", canStart: false });
+    expect(testServerText("maintenance", 0)).toEqual({ state: "maintenance", line: "maintenance", label: "maintenance", tone: "neutral", hint: "", wake: { phase: "idle", leftS: null, line: null }, canStart: false });
   });
 });
 
@@ -71,7 +82,16 @@ describe("an admin", () => {
   beforeEach(() => { who.user = { id: "a1", role: "ADMIN", displayName: "Alex", discordId: "123456789012345678", pcTier: "mid" }; });
   it("sees the section with the test server's state and pack", async () => {
     const res = await (await routes()).section(req("/api/app/test"));
-    expect(await res.json()).toEqual({ available: true, state: "asleep", players: 0, address: "lab.dsw.test", pack: "0.1.0+d44eb2ba", serverPack: "0.1.0+d44eb2ba" });
+    const body = await res.json();
+    expect(body).toMatchObject({ available: true, state: "asleep", players: 0, address: "lab.dsw.test", pack: "0.1.0+d44eb2ba", serverPack: "0.1.0+d44eb2ba" }); // what 3.6.0 reads
+    // 3.6.1: the card's words, the home's shape: the app says what the site says
+    expect(body.server).toMatchObject({ state: "asleep", line: "Asleep, join to wake it", label: "Asleep", canStart: false, wake: { phase: "idle" } });
+  });
+  it("can watch its wake (3.6.1, item 7): the app has always asked with GET", async () => {
+    const res = await (await routes()).watch(req("/api/app/test/wake"));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ server: "waking", wake: { phase: "waking" } });
+    expect(calls.list).toEqual(["/test/app/wake"]);
   });
   it("gets the test pack in the live manifest's shape: its own folder and profile, the test address, the live app channel", async () => {
     const m = (await (await (await routes()).manifest(req("/api/app/test/manifest"))).json()) as Record<string, unknown>;

@@ -266,6 +266,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
       address: env.SERVER_ADDRESS ?? null,
       pack: async () => ({ site: await sitePack(env.REPO_DIR), server: await serverPack() }),
       wake,
+      refresh: () => poller.poll(),
       memberByDiscord: (discordId) => db.user.findUnique({ where: { discordId }, select: { id: true, displayName: true } }),
     });
   }

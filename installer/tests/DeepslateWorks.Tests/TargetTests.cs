@@ -224,7 +224,7 @@ namespace DeepslateWorks.Tests
 
         // ---- item 4 on a real game log: Alex's test game, NeoForge 21.1.253 client, 2026-10-09 (fixtures/, chosen lines,
         // personal values replaced) ------------------------------------------------------------------------------------
-        static string RealLog([System.Runtime.CompilerServices.CallerFilePath] string me = "") => Path.Combine(Path.GetDirectoryName(me), "fixtures", "neoforge-21.1.253-client-latest.log");
+        static string RealLog([System.Runtime.CompilerServices.CallerFilePath] string me = "") => Path.Combine(Path.GetDirectoryName(me), "fixtures", "neoforge-21.1.253-client-latest.txt");
         static object PackFile(string filename) => Json.Parse("{\"slug\":\"x\",\"name\":\"x\",\"filename\":\"" + filename + "\",\"side\":\"client\"}");
 
         [WindowsFact] public void On_a_real_game_log_the_four_mods_3_6_0_called_missing_are_loaded_and_the_game_is_found()

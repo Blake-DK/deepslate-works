@@ -138,6 +138,12 @@ export const CHANGES: Change[] = [
       "On the app's Extras tab, the \"On\" beside each extra and the shader choices (None, Light, Full) were black on the dark card and hard to read. They are light now, with the app's own boxes instead of white ones. The Allow / Not now choices on permission questions got the same fix.",
     ],
   },
+  {
+    // planner 2026-10-09: no mod and no season named. Set `live: true` only after the live check (see the rule above).
+    id: "2026-10-09-pack-tidy",
+    date: "2026-10-09",
+    lines: ["A small pack update and a tidy-up of the world. Press Play as usual: the app brings your game up to date by itself."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

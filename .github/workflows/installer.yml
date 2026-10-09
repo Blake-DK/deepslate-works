@@ -114,6 +114,34 @@ jobs:
             shots
           if-no-files-found: ignore
 
+  # 3.6.1, the reopening day: the real app 3.5.5 (built from 04c0e59f, whose app code is the 3.5.5 players have)
+  # updates itself to this build against a stand-in site, then plays. Both exes carry the stand-in's address
+  # (http://127.0.0.1:47555): an app that updates itself restarts without -Root. Run by hand only.
+  update:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: This app and 3.5.5, both pointed at the stand-in site
+        shell: pwsh
+        run: |
+          dotnet build installer/app/DeepslateWorks.csproj -c Release -o new "-p:PortalUrl=http://127.0.0.1:47555"
+          git -c advice.detachedHead=false worktree add old355 04c0e59f
+          dotnet build old355/installer/app/DeepslateWorks.csproj -c Release -o old "-p:PortalUrl=http://127.0.0.1:47555"
+      - name: 3.5.5 updates itself and plays, in its own window
+        timeout-minutes: 15
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-update.ps1 -Old old/DeepslateWorks.exe -New new/DeepslateWorks.exe -Out shots
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: update-from-3.5.5
+          path: shots
+          if-no-files-found: ignore
+
   # main only: the exe as a tiny image (FROM scratch: the exe, its .sha256, VERSION) that deploy/deploy.sh copies into
   # dist/ci; Admin -> Build (installer) then hands it out. Tagged with the version, the commit and latest.
   publish:

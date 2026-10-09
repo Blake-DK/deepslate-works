@@ -17,12 +17,12 @@
   datapack folders.
 - **The trim, as approved (Alex, 2026-10-09 late evening; overrides "visited sites stay as ruins" below and in docs/46):**
   every boss-mod structure chunk is cleared on live whatever its player time, the 29 visited sites, the desert cluster
-  and those inside the square around spawn included. Spared: the two chunks holding Alex's own base storage beside the
-  chamber near spawn, and the chunks that hold players' property (graves, crates, chests players have used), about 27
-  chunks in all; the rest of each site is cleared. The approved set is about 22,000 overworld chunks and 48 in the
-  Nether; the AMP host holds the exact counts and checksums and records the approval. The live scripts were rewritten
-  after a read of their code and are dress-rehearsed on the test instance from the untrimmed test world before live,
-  the way back included.
+  and those inside the square around spawn included. Spared: 28 chunks, two for Alex's own base storage beside the
+  chamber near spawn and the rest holding players' property (graves, crates, chests players have used); the rest of
+  each site is cleared. **The approved set: 22,005 overworld chunks and 48 in the Nether.** The AMP host holds the
+  checksums and records the approval. The live scripts were rewritten after a read of their code and **dress-rehearsed
+  end to end on the test instance on 2026-10-09 from 19:00 UTC, the way back included for real: all passed.**
+  WorldEdit's `//regen` works on the server, so the spared fragments can be finished by hand later.
 - **Alex's answers:** "Alex_1" (a test) is made up and joins the placeholder list. The server fixes go on the test stack
   now. The wake watch in the app's log and a test game-check report are checked by Alex at the live step, before any
   player is let in. The pre-push hook (the name check) waits until after live is back, then comes as one numbered root

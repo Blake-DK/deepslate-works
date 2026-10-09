@@ -3868,7 +3868,7 @@ if ($SelfTest) {
   $s = Select-Java (Join-Path $dir "no-launcher-java.exe") "" $noJre
   Check "no Java anywhere: Java 21 is downloaded" (($s.path -eq $null) -and ($s.passedOver -eq $null))
   Write-Host "Self test: a user folder PowerShell would read as a pattern (1.4.2)" -ForegroundColor White
-  $odd = Join-Path $dir "Pab [x] PABULU~1"
+  $odd = Join-Path $dir "Bra [x] BRAMBL~1"
   [void][IO.Directory]::CreateDirectory($odd)
   $jarOdd = Join-Path $odd "neoforge-21.1.252-installer.jar"
   [IO.File]::WriteAllText($jarOdd, "jar")

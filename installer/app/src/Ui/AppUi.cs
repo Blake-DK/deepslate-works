@@ -224,6 +224,7 @@ namespace DeepslateWorks
                 ShowFront("opened");
                 try { UpEvent = new EventWaitHandle(false, EventResetMode.ManualReset, Env.AppUpEvent); UpEvent.Set(); } catch { }   // Setup's wait may end now
                 StartHome();   // 3.2.0: the server's state, who's online, the news, the votes; every 10 s while open
+                LiveProfileFirst("the app opened");   // 3.6.1 (item 9): a test Play the app was closed after
                 StartUpdateChecks();   // 3.3.0: what an Update would bring; every 10 minutes while open
                 // 3.1.0: moved over from the old launcher: the guided setup, which takes the Play link and the shortcuts
                 // over itself and removes the old launcher only after checking (so no repair here)
@@ -239,6 +240,7 @@ namespace DeepslateWorks
             };
             Window.Closing += (s, e) =>
             {
+                if (liveFirstDue.HasValue && !AnyRunning) LiveProfileFirst("the app closed");   // 3.6.1 (item 9)
                 var waiting = Panes.FirstOrDefault(p => p.Waiting);
                 if (waiting != null)
                 {
@@ -611,7 +613,7 @@ namespace DeepslateWorks
                 case "fail": LastFail = J.Str(o, "text"); break;
                 case "used": var id = J.Str(o, "step"); if (id != null) Used[id] = J.Int(o, "level", 1); break;
                 case "changed": Changed = J.Str(o, "text"); ChangedDetailText = J.Str(o, "detail"); break;
-                case "launched": Launched = DateTime.UtcNow; break;
+                case "launched": Launched = DateTime.UtcNow; if (!P.IsLive) liveFirstDue = DateTime.UtcNow.AddSeconds(30); break;
                 case "ready": if (P.IsLive) RefreshHome(); else RefreshTestSection(); OnReady(); break;   // 3.1.0: the game is ready; the run waits for Go (3.2.0: votes looked at again)
                 // 3.6.1: the pack this pane's run is for, and the one now in its folder: the footer while its tab is shown
                 case "versions": { var a = J.Str(o, "app"); var p = J.Str(o, "pack"); if (!string.IsNullOrEmpty(a)) VerApp = a; if (!string.IsNullOrEmpty(p)) VerCurrent = p; UpdateAppFooter(); break; }
@@ -761,10 +763,30 @@ namespace DeepslateWorks
             Log.Line("game check: " + (c.Ok ? string.Format("the game started with all {0} mods", c.Checked) : string.Format("{0} ({1} not loaded{2})", Engine.MissingText(c), c.Missing.Count, c.Elsewhere ? ", another launcher profile" : "")));
             var pack = J.Str(list, "version") ?? "";
             var off = Consents.Decision(Consent, "reports") == "decline";
-            new Thread(() => Engine.SendGameCheck(c, pack, off)) { IsBackground = true, Name = "game check" }.Start();
+            var test = !P.IsLive;
+            new Thread(() => Engine.SendGameCheck(c, pack, off, test)) { IsBackground = true, Name = "game check" }.Start();
             if (c.Ok) return;
             GameProblem = c;
             if (Mode == "idle") ShowGameProblem();
+        }
+
+        /// <summary>
+        /// 3.6.1 (item 9): a test Play leaves the Minecraft Launcher on the test profile. Once the launcher has closed (the
+        /// test game started from it, or it was closed without), the live profile is selected again and last used, so a
+        /// player who opens the launcher by hand lands on the live game. Tried every 2 s from 30 s after the launch until
+        /// the launcher is closed; also when the window opens and when it closes (the app closed before the launcher:
+        /// the next start puts it right). Never while the launcher is open, which would write the file back over it.
+        /// </summary>
+        DateTime? liveFirstDue;
+        void LiveProfileFirst(string why)
+        {
+            try
+            {
+                if (Engine.FindLauncher(null).Count > 0) return;   // still open: later
+                liveFirstDue = null;
+                if (Engine.PutLiveFirst(Env.Profiles, Env.ProfileId, Env.TestProfileId, false)) Log.Line("window: the Minecraft Launcher opens on the live profile again (" + why + ")");
+            }
+            catch (Exception e) { liveFirstDue = null; Log.Line("window: could not put the live profile first: " + e.Message); }
         }
 
         void ShowGameProblem()
@@ -816,6 +838,7 @@ namespace DeepslateWorks
                 GameRunning = Extras.GameRunning();
                 foreach (var p in Panes.ToList())
                     if (p.WatchSince.HasValue) On(p, () => { try { WatchGame(); } catch (Exception e) { Log.Line("game check failed: " + e.Message); WatchSince = null; } });
+                if (liveFirstDue.HasValue && DateTime.UtcNow >= liveFirstDue.Value && !AnyRunning) LiveProfileFirst("after the test game");
                 var done = Extras.InstallQueuedIfClosed(GameRunning, AnyRunning);
                 if (done != null) AfterInstall(done);
                 else if (Tabs.SelectedItem == ExtrasTab && (was != GameRunning || DateTime.Now.Second % 6 < 2)) ShowExtras(true);

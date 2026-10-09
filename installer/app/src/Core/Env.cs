@@ -66,6 +66,8 @@ namespace DeepslateWorks
         public static string Target { get; set; } = "live";
         public static bool TestTarget => Target == "test";
         public const string TestDirName = ".minecraft-deepslate-works-test";
+        /// <summary>The test pack's launcher profile id (the site's TEST_PROFILE.id).</summary>
+        public const string TestProfileId = "deepslate-works-test";
         public static string ExtrasUrl => PortalUrl + "/api/modpack/extras";
         public static string ReportUrl => PortalUrl + "/api/installer/report";
         public static string ExeDownloadUrl => PortalUrl + "/downloads/" + ExeName;   // never an address from the manifest
@@ -118,6 +120,11 @@ namespace DeepslateWorks
         public static string LogFile => Path.Combine(Temp, "deepslate-works.log");
         public static string ConsentPath => Path.Combine(AppHome, ConsentFileName);
         public static string ExtrasStatePath => Path.Combine(AppHome, ExtrasStateName);
+        /// <summary>3.6.1 (item 5): what is in place in the test game's folders (its applied list). The choices are the
+        /// Extras tab's, in extras.json, shared by both games.</summary>
+        public static string ExtrasTestStatePath => Path.Combine(AppHome, "extras-test.json");
+        /// <summary>The state whose applied list is the run's game folder's.</summary>
+        public static string ExtrasRunStatePath => TestTarget ? ExtrasTestStatePath : ExtrasStatePath;
         public static string ExtrasManifestPath => Path.Combine(AppHome, ExtrasManifestName);
         public static string HomeExe => Path.Combine(AppHome, ExeName);
 

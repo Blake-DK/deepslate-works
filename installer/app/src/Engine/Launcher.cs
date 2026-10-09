@@ -118,6 +118,30 @@ namespace DeepslateWorks
             WriteJson(path, json);
         }
 
+        /// <summary>
+        /// 3.6.1 (item 9): after a test Play the Minecraft Launcher would open on the test profile (selectedProfile, and the
+        /// newest lastUsed with "by last played"). This puts the live profile back: selected, and last used now, so a
+        /// player who opens the launcher by hand lands on the live game. Only when launcher_profiles.json is still on the
+        /// test profile and the live one is there; never while the launcher is open (it writes the file back over it).
+        /// True when the file was written.
+        /// </summary>
+        public static bool PutLiveFirst(string path, string liveId, string testId, bool launcherOpen)
+        {
+            if (launcherOpen || !File.Exists(path)) return false;
+            var json = ReadJson(path) as JObj;
+            if (json == null || !(json["profiles"] is JObj profiles) || !(profiles[liveId] is JObj live)) return false;
+            var test = profiles[testId] as JObj;
+            var selected = J.Str(json, "selectedProfile");
+            var testNewer = test != null && string.CompareOrdinal(J.Str(test, "lastUsed") ?? "", J.Str(live, "lastUsed") ?? "") > 0;
+            if (selected != testId && !testNewer) return false;
+            json["selectedProfile"] = liveId;
+            live["lastUsed"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", System.Globalization.CultureInfo.InvariantCulture);
+            File.Copy(path, path + ".bak", true);
+            WriteJson(path, json);
+            Log.Line("launcher: the live profile is the one the Minecraft Launcher opens on again (it was on the test profile)");
+            return true;
+        }
+
         /// <summary>"" when the profile is there and points at the right version; otherwise what is wrong, in words.</summary>
         public static string TestLauncherProfile(string path, string id, string versionId)
         {

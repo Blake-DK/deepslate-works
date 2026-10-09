@@ -94,6 +94,57 @@ namespace DeepslateWorks
             return string.Format("Your settings from the Settings tab applied ({0})", string.Join(", ", what));
         }
 
+        /// <summary>
+        /// 3.6.1 (item 6): the test game's options at a test Play. A new test folder starts as a copy of the live game's
+        /// options.txt (key binds and all), without resource packs the test folder does not have. Every test Play then
+        /// brings across the keys the Settings tab manages (GameOptions.Known) and the prisoner villagers from the live
+        /// game, with the tab's changes that wait for the live game (pending) on top. Pending stays the live game's: only a
+        /// live Play applies and clears it, so a change reaches whichever game is played next and a test Play never uses it
+        /// up. Anything else changed inside the test game stays. Returns the tick line, or null when nothing changed.
+        /// </summary>
+        public static string CarryToTest(string liveOptions, string testOptions, string testPacks, string settingsPath = null)
+        {
+            var made = false;
+            if (!File.Exists(testOptions) && File.Exists(liveOptions))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(testOptions));
+                var text = WithoutMissingPacks(File.ReadAllText(liveOptions), testPacks);
+                var tmp = testOptions + ".new";
+                File.WriteAllText(tmp, text);
+                if (File.Exists(testOptions)) File.Delete(testOptions);
+                File.Move(tmp, testOptions);
+                Log.Line("settings: the test game's options.txt made from the live game's");
+                made = true;
+            }
+            var want = new Dictionary<string, string>(GameOptions.Read(liveOptions), StringComparer.Ordinal);
+            var p = AppSettings.Pending(settingsPath);
+            foreach (var kv in p.Options) want[kv.Key] = kv.Value;
+            var changed = File.Exists(testOptions) || want.Count > 0 ? GameOptions.Set(testOptions, want) : new List<string>();
+            var villagers = p.Villagers ?? (File.Exists(liveOptions) && VillagersOn(liveOptions));
+            var villagersChanged = false;
+            if (File.Exists(Path.Combine(testPacks, VillagerPack)) && File.Exists(testOptions) && VillagersOn(testOptions) != villagers)
+                villagersChanged = SetVillagers(testOptions, villagers);
+            if (!made && changed.Count == 0 && !villagersChanged) return null;
+            var what = changed.Select(k => GameOptions.Describe(k, want[k])).ToList();
+            if (villagersChanged) what.Add("prisoner villagers " + (villagers ? "on" : "off"));
+            Log.Line("settings: brought across to the test game: " + (what.Count > 0 ? string.Join(", ", what) : "options.txt"));
+            return made ? "Your settings from the live game copied in" : string.Format("Your settings brought across from the live game ({0})", string.Join(", ", what));
+        }
+
+        /// <summary>options.txt's text with resourcePacks and incompatibleResourcePacks keeping only the built-in packs and
+        /// the "file/..." packs that are in packsDir.</summary>
+        public static string WithoutMissingPacks(string text, string packsDir)
+        {
+            return System.Text.RegularExpressions.Regex.Replace(text, @"(?m)^(resourcePacks|incompatibleResourcePacks):(\[.*\])(\r?)$", m =>
+            {
+                List<string> list;
+                try { list = Extras.ParseList(m.Groups[2].Value); }
+                catch { return m.Value; }
+                var keep = list.Where(id => !id.StartsWith("file/", StringComparison.Ordinal) || File.Exists(Path.Combine(packsDir, id.Substring(5)))).ToList();
+                return m.Groups[1].Value + ":" + GameOptions.PackListText(keep) + m.Groups[3].Value;
+            });
+        }
+
         /// <summary>The report's settings block (docs/30 §6): the memory chosen (null: automatic), what the profile got,
         /// the render distance in options.txt now, and whether the prisoner villagers are on.</summary>
         public static JObj ReportBlock(int? ramGb, int xmxGb, string options)

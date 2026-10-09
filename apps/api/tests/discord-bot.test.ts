@@ -64,7 +64,7 @@ describe("chat from Discord into the game (docs/22 §5)", () => {
 
   it("mentions become names, emoji :name:, pictures and files words; bots and webhooks never come back", () => {
     const m = {
-      id: "1", channel_id: "c", content: "hi <@111> and <@!222> in <#333> <:pog:444> <@&555>", author: { id: "9", username: "pab" },
+      id: "1", channel_id: "c", content: "hi <@111> and <@!222> in <#333> <:pog:444> <@&555>", author: { id: "9", username: "kanefinch" },
       mentions: [{ id: "111", username: "rowan", member: { nick: "samoyedx" } }, { id: "222", username: "owly", global_name: "m1owl" }],
       attachments: [{ content_type: "image/png" }, { content_type: "application/zip" }],
     };

@@ -69,7 +69,7 @@ namespace DeepslateWorks.Tests
         {
             using (var s = new Scratch())
             {
-                var odd = s.P("Pab [x] PABULU~1");
+                var odd = s.P("Bra [x] BRAMBL~1");
                 Directory.CreateDirectory(odd);
                 var pf = Path.Combine(odd, "launcher_profiles.json");
                 File.WriteAllText(pf, Defaults, Utf8);
@@ -242,7 +242,7 @@ namespace DeepslateWorks.Tests
         {
             using (var s = new Scratch())
             {
-                var odd = s.P("Pab [x] PABULU~1"); Directory.CreateDirectory(odd);
+                var odd = s.P("Bra [x] BRAMBL~1"); Directory.CreateDirectory(odd);
                 var jar = Path.Combine(odd, "neoforge-21.1.252-installer.jar");
                 File.WriteAllText(jar, "jar");
                 Log.RemoveTemp(jar);

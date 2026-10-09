@@ -5,9 +5,12 @@ change runs through the app, as players use live. Later versions add a tester ti
 
 ## Who sees it
 
-Admins only. The app asks the **live** site `GET /api/app/test` with its launcher token. The live web finds the user
-behind the token, reads the role from the database, and answers anyone who is not an admin exactly as a path that does
-not exist (`notFound()`). The same holds for every route below. A non-admin's app never shows the section.
+Admins only. The app asks the **live** site `GET /api/app/test` with its launcher token. The middleware lets a request
+with a launcher token through to the four routes (`lib/test-app-paths.ts`); the route finds the user behind the token,
+reads the role from the database, and answers anyone who is not an admin exactly as a path that does not exist: the
+middleware's 401 "Sign in first" to an app, Next's 404 to a signed-in browser. A non-admin's app never shows the section.
+(First deploy, 2026-10-09: the middleware's list of app routes did not include these, so even an admin's app got the 401;
+found by a throwaway non-admin probe on the test web before any player app was given 3.6.0.)
 
 ## How an admin's app gets the test pack (no secret in the app, test site unchanged)
 

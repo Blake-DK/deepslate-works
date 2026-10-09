@@ -1,6 +1,5 @@
-import { notFound } from "next/navigation";
 import { testAppCall } from "@/server/api-client";
-import { appAdmin, testAppConfigured } from "@/server/test-app";
+import { appAdmin, asMissing, testAppConfigured } from "@/server/test-app";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +7,7 @@ export const dynamic = "force-dynamic";
 // anyone else gets what a path that does not exist gives. `available: false` with the reason when the test stack is
 // off or cannot be reached; the section then says so and does nothing else.
 export async function GET(req: Request) {
-  if (!(await appAdmin(req))) notFound();
+  if (!(await appAdmin(req))) return asMissing(req);
   if (!testAppConfigured()) return Response.json({ available: false, reason: "The test server is switched off." }, { headers: { "cache-control": "no-store" } });
   const res = await testAppCall("/test/app/state", { timeoutMs: 5000 });
   if (!res || !res.ok) return Response.json({ available: false, reason: "The site can't reach the test server right now." }, { headers: { "cache-control": "no-store" } });

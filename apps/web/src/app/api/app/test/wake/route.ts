@@ -1,8 +1,7 @@
-import { notFound } from "next/navigation";
 import { audit } from "@/server/events";
 import { testAppCall } from "@/server/api-client";
 import { bearer, userFromLauncherToken } from "@/server/launcher";
-import { testAppConfigured } from "@/server/test-app";
+import { asMissing, testAppConfigured } from "@/server/test-app";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +11,7 @@ export async function POST(req: Request) {
   // the app's launcher token only, never a cookie (routes-origin.test.ts): a page elsewhere cannot make a browser wake it
   const user = await userFromLauncherToken(bearer(req));
   const admin = user && user.role === "ADMIN" ? user : null;
-  if (!admin) notFound();
+  if (!admin) return asMissing(req);
   if (!testAppConfigured()) return Response.json({ error: { code: "test_off", message: "The test server is switched off." } }, { status: 503 });
   const res = await testAppCall("/test/app/wake", { method: "POST", body: { discordId: admin.discordId ?? null, name: admin.displayName } });
   const body = res ? await res.json().catch(() => ({})) : { error: { code: "test_unreachable", message: "The site can't reach the test server right now." } };

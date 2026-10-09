@@ -1,4 +1,5 @@
 import "server-only";
+import { notFound } from "next/navigation";
 import type { LockFile, Manifest } from "modpack";
 import { distancesFor, serverViewDistance } from "modpack/schema";
 import { env } from "@/env";
@@ -18,6 +19,18 @@ export const TEST_PROFILE = { id: "deepslate-works-test", name: "Deepslate Works
 export async function appAdmin(req: Request) {
   const user = await userFromLauncherToken(bearer(req));
   return user && user.role === "ADMIN" ? user : null;
+}
+
+/** What the middleware answers an app (no session cookie) on a path that does not exist: the same, word for word. */
+export const MISSING_FOR_APP = { error: { code: "unauthorized", message: "Sign in first" } } as const;
+
+/**
+ * The answer for anyone who is not an admin: exactly what a path that does not exist gives this request. An app (a
+ * launcher token, no session cookie) gets the middleware's 401; a signed-in browser gets Next's 404 (notFound()).
+ */
+export function asMissing(req: Request): Response {
+  if (/(^|;\s*)(__Secure-)?[a-z.]*session-token(\.\d+)?=/.test(req.headers.get("cookie") ?? "")) notFound();
+  return Response.json(MISSING_FOR_APP, { status: 401 });
 }
 
 /** Whether the live site can reach a test server for the app at all (the test stack on, the token set). */

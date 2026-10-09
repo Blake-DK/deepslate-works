@@ -1,5 +1,24 @@
 # 11 · Status and handover
 
+## Where things stand, 2026-10-09 late evening (the planner's answers to the evening report)
+
+- **Still true:** live is stopped on purpose; no start, stop, wake, Build, Sync or Lock of either server; no deploy;
+  no `test-pull.sh`; the test checkout stays held at `86bdcc5c` until Alex moves it. Nothing merges to `dev` or `main`
+  until Alex says go. CI builds only; commits as Alex; public-repo rules.
+- **The one PR to `main`, on Alex's go, carries five things in this order into `dev`:** the name fix and docs
+  (`work/names`), the mod removal re-applied from `89099a8d` (lock object `8650125f`, 71 files, hash `d44eb2ba`), the
+  test packs' removal, the server fixes (`work/app-3-6-1-server`), the app (`work/app-3-6-1`, 3.6.1). 3.6.1 goes to
+  players with the reopening (`INSTALLER_TAG=3.6.1`).
+- **Alex's answers:** "Alex_1" (a test) is made up and joins the placeholder list. The server fixes go on the test stack
+  now. The wake watch in the app's log and a test game-check report are checked by Alex at the live step, before any
+  player is let in. The pre-push hook (the name check) waits until after live is back, then comes as one numbered root
+  script; nothing that `deploy.sh` checks changes before the reopening deploy. The test packs come off live in the same
+  maintenance window but with their own stop and start, after the mod removal has loaded clean; the repo change rides
+  in the one PR; the test-only commit for the test checkout is prepared but not put there; the AMP host first checks the
+  world (the four packs, their dimension folders, whether `level.dat` stores those dimensions, player data pointing
+  into them) and the planner sends the result.
+- **The app 3.6.1 build for Alex to try:** run 37966023431, sha256 `ebd3a77f…f5af0dd` (`work/app-3-6-1`, docs/11 there).
+
 ## Today's state and decisions, 2026-10-09 evening (Alex and the planner)
 
 - **Live:** stopped on purpose; nothing changed on the live world or pack. **Test:** the trimmed world is on the test

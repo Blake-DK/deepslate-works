@@ -52,6 +52,7 @@ namespace DeepslateWorks
         public const string FailedStatus = "Something went wrong. The Log tab has the details; Alex has them too if reports are on.";
         public const string ReadyTitle = "Ready";
         public const string ReadyStatus = "The Minecraft Launcher is opening on Deepslate Works: press Play there. This window can stay open, or be closed.";
+        public const string TestReadyStatus = "The Minecraft Launcher is opening on Deepslate Works TEST: press Play there. This window can stay open, or be closed.";
         public const string Play = "Play", Continue = "Continue", Save = "Save", Working = "Working...";
         public const string Allow = "Allow", NotNow = "Not now";
         /// <summary>The Extras tab's download question's buttons (2.0.1: Allow all on every question).</summary>

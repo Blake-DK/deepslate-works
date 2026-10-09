@@ -320,6 +320,9 @@ try {
   Check "item 6: the Settings change reached the test game (render distance 14)" ((Option (Join-Path $pc.Test "options.txt") "renderDistance") -eq "14")
   Check "the test run's report is a test report" (@(Get-Content $reports -ErrorAction SilentlyContinue | Where-Object { $_ -match '"mode":"test_play"' }).Count -ge 1)
   Check "item 1: the live run that only waited sent no 'cancelled' report" (@(Get-Content $reports -ErrorAction SilentlyContinue | Where-Object { $_ -match '"outcome":"cancelled"' }).Count -eq 0)
+  $test = Tab (Ui-Root) "TestTab"
+  Check "the Test tab's ready line names the test profile" (@(Texts $test | Where-Object { $_ -match 'opening on Deepslate Works TEST' }).Count -gt 0)
+  Check "no first-install hint about the live site on the Test tab" (@(Texts $test | Where-Object { $_ -match '^From now on, press Play' }).Count -eq 0)
   Save-Pair "1-desktop-test-ready"
   # Back to the Play tab: Play there ends the test run that only waits and gets the live game ready
   $testBefore = Snap $pc.Test

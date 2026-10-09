@@ -686,7 +686,7 @@ namespace DeepslateWorks
             }
             if (outcome == "not_launched") { if (keepScreen) { keepScreen = false; Mode = "idle"; PlayButton.Content = UiText.Play; PlayButton.IsEnabled = true; return; } ShowIdle(); return; }
             PlayTitle.Text = UiText.ReadyTitle;
-            PlayStatus.Text = UiText.ReadyStatus;
+            PlayStatus.Text = P.IsLive ? UiText.ReadyStatus : UiText.TestReadyStatus;
             ShowChanged();
             if (Tabs.SelectedItem == ExtrasTab) ShowExtras();
             // 2.1.0: watch the game's log for the session this launch starts

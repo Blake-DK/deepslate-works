@@ -495,7 +495,8 @@ namespace DeepslateWorks
                     if (run.ModsCheck != null && !run.ModsCheck.Ok) throw run.Fail(MissingText(run.ModsCheck));
                     Show(run, string.Format("Open the Minecraft Launcher from the Start menu, choose {0}, press Play.", profileName));
                 }
-                if (run.Mode == "first_install") Show(run, string.Format("From now on, press Play on {0} or open {1} from your desktop. It keeps itself up to date.", Env.PortalUrl.Replace("https://", ""), Env.PackName));
+                // 3.6.1: the hint about the site's Play is for the live game's first install only
+                if (run.Mode == "first_install" && !Env.TestTarget) Show(run, string.Format("From now on, press Play on {0} or open {1} from your desktop. It keeps itself up to date.", Env.PortalUrl.Replace("https://", ""), Env.PackName));
                 if (wake.Waking) wake.Watch(run, Wake.Call, Sleep);
             }
             return "done";

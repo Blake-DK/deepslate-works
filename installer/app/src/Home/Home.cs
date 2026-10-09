@@ -49,7 +49,7 @@ namespace DeepslateWorks
         {
             if (Io != null) return Io;
             if (Env.CustomRoot || !Env.OnWindows) return new FileHomeIo(Path.Combine(Env.Root, "registry and shortcuts"));
-            return new WindowsHomeIo(Env.DataDir);
+            return new WindowsHomeIo(Env.LiveDataDir);
         }
 
         // ---- the stub's API ------------------------------------------------------------------------------------

@@ -55,7 +55,9 @@ namespace DeepslateWorks
         /// no countdown, no wake; the report says "update_only"; with the game running it waits for it (UpdateDeferred).</summary>
         public bool UpdateOnly;
         /// <summary>What the report calls this run: the Update button's own kind, else the mode (first_install, update, play).</summary>
-        public string ReportMode => UpdateOnly && (Mode == "play" || Mode == "update" || Mode == "first_install") ? "update_only" : Mode;
+        public string ReportMode => Target == "test" ? "test_play" : UpdateOnly && (Mode == "play" || Mode == "update" || Mode == "first_install") ? "update_only" : Mode;
+        /// <summary>docs/45: "test" for a Play from the Test section (Env.Target follows it for the run); "live" otherwise.</summary>
+        public string Target = "live";
         public ModsCheck ModsCheck;                 // 2.1.0: the last check of mods\ in this run (the report's `mods`)
         public string PackCheckDir;                 // 2.1.0: mods\ and the PC set, for the report of a run that stops part-way
         public List<object> PackCheckFiles;

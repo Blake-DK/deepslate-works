@@ -99,7 +99,7 @@ namespace DeepslateWorks
         /// <summary>The pack on this PC: installed.json's version, or null.</summary>
         public static string InstalledPack()
         {
-            try { return File.Exists(Env.InstalledFile) ? J.Str(Json.ReadFile(Env.InstalledFile), "version") : null; } catch { return null; }
+            try { return File.Exists(Env.LiveInstalledFile) ? J.Str(Json.ReadFile(Env.LiveInstalledFile), "version") : null; } catch { return null; }
         }
     }
 }

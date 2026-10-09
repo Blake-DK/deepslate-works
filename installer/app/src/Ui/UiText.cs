@@ -29,6 +29,14 @@ namespace DeepslateWorks
         public const string ReviewTitle = "Permissions";
         public const string ReviewStatus = "What Deepslate Works may do on this PC. Changes count from the next Play. Reset all forgets every answer, so everything is asked again.";
         public const string RunningTitle = "Getting the game ready";
+        // docs/45: the Test section (admins only)
+        public const string TestRunningTitle = "Getting the TEST game ready";
+        public const string TestRunningStatus = "The test pack, in its own folder. Then the Minecraft Launcher opens on Deepslate Works TEST and joins the test server.";
+        public const string TestNote = "Only admins see this. It plays the test server with the test pack, in a game folder of its own: your normal game is not changed.";
+        public const string TestOff = "The test server is off: {0}";
+        public static string TestStateLine(string state, int players, string address) => string.Format("The test server is {0}{1}. Address: {2}.", state == "online" ? "online" : state == "asleep" ? "asleep (Play test wakes it)" : state, state == "online" ? string.Format(", {0} on", players) : "", string.IsNullOrEmpty(address) ? "?" : address);
+        public static string TestPackLine(string pack, string serverPack) => string.Format("Test pack {0}{1}.", pack ?? "?", !string.IsNullOrEmpty(serverPack) && serverPack != pack ? string.Format(" (the test server runs {0})", serverPack) : "");
+        public const string TestFolderLine = "Game folder: .minecraft-deepslate-works-test. Launcher profile: Deepslate Works TEST.";
         public const string RunningStatus = "Checking for updates, then the Minecraft Launcher opens on Deepslate Works.";
         public const string RunningExtrasStatus = "Fetching the visual extras.";
         public const string AlreadyTitle = "Already running";

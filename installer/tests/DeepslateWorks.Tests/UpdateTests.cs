@@ -44,7 +44,7 @@ namespace DeepslateWorks.Tests
             Http.Fake = (m, u, b) =>
             {
                 Calls.Add(m + " " + u);
-                if (u.StartsWith(Env.ManifestUrl)) return Tuple.Create(200, Manifest());
+                if (u.StartsWith(Env.ManifestUrl)) return Tuple.Create(200, Manifest(u.Contains("/api/app/test/")));
                 if (u == Env.ReportUrl) { Reports.Add(b); return Tuple.Create(200, "{}"); }
                 if (u == Env.WakeUrl) return Tuple.Create(202, "{\"result\":\"started\",\"wake\":{\"phase\":\"waking\"}}");
                 return Tuple.Create(404, "{}");
@@ -55,10 +55,10 @@ namespace DeepslateWorks.Tests
         public static string Sha(byte[] b) { using (var h = SHA512.Create()) return string.Concat(h.ComputeHash(b).Select(x => x.ToString("x2"))); }
         public string Hash => Sha(Encoding.UTF8.GetBytes(string.Join(",", Files.Keys.OrderBy(k => k).Select(k => k + Sha(Files[k])))));
 
-        public string Manifest()
+        public string Manifest(bool test = false)
         {
             var files = string.Join(",", Files.Select(kv => string.Format("{{\"slug\":\"{0}\",\"name\":\"{0}\",\"filename\":\"{1}\",\"url\":\"https://cdn.example/{1}\",\"sha512\":\"{2}\",\"size\":{3},\"side\":\"both\"}}", kv.Key.Replace(".jar", ""), kv.Key, Sha(kv.Value), kv.Value.Length)));
-            return "{\"name\":\"Deepslate Works\",\"version\":\"0.1.0+" + Hash.Substring(0, 8) + "\",\"hash\":\"" + Hash + "\",\"minecraft\":\"1.21.1\",\"neoforge\":\"" + Neo + "\",\"server_address\":\"play.example\",\"profile\":{\"id\":\"deepslate-works\",\"dir\":\".minecraft-deepslate-works\",\"icon\":\"Grass\"},\"ram\":{\"min_gb\":4,\"max_gb\":8},\"render_distance\":8,\"simulation_distance\":6,\"config_url\":null,\"files\":[" + files + "],\"configs\":[],\"installer\":null,\"branding\":null}";
+            return "{\"name\":\"Deepslate Works\",\"version\":\"0.1.0+" + Hash.Substring(0, 8) + "\",\"hash\":\"" + Hash + "\",\"minecraft\":\"1.21.1\",\"neoforge\":\"" + Neo + "\",\"server_address\":\"play.example\"," + (test ? "\"profile\":{\"id\":\"deepslate-works-test\",\"dir\":\".minecraft-deepslate-works-test\",\"name\":\"Deepslate Works TEST\",\"icon\":\"Grass\"}" : "\"profile\":{\"id\":\"deepslate-works\",\"dir\":\".minecraft-deepslate-works\",\"icon\":\"Grass\"}") + ",\"ram\":{\"min_gb\":4,\"max_gb\":8},\"render_distance\":8,\"simulation_distance\":6,\"config_url\":null,\"files\":[" + files + "],\"configs\":[],\"installer\":null,\"branding\":null}";
         }
 
         public string ModsDir => Path.Combine(Env.DataDir, "mods");

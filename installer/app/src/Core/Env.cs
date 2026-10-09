@@ -49,8 +49,21 @@ namespace DeepslateWorks
             }
             set { _portal = value == null ? null : value.TrimEnd('/'); }
         }
-        public static string ManifestUrl => PortalUrl + "/api/modpack/manifest";
-        public static string WakeUrl => PortalUrl + "/api/play/wake";
+        public static string ManifestUrl => TestTarget ? PortalUrl + "/api/app/test/manifest" : PortalUrl + "/api/modpack/manifest";
+        public static string WakeUrl => TestTarget ? PortalUrl + "/api/app/test/wake" : PortalUrl + "/api/play/wake";
+        /// <summary>docs/45: the Test section asks here whether to show itself (admins only; anyone else: not found).</summary>
+        public static string TestSectionUrl => PortalUrl + "/api/app/test";
+
+        /// <summary>
+        /// docs/45: which pack a run is for. "live" always, except for the length of a Play from the Test section, which
+        /// Engine.Execute sets from the run and puts back when the run ends. Only the run's own paths follow it (the game
+        /// folder, installed.json, the pack list, options.txt, the manifest and the wake); everything the window reads
+        /// for itself asks for the live ones by name (LiveDataDir, LiveInstalledFile, LivePackListPath), so the live
+        /// folder is never touched by a test run and the test folder never by a live one.
+        /// </summary>
+        public static string Target { get; set; } = "live";
+        public static bool TestTarget => Target == "test";
+        public const string TestDirName = ".minecraft-deepslate-works-test";
         public static string ExtrasUrl => PortalUrl + "/api/modpack/extras";
         public static string ReportUrl => PortalUrl + "/api/installer/report";
         public static string ExeDownloadUrl => PortalUrl + "/downloads/" + ExeName;   // never an address from the manifest
@@ -85,12 +98,16 @@ namespace DeepslateWorks
             }
             set { _appHome = value; }
         }
-        /// <summary>The game folder (the mod list's profile.dir; it has always been this).</summary>
-        public static string DataDir => Path.Combine(Root, ".minecraft-deepslate-works");
+        /// <summary>The live game folder (the mod list's profile.dir; it has always been this).</summary>
+        public static string LiveDataDir => Path.Combine(Root, ".minecraft-deepslate-works");
+        /// <summary>The run's game folder: the live one, or the test one during a test run (docs/45).</summary>
+        public static string DataDir => TestTarget ? Path.Combine(Root, TestDirName) : LiveDataDir;
         public static string Minecraft => Path.Combine(Root, ".minecraft");
         public static string Profiles => Path.Combine(Minecraft, "launcher_profiles.json");
-        public static string TokenFile => Path.Combine(DataDir, "launcher.json");
+        /// <summary>One sign-in for both: always in the live folder.</summary>
+        public static string TokenFile => Path.Combine(LiveDataDir, "launcher.json");
         public static string InstalledFile => Path.Combine(DataDir, "installed.json");
+        public static string LiveInstalledFile => Path.Combine(LiveDataDir, "installed.json");
         public static string Temp { get; set; } = Path.GetTempPath();
         /// <summary>%TEMP%\deepslate-works.log, the same file 2.0.x wrote, so the Log tab shows both.</summary>
         public static string LogFile => Path.Combine(Temp, "deepslate-works.log");

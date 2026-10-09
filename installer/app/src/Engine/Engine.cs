@@ -28,6 +28,15 @@ namespace DeepslateWorks
 
         public static string Execute(Run run)
         {
+            // docs/45: a Play from the Test section is a run for the test pack; every per-pack path follows it until the
+            // run ends (Env.Target). One run at a time (the lock below), so nothing else of the engine runs meanwhile.
+            Env.Target = run.Target == "test" ? "test" : "live";
+            try { return ExecuteLocked(run); }
+            finally { Env.Target = "live"; }
+        }
+
+        static string ExecuteLocked(Run run)
+        {
             // ---- a. the lock ----------------------------------------------------------------------------------------
             var mutex = EnterLock(Env.LockName);
             if (mutex == null)
@@ -160,7 +169,10 @@ namespace DeepslateWorks
             var bundled = Path.Combine(Env.Minecraft, @"runtime\java-runtime-delta\windows-x64\java-runtime-delta\bin\java.exe");
             var onPath = FindJavaOnPath();
             var runtimeDir = Path.Combine(gameDir, "runtime");
-            var chosen = SelectJava(bundled, onPath, runtimeDir);
+            // docs/45: a test run reads the Java the live folder already downloaded (never writes there); a download, if
+            // one is needed, goes into the test folder's own runtime
+            var liveRuntime = Path.Combine(Env.LiveDataDir, "runtime");
+            var chosen = SelectJava(bundled, onPath, Env.TestTarget && Directory.Exists(liveRuntime) && FirstJavaIn(liveRuntime) != null ? liveRuntime : runtimeDir);
             // A Java download is more than the answer may have covered (planner: "something bigger than before"): asked again.
             run.RequestConsent("java", chosen.Path != null ? 1 : 2);
             run.MarkUsed("java", chosen.Path != null && !Regex.IsMatch(chosen.Source ?? "", "downloaded", RegexOptions.IgnoreCase) ? 1 : 2);
@@ -342,7 +354,7 @@ namespace DeepslateWorks
             var serverAddress = J.Str(manifest, "server_address");
             if (!Exists(serversDat) && !run.DryRun)
             {
-                File.WriteAllBytes(serversDat, ServersDat(Env.PackName, serverAddress));
+                File.WriteAllBytes(serversDat, ServersDat(J.Str(profile, "name") ?? Env.PackName, serverAddress));
                 run.Tick(string.Format("Server added to your list: {0}", serverAddress));
             }
 
@@ -359,7 +371,8 @@ namespace DeepslateWorks
             var javaArgs = "-Xmx" + xmxText + "G -Xms1G -XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:MaxGCPauseMillis=50 -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20";
             var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", Inv);
             var profileId = J.Str(profile, "id");
-            var entry = J.O("name", Env.PackName, "type", "custom", "lastVersionId", versionId, "gameDir", gameDir, "javaArgs", javaArgs,
+            // docs/45: the test pack's profile is named in the manifest ("Deepslate Works TEST"), the live one is the pack's name
+            var entry = J.O("name", J.Str(profile, "name") ?? Env.PackName, "type", "custom", "lastVersionId", versionId, "gameDir", gameDir, "javaArgs", javaArgs,
                             "javaDir", java, "icon", Brand.ProfileIcon(branding, J.Get(profile, "icon")), "created", now, "lastUsed", now);   // 2.1.1: the logo
             bool profileLeft = false;
             var given = xmx;   // what the profile has once this step is done (the report's xmxGb)

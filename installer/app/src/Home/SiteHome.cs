@@ -234,6 +234,18 @@ namespace DeepslateWorks
             return Parse(Http.GetJson(HomeUrl, 8));
         }
 
+        /// <summary>
+        /// docs/45: the Test section. The live site answers an admin with the test server's state; anyone else gets "not
+        /// found", and so does a site without the section: then null, and the window shows nothing of it.
+        /// </summary>
+        public static JObj FetchTestSection()
+        {
+            EnsureToken();
+            if (string.IsNullOrEmpty(Http.Token)) return null;
+            try { return Http.GetJson(Env.TestSectionUrl, 8) as JObj; }
+            catch (HttpError) { return null; }
+        }
+
         /// <summary>The vote; the poll comes back with the results. A refusal throws HttpError (its body says why).</summary>
         public static PollInfo Vote(string pollId, IEnumerable<string> choices)
         {

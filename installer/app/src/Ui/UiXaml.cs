@@ -342,6 +342,25 @@ namespace DeepslateWorks
         </DockPanel>
       </Grid>
     </TabItem>
+    <TabItem x:Name=""TestTab"" Header=""Test"" Visibility=""Collapsed"">
+      <DockPanel Margin=""16,14,16,12"">
+        <StackPanel DockPanel.Dock=""Top"" Margin=""0,0,0,10"">
+          <TextBlock x:Name=""TestTitle"" FontSize=""20"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Text=""The TEST server""/>
+          <TextBlock x:Name=""TestNote"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""{DynamicResource Muted}""/>
+        </StackPanel>
+        <DockPanel DockPanel.Dock=""Bottom"" Margin=""0,10,0,0"">
+          <Button x:Name=""TestPlayButton"" DockPanel.Dock=""Right"" Style=""{StaticResource PlayBlock}"" Content=""Play test"" MinWidth=""190""/>
+          <TextBlock x:Name=""TestError"" TextWrapping=""Wrap"" VerticalAlignment=""Center"" Foreground=""{DynamicResource Muted}"" Visibility=""Collapsed""/>
+        </DockPanel>
+        <Border Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
+          <StackPanel>
+            <TextBlock x:Name=""TestState"" TextWrapping=""Wrap""/>
+            <TextBlock x:Name=""TestPack"" TextWrapping=""Wrap"" Margin=""0,6,0,0"" Foreground=""{DynamicResource Muted}""/>
+            <TextBlock x:Name=""TestFolder"" TextWrapping=""Wrap"" Margin=""0,6,0,0"" Foreground=""{DynamicResource Muted}""/>
+          </StackPanel>
+        </Border>
+      </DockPanel>
+    </TabItem>
     <TabItem x:Name=""VoteTab"" Visibility=""Collapsed"">
       <TabItem.Header>
         <StackPanel Orientation=""Horizontal"">
@@ -502,6 +521,8 @@ namespace DeepslateWorks
             "ServerBox", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "StartButton", "SiteLink", "NewsBox", "NewsText", "NewsMeta", "NewsOpen", "NewsScroll", "PlayScroll",
             "VoteTab", "VoteStep", "VoteTitle", "VoteNote", "VoteBody", "VoteButton", "VoteError",
             "UpdateButton", "UpdateLine",   // 3.3.0
+            // docs/45: the Test section (admins only)
+            "TestTab", "TestTitle", "TestNote", "TestState", "TestPack", "TestFolder", "TestPlayButton", "TestError",
             // 3.4.0 (docs/21): the ground, the banner with the server pill, the drawn logo, the Vote tab's badge, the card
             // round "Since last time"
             "ChangedBox", "PlayChangedDetail", "OnlineHeads", "GroundTile", "Hero", "HeroImage", "HeroShade", "HeroStatus", "HeroDot", "HeroLine", "LogoFallback", "VoteBadge", "VoteBadgeText",

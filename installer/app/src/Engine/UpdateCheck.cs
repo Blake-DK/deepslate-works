@@ -89,11 +89,11 @@ namespace DeepslateWorks
                 return new Waiting { Problem = SiteHome.Why(e), CheckedAt = now };
             }
             object installed = null;
-            try { if (File.Exists(Env.InstalledFile)) installed = Json.Parse(File.ReadAllText(Env.InstalledFile)); } catch { }
+            try { if (File.Exists(Env.LiveInstalledFile)) installed = Json.Parse(File.ReadAllText(Env.LiveInstalledFile)); } catch { }   // docs/45: the live pack's, always
             ExtrasManifest x = null; bool queued = false;
             try { x = ExtrasManifest.Read(Env.ExtrasManifestPath); } catch { }
             try { queued = ExtrasState.Read(Env.ExtrasStatePath)?.Queued != null; } catch { }
-            return Compare(site, Engine.ReadPackList(Engine.PackListPath), installed, x, queued, Env.Version, now);
+            return Compare(site, Engine.ReadPackList(Engine.LivePackListPath), installed, x, queued, Env.Version, now);
         }
     }
 }

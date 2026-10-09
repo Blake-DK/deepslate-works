@@ -462,6 +462,46 @@ describe("the door lets a player in once a visit (3.6.1, item 11)", () => {
     }
   });
 
+  it("a server that stops ends every visit: the first join after the start meets the door (rehearsal, 2026-10-09)", async () => {
+    for (const end of ["stopping", "started"] as const) {
+      state.ran.length = 0;
+      const t = logged();
+      const now = vi.spyOn(Date, "now");
+      let clock = Date.parse("2026-10-09T19:34:38Z");
+      now.mockImplementation(() => clock);
+      try {
+        await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+        expect(ran("link.release")).toHaveLength(1);
+        clock += 60_000; // the server stops with them on: no "left the game" line, the session closed by the stop
+        await t.room.onEvent(end === "stopping" ? { type: "stopping" } : { type: "started", seconds: 20 });
+        clock += 29_000;
+        await t.room.onEvent({ type: "join", name: "samoyedx", ip: null }); // back after the start
+        expect(ran("link.release"), end).toHaveLength(2);
+        expect(t.logs).not.toContain("join: already in, with no leave since: not a new visit");
+      } finally {
+        now.mockRestore();
+      }
+    }
+  });
+
+  it("and a server that went down without saying so (AMP's state not running) ends them too", async () => {
+    const t = logged();
+    const now = vi.spyOn(Date, "now");
+    let clock = Date.parse("2026-10-09T19:34:38Z");
+    now.mockImplementation(() => clock);
+    try {
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      (t.tail as { state: number }).state = 0; // crashed or killed
+      await tick(t.room);
+      (t.tail as { state: number }).state = 20;
+      clock += 90_000;
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(2);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it("a live `list` without them is their leave, when its line was never read", async () => {
     const t = logged();
     const now = vi.spyOn(Date, "now");

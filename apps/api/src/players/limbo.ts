@@ -143,6 +143,10 @@ export class Limbo {
       if (h) await this.prompt(e.name, h, Date.now());
     }
     if (e.type === "refused" && !info.replay) await this.onRefused(e);
+    // 3.6.1: a server that stops sends everyone away without a "left the game" line for each: every visit ends with it,
+    // so the first join after the start is a new visit and meets the door (rehearsal on test, 2026-10-09 19:43 UTC: a
+    // join after a restart was taken for the same visit)
+    if (e.type === "stopping" || e.type === "started") this.lastJoin.clear();
     if (e.type === "leave") {
       // What is kept in HeldPlayer stays: it is what puts a member back where they stood when they come again
       // (docs/31 B-02). Only someone who was to link and has no place to go back to leaves nothing worth keeping.
@@ -445,6 +449,8 @@ export class Limbo {
 
   /** Every 5 s while anyone is held: drag them back, open the door when it may, the action bar, kick the idle. (The prompt has a timer of its own.) */
   private async tick() {
+    // 3.6.1: down without a "stopping" line (a crash, a kill): the visits ended with it all the same
+    if (this.tail.state !== 20 && this.lastJoin.size > 0) this.lastJoin.clear();
     if (this.held.size === 0 || this.tail.state !== 20 || this.ticking) return;
     this.ticking = true; // a slow AMP must not have two rounds release the same player twice
     try {

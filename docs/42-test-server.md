@@ -177,3 +177,18 @@ S3 and S4 go to `main` together in one PR: the profile is inert without `TEST_ST
 2. **The two names**, real ones in `deploy/.env`: the test site (it must sit under the live site's domain for the admin gate to work) and the game address (anything that does not say "test" or "season").
 3. **Actions minutes.** Each press of `test-images.yml` costs about what one push to `main` costs. If the month's budget is tight, the test stack can run `main`'s images until a season change needs `dev`.
 4. **Who else tests.** The plan assumes admins. A second player is needed for the 48-block group credit; that is one invite on the test site and one whitelist line.
+
+## 13. Silent on Discord (2026-10-08, Alex; for docs/42a too, which is not in the repo)
+
+The test server says nothing in the players' Discord, and nothing from there reaches it. §6's "a private test channel by
+webhook, or empty" stands, but only as an override; empty is the default and means silent.
+
+- **One instance talks to Discord, and is marked so.** The api reads `DISCORD_TALKS`; only `"1"` turns on the bot and
+  the players' three webhooks (`apps/api/src/discord/gate.ts`). The live `api` service sets it in
+  `deploy/docker-compose.yml`; `api-test` does not, and neither will any instance added later unless someone marks it.
+- **Not marked:** no bot (no presence or status text, no slash commands, no forum or vote posts, no chat from the
+  Discord game chat into the server, which therefore goes to the live server only), and none of the players' webhooks
+  even if they are set (no joins, leaves, deaths, advancements, season moments, start or stop lines). Only
+  `DISCORD_PRIVATE_WEBHOOK_*` can post, from `TEST_DISCORD_WEBHOOK_*` in `deploy/.env`, for a private channel; empty by
+  default. `deploy.sh` and `test-up.sh` refuse a `TEST_DISCORD_WEBHOOK_*` equal to a live webhook.
+- **Not affected:** the door's "still in the Discord server" check and Discord sign-in only read; they work as before.

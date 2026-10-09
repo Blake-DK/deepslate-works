@@ -1,6 +1,7 @@
 // docs/22: the bot, put together from what api already has (the server's view, the door, the actions, its own routes).
 // With no DISCORD_BOT_TOKEN nothing here is made and nothing changes (§2.8).
 import { readFile } from "node:fs/promises";
+import { talksToDiscord } from "./gate.js";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { db } from "../db.js";
@@ -32,6 +33,7 @@ const isId = (v: string | undefined) => (v && /^\d{5,25}$/.test(v) ? v : null);
 
 /** The Discord app's id and the guild, when both are usable; null = no bot. */
 export function botConfig(env: Env): { token: string; guild: string; clientId: string | null } | null {
+  if (!talksToDiscord(env)) return null; // docs/42a: no bot on an instance not marked as the one that talks to Discord
   const guild = isId(env.DISCORD_GUILD_ID);
   if (!env.DISCORD_BOT_TOKEN || !guild) return null;
   return { token: env.DISCORD_BOT_TOKEN, guild, clientId: isId(env.DISCORD_CLIENT_ID) };

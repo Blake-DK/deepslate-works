@@ -165,6 +165,9 @@ services:
       DEPLOY_KEY_PATH: ${DEPLOY_KEY_PATH:-}
       LIMBO_POS: ${LIMBO_POS:-}
       SPAWN_POS: ${SPAWN_POS:-}
+      # docs/42a: this api is the one instance that talks to the players' Discord (the bot and the webhooks below).
+      # No other service sets it; without it an api is silent on Discord (apps/api/src/discord/gate.ts).
+      DISCORD_TALKS: "1"
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
@@ -350,11 +353,12 @@ services:
       DEPLOY_KEY_PATH: /run/keys/deploy.key   # the test key: rrsync-rooted at the test instance's Minecraft/
       LIMBO_POS: ${LIMBO_POS:-}
       SPAWN_POS: ${SPAWN_POS:-}
-      # no DISCORD_BOT_TOKEN: no bot on the test server (docs/42 §10); the webhooks are a private test channel's
-      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
-      DISCORD_WEBHOOK_FEED: ${TEST_DISCORD_WEBHOOK_FEED:-}
-      DISCORD_WEBHOOK_ADMIN: ${TEST_DISCORD_WEBHOOK_ADMIN:-}
-      DISCORD_WEBHOOK_UPDATES: ${TEST_DISCORD_WEBHOOK_UPDATES:-}
+      # docs/42a (2026-10-08): silent on Discord. No DISCORD_TALKS, so no bot and none of the players' webhooks even if
+      # they were set here; only a private channel's, when TEST_DISCORD_WEBHOOK_* are set in deploy/.env (empty: silent).
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}   # read only: the door's "still in the Discord server" check
+      DISCORD_PRIVATE_WEBHOOK_FEED: ${TEST_DISCORD_WEBHOOK_FEED:-}
+      DISCORD_PRIVATE_WEBHOOK_ADMIN: ${TEST_DISCORD_WEBHOOK_ADMIN:-}
+      DISCORD_PRIVATE_WEBHOOK_UPDATES: ${TEST_DISCORD_WEBHOOK_UPDATES:-}
       MODRINTH_USER_AGENT: ${MODRINTH_USER_AGENT:-}
       GEOIP_DB: ${GEOIP_DB:-}
       TEST_MODE: "1"

@@ -28,6 +28,15 @@ test_env_check() {
   [ "${#summary}" -ge 32 ] || say "TEST_SUMMARY_TOKEN: at least 32 characters (openssl rand -hex 32)"
   { [ "$token" != "$live_token" ] && [ "$summary" != "$live_token" ] && [ "$summary" != "$token" ]; } || say "TEST_API_SERVICE_TOKEN, TEST_SUMMARY_TOKEN and API_SERVICE_TOKEN must be three different tokens"
   [ -n "$(envval TEST_SERVER_ADDRESS)" ] || say "TEST_SERVER_ADDRESS: the test server's game address on mc-router"
+  # docs/42a (2026-10-08): the test server never posts to the players' channels. On 2026-10-08 the live webhooks were
+  # copied here and test joins reached the players' feed; a test webhook equal to any live one is refused.
+  local w l
+  for w in TEST_DISCORD_WEBHOOK_FEED TEST_DISCORD_WEBHOOK_ADMIN TEST_DISCORD_WEBHOOK_UPDATES; do
+    [ -n "$(envval $w)" ] || continue
+    for l in DISCORD_WEBHOOK_FEED DISCORD_WEBHOOK_ADMIN DISCORD_WEBHOOK_UPDATES; do
+      [ "$(envval $w)" != "$(envval $l)" ] || say "$w is the live $l: the test server must not post to the players' Discord (leave it empty, or a private channel's webhook)"
+    done
+  done
   [[ "$(envval TEST_IMAGE_TAG)" =~ ^[A-Za-z0-9._-]*$ ]] || say "TEST_IMAGE_TAG: an image tag (test, or a commit)"
   mock=$(envval TEST_AMP_MOCK)
   if [ "$mock" != 1 ]; then

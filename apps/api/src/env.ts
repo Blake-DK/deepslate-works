@@ -31,6 +31,13 @@ const schema = z.object({
   // docs/22: the forum channel season-updates (votes, season posts, news), and the Discord app's id (not a secret) for
   // the slash commands and the "Add the bot" link. The bot itself is DISCORD_BOT_TOKEN.
   DISCORD_WEBHOOK_UPDATES: z.string().optional(),
+  // docs/42a (2026-10-08): "1" marks the one instance that talks to the players' Discord (the bot and the three webhooks
+  // above). Absent: silent (discord/gate.ts). The live api's compose service sets it; nothing else does.
+  DISCORD_TALKS: z.string().optional(),
+  // A private channel for an instance that is not marked (the test server), set through deploy/.env; empty: silent.
+  DISCORD_PRIVATE_WEBHOOK_FEED: z.string().optional(),
+  DISCORD_PRIVATE_WEBHOOK_ADMIN: z.string().optional(),
+  DISCORD_PRIVATE_WEBHOOK_UPDATES: z.string().optional(),
   DISCORD_CLIENT_ID: z.string().optional(), // used only when it looks like an id
   // modpack build (runs as a child process of api): the repo mounts and the CLI's location in the image
   REPO_DIR: z.string().default("/repo"),

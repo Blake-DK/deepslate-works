@@ -237,9 +237,12 @@ namespace DeepslateWorks.Tests
                     ui.Consent = real;
                     var missing = new[] { "extras: On", "extras: None", "extras: Light (MakeUp Ultra Fast)", "extras: Full (Complementary Reimagined)", "play: Allow", "play: Not now" }
                         .Where(x => !seen.Contains(x)).ToList();
-                    Assert.True(missing.Count == 0, "never drawn, so never checked:\n" + string.Join("\n", missing));
-                    Assert.True(stock.Count == 0, "Windows' own check box or choice:\n" + string.Join("\n", stock));
-                    Assert.True(low.Count == 0, "hard to read:\n" + string.Join("\n", low.Distinct()));
+                    // one failure that says all of it
+                    var say = new List<string>();
+                    if (missing.Count > 0) say.Add("never drawn, so never checked:\n" + string.Join("\n", missing));
+                    if (stock.Count > 0) say.Add("Windows' own check box or choice:\n" + string.Join("\n", stock));
+                    if (low.Count > 0) say.Add("hard to read:\n" + string.Join("\n", low.Distinct()));
+                    Assert.True(say.Count == 0, string.Join("\n", say));
                 });
             }
         }

@@ -484,6 +484,27 @@ describe("the door lets a player in once a visit (3.6.1, item 11)", () => {
     }
   });
 
+  it("a member whose access went while the server was down is held at their first join after the start", async () => {
+    const t = logged();
+    const now = vi.spyOn(Date, "now");
+    let clock = Date.parse("2026-10-09T19:34:38Z");
+    now.mockImplementation(() => clock);
+    try {
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(1);
+      clock += 60_000;
+      await t.room.onEvent({ type: "stopping" }); // the server stops with them on
+      state.users[0]!.verifiedAt = null; // meanwhile their access is taken away (unlinked)
+      clock += 60_000;
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(1); // not let in again
+      expect(ran("limbo.hold")).toHaveLength(1); // held at the door instead
+      expect(t.room.held.has("samoyedx")).toBe(true);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it("and a server that went down without saying so (AMP's state not running) ends them too", async () => {
     const t = logged();
     const now = vi.spyOn(Date, "now");

@@ -5,6 +5,7 @@ import { asSectionQuery, pickTab, TabbedPage, type PageQuery } from "@/component
 import MembersSection from "../users/section";
 import InvitesSection from "../invites/section";
 import InstallsSection from "../installs/section";
+import { TEST_MODES } from "@/shared/join-gate";
 
 export const metadata: Metadata = { title: "People" };
 
@@ -15,7 +16,7 @@ export default async function PeopleAdminPage({ searchParams }: { searchParams: 
   const [members, invites, installs] = await Promise.all([
     db.user.count(),
     db.invite.count({ where: { usedBy: null, expiresAt: { gt: new Date() } } }),
-    db.installReport.count({ where: { mode: { not: "test_play" } } }),
+    db.installReport.count({ where: { mode: { notIn: TEST_MODES } } }),
   ]);
   const tabs = [{ key: "members", label: "Members", count: members }, { key: "invites", label: "Invites", count: invites || null }, { key: "installs", label: "Installs", count: installs || null }] as const;
   const q = await searchParams;

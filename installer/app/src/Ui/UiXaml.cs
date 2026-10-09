@@ -249,118 +249,7 @@ namespace DeepslateWorks
     </StackPanel>
   </Border>
   <TabControl x:Name=""Tabs"" Style=""{StaticResource Strip}"" Background=""Transparent"" BorderThickness=""0"" Padding=""0"" Margin=""0"">
-    <TabItem Header=""Play"" x:Name=""PlayTab"">
-      <!-- 3.4.1 (docs/21 §11): two columns, the server on the left, the run on the right, the buttons along the bottom -->
-      <Grid x:Name=""PlayGrid"" Margin=""16,14,16,12"">
-        <Grid.ColumnDefinitions><ColumnDefinition Width=""340""/><ColumnDefinition Width=""16""/><ColumnDefinition Width=""*""/></Grid.ColumnDefinitions>
-        <Grid.RowDefinitions><RowDefinition Height=""*""/><RowDefinition Height=""12""/><RowDefinition Height=""Auto""/></Grid.RowDefinitions>
-        <!-- 3.5.4: the cards keep their width; the news card takes the room that is left, and only its text scrolls when it is longer -->
-        <DockPanel x:Name=""PlayLeft"" Grid.Column=""0"" Grid.Row=""0"" LastChildFill=""True"" ClipToBounds=""True"">
-          <Border x:Name=""ServerBox"" DockPanel.Dock=""Top"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
-            <StackPanel>
-              <DockPanel>
-                <Button x:Name=""StartButton"" DockPanel.Dock=""Right"" Style=""{StaticResource Primary}"" Padding=""12,3,12,4"" Margin=""10,0,0,0"" VerticalAlignment=""Top"" Content=""Start"" Visibility=""Collapsed""/>
-                <Ellipse x:Name=""ServerDot"" DockPanel.Dock=""Left"" Width=""9"" Height=""9"" Fill=""{DynamicResource Dim}"" Margin=""0,6,7,0"" VerticalAlignment=""Top""/>
-                <TextBlock x:Name=""ServerLine"" FontSize=""14"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Text=""Asking the site how the server is...""/>
-              </DockPanel>
-              <TextBlock x:Name=""SiteLinkLine"" Margin=""16,3,0,0""><Hyperlink x:Name=""SiteLink"">Open the site</Hyperlink></TextBlock>
-              <TextBlock x:Name=""ServerHint"" TextWrapping=""Wrap"" Margin=""16,2,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
-              <DockPanel Margin=""16,4,0,0"">
-                <StackPanel x:Name=""OnlineHeads"" DockPanel.Dock=""Left"" Orientation=""Horizontal"" VerticalAlignment=""Center"" Visibility=""Collapsed""/>
-                <TextBlock x:Name=""ServerOnline"" TextWrapping=""Wrap"" VerticalAlignment=""Center"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
-              </DockPanel>
-            </StackPanel>
-          </Border>
-          <Border x:Name=""ChangedBox"" DockPanel.Dock=""Top"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,8"" Margin=""0,10,0,0""
-                  Visibility=""{Binding Visibility, ElementName=PlayChanged}"">
-            <StackPanel>
-              <TextBlock x:Name=""PlayChanged"" TextWrapping=""Wrap"" Foreground=""{DynamicResource GreenText}"" FontWeight=""SemiBold"" Visibility=""Collapsed""/>
-              <TextBlock x:Name=""PlayChangedDetail"" TextWrapping=""Wrap"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Margin=""0,3,0,0"" Visibility=""Collapsed""/>
-            </StackPanel>
-          </Border>
-          <!-- 3.5.3 (Alex, 2026-10-06): the pinned news in a card of its own, larger, and the whole card opens it on the site -->
-          <Border x:Name=""NewsBox"" VerticalAlignment=""Top"" Margin=""0,10,0,0"" CornerRadius=""4"" Padding=""12,10"" Cursor=""Hand"" Visibility=""Collapsed"">
-            <Border.Style>
-              <Style TargetType=""Border"">
-                <Setter Property=""Background"" Value=""{DynamicResource Card}""/>
-                <Setter Property=""BorderBrush"" Value=""{DynamicResource Line}""/>
-                <Setter Property=""BorderThickness"" Value=""1""/>
-                <Style.Triggers><Trigger Property=""IsMouseOver"" Value=""True""><Setter Property=""BorderBrush"" Value=""{DynamicResource Copper}""/></Trigger></Style.Triggers>
-              </Style>
-            </Border.Style>
-            <DockPanel>
-              <DockPanel DockPanel.Dock=""Top"">
-                <TextBlock x:Name=""NewsOpen"" DockPanel.Dock=""Right"" Foreground=""{DynamicResource Blue}"" FontSize=""12"" Text=""Read it on the site ›""/>
-                <TextBlock Text=""PINNED NEWS"" Foreground=""{DynamicResource Copper}"" FontSize=""11.5"" FontWeight=""SemiBold""/>
-              </DockPanel>
-              <TextBlock x:Name=""NewsMeta"" DockPanel.Dock=""Bottom"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Margin=""0,6,0,0""/>
-              <ScrollViewer x:Name=""NewsScroll"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Disabled"" Margin=""0,6,0,0"" Focusable=""False"">
-                <ScrollViewer.Resources>
-                  <Style TargetType=""ScrollBar"">
-                    <Setter Property=""Width"" Value=""8""/><Setter Property=""MinWidth"" Value=""8""/><Setter Property=""Margin"" Value=""6,0,0,0""/><Setter Property=""Cursor"" Value=""Arrow""/>
-                    <Setter Property=""Template""><Setter.Value>
-                      <ControlTemplate TargetType=""ScrollBar"">
-                        <Border Background=""{DynamicResource Line}"" CornerRadius=""4"">
-                          <Track x:Name=""PART_Track"" Orientation=""Vertical"" IsDirectionReversed=""True"">
-                            <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType=""Thumb""><Border Background=""{DynamicResource BoxLine}"" CornerRadius=""4""/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
-                          </Track>
-                        </Border>
-                      </ControlTemplate>
-                    </Setter.Value></Setter>
-                  </Style>
-                </ScrollViewer.Resources>
-                <TextBlock x:Name=""NewsText"" TextWrapping=""Wrap"" Foreground=""{DynamicResource Fg}"" FontSize=""14"" LineHeight=""21"" LineStackingStrategy=""BlockLineHeight""/>
-              </ScrollViewer>
-            </DockPanel>
-          </Border>
-        </DockPanel>
-        <DockPanel x:Name=""PlayRight"" Grid.Column=""2"" Grid.Row=""0"">
-          <StackPanel DockPanel.Dock=""Top"" Margin=""0,0,0,10"">
-            <TextBlock x:Name=""StepLabel"" Foreground=""{DynamicResource Blue}"" FontWeight=""SemiBold"" Margin=""0,0,0,2"" Visibility=""Collapsed""/>
-            <TextBlock x:Name=""PlayTitle"" FontSize=""20"" FontWeight=""SemiBold"" Text=""Deepslate Works""/>
-            <TextBlock x:Name=""PlayStatus"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""{DynamicResource Muted}""/>
-          </StackPanel>
-          <Border x:Name=""PlayCard"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
-            <ScrollViewer x:Name=""PlayScroll"" VerticalScrollBarVisibility=""Auto""><StackPanel x:Name=""PlayBody""/></ScrollViewer>
-          </Border>
-        </DockPanel>
-        <DockPanel x:Name=""PlayRow"" Grid.Column=""0"" Grid.ColumnSpan=""3"" Grid.Row=""2"">
-          <StackPanel DockPanel.Dock=""Left"" Orientation=""Horizontal"" VerticalAlignment=""Center"" TextElement.FontSize=""12.5"">
-            <TextBlock><Hyperlink x:Name=""ReviewLink"">Review permissions</Hyperlink></TextBlock>
-            <TextBlock Margin=""18,0,0,0""><Hyperlink x:Name=""SettingsLink"">Settings</Hyperlink></TextBlock>
-          </StackPanel>
-          <StackPanel DockPanel.Dock=""Right"" HorizontalAlignment=""Right"">
-            <StackPanel Orientation=""Horizontal"" HorizontalAlignment=""Right"">
-              <Button x:Name=""AllowAllButton"" Style=""{StaticResource Plain}"" Content=""Allow all"" Visibility=""Collapsed""/>
-              <Button x:Name=""ResetButton"" Style=""{StaticResource Plain}"" Content=""Reset all"" Visibility=""Collapsed""/>
-              <Button x:Name=""PlayButton"" Style=""{StaticResource PlayBlock}"" Content=""Play"" MinWidth=""190""/>
-              <Button x:Name=""UpdateButton"" Style=""{StaticResource Plain}"" ContentTemplate=""{StaticResource MarkedLabel}"" Content=""Update"" MinWidth=""118"" Margin=""8,0,0,0"" Padding=""12,6,12,7""/>
-            </StackPanel>
-            <TextBlock x:Name=""PlayHint"" HorizontalAlignment=""Right"" Margin=""0,5,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
-            <TextBlock x:Name=""UpdateLine"" HorizontalAlignment=""Right"" TextAlignment=""Right"" TextWrapping=""Wrap"" MaxWidth=""380"" Margin=""0,4,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
-          </StackPanel>
-        </DockPanel>
-      </Grid>
-    </TabItem>
-    <TabItem x:Name=""TestTab"" Header=""Test"" Visibility=""Collapsed"">
-      <DockPanel Margin=""16,14,16,12"">
-        <StackPanel DockPanel.Dock=""Top"" Margin=""0,0,0,10"">
-          <TextBlock x:Name=""TestTitle"" FontSize=""20"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Text=""The TEST server""/>
-          <TextBlock x:Name=""TestNote"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""{DynamicResource Muted}""/>
-        </StackPanel>
-        <DockPanel DockPanel.Dock=""Bottom"" Margin=""0,10,0,0"">
-          <Button x:Name=""TestPlayButton"" DockPanel.Dock=""Right"" Style=""{StaticResource PlayBlock}"" Content=""Play test"" MinWidth=""190""/>
-          <TextBlock x:Name=""TestError"" TextWrapping=""Wrap"" VerticalAlignment=""Center"" Foreground=""{DynamicResource Muted}"" Visibility=""Collapsed""/>
-        </DockPanel>
-        <Border Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
-          <StackPanel>
-            <TextBlock x:Name=""TestState"" TextWrapping=""Wrap""/>
-            <TextBlock x:Name=""TestPack"" TextWrapping=""Wrap"" Margin=""0,6,0,0"" Foreground=""{DynamicResource Muted}""/>
-            <TextBlock x:Name=""TestFolder"" TextWrapping=""Wrap"" Margin=""0,6,0,0"" Foreground=""{DynamicResource Muted}""/>
-          </StackPanel>
-        </Border>
-      </DockPanel>
-    </TabItem>
+    <TabItem Header=""Play"" x:Name=""PlayTab""/>
     <TabItem x:Name=""VoteTab"" Visibility=""Collapsed"">
       <TabItem.Header>
         <StackPanel Orientation=""Horizontal"">
@@ -490,6 +379,104 @@ namespace DeepslateWorks
 
         /// <summary>One question with up to three answers (Yes / Later / Allow all). The text says what will happen; Allow all
         /// says what it will remember, so nothing is hidden behind it.</summary>
+        /// <summary>
+        /// 3.6.1: the Play view, once per target: the Play tab for the live server, the Test tab for the test server (admins
+        /// only). Parsed on its own (PlayPane), so each copy has names of its own; the window's styles are DynamicResource here
+        /// because they are found once the view is in the window.
+        /// </summary>
+        public static readonly string PlayViewXaml = @"<Grid " + Ns + @" x:Name=""PlayGrid"" Margin=""16,14,16,12"">
+  <!-- 3.4.1 (docs/21 §11): two columns, the server on the left, the run on the right, the buttons along the bottom -->
+  <Grid.ColumnDefinitions><ColumnDefinition Width=""340""/><ColumnDefinition Width=""16""/><ColumnDefinition Width=""*""/></Grid.ColumnDefinitions>
+  <Grid.RowDefinitions><RowDefinition Height=""*""/><RowDefinition Height=""12""/><RowDefinition Height=""Auto""/></Grid.RowDefinitions>
+  <!-- 3.5.4: the cards keep their width; the news card takes the room that is left, and only its text scrolls when it is longer -->
+  <DockPanel x:Name=""PlayLeft"" Grid.Column=""0"" Grid.Row=""0"" LastChildFill=""True"" ClipToBounds=""True"">
+    <Border x:Name=""ServerBox"" DockPanel.Dock=""Top"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
+      <StackPanel>
+        <TextBlock x:Name=""ServerName"" Foreground=""{DynamicResource Copper}"" FontSize=""11.5"" FontWeight=""SemiBold"" Margin=""16,0,0,3"" Text=""Live server""/>
+        <DockPanel>
+          <Button x:Name=""StartButton"" DockPanel.Dock=""Right"" Style=""{DynamicResource Primary}"" Padding=""12,3,12,4"" Margin=""10,0,0,0"" VerticalAlignment=""Top"" Content=""Start"" Visibility=""Collapsed""/>
+          <Ellipse x:Name=""ServerDot"" DockPanel.Dock=""Left"" Width=""9"" Height=""9"" Fill=""{DynamicResource Dim}"" Margin=""0,6,7,0"" VerticalAlignment=""Top""/>
+          <TextBlock x:Name=""ServerLine"" FontSize=""14"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Text=""Asking the site how the server is...""/>
+        </DockPanel>
+        <TextBlock x:Name=""SiteLinkLine"" Margin=""16,3,0,0""><Hyperlink x:Name=""SiteLink"">Open the site</Hyperlink></TextBlock>
+        <TextBlock x:Name=""ServerHint"" TextWrapping=""Wrap"" Margin=""16,2,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
+        <DockPanel Margin=""16,4,0,0"">
+          <StackPanel x:Name=""OnlineHeads"" DockPanel.Dock=""Left"" Orientation=""Horizontal"" VerticalAlignment=""Center"" Visibility=""Collapsed""/>
+          <TextBlock x:Name=""ServerOnline"" TextWrapping=""Wrap"" VerticalAlignment=""Center"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
+        </DockPanel>
+      </StackPanel>
+    </Border>
+    <Border x:Name=""ChangedBox"" DockPanel.Dock=""Top"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,8"" Margin=""0,10,0,0""
+            Visibility=""{Binding Visibility, ElementName=PlayChanged}"">
+      <StackPanel>
+        <TextBlock x:Name=""PlayChanged"" TextWrapping=""Wrap"" Foreground=""{DynamicResource GreenText}"" FontWeight=""SemiBold"" Visibility=""Collapsed""/>
+        <TextBlock x:Name=""PlayChangedDetail"" TextWrapping=""Wrap"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Margin=""0,3,0,0"" Visibility=""Collapsed""/>
+      </StackPanel>
+    </Border>
+    <!-- 3.5.3 (Alex, 2026-10-06): the pinned news in a card of its own, larger, and the whole card opens it on the site -->
+    <Border x:Name=""NewsBox"" VerticalAlignment=""Top"" Margin=""0,10,0,0"" CornerRadius=""4"" Padding=""12,10"" Cursor=""Hand"" Visibility=""Collapsed"">
+      <Border.Style>
+        <Style TargetType=""Border"">
+          <Setter Property=""Background"" Value=""{DynamicResource Card}""/>
+          <Setter Property=""BorderBrush"" Value=""{DynamicResource Line}""/>
+          <Setter Property=""BorderThickness"" Value=""1""/>
+          <Style.Triggers><Trigger Property=""IsMouseOver"" Value=""True""><Setter Property=""BorderBrush"" Value=""{DynamicResource Copper}""/></Trigger></Style.Triggers>
+        </Style>
+      </Border.Style>
+      <DockPanel>
+        <DockPanel DockPanel.Dock=""Top"">
+          <TextBlock x:Name=""NewsOpen"" DockPanel.Dock=""Right"" Foreground=""{DynamicResource Blue}"" FontSize=""12"" Text=""Read it on the site ›""/>
+          <TextBlock Text=""PINNED NEWS"" Foreground=""{DynamicResource Copper}"" FontSize=""11.5"" FontWeight=""SemiBold""/>
+        </DockPanel>
+        <TextBlock x:Name=""NewsMeta"" DockPanel.Dock=""Bottom"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Margin=""0,6,0,0""/>
+        <ScrollViewer x:Name=""NewsScroll"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Disabled"" Margin=""0,6,0,0"" Focusable=""False"">
+          <ScrollViewer.Resources>
+            <Style TargetType=""ScrollBar"">
+              <Setter Property=""Width"" Value=""8""/><Setter Property=""MinWidth"" Value=""8""/><Setter Property=""Margin"" Value=""6,0,0,0""/><Setter Property=""Cursor"" Value=""Arrow""/>
+              <Setter Property=""Template""><Setter.Value>
+                <ControlTemplate TargetType=""ScrollBar"">
+                  <Border Background=""{DynamicResource Line}"" CornerRadius=""4"">
+                    <Track x:Name=""PART_Track"" Orientation=""Vertical"" IsDirectionReversed=""True"">
+                      <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType=""Thumb""><Border Background=""{DynamicResource BoxLine}"" CornerRadius=""4""/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+                    </Track>
+                  </Border>
+                </ControlTemplate>
+              </Setter.Value></Setter>
+            </Style>
+          </ScrollViewer.Resources>
+          <TextBlock x:Name=""NewsText"" TextWrapping=""Wrap"" Foreground=""{DynamicResource Fg}"" FontSize=""14"" LineHeight=""21"" LineStackingStrategy=""BlockLineHeight""/>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+  </DockPanel>
+  <DockPanel x:Name=""PlayRight"" Grid.Column=""2"" Grid.Row=""0"">
+    <StackPanel DockPanel.Dock=""Top"" Margin=""0,0,0,10"">
+      <TextBlock x:Name=""StepLabel"" Foreground=""{DynamicResource Blue}"" FontWeight=""SemiBold"" Margin=""0,0,0,2"" Visibility=""Collapsed""/>
+      <TextBlock x:Name=""PlayTitle"" FontSize=""20"" FontWeight=""SemiBold"" Text=""Deepslate Works""/>
+      <TextBlock x:Name=""PlayStatus"" TextWrapping=""Wrap"" Margin=""0,4,0,0"" Foreground=""{DynamicResource Muted}""/>
+    </StackPanel>
+    <Border x:Name=""PlayCard"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Line}"" BorderThickness=""1"" CornerRadius=""4"" Padding=""12,10"">
+      <ScrollViewer x:Name=""PlayScroll"" VerticalScrollBarVisibility=""Auto""><StackPanel x:Name=""PlayBody""/></ScrollViewer>
+    </Border>
+  </DockPanel>
+  <DockPanel x:Name=""PlayRow"" Grid.Column=""0"" Grid.ColumnSpan=""3"" Grid.Row=""2"">
+    <StackPanel DockPanel.Dock=""Left"" Orientation=""Horizontal"" VerticalAlignment=""Center"" TextElement.FontSize=""12.5"">
+      <TextBlock><Hyperlink x:Name=""ReviewLink"">Review permissions</Hyperlink></TextBlock>
+      <TextBlock Margin=""18,0,0,0""><Hyperlink x:Name=""SettingsLink"">Settings</Hyperlink></TextBlock>
+    </StackPanel>
+    <StackPanel DockPanel.Dock=""Right"" HorizontalAlignment=""Right"">
+      <StackPanel Orientation=""Horizontal"" HorizontalAlignment=""Right"">
+        <Button x:Name=""AllowAllButton"" Style=""{DynamicResource Plain}"" Content=""Allow all"" Visibility=""Collapsed""/>
+        <Button x:Name=""ResetButton"" Style=""{DynamicResource Plain}"" Content=""Reset all"" Visibility=""Collapsed""/>
+        <Button x:Name=""PlayButton"" Style=""{DynamicResource PlayBlock}"" Content=""Play"" MinWidth=""190""/>
+        <Button x:Name=""UpdateButton"" Style=""{DynamicResource Plain}"" ContentTemplate=""{DynamicResource MarkedLabel}"" Content=""Update"" MinWidth=""118"" Margin=""8,0,0,0"" Padding=""12,6,12,7""/>
+      </StackPanel>
+      <TextBlock x:Name=""PlayHint"" HorizontalAlignment=""Right"" Margin=""0,5,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
+      <TextBlock x:Name=""UpdateLine"" HorizontalAlignment=""Right"" TextAlignment=""Right"" TextWrapping=""Wrap"" MaxWidth=""380"" Margin=""0,4,0,0"" Foreground=""{DynamicResource Muted}"" FontSize=""12"" Visibility=""Collapsed""/>
+    </StackPanel>
+  </DockPanel>
+</Grid>";
+
         public static readonly string AskXaml = @"<Window " + Ns + @"
         Title=""Deepslate Works"" Width=""440"" SizeToContent=""Height"" ResizeMode=""NoResize"" WindowStartupLocation=""CenterOwner""
         FontFamily=""Segoe UI"" FontSize=""14"" TextOptions.TextFormattingMode=""Display"" TextOptions.TextRenderingMode=""ClearType"" UseLayoutRounding=""True"" SnapsToDevicePixels=""True"" Background=""{DynamicResource Card}"" Foreground=""{DynamicResource Fg}"">
@@ -513,21 +500,15 @@ namespace DeepslateWorks
         /// <summary>Every name the window looks up in AppXaml.</summary>
         public static readonly string[] Names =
         {
-            "Tabs", "PlayTab", "ExtrasTab", "LogTab", "PlayTitle", "PlayStatus", "PlayChanged", "ReviewLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody",
+            "Tabs", "PlayTab", "ExtrasTab", "LogTab",
             "HeadlineBox", "HeadlineText", "HeadlineButton", "ErrorLine", "ErrorText", "DetailsLink", "ProgressBox", "CheckButton", "ApplyButton", "ExtrasStatus", "ExtrasBody", "ChecksTitle", "ChecksBody", "LogList",
             "BrandBar", "BrandLogo", "BrandName", "BrandTagline", "Footer", "FooterApp", "FooterPack", "FooterServer",
-            "StepLabel", "SettingsLink", "PlayHint",
-            // 3.2.0 (planner 2026-10-02): the server on the Play tab, and the Vote tab
-            "ServerBox", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "StartButton", "SiteLink", "NewsBox", "NewsText", "NewsMeta", "NewsOpen", "NewsScroll", "PlayScroll",
+            // 3.2.0 (planner 2026-10-02): the Vote tab
             "VoteTab", "VoteStep", "VoteTitle", "VoteNote", "VoteBody", "VoteButton", "VoteError",
-            "UpdateButton", "UpdateLine",   // 3.3.0
-            // docs/45: the Test section (admins only)
-            "TestTab", "TestTitle", "TestNote", "TestState", "TestPack", "TestFolder", "TestPlayButton", "TestError",
-            // 3.4.0 (docs/21): the ground, the banner with the server pill, the drawn logo, the Vote tab's badge, the card
-            // round "Since last time"
-            "ChangedBox", "PlayChangedDetail", "OnlineHeads", "GroundTile", "Hero", "HeroImage", "HeroShade", "HeroStatus", "HeroDot", "HeroLine", "LogoFallback", "VoteBadge", "VoteBadgeText",
-            // 3.4.1 (docs/21 §11): the landscape Play tab, and the name's shadow (one of the pixel face's three places)
-            "PlayGrid", "PlayLeft", "PlayRight", "PlayCard", "PlayRow", "BrandShade",
+            // 3.4.0 (docs/21): the ground, the banner with the server pill, the drawn logo, the Vote tab's badge
+            "GroundTile", "Hero", "HeroImage", "HeroShade", "HeroStatus", "HeroDot", "HeroLine", "LogoFallback", "VoteBadge", "VoteBadgeText",
+            // 3.4.1 (docs/21 §11): the name's shadow (one of the pixel face's three places)
+            "BrandShade",
             // 3.4.2: Save log and Send to Alex on the Log tab
             "SaveLogButton", "SendLogButton", "LogStatus",
             // 3.5.0 (docs/30): the Settings tab
@@ -536,6 +517,16 @@ namespace DeepslateWorks
             "VillagerCard", "VillagerPreview", "VillagerTitle", "VillagerSwitch", "VillagerNote", "VillagerMissing",
             "WebsiteCard", "WebsiteTitle", "WebsiteQuestion", "WebsiteChoices", "WebsiteNote",
             "GraphicsCard", "GraphicsTitle", "GraphicsEmpty", "GraphicsBody",
+        };
+
+        /// <summary>3.6.1: every name a Play view (PlayPane) looks up in PlayViewXaml, the same in each copy.</summary>
+        public static readonly string[] PlayViewNames =
+        {
+            "PlayGrid", "PlayLeft", "PlayRight", "PlayCard", "PlayRow",
+            "PlayTitle", "PlayStatus", "PlayChanged", "PlayChangedDetail", "ChangedBox", "ReviewLink", "SettingsLink", "ResetButton", "AllowAllButton", "PlayButton", "PlayBody",
+            "StepLabel", "PlayHint", "PlayScroll", "UpdateButton", "UpdateLine",
+            "ServerBox", "ServerName", "ServerDot", "ServerLine", "ServerHint", "ServerOnline", "OnlineHeads", "StartButton", "SiteLinkLine", "SiteLink",
+            "NewsBox", "NewsText", "NewsMeta", "NewsOpen", "NewsScroll",
         };
 
         /// <summary>Every name the question window looks up in AskXaml.</summary>

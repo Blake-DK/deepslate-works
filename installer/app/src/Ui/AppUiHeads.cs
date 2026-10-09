@@ -18,14 +18,14 @@ namespace DeepslateWorks
     /// </summary>
     sealed partial class AppUi
     {
-        StackPanel OnlineHeads;
+        StackPanel OnlineHeads => LivePane.OnlineHeads;   // 3.6.1: the live server's players (the test card has a count)
         readonly Dictionary<string, BitmapSource> headPics = new Dictionary<string, BitmapSource>(StringComparer.OrdinalIgnoreCase);
         readonly HashSet<string> headAsked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         readonly HashSet<string> headFailed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         List<OnlinePlayer> headsShown = new List<OnlinePlayer>();
         static BitmapSource headPlaceholder;
 
-        void WireHeads() => OnlineHeads = Window.FindName("OnlineHeads") as StackPanel ?? throw new InvalidOperationException("the window has no OnlineHeads");
+        void WireHeads() { }   // 3.6.1: the heads' row is the live Play view's own (PlayPane)
 
         /// <summary>The placeholder from the exe (branding/launcher/head-placeholder.png); null when it is not there.</summary>
         static BitmapSource HeadPlaceholder()

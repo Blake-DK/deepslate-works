@@ -156,12 +156,16 @@ namespace DeepslateWorks.Tests
                 Assert.Contains("x:Key=\"Plain\"", x);
                 Assert.DoesNotMatch(new Regex(@"=""#[0-9A-Fa-f]{3,8}"""), x);
             }
-            Assert.Contains("Style=\"{StaticResource PlayBlock}\"", AppWindow.AppXaml);
+            // 3.6.1: the Play view is parsed on its own, so the window's styles are found once it is in the window
+            Assert.Contains("Style=\"{DynamicResource PlayBlock}\"", AppWindow.PlayViewXaml);
+            Assert.DoesNotMatch(new Regex(@"=""#[0-9A-Fa-f]{3,8}"""), AppWindow.PlayViewXaml);
+            Assert.DoesNotContain("StaticResource", AppWindow.PlayViewXaml);
             Assert.Contains("Style=\"{StaticResource VoteBlock}\"", AppWindow.AppXaml);
             Assert.Contains("x:Key=\"PickBox\"", AppWindow.AppXaml);
             // 3.5.0: the Settings tab's slider, switch and choice are drawn by the theme, not by Windows
             foreach (var k in new[] { "x:Key=\"Switch\"", "x:Key=\"Choice\"", "x:Key=\"SliderThumb\"", "<Style TargetType=\"Slider\">" }) Assert.Contains(k, AppWindow.AppXaml);
-            Assert.Contains("ContentTemplate=\"{StaticResource MarkedLabel}\"", AppWindow.AppXaml);
+            Assert.Contains("ContentTemplate=\"{DynamicResource MarkedLabel}\"", AppWindow.PlayViewXaml);
+            Assert.Contains("x:Key=\"MarkedLabel\"", AppWindow.AppXaml);
         }
     }
 }

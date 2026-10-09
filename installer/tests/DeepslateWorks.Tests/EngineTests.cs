@@ -408,7 +408,7 @@ namespace DeepslateWorks.Tests
                 Assert.Equal("no", w.Request(run, Refuse(asked, "crashed"))); Assert.Equal("crashed", w.Refused);
                 w = new Engine.Wake();
                 Assert.Equal("no", w.Request(run, m => throw new Exception("The remote name could not be resolved"))); Assert.Null(w.Refused);
-                Assert.Contains(Log.RunLines, l => l.EndsWith("wake: not started (The remote name could not be resolved)"));
+                Assert.Contains(Log.RunLines, l => l.EndsWith("wake: not started: the site could not be asked (The remote name could not be resolved)"));
 
                 var seq = new Queue<string>(new[] { "waking", "waking", "ready" });
                 Func<string, object> seqCall = m => { var p = seq.Count > 1 ? seq.Dequeue() : seq.Peek(); return J.O("wake", J.O("phase", p)); };

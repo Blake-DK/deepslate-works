@@ -43,7 +43,53 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.1: the Test tab is the Play tab pointed at the test server (planner brief, 2026-10-09; docs/45)
+
+- **One Play view, two copies.** The Play tab's view is `AppWindow.PlayViewXaml`, parsed once per target into a
+  `PlayPane` (its own names, so each copy has its own controls): the live server's on the Play tab, the test server's on
+  the Test tab. Each pane has its own run state, countdown, card, footer and banner pill; the window's Play code works
+  on the pane in hand (`AppUi.P`, set by `On(pane, …)` for that pane's button, run lines and countdown; live otherwise).
+  No second copy of the Play code.
+- **Admins only, asked only for admins.** The Test tab is made when the live site's home says the sign-in is an admin's
+  (`/api/app/home`'s `admin`); only then is `/api/app/test` asked. A member's app has no Test tab, asks nothing about one
+  and logs nothing of it.
+- **Play on either tab** ends a run of the other's that only waits for Play (no game being installed or started): no
+  "cancelled" report (`Run.Switched`), nothing more written to its folder. Play is shut only while the other game is
+  really being got ready, and the tab says why.
+- **The card names its server:** "Live server" / "Test server". The test card is the site's own words (`server` in the
+  Test section's answer, the home's shape), so a state the app does not know shows as the site words it. The footer and
+  the banner's pill follow the tab in view ("Test pack …", "Test server: …").
+- **Start** says "Start live server" and asks "Start the live server? …". No Stop in the app; no Start or Stop of the
+  test server (test starts and stops stay on the test site, where they are logged).
+- **What follows the run's target**, and what 3.6.0 got wrong:
+  - Extras: the run's own game folder, with the Extras tab's choices and an applied list per game (`extras.json` for
+    live, `extras-test.json` for test). 3.6.0 synced the extras into the **live** folder during a test Play and the
+    test game had none. The run says "on" only for files in place with the right checksum, else "N chosen, M in place".
+  - Settings: a new test folder starts as a copy of the live game's `options.txt` (resource packs it lacks dropped);
+    each test Play brings across the keys the Settings tab manages and the prisoner villagers, with the tab's waiting
+    changes on top. The waiting changes stay the live game's: only a live Play applies and clears them, so a change
+    reaches whichever game is played next. 3.6.0 applied them to the test game and cleared them, so live lost them.
+  - The game check after a test Play has its own report mode, `test_game_check`, and is shown on the Test tab. 3.6.0
+    sent it as `game_check`, into the live figures.
+  - The Minecraft Launcher: after a test Play, once the launcher is closed, the live profile is selected again and
+    last used (`Engine.PutLiveFirst`); also when the window opens and closes. Never while the launcher is open.
+- **The game check** counts every file NeoForge says it found (mod, library, game library) and always reads
+  `debug.log` too; a `latest.log` that starts with a time and no date is read on the day the log was last written (the
+  day before when that would be later). 3.6.0 fell back to the file's creation time, which Windows carries over from
+  the previous log, and almost never found a game.
+- **The wake line** says what each answer means ("the test server is switched off, and Play does not start it", "the
+  live site can't reach the test server's site", …), the code in brackets.
+- **The profile line** names the profile written ("Deepslate Works TEST" for a test Play).
+- **Tests:** `TabsTests`, `TargetTests`, and `installer/tests/windows-tabs.ps1` on the Windows runner: the app's own
+  window against a stand-in site on 127.0.0.1, opened from the desktop, as the Play link opens it (`-AsLink`, only in a
+  `-Root` run against 127.0.0.1) and with live switched off, plus a member's app; pictures of both tabs side by side
+  and both game folders listed with hashes before and after each kind of run. A stand-in run never opens the Minecraft
+  Launcher (`Env.StandIn`).
+
 ## 3.6.0: the Test section, admins only (Alex and the planner, 2026-10-09; docs/45)
+
+Corrected by 3.6.1 (above): the "never touched" claims below were not true of 3.6.0's extras, waiting settings and game
+check.
 
 - A **Test** tab, shown only when the live site answers `GET /api/app/test` for the signed-in member (admins; anyone else
   gets "not found" and the tab stays hidden). It says plainly it is the test server, shows its state, address and test

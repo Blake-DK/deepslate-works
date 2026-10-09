@@ -29,14 +29,21 @@ namespace DeepslateWorks
         public const string ReviewTitle = "Permissions";
         public const string ReviewStatus = "What Deepslate Works may do on this PC. Changes count from the next Play. Reset all forgets every answer, so everything is asked again.";
         public const string RunningTitle = "Getting the game ready";
-        // docs/45: the Test section (admins only)
+        // docs/45, 3.6.1: the Test tab (admins only), the Play tab pointed at the test server
+        public const string LiveServerName = "Live server";
+        public const string TestServerName = "Test server";
         public const string TestRunningTitle = "Getting the TEST game ready";
         public const string TestRunningStatus = "The test pack, in its own folder. Then the Minecraft Launcher opens on Deepslate Works TEST and joins the test server.";
-        public const string TestNote = "Only admins see this. It plays the test server with the test pack, in a game folder of its own: your normal game is not changed.";
-        public const string TestOff = "The test server is off: {0}";
-        public static string TestStateLine(string state, int players, string address) => string.Format("The test server is {0}{1}. Address: {2}.", state == "online" ? "online" : state == "asleep" ? "asleep (Play test wakes it)" : state, state == "online" ? string.Format(", {0} on", players) : "", string.IsNullOrEmpty(address) ? "?" : address);
+        public const string TestIdleTitle = "Deepslate Works TEST";
+        public const string TestIdleStatus = "Only admins see this tab. Play here installs the test pack into a game folder of its own and joins the test server. Your normal game is not changed.";
+        public const string TestAsking = "Asking the site how the test server is...";
+        public static string TestPlayers(int n) => n == 0 ? "Nobody on the test server right now." : n == 1 ? "1 player on the test server." : string.Format("{0} players on the test server.", n);
         public static string TestPackLine(string pack, string serverPack) => string.Format("Test pack {0}{1}.", pack ?? "?", !string.IsNullOrEmpty(serverPack) && serverPack != pack ? string.Format(" (the test server runs {0})", serverPack) : "");
         public const string TestFolderLine = "Game folder: .minecraft-deepslate-works-test. Launcher profile: Deepslate Works TEST.";
+        /// <summary>Item 1: Play is shut only while the other server's game is really being installed or started.</summary>
+        public static string HeldByOther(bool otherIsLive) => otherIsLive ? "The live game is being got ready. Play here works as soon as that's done." : "The test game is being got ready. Play here works as soon as that's done.";
+        /// <summary>Item 1: a run that only waited for Play, ended so the other server's Play could start.</summary>
+        public static string SwitchedStatus(bool toLive) => toLive ? "Ended so the live game could start. Press Play here when you want this one." : "Ended so the test game could start. Press Play here when you want this one.";
         public const string RunningStatus = "Checking for updates, then the Minecraft Launcher opens on Deepslate Works.";
         public const string RunningExtrasStatus = "Fetching the visual extras.";
         public const string AlreadyTitle = "Already running";
@@ -45,6 +52,7 @@ namespace DeepslateWorks
         public const string FailedStatus = "Something went wrong. The Log tab has the details; Alex has them too if reports are on.";
         public const string ReadyTitle = "Ready";
         public const string ReadyStatus = "The Minecraft Launcher is opening on Deepslate Works: press Play there. This window can stay open, or be closed.";
+        public const string TestReadyStatus = "The Minecraft Launcher is opening on Deepslate Works TEST: press Play there. This window can stay open, or be closed.";
         public const string Play = "Play", Continue = "Continue", Save = "Save", Working = "Working...";
         public const string Allow = "Allow", NotNow = "Not now";
         /// <summary>The Extras tab's download question's buttons (2.0.1: Allow all on every question).</summary>
@@ -126,7 +134,10 @@ namespace DeepslateWorks
         // ---- the app as the front door, votes before play (3.2.0, planner 2026-10-02) ------------------------------
         public const string OpenedStatus = "Signing in, checking for updates and waking the server. Press Play when it's ready.";
         public const string VoteFirstHint = "There's a vote to answer first. Press the button: the game starts once you've voted.";
-        public const string StartServerQuestion = "Start the server? It is switched off (or crashed), so joining won't wake it. This is the same Start as Admin \u2192 Server on the site.";
+        // 3.6.1 (item 10): Start names the server it acts on, on the button and in the question. The app starts only the live
+        // server; the test server is started on the test site.
+        public const string StartLiveButton = "Start live server";
+        public const string StartServerQuestion = "Start the live server? It is switched off (or crashed), so joining won't wake it. This is the same Start as Admin \u2192 Server on the live site.";
         public const string StartSent = "Start sent. The server is starting.";
         public const string VoteButton = "Vote", VoteSaving = "Saving...", NextVote = "Next vote", GoToPlay = "Go to Play", PlayNow = "Play now";
         public const string VoteThanksPlaying = "Thanks, your vote is in. The game starts in a few seconds. Here's how it stands:";

@@ -141,33 +141,35 @@ namespace DeepslateWorks.Tests
                     try
                     {
                         w.Width = w.MinWidth; ui.Pump(); w.UpdateLayout();
-                        AssertRowFits(w, "the Play view");
+                        AssertRowFits(ui,"the Play view");
                         ui.PressReview(); ui.Pump(); w.UpdateLayout();
-                        AssertRowFits(w, "Review permissions");
+                        AssertRowFits(ui,"Review permissions");
                         ui.PressTab("play"); ui.PressAllowAll(); ui.Pump();
                         // the first-run cards: Allow all and Continue (the Update button stays out of them too)
                         ui.Consent = new Dictionary<string, ConsentAnswer>();
                         ui.ShowFirstRun(); ui.Tick(); ui.Pump(); w.UpdateLayout();
                         Assert.False(ui.UpdateShown);
-                        AssertRowFits(w, "the first-run questions");
+                        AssertRowFits(ui,"the first-run questions");
                     }
                     finally { w.Close(); }
                 });
         }
 
         /// <summary>Every visible button of the bottom row lies wholly inside the Play tab and to the right of the links.</summary>
-        static void AssertRowFits(Window w, string view)
+        static void AssertRowFits(AppUi ui, string view)
         {
+            var w = ui.Window;
+            object N(string n) => ui.LivePane.Find(n) ?? w.FindName(n);   // 3.6.1: the Play view's names are its own
             var root = (FrameworkElement)w.Content;
             // the links are Hyperlinks (not laid out themselves): their TextBlocks are
-            var links = (FrameworkElement)((FrameworkContentElement)w.FindName("ReviewLink")).Parent;
-            var settings = (FrameworkElement)((FrameworkContentElement)w.FindName("SettingsLink")).Parent;
+            var links = (FrameworkElement)((FrameworkContentElement)N("ReviewLink")).Parent;
+            var settings = (FrameworkElement)((FrameworkContentElement)N("SettingsLink")).Parent;
             double linksRight = Math.Max(Right(links, root), Right(settings, root));
-            var tab = (FrameworkElement)w.FindName("Tabs");
+            var tab = (FrameworkElement)N("Tabs");
             double tabRight = Right(tab, root);
             foreach (var n in new[] { "AllowAllButton", "ResetButton", "PlayButton", "UpdateButton" })
             {
-                var b = (Button)w.FindName(n);
+                var b = (Button)N(n);
                 if (b.Visibility != Visibility.Visible) continue;
                 var left = b.TranslatePoint(new Point(0, 0), root).X;
                 var right = left + b.ActualWidth;

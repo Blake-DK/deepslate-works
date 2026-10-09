@@ -78,6 +78,56 @@
 Last updated 2026-10-09, latest: the launcher's Test section (docs/45) deployed with app 3.5.5 still handed out, and a middleware test for every app route (first section below). Before that: Season 1 mods off live until the season opens, the fallback on `dev` (first section below). Before that: app 3.5.6, readable words on the Extras tab, on `dev` (first section below). Before that: the planner's answers of 2026-10-09 (second section below). Before that: `main` at PR #20 deployed (second section below). Before that: the test server silent on Discord (second section below). Before that: the starter kit on the first release, the book alone in the join room (second section below). Before that: the join room's sign-in book unblocked in OPAC (second section below). Before that: `main` (PR #18) deployed and the test server brought up (second section below). Before that: the test server (docs/42), S0 and S3 to S6, built (second section below). Before that: countries from mc-router's joins on the admin-only stats, on `dev` (second section below). Before that: mc-router on Admin → Server → Router, through api, on `dev`, not deployed (second section below). Before that: the build designer's second pass, Parts 1 and 2 (docs/40), in a `dev` → `main` PR (second section below). Before that: Discord sign-in fixed (PR #13, deployed), then PR #14 merged to `main`, not deployed: sign-in alerts, the healthcheck and deploy.sh fixes, the 7 October change log (first section below). Before that, the same day: the admin sign-in notice can be acknowledged (second section below). Before that, the same day: the build designer, Steps 1 and 2 (docs/39: the `designer` container and the "Design a build" card on Admin → Seasons → Builds), on `dev`, not deployed (second section below). Before that, the same day: its Step 0, items 1 to 4 (first section below).  Before that, the same day: the security register (docs/38) on `dev`, with the open findings, the first fix spec and the build order moved to a private place (first section below). Before that: 2026-10-06, latest: app 3.5.5, the Play tab never scrolls, the window grows to show it all, on `dev`, not deployed (second section below). Before that, the same day: Build and Sync say "updated" for a new version of a mod (second section). Before that, the same day: placeholder values in `deploy/.env.example` and a list of `deploy/` in its README (third section). Before that, the same day: the `dev` image tag undone, `dev` builds no images again (fourth section). Before that, the same day: app 3.5.4, readable text, the whole news, Play through the vote, merged to `main` in PR #5 (fifth section). Before that, the same day: importing builds, the plan (docs/37), its Step 1 and Step 2, on `dev`, not deployed (third section). Before that, the same day: app 3.5.3, the Play tab fits without scrolling, the news card opens the site, the Log tab's green lines, merged to `main` in PR #4 (fourth section). Before that, the same day: Discord votes say they are the site vote, polls can be edited and made must-vote, on `dev`, not deployed (fifth section). Before that, the same day: the "out of date" box on Admin → Modpack, on `dev`, not deployed (sixth section). Before that, the same day: the newest app is required to join, app 3.5.2, deployed (second section). Before that: 2026-10-05, latest: the worlds plan (docs/36) and what CI measured of it (first section below). Before that, the same day: the season's mods are listed to admins only, and the "no videos" warnings are gone (first section below). Before that, the same day: Xaero's maps pinned back after every PC failed to load (first section below). Before that, the same day: a code review (docs/35) and the control panel reorganised on `dev`, not deployed (first section below). Before that: 2026-10-04, latest: the `createdeco:placard` recipe ERROR has a fix in `deepslate-tools` (first section below). Before that: 2026-10-04, later still: an invite now stands in for the Discord server (first section below). Before that: 2026-10-04, late: Season 1's recording, Season page, Admin → Seasons, Discord moments and the Frontier's datapack are built on `dev` (first section below). Before that: 2026-10-04, 15:20 UTC: PR B, C and D running (deployed 14:50 by the old script), the first root checks after them (first section below). Before that: 2026-10-04 evening: We're live pressed 2026-10-04, PR A (B-01) deployed, the planner's fix order (first section below). Before that: 2026-10-04, 12:50 UTC for the review and the seasons roadmap (docs/31, docs/32; docs only, first section below). Before that: 2026-10-04, about 12:00 UTC: app 3.5.0, the Settings tab, is on its branch, not merged (its section is the first below). Before that: 2026-10-04, 11:10 UTC for the Activity page (docs/29: `main` `bf5e9d3` deployed, section below). Before that: 2026-10-03, 21:30 UTC (`main` `bc12ef3`, images `ac2bfe4` deployed with the signed-in check; pack `0.1.0+d7521da9`, app 3.4.2; the five fixes after the state-of-development check and their follow-ups are live: dated nightly dumps, a backup counts once AMP lists it, the Discord card shows the last real send, install reports readable through api, `server-loaded.json` from the 19:33 start). Read the first section below first; the sections after it are the record of how it got there, newest work nearest the top of each part, and some of them describe a state that has since moved on. `docs/10-roadmap.md` is the plan and its boxes, with "Open items, by priority" at its end; `ROADMAP.md` is the same for people who are not building it.
 
 
+## App 3.6.1, one Play view for both servers (planner brief, 2026-10-09; on `work/app-3-6-1` and `work/app-3-6-1-server`)
+
+- **Branches, pushed for CI only (Alex's word, 2026-10-09):** `work/app-3-6-1` (the app, docs/07, docs/45 "The app",
+  this section, the change log entry `2026-10-09-app-3-6-1` without `live`) and `work/app-3-6-1-server` (api and web,
+  docs/45's route table). Neither is on `dev` or `main`; neither merges before the removal is deployed and Alex says so.
+  Nothing deployed; no server started, stopped, woken, built, synced or locked; live stays pinned at 3.5.5.
+- **CI (installer workflow, dispatched on `work/app-3-6-1`):**
+  - run 37950339260 on `6a3606b1`: the new real-window test (`installer/tests/windows-tabs.ps1`) on the 3.6.0 code,
+    **25 checks failed** as intended (no card names its server, the Test tab has no card or steps, Play test shut while
+    live waits, no test run, Start says "Start", a member's app asked `/api/app/test` 3 times).
+  - run 37952291134 on `5bfb61ee` (the shared view): items 1, 2, 3 and the member's app pass in the window; 4 checks
+    left (items 5 and 6, and the harness could not read the Start question); 2 unit tests broken by the change (fixed).
+  - run 37953724562 on `6697b555` (items 4 to 9): **all 47 window checks and 293 unit tests pass.**
+  - run 37956740006 on `211477bb`: all 49 window checks and 293 unit tests pass (superseded below).
+  - run 37966023431 on `21f5f7e9` (sha256 `ebd3a77f…`): superseded by the next line.
+  - **the 3.6.1 build Alex tries:** run 37968006515 on `76f580f8`, artifact `deepslate-works-3.6.1`, **all 49 window
+    checks and 296 unit tests pass** (item 4 on Alex's real game log, fixture `neoforge-21.1.253-client-latest.txt`;
+    a mod's own locator counts only for a pack file whose whole name it reports); `DeepslateWorks.exe` 3.6.1,
+    837,120 bytes, sha256 `b37bc4891cd29c68ffe51e2e39afb9e45d677562e9b687aa2ed1808d94be46f2`. For Alex only.
+  - the same run's `update` job: **the exact 3.5.5 exe the site hands out** (image `deepslate-installer:3.5.5`,
+    sha256 `626bdb2a…04fc`, the live `dist/DeepslateWorks.exe`), run with `-Root` and the stand-in address, updated
+    itself to this build, removed the jar the mod list no longer has, kept the one it has, played and reported as 3.6.1
+    with `updatedFrom 3.5.5`; all 13 checks pass (artifact `update-from-3.5.5`).
+- **Item 4 on the real log:** Alex's test game's `latest.log` (NeoForge 21.1.253 client) starts "[20:26:09] [main/INFO]"
+  (no date); Custom Window Title is a "Found gamelibrary file", KotlinLangForge and Scalable Cats Force "Found library
+  file"; Sodium's own locator reports `net.caffeinemc.sodium-neoforge-0.8.13+mc1.21.1-mod.jar` and the pack's name is
+  never in the log. 3.6.0's rules on that log: those four "not loaded" and no start time; 3.6.1's: none missing and
+  the time read. The two logs were scanned for secrets (the launcher masks the access token; none found), cut down to
+  16 lines with personal values replaced, and deleted from the VPS.
+- **What a real window proves** (the app's own window on the Windows runner, a stand-in site on 127.0.0.1): items 1,
+  2, 3, 10, the member's app (no Test tab, nothing asked, nothing logged), the unknown state in the site's words, the
+  footer and pill following the tab, and no test run writing into the live folder nor a live run into the test folder
+  (both folders listed with hashes before and after, `tabs/*.txt` in the artifact), extras into the test game (item 5),
+  settings carried both ways (item 6). **Unit tests only:** the game check's log reading (4a, 4b: no real log yet), the
+  wake's words (7), the profile line (8), the launcher profile put back (9). **Only Alex on his PC:** the real
+  `deepslate://` link from a browser, the Minecraft Launcher opening on the live profile after a test Play, the game
+  check on a real game (Sodium), extras and settings inside the test game, live Play unchanged.
+- **Server branch (proven by tests, not yet on the test stack):** the AMP session fix (`df80d3c2`), the door's once a
+  visit (`6f4a1351`), the test wake (`62aa92c8`), `test_game_check` (`e206ae9b`). New api tests fail on `dev`'s code
+  (5 failed) and pass on the branch; `deploy/check.sh` all green: modpack 217, api 721, web 605.
+- **The AMP session drops:** in the test api's log, 26 new AMP sessions in 24 h, 58 to 91 s apart while the test
+  Control Room was open (its 30 s refresh asks for backup permissions the test user lacks). The live api: one new
+  session in 72 h. Live would churn the same way if a page asked for a permission the live user lacks; it has both
+  backup permissions (see 2026-09-29 below). After the fix a permission granted in AMP is seen from the api's next session.
+- **Waiting:** Alex's `latest.log` and `debug.log` from his test game folder on the VPS (for 4a and Sodium, fixtures);
+  the server branch on the test stack after the rehearsal, on Alex's word (session age over ten minutes before and
+  after; one real test wake from asleep to online in the app's log); the exe to Alex from the 3.6.1 run's artifacts.
+- **Found on the way:** a real player's name in comments, tests and docs. Replaced by placeholders on Alex's word, without
+  a history rewrite (see "Today's state and decisions" at the top).
+
 ## The launcher's Test section on live, before 3.6.0 (docs/45, 2026-10-09)
 
 - **Deployed:** `main` at PR #22 (`4aec215e`) with `INSTALLER_TAG=3.5.5`. The build folder and `installer.json` still

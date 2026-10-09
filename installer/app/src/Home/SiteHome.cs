@@ -156,14 +156,17 @@ namespace DeepslateWorks
 
         /// <summary>3.4.0 (docs/21 §4): the server pill on the banner, the Play tab's line shortened. Null: the site could not
         /// be reached.</summary>
-        public static string HeroLine(HomeInfo h)
+        public static string HeroLine(HomeInfo h) => HeroLine(h, h?.Online.Count ?? 0, "Server");
+
+        /// <summary>3.6.1: the same for a named server ("Test server is up").</summary>
+        public static string HeroLine(HomeInfo h, int players, string who)
         {
             var s = h?.Server;
             if (s == null) return "Can't reach the site";
             if (s.Waking) return s.WakeLeftS.HasValue && s.WakeLeftS.Value > 0 && s.WakeLeftS.Value < 30 ? string.Format("Waking, about {0} s", s.WakeLeftS.Value) : "Waking, about 30 s";
-            if (s.State == "online") return h.Online.Count > 0 ? string.Format("Server is up · {0} playing", h.Online.Count) : "Server is up";
-            if (s.State == "asleep") return "Server is asleep";
-            return !string.IsNullOrEmpty(s.Label) ? "Server: " + s.Label : s.Line;
+            if (s.State == "online") return players > 0 ? string.Format("{0} is up · {1} playing", who, players) : who + " is up";
+            if (s.State == "asleep") return who + " is asleep";
+            return !string.IsNullOrEmpty(s.Label) ? who + ": " + s.Label : s.Line;
         }
 
         /// <summary>The pill's dot, as a Theme key: up green, waking or starting copper, the site unreachable or the
@@ -243,7 +246,59 @@ namespace DeepslateWorks
             EnsureToken();
             if (string.IsNullOrEmpty(Http.Token)) return null;
             try { return Http.GetJson(Env.TestSectionUrl, 8) as JObj; }
-            catch (HttpError) { return null; }
+            catch (HttpError e) when (e.Status != 0) { return null; }   // 3.6.1: the site not reached at all is not "no section"
+        }
+
+        /// <summary>3.6.1: the Test tab's card, from what the live site said about the test server.</summary>
+        public sealed class TestSection
+        {
+            public bool Available;
+            public ServerInfo Server = new ServerInfo();
+            public int Players;
+            public string Pack, ServerPack, Address;
+        }
+
+        /// <summary>
+        /// 3.6.1: the Test section's answer as the Test tab shows it. The site's own words for the server when it sends
+        /// them ("server", the same block as the home's), so a state this app does not know reads as the site words it;
+        /// from a site before that, its state with the plain words for it. failed: the site could not be asked at all.
+        /// </summary>
+        public static TestSection ParseTestSection(JObj s, bool failed = false)
+        {
+            var t = new TestSection();
+            if (s == null)
+            {
+                t.Server = new ServerInfo { State = "unreachable", Line = failed ? "Can't reach " + Env.SiteHost + " right now." : "The site has no test server for this sign-in.", Label = "", Tone = failed ? "bad" : "neutral" };
+                return t;
+            }
+            t.Available = J.Bool(s, "available");
+            if (!t.Available)
+            {
+                t.Server = new ServerInfo { State = "off", Line = J.Str(s, "reason") ?? "The test server is switched off.", Label = "", Tone = "neutral" };
+                return t;
+            }
+            var server = J.Obj(s, "server");
+            t.Server = server != null ? ParseServer(server) : FromState(J.Str(s, "state") ?? "unreachable");
+            t.Players = J.Int(s, "players", 0);
+            t.Pack = J.Str(s, "pack"); t.ServerPack = J.Str(s, "serverPack"); t.Address = J.Str(s, "address");
+            return t;
+        }
+
+        /// <summary>A site before 3.6.1 sends the test server's state only: the words the site uses for it (shared/server-
+        /// state.ts), and a state this app does not know as it came.</summary>
+        static ServerInfo FromState(string state)
+        {
+            switch (state)
+            {
+                case "online": return new ServerInfo { State = state, Line = "Online", Label = "Online", Tone = "good" };
+                case "asleep": return new ServerInfo { State = state, Line = "Asleep, join to wake it", Label = "Asleep", Tone = "neutral" };
+                case "waking": return new ServerInfo { State = state, Line = "Waking up...", Label = "Waking up", Tone = "warn" };
+                case "starting": return new ServerInfo { State = state, Line = "Starting...", Label = "Starting", Tone = "warn" };
+                case "off": return new ServerInfo { State = state, Line = "Switched off", Label = "Switched off", Tone = "neutral" };
+                case "crashed": return new ServerInfo { State = state, Line = "Crashed", Label = "Crashed", Tone = "bad" };
+                case "unreachable": return new ServerInfo();
+                default: return new ServerInfo { State = state, Line = state, Label = state, Tone = "neutral" };
+            }
         }
 
         /// <summary>The vote; the poll comes back with the results. A refusal throws HttpError (its body says why).</summary>
@@ -261,10 +316,10 @@ namespace DeepslateWorks
 
         /// <summary>The site's "wake" for a sleeping server, said to come from the app ("&lt;name&gt; woke the server (app)").
         /// The site decides: only from Asleep, only for a member the door would let in, one start however often.</summary>
-        public static void Wake()
+        public static void Wake(string target = "live")
         {
             EnsureToken();
-            Http.PostJson(Env.WakeUrl, J.O("via", "app"), 15);
+            Http.PostJson(Env.WakeUrlFor(target), J.O("via", "app"), 15);
         }
 
         /// <summary>What a refusal said, for the screen: the site's message, or the error.</summary>

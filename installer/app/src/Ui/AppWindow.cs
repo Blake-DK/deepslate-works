@@ -39,7 +39,9 @@ namespace DeepslateWorks
             {
                 // before any window: its own taskbar button (2.0.3), never grouped under another program
                 try { Native.SetCurrentProcessExplicitAppUserModelID(Env.AppUserModelId); } catch (Exception e) { Log.Line("window: " + e.Message); }
-                var ui = new AppUi(run ?? new DeepslateWorks.Run(), false) { ShowSignal = signal, PlaySignal = play, FromWebsite = args != null && args.Link != "", AutoUpdate = args != null && args.Update };
+                var testLink = Env.StandIn && Args.TestLink(args, Env.CustomRoot, Env.PortalUrl);
+                if (testLink) Log.Line("test run: opened as the Play link opens it (-AsLink)");
+                var ui = new AppUi(run ?? new DeepslateWorks.Run(), false) { ShowSignal = signal, PlaySignal = play, FromWebsite = (args != null && args.Link != "") || testLink, AutoUpdate = args != null && args.Update };
                 ui.Open();
                 return 0;
             }

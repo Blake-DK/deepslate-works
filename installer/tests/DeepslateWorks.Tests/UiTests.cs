@@ -31,6 +31,7 @@ namespace DeepslateWorks.Tests
         [Fact] public void Both_windows_XAML_is_well_formed()
         {
             Load(AppWindow.AppXaml);
+            Load(AppWindow.PlayViewXaml);   // 3.6.1: the Play view, parsed on its own once per target
             Load(AppWindow.AskXaml);
             Load(AppWindow.RestartXaml);
             Assert.Equal(AppWindow.AskXaml, AppWindow.RestartXaml);
@@ -40,6 +41,9 @@ namespace DeepslateWorks.Tests
         {
             var names = Named(AppWindow.AppXaml);
             Assert.Empty(AppWindow.Names.Where(n => !names.ContainsKey(n)));
+            var view = Named(AppWindow.PlayViewXaml);
+            Assert.Empty(AppWindow.PlayViewNames.Where(n => !view.ContainsKey(n)));
+            Assert.Empty(view.Keys.Where(k => !k.StartsWith("PART_") && names.ContainsKey(k)));   // no name in both (a template's parts aside): the view's are looked up in the view only
             var ask = Named(AppWindow.AskXaml);
             Assert.Empty(AppWindow.AskNames.Where(n => !ask.ContainsKey(n)));
         }
@@ -47,6 +51,7 @@ namespace DeepslateWorks.Tests
         [Fact] public void The_named_controls_are_what_the_code_takes_them_for()
         {
             var n = Named(AppWindow.AppXaml);
+            foreach (var kv in Named(AppWindow.PlayViewXaml)) n[kv.Key] = kv.Value;   // 3.6.1: the Play view's names too
             Assert.Equal("TabControl", n["Tabs"]);
             foreach (var t in new[] { "PlayTab", "VoteTab", "ExtrasTab", "LogTab" }) Assert.Equal("TabItem", n[t]);
             foreach (var t in new[] { "StartButton", "VoteButton", "UpdateButton" }) Assert.Equal("Button", n[t]);
@@ -85,10 +90,10 @@ namespace DeepslateWorks.Tests
 
         [Fact] public void The_Play_tabs_questions_have_Allow_all_next_to_Continue_and_Review_has_Reset_all()
         {
-            Assert.Matches(new Regex("x:Name=\"AllowAllButton\"[^>]*Content=\"Allow all\""), AppWindow.AppXaml);
-            Assert.Matches(new Regex("x:Name=\"ResetButton\"[^>]*Content=\"Reset all\""), AppWindow.AppXaml);
-            Assert.Matches(new Regex("x:Name=\"PlayButton\"[^>]*Content=\"Play\""), AppWindow.AppXaml);
-            Assert.Contains(">Review permissions</Hyperlink>", AppWindow.AppXaml);
+            Assert.Matches(new Regex("x:Name=\"AllowAllButton\"[^>]*Content=\"Allow all\""), AppWindow.PlayViewXaml);
+            Assert.Matches(new Regex("x:Name=\"ResetButton\"[^>]*Content=\"Reset all\""), AppWindow.PlayViewXaml);
+            Assert.Matches(new Regex("x:Name=\"PlayButton\"[^>]*Content=\"Play\""), AppWindow.PlayViewXaml);
+            Assert.Contains(">Review permissions</Hyperlink>", AppWindow.PlayViewXaml);
         }
 
         [Fact] public void The_Extras_tabs_download_question_has_Allow_all()

@@ -42,6 +42,14 @@ once a visit (no join without a leave between, no "release" in the log at a resy
 
 ## The app
 
+**3.6.1 (what is built now; docs/07 "3.6.1").** The Test tab is the Play tab pointed at the test server: the same view
+and code with the target "test" (card, steps, Play, countdown), made only when the home says the sign-in is an admin's.
+Play on either tab ends a run of the other's that only waits. Extras, settings, the game check and the launcher profile
+follow the target as docs/07 says. **Corrections to version one below:** 3.6.0 did write into the live folder during a
+test Play (the extras were synced there; the Settings tab's waiting changes were used up by the test game), its game
+check counted in the live figures, and a member's app asked `/api/app/test` every 10 s. The text below is version
+one's, kept for the record.
+
 - A Test section, shown only when `GET /api/app/test` answers. It shows the test pack's version and says plainly it is
   the test server. When the stack is off or cannot be reached it says so and does nothing else.
 - **Its own Play:** the test manifest, the same steps as live Play (jars not in the manifest removed, Extras kept), the

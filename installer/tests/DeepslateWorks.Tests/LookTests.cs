@@ -53,7 +53,11 @@ namespace DeepslateWorks.Tests
         [WindowsFact] public void Every_name_is_in_the_window()
         {
             using (new Scratch())
-                WithWindow(ui => { foreach (var n in AppWindow.Names) Assert.NotNull(ui.Window.FindName(n)); });
+                WithWindow(ui =>
+                {
+                    foreach (var n in AppWindow.Names) Assert.NotNull(ui.Window.FindName(n));
+                    foreach (var n in AppWindow.PlayViewNames) Assert.NotNull(ui.LivePane.Find(n));   // 3.6.1: the Play view's own names
+                });
         }
 
         [WindowsFact] public void The_ground_is_tiled_and_the_banner_is_128_at_any_size()
@@ -81,7 +85,7 @@ namespace DeepslateWorks.Tests
                     {
                         Resize(ui, size.Width, size.Height);
                         var w = ui.Window;
-                        FrameworkElement F(string n) => (FrameworkElement)w.FindName(n);
+                        FrameworkElement F(string n) => (FrameworkElement)(ui.LivePane.Find(n) ?? w.FindName(n));   // 3.6.1: the Play view's own names
                         Rect At(string n) { var e = F(n); return e.TransformToAncestor(w).TransformBounds(new Rect(0, 0, e.ActualWidth, e.ActualHeight)); }
                         Assert.Equal(340, F("PlayLeft").ActualWidth, 0);
                         Assert.True(At("PlayCard").Left >= At("PlayLeft").Right + 15, size + ": the card overlaps the left column");
@@ -167,7 +171,7 @@ namespace DeepslateWorks.Tests
                     ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Waking)), "ready");
                     ui.SimSteps(14);
                     ui.Pump(); ui.Window.UpdateLayout(); ui.Pump(); ui.Window.UpdateLayout(); ui.Pump();
-                    var sv = (System.Windows.Controls.ScrollViewer)ui.Window.FindName("PlayScroll");
+                    var sv = (System.Windows.Controls.ScrollViewer)ui.LivePane.Find("PlayScroll");
                     // the screen decides how far it can grow (CI's is small): all of it shown, or the whole height used
                     Assert.True(ui.Window.ActualHeight > 600, "the window did not grow: " + ui.Window.ActualHeight);
                     Assert.True(sv.ExtentHeight <= sv.ViewportHeight + 0.5 || ScreenFull(ui.Window), "the steps still scroll: " + sv.ExtentHeight + " in " + sv.ViewportHeight);
@@ -280,7 +284,7 @@ namespace DeepslateWorks.Tests
                     WithWindow(ui =>
                     {
                         ui.Window.Resources["PixelFont"] = new FontFamily("Deepslate Look Test Face");
-                        var play = (System.Windows.Controls.Button)ui.Window.FindName("PlayButton");
+                        var play = (System.Windows.Controls.Button)ui.LivePane.Find("PlayButton");
                         play.Content = "Play"; ui.Pump();
                         Assert.Equal("Deepslate Look Test Face", play.FontFamily.Source);
                         play.Content = "Vote first, it takes ten seconds"; ui.Pump();

@@ -144,6 +144,16 @@ export const CHANGES: Change[] = [
     date: "2026-10-09",
     lines: ["A small pack update and a tidy-up of the world. Press Play as usual: the app brings your game up to date by itself."],
   },
+  {
+    // app 3.6.1. Set `live: true` only once 3.6.1 is what the site hands out and its live check passed (the rule above).
+    id: "2026-10-09-app-3-6-1",
+    date: "2026-10-09",
+    lines: [
+      "The app's server card says which server it is about: Live server.",
+      "After you press Play, the app's check of your game now reads the game's log properly. It no longer says mods are missing when they are loaded, and it no longer misses the game starting.",
+      "Settings you change in the app reach your game the next time you press Play, whatever else you did in between.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

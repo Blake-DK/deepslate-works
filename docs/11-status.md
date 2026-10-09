@@ -69,9 +69,8 @@ Last updated 2026-10-09, latest: the launcher's Test section (docs/45) deployed 
 - **Waiting:** Alex's `latest.log` and `debug.log` from his test game folder on the VPS (for 4a and Sodium, fixtures);
   the server branch on the test stack after the rehearsal, on Alex's word (session age over ten minutes before and
   after; one real test wake from asleep to online in the app's log); the exe to Alex from the 3.6.1 run's artifacts.
-- **Found on the way, not changed:** a player name that is not on the placeholder list is in a comment of
-  `shared/join-gate.ts` (both apps) and in older lines of docs/11 and docs/21. For Alex: a real name, or an old
-  stand-in? If real, it wants replacing (history included, his call).
+- **Found on the way:** a real player's name in comments, tests and docs. Replaced by placeholders on Alex's word, without
+  a history rewrite (see "Today's state and decisions" at the top).
 
 ## The launcher's Test section on live, before 3.6.0 (docs/45, 2026-10-09)
 

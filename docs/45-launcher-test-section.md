@@ -20,6 +20,13 @@ found by a throwaway non-admin probe on the test web before any player app was g
 | `GET /api/app/test/manifest`: the test pack in the live manifest's shape | `GET /test/app/pack`, `GET /test/app/state` |
 | `GET /api/app/test/config.zip`: the test settings bundle | `GET /test/app/config.zip` (stream) |
 | `POST /api/app/test/wake` | `POST /test/app/wake` |
+| `GET /api/app/test/wake` (3.6.1): how the wake is going, watched every 5 s | `GET /test/app/wake` |
+
+3.6.1 (server half): `GET /api/app/test` also sends `server`, the test server in the site's words in the home's shape (a
+state the site's list does not know goes as it is; 3.6.0 ignores it). The test api asks AMP once more before it answers
+a wake "unreachable". The game check after a test Play has the mode `test_game_check`, left out wherever `test_play` is
+(`TEST_MODES` in shared/join-gate). A refused AMP permission no longer costs a new login, and the door lets a player in
+once a visit (no join without a leave between, no "release" in the log at a resync for someone already in).
 
 - **The token:** `TEST_APP_TOKEN` in `deploy/.env`, passed to the live web and to `api-test` only. `api-test` takes it
   on these four paths and on nothing else, and refuses to start if it equals the service or the summary token. It never

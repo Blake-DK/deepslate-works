@@ -180,22 +180,44 @@ namespace DeepslateWorks.Tests
             // 3.5.4 (Alex, 2026-10-06, "that news black text is hard to read"): the tab strip set no text colour, so a
             // TextBlock with none of its own (the pinned news, the server line) was Windows' black on the dark card,
             // about 1.2:1. Every visible text on every tab against the first solid background behind it: WCAG AA, 4.5:1.
+            // 3.5.6 (Alex, 2026-10-09): this passed on 3.5.5 with the Extras tab's "On" and shader choices black on the
+            // card, because the walk never drew them: no extras list on the test PC (the tab showed only its download
+            // card), and every permission answered (no Allow / Not now). Now the extras list is there with Iris on, then
+            // off (the shader choices disabled), and the permission cards are on screen for one walk; the texts that bug
+            // was in must have been seen, and every check box and choice must carry the app's own style.
             using (new Scratch())
+            {
+                var files = new[] { "iris.jar", "makeup.zip", "comp.zip", "fa.zip", "emf.jar", "etf.jar", "fl.jar" };
+                Json.WriteFile(Env.ExtrasManifestPath, XKit.List201(files.ToDictionary(f => f, f => new string('0', 128))).Raw);
+                void Chosen(bool iris)
+                {
+                    var st = new ExtrasState { Downloaded = true, Shader = "light" };
+                    st.Choices["iris"] = iris; st.Choices["falling-leaves"] = true;
+                    st.Save(Env.ExtrasStatePath);
+                }
+                Chosen(true);
                 WithWindow(ui =>
                 {
                     var low = new List<string>();
+                    var seen = new HashSet<string>(StringComparer.Ordinal);
+                    var stock = new HashSet<string>(StringComparer.Ordinal);
                     void Walk(params string[] tabs)
                     {
                         foreach (var tab in tabs)
                         {
                             ui.PressTab(tab); ui.Pump(); ui.Window.UpdateLayout();
-                            foreach (var t in Tree(ui.Window).OfType<System.Windows.Controls.TextBlock>())
+                            foreach (var d in Tree(ui.Window))
                             {
+                                // a check box or a choice with no style is Windows' own: a white box and black words
+                                if ((d is System.Windows.Controls.CheckBox || d is System.Windows.Controls.RadioButton) && ((FrameworkElement)d).IsVisible && ((FrameworkElement)d).Style == null)
+                                    stock.Add(string.Format("{0}: {1} \"{2}\"", tab, d.GetType().Name, ((System.Windows.Controls.ContentControl)d).Content));
+                                if (!(d is System.Windows.Controls.TextBlock t)) continue;
                                 if (!t.IsVisible || string.IsNullOrWhiteSpace(t.Text) || !(t.Foreground is SolidColorBrush fg)) continue;
                                 // a drawn shadow is not text to read; a block button's face and words are ThemeTests' pairs
                                 if (t.Name == "BrandShade" || t.Name == "Shade" || InButton(t)) continue;
                                 var bg = BackOf(t);
                                 if (bg == null) continue;
+                                seen.Add(tab + ": " + t.Text);
                                 var r = Theme.Contrast(fg.Color, bg.Value);
                                 if (r < 4.5) low.Add(string.Format("{0}: \"{1}\" ({2}) {3} on {4}: {5:0.0}:1", tab, t.Text.Length > 30 ? t.Text.Substring(0, 30) + "…" : t.Text, Owner(t), fg.Color, bg.Value, r));
                             }
@@ -203,17 +225,36 @@ namespace DeepslateWorks.Tests
                     }
                     ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.Up)), "ready"); ui.Pump();
                     Walk("play", "extras", "settings", "log");
+                    Chosen(false);
+                    Walk("extras");
                     ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.TwoVotes)), "ready"); ui.Pump();
                     Walk("play", "vote");
+                    ui.SimDone();
+                    var real = ui.Consent;
+                    ui.Consent = new Dictionary<string, ConsentAnswer>();
+                    ui.ShowFirstRun(); ui.Pump();
+                    Walk("play");
+                    ui.Consent = real;
+                    var missing = new[] { "extras: On", "extras: None", "extras: Light (MakeUp Ultra Fast)", "extras: Full (Complementary Reimagined)", "play: Allow", "play: Not now" }
+                        .Where(x => !seen.Contains(x)).ToList();
+                    Assert.True(missing.Count == 0, "never drawn, so never checked:\n" + string.Join("\n", missing));
+                    Assert.True(stock.Count == 0, "Windows' own check box or choice:\n" + string.Join("\n", stock));
                     Assert.True(low.Count == 0, "hard to read:\n" + string.Join("\n", low.Distinct()));
                 });
+            }
         }
 
         static bool ScreenFull(Window w) => w.ActualHeight >= SystemParameters.WorkArea.Height - 1;
 
+        /// <summary>Inside a block button (a Button: its face and words are ThemeTests' pairs). A check box or a choice is a
+        /// ToggleButton, never a Button, so its words are checked like any other text.</summary>
         static bool InButton(DependencyObject d)
         {
-            for (var p = VisualTreeHelper.GetParent(d); p != null; p = VisualTreeHelper.GetParent(p)) if (p is System.Windows.Controls.Button) return true;
+            for (var p = VisualTreeHelper.GetParent(d); p != null; p = VisualTreeHelper.GetParent(p))
+            {
+                if (p is System.Windows.Controls.Primitives.ToggleButton) return false;
+                if (p is System.Windows.Controls.Button) return true;
+            }
             return false;
         }
 

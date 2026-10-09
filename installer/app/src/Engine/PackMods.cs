@@ -138,7 +138,7 @@ namespace DeepslateWorks
                 var name = J.Str(f, "filename");
                 if (string.IsNullOrEmpty(name)) continue;
                 c.Checked++;
-                if (!s.Found.Contains(name)) c.Missing.Add(new MissingMod { Slug = J.Str(f, "slug") ?? "", Name = ModLabel(f), Filename = name, Why = "not loaded" });
+                if (!s.Found.Contains(name) && !FoundUnderOwnLocator(s, name)) c.Missing.Add(new MissingMod { Slug = J.Str(f, "slug") ?? "", Name = ModLabel(f), Filename = name, Why = "not loaded" });
             }
             // the server's own words name the mod even when the log lists no files: put it first
             if (!string.IsNullOrEmpty(s.RefusedMod) || !string.IsNullOrEmpty(s.RefusedChannel))
@@ -152,6 +152,14 @@ namespace DeepslateWorks
             }
             c.Ok = !elsewhere && c.Missing.Count == 0 && !s.Refused;
             return c;
+        }
+
+        /// <summary>3.6.1 (item 4a): a pack file a mod's own locator loaded under another name: the pack's name without
+        /// ".jar" inside a file that locator reported (Sodium: "net.caffeinemc." + the name + "-mod.jar").</summary>
+        public static bool FoundUnderOwnLocator(GameSession s, string filename)
+        {
+            var stem = Regex.Replace(filename ?? "", @"\.jar$", "", RegexOptions.IgnoreCase);
+            return stem.Length >= 6 && s.FoundByOwnLocator.Any(x => x.IndexOf(stem, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
         public sealed class FoundSession { public GameSession Session; public bool Elsewhere; }
@@ -172,7 +180,7 @@ namespace DeepslateWorks
                 // the files found at DEBUG level (libraries among them) are in debug.log only: 3.6.1 (item 4a) always adds
                 // them, not only when latest.log has none
                 var dbg = Extras.ReadGameSession(Path.Combine(dir, "logs", "debug.log"));
-                if (dbg != null) foreach (var f in dbg.Found) if (!s.Found.Contains(f)) s.Found.Add(f);
+                if (dbg != null) { foreach (var f in dbg.Found) if (!s.Found.Contains(f)) s.Found.Add(f); s.FoundByOwnLocator.AddRange(dbg.FoundByOwnLocator); }
                 if (elsewhere)
                 {
                     if (string.IsNullOrEmpty(serverHost) || !s.Connects.Any(x => x.IndexOf(serverHost, StringComparison.OrdinalIgnoreCase) >= 0)) continue;

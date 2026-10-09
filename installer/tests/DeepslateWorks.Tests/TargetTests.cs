@@ -222,6 +222,48 @@ namespace DeepslateWorks.Tests
             }
         }
 
+        // ---- item 4 on a real game log: Alex's test game, NeoForge 21.1.253 client, 2026-10-09 (fixtures/, chosen lines,
+        // personal values replaced) ------------------------------------------------------------------------------------
+        static string RealLog([System.Runtime.CompilerServices.CallerFilePath] string me = "") => Path.Combine(Path.GetDirectoryName(me), "fixtures", "neoforge-21.1.253-client-latest.log");
+        static object PackFile(string filename) => Json.Parse("{\"slug\":\"x\",\"name\":\"x\",\"filename\":\"" + filename + "\",\"side\":\"client\"}");
+
+        [WindowsFact] public void On_a_real_game_log_the_four_mods_3_6_0_called_missing_are_loaded_and_the_game_is_found()
+        {
+            using (var s = new Scratch())
+            {
+                var game = Path.Combine(Env.Root, "game"); var logs = Path.Combine(game, "logs"); Directory.CreateDirectory(logs);
+                var log = Path.Combine(logs, "latest.log");
+                File.Copy(RealLog(), log);
+                var written = DateTime.Now;
+                File.SetLastWriteTime(log, written);
+                File.SetCreationTime(log, written.AddDays(-3));   // Windows' tunnelling: the creation time of an older log
+                var start = Extras.StartFromTime("20:26:09", written);   // its first line: "[20:26:09] [main/INFO]: …", no date
+                var found = Engine.FindGameSession(game, null, start.AddMinutes(-1), "");
+                Assert.NotNull(found);
+                Assert.Equal(start, found.Session.StartedAt);
+                Assert.True(found.Session.Loaded);
+                // what 3.6.0 called not loaded: a game library, two libraries, and Sodium, which its own locator loads
+                // under another name ("net.caffeinemc.sodium-neoforge-…-mod.jar"; the pack's name is never in the log)
+                Assert.DoesNotContain("sodium-neoforge-0.8.13+mc1.21.1.jar", found.Session.Found);
+                var files = new[] { "CustomWindowTitle-1.21.4+v1.4.1.jar", "KotlinLangForge-2.14.1-k2.4.20-3.0+neoforge.jar", "ScalableCatsForce-NeoForge-3.7.1-build-11-with-library.jar", "sodium-neoforge-0.8.13+mc1.21.1.jar", "mcw-mcwwindows-2.4.2-mc1.21.1neoforge.jar" }.Select(PackFile).ToList();
+                var c = Engine.TestGameMods(found.Session, files);
+                Assert.True(c.Ok, "missing: " + string.Join(", ", c.Missing.Select(m => m.Filename)));
+                Assert.Equal(5, c.Checked);
+                // and a jar the game did not load is still missing
+                var c2 = Engine.TestGameMods(found.Session, files.Concat(new[] { PackFile("not-in-this-game-1.0.jar") }).ToList());
+                Assert.Equal(new[] { "not-in-this-game-1.0.jar" }, c2.Missing.Select(m => m.Filename).ToArray());
+            }
+        }
+
+        [Fact] public void A_mods_own_locator_counts_only_for_the_pack_file_whose_name_it_carries()
+        {
+            var s = new GameSession();
+            s.FoundByOwnLocator.Add("net.caffeinemc.sodium-neoforge-0.8.13+mc1.21.1-mod.jar");
+            Assert.True(Engine.FoundUnderOwnLocator(s, "sodium-neoforge-0.8.13+mc1.21.1.jar"));
+            Assert.False(Engine.FoundUnderOwnLocator(s, "sodium-neoforge-0.8.14+mc1.21.1.jar"));   // another version is not it
+            Assert.False(Engine.FoundUnderOwnLocator(s, "iris-neoforge-1.8.12+mc1.21.1.jar"));
+        }
+
         [Fact] public void A_test_games_check_has_its_own_mode()
         {
             Assert.Equal("test_game_check", Engine.GameCheckMode(true));

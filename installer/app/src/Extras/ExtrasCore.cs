@@ -506,8 +506,14 @@ namespace DeepslateWorks
             {
                 // 3.6.1 (item 4a): every file NeoForge says it found, whatever it calls it (mod, library, game library): a
                 // library or language jar loaded is as loaded as a mod
-                var f = Regex.Match(l, "Found (?:[A-Za-z]+ ){0,2}file \"([^\"]+)\"");
-                if (f.Success) { s.Found.Add(f.Groups[1].Value); continue; }
+                var f = Regex.Match(l, "Found (?:[A-Za-z]+ ){0,2}file \"([^\"]+)\"(.*)$");
+                if (f.Success)
+                {
+                    s.Found.Add(f.Groups[1].Value);
+                    var where = f.Groups[2].Value;
+                    if (where.Contains("locator:") && !where.Contains("mods folder locator") && !where.Contains("jarinjar")) s.FoundByOwnLocator.Add(f.Groups[1].Value);
+                    continue;
+                }
                 var rl = Regex.Match(l, "Reloading ResourceManager: (.*)$", RegexOptions.IgnoreCase);
                 if (rl.Success) { s.Packs = Regex.Split(rl.Groups[1].Value, @",\s*").ToList(); s.Loaded = true; continue; }
                 var cn = Regex.Match(l, @"Connecting to ([^,\s]+), ?(\d+)");

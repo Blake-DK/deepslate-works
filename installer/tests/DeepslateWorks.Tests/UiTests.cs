@@ -43,7 +43,7 @@ namespace DeepslateWorks.Tests
             Assert.Empty(AppWindow.Names.Where(n => !names.ContainsKey(n)));
             var view = Named(AppWindow.PlayViewXaml);
             Assert.Empty(AppWindow.PlayViewNames.Where(n => !view.ContainsKey(n)));
-            Assert.Empty(view.Keys.Where(names.ContainsKey));   // no name in both: the view's are looked up in the view only
+            Assert.Empty(view.Keys.Where(k => !k.StartsWith("PART_") && names.ContainsKey(k)));   // no name in both (a template's parts aside): the view's are looked up in the view only
             var ask = Named(AppWindow.AskXaml);
             Assert.Empty(AppWindow.AskNames.Where(n => !ask.ContainsKey(n)));
         }

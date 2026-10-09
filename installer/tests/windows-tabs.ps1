@@ -389,7 +389,8 @@ try {
     }
     if ($asked) {
       $q = [Windows.Automation.AutomationElement]::FromHandle($asked.handle)
-      $words = (Texts $q) -join " "
+      # a message box's words are not always a Text element: every name in it
+      $words = (@($q.FindAll([Windows.Automation.TreeScope]::Descendants, [Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name } | Where-Object { $_ }) -join " ")
       [void](Save-Crop $asked.handle (Join-Path $Shots "3-live-off-start-question.png"))
       Check ("item 10: Start asks first and names the live server: '" + $words + "'") ($words -match 'live server')
       [void](Press (Find-Named $q "No"))

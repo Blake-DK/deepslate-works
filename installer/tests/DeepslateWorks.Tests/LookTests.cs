@@ -85,7 +85,7 @@ namespace DeepslateWorks.Tests
                     {
                         Resize(ui, size.Width, size.Height);
                         var w = ui.Window;
-                        FrameworkElement F(string n) => (FrameworkElement)w.FindName(n);
+                        FrameworkElement F(string n) => (FrameworkElement)(ui.LivePane.Find(n) ?? w.FindName(n));   // 3.6.1: the Play view's own names
                         Rect At(string n) { var e = F(n); return e.TransformToAncestor(w).TransformBounds(new Rect(0, 0, e.ActualWidth, e.ActualHeight)); }
                         Assert.Equal(340, F("PlayLeft").ActualWidth, 0);
                         Assert.True(At("PlayCard").Left >= At("PlayLeft").Right + 15, size + ": the card overlaps the left column");

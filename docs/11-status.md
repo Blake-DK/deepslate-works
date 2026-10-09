@@ -22,6 +22,14 @@ Last updated 2026-10-09, latest: the launcher's Test section (docs/45) deployed 
   `src/app/api/app`, as an app asks (a token, no session), and fails if one is refused. Checked by removing the
   door line: it fails; with it, 602 web tests pass.
 - **Next:** Alex installs 3.6.0 (installer run 37920932991, artifact `deepslate-works-3.6.0`) and checks the Test tab.
+- **3.6.0 installed (13:14 UTC):** the Test tab shows for Alex. "Offline" he saw was the live server: the app opened
+  on the Play tab from the site's Play link, and its card says live is switched off (it is, on purpose; the run's report
+  says "the server is off", "wake: not started (off)"). The test api answered every one of the app's state asks
+  (12:49 to 13:16) with 200, `online`, 0 players; the live web passes that through as `available: true`. Nothing is
+  mapped wrong. Play test was not pressed yet (no `test_play` report, no pack request). Two notes:
+  - **For a fix (wording):** with two servers in the app, the Play tab's card should say "Live server: switched off"
+    and the Test tab "Test server: online"; an admin also sees Start on that card, which starts **live**.
+  - The test api lost its AMP login for about 30 s at 13:13 ("AMP login failed: unknown", then a new session).
 
 
 ## App 3.5.6: readable words on the Extras tab (2026-10-09, on `dev`, not deployed)

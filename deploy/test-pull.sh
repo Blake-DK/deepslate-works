@@ -16,6 +16,9 @@ owner=$(stat -c %U "$dir")
 if [ "$(id -u)" = 0 ] && [ "$owner" != root ]; then exec runuser -u "$owner" -- "$0" "$dir"; fi
 # its .git is mounted into no container read-write, but no hook or fsmonitor of it runs here either
 g() { git -C "$dir" -c core.hooksPath=/dev/null -c core.fsmonitor= "$@"; }
+# 2026-10-09: a checkout can be held at a commit on purpose (the rehearsal of a pack change runs a pack dev no longer
+# has). The hold is a file in its .git, never committed: remove it to pull again.
+if [ -f "$dir/.git/deepslate-hold" ]; then die "$dir is held on purpose: $(head -c 300 "$dir/.git/deepslate-hold"). Remove $dir/.git/deepslate-hold to pull. Nothing was changed."; fi
 [ "$(g branch --show-current)" = dev ] || die "$dir is on '$(g branch --show-current)', not dev. Nothing was changed."
 [ -z "$(g status --porcelain --untracked-files=no)" ] || die "$dir has local changes (git -C $dir status). Nothing was changed."
 before=$(g rev-parse HEAD)

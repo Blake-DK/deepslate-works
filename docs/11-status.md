@@ -57,6 +57,14 @@ Last updated 2026-10-09, latest: Season 1 mods off live until the season opens, 
   refused by the server for mods it does not have. Players always start through the app, so that is the edge case.
   Do not run Lock on live: it would re-resolve every unpinned mod. The trimmed lock reaches live by the deploy.
 - **The proper mechanism:** docs/44, to land before more season work goes to test.
+- **Held off main (Alex and the planner, 2026-10-09):** the launcher's Test section has to reach live through a
+  `dev` → `main` PR, and that PR must not carry the removal. So `mods.json` and the lock on `dev` are back to main's
+  objects (lock `16dbfce4`, 77 files, hash `f652ffca`). The removal comes back on Alex's go by re-applying the files of
+  `89099a8d` (lock object `8650125f`, 71 files, hash `d44eb2ba`; `mods.json` object `7b325696`), not by a new trim.
+- **The test checkout is held on purpose at `86bdcc5`** (the trimmed pack) while the test images move ahead with new
+  code. `deploy/test-pull.sh` now refuses a checkout with `.git/deepslate-hold` in it and prints why; the file is in
+  place (never committed). The live checkout's copy of the script learns this at the next deploy; until then, do not
+  run `test-pull.sh` from the live checkout.
 - **Rehearsal and live:** see the next lines as they are done.
 
 ## The planner's answers of 2026-10-09

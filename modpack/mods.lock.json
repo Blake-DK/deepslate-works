@@ -2,7 +2,7 @@
   "generatedAt": "2026-10-06T18:24:48.116Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "d44eb2ba9d92627de3ca38ad376a5c2fba333c46b48a2fd2e421a4952be3b55e",
+  "hash": "f652ffca38acc3600f9a990bb3a44586fe38ab7bb0c8df2a00ab01d9f3ef3eb7",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -394,6 +394,27 @@
       }
     },
     {
+      "slug": "curios",
+      "name": "Curios API",
+      "projectId": "vvuO3ImH",
+      "versionId": "yohfFbgD",
+      "versionNumber": "9.5.1+1.21.1",
+      "versionType": "release",
+      "filename": "curios-neoforge-9.5.1+1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/vvuO3ImH/versions/yohfFbgD/curios-neoforge-9.5.1%2B1.21.1.jar",
+      "sha512": "5981a267686b744e7e3c227f78cbcd5267c14ac6979a28e814695f4589273998563147207fef4a5cdb7cdbdc39797cd95d9e4abadb55869f18e02a38d0654ae5",
+      "sha1": "418fcd42e3a7844c9bdc71c9b6401fdb3894e0c4",
+      "size": 410690,
+      "side": "both",
+      "requiredBy": [
+        "l_enders-cataclysm"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
       "slug": "custom-window-title",
       "name": "Custom Window Title",
       "projectId": "RGH5gtzF",
@@ -429,6 +450,25 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
+      }
+    },
+    {
+      "slug": "edf-remastered",
+      "name": "Ender Dragon Fight Remastered",
+      "projectId": "HQsBdHGd",
+      "versionId": "5OYoqItD",
+      "versionNumber": "5.0.2+mod",
+      "versionType": "release",
+      "filename": "edf-remastered-5.0.2.jar",
+      "url": "https://cdn.modrinth.com/data/HQsBdHGd/versions/5OYoqItD/edf-remastered-5.0.2.jar",
+      "sha512": "4bb2774e373e9a6c744f9226c48a29e10a602a06a48bc739f6e703176833c75b7e35f4c5a59cf16a3c3598fed7800d782c93a19ff1be1cf628336e2fcc0e3bf4",
+      "sha1": "01badac01410bca4624fed803d9c777a43162c3d",
+      "size": 6841557,
+      "side": "server",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "required"
       }
     },
     {
@@ -562,6 +602,27 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
+      }
+    },
+    {
+      "slug": "geckolib",
+      "name": "GeckoLib",
+      "projectId": "8BmcQJ2H",
+      "versionId": "Grwn5rUB",
+      "versionNumber": "4.9.3",
+      "versionType": "release",
+      "filename": "geckolib-neoforge-1.21.1-4.9.3.jar",
+      "url": "https://cdn.modrinth.com/data/8BmcQJ2H/versions/Grwn5rUB/geckolib-neoforge-1.21.1-4.9.3.jar",
+      "sha512": "8dfa5f8c57224a5e34e5098367ea9819ca6dc9c11357cd3062c16da3455c8bd1a483098af7383debc4b9ce8e4d7ab3fdc799b415644eb829da83eb72a7335dfd",
+      "sha1": "5cfe835472a5c5457ae9ac192d9d7b317454d5ac",
+      "size": 634531,
+      "side": "both",
+      "requiredBy": [
+        "mowzies-mobs"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "optional"
       }
     },
     {
@@ -737,6 +798,46 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
+      }
+    },
+    {
+      "slug": "l_enders-cataclysm",
+      "name": "L_Ender's Cataclysm",
+      "projectId": "46KJle7n",
+      "versionId": "PsPYpoCC",
+      "versionNumber": "3.33",
+      "versionType": "release",
+      "filename": "L_Ender's Cataclysm 1.21.1-3.33.jar",
+      "url": "https://cdn.modrinth.com/data/46KJle7n/versions/PsPYpoCC/L_Ender%27s%20Cataclysm%201.21.1-3.33.jar",
+      "sha512": "289f6e8364a6e432f34803a47cff8381899a1df0fdc675170323b43fd1c09579b1320d8b4e0de5df65c609b738d450c13c89e240d6d79f607888da26b7724947",
+      "sha1": "f0310277167c82fd16a5c2bab220b5c5c262f133",
+      "size": 73375667,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      }
+    },
+    {
+      "slug": "lionfish-api",
+      "name": "Lionfish API",
+      "projectId": "FoVacERa",
+      "versionId": "fTRMVgyZ",
+      "versionNumber": "3.1",
+      "versionType": "release",
+      "filename": "lionfishapi-3.1.jar",
+      "url": "https://cdn.modrinth.com/data/FoVacERa/versions/fTRMVgyZ/lionfishapi-3.1.jar",
+      "sha512": "fdd90f19d0424c3a837111291d6ac1547d62cbcedd43b74d3a8946912f9c5212a5ea239a6969eccf678289bcb77cbb9a937db01fdaf60e57826f9a99893d19cb",
+      "sha1": "353ca00ed118eb67cf11085abbbd699884722326",
+      "size": 91596,
+      "side": "both",
+      "requiredBy": [
+        "l_enders-cataclysm"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
       }
     },
     {
@@ -965,6 +1066,25 @@
       "modrinth": {
         "client": "required",
         "server": "unsupported"
+      }
+    },
+    {
+      "slug": "mowzies-mobs",
+      "name": "Mowzie's Mobs",
+      "projectId": "BFbX9xcm",
+      "versionId": "xgAXTl17",
+      "versionNumber": "1.8.2",
+      "versionType": "release",
+      "filename": "mowziesmobs-1.21.1-1.8.2.jar",
+      "url": "https://cdn.modrinth.com/data/BFbX9xcm/versions/xgAXTl17/mowziesmobs-1.21.1-1.8.2.jar",
+      "sha512": "ab10d2f759df613d5094bac26c5a8bbe144786699018f7e4ae027fc4a86632aa7f96206f2c8be9970338eadef42539614a19b41d0d70b6216c3ed1c4c4421f0a",
+      "sha1": "d64475cd77444b056ece6472c79d40293dc63c6c",
+      "size": 36042925,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
       }
     },
     {

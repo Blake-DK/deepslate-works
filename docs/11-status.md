@@ -48,9 +48,20 @@ Last updated 2026-10-09, latest: the launcher's Test section (docs/45) deployed 
   - run 37952291134 on `5bfb61ee` (the shared view): items 1, 2, 3 and the member's app pass in the window; 4 checks
     left (items 5 and 6, and the harness could not read the Start question); 2 unit tests broken by the change (fixed).
   - run 37953724562 on `6697b555` (items 4 to 9): **all 47 window checks and 293 unit tests pass.**
-  - the 3.6.1 build: run 37956740006 on `211477bb`, artifact `deepslate-works-3.6.1`, **all 49 window checks and
-    293 unit tests pass**; `DeepslateWorks.exe` 3.6.1, 836,608 bytes, sha256
-    `7e50f9cb4caa56ab5ca69960c42b2d06a38705b0b54386dec9aa0017b1610193`. For Alex only, from that run's page.
+  - run 37956740006 on `211477bb`: all 49 window checks and 293 unit tests pass (superseded below).
+  - **the 3.6.1 build Alex tries:** run 37966023431 on `21f5f7e9`, artifact `deepslate-works-3.6.1`, **all 49 window
+    checks and 295 unit tests pass** (item 4 on Alex's real game log, fixture
+    `neoforge-21.1.253-client-latest.txt`); `DeepslateWorks.exe` 3.6.1, 837,120 bytes, sha256
+    `ebd3a77f7c8f02f9ac3e8866f4936501e88e9f9190a68264248eecce5f5af0dd`. For Alex only, from that run's page.
+  - the same run's `update` job: the real app 3.5.5 (built from `04c0e59f`) updated itself to this build against a
+    stand-in site, removed the jar the mod list no longer has, kept the one it has, played and reported as 3.6.1 with
+    `updatedFrom 3.5.5`; all 13 checks pass (artifact `update-from-3.5.5`).
+- **Item 4 on the real log:** Alex's test game's `latest.log` (NeoForge 21.1.253 client) starts "[20:26:09] [main/INFO]"
+  (no date); Custom Window Title is a "Found gamelibrary file", KotlinLangForge and Scalable Cats Force "Found library
+  file"; Sodium's own locator reports `net.caffeinemc.sodium-neoforge-0.8.13+mc1.21.1-mod.jar` and the pack's name is
+  never in the log. 3.6.0's rules on that log: those four "not loaded" and no start time; 3.6.1's: none missing and
+  the time read. The two logs were scanned for secrets (the launcher masks the access token; none found), cut down to
+  16 lines with personal values replaced, and deleted from the VPS.
 - **What a real window proves** (the app's own window on the Windows runner, a stand-in site on 127.0.0.1): items 1,
   2, 3, 10, the member's app (no Test tab, nothing asked, nothing logged), the unknown state in the site's words, the
   footer and pill following the tab, and no test run writing into the live folder nor a live run into the test folder

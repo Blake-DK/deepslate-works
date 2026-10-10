@@ -32,6 +32,24 @@ export function parseLoadedMods(log: string): Loaded[] {
   return [...out.values()];
 }
 
+/**
+ * The mod ids the server loaded, from the "Mod List:" NeoForge writes at every start ("\t\tAlternate Current 1.9.0
+ * (alternate_current)", one row per mod, minecraft and neoforge included). Empty when the log has no such list.
+ * events/parse.ts (aboutModsNoLongerLoaded) uses them to know which namespaces no loaded mod has.
+ */
+export function parseModIds(log: string): string[] {
+  const at = log.indexOf("Mod List:");
+  if (at < 0) return [];
+  const ids = new Set<string>();
+  for (const line of log.slice(at).split(/\r?\n/).slice(1)) {
+    if (line.trim() === "" || /^\s*Name Version \(Mod Id\)\s*$/.test(line)) continue;
+    const m = /^\t\t.+ \(([a-z0-9_.-]{1,64})\)\s*$/.exec(line);
+    if (!m) break;
+    ids.add(m[1]!);
+  }
+  return [...ids];
+}
+
 /** Server-only is only right for a mod no PC needs: Modrinth says the client can do without it, and it has no required channels. */
 export function serverOnlyIsSafe(e: LockLike["files"][number]): boolean {
   return e.modrinth?.client !== "required" && e.channels !== "required";
@@ -71,17 +89,19 @@ export class ServerMods {
     }
   }
 
-  async capture(): Promise<{ files: Loaded[]; problems: Problem[]; source: string } | null> {
+  async capture(): Promise<{ files: Loaded[]; problems: Problem[]; source: string; modIds: string[] } | null> {
     let source = "logs/latest.log";
-    let loaded = parseLoadedMods((await this.read(source)) ?? "");
-    if (loaded.length === 0) { source = "logs/debug.log"; loaded = parseLoadedMods((await this.read(source)) ?? ""); }
+    let text = (await this.read(source)) ?? "";
+    let loaded = parseLoadedMods(text);
+    if (loaded.length === 0) { source = "logs/debug.log"; text = (await this.read(source)) ?? ""; loaded = parseLoadedMods(text); }
     if (loaded.length === 0) { this.log({}, "server mods: no 'Found mod file' lines in latest.log or debug.log"); return null; }
     const lock = JSON.parse(await readFile(path.join(this.repoDir, "modpack", "mods.lock.json"), "utf8")) as LockLike;
     const problems = compareLoaded(loaded, lock);
-    const value = { at: new Date().toISOString(), source, files: loaded, problems } as unknown as Prisma.InputJsonValue;
+    const modIds = parseModIds(text);
+    const value = { at: new Date().toISOString(), source, files: loaded, problems, modIds } as unknown as Prisma.InputJsonValue;
     await db.setting.upsert({ where: { key: SERVER_MODS_KEY }, create: { key: SERVER_MODS_KEY, value }, update: { value } });
-    this.log({ files: loaded.length, problems: problems.length, source }, "server mods: captured");
+    this.log({ files: loaded.length, problems: problems.length, modIds: modIds.length, source }, "server mods: captured");
     if (problems.length) await audit({ action: "modpack.serverMods", params: { files: loaded.length, problems: problems.map((p) => `${p.filename}: ${p.why}`).slice(0, 20) }, result: "FAILED" });
-    return { files: loaded, problems, source };
+    return { files: loaded, problems, source, modIds };
   }
 }

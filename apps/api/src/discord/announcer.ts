@@ -4,7 +4,7 @@
 // docs/22 §13: with the forum season-updates (its webhook, or the bot), votes, news and We're live are forum posts there
 // (replies in the same post), and #game-chat (the feed webhook) also carries the game's chat.
 import { CHANGELOG_OPENER, CHANGELOG_TITLE, changeText, type Change } from "../changelog.js";
-import { isKnownHarmless } from "../events/parse.js";
+import { aboutModsNoLongerLoaded, isKnownHarmless } from "../events/parse.js";
 import type { Attachment, Message, Sent, Webhook, Where } from "./webhook.js";
 import type { BotMessage, Component } from "./rest.js";
 import {
@@ -34,7 +34,9 @@ export type VotePoster = {
   pollShape(id: string): Promise<{ id: string; options: unknown; multiple: boolean } | null>;
 };
 export type LogEntry = { at: string; channel: Channel; what: string; ok: boolean; error?: string };
-export type FeedState = { cursor: string | null; hash: string; refused: Partial<Record<Channel, string>>; log: LogEntry[] };
+/** Problem lines left out because they are only about mods the server no longer loads (events/parse.ts). */
+export type LeftOut = { count: number; since: string; last: string | null };
+export type FeedState = { cursor: string | null; hash: string; refused: Partial<Record<Channel, string>>; log: LogEntry[]; leftOut?: LeftOut };
 
 export type FeedStore = {
   newestEventId(): Promise<bigint>;
@@ -61,6 +63,8 @@ export type FeedStore = {
   season?(id: string): Promise<SeasonInfo | null>;
   /** Is this advancement title a boss, a trial or a wake of the current season? Those have lines of their own. */
   seasonTitle?(title: string): Promise<boolean>;
+  /** The mod ids the server loaded at its last start (modpack/server-mods.ts); null when there is no such list. */
+  loadedMods?(): Promise<ReadonlySet<string> | null>;
 };
 
 type Deps = {
@@ -399,7 +403,7 @@ export class Announcer {
       return { ...v, last };
     };
     const [feed, admin, updates] = await Promise.all([one("feed"), adminView(), one("updates")]);
-    return { feed: withLast("feed", feed), admin: withLast("admin", admin), updates: withLast("updates", updates), recent: log };
+    return { feed: withLast("feed", feed), admin: withLast("admin", admin), updates: withLast("updates", updates), recent: log, leftOut: this.st?.leftOut ?? null };
   }
 
   // ---- §4: one event ------------------------------------------------------------------------------------------------
@@ -477,6 +481,12 @@ export class Announcer {
       }
       case "ERROR": {
         if (isKnownHarmless(e.message)) return true; // known and harmless: in the event log, not in Discord (events/parse.ts)
+        // about a mod that is no longer in the pack (events/parse.ts): in the event log and counted, not in Discord
+        if (aboutModsNoLongerLoaded(e.message, (await this.d.store.loadedMods?.().catch(() => null)) ?? null)) {
+          const was = this.st?.leftOut;
+          if (this.st) this.st.leftOut = { count: (was?.count ?? 0) + 1, since: was?.since ?? e.at.toISOString(), last: e.at.toISOString() };
+          return true;
+        }
         if (!sw.problems || !this.canAdmin()) return true;
         const t = now.getTime();
         const seen = this.problems.get(e.message);

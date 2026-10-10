@@ -7,7 +7,7 @@
 #
 # Only a fast-forward: a checkout with local commits or changes, or on another branch, is left as it is and named.
 # New pack or season files are then on the test site at once (they are read from the checkout); new code needs new
-# images (the workflow test-images, then sudo deploy/test-up.sh).
+# images (CI builds `dev` on a push, the workflow dev-images; then sudo deploy/test-up.sh).
 set -euo pipefail
 dir=${1:-${TEST_DIR:-/home/ladm/Minecraft-site-test}}
 die() { echo "test-pull: $*" >&2; exit 1; }

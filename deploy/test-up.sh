@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 # docs/42: starts the test server's copy of the site, web-test and api-test, or puts them on new images.
 #
-#   sudo deploy/test-up.sh     pull the images tagged TEST_IMAGE_TAG (default `test`, made by the workflow test-images),
-#                              make the database deepslate_test if it is missing, start both
+#   sudo deploy/test-up.sh     pull the images tagged TEST_IMAGE_TAG (default `dev`: CI builds it on every push to dev
+#                              that changes an image, .github/workflows/dev-images.yml), make the database
+#                              deepslate_test if it is missing, start both, and print the commit the test site is now on
+#
+# The test site follows dev, the live site follows main (2026-10-10). Another ref on the test site: run the workflow
+# test-images for it (tag `test` and its commit), set TEST_IMAGE_TAG=test in deploy/.env, run this; set it back to dev
+# (or remove the line) to follow dev again.
 #
 # deploy.sh runs it too (without the pull) while TEST_STACK=1. The live containers are never touched here: the two are
 # started without their dependencies (--no-deps), web-test first, as its start applies the test database's migrations.
@@ -50,7 +55,7 @@ if [ "$have" != 1 ]; then
   echo "made the database deepslate_test"
 fi
 
-tag=$(envval TEST_IMAGE_TAG); tag=${tag:-test}
+tag=$(envval TEST_IMAGE_TAG); tag=${tag:-dev}
 if [ "${TEST_UP_PULL:-1}" = 1 ]; then
   echo "images: deepslate-web and deepslate-api tagged $tag"
   # docker pull, not `compose pull`: the two services have pull_policy: missing (a live deploy never waits on them), and
@@ -59,7 +64,9 @@ if [ "${TEST_UP_PULL:-1}" = 1 ]; then
   # image changed.
   owner_gh=$(envval GHCR_OWNER)
   for svc in web api; do
-    docker pull -q "ghcr.io/${owner_gh}/deepslate-${svc}:${tag}" >/dev/null || die "no image deepslate-${svc}:${tag}: run the workflow test-images on GitHub (Actions → test-images → Run workflow), then this again"
+    if [ "$tag" = dev ]; then hint="CI makes it on a push to dev that changes an image: wait for Actions → dev-images to finish"
+    else hint="run the workflow test-images on GitHub (Actions → test-images → Run workflow)"; fi
+    docker pull -q "ghcr.io/${owner_gh}/deepslate-${svc}:${tag}" >/dev/null || die "no image deepslate-${svc}:${tag}: ${hint}, then this again"
   done
 fi
 
@@ -80,8 +87,11 @@ wait_healthy deepslate-api-test 40 || exit 1
 
 # docs/42 §5.3: what the test site runs, and a warning when the images and the checkout are not the same commit
 images=$(docker exec deepslate-api-test printenv PORTAL_COMMIT 2>/dev/null || echo unknown)
+web_images=$(docker exec deepslate-web-test printenv PORTAL_COMMIT 2>/dev/null || echo unknown)
+[ "$web_images" = "$images" ] || echo "test-up: web-test runs ${web_images:0:12} and api-test ${images:0:12}: the tag $tag moved between the two pulls; run this again" >&2
 checkout=$(runuser -u "$owner" -- git -C "$TEST_DIR" -c core.hooksPath=/dev/null -c core.fsmonitor= rev-parse HEAD 2>/dev/null || echo unknown)
 echo "test server up: images ${images:0:12}, checkout ${checkout:0:12}"
-[ "$images" = "$checkout" ] || echo "note: the images and the checkout are different commits. New code: run test-images for dev, then sudo deploy/test-up.sh; new pack or season files: deploy/test-pull.sh as ladm"
+[ "$images" = "$checkout" ] || echo "note: the images and the checkout are different commits. The images are tag ${tag}; the checkout holds the pack and season files (deploy/test-pull.sh as ladm, unless it is held)"
+echo "the test site is now on ${images} (tag ${tag})"
 [ -s deploy/keys-test/known_hosts ] || echo "note: deploy/keys-test/known_hosts is missing; copy the live one (the same AMP host): cp deploy/keys/known_hosts deploy/keys-test/known_hosts"
 docker ps --filter name=deepslate- --filter name=test --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'

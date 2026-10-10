@@ -60,8 +60,8 @@ Logs: `docker logs -f deepslate-web`. Health: `https://deepslate.dsw.test/api/he
 ## The test server (docs/42)
 
 A hidden copy of the site for the AMP instance `DeepslateTest01`: `web-test` and `api-test` (compose profile `test`),
-the database `deepslate_test` in the same Postgres, a checkout of its own on `dev` (`TEST_DIR`), images built from
-`dev` by hand (the workflow `test-images`). Off unless `TEST_STACK=1` in `.env`; then `deploy.sh` checks the `TEST_`
+the database `deepslate_test` in the same Postgres, a checkout of its own on `dev` (`TEST_DIR`), images built by CI on
+each push to `dev` (the workflow `dev-images`, tag `dev`). The test site follows `dev`; the live site follows `main`. Off unless `TEST_STACK=1` in `.env`; then `deploy.sh` checks the `TEST_`
 lines before anything and starts the pair after the live stack is healthy, and never waits on it. With it off,
 `deploy.sh` removes the two containers.
 
@@ -74,7 +74,9 @@ sudo cp deploy/keys/known_hosts deploy/keys-test/known_hosts                    
 sudo deploy/test-up.sh
 ```
 
-New pack or season files on the test site: `deploy/test-pull.sh` (as ladm); they are read from the checkout. New code:
-run `test-images` for `dev` on GitHub, then `sudo deploy/test-up.sh`. The test site's footer says when the images and
-the checkout are not the same commit. Caddy: the last block of `Caddyfile.snippet`, with the real names.
+New code on the test site: push to `dev`, wait for Actions → `dev-images` (about five minutes), then
+`sudo deploy/test-up.sh`; it prints the commit the test site is now on. A push that changes only docs, `deploy/`,
+`tools/` or another workflow builds nothing. Another ref: run `test-images` for it, set `TEST_IMAGE_TAG=test` in `.env`,
+then `sudo deploy/test-up.sh`. New pack or season files: `deploy/test-pull.sh` (as ladm); they are read from the
+checkout. The test site's footer says when the images and the checkout are not the same commit. Caddy: the last block of `Caddyfile.snippet`, with the real names.
 

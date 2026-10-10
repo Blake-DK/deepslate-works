@@ -1,8 +1,8 @@
 name: test-images
-# docs/42 §5.3: the images of the test server's copy of the site (web-test, api-test). `dev` builds no images on a push
-# (ci.yml, the Actions minutes), so this runs by hand only: Actions → test-images → Run workflow, on the ref asked for
-# (dev by default). Both images are tagged `test` and with the commit; deploy/deploy.sh never pulls them, only
-# `sudo deploy/test-up.sh` does. A run costs about what one push to main costs.
+# docs/42 §5.3: images of the test server's copy of the site (web-test, api-test) for any ref, by hand only: Actions →
+# test-images → Run workflow. dev needs no run: dev-images.yml builds it on every push (tag `dev`), and the test site
+# follows that tag. Both images here are tagged `test` and with the commit; to run them, set TEST_IMAGE_TAG=test in
+# deploy/.env, then `sudo deploy/test-up.sh`. deploy/deploy.sh never pulls them. A run costs about what one push to main costs.
 on:
   workflow_dispatch:
     inputs:

@@ -40,7 +40,7 @@ test_env_check() {
       [ "$(envval $w)" != "$(envval $l)" ] || say "$w is the live $l: the test server must not post to the players' Discord (leave it empty, or a private channel's webhook)"
     done
   done
-  [[ "$(envval TEST_IMAGE_TAG)" =~ ^[A-Za-z0-9._-]*$ ]] || say "TEST_IMAGE_TAG: an image tag (test, or a commit)"
+  [[ "$(envval TEST_IMAGE_TAG)" =~ ^[A-Za-z0-9._-]*$ ]] || say "TEST_IMAGE_TAG: an image tag (dev, test, or a commit)"
   mock=$(envval TEST_AMP_MOCK)
   if [ "$mock" != 1 ]; then
     [ -n "$(envval TEST_AMP_INSTANCE_ID)" ] || say "TEST_AMP_INSTANCE_ID: the id of the AMP instance DeepslateTest01"

@@ -278,13 +278,14 @@ services:
       retries: 3
 
   # docs/42: the test server's own copy of the site, hidden from players. Profile `test`: deploy.sh starts both only
-  # while TEST_STACK=1 is in deploy/.env and removes them when it is not. Their images are built from `dev` by hand
-  # (.github/workflows/test-images.yml, tag TEST_IMAGE_TAG) and pulled by deploy/test-up.sh, never by a live deploy.
+  # while TEST_STACK=1 is in deploy/.env and removes them when it is not. Their images are built by CI on each push to `dev`
+  # (.github/workflows/dev-images.yml, tag `dev`; another ref by hand with test-images.yml, tag `test`), chosen by
+  # TEST_IMAGE_TAG and pulled by deploy/test-up.sh, never by a live deploy.
   # Every host path is the test checkout's (TEST_DIR), so nothing the test site builds lands in the live dist/.
   # The defaults only keep `docker compose config` working while the TEST_ variables are unset.
   web-test:
     profiles: [test]
-    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-web:${TEST_IMAGE_TAG:-test}
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-web:${TEST_IMAGE_TAG:-dev}
     pull_policy: missing                # deploy/test-up.sh pulls; a live deploy never waits on a test image
     container_name: deepslate-web-test
     restart: unless-stopped
@@ -330,7 +331,7 @@ services:
 
   api-test:
     profiles: [test]
-    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-api:${TEST_IMAGE_TAG:-test}
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-api:${TEST_IMAGE_TAG:-dev}
     pull_policy: missing
     container_name: deepslate-api-test
     restart: unless-stopped

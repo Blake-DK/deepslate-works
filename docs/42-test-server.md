@@ -76,7 +76,7 @@ Two services in `deploy/docker-compose.yml` under `profiles: [test]`, started an
 ### 5.3 Code: the checkout and the images
 
 - **Checkout:** `/home/ladm/Minecraft-site-test` on `dev`, read-only for the containers except `dist/` and `data/`. `deploy/test-pull.sh` (as ladm) fast-forwards it to `origin/dev` and prints the commit.
-- **Images:** `dev` builds no images (docs/11, the Actions minutes). A workflow `test-images.yml`, run by hand only (`workflow_dispatch`, a ref, default `dev`), builds both images and tags them `test` and the commit. `TEST_IMAGE_TAG=test`. One run when Alex wants new code on the test site, not one per push.
+- **Images (since 2026-10-10: the test site follows `dev`, live follows `main`):** `.github/workflows/dev-images.yml` builds both images on a push to `dev` that changes something an image is made of (not docs, top-level Markdown, `deploy/`, `tools/` or other workflows), tags them with the commit and `dev`, and cancels an older run still going. A commit that already has images is not built again; `dev` is moved onto them. `TEST_IMAGE_TAG=dev`; `sudo deploy/test-up.sh` pulls it and prints the commit. `test-images.yml` (by hand, any ref, tag `test`) stays for other refs. Live never pulls `dev`: deploy.sh pulls by sha.
 - **The test site says what it runs** in its footer and on the Control Room card: the images' commit, the checkout's commit and a warning when the two differ.
 
 ### 5.4 Reaching the instance

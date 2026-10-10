@@ -289,4 +289,8 @@ describe("the leftovers (docs/23 §8 step 4): every page takes the parts", () =>
     expect(results).toContain('<div className="h-full bg-primary"');
     expect(results).toContain('<div className="h-full bg-info"');
   });
+  it("tabs inside a page are a TabStrip: nothing pulled out of its box, so no 1 px vertical scrollbar on Windows", () => {
+    expect(hits(/-mb-px/)).toEqual([]);
+    expect(hits(/<nav\b[^>]*overflow-x-auto/, ["components/tabs.tsx", "components/nav-link.tsx"])).toEqual([]);
+  });
 });

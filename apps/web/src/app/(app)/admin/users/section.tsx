@@ -17,6 +17,7 @@ import { setEarlyAccessAction, unblockAction } from "./actions";
 import { blockedList } from "@/server/auth/blocked";
 import { MemberMenu } from "./member-menu";
 import { stripLink } from "@/components/strip-link";
+import { TabStrip } from "@/components/tabs";
 import { fieldClasses } from "@/components/ui/input";
 import { TEST_MODES } from "@/shared/join-gate";
 import { getStatus } from "@/server/status";
@@ -103,9 +104,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
       <Flash msg={msg} detail={detail} />
       <div className="flex flex-wrap items-center gap-3">
-        <nav className="flex max-w-full overflow-x-auto whitespace-nowrap border-b" aria-label="Filter the members">
-          {(Object.keys(SHOW) as Show[]).map((k) => <Link key={k} href={href(k)} aria-current={only === k ? "page" : undefined} className={cn("-mb-px", stripLink(only === k))}>{SHOW[k]} ({count[k]})</Link>)}
-        </nav>
+        <TabStrip label="Filter the members" className="max-w-full">
+          {(Object.keys(SHOW) as Show[]).map((k) => <Link key={k} href={href(k)} aria-current={only === k ? "page" : undefined} className={stripLink(only === k)}>{SHOW[k]} ({count[k]})</Link>)}
+        </TabStrip>
         <form method="get" action="/admin/people" className="flex min-w-0 flex-1 items-center gap-2" role="search">
           {only !== "all" && <input type="hidden" name="show" value={only} />}
           <input name="q" type="search" defaultValue={query} placeholder="Search by name" aria-label="Search by name" className={cn("h-11 min-w-0 flex-1 min-[800px]:max-w-xs", fieldClasses.replace("w-full ", ""))} />

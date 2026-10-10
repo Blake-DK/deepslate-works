@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getExtraNames } from "@/server/modpack/lock";
 import { extrasLine, extrasReportSchema } from "@/lib/extras-line";
 import { Prisma } from "@prisma/client";
-import { formatDate, cn } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { MODE_LABEL, OUTCOMES, memoryLine, settingsSchema, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
@@ -14,6 +14,7 @@ import { getInstaller } from "@/server/modpack/lock";
 import { isOutdated } from "@/lib/installer-version";
 import { InstallerVersion } from "@/components/admin/installer-version";
 import { stripLink } from "@/components/strip-link";
+import { TabStrip } from "@/components/tabs";
 import { TEST_MODES } from "@/shared/join-gate";
 
 const TONE = { ok: "good", failed: "bad", cancelled: "warn", skipped: "neutral" } as const;
@@ -143,10 +144,10 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
         </Card>
       )}
       <h2 className="pt-2 text-lg font-semibold">Every run</h2>
-      <nav className="flex max-w-full overflow-x-auto whitespace-nowrap border-b" aria-label="Filter by outcome">
-        <Link href="/admin/people?tab=installs" aria-current={!only ? "page" : undefined} className={cn("-mb-px", stripLink(!only))}>All ({total})</Link>
-        {OUTCOMES.map((o) => <Link key={o} href={`/admin/people?tab=installs&outcome=${o}`} aria-current={only === o ? "page" : undefined} className={cn("-mb-px", stripLink(only === o))}>{LABEL[o]} ({n(o)})</Link>)}
-      </nav>
+      <TabStrip label="Filter by outcome" className="max-w-full">
+        <Link href="/admin/people?tab=installs" aria-current={!only ? "page" : undefined} className={stripLink(!only)}>All ({total})</Link>
+        {OUTCOMES.map((o) => <Link key={o} href={`/admin/people?tab=installs&outcome=${o}`} aria-current={only === o ? "page" : undefined} className={stripLink(only === o)}>{LABEL[o]} ({n(o)})</Link>)}
+      </TabStrip>
       {rows.length === 0 ? (
         <Card><CardContent className="p-4 text-sm text-muted-foreground">{only ? "No reports with that outcome." : "No reports yet. They arrive when someone runs the installer."}</CardContent></Card>
       ) : (

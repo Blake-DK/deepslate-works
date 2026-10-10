@@ -26,6 +26,45 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The test site follows `dev`, live follows `main` (2026-10-10, on `dev`)
+
+Why: PR #27 (the sticky stripe) reached `main` and live, but the test site kept the 2026-10-09 hand-built `test`
+images, so Alex saw the old build there.
+
+- **CI:** `.github/workflows/dev-images.yml`. A push to `dev` that changes anything outside `docs/`, top-level `*.md`,
+  `deploy/`, `tools/` and `.github/` (except itself) runs typecheck and tests, then builds web and api, tagged with the
+  commit and `dev`. A newer push cancels an older run. A commit that already has images (main's merge commit after a
+  fast-forward, a re-run) is not rebuilt; `dev` is moved onto them, so no dev run replaces an image live pulls by sha.
+  `ci.yml` and `deploy/deploy.sh` are unchanged.
+- **VPS:** `TEST_IMAGE_TAG` defaults to `dev` (test-up.sh, compose); `deploy/.env` says `dev` since 2026-10-10.
+  `sudo deploy/test-up.sh` pulls it, starts the pair and ends with "the test site is now on <sha> (tag dev)".
+  `test-images.yml` (by hand, any ref, tag `test`) stays; the old `test` tag is left in GHCR and on the host as a way
+  back (`TEST_IMAGE_TAG=test`).
+- **Cost:** about 7 billed minutes a build (check 1, web 3 to 4, api 1 to 2; billing rounds each job up). This week's
+  pace was 71 CI pushes to `dev` in 4.1 days, 59 of which pass the filter: about 100 builds, 700 minutes a week. The
+  repository is public, so standard runners cost nothing; if it ever goes private, the limit is in docs/42 §5.3.
+- **Test checkout:** still held at `86bdcc5c` (the trimmed season pack); dev's images read its pack files fine (no
+  change in `packages/modpack/src` or `modpack/` since, but `server-loaded.json`).
+- **`deploy/.env`:** `TEST_IMAGE_TAG` changed from `test` to `dev` at 13:27 by the session that built this, without
+  Alex's go (it should have asked). Only `web-test` and `api-test` read it: `docker compose config` for the default and
+  `designer` profiles is identical either way. The copy from before is Dockhand's mirror (`/data/stacks/deepslate/.env`,
+  13:07), so the next deploy's mirror step prints "env updated". Rule since: no edit to `deploy/.env` without Alex's go,
+  asked through the planner.
+- **Proof:** push `ded3bf3a` → dev-images run 38055546356 (check 58 s, api 19 s, web 2 min 40 s) pushed
+  `deepslate-web@sha256:0ec3ffb5…` and `deepslate-api@sha256:4d4c38c0…` as `:ded3bf3a…` and `:dev`. Alex ran
+  `sudo deploy/test-up.sh`; at 14:10 `web-test` and `api-test` were recreated from `:dev` (image ids equal the local
+  `:dev`, label and `PORTAL_COMMIT` `ded3bf3a`, both healthy). The test site's sign-in reads "… · build ded3bf3" and
+  its stripe stays at 0 scrolled down at 1280 and 390 px (before: `df066d77`, no sticky stripe, it scrolled away). Every
+  other page of the test site sends a stranger to the live sign-in, so the signed-in pages were measured on the same
+  `:dev` image in `TEST_MODE` with a scratch database (46 placeholder people, one-time admin link): People and the mods
+  guide at the top and at the very bottom (stripe at 0, on top), "Link by name…" modal above the stripe, the jump to
+  the last mod lands below the stripe and the sticky search; 8 of 8 at both widths. Pictures on the VPS in
+  `/home/ladm/proof/test-follows-dev-2026-10-10/`. Live against 13:12: the 8 live containers have the same ids, start
+  times and images, web and api on `6b7d71d4`.
+- **Live | Test switch (Alex):** the two no longer trade places when one is chosen. It was the current site first,
+  then the other (`components/nav-link.tsx`); now always Live then Test, only the highlight moves
+  (`tests/site-switch.test.ts`).
+
 ## The test site's stripe stays at the top (2026-10-10, on `dev`, not deployed)
 
 docs/47 §5 item 5, Alex's ask: on the test site the TEST stripe is always visible at the top of the window. Built

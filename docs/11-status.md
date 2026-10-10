@@ -26,6 +26,39 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Admin, not Control Room: docs/48 Part A (2026-10-10, on `dev` `ee78660a`, not deployed)
+
+The rename and the new layout, with no change to the api, the database or what any action does. Part B (Maintenance)
+is not started.
+
+- **Built:** the copper tab says Admin; the admin strip is Overview · Server · Joining · People · Modpack · Builds ·
+  Seasons · News & polls · Discord · Site (`components/nav-link.tsx`). Overview (`admin/page.tsx`): the heading row,
+  what needs attention, tiles that are links (Server, Playing now, At the door, Backups, Members, and the test
+  server's card on live), the last 5 console lines, what admins did lately; 30 s refresh. The players list, the
+  inventory view and the copies of Power, Restart, Back up now and the held list left it, and with them the
+  `back="/admin"` path of their actions. Builds is `/admin/builds` (the designer and builds cards, their actions and
+  messages, out of Seasons). News & polls has News and Polls tabs; the polls' actions come back to `?tab=polls`.
+  People → Members: an online mark with the ping, online rows first, row menu Inventory and Kick back to the door (while
+  the server runs), the typed-name kick card under the table, coming back to People. Old addresses: `/admin/votes`
+  (next.config.ts), `/admin/seasons?design=` (server redirect), `/admin/seasons#design` and `#builds` (in the browser,
+  `seasons/to-builds.tsx`), `/admin?p=<uuid>` to the player's Inventory tab.
+- **Checks:** web 610 tests, api 735, typecheck and lint; CI and dev-images green on `ee78660a`. Alex ran
+  `sudo deploy/test-up.sh`; at 17:54 UTC `web-test` and `api-test` were on `ee78660a`.
+- **Proof (A6), on the test stack:** a throwaway admin "Proof VPS" was made in `deepslate_test` (Alex's go; `admin.mjs`,
+  then three one-time links from `api-test`, all in the test site's event log) and a copy of `web-test` from the same
+  image id, on `deepslate_test` and `api-test`, was run on the VPS's loopback, as the test site's address only takes a
+  live admin session. A headless browser, at 1280 and 390 px: the strips (one row, the admin strip scrolls sideways on
+  the phone, no page sideways scroll), Overview's rows in order and no button on it (the sign-in notice the proof's own
+  links raised aside), every tile to its page, the six old addresses, a news post and a poll each made and closed from
+  their tab and back to it, a build uploaded and removed and back to Builds with its message: 41 of 41. Pictures and
+  logs in `/home/ladm/proof/admin-rename-2026-10-10/` on the VPS. The copy was removed, and "Proof VPS" deleted from
+  `deepslate_test` with an event saying so.
+- **Not shown, the test server was switched off:** an online member sorting first with the mark, the row menu's kick
+  and the typed-name kick (its button is off while the server is not running), Builder mode on and off, placing and
+  locking a build. They need the test server up and somebody in the game. "A design opens from `?design=`" cannot be
+  shown on the test site: its designer is not set up (live's is); the redirect itself is proven.
+- **`grep -ri "control room" apps/`** prints nothing.
+
 ## The test site follows `dev`, live follows `main` (2026-10-10, on `dev`)
 
 Why: PR #27 (the sticky stripe) reached `main` and live, but the test site kept the 2026-10-09 hand-built `test`

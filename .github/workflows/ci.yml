@@ -1,15 +1,15 @@
 name: ci
 # `dev` is where work lands: a push to it runs the checks, nothing more. Images are built and
 # pushed for `main` only, and a pull request (dev → main is the usual one) builds them without pushing.
-# A push or pull request that changes only docs/ or Markdown files at the top (README, ROADMAP) runs nothing:
-# they are in no image and no test. Such a commit on main has no images of its own, so deploy/deploy.sh then deploys
-# the images of the last commit before it that changed anything else; the two lists must stay the same.
+# A push that changes only docs/ or Markdown files at the top (README, ROADMAP) runs nothing: they are in no image
+# and no test. Such a commit on main has no images of its own, so deploy/deploy.sh then deploys the images of the
+# last commit before it that changed anything else; the two lists must stay the same. A pull request always runs:
+# `check` is required on main, and a skipped workflow leaves a required check waiting for ever (PR #25).
 on:
   push:
     branches: [main, dev]
     paths-ignore: ["docs/**", "*.md"]
   pull_request:
-    paths-ignore: ["docs/**", "*.md"]
 
 # docs/35 R-20: the runs of pushes to main go one after the other, in the order of the pushes, from their first job
 # on. The group on the `images` job alone was entered only after `check`, so of two pushes close together the older

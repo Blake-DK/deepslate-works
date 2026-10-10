@@ -71,3 +71,57 @@ describe("the Test section's routes on the test server (docs/45)", () => {
     expect(woke).toEqual([]);
   });
 });
+
+describe("the test wake tells the truth (3.6.1, item 7)", () => {
+  async function withState(states: ServerState[]) {
+    let at = 0;
+    let asked = 0;
+    const woke: string[] = [];
+    const app = Fastify();
+    app.addHook("onRequest", serviceAuth(SERVICE, Object.fromEntries(TEST_APP_PATHS.map((p) => [p, APP]))));
+    testAppRoutes(app, {
+      repoDir: tmpdir(),
+      server: () => ({ state: states[Math.min(at, states.length - 1)], players: [] }),
+      address: "lab.dsw.test",
+      pack: async () => ({ site: null, server: null }),
+      wake: { start: async (_id: string, name: string) => { woke.push(name); }, view: () => ({ phase: woke.length ? "waking" : "idle" }) as never },
+      refresh: async () => { asked++; at++; },
+      memberByDiscord: async () => null,
+    });
+    return { app, woke, asked: () => asked };
+  }
+
+  it("asks AMP once more before it answers unreachable: a poller between two reads is not an answer", async () => {
+    const t = await withState(["unreachable", "asleep"]);
+    const r = await t.app.inject({ method: "POST", url: "/test/app/wake", headers: bearer(APP), payload: { name: "Alex" } });
+    expect(t.asked()).toBe(1);
+    expect(r.statusCode).toBe(202);
+    expect(t.woke).toHaveLength(1);
+  });
+
+  it("says unreachable only when AMP still does not answer", async () => {
+    const t = await withState(["unreachable", "unreachable"]);
+    const r = await t.app.inject({ method: "POST", url: "/test/app/wake", headers: bearer(APP), payload: { name: "Alex" } });
+    expect(t.asked()).toBe(1);
+    expect(r.statusCode).toBe(409);
+    expect((r.json() as { error: { code: string } }).error.code).toBe("unreachable");
+  });
+
+  it("online, waking and switched off each answer as they are, without asking AMP again", async () => {
+    for (const [state, code] of [["online", 200], ["waking", 200], ["off", 409], ["starting", 409]] as const) {
+      const t = await withState([state]);
+      const r = await t.app.inject({ method: "POST", url: "/test/app/wake", headers: bearer(APP), payload: { name: "Alex" } });
+      expect(r.statusCode, state).toBe(code);
+      expect(t.asked(), state).toBe(0);
+    }
+  });
+
+  it("the wake the app watches is there, by GET, to the app's token only", async () => {
+    const t = await withState(["asleep"]);
+    await t.app.inject({ method: "POST", url: "/test/app/wake", headers: bearer(APP), payload: { name: "Alex" } });
+    const r = await t.app.inject({ url: "/test/app/wake", headers: bearer(APP) });
+    expect(r.statusCode).toBe(200);
+    expect((r.json() as { wake: { phase: string } }).wake.phase).toBe("waking");
+    expect((await t.app.inject({ url: "/test/app/wake", headers: bearer(SERVICE) })).statusCode).toBe(401);
+  });
+});

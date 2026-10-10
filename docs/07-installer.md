@@ -43,7 +43,53 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.1: the Test tab is the Play tab pointed at the test server (planner brief, 2026-10-09; docs/45)
+
+- **One Play view, two copies.** The Play tab's view is `AppWindow.PlayViewXaml`, parsed once per target into a
+  `PlayPane` (its own names, so each copy has its own controls): the live server's on the Play tab, the test server's on
+  the Test tab. Each pane has its own run state, countdown, card, footer and banner pill; the window's Play code works
+  on the pane in hand (`AppUi.P`, set by `On(pane, …)` for that pane's button, run lines and countdown; live otherwise).
+  No second copy of the Play code.
+- **Admins only, asked only for admins.** The Test tab is made when the live site's home says the sign-in is an admin's
+  (`/api/app/home`'s `admin`); only then is `/api/app/test` asked. A member's app has no Test tab, asks nothing about one
+  and logs nothing of it.
+- **Play on either tab** ends a run of the other's that only waits for Play (no game being installed or started): no
+  "cancelled" report (`Run.Switched`), nothing more written to its folder. Play is shut only while the other game is
+  really being got ready, and the tab says why.
+- **The card names its server:** "Live server" / "Test server". The test card is the site's own words (`server` in the
+  Test section's answer, the home's shape), so a state the app does not know shows as the site words it. The footer and
+  the banner's pill follow the tab in view ("Test pack …", "Test server: …").
+- **Start** says "Start live server" and asks "Start the live server? …". No Stop in the app; no Start or Stop of the
+  test server (test starts and stops stay on the test site, where they are logged).
+- **What follows the run's target**, and what 3.6.0 got wrong:
+  - Extras: the run's own game folder, with the Extras tab's choices and an applied list per game (`extras.json` for
+    live, `extras-test.json` for test). 3.6.0 synced the extras into the **live** folder during a test Play and the
+    test game had none. The run says "on" only for files in place with the right checksum, else "N chosen, M in place".
+  - Settings: a new test folder starts as a copy of the live game's `options.txt` (resource packs it lacks dropped);
+    each test Play brings across the keys the Settings tab manages and the prisoner villagers, with the tab's waiting
+    changes on top. The waiting changes stay the live game's: only a live Play applies and clears them, so a change
+    reaches whichever game is played next. 3.6.0 applied them to the test game and cleared them, so live lost them.
+  - The game check after a test Play has its own report mode, `test_game_check`, and is shown on the Test tab. 3.6.0
+    sent it as `game_check`, into the live figures.
+  - The Minecraft Launcher: after a test Play, once the launcher is closed, the live profile is selected again and
+    last used (`Engine.PutLiveFirst`); also when the window opens and closes. Never while the launcher is open.
+- **The game check** counts every file NeoForge says it found (mod, library, game library) and always reads
+  `debug.log` too; a `latest.log` that starts with a time and no date is read on the day the log was last written (the
+  day before when that would be later). 3.6.0 fell back to the file's creation time, which Windows carries over from
+  the previous log, and almost never found a game.
+- **The wake line** says what each answer means ("the test server is switched off, and Play does not start it", "the
+  live site can't reach the test server's site", …), the code in brackets.
+- **The profile line** names the profile written ("Deepslate Works TEST" for a test Play).
+- **Tests:** `TabsTests`, `TargetTests`, and `installer/tests/windows-tabs.ps1` on the Windows runner: the app's own
+  window against a stand-in site on 127.0.0.1, opened from the desktop, as the Play link opens it (`-AsLink`, only in a
+  `-Root` run against 127.0.0.1) and with live switched off, plus a member's app; pictures of both tabs side by side
+  and both game folders listed with hashes before and after each kind of run. A stand-in run never opens the Minecraft
+  Launcher (`Env.StandIn`).
+
 ## 3.6.0: the Test section, admins only (Alex and the planner, 2026-10-09; docs/45)
+
+Corrected by 3.6.1 (above): the "never touched" claims below were not true of 3.6.0's extras, waiting settings and game
+check.
 
 - A **Test** tab, shown only when the live site answers `GET /api/app/test` for the signed-in member (admins; anyone else
   gets "not found" and the tab stays hidden). It says plainly it is the test server, shows its state, address and test
@@ -197,7 +243,7 @@ The install steps do not run in the window. The window starts the same script ag
 
 ## Installer 1.5.6: when Setup can't set up the Play button (planner, 2026-09-30)
 
-**The fault.** Rowan (Pabulum) ran Setup.bat on 2026-09-30 and saw "Could not set up the Play button and the shortcuts (…). Carrying on from this folder." The copy into `%LOCALAPPDATA%\DeepslateWorks\` was refused ("Access to the path '…\DeepslateWorks\DeepslateWorks.ps1' is denied."), and because the copy, the Play link, the shortcuts and the Settings → Apps entry were in one `try`, nothing after the copy was done either. The Setup window's own line never reached a report (Setup runs in a process of its own and the report is sent by the run it starts); his 19:57 UTC report (1.5.4 → 1.5.5, run from the extracted download) shows the same refusal at the end of the run.
+**The fault.** Rowan ran Setup.bat on 2026-09-30 and saw "Could not set up the Play button and the shortcuts (…). Carrying on from this folder." The copy into `%LOCALAPPDATA%\DeepslateWorks\` was refused ("Access to the path '…\DeepslateWorks\DeepslateWorks.ps1' is denied."), and because the copy, the Play link, the shortcuts and the Settings → Apps entry were in one `try`, nothing after the copy was done either. The Setup window's own line never reached a report (Setup runs in a process of its own and the report is sent by the run it starts); his 19:57 UTC report (1.5.4 → 1.5.5, run from the extracted download) shows the same refusal at the end of the run.
 
 **Each part on its own** (`Repair-Home`, used by Setup with `-Force`, by the first run under 1.4.x's name, and at the end of every run). On screen after Setup, one line each:
 
@@ -419,7 +465,7 @@ Mods, configs, the NeoForge version and the memory settings come from the mod li
 
 ## A Java on the PC ended the install (2026-09-29, installer 1.4.1)
 
-**What happened.** Pabulum, the first player with early access, ran `Setup.bat` three times (16:48, 16:53 and 17:06 UTC) and each run ended at "Finding Java 21" with `NativeCommandError`. His PC had Java 8 on PATH the first time and Java 21.0.12, which he installed himself, after that. The same happened on both.
+**What happened.** Rowan, the first player with early access, ran `Setup.bat` three times (16:48, 16:53 and 17:06 UTC) and each run ended at "Finding Java 21" with `NativeCommandError`. His PC had Java 8 on PATH the first time and Java 21.0.12, which he installed himself, after that. The same happened on both.
 
 **Why.** `java -version` says its version on stderr. The script asked with `& $cmd.Source -version 2>&1`, and in Windows PowerShell 5.1 a native command's stderr that is sent through `2>&1` becomes an error record; with `$ErrorActionPreference = "Stop"` that error ends the script. So the check ended before it had compared anything, whatever the Java was, and the branch that downloads Java 21 was never reached. It had not shown before because every PC so far had the launcher's own Java, which is taken first and was never asked for its version. The second place, the version for the report, had the same fault inside a `try`: no crash, and `java.version` was `null` in every report.
 
@@ -437,18 +483,18 @@ Mods, configs, the NeoForge version and the memory settings come from the mod li
 
 ## A temp file ended an install that had worked (2026-09-29, installer 1.4.2)
 
-**What happened.** Pabulum's first run of 1.4.1 (18:04 UTC) installed NeoForge ("Successfully installed client into launcher") and then stopped on the next line, `Remove-Item $jar -Force -ErrorAction SilentlyContinue`, which only deletes the NeoForge installer from `%TEMP%`: `PSArgumentException`, "An object at the specified path C:\Users\<name>… does not exist". PowerShell could not resolve his user folder as a path pattern, and that error stops a script whatever `-ErrorAction` says. His next run (18:08, started as admin) went through only because NeoForge was already there and the block was skipped; being admin had nothing to do with it.
+**What happened.** Rowan's first run of 1.4.1 (18:04 UTC) installed NeoForge ("Successfully installed client into launcher") and then stopped on the next line, `Remove-Item $jar -Force -ErrorAction SilentlyContinue`, which only deletes the NeoForge installer from `%TEMP%`: `PSArgumentException`, "An object at the specified path C:\Users\<name>… does not exist". PowerShell could not resolve his user folder as a path pattern, and that error stops a script whatever `-ErrorAction` says. His next run (18:08, started as admin) went through only because NeoForge was already there and the block was skipped; being admin had nothing to do with it.
 
-**Why.** With `-Path` (and a path given without a parameter name) PowerShell treats `[` `]` as a pattern and resolves the path before acting on it. A user folder with brackets in its name, or a `%TEMP%` in the short 8.3 form (`PABULU~1`, which Windows uses for long names and names with spaces), can fail that. Which of the two his PC has is not known: the report blanks the name.
+**Why.** With `-Path` (and a path given without a parameter name) PowerShell treats `[` `]` as a pattern and resolves the path before acting on it. A user folder with brackets in its name, or a `%TEMP%` in the short 8.3 form (`BRAMBL~1`, which Windows uses for long names and names with spaces), can fail that. Which of the two his PC has is not known: the report blanks the name.
 
 **What it does now.**
 
 - Every file operation outside the self test takes `-LiteralPath`; the self test reads the script and fails on any that does not.
 - Temporary files (the NeoForge installer and its output, the Java zip, `config.zip`, a `.part` download, the installer update zip) are removed by `Remove-Temp`, which uses .NET directly and only logs a failure. A leftover file never ends a run.
 - The settings step no longer says "No config files this time" when only the cleanup of `config.zip` failed.
-- Self test: a folder named `Pab [x] PABULU~1`, a file removed from it, removal of what is not there, and the launcher profile written and read back in it. 63 checks.
+- Self test: a folder named `Bra [x] BRAMBL~1`, a file removed from it, removal of what is not there, and the launcher profile written and read back in it. 63 checks.
 
-**Not tested here:** a real 8.3 path; `pwsh` on Linux has no short names. `Invoke-WebRequest -OutFile` still takes its path as given; it worked on Pabulum's PC.
+**Not tested here:** a real 8.3 path; `pwsh` on Linux has no short names. `Invoke-WebRequest -OutFile` still takes its path as given; it worked on Rowan's PC.
 
 ## The PC tier is measured (Alex, 2026-09-29)
 
@@ -554,7 +600,7 @@ Again and updates:
 
 Java (installer 1.4.1):
 - [ ] A PC with an old Java on PATH (`java -version` in a command window says 1.8 or 17) and no launcher runtime yet: step 4 says the Java on this PC is not Java 21 and is left as it is, downloads Java 21, and carries on. The profile's Java is the one in the pack's folder.
-- [ ] A PC with Java 21 on PATH: "Using Java 21 from PATH". (Pabulum's PC, 2026-09-29: passed.)
+- [ ] A PC with Java 21 on PATH: "Using Java 21 from PATH". (Rowan's PC, 2026-09-29: passed.)
 - [ ] Admin → Installs, the run: Java's source and its version line are filled in.
 
 Edges:
@@ -566,7 +612,7 @@ Edges:
 - `install.ps1 -SelfTest`: 58 checks, under Windows PowerShell 5.1 and under `pwsh` on Linux. On the VPS it runs in a container (`mcr.microsoft.com/powershell`, with a memory limit, no network). **It has never been run on Windows by this session**; the first line of the checklist above is that run.
 - `packages/modpack/tests/installer.test.ts` reads the script as text: its version, that no command's stderr goes through `2>&1`, that Java is asked through a process of its own.
 - On the live site with a throwaway member, from the VPS (`/root/.config/deepslate/`): `installer-report-test.sh` (a report from a dry run), `play-test.sh` (the Play link and what it refuses), `update-test.sh` (an old copy fetches the new one; a wrong checksum replaces nothing).
-- What needs Windows and a person: the checklist above. Done so far on real PCs: a clean install, Play from the site, the launcher left open (Alex's PC); an install with Java on PATH (Pabulum's). Never watched: a rerun replacing exactly one jar, a PC with 8 GB.
+- What needs Windows and a person: the checklist above. Done so far on real PCs: a clean install, Play from the site, the launcher left open (Alex's PC); an install with Java on PATH (Rowan's). Never watched: a rerun replacing exactly one jar, a PC with 8 GB.
 
 ## Which installer ran (2026-09-29, planner; installer 1.4.3)
 

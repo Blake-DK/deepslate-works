@@ -10,10 +10,12 @@ export const GATE_REASONS = ["no report", "old installer", "missing mods", "stal
 
 /**
  * The runs that count as "pressed Play": the Play button, and a run of Setup.bat that went through. A fresh install
- * is the current pack by definition (planner, 2026-09-29, after Pabulum was held although he had just installed).
+ * is the current pack by definition (planner, 2026-09-29, after Bramble09 was held although he had just installed).
  */
 // App 3.3.0: the Update button's run counts too: it proves the right pack is on the PC (planner 2026-10-02).
 export const PLAY_MODES = ["play", "install", "first_install", "update", "update_only"] as const; // not already_running: that run did nothing
+/** docs/45, 3.6.1: the app's runs and game checks for the test server: never in a live figure, never for the door. */
+export const TEST_MODES = ["test_play", "test_game_check"];
 export type GateReason = (typeof GATE_REASONS)[number];
 
 /** `installerVersion`: which installer made the run ("unknown" from installers that did not say). */

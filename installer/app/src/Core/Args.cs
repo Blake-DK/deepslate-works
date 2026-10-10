@@ -11,6 +11,7 @@ namespace DeepslateWorks
         public string Link = "";          // the deepslate:// link, when Windows starts this from the Play button on the site
         public bool Uninstall, Yes, VerifyExtras, Console, AllowAll, DryRun, NoLaunch;
         public bool Update;               // 3.3.0: the app updated itself during an Update and carries on with it
+        public bool AsLink;               // 3.6.1: windows-tabs.ps1 only, a test run opened as the Play link opens it (TestLink)
         public string Screenshots = "", Root = "", From = "", MigratedFrom = "";   // MigratedFrom: -HandOver (3.1.0), or 2.1.3's -MigratedFrom
         public int WaitFor;
         public string[] PretendRunning = new string[0];
@@ -37,6 +38,7 @@ namespace DeepslateWorks
                     case "dryrun": a.DryRun = true; break;
                     case "nolaunch": a.NoLaunch = true; break;
                     case "update": a.Update = true; break;
+                    case "aslink": a.AsLink = true; break;
                     case "screenshots": a.Screenshots = Next(); break;
                     case "root": a.Root = Next(); break;
                     case "from": a.From = Next(); break;
@@ -55,6 +57,14 @@ namespace DeepslateWorks
             }
             return a;
         }
+
+        /// <summary>
+        /// 3.6.1: -AsLink opens the window as the site's Play link does, for windows-tabs.ps1 only: in a test run (-Root)
+        /// against the stand-in site on 127.0.0.1, never anywhere else. A real link resets every switch (Parse), so a link
+        /// that carries it gets nothing from it.
+        /// </summary>
+        public static bool TestLink(Args a, bool customRoot, string portalUrl) =>
+            a != null && a.AsLink && a.Link == "" && customRoot && Regex.IsMatch(portalUrl ?? "", @"^http://127\.0\.0\.1:\d{2,5}$");
 
         /// <summary>3.3.0: what an Update's restart after a self-update passes on: the switches, never a link (a link run
         /// would reset them), and -Update so the new copy goes straight on with it.</summary>

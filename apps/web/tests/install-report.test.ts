@@ -68,6 +68,14 @@ describe("a report on its way into the database", () => {
     expect("hostname" in r.system).toBe(false);
     expect("username" in r.system).toBe(false);
   });
+  it("takes the test game's check (3.6.1), kept out of every live figure with the test Plays", async () => {
+    expect(reportSchema.parse({ ...REPORT, mode: "test_game_check" }).mode).toBe("test_game_check");
+    const { TEST_MODES, PLAY_MODES } = await import("@/shared/join-gate");
+    expect(TEST_MODES).toEqual(["test_play", "test_game_check"]);
+    for (const m of TEST_MODES) expect((PLAY_MODES as readonly string[]).includes(m)).toBe(false);
+    const { describeAction } = await import("@/shared/events");
+    expect(describeAction("installer.report", { role: "ADMIN", name: "Bramble09" }, { mode: "test_game_check", outcome: "ok" }, "OK")).toBe("Bramble09 started the test game with every mod of the test pack");
+  });
   it("refuses what makes no sense", () => {
     expect(reportSchema.safeParse({ ...REPORT, outcome: "exploded" }).success).toBe(false);
     expect(reportSchema.safeParse({ ...REPORT, durationSec: -1 }).success).toBe(false);

@@ -32,6 +32,7 @@ import { Switch } from "@/components/admin/parts";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/server/api-client";
 import { stripLink } from "@/components/strip-link";
+import { TEST_MODES } from "@/shared/join-gate";
 
 type PartyView = { id: string; name: string | null; members: Array<{ uuid: string; name: string; rank: string; owner: boolean }>; allies: Array<{ id: string; name: string | null; owner: string | null }> };
 const RANK: Record<string, string> = { ADMIN: "admin", MODERATOR: "moderator" };
@@ -79,9 +80,9 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
     listEvents({ ...readFilter({}, admin), player: id }, admin, 40),
   ]);
   // Admins only: what the installer last reported from this member's PC (docs/07 "Install reports").
-  const install = admin && member ? await db.installReport.findFirst({ where: { userId: member.id, mode: { not: "test_play" } }, orderBy: { at: "desc" }, select: { id: true, at: true, outcome: true, failedStep: true, packVersion: true, system: true } }) : null;
+  const install = admin && member ? await db.installReport.findFirst({ where: { userId: member.id, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, select: { id: true, at: true, outcome: true, failedStep: true, packVersion: true, system: true } }) : null;
   // 2.0.1: their Extras tab, from the latest report that says
-  const extrasRun = admin && member ? await db.installReport.findFirst({ where: { userId: member.id, extras: { not: Prisma.DbNull }, mode: { not: "test_play" } }, orderBy: { at: "desc" }, select: { extras: true } }) : null;
+  const extrasRun = admin && member ? await db.installReport.findFirst({ where: { userId: member.id, extras: { not: Prisma.DbNull }, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, select: { extras: true } }) : null;
   const extrasText = extrasRun ? extrasLine(extrasReportSchema.safeParse(extrasRun.extras).data ?? null, await getExtraNames()) : null;
   const pc = install ? summary(install.system as SystemInfo) : null;
   const guess = install ? suggestTier(install.system as SystemInfo) : null;

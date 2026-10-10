@@ -50,7 +50,9 @@ namespace DeepslateWorks
             set { _portal = value == null ? null : value.TrimEnd('/'); }
         }
         public static string ManifestUrl => TestTarget ? PortalUrl + "/api/app/test/manifest" : PortalUrl + "/api/modpack/manifest";
-        public static string WakeUrl => TestTarget ? PortalUrl + "/api/app/test/wake" : PortalUrl + "/api/play/wake";
+        public static string WakeUrl => WakeUrlFor(Target);
+        /// <summary>3.6.1: the wake of a named server, for the window: it never reads Target, which a waiting run holds.</summary>
+        public static string WakeUrlFor(string target) => target == "test" ? PortalUrl + "/api/app/test/wake" : PortalUrl + "/api/play/wake";
         /// <summary>docs/45: the Test section asks here whether to show itself (admins only; anyone else: not found).</summary>
         public static string TestSectionUrl => PortalUrl + "/api/app/test";
 
@@ -64,6 +66,8 @@ namespace DeepslateWorks
         public static string Target { get; set; } = "live";
         public static bool TestTarget => Target == "test";
         public const string TestDirName = ".minecraft-deepslate-works-test";
+        /// <summary>The test pack's launcher profile id (the site's TEST_PROFILE.id).</summary>
+        public const string TestProfileId = "deepslate-works-test";
         public static string ExtrasUrl => PortalUrl + "/api/modpack/extras";
         public static string ReportUrl => PortalUrl + "/api/installer/report";
         public static string ExeDownloadUrl => PortalUrl + "/downloads/" + ExeName;   // never an address from the manifest
@@ -86,6 +90,9 @@ namespace DeepslateWorks
         public static string Root { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         /// <summary>A test run (-Root given): nothing is copied, registered or linked outside Root.</summary>
         public static bool CustomRoot { get; set; }
+        /// <summary>3.6.1: a test run against the stand-in site on this PC (windows-tabs.ps1): -Root, and the site on
+        /// 127.0.0.1. Such a run never opens the Minecraft Launcher (Launcher.OpenLauncher).</summary>
+        public static bool StandIn => CustomRoot && System.Text.RegularExpressions.Regex.IsMatch(PortalUrl, @"^http://127\.0\.0\.1:\d{2,5}$");
         static string _appHome;
         /// <summary>%LOCALAPPDATA%\DeepslateWorks: the exe, consent.json, extras.json, logs\.</summary>
         public static string AppHome
@@ -113,6 +120,11 @@ namespace DeepslateWorks
         public static string LogFile => Path.Combine(Temp, "deepslate-works.log");
         public static string ConsentPath => Path.Combine(AppHome, ConsentFileName);
         public static string ExtrasStatePath => Path.Combine(AppHome, ExtrasStateName);
+        /// <summary>3.6.1 (item 5): what is in place in the test game's folders (its applied list). The choices are the
+        /// Extras tab's, in extras.json, shared by both games.</summary>
+        public static string ExtrasTestStatePath => Path.Combine(AppHome, "extras-test.json");
+        /// <summary>The state whose applied list is the run's game folder's.</summary>
+        public static string ExtrasRunStatePath => TestTarget ? ExtrasTestStatePath : ExtrasStatePath;
         public static string ExtrasManifestPath => Path.Combine(AppHome, ExtrasManifestName);
         public static string HomeExe => Path.Combine(AppHome, ExeName);
 

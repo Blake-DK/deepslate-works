@@ -14,6 +14,7 @@ import { getInstaller } from "@/server/modpack/lock";
 import { isOutdated } from "@/lib/installer-version";
 import { InstallerVersion } from "@/components/admin/installer-version";
 import { stripLink } from "@/components/strip-link";
+import { TEST_MODES } from "@/shared/join-gate";
 
 const TONE = { ok: "good", failed: "bad", cancelled: "warn", skipped: "neutral" } as const;
 const LABEL = { ok: "All good", failed: "Failed", cancelled: "Stopped", skipped: "Already running" } as const;
@@ -29,26 +30,27 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   const { outcome } = await searchParams;
   const only = (OUTCOMES as readonly string[]).includes(outcome ?? "") ? outcome : undefined;
   const [rows, counts, installer] = await Promise.all([
-    db.installReport.findMany({ where: only ? { outcome: only, mode: { not: "test_play" } } : { mode: { not: "test_play" } }, orderBy: { at: "desc" }, take: 200, select: { id: true, userId: true, at: true, mode: true, minimal: true, playLinkMissing: true, updatedFrom: true, updateProblem: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } }),
-    db.installReport.groupBy({ by: ["outcome"], where: { mode: { not: "test_play" } }, _count: { _all: true } }),
+    db.installReport.findMany({ where: only ? { outcome: only, mode: { notIn: TEST_MODES } } : { mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, take: 200, select: { id: true, userId: true, at: true, mode: true, minimal: true, playLinkMissing: true, updatedFrom: true, updateProblem: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } }),
+    db.installReport.groupBy({ by: ["outcome"], where: { mode: { notIn: TEST_MODES } }, _count: { _all: true } }),
     getInstaller(),
   ]);
   const current = installer?.current ?? null;
   const n = (o: string) => counts.find((c) => c.outcome === o)?._count._all ?? 0;
   const total = counts.reduce((a, c) => a + c._count._all, 0);
   const now = new Date();
-  // The group's PCs: each member's latest report, whatever the filter above says.
-  const latest = await db.installReport.findMany({ orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, userId: true, at: true, system: true, tierMeasured: true, mode: true, outcome: true, extras: true, user: { select: { displayName: true, mcUuid: true } } } });
+  // The group's PCs: each member's latest report, whatever the filter above says. 3.6.1: never a test run's (an admin's
+  // test Play or test game check is not their PC's latest, and has no measured tier)
+  const latest = await db.installReport.findMany({ where: { mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, userId: true, at: true, system: true, tierMeasured: true, mode: true, outcome: true, extras: true, user: { select: { displayName: true, mcUuid: true } } } });
   // 3.5.0 (docs/30 §6): the memory the game got on each member's PC, and whether they chose it, from their latest report
   // that says (a ping, a game check and apps before 3.5.0 do not)
   const memory = new Map(
-    (await db.installReport.findMany({ where: { settings: { not: Prisma.DbNull }, mode: { not: "test_play" } }, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { userId: true, settings: true } }))
+    (await db.installReport.findMany({ where: { settings: { not: Prisma.DbNull }, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { userId: true, settings: true } }))
       .map((r) => [r.userId, memoryLine(settingsSchema.safeParse(r.settings).data ?? null)] as const)
       .filter((e): e is readonly [string, string] => e[1] !== null),
   );
   // 2.0.1: the Extras tab on each member's PC, from their latest report that says (older installers do not)
   const extraNames = await getExtraNames();
-  const extrasRows = (await db.installReport.findMany({ where: { extras: { not: Prisma.DbNull }, mode: { not: "test_play" } }, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, at: true, extras: true, user: { select: { displayName: true } } } }))
+  const extrasRows = (await db.installReport.findMany({ where: { extras: { not: Prisma.DbNull }, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, at: true, extras: true, user: { select: { displayName: true } } } }))
     .map((r) => ({ ...r, line: extrasLine(extrasReportSchema.safeParse(r.extras).data ?? null, extraNames) }))
     .filter((r) => r.line);
   const members = await db.user.count();

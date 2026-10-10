@@ -24,12 +24,21 @@ namespace DeepslateWorks
     sealed partial class AppUi
     {
         public TabItem VoteTab;
-        Border ServerBox, NewsBox;
-        Ellipse ServerDot;
-        TextBlock ServerLineText, ServerHint, ServerOnline, NewsText, NewsMeta, NewsOpen, VoteStep, VoteTitle, VoteNote, VoteError;
-        Hyperlink SiteLink;
-        Button StartButton, VoteButton;
+        TextBlock VoteStep, VoteTitle, VoteNote, VoteError;
+        Button VoteButton;
         StackPanel VoteBody;
+        // the card of the pane (3.6.1): the live server's on the Play tab, the test server's on the Test tab
+        Border ServerBox => P.ServerBox;
+        Border NewsBox => P.NewsBox;
+        Ellipse ServerDot => P.ServerDot;
+        TextBlock ServerLineText => P.ServerLine;
+        TextBlock ServerHint => P.ServerHint;
+        TextBlock ServerOnline => P.ServerOnline;
+        TextBlock NewsText => P.NewsText;
+        TextBlock NewsMeta => P.NewsMeta;
+        TextBlock NewsOpen => P.NewsOpen;
+        Hyperlink SiteLink => P.SiteLink;
+        Button StartButton => P.StartButton;
 
         public HomeInfo SiteNow;
         DispatcherTimer HomeTimer, VoteNextTimer;
@@ -54,22 +63,21 @@ namespace DeepslateWorks
 
         /// <summary>Votes still to answer: the site lists them until they are answered (a ballot on the site, a poll here).</summary>
         List<VoteItem> PendingVotes => SiteNow != null && SiteNow.SignedIn ? SiteNow.Votes.Where(v => !answered.Contains(v.Id)).ToList() : new List<VoteItem>();
-        public bool VotesBlock => PendingVotes.Count > 0;
+        /// <summary>3.6.1: the live server's votes hold the Play tab only; the test server's door has its own rules.</summary>
+        public bool VotesBlock => P.IsLive && PendingVotes.Count > 0;
 
         void WireHome()
         {
             var w = Window;
             T F<T>(string n) where T : class => w.FindName(n) as T ?? throw new InvalidOperationException("the window has no " + n);
-            VoteTab = F<TabItem>("VoteTab"); ServerBox = F<Border>("ServerBox"); NewsBox = F<Border>("NewsBox"); ServerDot = F<Ellipse>("ServerDot");
-            ServerLineText = F<TextBlock>("ServerLine"); ServerHint = F<TextBlock>("ServerHint"); ServerOnline = F<TextBlock>("ServerOnline");
-            NewsText = F<TextBlock>("NewsText"); NewsMeta = F<TextBlock>("NewsMeta"); NewsOpen = F<TextBlock>("NewsOpen"); SiteLink = F<Hyperlink>("SiteLink");
-            StartButton = F<Button>("StartButton"); VoteButton = F<Button>("VoteButton"); VoteBody = F<StackPanel>("VoteBody");
+            VoteTab = F<TabItem>("VoteTab"); VoteButton = F<Button>("VoteButton"); VoteBody = F<StackPanel>("VoteBody");
             VoteStep = F<TextBlock>("VoteStep"); VoteTitle = F<TextBlock>("VoteTitle"); VoteNote = F<TextBlock>("VoteNote"); VoteError = F<TextBlock>("VoteError");
             SiteLink.Click += (s, e) => OpenSite(SiteNow?.Site ?? Env.PortalUrl);
             // 3.5.3: the whole news card opens it on the site (the Votes page for news about a vote)
             // 3.5.5 (Alex, 2026-10-06): nothing on the Play tab scrolls; the window grows to show it all
-            F<ScrollViewer>("NewsScroll").ScrollChanged += (s, e) => FitPlayTab();
-            F<ScrollViewer>("PlayScroll").ScrollChanged += (s, e) => FitPlayTab();
+            P.NewsScroll.ScrollChanged += (s, e) => FitPlayTab();
+            P.PlayScroll.ScrollChanged += (s, e) => FitPlayTab();
+            StartButton.Content = UiText.StartLiveButton;   // 3.6.1 (item 10): it names the server it starts
             NewsBox.MouseLeftButtonUp += (s, e) =>
             {
                 if (OnScrollBar(e.OriginalSource as DependencyObject)) return;   // scrolling a long news item is not a click on it
@@ -90,12 +98,13 @@ namespace DeepslateWorks
         /// smallest, so dragging it smaller cannot hide text either. Only on a screen too small for it all does the news scroll.</summary>
         void FitPlayTab()
         {
-            if (fitting || Window.WindowState != WindowState.Normal || Tabs.SelectedItem != PlayTab) return;
+            var pane = ShownPane;
+            if (fitting || Window.WindowState != WindowState.Normal || (Tabs.SelectedItem != PlayTab && pane.IsLive)) return;
             fitting = true;
             try
             {
-                double Over(string n) { var sv = Window.FindName(n) as ScrollViewer; return sv == null || !sv.IsVisible ? 0 : sv.ExtentHeight - sv.ViewportHeight; }
-                var missing = Math.Max(Over("NewsScroll"), Over("PlayScroll"));
+                double Over(ScrollViewer sv) => sv == null || !sv.IsVisible ? 0 : sv.ExtentHeight - sv.ViewportHeight;
+                var missing = Math.Max(Over(pane.NewsScroll), Over(pane.PlayScroll));
                 if (missing <= 0.5) return;
                 var wa = SystemParameters.WorkArea;
                 var want = Math.Min(Math.Ceiling(Window.ActualHeight + missing), wa.Height);
@@ -153,6 +162,7 @@ namespace DeepslateWorks
             var first = SiteNow == null;
             SiteNow = h;
             ShowServer(h);
+            if (!homeSim) SyncTestTab(h.SignedIn && h.Admin);   // 3.6.1: the Test tab is made for an admin only, and asked about only then
             // Wake on open: a sleeping server starts booting the moment the app opens (the site decides: Asleep only, for
             // members the door would let in, one start however often). The run's own wake is the same call.
             if (!homeSim && !wokeAtOpen && h.SignedIn && h.Server.Asleep) { wokeAtOpen = true; WakeNow("opened"); }
@@ -172,7 +182,7 @@ namespace DeepslateWorks
         {
             var s = h.Server;
             ServerDot.Fill = NewBrush(Theme.ToneKey(s.Tone));
-            SetHero(h);   // 3.4.0: the pill on the banner says the same, shortened
+            if (ShownPane.IsLive) SetHero(h);   // 3.4.0: the pill on the banner says the same, shortened (3.6.1: while its tab is shown)
             ServerLineText.Text = SiteHome.ServerLine(s);
             var hint = s.State == "online" || s.Waking ? "" : s.Hint;
             ServerHint.Text = hint; ServerHint.Visibility = string.IsNullOrEmpty(hint) ? Visibility.Collapsed : Visibility.Visible;
@@ -199,25 +209,32 @@ namespace DeepslateWorks
             if (Mode == "asking" || reviewing) return;   // 3.3.1: no Play hint on the question cards
             if (Count != null && Count.Running) return;   // "Click anywhere to stop" has the line
             if (VotesBlock && Guided == 0 && (Mode == "idle" || Mode == "ready")) return;   // GatePlay has it
-            var waking = SiteNow != null && SiteNow.Server.Waking && (Mode == "ready" || Mode == "running" || Mode == "idle");
-            if (waking) { PlayHint.Text = SiteHome.ServerLine(SiteNow.Server); PlayHint.Visibility = Visibility.Visible; }
+            if (P.HeldByOther) return;   // 3.6.1: the line says why Play is shut
+            var server = PaneServer;
+            var waking = server != null && server.Waking && (Mode == "ready" || Mode == "running" || Mode == "idle");
+            if (waking) { PlayHint.Text = SiteHome.ServerLine(server); PlayHint.Visibility = Visibility.Visible; }
             else if (PlayHint.Text != null && PlayHint.Text.StartsWith("Waking the server")) PlayHint.Visibility = Visibility.Collapsed;
         }
 
-        /// <summary>The site's wake, from the app: when it opens on a sleeping server, and when Play is pressed.</summary>
+        /// <summary>3.6.1: the pane's server as the site last said: the home's for live, the Test section's for test.</summary>
+        ServerInfo PaneServer => P.IsLive ? (SiteNow != null && SiteNow.SignedIn ? SiteNow.Server : null) : P.Server;
+
+        /// <summary>The site's wake, from the app: when it opens on a sleeping server, and when Play is pressed. 3.6.1: the
+        /// pane's server, by name.</summary>
         void WakeNow(string why)
         {
             if (homeSim) return;
             var d = Window.Dispatcher;
+            var target = P.Target;
             new Thread(() =>
             {
-                try { SiteHome.Wake(); Log.Line("wake (" + why + "): asked the site to wake the server"); }
-                catch (Exception e) { Log.Line("wake (" + why + "): not started (" + SiteHome.Why(e) + ")"); }
-                try { d.BeginInvoke(new Action(() => RefreshHome())); } catch { }
+                try { SiteHome.Wake(target); Log.Line("wake (" + why + ", " + target + "): asked the site to wake the server"); }
+                catch (Exception e) { Log.Line("wake (" + why + ", " + target + "): not started (" + SiteHome.Why(e) + ")"); }
+                try { d.BeginInvoke(new Action(() => { if (target == PlayPane.Live) RefreshHome(); else RefreshTestSection(); })); } catch { }
             }) { IsBackground = true, Name = "wake" }.Start();
         }
 
-        void WakeIfAsleep(string why) { if (SiteNow != null && SiteNow.SignedIn && SiteNow.Server.Asleep) WakeNow(why); }
+        void WakeIfAsleep(string why) { var s = PaneServer; if (s != null && s.Asleep) WakeNow(why); }
 
         // Admins: Start, for a server that is switched off or crashed (a wake never starts those). The site's audited start.
         void OnStartServer()

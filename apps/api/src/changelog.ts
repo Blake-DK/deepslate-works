@@ -139,10 +139,11 @@ export const CHANGES: Change[] = [
     ],
   },
   {
-    // planner 2026-10-09: no mod and no season named. Set `live: true` only after the live check (see the rule above).
-    id: "2026-10-09-pack-tidy",
+    // planner 2026-10-09: no mod and no season named; the pack tidy and app 3.6.1 as one entry. Set `live: true` only
+    // after the live check (the rule above).
+    id: "2026-10-09-reopening",
     date: "2026-10-09",
-    lines: ["A small pack update and a tidy-up of the world. Press Play as usual: the app brings your game up to date by itself."],
+    lines: ["A small pack update, a tidy-up of the world and a new version of the app. Press Play as usual."],
   },
 ];
 

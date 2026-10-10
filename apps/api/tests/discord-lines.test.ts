@@ -19,7 +19,7 @@ describe("Discord lines (docs/21 §4)", () => {
   });
 
   it("a death text with @everyone or a Markdown link pings nobody and shows as plain text", () => {
-    const e = { ...REAL.death, message: "KaneFinch was slain by Pabulum using [@everyone click](https://evil.example) <@&123>", meta: { name: "KaneFinch" } };
+    const e = { ...REAL.death, message: "KaneFinch was slain by Bramble09 using [@everyone click](https://evil.example) <@&123>", meta: { name: "KaneFinch" } };
     const text = deathText(e);
     expect(text).not.toContain("@everyone");
     expect(text).toContain("@\u200beveryone");

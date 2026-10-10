@@ -29,8 +29,8 @@ namespace DeepslateWorks
     /// </summary>
     sealed partial class AppUi
     {
-        Button UpdateButton;
-        TextBlock UpdateLine;
+        Button UpdateButton => LivePane.UpdateButton;   // 3.6.1: the app has one channel, the live site's: Update is the Play tab's
+        TextBlock UpdateLine => LivePane.UpdateLine;
         DispatcherTimer UpdTimer;
         public Waiting LastCheck;
         volatile bool checkBusy;
@@ -44,8 +44,6 @@ namespace DeepslateWorks
         void WireUpdate()
         {
             var w = Window;
-            UpdateButton = w.FindName("UpdateButton") as Button ?? throw new InvalidOperationException("the window has no UpdateButton");
-            UpdateLine = w.FindName("UpdateLine") as TextBlock ?? throw new InvalidOperationException("the window has no UpdateLine");
             UpdateButton.Click += (s, e) => OnUpdateButton();
             UpdTimer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromMinutes(UpdateCheck.EveryMinutes) };
             UpdTimer.Tick += (s, e) => CheckUpdates();
@@ -80,7 +78,7 @@ namespace DeepslateWorks
         }
 
         /// <summary>One run at a time: while any run works (Play's or Update's) the button waits.</summary>
-        void UpdateButtonEnabled() => UpdateButton.IsEnabled = !updating && !deferredUpdate && Guided == 0 && (Mode == "idle" || Mode == "ready");
+        void UpdateButtonEnabled() => UpdateButton.IsEnabled = !updating && !deferredUpdate && Guided == 0 && (Mode == "idle" || Mode == "ready") && !AnyRunning;
 
         void OnUpdateButton()
         {
@@ -104,6 +102,7 @@ namespace DeepslateWorks
                 updateAfter = true; keepScreen = true; Go(false);
                 return;
             }
+            if (EndWaitingOther(LivePane, () => StartRun(true, false, false, true))) return;   // 3.6.1: a test run that only waits, likewise
             if (worker != null && worker.IsAlive) return;
             StartRun(true, false, false, true);
         }
@@ -200,7 +199,7 @@ namespace DeepslateWorks
                 }
                 return;
             }
-            if (!updating && UpdateButton.IsEnabled != (Guided == 0 && (Mode == "idle" || Mode == "ready"))) UpdateButtonEnabled();
+            if (!updating && UpdateButton.IsEnabled != (Guided == 0 && (Mode == "idle" || Mode == "ready") && !AnyRunning)) UpdateButtonEnabled();
         }
 
         /// <summary>The footer's versions straight after an Update (the pack on this PC, the site's current one).</summary>

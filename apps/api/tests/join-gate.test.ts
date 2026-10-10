@@ -135,12 +135,12 @@ describe("the door checks live or early access before anything else (docs/13 §9
   });
   it("is in the event log with its reason", () => {
     expect(kindOf("join.blocked", "PLAYER")).toBe("JOIN_BLOCKED");
-    expect(describeAction("join.blocked", { role: "PLAYER", name: "Pabulum" }, { name: "pabulum", reason: "not live" })).toBe("Pabulum was held in the entrance room: the server is not open yet");
-    expect(describeAction("join.ready", { role: "PLAYER", name: "Pabulum" }, { name: "pabulum", was: "not live", back: true })).toBe("Pabulum was let in: the server is open for them now, back to where they were");
+    expect(describeAction("join.blocked", { role: "PLAYER", name: "KaneFinch" }, { name: "KaneFinch", reason: "not live" })).toBe("KaneFinch was held in the entrance room: the server is not open yet");
+    expect(describeAction("join.ready", { role: "PLAYER", name: "KaneFinch" }, { name: "KaneFinch", was: "not live", back: true })).toBe("KaneFinch was let in: the server is open for them now, back to where they were");
   });
 });
 
-// Planner, 2026-09-29: linking must not skip Play first. Pabulum linked in the room and was let straight in. The
+// Planner, 2026-09-29: linking must not skip Play first. KaneFinch linked in the room and was let straight in. The
 // order is linked → open for them → Play first (Play, or a run of the installer that went through, inside the
 // window) → in, and it is the same whether they walk in linked or have just linked in the room.
 describe("the door after linking: the same order as at a join", () => {
@@ -205,12 +205,12 @@ describe("the door after linking: the same order as at a join", () => {
     expect(actions["limbo.remindOld"].build(ctx, { name: "samoyedx" })).toEqual(cmds.slice(-5));
     expect(actions["limbo.kickIdleOld"].build(ctx, { name: "samoyedx" })).toEqual(["kick samoyedx Press Play on deepslate.dsw.test to update Deepslate Works, then join again."]);
     expect(waitFor("old installer")).toBe("old");
-    expect(describeAction("join.blocked", { role: "PLAYER", name: "Pabulum" }, { name: "Pabulum", reason: "old installer" })).toBe("Pabulum was held in the entrance room: their installer is older than the minimum; they were told to press Play to update it");
+    expect(describeAction("join.blocked", { role: "PLAYER", name: "KaneFinch" }, { name: "KaneFinch", reason: "old installer" })).toBe("KaneFinch was held in the entrance room: their installer is older than the minimum; they were told to press Play to update it");
   });
 
   async function roomWith(blocked: BlockReason | null) {
     const { Limbo } = await import("../src/players/limbo.js");
-    const tail = { online: new Set(["pabulum"]), uuidByName: new Map([["pabulum", "uuid-p"]]), on() {}, onResync() {} };
+    const tail = { online: new Set(["kanefinch"]), uuidByName: new Map([["kanefinch", "uuid-p"]]), on() {}, onResync() {} };
     const env = { LIMBO_POS: "deepslate:limbo 0.5 65 0.5", SPAWN_POS: "", PORTAL_URL: "https://deepslate.dsw.test" } as never;
     const limbo = new Limbo(env, {} as never, tail as never, () => {});
     const did: string[] = [];
@@ -219,24 +219,24 @@ describe("the door after linking: the same order as at a join", () => {
     l.atTheDoor = async () => blocked;
     l.holdMember = async (name: string, _u: string, _id: string, reason: BlockReason, inRoom: boolean) => { did.push(`hold ${name} ${reason} inRoom=${inRoom}`); };
     l.letIn = async (name: string) => { did.push(`let in ${name}`); return { ok: true, commands: 1 }; };
-    limbo.held.set("pabulum", { uuid: "uuid-p", code: "ABCDEFGH", since: 0, lastReminder: 0, kind: "link" });
+    limbo.held.set("kanefinch", { uuid: "uuid-p", code: "ABCDEFGH", since: 0, lastReminder: 0, kind: "link" });
     return { limbo, did };
   }
 
   it("holds a member who has just linked but not pressed Play, with the Play line, not the link line", async () => {
     const { limbo, did } = await roomWith("no report");
-    expect(await limbo.release("uuid-p")).toEqual({ released: false, name: "pabulum" });
-    expect(did).toEqual(["hold pabulum no report inRoom=true"]);
+    expect(await limbo.release("uuid-p")).toEqual({ released: false, name: "kanefinch" });
+    expect(did).toEqual(["hold kanefinch no report inRoom=true"]);
   });
   it("holds one the server is not open for with the 'not open' line", async () => {
     const { limbo, did } = await roomWith("not live");
     await limbo.release("uuid-p");
-    expect(did).toEqual(["hold pabulum not live inRoom=true"]);
+    expect(did).toEqual(["hold kanefinch not live inRoom=true"]);
   });
   it("lets in one who has just linked and has pressed Play (or installed) inside the window", async () => {
     const { limbo, did } = await roomWith(null);
-    expect(await limbo.release("uuid-p")).toEqual({ released: true, name: "pabulum" });
-    expect(did).toEqual(["let in pabulum"]);
-    expect(limbo.held.has("pabulum")).toBe(false);
+    expect(await limbo.release("uuid-p")).toEqual({ released: true, name: "kanefinch" });
+    expect(did).toEqual(["let in kanefinch"]);
+    expect(limbo.held.has("kanefinch")).toBe(false);
   });
 });

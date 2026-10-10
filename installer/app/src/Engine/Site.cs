@@ -103,7 +103,29 @@ namespace DeepslateWorks
                 { "off", "The server is switched off. Ask Alex in Discord." },
                 { "crashed", "The server has crashed. Ask Alex in Discord." },
                 { "unreachable", "The site can't reach the server right now. Try again in a minute." },
+                { "test_unreachable", "The site can't reach the test server right now. Try again in a minute." },   // 3.6.1: the Test tab's
+                { "test_off", "The test server is switched off." },
             };
+
+            /// <summary>3.6.1 (item 7): the log's words for what the site answered, for the server the run is for. The code
+            /// stays in brackets for the reader of a report.</summary>
+            public static string LogWords(string code, bool test)
+            {
+                var who = test ? "the test server" : "the server";
+                switch ((code ?? "").ToLowerInvariant())
+                {
+                    case "awake": return who + " is up, nothing to wake";
+                    case "off": return who + " is switched off, and Play does not start it";
+                    case "crashed": return who + " has crashed";
+                    case "busy": return who + " is already starting, stopping or restarting";
+                    case "unreachable": return "the site has no word from " + who + "'s control panel right now";
+                    case "test_unreachable": return "the live site can't reach the test server's site (the test stack may be down)";
+                    case "test_off": return "the test server is switched off on the live site";
+                    case "not_open": return who + " is not open to this member yet";
+                    case "not_member": return "this sign-in is not a member's";
+                    default: return "the site said " + (string.IsNullOrEmpty(code) ? "something else" : code);
+                }
+            }
             /// <summary>Why the site would not wake it (off, crashed, unreachable): what a later "server_offline" says.</summary>
             public string Refused;
             public bool Waking;
@@ -123,7 +145,7 @@ namespace DeepslateWorks
                     string code = "";
                     try { code = J.Str(Json.Parse(body), "error.code") ?? ""; } catch { }
                     if (code.Length > 0 && RefusedText.ContainsKey(code)) Refused = code;
-                    Log.Line(string.Format("wake: not started ({0})", code.Length > 0 ? code : e.Message));
+                    Log.Line(code.Length > 0 ? string.Format("wake: not started: {0} ({1})", LogWords(code, Env.TestTarget), code) : string.Format("wake: not started: the site could not be asked ({0})", e.Message));
                     return "no";
                 }
                 var result = J.Str(r, "result") ?? "";
@@ -133,7 +155,7 @@ namespace DeepslateWorks
                     Log.Line("wake: the server is waking");
                     return "waking";
                 }
-                Log.Line("wake: " + result);
+                Log.Line(string.Format("wake: {0} ({1})", LogWords(result, Env.TestTarget), result));
                 return result;
             }
 

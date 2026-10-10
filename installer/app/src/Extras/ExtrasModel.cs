@@ -317,6 +317,10 @@ namespace DeepslateWorks
     {
         public DateTime? StartedAt;   // UTC
         public readonly HashSet<string> Found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>3.6.1: files a mod's own locator reported (neither the mods folder nor jar-in-jar). Sodium's locator
+        /// reports "net.caffeinemc.sodium-neoforge-0.8.13+mc1.21.1-mod.jar" for the pack's "sodium-neoforge-0.8.13+mc1.21.1.jar"
+        /// and nothing under the pack's name (a real NeoForge 21.1.253 client log, fixtures/).</summary>
+        public readonly List<string> FoundByOwnLocator = new List<string>();
         public List<string> Packs = new List<string>();
         public bool Failed;
         public readonly List<string> Errors = new List<string>();

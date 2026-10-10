@@ -17,6 +17,17 @@ export function statusText(s: StatusLike, admin: boolean): StatusText {
   };
 }
 
+/**
+ * 3.6.1: the test server for the launcher's Test tab, in the same words and shape as the home's `server` (the card is
+ * the Play tab's). A state this list does not know goes as the test api sent it, so an app shows it without an update;
+ * no Start (test starts stay on the test site) and no wake figure.
+ */
+export function testServerText(state: string, players: number) {
+  if (!Object.prototype.hasOwnProperty.call(STATE_LABEL, state)) return { state, line: state, label: state, tone: "neutral" as Tone, hint: "", wake: { phase: "idle", leftS: null, line: null }, canStart: false };
+  const s = state as ServerState;
+  return { state: s, line: stateLine(s, { players }), label: STATE_LABEL[s], tone: TONE[s], hint: stateHint(s, true), wake: { phase: "idle", leftS: null, line: null }, canStart: false };
+}
+
 /** docs/23 §4: the banner's pill, the short line the app's window uses (SiteHome.HeroLine), and its dot. */
 export type Pill = { line: string; dot: "up" | "waking" | "asleep" | "down" };
 

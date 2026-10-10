@@ -21,6 +21,12 @@ function run(cmd: string, args: string[], timeoutMs: number): Promise<{ code: nu
   });
 }
 
+/** A Sync that changed the mods restarts the server only while it is running (AMP state 20). Stopped, asleep, starting,
+ *  or not known: no Restart, which in AMP would start a stopped server. */
+export function restartAfterSync(stateCode: number | null | undefined): boolean {
+  return stateCode === 20;
+}
+
 export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; beforeRestart?: () => Promise<unknown> } = {}): Promise<{ ok: boolean; lines: string[]; restarted: boolean; dryRun: boolean }> {
   const dryRun = Boolean(opts.dryRun);
   const lines: string[] = [];
@@ -78,9 +84,15 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; b
   } catch {
     /* none built */
   }
-  // 3. restart if mods changed
+  // 3. restart if mods changed, and only a server that is running (2026-10-09: AMP's Restart starts a stopped server,
+  //    and a Sync while live is stopped on purpose must never start it; a sleeping one loads the mods when it wakes)
   let restarted = false;
   if (modsChanged) {
+    const code = env.AMP_MOCK === "1" ? 20 : await amp.getStatus().then((s) => s.stateCode ?? null).catch(() => null);
+    if (!restartAfterSync(code)) {
+      lines.push(`the server is not running (AMP state ${code ?? "unknown"}): not restarted; it loads the new mods at its next start`);
+      return { ok: true, lines, restarted: false, dryRun };
+    }
     if (env.AMP_MOCK === "1") lines.push("AMP_MOCK=1: would call Core.Restart");
     else {
       await opts.beforeRestart?.().catch(() => undefined); // a running pre-generation is paused and saved first

@@ -137,6 +137,20 @@ namespace DeepslateWorks
         }
         static bool ShaIs(string file, string expected) => Extras_.Same(Sha512(file), expected);
 
+        /// <summary>3.6.1 (item 5): how many of the extras that are on have every file in this game's folders, with the
+        /// right checksum. What the run's line may call "on".</summary>
+        public static int InPlace(ExtrasPaths paths, ExtrasManifest m, ExtrasState s)
+        {
+            var n = 0;
+            foreach (var id in GetOn(m, s))
+            {
+                var x = m.Find(id);
+                if (x == null) continue;
+                if (x.Files.All(f => !Regex.IsMatch(f.Filename ?? "", @"[\\/]|^\.\.?$") && File.Exists(Path.Combine(paths[FolderFor(f.Kind)], f.Filename)) && ShaIs(Path.Combine(paths[FolderFor(f.Kind)], f.Filename), f.Sha512))) n++;
+            }
+            return n;
+        }
+
         /// <summary>Move-ExtraFile: moves a file, replacing what is there.</summary>
         public static void MoveFile(string from, string to)
         {
@@ -474,12 +488,32 @@ namespace DeepslateWorks
             {
                 try { s.StartedAt = DateTime.ParseExact(Regex.Replace(mt.Groups[1].Value, @"\.\d+$", ""), "ddMMMyyyy HH:mm:ss", CultureInfo.InvariantCulture).ToUniversalTime(); } catch { }
             }
+            if (s.StartedAt == null)
+            {
+                // 3.6.1 (item 4b): the client's latest.log starts "[22:51:16] [main/INFO]", a time with no date. It is read on
+                // the day the log was last written, a day earlier when that would be later than the log's last write (the
+                // session began before midnight). The file's creation time is no clock for it: Windows keeps the previous
+                // latest.log's when the game makes a new one within seconds (file-system tunnelling).
+                var tm = Regex.Match(first, @"^\[(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?\]");
+                if (tm.Success)
+                {
+                    try { s.StartedAt = StartFromTime(tm.Groups[1].Value + ":" + tm.Groups[2].Value + ":" + tm.Groups[3].Value, File.GetLastWriteTime(file)); } catch { }
+                }
+            }
             if (s.StartedAt == null) { try { s.StartedAt = File.GetCreationTimeUtc(file); } catch { } }
             var failRe = new Regex("Mod loading has failed|ModLoadingException|LoadingFailedException|Failed to load mod|requires .* but .* is (missing|not installed)|Mod .* (requires|is incompatible)", RegexOptions.IgnoreCase);
             foreach (var l in lines)
             {
-                var f = Regex.Match(l, "Found mod file \"([^\"]+)\"");
-                if (f.Success) { s.Found.Add(f.Groups[1].Value); continue; }
+                // 3.6.1 (item 4a): every file NeoForge says it found, whatever it calls it (mod, library, game library): a
+                // library or language jar loaded is as loaded as a mod
+                var f = Regex.Match(l, "Found (?:[A-Za-z]+ ){0,2}file \"([^\"]+)\"(.*)$");
+                if (f.Success)
+                {
+                    s.Found.Add(f.Groups[1].Value);
+                    var where = f.Groups[2].Value;
+                    if (where.Contains("locator:") && !where.Contains("mods folder locator") && !where.Contains("jarinjar")) s.FoundByOwnLocator.Add(f.Groups[1].Value);
+                    continue;
+                }
                 var rl = Regex.Match(l, "Reloading ResourceManager: (.*)$", RegexOptions.IgnoreCase);
                 if (rl.Success) { s.Packs = Regex.Split(rl.Groups[1].Value, @",\s*").ToList(); s.Loaded = true; continue; }
                 var cn = Regex.Match(l, @"Connecting to ([^,\s]+), ?(\d+)");
@@ -494,6 +528,16 @@ namespace DeepslateWorks
                 if (failRe.IsMatch(l)) { s.Failed = true; s.Errors.Add(l.Trim()); }
             }
             return s;
+        }
+
+        /// <summary>3.6.1 (item 4b): "HH:mm:ss" from a log line with no date, as UTC: on the local day the log was last
+        /// written, or the day before when that would be more than a minute after the last write.</summary>
+        public static DateTime StartFromTime(string hhmmss, DateTime lastWriteLocal)
+        {
+            var t = TimeSpan.ParseExact(hhmmss, @"hh\:mm\:ss", CultureInfo.InvariantCulture);
+            var at = DateTime.SpecifyKind(lastWriteLocal.Date + t, DateTimeKind.Local);
+            if (at > lastWriteLocal.AddMinutes(1)) at = at.AddDays(-1);
+            return at.ToUniversalTime();
         }
 
         static DateTime? ParseIso(string t)

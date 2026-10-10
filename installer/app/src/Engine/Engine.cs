@@ -298,8 +298,15 @@ namespace DeepslateWorks
                 finally { Log.RemoveTemp(cz); }
             }
             var options = Path.Combine(gameDir, "options.txt");
-            // 3.5.0 (docs/30 §4.2): what the Settings tab kept for this Play (saved while Minecraft was open), first
-            if (!run.DryRun)
+            // 3.5.0 (docs/30 §4.2): what the Settings tab kept for this Play (saved while Minecraft was open), first.
+            // 3.6.1 (item 6): a test Play takes the live game's settings, the waiting ones on top, and leaves those waiting
+            // for the live game; only a live Play applies and clears them
+            if (!run.DryRun && Env.TestTarget)
+            {
+                try { var carried = GameSettings.CarryToTest(GameSettings.LiveOptionsPath, options, Path.Combine(gameDir, "resourcepacks")); if (carried != null) run.Tick(carried); }
+                catch (Exception e) { run.Note("Your settings could not be brought across to the test game this time: " + e.Message); }
+            }
+            else if (!run.DryRun)
             {
                 try { var applied = GameSettings.ApplyPending(options, GameRunningNow()); if (applied != null) run.Tick(applied); }
                 catch (Exception e) { run.Note("Your settings from the Settings tab could not be applied this time: " + e.Message); }
@@ -314,6 +321,13 @@ namespace DeepslateWorks
             object prevOurs = J.Has(prev, "renderDistance") ? J.Get(prev, "renderDistance") : null;
             object ourRender = prevOurs;
             if (run.DryRun) run.Note(string.Format("(dry run) render distance for this PC: {0}", rd));
+            else if (Env.TestTarget)
+            {
+                // 3.6.1 (item 6): the test game's render distance is the live game's (brought across above); chat links on,
+                // so the entrance room's sign-in link can be clicked
+                try { var cl = SetChatLinks(options); if (cl != null) run.Tick(cl); }
+                catch (Exception e) { run.Note("Chat links were left as they are: " + e.Message); }
+            }
             else
             {
                 try
@@ -372,7 +386,8 @@ namespace DeepslateWorks
             var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", Inv);
             var profileId = J.Str(profile, "id");
             // docs/45: the test pack's profile is named in the manifest ("Deepslate Works TEST"), the live one is the pack's name
-            var entry = J.O("name", J.Str(profile, "name") ?? Env.PackName, "type", "custom", "lastVersionId", versionId, "gameDir", gameDir, "javaArgs", javaArgs,
+            var profileName = J.Str(profile, "name") ?? Env.PackName;   // 3.6.1 (item 8): every line names the profile written
+            var entry = J.O("name", profileName, "type", "custom", "lastVersionId", versionId, "gameDir", gameDir, "javaArgs", javaArgs,
                             "javaDir", java, "icon", Brand.ProfileIcon(branding, J.Get(profile, "icon")), "created", now, "lastUsed", now);   // 2.1.1: the logo
             bool profileLeft = false;
             var given = xmx;   // what the profile has once this step is done (the report's xmxGb)
@@ -420,8 +435,8 @@ namespace DeepslateWorks
                     throw new RunFailed("The launcher profile was not saved.");
                 }
             }
-            if (profileLeft) run.Tick(string.Format("Profile '{0}' is already in the launcher", Env.PackName));
-            else run.Tick(string.Format("Profile '{0}' with {1} GB of RAM ({2}your PC has {3} GB), saved and checked", Env.PackName, xmxText, ramChosen.HasValue ? "chosen in Settings; " : "", totalGb.ToString(Inv)));
+            if (profileLeft) run.Tick(string.Format("Profile '{0}' is already in the launcher", profileName));
+            else run.Tick(string.Format("Profile '{0}' with {1} GB of RAM ({2}your PC has {3} GB), saved and checked", profileName, xmxText, ramChosen.HasValue ? "chosen in Settings; " : "", totalGb.ToString(Inv)));
             if (!run.DryRun) { try { run.Settings = GameSettings.ReportBlock(ramChosen, given, options); } catch (Exception e) { Log.Line("settings: not in the report: " + e.Message); } }
 
             // ---- the Play link and the shortcuts: put right when missing (setup made them; this keeps them) ------
@@ -474,13 +489,14 @@ namespace DeepslateWorks
             else if (!WaitForGo(run)) return "not_launched";
             else
             {
-                if (profileLeft) { run.Emit(J.O("t", "launched", "opened", false)); Show(run, string.Format("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play.", Env.PackName)); }
+                if (profileLeft) { run.Emit(J.O("t", "launched", "opened", false)); Show(run, string.Format("The Minecraft Launcher is already open. Choose {0} next to Play, then press Play.", profileName)); }
                 else if (!OpenLauncherChecked(run, modsDir, run.PackCheckFiles))
                 {
                     if (run.ModsCheck != null && !run.ModsCheck.Ok) throw run.Fail(MissingText(run.ModsCheck));
-                    Show(run, string.Format("Open the Minecraft Launcher from the Start menu, choose {0}, press Play.", Env.PackName));
+                    Show(run, string.Format("Open the Minecraft Launcher from the Start menu, choose {0}, press Play.", profileName));
                 }
-                if (run.Mode == "first_install") Show(run, string.Format("From now on, press Play on {0} or open {1} from your desktop. It keeps itself up to date.", Env.PortalUrl.Replace("https://", ""), Env.PackName));
+                // 3.6.1: the hint about the site's Play is for the live game's first install only
+                if (run.Mode == "first_install" && !Env.TestTarget) Show(run, string.Format("From now on, press Play on {0} or open {1} from your desktop. It keeps itself up to date.", Env.PortalUrl.Replace("https://", ""), Env.PackName));
                 if (wake.Waking) wake.Watch(run, Wake.Call, Sleep);
             }
             return "done";
@@ -502,6 +518,8 @@ namespace DeepslateWorks
                 try { go = run.WaitForGo(); } catch (Exception e) { Log.Line("ready: " + e.Message); go = false; }
                 if (!go)
                 {
+                    // 3.6.1 (item 1): ended for the other server's Play: not a cancel, so no report
+                    if (run.Switched) { Log.Line("ready: ended so the other server's game could start: no report"); run.Reported = true; return false; }
                     Log.Line("ready: the game was not started (the window was closed)");
                     // 3.2.0: opening the app and closing it again, with nothing updated, is not a press of Play
                     if (run.OpenedOnly && run.Mode == "play") { Log.Line("ready: opened without playing, nothing changed: no report"); run.Reported = true; }

@@ -138,7 +138,7 @@ namespace DeepslateWorks
                 var name = J.Str(f, "filename");
                 if (string.IsNullOrEmpty(name)) continue;
                 c.Checked++;
-                if (!s.Found.Contains(name)) c.Missing.Add(new MissingMod { Slug = J.Str(f, "slug") ?? "", Name = ModLabel(f), Filename = name, Why = "not loaded" });
+                if (!s.Found.Contains(name) && !FoundUnderOwnLocator(s, name)) c.Missing.Add(new MissingMod { Slug = J.Str(f, "slug") ?? "", Name = ModLabel(f), Filename = name, Why = "not loaded" });
             }
             // the server's own words name the mod even when the log lists no files: put it first
             if (!string.IsNullOrEmpty(s.RefusedMod) || !string.IsNullOrEmpty(s.RefusedChannel))
@@ -152,6 +152,19 @@ namespace DeepslateWorks
             }
             c.Ok = !elsewhere && c.Missing.Count == 0 && !s.Refused;
             return c;
+        }
+
+        /// <summary>3.6.1 (item 4a): a pack file a mod's own locator loaded under another name. The name that locator
+        /// reported must be the pack file's name without ".jar", whole: at the start or after a dot (a package prefix,
+        /// "net.caffeinemc."), and followed only by "-mod.jar" or ".jar". So "net.caffeinemc.sodium-neoforge-0.8.13+mc1.21.1-mod.jar"
+        /// is the pack's "sodium-neoforge-0.8.13+mc1.21.1.jar", and a name that only contains another (another version,
+        /// "oculus-iris-…" for "iris-…", "…-extra") is not.</summary>
+        public static bool FoundUnderOwnLocator(GameSession s, string filename)
+        {
+            var stem = Regex.Replace(filename ?? "", @"\.jar$", "", RegexOptions.IgnoreCase);
+            if (stem.Length < 6) return false;
+            var whole = new Regex(@"(^|\.)" + Regex.Escape(stem) + @"(-mod)?\.jar$", RegexOptions.IgnoreCase);
+            return s.FoundByOwnLocator.Any(x => whole.IsMatch(x));
         }
 
         public sealed class FoundSession { public GameSession Session; public bool Elsewhere; }
@@ -169,11 +182,10 @@ namespace DeepslateWorks
                 try { if (File.GetLastWriteTimeUtc(log) < sinceUtc) continue; } catch { continue; }
                 var s = Extras.ReadGameSession(log);
                 if (s == null || s.StartedAt == null || s.StartedAt.Value < sinceUtc.AddSeconds(-5)) continue;
-                if (s.Found.Count == 0)
-                {
-                    var dbg = Extras.ReadGameSession(Path.Combine(dir, "logs", "debug.log"));   // the mod list may only be in debug.log
-                    if (dbg != null) foreach (var f in dbg.Found) s.Found.Add(f);
-                }
+                // the files found at DEBUG level (libraries among them) are in debug.log only: 3.6.1 (item 4a) always adds
+                // them, not only when latest.log has none
+                var dbg = Extras.ReadGameSession(Path.Combine(dir, "logs", "debug.log"));
+                if (dbg != null) { foreach (var f in dbg.Found) if (!s.Found.Contains(f)) s.Found.Add(f); s.FoundByOwnLocator.AddRange(dbg.FoundByOwnLocator); }
                 if (elsewhere)
                 {
                     if (string.IsNullOrEmpty(serverHost) || !s.Connects.Any(x => x.IndexOf(serverHost, StringComparison.OrdinalIgnoreCase) >= 0)) continue;
@@ -184,13 +196,16 @@ namespace DeepslateWorks
             return null;
         }
 
+        public static string GameCheckMode(bool test) => test ? "test_game_check" : "game_check";
+
         /// <summary>The window's report of what the game loaded (mode game_check): for Play first and for Alex. The mod
         /// check goes even when reports are off (the door needs it); no log and no PC details then.</summary>
-        public static void SendGameCheck(ModsCheck c, string pack, bool reportsOff)
+        public static void SendGameCheck(ModsCheck c, string pack, bool reportsOff, bool test = false)
         {
             if (string.IsNullOrEmpty(Http.Token)) return;
             var line = "game check: " + (c.Ok ? string.Format("all {0} mods loaded", c.Checked) : MissingText(c));
-            var rep = J.O("packVersion", string.IsNullOrEmpty(pack) ? "unknown" : pack, "installerVersion", Env.Version, "mode", "game_check", "outcome", c.Ok ? "ok" : "failed",
+            // 3.6.1 (item 4): the test game's check has its own mode, so the site keeps it out of every live figure
+            var rep = J.O("packVersion", string.IsNullOrEmpty(pack) ? "unknown" : pack, "installerVersion", Env.Version, "mode", GameCheckMode(test), "outcome", c.Ok ? "ok" : "failed",
                           "durationSec", 0, "log", LogBundle.GameCheckLog(line, c.Ok, reportsOff), "system", null, "minimal", reportsOff, "mods", c.ToJson());
             try { Http.PostJson(Env.ReportUrl, rep, 20); Log.Line("game check sent to the site"); }
             catch (Exception e) { Log.Line("game check not sent: " + e.Message); }

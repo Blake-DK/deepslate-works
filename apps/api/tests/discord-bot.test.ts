@@ -16,14 +16,14 @@ import { REAL } from "./fixtures/discord-events.js";
 const ctx = { limbo: { dimension: null, x: 0, y: 65, z: 0 }, spawn: null, portalUrl: "https://deepslate.dsw.test" } as never;
 
 describe("chat from Discord into the game (docs/22 §5)", () => {
-  const build = (text: string, name = "Pabulum") => {
+  const build = (text: string, name = "KaneFinch") => {
     const input = actions["chat.fromDiscord"].input.safeParse({ name: discordChatName(name), text: discordChatText(text), member: null });
     expect(input.success).toBe(true);
     return actions["chat.fromDiscord"].build(ctx, input.data!);
   };
 
   it("the injection test: quotes, backslashes, \"}], and a line break with /op are one tellraw and nothing else", () => {
-    const evil = 'he said "hi" \\ back\\slash "}],{"text":"x","clickEvent":{"action":"run_command","value":"/op Pabulum"}}\n/op Pabulum\r\n/stop';
+    const evil = 'he said "hi" \\ back\\slash "}],{"text":"x","clickEvent":{"action":"run_command","value":"/op KaneFinch"}}\n/op KaneFinch\r\n/stop';
     const lines = build(evil);
     expect(lines).toHaveLength(1);
     const line = lines[0]!;
@@ -33,7 +33,7 @@ describe("chat from Discord into the game (docs/22 §5)", () => {
     expect(json).toHaveLength(4);
     for (const part of json.slice(1)) expect(Object.keys(part as object).sort()).toEqual(["color", "text"]);
     expect((json[3] as { text: string }).text).toBe(`: ${discordChatText(evil)}`);
-    expect((json[3] as { text: string }).text).toContain("/op Pabulum /stop"); // shown as text, never run
+    expect((json[3] as { text: string }).text).toContain("/op KaneFinch /stop"); // shown as text, never run
   });
 
   it("selectors, § colours, control characters and separators come through as plain text or not at all", () => {
@@ -54,17 +54,17 @@ describe("chat from Discord into the game (docs/22 §5)", () => {
   });
 
   it("the event log keeps what was said, as for game chat; with chat logging off only who and how long", () => {
-    expect(actions["chat.fromDiscord"].audit!({ name: "Pabulum", text: "meet at spawn", member: "u1" })).toEqual({ name: "Pabulum", member: "u1", length: 13, text: "meet at spawn" });
-    expect(actions["chat.fromDiscord"].audit!({ name: "Pabulum", text: "meet at spawn", member: "u1", log: true })).toMatchObject({ text: "meet at spawn" });
-    expect(actions["chat.fromDiscord"].audit!({ name: "Pabulum", text: "secret plans", member: "u1", log: false })).toEqual({ name: "Pabulum", member: "u1", length: 12 });
-    expect(describeAction("chat.fromDiscord", { role: "PLAYER", name: "Pabulum" }, { name: "Pabulum", length: 13, text: "meet at spawn" })).toBe("<Pabulum> meet at spawn (from Discord)");
-    expect(describeAction("chat.fromDiscord", { role: "PLAYER", name: "Pabulum" }, { name: "Pabulum", length: 39 })).toBe("Pabulum wrote into the game from Discord (39 characters)");
+    expect(actions["chat.fromDiscord"].audit!({ name: "KaneFinch", text: "meet at spawn", member: "u1" })).toEqual({ name: "KaneFinch", member: "u1", length: 13, text: "meet at spawn" });
+    expect(actions["chat.fromDiscord"].audit!({ name: "KaneFinch", text: "meet at spawn", member: "u1", log: true })).toMatchObject({ text: "meet at spawn" });
+    expect(actions["chat.fromDiscord"].audit!({ name: "KaneFinch", text: "secret plans", member: "u1", log: false })).toEqual({ name: "KaneFinch", member: "u1", length: 12 });
+    expect(describeAction("chat.fromDiscord", { role: "PLAYER", name: "KaneFinch" }, { name: "KaneFinch", length: 13, text: "meet at spawn" })).toBe("<KaneFinch> meet at spawn (from Discord)");
+    expect(describeAction("chat.fromDiscord", { role: "PLAYER", name: "KaneFinch" }, { name: "KaneFinch", length: 39 })).toBe("KaneFinch wrote into the game from Discord (39 characters)");
     expect(kindOf("chat.fromDiscord", "PLAYER")).toBe("CHAT");
   });
 
   it("mentions become names, emoji :name:, pictures and files words; bots and webhooks never come back", () => {
     const m = {
-      id: "1", channel_id: "c", content: "hi <@111> and <@!222> in <#333> <:pog:444> <@&555>", author: { id: "9", username: "pab" },
+      id: "1", channel_id: "c", content: "hi <@111> and <@!222> in <#333> <:pog:444> <@&555>", author: { id: "9", username: "kanefinch" },
       mentions: [{ id: "111", username: "rowan", member: { nick: "samoyedx" } }, { id: "222", username: "owly", global_name: "m1owl" }],
       attachments: [{ content_type: "image/png" }, { content_type: "application/zip" }],
     };

@@ -100,14 +100,29 @@ namespace DeepslateWorks
             {
                 var m = ExtrasManifest.Read(Env.ExtrasManifestPath);
                 if (m == null) return null;
-                return ReportBlock(Paths, m, ExtrasState.Read(Env.ExtrasStatePath));
+                // 3.6.1: a test run's report has the test game's extras
+                return Env.TestTarget ? ReportBlock(GetPaths(Env.DataDir), m, RunState()) : ReportBlock(Paths, m, ExtrasState.Read(Env.ExtrasStatePath));
             }
             catch (Exception e) { DeepslateWorks.Log.Line("extras: not in the report: " + e.Message); return null; }
         }
 
         /// <summary>The file names of the extras' jars that are switched on: the install steps leave them in mods\
         /// (Get-AppliedExtraJars of the saved state).</summary>
-        public static List<string> AppliedJars() => AppliedJars(ExtrasState.Read(Env.ExtrasStatePath));
+        public static List<string> AppliedJars() => AppliedJars(ExtrasState.Read(Env.ExtrasRunStatePath));   // 3.6.1: the run's game folder's
+
+        /// <summary>
+        /// 3.6.1 (item 5): the extras state for the run's game folder. Live: extras.json. Test: what is in place in the
+        /// test folder (extras-test.json) with the Extras tab's choices from extras.json, so both games get what was
+        /// chosen. A queue left by Later is the live game's (it waits for that game to close) and is not the test game's.
+        /// </summary>
+        public static ExtrasState RunState()
+        {
+            var live = ExtrasState.Read(Env.ExtrasStatePath);
+            if (!Env.TestTarget) return live;
+            var own = ExtrasState.Read(Env.ExtrasTestStatePath);
+            own.Choices = live.Choices; own.Shader = live.Shader; own.Queued = null; own.Seen = live.Seen; own.Downloaded = true;
+            return own;
+        }
 
         /// <summary>
         /// The install steps' extras step (2.0.0, "every extra downloaded into extras\, nothing switched on; the Extras tab
@@ -127,12 +142,18 @@ namespace DeepslateWorks
                 run.Step("Visual extras");
                 Json.WriteFile(Env.ExtrasManifestPath, raw);
                 var m = ExtrasManifest.FromJson(raw) ?? new ExtrasManifest { Raw = raw };
-                var state = ExtrasState.Read(Env.ExtrasStatePath);
-                var sx = SyncFiles(Paths, m, state, fetch ?? ((url, outFile) => Http.Download(url, outFile)));
+                // 3.6.1 (item 5): the run's own game folder and its own applied list; the choices are shared
+                var paths = GetPaths(Env.DataDir);
+                var state = RunState();
+                var sx = SyncFiles(paths, m, state, fetch ?? ((url, outFile) => Http.Download(url, outFile)));
                 if (!state.Downloaded) { state.Seen = m.Extras.Select(x => x.Id).ToList(); state.Downloaded = true; }
                 if (sx.Applied != null && !sx.Applied.Ok) run.Note("Your extras could not be updated this time: " + sx.Applied.Error);
-                state.Save(Env.ExtrasStatePath);
-                run.Tick(string.Format("{0} extras ready ({1} downloaded), {2} on", m.Extras.Count, sx.Downloaded, GetOn(m, state).Count));
+                state.Save(Env.ExtrasRunStatePath);
+                // "on" only for an extra whose files are in this game's folders, checked; else how many are in place
+                var on = GetOn(m, state).Count;
+                var inPlace = InPlace(paths, m, state);
+                run.Tick(inPlace == on ? string.Format("{0} extras ready ({1} downloaded), {2} on", m.Extras.Count, sx.Downloaded, on)
+                    : string.Format("{0} extras ready ({1} downloaded), {2} chosen, {3} in place", m.Extras.Count, sx.Downloaded, on, inPlace));
                 run.Emit(J.O("t", "extras", "downloaded", sx.Downloaded));
             }
             catch (NeedAnswer) { throw; }

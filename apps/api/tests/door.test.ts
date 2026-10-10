@@ -418,3 +418,128 @@ describe("two callers meet a dead AMP session at once (B-41)", () => {
     });
   });
 });
+
+describe("the door lets a player in once a visit (3.6.1, item 11)", () => {
+  function logged() {
+    const tail = fakeTail();
+    const logs: string[] = [];
+    const room = new Room(env, {} as never, tail as never, (_o, m) => void logs.push(m), memoryHeldStore());
+    room.blocked = null;
+    tail.online.add("samoyedx");
+    tail.uuidByName.set("samoyedx", UUID_A);
+    return { tail, room, logs };
+  }
+
+  it("a resync after a new AMP session leaves a member already in alone and says nothing of a release", async () => {
+    const t = logged();
+    await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+    expect(ran("link.release")).toHaveLength(1);
+    t.logs.length = 0;
+    for (let i = 0; i < 3; i++) await t.room.resync(["samoyedx"]); // three new sessions
+    expect(ran("link.release")).toHaveLength(1);
+    expect(t.logs.filter((m) => m.startsWith("resync"))).toEqual([]);
+  });
+
+  it("their join line read again later, with no leave since, is not a new visit", async () => {
+    const t = logged();
+    const now = vi.spyOn(Date, "now");
+    let clock = Date.parse("2026-10-09T16:00:00Z");
+    now.mockImplementation(() => clock);
+    try {
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(1);
+      clock += 90_000; // a new AMP session sends its last lines again; this one was not among those seen
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(1);
+      expect(t.logs).toContain("join: already in, with no leave since: not a new visit");
+      // a real new visit: a leave, then a join
+      await t.room.onEvent({ type: "leave", name: "samoyedx", reason: null });
+      clock += 90_000;
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(2);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it("a server that stops ends every visit: the first join after the start meets the door (rehearsal, 2026-10-09)", async () => {
+    for (const end of ["stopping", "started"] as const) {
+      state.ran.length = 0;
+      const t = logged();
+      const now = vi.spyOn(Date, "now");
+      let clock = Date.parse("2026-10-09T19:34:38Z");
+      now.mockImplementation(() => clock);
+      try {
+        await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+        expect(ran("link.release")).toHaveLength(1);
+        clock += 60_000; // the server stops with them on: no "left the game" line, the session closed by the stop
+        await t.room.onEvent(end === "stopping" ? { type: "stopping" } : { type: "started", seconds: 20 });
+        clock += 29_000;
+        await t.room.onEvent({ type: "join", name: "samoyedx", ip: null }); // back after the start
+        expect(ran("link.release"), end).toHaveLength(2);
+        expect(t.logs).not.toContain("join: already in, with no leave since: not a new visit");
+      } finally {
+        now.mockRestore();
+      }
+    }
+  });
+
+  it("a member whose access went while the server was down is held at their first join after the start", async () => {
+    const t = logged();
+    const now = vi.spyOn(Date, "now");
+    let clock = Date.parse("2026-10-09T19:34:38Z");
+    now.mockImplementation(() => clock);
+    try {
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(1);
+      clock += 60_000;
+      await t.room.onEvent({ type: "stopping" }); // the server stops with them on
+      state.users[0]!.verifiedAt = null; // meanwhile their access is taken away (unlinked)
+      clock += 60_000;
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(1); // not let in again
+      expect(ran("limbo.hold")).toHaveLength(1); // held at the door instead
+      expect(t.room.held.has("samoyedx")).toBe(true);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it("and a server that went down without saying so (AMP's state not running) ends them too", async () => {
+    const t = logged();
+    const now = vi.spyOn(Date, "now");
+    let clock = Date.parse("2026-10-09T19:34:38Z");
+    now.mockImplementation(() => clock);
+    try {
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      (t.tail as { state: number }).state = 0; // crashed or killed
+      await tick(t.room);
+      (t.tail as { state: number }).state = 20;
+      clock += 90_000;
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(2);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it("a live `list` without them is their leave, when its line was never read", async () => {
+    const t = logged();
+    const now = vi.spyOn(Date, "now");
+    let clock = Date.parse("2026-10-09T16:00:00Z");
+    now.mockImplementation(() => clock);
+    try {
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      await t.room.onEvent({ type: "list", online: 0, max: 20, names: [] }, { replay: true }); // old lines say nothing
+      clock += 90_000;
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(1);
+      await t.room.onEvent({ type: "list", online: 0, max: 20, names: [] }, { replay: false }); // the server's live answer
+      clock += 90_000;
+      await t.room.onEvent({ type: "join", name: "samoyedx", ip: null });
+      expect(ran("link.release")).toHaveLength(2);
+    } finally {
+      now.mockRestore();
+    }
+  });
+});

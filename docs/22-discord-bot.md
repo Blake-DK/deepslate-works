@@ -85,11 +85,11 @@ The channel is **#game-chat**, picked on the card (§7).
 
 **Discord → game.** A message in the chat channel, from a person (never from a bot or a webhook, which is also what stops a loop), becomes one chat line in the game:
 
-> `[Discord] Pabulum: anyone on tonight?`
+> `[Discord] Rowan: anyone on tonight?`
 
 - **This is the one place where a person's free text goes to the console**, so it has its own action, `chat.fromDiscord`, and its own rules. The line is a `tellraw @a[tag=verified]` whose text is one JSON string built by `JSON.stringify`, with a cleaner of its own (the registry's `chatSafe` cuts at 40 characters and drops question marks, too strict for chat): no selector, no click event, no hover event, no translation key, no NBT. Before that: one line only (line breaks become spaces), control characters and `§` removed, at most 256 characters with "…" after that. A test feeds it quotes, backslashes, `"}],` and a line break followed by `/op` and asserts that exactly one console line leaves and that it is a `tellraw`.
 - **The name** is the member's Minecraft name when their Discord account is on the portal, their Discord display name otherwise (cleaned the same way, at most 32 characters). `[Discord]` in blue, the name in white, the text in grey.
-- Mentions become names (`@Pabulum`, `#general`), custom emoji become `:name:`, a picture or a file becomes "[picture]" or "[file]", a reply adds nothing. Links are shown as text and cannot be clicked.
+- Mentions become names (`@Rowan`, `#general`), custom emoji become `:name:`, a picture or a file becomes "[picture]" or "[file]", a reply adds nothing. Links are shown as text and cannot be clicked.
 - **Nobody online: nothing is sent** and the server is not woken. Discord chat is not kept for later.
 - At most 1 line a second per person and 5 a second in all; what is over is dropped and the bot adds a 🐌 reaction to the dropped message.
 - A message that was relayed gets nothing; the channel stays clean. A message that was not (server asleep) gets nothing either, but the bot's status line says "Asleep".

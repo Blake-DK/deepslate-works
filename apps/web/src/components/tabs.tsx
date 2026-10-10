@@ -14,7 +14,7 @@ export function TabbedPage({ title, intro, base, tabs, current, children }: { ti
         {intro && <p className="text-muted-foreground">{intro}</p>}
       </div>
       {tabs.length > 1 && (
-        <nav aria-label={`${title}: sections`} className="flex overflow-x-auto whitespace-nowrap border-b" data-testid="tabs">
+        <TabStrip label={`${title}: sections`} data-testid="tabs">
           {tabs.map((t) => (
             <Link
               key={t.key}
@@ -22,7 +22,7 @@ export function TabbedPage({ title, intro, base, tabs, current, children }: { ti
               aria-current={t.key === current ? "page" : undefined}
               className={cn(
                 // the strip's tab (docs/23 §4: components/tabs.tsx takes the same style)
-                "-mb-px inline-flex shrink-0 items-center whitespace-nowrap border-b-[3px] px-[14px] pt-[13px] pb-[10px] text-[15px] font-semibold",
+                "inline-flex shrink-0 items-center whitespace-nowrap border-b-[3px] px-[14px] pt-[13px] pb-[10px] text-[15px] font-semibold",
                 t.key === current ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
@@ -30,10 +30,24 @@ export function TabbedPage({ title, intro, base, tabs, current, children }: { ti
               {t.count != null && t.count !== "" && <span className="ml-1.5 text-xs font-normal text-dim">{t.count}</span>}
             </Link>
           ))}
-        </nav>
+        </TabStrip>
       )}
       {children}
     </div>
+  );
+}
+
+/**
+ * A row of tabs inside a page, on a 1 px Line; scrolls sideways on a phone, never wraps. The line is an inset shadow,
+ * not a border, so the current tab's 3 px underline is drawn over it from inside the box. Tabs pulled down over a
+ * border by a negative margin stuck out of the strip by 1 px, and with always-visible scrollbars (Windows) the strip
+ * showed a vertical scrollbar for that pixel.
+ */
+export function TabStrip({ label, className, children, ...rest }: { label: string; className?: string; children: React.ReactNode; "data-testid"?: string }) {
+  return (
+    <nav aria-label={label} className={cn("flex overflow-x-auto whitespace-nowrap shadow-[inset_0_-1px_0_var(--border)]", className)} {...rest}>
+      {children}
+    </nav>
   );
 }
 

@@ -16,17 +16,17 @@ export type StateInput = {
   crashed: boolean;
 };
 
-/** AMP's states (amp/client.ts, docs/08): 0 Stopped, 5/7/10 starting, 20 Running, 30 Sleeping, 40 Restarting,
- * 45 Stopping, 50 PreparingForSleep, 60 Waiting, 100 Failed, 200 Suspended, 250 Maintenance, 999/-1 unknown. */
+/** AMP's states (amp/client.ts, docs/08): 0 Stopped, 5/7/10 starting, 20 Running, 30 Restarting, 40 Stopping,
+ * 45 PreparingForSleep, 50 Sleeping, 60 Waiting, 100 Failed, 200 Suspended, 250 Maintenance, 999/-1 unknown. */
 export function serverState(i: StateInput): ServerState {
   const c = i.stateCode;
   if (!i.reachable || c === null || c === -1 || c === 999) return "unreachable";
   if (c === 20) return "online";
   if (i.waking) return "waking";
-  if (c === 30 || c === 50) return "asleep";
+  if (c === 45 || c === 50) return "asleep";
   if (c === 5 || c === 7 || c === 10 || c === 60) return "starting";
-  if (c === 40) return "restarting";
-  if (c === 45) return "stopping";
+  if (c === 30) return "restarting";
+  if (c === 40) return "stopping";
   if (c === 100) return "crashed";
   if (c === 0 && i.crashed) return "crashed";
   return "off";

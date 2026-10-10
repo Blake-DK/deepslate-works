@@ -1,9 +1,10 @@
 import { instancePath } from "./paths.js";
 
-// AMP ApplicationState (verified against the live instance 2026-09-28: 0 = Stopped, 20 = Ready/Running).
+// AMP ApplicationState (verified against the live instance: 2026-09-28 0 = Stopped, 20 = Ready/Running; 2026-10-08 a
+// sleeping instance reports 50, docs/11). 30, 40, 45 and 50 had been swapped until 2026-10-10 (docs/47 §5.7).
 export const AMP_STATE: Record<number, string> = {
-  [-1]: "Undefined", 0: "Stopped", 5: "PreStart", 7: "Configuring", 10: "Starting", 20: "Running", 30: "Sleeping", 40: "Restarting",
-  45: "Stopping", 50: "PreparingForSleep", 60: "Waiting", 100: "Failed", 200: "Suspended", 250: "Maintenance", 999: "Indeterminate",
+  [-1]: "Undefined", 0: "Stopped", 5: "PreStart", 7: "Configuring", 10: "Starting", 20: "Running", 30: "Restarting", 40: "Stopping",
+  45: "PreparingForSleep", 50: "Sleeping", 60: "Waiting", 100: "Failed", 200: "Suspended", 250: "Maintenance", 999: "Indeterminate",
 };
 
 export type AmpStatus = {
@@ -24,8 +25,8 @@ export type Availability = "online" | "starting" | "sleeping" | "offline";
 export function availability(stateCode: number | null | undefined): Availability {
   switch (stateCode) {
     case 20: return "online";
-    case 5: case 7: case 10: case 40: case 60: return "starting";
-    case 30: case 50: return "sleeping";
+    case 5: case 7: case 10: case 30: case 60: return "starting";
+    case 45: case 50: return "sleeping";
     default: return "offline";
   }
 }

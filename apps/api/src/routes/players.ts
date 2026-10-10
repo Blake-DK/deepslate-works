@@ -87,7 +87,7 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
     // is in "Stopping": there is no other state in which ending the process is the right thing to do.
     const method = ({ start: "Start", stop: "Stop", restart: "Restart", kill: "Kill" } as Record<string, string>)[op];
     if (!method) return reply.code(404).send({ error: { code: "validation", message: "start|stop|restart|kill" } });
-    if (op === "kill" && tail.state !== 45) {
+    if (op === "kill" && tail.state !== 40) {
       await audit({ userId: req.caller.userId, action: "server.kill", params: { state: tail.state }, result: "DENIED", detail: "not in Stopping" });
       return reply.code(409).send({ error: { code: "not_stopping", message: "The server is not stuck in \"Stopping\". Ending its process is only for that." } });
     }

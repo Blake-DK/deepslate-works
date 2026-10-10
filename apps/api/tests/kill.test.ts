@@ -28,7 +28,7 @@ function app(state: number, before: string[] = []) {
 
 describe("POST /server/kill", () => {
   it("is refused unless the server is in Stopping", async () => {
-    for (const state of [20, 0, 10, 30, 50, 100]) {
+    for (const state of [20, 0, 10, 30, 45, 50, 100]) {
       const { f, called, as } = app(state);
       const r = await f.inject({ method: "POST", url: "/server/kill", headers: as("ADMIN"), payload: {} });
       expect([state, r.statusCode, r.json().error.code]).toEqual([state, 409, "not_stopping"]);
@@ -36,13 +36,13 @@ describe("POST /server/kill", () => {
     }
   });
   it("is for admins", async () => {
-    const { f, called, as } = app(45);
+    const { f, called, as } = app(40);
     const r = await f.inject({ method: "POST", url: "/server/kill", headers: as("PLAYER"), payload: {} });
     expect(r.statusCode).toBe(403);
     expect(called).toEqual([]);
   });
   it("ends the process of a server that is stuck in Stopping", async () => {
-    const { f, called, as } = app(45);
+    const { f, called, as } = app(40);
     const r = await f.inject({ method: "POST", url: "/server/kill", headers: as("ADMIN"), payload: {} });
     expect(r.statusCode).toBe(200);
     expect(called).toEqual(["Kill"]);

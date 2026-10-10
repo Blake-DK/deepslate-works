@@ -134,7 +134,7 @@ export function PowerCard({ status, players }: { status: LiveStatus; players: Pl
   const running = status.server === "online";
   // an admin may start it from anything that is not up or on its way: switched off, crashed, asleep
   const startable = status.server === "off" || status.server === "crashed" || status.server === "asleep";
-  const stuck = status.stateCode === 45;
+  const stuck = status.stateCode === 40; // AMP Stopping; 45 is PreparingForSleep, never killed
   return (
     <Card data-testid="power">
       <CardHeader>

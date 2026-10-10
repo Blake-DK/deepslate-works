@@ -115,7 +115,7 @@ describe("Recorder: the server going up and down", () => {
     const t = setup();
     const online = t.status({ players: ["m1_owl"] });
     await t.say(L("m1_owl joined the game"));
-    await t.poll(t.status({ state: "Sleeping", stateCode: 30, availability: "sleeping" }), online);
+    await t.poll(t.status({ state: "Sleeping", stateCode: 50, availability: "sleeping" }), online);
     expect(t.events.map((e) => e.kind)).toEqual(["JOIN", "LEAVE", "SERVER_STOP"]);
     expect(t.events.at(-1)?.message).toBe("Server asleep (nobody on)");
     expect(t.sessions[0]?.leftAt).not.toBeNull();
@@ -126,7 +126,7 @@ describe("Recorder: the server going up and down", () => {
     expect(t.events.at(-1)).toMatchObject({ kind: "SERVER_STOP", message: "Server switched off" });
 
     t.tick(600);
-    await t.poll(t.status({ state: "Restarting", stateCode: 40, availability: "starting" }), online);
+    await t.poll(t.status({ state: "Restarting", stateCode: 30, availability: "starting" }), online);
     expect(t.events.at(-1)).toMatchObject({ kind: "SERVER_STOP", message: "Server restarting" });
 
     t.tick(600);
@@ -150,10 +150,10 @@ describe("Recorder: the server going up and down", () => {
     "ThreadedAnvilChunkStorage: All dimensions are saved",
   ];
   it.each([
-    ["the sleep state at once", [{ state: "PreparingForSleep", stateCode: 50, availability: "sleeping" }], "Server asleep (nobody on)"],
-    ["a state between, then sleep", [{ state: "Stopping", stateCode: 45, availability: "offline" }, { state: "Sleeping", stateCode: 30, availability: "sleeping" }], "Server asleep (nobody on)"],
-    ["Stopped, then sleep", [{ state: "Stopped", stateCode: 0, availability: "offline" }, { state: "Sleeping", stateCode: 30, availability: "sleeping" }], "Server asleep (nobody on)"],
-    ["a state between for longer than the wait", [{ state: "Stopping", stateCode: 45, availability: "offline" }, { state: "Stopping", stateCode: 45, availability: "offline" }], "Server switched off"],
+    ["the sleep state at once", [{ state: "PreparingForSleep", stateCode: 45, availability: "sleeping" }], "Server asleep (nobody on)"],
+    ["a state between, then sleep", [{ state: "Stopping", stateCode: 40, availability: "offline" }, { state: "Sleeping", stateCode: 50, availability: "sleeping" }], "Server asleep (nobody on)"],
+    ["Stopped, then sleep", [{ state: "Stopped", stateCode: 0, availability: "offline" }, { state: "Sleeping", stateCode: 50, availability: "sleeping" }], "Server asleep (nobody on)"],
+    ["a state between for longer than the wait", [{ state: "Stopping", stateCode: 40, availability: "offline" }, { state: "Stopping", stateCode: 40, availability: "offline" }], "Server switched off"],
   ] as const)("a sleep with the stop lines read after the poll, %s: never a crash", async (_how, states, message) => {
     const t = setup();
     let prev = t.status({});
@@ -196,7 +196,7 @@ describe("Recorder: the server going up and down", () => {
   });
   it("records the start once: from the Done line, or from the state if the line was missed", async () => {
     const t = setup();
-    const asleep = t.status({ state: "Sleeping", stateCode: 30, availability: "sleeping" });
+    const asleep = t.status({ state: "Sleeping", stateCode: 50, availability: "sleeping" });
     await t.say('[29Sep2026 03:46:07.132] [Server thread/INFO] [net.minecraft.server.dedicated.DedicatedServer/]: Done (1.756s)! For help, type "help"');
     t.tick(5);
     await t.poll(t.status({}), asleep);
@@ -268,7 +268,7 @@ describe("Recorder: sessions come from join and leave lines only", () => {
   it("a join after the server went down is a new session, however soon", async () => {
     const t = setup();
     await t.say(L("m1_owl joined the game"));
-    await t.poll(t.status({ state: "Sleeping", stateCode: 30, availability: "sleeping" }), t.status({}));
+    await t.poll(t.status({ state: "Sleeping", stateCode: 50, availability: "sleeping" }), t.status({}));
     t.tick(20);
     await t.say(L("m1_owl joined the game"));
     expect(t.sessions).toHaveLength(2);

@@ -56,7 +56,7 @@ function OptionRow({ i, mods, value, note, testId }: { i: number; mods: Mods; va
   );
 }
 
-/** Admin → Votes: an open poll's editor (Alex, 2026-10-06), folded under the poll. */
+/** Admin → News & polls → Polls: an open poll's editor (Alex, 2026-10-06), folded under the poll. */
 function EditPoll({ poll, mods }: { poll: PollView; mods: Mods }) {
   const current = poll.options.filter((o) => o.id !== DONT_MIND.id);
   const voted = new Map(poll.results?.counts.map((c) => [c.id, c.votes]) ?? []);
@@ -103,7 +103,7 @@ const ERRORS: Record<string, string> = {
   "already-open": "Close the open vote before opening another.",
 };
 
-/** `part` (docs/35): the quick polls are Admin → Votes, the season's mod vote is Modpack → Mod vote. */
+/** `part` (docs/35, docs/48): the quick polls are Admin → News & polls → Polls, the season's mod vote is Modpack → Mod vote. */
 export default async function VotesSection({ searchParams, part }: { searchParams: Promise<{ error?: string; poll?: string; new?: string }>; part: "polls" | "modvote" }) {
   const { error, poll: pollMsg, new: newPoll } = await searchParams;
   const admin = await requireAdmin();
@@ -122,7 +122,7 @@ export default async function VotesSection({ searchParams, part }: { searchParam
       {part === "polls" && (<>
       <div id="polls" className="scroll-mt-20 space-y-4">
         {pollMsg && (POLL_DONE[pollMsg] ? <Alert tone="success">{POLL_DONE[pollMsg]}</Alert> : <Alert tone="error">{pollMsg}</Alert>)}
-        {newPoll !== "1" && <Link href="/admin/votes?new=1#new-poll" className={buttonClasses("primary")} data-testid="poll-new">New poll</Link>}
+        {newPoll !== "1" && <Link href="/admin/news?tab=polls&new=1#new-poll" className={buttonClasses("primary")} data-testid="poll-new">New poll</Link>}
       </div>
       {/* shown only after "New poll" is pressed (Alex, 2026-10-06) */}
       {newPoll === "1" && (
@@ -153,7 +153,7 @@ export default async function VotesSection({ searchParams, part }: { searchParam
             <p className="text-xs text-muted-foreground">Must vote: members are asked in the app and on the site before Play, and the entrance room holds anyone who joins without voting. Somebody already playing is never kicked or held; it applies from their next join. Admins are asked too but never held.</p>
             <div className="flex flex-wrap gap-2">
               <Button type="submit" data-testid="poll-open">Open poll</Button>
-              <Link href="/admin/votes#polls" className={buttonClasses("ghost")}>Cancel</Link>
+              <Link href="/admin/news?tab=polls#polls" className={buttonClasses("ghost")}>Cancel</Link>
             </div>
           </form>
         </CardContent>

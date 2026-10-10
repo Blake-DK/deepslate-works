@@ -338,7 +338,7 @@ describe("a name another account still carries (R-30)", () => {
   });
 });
 
-describe("Release on the Control Room card", () => {
+describe("Release on the held list", () => {
   it("lets a held member in whatever the door says, back to where they stood, with the admin on the audit row", async () => {
     const t = setup();
     await t.join("samoyedx", UUID_A);

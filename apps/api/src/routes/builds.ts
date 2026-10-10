@@ -8,7 +8,7 @@ import { BUILD_DIMENSION, BUILD_NAME, MAX_BUILD_PIECES, MAX_BUILD_SIDE, buildBox
 import { runAction } from "../actions/run.js";
 import { requireAdmin } from "../auth.js";
 
-// docs/34 §10 (T2 to T4): Admin → Seasons, "Builds". Capture takes something that stands in the world and keeps it
+// docs/34 §10 (T2 to T4): Admin → Builds (docs/48). Capture takes something that stands in the world and keeps it
 // under a name; Place puts a kept build somewhere, in the main world or a Frontier; Lock makes its ground a server
 // claim. What has been captured is remembered here (its size is needed to place it again); the structure files
 // themselves are the server's, in world/generated/deepslate/structures/, and outlive a Frontier's wipe.

@@ -12,7 +12,7 @@ import type { ClientPoll } from "@/server/polls";
 
 type Props = {
   poll: ClientPoll;
-  /** Admin → Votes: who voted for what under the results. */
+  /** Admin → News & polls → Polls: who voted for what under the results. */
   showVoters?: boolean;
   /** After a vote: refresh the page (the banner goes, the Play button opens). */
   refreshAfter?: boolean;
@@ -27,7 +27,7 @@ export function PollCard({ poll: initial, showVoters = false, refreshAfter = fal
   const router = useRouter();
   const [poll, setPoll] = useState(initial);
   const [picked, setPicked] = useState<string[]>(initial.mine ?? []);
-  // Admin → Votes opens on the results and who voted for what; a member who has not voted opens on the options
+  // Admin → News & polls → Polls opens on the results and who voted for what; a member who has not voted opens on the options
   const [editing, setEditing] = useState(initial.mine === null && initial.open && !(showVoters && initial.results));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

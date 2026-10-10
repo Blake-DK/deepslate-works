@@ -1,0 +1,116 @@
+"use server";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { requireAdmin } from "@/server/auth/session";
+import { apiFetch, ApiError } from "@/server/api-client";
+import { audit } from "@/server/events";
+import { removeBuild, storeBuild } from "@/server/builds";
+import { designName } from "@/lib/designer";
+
+// docs/48 A4: Admin → Builds (out of Seasons). Every button is a named call to api, which checks, acts and writes the
+// event log, or an upload kept by the site and audited here.
+
+const to = (msg: string, detail?: string) => `/admin/builds?msg=${msg}${detail ? `&detail=${encodeURIComponent(detail)}` : ""}`;
+
+// ---- docs/34 §10: builds. Numbers and a name from the form, checked here and again by api.
+const int = z.coerce.number().int();
+const dimension = z.string().regex(/^(minecraft:overworld|deepslate:frontier_[a-z0-9_]{1,32})$/);
+const captureForm = z.object({ name: z.string().regex(/^[a-z0-9_]{2,24}$/), dimension, x1: int, y1: int, z1: int, x2: int, y2: int, z2: int });
+// the build's field says which list it is from: "c:<name>" captured in the world, "u:<name>" uploaded
+const placeForm = z.object({ name: z.string().regex(/^[cu]:[a-z0-9_]{2,24}$/), dimension, x: int, y: int, z: int });
+const fields = (formData: FormData, names: string[]) => Object.fromEntries(names.map((n) => [n, formData.get(n)]));
+
+export async function buildCaptureAction(formData: FormData) {
+  const admin = await requireAdmin();
+  // docs/40 Part 1: any name, made into the form a build's name takes ("Boss Temple" is boss_temple)
+  const f = captureForm.safeParse({ ...fields(formData, ["dimension", "x1", "y1", "z1", "x2", "y2", "z2"]), name: designName(String(formData.get("name") ?? "")) });
+  if (!f.success) redirect(to("error", "Whole numbers for both corners"));
+  if (formData.get("sure") !== "on") redirect(to("confirm"));
+  const { name, x1, y1, z1, x2, y2, z2 } = f.data;
+  let r: { pieces?: number };
+  try {
+    r = await apiFetch("/builds/capture", { method: "POST", body: { name, dimension: f.data.dimension, from: { x: x1, y: y1, z: z1 }, to: { x: x2, y: y2, z: z2 } }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 120_000 });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/builds");
+  redirect(to("captured", `${name}, ${r.pieces ?? 1} ${r.pieces === 1 ? "piece" : "pieces"}`));
+}
+
+export async function buildPlaceAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const f = placeForm.safeParse(fields(formData, ["name", "dimension", "x", "y", "z"]));
+  if (!f.success) redirect(to("error", "Pick a build and give whole numbers for the position"));
+  if (formData.get("sure") !== "on") redirect(to("confirm"));
+  const { x, y, z: zz } = f.data;
+  const name = f.data.name.slice(2);
+  let r: { locked?: boolean };
+  try {
+    r = await apiFetch("/builds/place", { method: "POST", body: { name, upload: f.data.name.startsWith("u:"), dimension: f.data.dimension, at: { x, y, z: zz }, lock: formData.get("lock") === "on" }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 120_000 });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/builds");
+  redirect(to(formData.get("lock") === "on" ? (r.locked ? "placedLocked" : "placedNotLocked") : "placed", name));
+}
+
+/** A build file from the admin's PC, kept under a name. It reaches the server with the next Build and Sync. */
+export async function buildUploadAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) redirect(to("error", "Pick a file first"));
+  // docs/40 Part 1: any name, made into the form a build's name takes; none typed, the file's own name
+  const name = designName(String(formData.get("name") ?? ""), file.name.replace(/\.[a-z]+$/i, ""));
+  const stored = await storeBuild(name, file, { allowMissing: formData.get("allowMissing") === "on" });
+  if (!stored.ok) redirect(to("error", stored.reason));
+  const { check } = stored.build.note!;
+  await audit({ userId: admin.id, action: "build.upload", params: { name, format: stored.build.format, kb: Math.round(stored.build.bytes / 1024), size: `${check.size.x}x${check.size.y}x${check.size.z}`, missing: check.missing }, result: "OK" });
+  revalidatePath("/admin/builds");
+  redirect(to("uploaded", `${name}, ${check.size.x} by ${check.size.y} by ${check.size.z} blocks${check.missing.length ? ", the missing mods' blocks will be air" : ""}`));
+}
+
+export async function buildRemoveAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const name = String(formData.get("name") ?? "");
+  if (!(await removeBuild(name))) redirect(to("error", "No such upload"));
+  await audit({ userId: admin.id, action: "build.uploadRemove", params: { name }, result: "OK" });
+  revalidatePath("/admin/builds");
+  redirect(to("uploadRemoved", name));
+}
+
+/**
+ * docs/37 Step 2: Builder mode for the admin pressing it, through api (which checks their Builder tools and that they
+ * are online). On: creative, where WorldEdit works; off: survival.
+ */
+export async function builderModeAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const on = formData.get("on") === "1";
+  let r: { ok: boolean; online?: boolean };
+  try {
+    r = await apiFetch<{ ok: boolean; online?: boolean }>("/builder/mode", { method: "POST", body: { on }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  revalidatePath("/admin/builds");
+  redirect(to(on ? "builderOn" : r.online === false ? "builderOffline" : "builderOff"));
+}
+
+/** docs/37 Step 2: lock the ground of something WorldEdit placed (the site does not see it): a world and two corners. */
+export async function buildLockAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const n = (k: string) => Number(formData.get(k));
+  const f = z.object({ dimension: z.string().min(1) }).safeParse({ dimension: formData.get("dimension") });
+  const [x1, z1, x2, z2] = [n("x1"), n("z1"), n("x2"), n("z2")];
+  if (!f.success || ![x1, z1, x2, z2].every(Number.isInteger)) redirect(to("error", "Give a world and whole numbers for both corners"));
+  try {
+    await apiFetch("/builds/lock", { method: "POST", body: { dimension: f.data.dimension, x1, z1, x2, z2 }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 });
+  } catch (e) {
+    if (e instanceof ApiError) redirect(to("error", e.message));
+    throw e;
+  }
+  redirect(to("locked", `${Math.min(x1, x2)} ${Math.min(z1, z2)} to ${Math.max(x1, x2)} ${Math.max(z1, z2)}`));
+}

@@ -13,7 +13,7 @@ import { formatDate } from "@/lib/utils";
 import SettingsSection from "../settings/section";
 import { BlockedList } from "../users/section";
 import { setEarlyAccessAction } from "../users/actions";
-import { Flash, HeldCard, KickCard, loadHeld, loadPlayers, RoomCard } from "../server/cards";
+import { Flash, HeldCard, loadHeld, loadPlayers, RoomCard } from "../server/cards";
 import { env } from "@/env";
 import { getTestState, type TestState } from "@/server/test-mode";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ export const metadata: Metadata = { title: "Joining" };
 
 /**
  * docs/35: who gets in, on one page. It was in five places: Site settings (Launch, Joining), People (early access,
- * outside Discord, blocked), Server (the entrance room), Pack (must vote) and the Control Room (who is held).
+ * outside Discord, blocked), Server (the entrance room), Pack (must vote) and the first admin page (who is held).
  * Nothing here is a second copy of a setting: each card is the same card, or the same switch, as before.
  */
 export default async function JoiningAdminPage({ searchParams }: { searchParams: PageQuery }) {
@@ -38,10 +38,7 @@ export default async function JoiningAdminPage({ searchParams }: { searchParams:
 
   let body: React.ReactNode;
   if (tab === "waiting") {
-    const [status, turned] = await Promise.all([
-      getStatus(),
-      db.event.findMany({ where: { kind: "JOIN_BLOCKED" }, orderBy: { at: "desc" }, take: 10, select: { id: true, at: true, message: true } }),
-    ]);
+    const turned = await db.event.findMany({ where: { kind: "JOIN_BLOCKED" }, orderBy: { at: "desc" }, take: 10, select: { id: true, at: true, message: true } });
     body = (
       <div className="space-y-4">
         <AutoRefresh seconds={15} />
@@ -66,7 +63,6 @@ export default async function JoiningAdminPage({ searchParams }: { searchParams:
             )}
           </CardContent>
         </Card>
-        <KickCard running={status.server === "online"} />
       </div>
     );
   } else if (tab === "rules") {
@@ -94,7 +90,7 @@ export default async function JoiningAdminPage({ searchParams }: { searchParams:
             {!vote?.mustVote && polls.length === 0 && <p className="text-muted-foreground">No open vote holds anybody right now.</p>}
             {vote?.mustVote && <p><Badge tone="warn">must vote</Badge> The mod vote &quot;{vote.title}&quot;. Change it on <Link href="/admin/pack?tab=modvote" className="underline">Modpack → Mod vote</Link>.</p>}
             {vote && !vote.mustVote && <p className="text-muted-foreground">The mod vote &quot;{vote.title}&quot; is open and optional. Make it a must on <Link href="/admin/pack?tab=modvote" className="underline">Modpack → Mod vote</Link>.</p>}
-            {polls.map((p) => <p key={p.id}><Badge tone="warn">must vote</Badge> The poll &quot;{p.question}&quot;. Close it on <Link href="/admin/votes" className="underline">Votes</Link>.</p>)}
+            {polls.map((p) => <p key={p.id}><Badge tone="warn">must vote</Badge> The poll &quot;{p.question}&quot;. Close it on <Link href="/admin/news?tab=polls" className="underline">News &amp; polls → Polls</Link>.</p>)}
           </CardContent>
         </Card>
         {!settings.live && (

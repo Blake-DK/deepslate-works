@@ -23,6 +23,9 @@ describe("the test stripe", () => {
     expect(s).toContain("TEST · the test server, hidden from players");
     expect(s).toContain('<StripeHeight of="test-stripe" />');
     expect(s).toContain("if (!env.TEST_MODE) return null;");
+    // the commit the test site runs, so a push to dev can be seen arriving (it follows dev since 2026-10-10)
+    expect(s).toContain("const commit = webBuild().commit;");
+    expect(s).toContain("{commit ? ` · build ${commit.slice(0, 7)}` : \"\"}");
   });
 
   it("marks <html> only on the test site, and only that mark turns on the scroll padding", () => {

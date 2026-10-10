@@ -102,7 +102,7 @@ export function BrandingForm({ initial, action, part }: { initial: BrandingValue
       </form>
 
       {part === "look" && (
-      <aside aria-label="Preview" className="space-y-3 lg:sticky lg:top-4 lg:self-start">
+      <aside aria-label="Preview" className="space-y-3 lg:sticky lg:top-[calc(1rem+var(--stripe-h,0px))] lg:self-start">
         <h2 className="text-sm font-semibold">Preview</h2>
         <div className="overflow-hidden rounded-[4px] border bg-background text-sm text-foreground">
           <div className="flex items-center gap-2 border-b bg-panel px-3 py-2">

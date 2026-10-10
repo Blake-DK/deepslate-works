@@ -86,6 +86,14 @@ body {
 
 * { border-color: var(--border); }
 
+/* docs/47 §5 item 5: the test site's stripe sticks to the top of the window. A jump to an anchor (and scrollIntoView)
+   lands below it; 34 px is its one-line height until components/stripe-height.tsx measures it. Not on the live site:
+   there <html> has no data-test-site and --stripe-h is unset, so every var(--stripe-h, 0px) is 0. */
+html[data-test-site] {
+  --stripe-h: 34px;
+  scroll-padding-top: var(--stripe-h);
+}
+
 /* The deepslate ground (docs/23 §4): the tile at 48 px over Ground at 35 %, fixed, never in the way of a click. */
 body::before {
   content: "";

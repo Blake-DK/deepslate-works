@@ -26,6 +26,12 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## All open work in one list (2026-10-10, on `dev`)
+
+`docs/49-leftover-work.md` gathers every open item from docs/10, 28, 34 to 48 and the VPS session's reports, each
+checked against git and the code, with a "next up" order and who it waits on. It also lists the docs that can be
+removed later (12, 15, 43, and 26 folded into 27) and why none was removed yet. The source docs stay the detail.
+
 ## The test site follows `dev`, live follows `main` (2026-10-10, on `dev`)
 
 Why: PR #27 (the sticky stripe) reached `main` and live, but the test site kept the 2026-10-09 hand-built `test`

@@ -59,6 +59,12 @@ is not started.
   shown on the test site: its designer is not set up (live's is); the redirect itself is proven.
 - **`grep -ri "control room" apps/`** prints nothing.
 
+## All open work in one list (2026-10-10, on `dev`)
+
+`docs/49-leftover-work.md` gathers every open item from docs/10, 28, 34 to 48 and the VPS session's reports, each
+checked against git and the code, with a "next up" order and who it waits on. It also lists the docs that can be
+removed later (12, 15, 43, and 26 folded into 27) and why none was removed yet. The source docs stay the detail.
+
 ## The test site follows `dev`, live follows `main` (2026-10-10, on `dev`)
 
 Why: PR #27 (the sticky stripe) reached `main` and live, but the test site kept the 2026-10-09 hand-built `test`

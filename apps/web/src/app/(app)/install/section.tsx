@@ -14,6 +14,8 @@ import { CopyButton } from "./copy-button";
 import { canDownload } from "@/server/modpack/gate";
 import { canSeeServer, getSettings } from "@/server/settings";
 import { LaunchBanner } from "@/components/launch-banner";
+import { MaintenanceBanner } from "@/components/maintenance-banner";
+import { getMaintenance } from "@/server/settings";
 import { isWindows, WINDOWS_ONLY } from "@/lib/platform";
 import { getPlayInfo } from "@/server/play";
 import { PlayButton } from "@/components/server/play-button";
@@ -37,7 +39,8 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
   }
   const [m, lock, installer, play, pending] = await Promise.all([getManifest(), getLock(), getInstaller(), getPlayInfo(user), pendingFor({ id: user.id, role: user.role })]);
   const version = lock ? `${m.version}+${lock.hash.slice(0, 8)}` : null;
-  const settings = await getSettings();
+  const [settings, maintenance] = await Promise.all([getSettings(), getMaintenance().catch(() => ({ on: false }))]);
+  const admin = user.role === "ADMIN";
   const showServer = canSeeServer(user, settings);
   const gate = await canDownload(user);
   const ready = Boolean(lock && installer) && gate.ok;
@@ -51,7 +54,7 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
           <h2 className="text-xl font-semibold">Join the server</h2>
           <p className="mt-1 max-w-2xl text-muted-foreground">Not open yet. When it launches, this page turns into a one-click installer for Windows, and the server address appears here.</p>
         </div>
-        <LaunchBanner launchAt={settings.launchAt} admin={false} />
+        {maintenance.on ? <MaintenanceBanner admin={false} /> : <LaunchBanner launchAt={settings.launchAt} admin={false} />}
         <Card>
           <CardHeader>
             <CardTitle>Meanwhile</CardTitle>
@@ -64,7 +67,9 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-6">
-      {!settings.live && user.role === "ADMIN" && <LaunchBanner launchAt={settings.launchAt} admin />}
+      {/* docs/48 B4: the site's Maintenance, in place of the address for members; Download and Play stay */}
+      {maintenance.on && <MaintenanceBanner admin={admin} />}
+      {!settings.live && admin && <LaunchBanner launchAt={settings.launchAt} admin />}
       <div>
         <h2 className="text-xl font-semibold">Join the server</h2>
         <p className="mt-1 max-w-2xl text-muted-foreground">
@@ -119,14 +124,14 @@ export default async function InstallPage({ searchParams }: { searchParams: Prom
           </CardContent>
         </Card>
 
-      <Card>
+      {(admin || !maintenance.on) && <Card>
         <CardHeader><CardTitle>Server address</CardTitle><CardDescription>The installer adds it to your server list; here it is in case you need it.</CardDescription></CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
           <span className="rounded-[4px] border bg-panel px-3 py-2 font-mono">{serverAddress(m)}</span>
           <CopyButton text={serverAddress(m)} label="Copy address" />
           <Badge>Minecraft {m.minecraft} · NeoForge {lock?.neoforge ?? "?"}</Badge>
         </CardContent>
-      </Card>
+      </Card>}
 
       <Card>
         <CardHeader><CardTitle>Your PC</CardTitle></CardHeader>

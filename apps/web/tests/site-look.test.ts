@@ -190,8 +190,11 @@ describe("the frame (docs/23 §4)", () => {
     expect(nav + links).not.toMatch(/MobileMenu|aria-label="Sidebar"|>Menu</);
     expect(links).toMatch(/overflow-x-auto whitespace-nowrap/);
   });
-  it("admin pages get the admin strip with the ten admin pages (docs/35)", () => {
-    expect(hrefs(links.slice(links.indexOf("export function AdminStrip")))).toEqual(["/admin", "/admin/server", "/admin/joining", "/admin/people", "/admin/pack", "/admin/seasons", "/admin/news", "/admin/votes", "/admin/discord", "/admin/site"]);
+  it("admin pages get the admin strip with the ten admin pages (docs/35, docs/48 A2)", () => {
+    expect(hrefs(links.slice(links.indexOf("export function AdminStrip")))).toEqual(["/admin", "/admin/server", "/admin/joining", "/admin/people", "/admin/pack", "/admin/builds", "/admin/seasons", "/admin/news", "/admin/discord", "/admin/site"]);
+    const strip = links.slice(links.indexOf("export function AdminStrip"));
+    expect([...strip.matchAll(/<NavLink href="[^"]+"[^>]*>([^<]+)<\/NavLink>/g)].map((m) => m[1])).toEqual(["Overview", "Server", "Joining", "People", "Modpack", "Builds", "Seasons", "News &amp; polls", "Discord", "Site"]);
+    expect(nav).toContain('<NavLink href="/admin" copper>Admin</NavLink>');
     expect(nav).toContain("{admin && <AdminStrip other={env.otherSite} />}"); // docs/42 §8: Live | Test, only with a test server
   });
   it("the display face is on the banner's name and the drawn logo tile only", () => {
@@ -285,5 +288,9 @@ describe("the leftovers (docs/23 §8 step 4): every page takes the parts", () =>
     const results = readFileSync(path.join(SRC, "app/(app)/vote/results/section.tsx"), "utf8");
     expect(results).toContain('<div className="h-full bg-primary"');
     expect(results).toContain('<div className="h-full bg-info"');
+  });
+  it("tabs inside a page are a TabStrip: nothing pulled out of its box, so no 1 px vertical scrollbar on Windows", () => {
+    expect(hits(/-mb-px/)).toEqual([]);
+    expect(hits(/<nav\b[^>]*overflow-x-auto/, ["components/tabs.tsx", "components/nav-link.tsx"])).toEqual([]);
   });
 });

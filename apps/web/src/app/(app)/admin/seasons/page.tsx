@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireAdmin } from "@/server/auth/session";
-import { db } from "@/server/db";
 import { apiFetch } from "@/server/api-client";
 import { TabbedPage, type PageQuery } from "@/components/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,14 +13,10 @@ import { Label, fieldClasses } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ukDayTime } from "@/lib/uk-time";
 import { seasonOpAction, seasonTickAction } from "./actions";
-import { BuildsCard, type BuildsView } from "./builds-card";
-import { listBuilds, readPackBlocks } from "@/server/builds";
-import { DesignCard, type DesignCardState } from "./design-card";
-import { designCalls, designerSetUp, isDesignerOwner, listDesigns, loadBlockList, readDesign } from "@/server/designer";
-import { currentJob } from "@/server/design-jobs";
 import { env } from "@/env";
 import { getTestState } from "@/server/test-mode";
 import { TestTools } from "./test-tools";
+import { ToBuilds } from "./to-builds";
 
 export const metadata: Metadata = { title: "Seasons" };
 
@@ -46,16 +42,6 @@ const MSG: Record<string, string> = {
   revoked: "Taken back, on the site and in the game.",
   revokedSite: "Taken back on the site. They are not on the server, so the game's own tick stays until it is taken back there.",
   revokedNone: "They did not have that tick.",
-  uploaded: "Uploaded. Press Build and then Sync on the Modpack page to put it on the server:",
-  uploadRemoved: "Removed. It leaves the server with the next Build and Sync:",
-  locked: "Its ground is locked: nobody can break or place blocks there. From",
-  builderOn: "Builder mode is on: you are in creative and WorldEdit works for you. Switch it off when you are done.",
-  builderOff: "Builder mode is off: you are back in survival.",
-  builderOffline: "You are not on the server, so nothing changed. If you left in Builder mode you are still in creative: switch it off when you are next on.",
-  captured: "Captured:",
-  placed: "Placed:",
-  placedLocked: "Placed, and its ground is locked:",
-  placedNotLocked: "Placed, but the lock was not taken by the server. Lock it by hand:",
   error: "That didn't work:",
   // docs/42 §7, the test site only
   clockSet: "The test clock is set. The season's lines follow it within a minute.",
@@ -65,27 +51,20 @@ const MSG: Record<string, string> = {
 const STATE: Record<string, { label: string; tone: "neutral" | "good" | "info" }> = { upcoming: { label: "Announced, not started", tone: "info" }, running: { label: "Running", tone: "good" }, ended: { label: "Ended", tone: "neutral" } };
 
 // docs/34 §6 (W1.4): the season's switches. Which season is current is a commit (modpack/seasons/index.json), and
-// so is everything in it; this page announces it, starts it, ends it, and puts a missed tick right.
+// so is everything in it; this page announces it, starts it, ends it, and puts a missed tick right. The designer and
+// the builds are on Admin → Builds (docs/48 A4); their old addresses here are sent on.
 export default async function SeasonsAdminPage({ searchParams }: { searchParams: PageQuery }) {
   const admin = await requireAdmin();
   const q = await searchParams;
+  if (typeof q.design === "string") redirect(`/admin/builds?design=${encodeURIComponent(q.design)}`);
   const msg = typeof q.msg === "string" ? q.msg : undefined;
   const detail = typeof q.detail === "string" ? q.detail : undefined;
   const view = await apiFetch<View>("/seasons", { caller: { id: admin.id, role: "ADMIN" } }).catch(() => null);
-  // docs/37 Step 2: the admin's own Builder tools, for the Builds card's switch
-  const me = await db.user.findUnique({ where: { id: admin.id }, select: { builderTools: true, mcUsername: true } });
-  // docs/39 Step 2: the designer card; ?design=<name> opens that design (the uploads list links to it)
-  const designState: DesignCardState = !designerSetUp() ? "off" : isDesignerOwner(admin) ? "ready" : "notOwner";
-  const designs = designState === "ready" ? await listDesigns() : [];
-  const designOpen = designState === "ready" && typeof q.design === "string" ? await readDesign(q.design) : null;
-  const designLeft = designState === "ready" ? await designCalls().then((c) => ({ hour: Math.max(0, 30 - c.hour), day: Math.max(0, env.DESIGNER_DAILY - c.day) })) : null;
-  const designJob = designState === "ready" ? await currentJob() : null; // docs/40 Part 2: a design that carries on
-  const uploads = await listBuilds();
-  const builds = await apiFetch<BuildsView>("/builds", { caller: { id: admin.id, role: "ADMIN" } }).catch(() => null);
   const file = view?.file ?? null;
   const state = view?.row?.state ?? null;
   return (
     <TabbedPage title="Seasons" intro="Announce, start and end the current season, and put a missed boss kill or trial right." base="/admin/seasons" tabs={[]} current="">
+      <ToBuilds />
       {msg && <Alert tone={msg === "error" || msg === "confirm" ? "error" : "success"}>{MSG[msg] ?? msg} {detail && <span className="font-mono">{detail}</span>}</Alert>}
       {!view && <Alert tone="error">The portal&apos;s backend did not answer. Try again in a moment.</Alert>}
       {env.TEST_MODE && <TestTools state={await getTestState(true)} />}
@@ -179,8 +158,6 @@ export default async function SeasonsAdminPage({ searchParams }: { searchParams:
           )}
         </div>
       )}
-      <DesignCard state={designState} designs={designs} blocks={designState === "ready" ? await loadBlockList() : { kinds: {}, blocks: [] }} initial={designOpen} left={designLeft} job={designJob} taken={[...designs.map((d) => d.name), ...uploads.map((b) => b.name)]} />
-      <BuildsCard view={builds} files={uploads} designed={designs.map((d) => d.name)} mods={(await readPackBlocks())?.namespaces ?? {}} builder={me?.builderTools ? { mcUsername: me.mcUsername } : null} frontiers={view?.file ? [`deepslate:frontier_${view.file.id}`] : []} />
     </TabbedPage>
   );
 }

@@ -4,7 +4,7 @@ import { env } from "@/env";
 
 export const dynamic = "force-dynamic";
 
-// docs/42 §8, the live site: the Control Room's "Test server" card asks here every 20 s while its tab is seen.
+// docs/42 §8, the live site: Admin → Overview's "Test server" card asks here every 20 s while its tab is seen.
 // Admins only. 404 while there is no test server to speak of; `{ off: true }` while TEST_STACK is not 1.
 export async function GET() {
   const user = await loadCurrentUser();

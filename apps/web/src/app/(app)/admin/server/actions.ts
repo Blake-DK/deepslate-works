@@ -11,12 +11,13 @@ import { removePhoto, storePhoto } from "@/server/news-images";
 import { photoInUse } from "@/server/polls";
 
 const ops = z.enum(["start", "stop", "restart"]);
-// Where to go after an action: the tab it belongs to, or the Control Room when its form says so. The form only
-// picks from this list; an address it sends is never used as such.
+// Where to go after an action: the tab it belongs to, or the page the card sits on when its form says so (Home's
+// status card, Joining's held list, People's kick). The form only picks from this list; an address it sends is never
+// used as such.
 const TABS = { power: "/admin/server", settings: "/admin/server?tab=performance", backups: "/admin/server?tab=backups", pregen: "/admin/server?tab=world", router: "/admin/server?tab=router", room: "/admin/joining?tab=room", news: "/admin/news" } as const;
 function place(formData: FormData | undefined, tab: keyof typeof TABS) {
   const back = formData?.get("back");
-  const base = back === "/admin" || back === "/" || back === "/admin/joining" ? back : TABS[tab];
+  const base = back === "/" || back === "/admin/joining" || back === "/admin/people" ? back : TABS[tab];
   return (msg: string, detail?: string) => `${base}${base.includes("?") ? "&" : "?"}msg=${msg}${detail ? `&detail=${encodeURIComponent(detail)}` : ""}`;
 }
 
@@ -118,7 +119,7 @@ export async function distanceAction(apply: string, formData: FormData) {
 }
 
 /** Ends the server's process. Only offered, and only accepted by api, while the server is stuck in "Stopping". */
-/** Admin → Control Room, "In the entrance room": lets a held, linked member in now (api `POST /held/release`, audited there). */
+/** Admin → Joining → Who's waiting, "In the entrance room": lets a held, linked member in now (api `POST /held/release`, audited there). */
 export async function releaseHeldAction(formData: FormData) {
   const to = place(formData, "power");
   const admin = await requireAdmin();

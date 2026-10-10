@@ -13,9 +13,10 @@ describe("availability", () => {
   it("maps AMP states to what the portal shows", () => {
     expect(availability(20)).toBe("online");
     expect(availability(10)).toBe("starting");
-    expect(availability(40)).toBe("starting");
-    expect(availability(30)).toBe("sleeping");
-    expect(availability(50)).toBe("sleeping");
+    expect(availability(30)).toBe("starting"); // Restarting
+    expect(availability(40)).toBe("offline"); // Stopping
+    expect(availability(45)).toBe("sleeping"); // PreparingForSleep
+    expect(availability(50)).toBe("sleeping"); // Sleeping
     expect(availability(0)).toBe("offline");
     expect(availability(100)).toBe("offline");
     expect(availability(null)).toBe("offline");
@@ -32,7 +33,7 @@ describe("toLive", () => {
     expect(live.availability).toBe("online");
   });
   it("shows nobody online when the server is not running, whatever the console remembered", () => {
-    const live = toLive(status({ state: "Sleeping", stateCode: 30, tps: null }), { online: new Set(["ghost"]), uuidByName: new Map() }, new Date());
+    const live = toLive(status({ state: "Sleeping", stateCode: 50, tps: null }), { online: new Set(["ghost"]), uuidByName: new Map() }, new Date());
     expect(live.players).toEqual([]);
     expect(live.availability).toBe("sleeping");
   });

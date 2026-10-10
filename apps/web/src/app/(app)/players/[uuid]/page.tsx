@@ -24,12 +24,11 @@ import { suggestTier, summary, type SystemInfo } from "@/lib/install-report";
 import { pingReadings, sessionPings } from "@/server/ping";
 import { average, pingSlots, pingTone } from "@/lib/ping";
 import { Sparkline } from "@/components/server/sparkline";
-import { pickTab, tabHref, type PageQuery } from "@/components/tabs";
+import { pickTab, tabHref, TabStrip, type PageQuery } from "@/components/tabs";
 import { InventoryPanel } from "@/components/players/inventory-panel";
 import { MemberMenu } from "../../admin/users/member-menu";
 import { setEarlyAccessAction } from "../../admin/users/actions";
 import { Switch } from "@/components/admin/parts";
-import { cn } from "@/lib/utils";
 import { apiFetch } from "@/server/api-client";
 import { stripLink } from "@/components/strip-link";
 import { TEST_MODES } from "@/shared/join-gate";
@@ -52,7 +51,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   if (!ID.test(id)) notFound();
   const now = new Date();
   const [member, rows, status] = await Promise.all([
-    db.user.findFirst({ where: { mcUuid: id }, select: { id: true, displayName: true, pcTier: true, pcTierSource: true, mcUsername: true, verifiedAt: true, guildMember: true, outsideAuth: true, discordId: true, role: true, earlyAccess: true, builderTools: true } }),
+    db.user.findFirst({ where: { mcUuid: id }, select: { id: true, displayName: true, pcTier: true, pcTierSource: true, mcUsername: true, verifiedAt: true, guildMember: true, outsideAuth: true, discordId: true, role: true, earlyAccess: true, builderTools: true, maintenanceJoin: true } }),
     db.session.findMany({ where: { mcUuid: id }, orderBy: { joinedAt: "desc" }, take: 2000 }),
     getStatus(),
   ]);
@@ -142,13 +141,13 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
         </section>
       )}
 
-      <nav aria-label="About this player" className="flex overflow-x-auto whitespace-nowrap border-b" data-testid="tabs">
+      <TabStrip label="About this player" data-testid="tabs">
         {tabs.map((t) => (
-          <Link key={t.key} href={tabHref(base, tabs, t.key)} aria-current={t.key === tab ? "page" : undefined} className={cn("-mb-px", stripLink(t.key === tab))}>
+          <Link key={t.key} href={tabHref(base, tabs, t.key)} aria-current={t.key === tab ? "page" : undefined} className={stripLink(t.key === tab)}>
             {t.label}{t.count != null && <span className="text-xs font-normal text-dim">{t.count}</span>}
           </Link>
         ))}
-      </nav>
+      </TabStrip>
 
       {tab === "overview" && online && stats && (
         <Card data-testid="connection">

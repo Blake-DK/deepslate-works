@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { doorRule, downloadRule, earlyBanner, isAdmin, isOpenFor, mayReport, NOT_OPEN_TEXT, playFirstApplies, playRule, type Member } from "@/shared/access";
+import { doorRule, downloadRule, earlyBanner, isAdmin, isOpenFor, joinsDuringMaintenance, MAINTENANCE_TEXT, mayReport, NOT_OPEN_TEXT, playFirstApplies, playRule, type Member } from "@/shared/access";
 import { playGate } from "@/shared/join-gate";
 
 // docs/13 "Early access": the table, as it is written there.
@@ -89,6 +89,52 @@ describe("join (the door)", () => {
   });
   it("says what the planner wrote to whoever waits because the server is not open", () => {
     expect(NOT_OPEN_TEXT).toBe("Not open yet. You'll be let in when the server goes live.");
+  });
+});
+
+describe("the door while the site's Maintenance is on (docs/48 B1, B2)", () => {
+  const ticked: Member = { role: "ADMIN", earlyAccess: false, maintenanceJoin: true };
+  const WHO = { player, "early access": early, "admin without the tick": admin, "admin with the tick": ticked } as const;
+  // who, We're live, Maintenance: at the door (Play pressed, no vote open, Play first on)
+  it.each([
+    ["player", true, true, "maintenance"],
+    ["player", false, true, "maintenance"],
+    ["early access", true, true, "maintenance"],
+    ["early access", false, true, "maintenance"],
+    ["admin without the tick", true, true, "maintenance"],
+    ["admin without the tick", false, true, "maintenance"],
+    ["admin with the tick", true, true, "in"],
+    ["admin with the tick", false, true, "in"],
+    ["player", true, false, "in"],
+    ["player", false, false, "not open"],
+    ["early access", true, false, "in"],
+    ["early access", false, false, "in"],
+    ["admin without the tick", true, false, "in"],
+    ["admin without the tick", false, false, "in"],
+    ["admin with the tick", true, false, "in"],
+    ["admin with the tick", false, false, "in"],
+  ] as const)("%s, We're live %s, Maintenance %s: %s", (who, live, maintenance, door) => {
+    expect(doorRule(WHO[who], { live, requirePlay: true, hasPlayed: true, maintenance })).toBe(door);
+  });
+  it("comes before the vote and Play first: the rest of the door is not looked at", () => {
+    expect(doorRule(player, { live: true, requirePlay: true, hasPlayed: false, unvoted: 2, maintenance: true })).toBe("maintenance");
+    expect(doorRule(ticked, { live: true, requirePlay: true, hasPlayed: false, unvoted: 2, maintenance: true })).toBe("in"); // admins: never held for Play or the vote
+  });
+  it("the tick is an admin's only: a player who somehow has it waits all the same", () => {
+    expect(joinsDuringMaintenance({ role: "PLAYER", maintenanceJoin: true })).toBe(false);
+    expect(doorRule({ role: "PLAYER", maintenanceJoin: true }, { live: true, requirePlay: false, hasPlayed: true, maintenance: true })).toBe("maintenance");
+  });
+  it("says what the planner wrote", () => {
+    expect(MAINTENANCE_TEXT).toBe("Down for maintenance. You'll be let in when it's done.");
+  });
+  it("is in the event log in the planner's words", async () => {
+    const { describeAction } = await import("@/shared/events");
+    const alex = { role: "ADMIN" as const, name: "Bramble09" };
+    expect(describeAction("join.blocked", { role: "system", name: null }, { name: "KaneFinch", reason: "maintenance" })).toBe("KaneFinch was held: the server is down for maintenance");
+    expect(describeAction("site.maintenance", alex, { on: true, kicked: ["KaneFinch", "owly"] })).toBe("Bramble09 started maintenance: only admins with the tick can join; kicked KaneFinch, owly");
+    expect(describeAction("site.maintenance", alex, { on: false })).toBe("Bramble09 ended maintenance: the door is as before");
+    expect(describeAction("user.maintenanceJoin", alex, { displayName: "m1_owl", on: true })).toBe("Bramble09 let m1_owl join during maintenance");
+    expect(describeAction("join.ready", { role: "system", name: null }, { name: "KaneFinch", was: "maintenance", back: true })).toBe("KaneFinch was let in: the maintenance is over, back to where they were");
   });
 });
 

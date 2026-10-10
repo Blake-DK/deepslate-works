@@ -152,6 +152,6 @@ export async function designKeepAction(name: string): Promise<DesignResult> {
   await writeDesign(next);
   const { check } = stored.build.note!;
   await audit({ userId: admin.id, action: "build.design.keep", params: { name: design.name, version: v.n, size: `${check.size.x}x${check.size.y}x${check.size.z}`, blocks: check.blocks }, result: "OK" });
-  revalidatePath("/admin/seasons");
+  revalidatePath("/admin/builds");
   return { ok: true, design: next, note: `Kept as the upload ${design.name}.nbt (version ${v.n}). Press Build and Sync on the Modpack page to put it on the server.` };
 }

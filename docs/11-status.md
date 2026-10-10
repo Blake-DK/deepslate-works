@@ -26,6 +26,86 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The site's Maintenance: docs/48 Part B (2026-10-10, on `dev`, in the `dev` → `main` PR, not deployed)
+
+- **Built:** `SiteSettings.maintenance` (with when and by whom) and `User.maintenanceJoin`, migration 0032 (off after
+  it, nobody ticked). The door (`shared/access.ts` `doorRule`, `players/limbo.ts`): after the link and the Discord server
+  rule, before "We're live", the vote and Play first; only an admin with the tick goes on. Held for it: "Down for
+  maintenance. You'll be let in when it's done." on screen, in chat, the reminder and the idle kick. api `POST
+  /maintenance`: on kicks everybody on the server without the tick (`maintenance.kick`, role system: not sendable
+  through `/actions`); off looks at whoever is held for it at once (release back to where they stood). Activity:
+  `site.maintenance`, `maintenance.kick`, `user.maintenanceJoin`, "<name> was held: the server is down for maintenance".
+  Members: "Down for maintenance" as `statusText`'s line (site, `/api/app/home`, `/api/version`) and the pill; a banner
+  on Home and Getting started in place of the address; Downloads and Play unchanged; no Discord post. Admins: the pill
+  reads "Maintenance" on every page.
+- **Where (Alex, 2026-10-10, overriding docs/48 B3):** the card is on Admin → Server → Power & restarts, not Overview.
+  Overview shows only a line while it is on, with a link there; Joining → Rules says on or off and where it is switched.
+- **Checks:** web 634, api 745 (`tests/maintenance.test.ts`: hold, release on off, kick on on, the words), modpack 217,
+  typecheck, lint. Test pair on `afa44a12` (18:37 UTC), migration 0032 applied to `deepslate_test`.
+- **Not done:** Alex's three checks of B5 and the in-game lines of A6 (online mark, kicks, Builder mode, place and
+  lock). The test server was switched off and only Alex is linked on the test database.
+- **Stop point (B4), for Alex or the planner:** app 3.6.1 shows the site's line on its Play tab, but its banner pill is
+  made from the state, so it reads "Server is up · N playing" with a green dot while Maintenance is on; Play goes
+  through and opens the launcher, and the member is held only after joining. Not worked round on the site (changing
+  the state would change what Play does); an app change is outside docs/48.
+- **The test site's backups:** none listed because the test instance's AMP user lacks `LocalFileBackup.Backup.ViewBackupsList`
+  and the backup permission (live lists 13). An AMP role setting, not code.
+- **`.git/config`:** two other sessions added `[branch "work/docs-tidy"]` and `[branch "work/amp-state-names"]`;
+  deploy.sh's S4 check stops on such sections. To remove before the deploy.
+
+## Admin, not Control Room: docs/48 Part A (2026-10-10, on `dev` `ee78660a`, not deployed)
+
+The rename and the new layout, with no change to the api, the database or what any action does. Part B (Maintenance)
+is not started.
+
+- **Built:** the copper tab says Admin; the admin strip is Overview · Server · Joining · People · Modpack · Builds ·
+  Seasons · News & polls · Discord · Site (`components/nav-link.tsx`). Overview (`admin/page.tsx`): the heading row,
+  what needs attention, tiles that are links (Server, Playing now, At the door, Backups, Members, and the test
+  server's card on live), the last 5 console lines, what admins did lately; 30 s refresh. The players list, the
+  inventory view and the copies of Power, Restart, Back up now and the held list left it, and with them the
+  `back="/admin"` path of their actions. Builds is `/admin/builds` (the designer and builds cards, their actions and
+  messages, out of Seasons). News & polls has News and Polls tabs; the polls' actions come back to `?tab=polls`.
+  People → Members: an online mark with the ping, online rows first, row menu Inventory and Kick back to the door (while
+  the server runs), the typed-name kick card under the table, coming back to People. Old addresses: `/admin/votes`
+  (next.config.ts), `/admin/seasons?design=` (server redirect), `/admin/seasons#design` and `#builds` (in the browser,
+  `seasons/to-builds.tsx`), `/admin?p=<uuid>` to the player's Inventory tab.
+- **Checks:** web 610 tests, api 735, typecheck and lint; CI and dev-images green on `ee78660a`. Alex ran
+  `sudo deploy/test-up.sh`; at 17:54 UTC `web-test` and `api-test` were on `ee78660a`.
+- **Proof (A6), on the test stack:** a throwaway admin "Proof VPS" was made in `deepslate_test` (Alex's go; `admin.mjs`,
+  then three one-time links from `api-test`, all in the test site's event log) and a copy of `web-test` from the same
+  image id, on `deepslate_test` and `api-test`, was run on the VPS's loopback, as the test site's address only takes a
+  live admin session. A headless browser, at 1280 and 390 px: the strips (one row, the admin strip scrolls sideways on
+  the phone, no page sideways scroll), Overview's rows in order and no button on it (the sign-in notice the proof's own
+  links raised aside), every tile to its page, the six old addresses, a news post and a poll each made and closed from
+  their tab and back to it, a build uploaded and removed and back to Builds with its message: 41 of 41. Pictures and
+  logs in `/home/ladm/proof/admin-rename-2026-10-10/` on the VPS. The copy was removed, and "Proof VPS" deleted from
+  `deepslate_test` with an event saying so.
+- **Not shown, the test server was switched off:** an online member sorting first with the mark, the row menu's kick
+  and the typed-name kick (its button is off while the server is not running), Builder mode on and off, placing and
+  locking a build. They need the test server up and somebody in the game. "A design opens from `?design=`" cannot be
+  shown on the test site: its designer is not set up (live's is); the redirect itself is proven.
+- **`grep -ri "control room" apps/`** prints nothing.
+
+## AMP state numbers corrected (2026-10-10, on `dev`, not deployed)
+
+docs/47 §5.7. AMP's `ApplicationState` is 30 Restarting, 40 Stopping, 45 PreparingForSleep, 50 Sleeping; the code had
+30 Sleeping, 40 Restarting, 45 Stopping, 50 PreparingForSleep (live confirmed 50 = asleep on 2026-10-08, see the OPAC
+section). Effects until now: every time the server went to sleep it passed through 45, which showed as "Stopping…"
+and offered admins "End the process"; a stop (40) showed as "Restarting…"; a restart (30) showed as "Asleep" and was
+open to Play.
+
+Fixed in `amp/client.ts` (names and `availability()`), both `shared/server-state.ts` (30 restarting, 40 stopping, 45 and
+50 asleep), `POST /server/kill` and the kill box (only at 40), docs/08, and the tests. Not changed: the state names
+already stored in status snapshots and event metadata. Rows written before the deploy carry the old names (a sleep
+stored as "PreparingForSleep", a restart as "Sleeping"); the uptime query counts both as available, so the uptime
+figure for restarts before the deploy is slightly high. The "End the process" button is safe to use once this is live.
+
+## All open work in one list (2026-10-10, on `dev`)
+
+`docs/49-leftover-work.md` gathers every open item from docs/10, 28, 34 to 48 and the VPS session's reports, each
+checked against git and the code, with a "next up" order and who it waits on. It also lists the docs that can be
+removed later (12, 15, 43, and 26 folded into 27) and why none was removed yet. The source docs stay the detail.
+
 ## The test site follows `dev`, live follows `main` (2026-10-10, on `dev`)
 
 Why: PR #27 (the sticky stripe) reached `main` and live, but the test site kept the 2026-10-09 hand-built `test`

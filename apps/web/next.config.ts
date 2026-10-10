@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
       to("/admin/installs", "/admin/people?tab=installs"),
       to("/admin/settings", "/admin/site"),
       to("/admin/branding", "/admin/site"),
+      // docs/48 A5: the quick polls are a tab of News & polls. A query (?new=1) is passed on by Next.
+      to("/admin/votes", "/admin/news?tab=polls"),
     ];
   },
   // Nothing on the site uses next/image, so the optimiser stays off and the middleware answers 404 for /_next/image:

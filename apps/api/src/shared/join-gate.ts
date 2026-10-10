@@ -54,10 +54,11 @@ export function playGate(run: PlayRun | null, serverPack: string | null, windowM
   return { ok: true, until };
 }
 
-/** Why somebody was held at the door: the server is not open for them yet, a vote they have not answered, or Play first. */
-export type BlockReason = GateReason | "not live" | "vote";
+/** Why somebody was held at the door: the site's Maintenance (docs/48), the server is not open for them yet, a vote they have not answered, or Play first. */
+export type BlockReason = GateReason | "maintenance" | "not live" | "vote";
 
 export const GATE_TEXT: Record<BlockReason, string> = {
+  maintenance: "the server is down for maintenance",
   "not live": "the server is not open yet",
   vote: "has not answered the new vote",
   "no report": "has not pressed Play on the site",

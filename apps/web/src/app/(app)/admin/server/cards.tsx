@@ -20,7 +20,7 @@ import { Check } from "@/components/ui/check";
 import { cn } from "@/lib/utils";
 import { GATE_TEXT, type BlockReason } from "@/shared/join-gate";
 
-// The cards of Admin → Server and Admin → News, and the ones the Control Room shares. Everything that was on the one
+// The cards of Admin → Server and Admin → News & polls, and the ones Joining and People share. Everything that was on the one
 // long Server page before docs/13 §11, word for word where it was a control; long explanations fold into
 // "How this works".
 
@@ -32,7 +32,7 @@ export type Backup = { allowed: boolean; canList?: boolean; stopsServer: boolean
 type Caller = { id: string; role: "ADMIN" };
 
 export const loadPlayers = (caller: Caller) => apiFetch<Players>("/players", { caller }).catch(() => null);
-export type HeldEntry = { name: string; uuid: string | null; kind: "link" | "play" | "closed" | "old" | "mods" | "vote"; reason: string | null; since: string; member: boolean; back: boolean };
+export type HeldEntry = { name: string; uuid: string | null; kind: "link" | "play" | "closed" | "old" | "mods" | "vote" | "maintenance"; reason: string | null; since: string; member: boolean; back: boolean };
 export const loadHeld = (caller: Caller) => apiFetch<{ state: number; held: HeldEntry[] }>("/held", { caller }).catch(() => null);
 export type HealthCheck = { ok: boolean | null; text: string };
 export type WatchView = { watch?: boolean; checks?: Record<string, HealthCheck> | null; checkedAt?: string | null };
@@ -47,6 +47,9 @@ export const consoleLines = (tail: Tail | null) => tail?.entries ?? (tail?.lines
 
 const MSG: Record<string, string> = {
   testDoor: "Saved. The test server's door goes by these rules from the next join.", // docs/42 T8
+  // docs/48 B3
+  maintenanceOn: "Maintenance is on. Only admins with the tick can join; everybody else waits at the door.",
+  maintenanceOff: "Maintenance is off. Whoever was held for it goes on through the door within seconds.",
   pregenOn: "Pre-generation is on.", pregenPaused: "Pre-generation stopped; where it got to is kept.", pregenOff: "The area is called off.", killed: "The server's process has been ended.", mapReloaded: "BlueMap read its settings again; a render in hand is asked for again.",
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
   groundClear: "Players have been warned in chat; items on the ground are cleared in 60 seconds.", groundPlan: "Saved.",
@@ -60,8 +63,8 @@ export function Flash({ msg, detail }: { msg?: string; detail?: string }) {
   return <Alert tone={msg === "error" || msg === "confirm" ? "error" : "success"}>{MSG[msg] ?? msg} {detail && <span className="font-mono">{detail}</span>}</Alert>;
 }
 
-/** A hidden field that sends the admin back to the Control Room after the action, when the card sits there. */
-const Back = ({ to }: { to?: "/admin" | "/admin/joining" }) => (to ? <input type="hidden" name="back" value={to} /> : null);
+/** A hidden field that sends the admin back to the page the card sits on, when that is not the action's own tab. */
+const Back = ({ to }: { to?: "/admin/joining" | "/admin/people" }) => (to ? <input type="hidden" name="back" value={to} /> : null);
 
 const CHECK_LABEL: Record<string, string> = { dump: "Database dump", dumpCopy: "Dump on the AMP host", backup: "World backup", pack: "Pack", wake: "Last wake" };
 
@@ -94,7 +97,7 @@ export function heldWhy(h: HeldEntry): string {
  * docs/32 §7 item 10 (the small part): who is in the entrance room and why, and Release for a linked member, so an
  * admin does not need the console to see why a friend cannot get in. Shown only while somebody is held.
  */
-export function HeldCard({ held, back }: { held: HeldEntry[] | null; back?: "/admin" | "/admin/joining" }) {
+export function HeldCard({ held, back }: { held: HeldEntry[] | null; back?: "/admin/joining" }) {
   if (!held || held.length === 0) return null;
   return (
     <Card data-testid="held">
@@ -126,12 +129,12 @@ export function HeldCard({ held, back }: { held: HeldEntry[] | null; back?: "/ad
   );
 }
 
-export function PowerCard({ status, players, back }: { status: LiveStatus; players: Players | null; back?: "/admin" }) {
+export function PowerCard({ status, players }: { status: LiveStatus; players: Players | null }) {
   const a = statusText(status, true);
   const running = status.server === "online";
   // an admin may start it from anything that is not up or on its way: switched off, crashed, asleep
   const startable = status.server === "off" || status.server === "crashed" || status.server === "asleep";
-  const stuck = status.stateCode === 45;
+  const stuck = status.stateCode === 40; // AMP Stopping; 45 is PreparingForSleep, never killed
   return (
     <Card data-testid="power">
       <CardHeader>
@@ -143,7 +146,6 @@ export function PowerCard({ status, players, back }: { status: LiveStatus; playe
       </CardHeader>
       <CardContent className="space-y-3">
         <form action={serverOpAction.bind(null, "")} className="flex flex-wrap items-center gap-2">
-          <Back to={back} />
           <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="sure" /> I&apos;m sure</label>
           <Button type="submit" formAction={serverOpAction.bind(null, "start")} size="sm" disabled={!startable}>Start</Button>
           <Button type="submit" formAction={serverOpAction.bind(null, "restart")} size="sm" variant="secondary" disabled={!running}>Restart now</Button>
@@ -151,7 +153,6 @@ export function PowerCard({ status, players, back }: { status: LiveStatus; playe
         </form>
         {stuck && (
           <form action={killAction} className="space-y-2 rounded-[4px] border border-l-[3px] border-l-danger bg-card p-3" data-testid="kill">
-            <Back to={back} />
             <p className="text-sm">The server is stopping. That takes a minute at most; if it has been like this for several minutes it is stuck, and the only way out is to end its process. <strong>Whatever it had not saved is lost.</strong></p>
             <ConfirmSubmit question="End the server's process? Whatever it had not saved is lost. Only do this when the server has been stuck in Stopping for several minutes.">End the process</ConfirmSubmit>
           </form>
@@ -161,7 +162,7 @@ export function PowerCard({ status, players, back }: { status: LiveStatus; playe
   );
 }
 
-export function RestartCard({ schedule, running, back }: { schedule: Schedule | null; running: boolean; back?: "/admin" }) {
+export function RestartCard({ schedule, running }: { schedule: Schedule | null; running: boolean }) {
   const planned = schedule?.restart ?? null;
   return (
     <Card data-testid="restart">
@@ -172,14 +173,12 @@ export function RestartCard({ schedule, running, back }: { schedule: Schedule | 
       <CardContent className="space-y-3">
         {planned ? (
           <form action={cancelRestartAction} className="flex flex-wrap items-center gap-3">
-            <Back to={back} />
             <p className="text-sm"><Badge tone="warn">Planned</Badge> Restarts at {new Date(planned.at).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })} UK time.</p>
             <Button type="submit" size="sm" variant="secondary">Call it off</Button>
           </form>
         ) : (
           <form action={scheduleRestartAction} className="flex flex-wrap items-end gap-2">
-            <Back to={back} />
-            <div><Label htmlFor={`minutes${back ? "-cr" : ""}`}>In how many minutes</Label><Input id={`minutes${back ? "-cr" : ""}`} name="minutes" type="number" min={1} max={120} defaultValue={5} className="h-8 w-24 text-sm" required /></div>
+            <div><Label htmlFor="minutes">In how many minutes</Label><Input id="minutes" name="minutes" type="number" min={1} max={120} defaultValue={5} className="h-8 w-24 text-sm" required /></div>
             <label className="flex items-center gap-2 pb-1.5 text-sm"><Check type="checkbox" name="sure" /> I&apos;m sure</label>
             <Button type="submit" size="sm" disabled={!running}>Plan restart</Button>
           </form>
@@ -262,7 +261,7 @@ export function BackupJobLine({ job }: { job: BackupJob }) {
   return <Alert tone="error" role="alert" data-testid="backup-job" data-phase="failed">Not kept: <span className="font-mono">{job.title}</span>. {job.reason}</Alert>;
 }
 
-export function BackupCard({ backup, back, list = true }: { backup: Backup | null; back?: "/admin"; list?: boolean }) {
+export function BackupCard({ backup }: { backup: Backup | null }) {
   return (
     <Card data-testid="backup">
       <CardHeader>
@@ -273,12 +272,11 @@ export function BackupCard({ backup, back, list = true }: { backup: Backup | nul
       </CardHeader>
       <CardContent className="space-y-3">
         <form action={backupAction} className="flex flex-wrap items-center gap-2">
-          <Back to={back} />
           <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="sure" disabled={!backup?.allowed} /> I&apos;m sure</label>
           <Button type="submit" size="sm" variant="secondary" disabled={!backup?.allowed}>Back up</Button>
         </form>
         {backup?.job && <BackupJobLine job={backup.job} />}
-        {list && (backup?.canList ? (
+        {backup?.canList ? (
           backup.backups?.length ? (
             <ul className="divide-y text-sm" aria-label="Backups AMP holds">
               {backup.backups.slice(0, 8).map((b, i) => (
@@ -289,8 +287,8 @@ export function BackupCard({ backup, back, list = true }: { backup: Backup | nul
               ))}
             </ul>
           ) : <p className="text-sm text-muted-foreground">AMP holds no backups yet.</p>
-        ) : backup ? <p className="text-xs text-muted-foreground">To list the backups here as well, the AMP user needs <span className="font-mono">{backup.listPermission ?? "LocalFileBackup.Backup.ViewBackupsList"}</span>.</p> : null)}
-        {list && <p className="text-xs text-muted-foreground">Restoring and deleting backups is done in AMP. The site cannot do either.</p>}
+        ) : backup ? <p className="text-xs text-muted-foreground">To list the backups here as well, the AMP user needs <span className="font-mono">{backup.listPermission ?? "LocalFileBackup.Backup.ViewBackupsList"}</span>.</p> : null}
+        <p className="text-xs text-muted-foreground">Restoring and deleting backups is done in AMP. The site cannot do either.</p>
       </CardContent>
     </Card>
   );
@@ -441,8 +439,11 @@ export function MapCard() {
 /**
  * Was "Kick + unwhitelist" on the Entrance room card. The whitelist is off (docs/14), so what this does today: the
  * player loses the "verified" tag and is kicked, and meets the door again at their next join. By name, because it is
- * also for somebody who is not a member.
+ * also for somebody who is not a member. On People → Members, under the table (docs/48 A4); a linked member's row menu
+ * has the same action (KickItem).
  */
+export const KICK_REASON = "An admin sent you back to the door. Join again.";
+
 export function KickCard({ running }: { running: boolean }) {
   return (
     <Card data-testid="kick">
@@ -452,9 +453,9 @@ export function KickCard({ running }: { running: boolean }) {
       </CardHeader>
       <CardContent>
         <form action={runActionAction} className="flex items-end gap-2">
-          <input type="hidden" name="back" value="/admin/joining" />
+          <Back to="/admin/people" />
           <input type="hidden" name="action" value="player.revoke" />
-          <input type="hidden" name="reason" value="An admin sent you back to the door. Join again." />
+          <input type="hidden" name="reason" value={KICK_REASON} />
           <div><Label htmlFor="rvname">Minecraft name</Label><Input id="rvname" name="name" placeholder="Minecraft name" pattern="[A-Za-z0-9_]{3,16}" className="h-8 w-40 text-sm" required /></div>
           <Button type="submit" size="sm" variant="danger" disabled={!running}>Kick</Button>
         </form>

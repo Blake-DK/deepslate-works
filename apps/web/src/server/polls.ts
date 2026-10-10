@@ -112,7 +112,7 @@ export async function answerPoll(who: Viewer & { displayName?: string }, pollId:
 
 export type NewPoll = { question: string; options: PollOption[]; multiple: boolean; mustVote: boolean; closesAt: Date | null };
 
-/** Admin → Votes → New poll: opened at once, with its news item, a chat line for whoever is playing, and the event. */
+/** Admin → News & polls → Polls → New poll: opened at once, with its news item, a chat line for whoever is playing, and the event. */
 export async function openPoll(admin: Viewer, p: NewPoll): Promise<string> {
   const now = new Date();
   const poll = await db.poll.create({ data: { question: p.question, options: p.options as unknown as Prisma.InputJsonValue, multiple: p.multiple, mustVote: p.mustVote, closesAt: p.closesAt, createdBy: admin.id, status: "OPEN", openedAt: now } });
@@ -150,7 +150,7 @@ export type PollEdit = { question: string; rows: EditRow[]; multiple: boolean; m
 export type Edit = { ok: true; changed: boolean } | { ok: false; reason: string };
 
 /**
- * Admin → Votes → Edit (Alex, 2026-10-06): an open poll's question, options, choice, closing date and must-vote. The
+ * Admin → News & polls → Polls → Edit (Alex, 2026-10-06): an open poll's question, options, choice, closing date and must-vote. The
  * votes already cast stay (editOptions keeps each option's id); the Discord post is redrawn from the event.
  */
 export async function editPoll(admin: Viewer, id: string, e: PollEdit): Promise<Edit> {

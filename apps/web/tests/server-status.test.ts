@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { statusText } from "@/lib/server-status";
+import { pillFor, statusText } from "@/lib/server-status";
 import { wakeLine } from "@/shared/server-state";
 
 // docs/13 §12: how the site words the server's state and a wake.
@@ -19,6 +19,22 @@ describe("statusText", () => {
   it("gives admins, and only admins, the reason AMP can't be reached", () => {
     expect(statusText({ ...base, server: "unreachable", reason: "login refused" }, true).reason).toBe("Reason: login refused.");
     expect(statusText({ ...base, server: "unreachable", reason: "login refused" }, false).reason).toBeNull();
+  });
+});
+
+describe("the site's Maintenance (docs/48 B3, B4)", () => {
+  const on = { ...base, server: "online" as const, online: [1, 2], maintenance: true };
+  it("members read \"Down for maintenance\" as the short line (the app takes it from the site); the state stays", () => {
+    expect(statusText(on, false)).toMatchObject({ state: "online", line: "Down for maintenance", tone: "warn", hint: "The server is being worked on. You'll be let in when it's done." });
+    expect(pillFor(on)).toEqual({ line: "Down for maintenance", dot: "waking" });
+  });
+  it("admins keep the server's own line, and their pill reads Maintenance on every page", () => {
+    expect(statusText(on, true)).toMatchObject({ state: "online", line: "Online, 2 playing", tone: "good" });
+    expect(pillFor(on, true)).toEqual({ line: "Maintenance", dot: "waking" });
+  });
+  it("off, nothing changes", () => {
+    expect(statusText({ ...on, maintenance: false }, false).line).toBe("Online, 2 playing");
+    expect(pillFor({ ...on, maintenance: false }, true)).toEqual({ line: "Server is up · 2 playing", dot: "up" });
   });
 });
 

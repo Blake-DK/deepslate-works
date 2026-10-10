@@ -8,7 +8,8 @@
 //                  and Play first applies to them. Nothing of an admin's.
 //   player         while not live: no address, no downloads, no Play. Once live: as above.
 
-export type Member = { role: "ADMIN" | "PLAYER"; earlyAccess?: boolean | null };
+/** `maintenanceJoin`: docs/48 B1, "Can join during maintenance", a tick only an admin can have. */
+export type Member = { role: "ADMIN" | "PLAYER"; earlyAccess?: boolean | null; maintenanceJoin?: boolean | null };
 
 /** Is the portal open for them: the address, the installer, the Play button? */
 export function isOpenFor(user: Member | null | undefined, live: boolean): boolean {
@@ -54,15 +55,25 @@ export function isAdmin(user: Member | null | undefined): boolean {
   return user?.role === "ADMIN";
 }
 
-export type Door = "in" | "not open" | "vote first" | "play first";
+export type Door = "in" | "maintenance" | "not open" | "vote first" | "play first";
 
 /**
- * At the door, for a linked member of the Discord server. First of all: is the server open for them, live or early
- * access (admins always)? If not they wait, whatever else. Then the must-vote polls (planner 2026-10-02): `unvoted` is
- * how many open must-vote polls they have not answered; admins are asked like everyone else but never held. Then Play
- * first. `hasPlayed`: their last run of Play went through, inside the window, with the server's pack (shared/join-gate).
+ * docs/48 B1: the site's Maintenance (not AMP's state of the same name). While it is on, only an admin with the tick
+ * "Can join during maintenance" comes in; an admin without it waits like a player.
  */
-export function doorRule(user: Member, d: { live: boolean; requirePlay: boolean; hasPlayed: boolean; unvoted?: number }): Door {
+export function joinsDuringMaintenance(user: Member): boolean {
+  return user.role === "ADMIN" && user.maintenanceJoin === true;
+}
+
+/**
+ * At the door, for a linked member of the Discord server. First, the site's Maintenance (docs/48 B2): while it is on,
+ * only an admin with the tick goes on. Then: is the server open for them, live or early access (admins always)? If
+ * not they wait, whatever else. Then the must-vote polls (planner 2026-10-02): `unvoted` is how many open must-vote
+ * polls they have not answered; admins are asked like everyone else but never held. Then Play first. `hasPlayed`:
+ * their last run of Play went through, inside the window, with the server's pack (shared/join-gate).
+ */
+export function doorRule(user: Member, d: { live: boolean; requirePlay: boolean; hasPlayed: boolean; unvoted?: number; maintenance?: boolean }): Door {
+  if (d.maintenance && !joinsDuringMaintenance(user)) return "maintenance";
   if (!isOpenFor(user, d.live)) return "not open";
   if (user.role !== "ADMIN" && (d.unvoted ?? 0) > 0) return "vote first";
   return !playFirstApplies(user, d.requirePlay) || d.hasPlayed ? "in" : "play first";
@@ -70,3 +81,6 @@ export function doorRule(user: Member, d: { live: boolean; requirePlay: boolean;
 
 /** What somebody reads in the room while the server is not open for them. */
 export const NOT_OPEN_TEXT = "Not open yet. You'll be let in when the server goes live.";
+
+/** docs/48 B2: the same words on screen, in chat, in the reminder, the idle kick and the kick when it is switched on. */
+export const MAINTENANCE_TEXT = "Down for maintenance. You'll be let in when it's done.";

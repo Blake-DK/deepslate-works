@@ -30,7 +30,7 @@ export type Actor = { role: "ADMIN" | "PLAYER" | "system" | null; name: string |
 export function kindOf(action: string, role: Actor["role"]): EventKind {
   // a line relayed from Discord is chat: under the Chat chip, kept as long as chat is kept, not shown to players
   if (action === "chat.fromDiscord") return "CHAT";
-  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.adminRelease" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "limbo.kickIdleClosed" || action === "limbo.kickIdleOld" || action === "limbo.kickIdleMods" || action === "limbo.kickIdleVote" || action === "join.ready") return "LINK";
+  if (action === "link.bind" || action === "link.release" || action === "limbo.held" || action === "limbo.adminRelease" || action === "limbo.kickIdle" || action === "limbo.kickIdlePlay" || action === "limbo.kickIdleClosed" || action === "limbo.kickIdleOld" || action === "limbo.kickIdleMods" || action === "limbo.kickIdleVote" || action === "limbo.kickIdleMaintenance" || action === "join.ready") return "LINK";
   if (action === "player.revoke" || action === "user.remove" || action === "user.clearMinecraft") return "REVOKE";
   if (action.startsWith("modpack.sync")) return "SYNC";
   if (action === "server.backup") return "BACKUP";
@@ -126,10 +126,11 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "link.bind": (p) => (p.refused ? "was stopped from trying more join codes: too many wrong ones" : `linked their Minecraft account ${s(p.mcUsername)}${p.via === "join" ? " with the code on /join" : ""}`),
   "link.release": (p) => `let ${s(p.name)} in`,
   "limbo.held": (p) => `${s(p.name)} is waiting in the entrance room`,
-  "join.blocked": (p) => p.refused ? `${s(p.name)} was refused by the server: their game is missing ${s(p.mod, "a mod the server needs")} (${s(p.channel, "?")}); the site and the app tell them to press Play` : `${s(p.name)} was held in the entrance room: ${p.reason === "missing mods" ? "their game was missing some of the pack's mods; they were told to press Play" : p.reason === "vote" ? "they have not answered the new vote yet" : p.reason === "not live" ? "the server is not open yet" : p.reason === "no report" ? "has not pressed Play on the site" : p.reason === "stale" ? "pressed Play too long ago" : p.reason === "wrong version" ? "pressed Play before the pack changed" : p.reason === "old installer" ? "their installer is older than the minimum; they were told to press Play to update it" : s(p.reason, "Play first")}`,
-  "join.ready": (p) => `${s(p.name)} ${p.was === "not live" ? "was let in: the server is open for them now" : p.was === "old installer" ? "installed the new Deepslate Works and was let in" : p.was === "vote" ? "voted and was let in" : "pressed Play and was let in"}${p.back ? ", back to where they were" : ""}`,
+  "join.blocked": (p) => p.reason === "maintenance" ? `${s(p.name)} was held: the server is down for maintenance` : p.refused ? `${s(p.name)} was refused by the server: their game is missing ${s(p.mod, "a mod the server needs")} (${s(p.channel, "?")}); the site and the app tell them to press Play` : `${s(p.name)} was held in the entrance room: ${p.reason === "missing mods" ? "their game was missing some of the pack's mods; they were told to press Play" : p.reason === "vote" ? "they have not answered the new vote yet" : p.reason === "not live" ? "the server is not open yet" : p.reason === "no report" ? "has not pressed Play on the site" : p.reason === "stale" ? "pressed Play too long ago" : p.reason === "wrong version" ? "pressed Play before the pack changed" : p.reason === "old installer" ? "their installer is older than the minimum; they were told to press Play to update it" : s(p.reason, "Play first")}`,
+  "join.ready": (p) => `${s(p.name)} ${p.was === "maintenance" ? "was let in: the maintenance is over" : p.was === "not live" ? "was let in: the server is open for them now" : p.was === "old installer" ? "installed the new Deepslate Works and was let in" : p.was === "vote" ? "voted and was let in" : "pressed Play and was let in"}${p.back ? ", back to where they were" : ""}`,
   "limbo.kickIdleClosed": (p) => `${s(p.name)} waited too long in the entrance room while the server is not open and was disconnected`,
   "limbo.kickIdleOld": (p) => `${s(p.name)} waited too long in the entrance room with an old installer and was disconnected`,
+  "limbo.kickIdleMaintenance": (p) => `${s(p.name)} waited too long in the entrance room during maintenance and was disconnected`,
   "limbo.kickIdleVote": (p) => `${s(p.name)} waited too long in the entrance room without voting and was disconnected`,
   "limbo.kickIdleMods": (p) => `${s(p.name)} waited too long in the entrance room with mods missing from their game and was disconnected`,
   "limbo.kickIdlePlay": (p) => `${s(p.name)} waited too long in the entrance room without pressing Play and was disconnected`,
@@ -157,6 +158,10 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "build.design.keep": (p) => `kept version ${s(p.version)} of the design "${s(p.name)}" as an upload`,
   // docs/37 Step 2: Builder tools (a tick per admin) and Builder mode (creative, where WorldEdit works)
   "user.builderTools": (p) => (p.on ? `gave ${s(p.displayName, "an admin")} Builder tools` : `took Builder tools away from ${s(p.displayName, "an admin")}`),
+  // docs/48: the site's Maintenance (not AMP's state of that name), and the tick of the admins who may join during it
+  "site.maintenance": (p) => (p.on ? `started maintenance: only admins with the tick can join${Array.isArray(p.kicked) && p.kicked.length ? `; kicked ${p.kicked.join(", ")}` : ""}` : "ended maintenance: the door is as before"),
+  "maintenance.kick": (p) => `kicked ${s(p.name)}: the server is down for maintenance`,
+  "user.maintenanceJoin": (p) => (p.on ? `let ${s(p.displayName, "an admin")} join during maintenance` : `took "can join during maintenance" away from ${s(p.displayName, "an admin")}`),
   "builder.on": (p) => `switched Builder mode on for ${s(p.player)} (creative, WorldEdit)`,
   "builder.off": (p) => `switched Builder mode off for ${s(p.player)} (survival)`,
   "season.grant": (p) => (p.already ? `gave ${s(p.member)} the tick for ${s(p.title)} again (they had it)` : `gave ${s(p.member)} the tick for ${s(p.title)}${p.inGame ? "" : " on the site only: they are not on the server"}`),
@@ -250,7 +255,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
 };
 
 // Phrases that already say who (or have no who).
-const SELF_CONTAINED = new Set(["chat.fromDiscord", "auth.adminPasswordFailed", "auth.adminLinkFailed", "auth.adminBreakGlass", "download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "limbo.kickIdleMods", "limbo.kickIdleVote", "modpack.serverMods", "world.pregenAutoPause"]);
+const SELF_CONTAINED = new Set(["chat.fromDiscord", "auth.adminPasswordFailed", "auth.adminLinkFailed", "auth.adminBreakGlass", "download.file.key", "download.modlist.key", "limbo.held", "limbo.kickIdle", "retention.prune", "join.blocked", "join.ready", "limbo.kickIdlePlay", "limbo.kickIdleClosed", "limbo.kickIdleOld", "limbo.kickIdleMods", "limbo.kickIdleVote", "limbo.kickIdleMaintenance", "modpack.serverMods", "world.pregenAutoPause"]);
 const POSSESSIVE = new Set(["profile.tier.measured"]); // "Alex: their PC was measured …"
 // Phrases that already say how it went.
 const OUTCOME_IN_PHRASE = new Set(["auth.adminPasswordFailed", "discord.test", "auth.adminLinkFailed", "server.wake", "installer.report", "download.file", "download.file.key", "download.modlist", "download.modlist.key"]);

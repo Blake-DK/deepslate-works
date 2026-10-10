@@ -73,11 +73,11 @@ Last updated 2026-10-04: the server went live, the first review was done and its
 - **Deepslate Works 3.5.1** is the app the site hands out: the launcher's look, a Settings tab (memory, graphics, the villager skins), logs sent to Alex on request.
 - **A review of everything** (docs/31, 65 findings) and its fixes, all running since the same day:
   - the site hands out the pack the server runs, and says so in its health;
-  - the entrance room remembers who it holds and where they stood, across leaves and restarts; Control Room shows who is in it and why, with Release;
+  - the entrance room remembers who it holds and where they stood, across leaves and restarts; Admin shows who is in it and why, with Release;
   - a link from the room asks "Link <name> to <you>?" before it links; leaving the Discord server ends access for good; "Remove and block";
   - deploys run the commit's own images, check the api and take a dump before a migration; logs are capped; the tunnel's images are pinned;
   - the database dump leaves the VPS every night, and one has been restored as a test.
-- **A health watch**: every ten minutes the portal looks at the database dump, its copy on the AMP host, the newest world backup, the pack on the site against the server's, and the last wake. What goes wrong is posted to the admin channel in Discord and shown in Control Room.
+- **A health watch**: every ten minutes the portal looks at the database dump, its copy on the AMP host, the newest world backup, the pack on the site against the server's, and the last wake. What goes wrong is posted to the admin channel in Discord and shown in Admin → Overview.
 - **Activity** shows everything first with chips to narrow it, and says what was written from Discord into the game.
 
 ## In progress

@@ -12,7 +12,7 @@ import { serverPack } from "./pack.js";
 import { requiredApp } from "./app-version.js";
 import { modsMissingFor } from "./mods.js";
 import { unvotedFor } from "./polls.js";
-import { doorRule, type Member } from "../shared/access.js";
+import { doorRule, joinsDuringMaintenance, type Member } from "../shared/access.js";
 import { CODE_TTL_MS, makeCode } from "../shared/join-code.js";
 import { prismaHeldStore, type HeldRow, type HeldStore } from "./held-store.js";
 import { DOOR_KEY, readTestDoor, testDoorInputs } from "../test-mode/door.js";
@@ -37,14 +37,15 @@ export type Back = { dimension: string; x: number; y: number; z: number };
 /** `reason`: the door's word for it, as it is kept in HeldPlayer (docs/31 B-02). */
 export type Held = { uuid: string; code: string; since: number; lastReminder: number; kind: "link" | HeldFor; userId?: string; back?: Back | null; reason?: string };
 /** "vote": an open must-vote poll they have not answered (planner 2026-10-02). */
-type HeldFor = "play" | "closed" | "old" | "mods" | "vote";
+/** "maintenance": the site's Maintenance is on and they do not have the tick (docs/48 B2). */
+type HeldFor = "play" | "closed" | "old" | "mods" | "vote" | "maintenance";
 /** Which wait a reason at the door is. */
-export const waitFor = (reason: BlockReason): HeldFor => (reason === "not live" ? "closed" : reason === "vote" ? "vote" : reason === "old installer" ? "old" : reason === "missing mods" ? "mods" : "play");
-const HOLD = { play: "limbo.holdPlay", closed: "limbo.holdClosed", old: "limbo.holdOld", mods: "limbo.holdMods", vote: "limbo.holdVote" } as const;
-const REMIND = { play: "limbo.remindPlay", closed: "limbo.remindClosed", old: "limbo.remindOld", mods: "limbo.remindMods", vote: "limbo.remindVote" } as const;
-const KICK = { link: "limbo.kickIdle", play: "limbo.kickIdlePlay", closed: "limbo.kickIdleClosed", old: "limbo.kickIdleOld", mods: "limbo.kickIdleMods", vote: "limbo.kickIdleVote" } as const;
+export const waitFor = (reason: BlockReason): HeldFor => (reason === "maintenance" ? "maintenance" : reason === "not live" ? "closed" : reason === "vote" ? "vote" : reason === "old installer" ? "old" : reason === "missing mods" ? "mods" : "play");
+const HOLD = { play: "limbo.holdPlay", closed: "limbo.holdClosed", old: "limbo.holdOld", mods: "limbo.holdMods", vote: "limbo.holdVote", maintenance: "limbo.holdMaintenance" } as const;
+const REMIND = { play: "limbo.remindPlay", closed: "limbo.remindClosed", old: "limbo.remindOld", mods: "limbo.remindMods", vote: "limbo.remindVote", maintenance: "limbo.remindMaintenance" } as const;
+const KICK = { link: "limbo.kickIdle", play: "limbo.kickIdlePlay", closed: "limbo.kickIdleClosed", old: "limbo.kickIdleOld", mods: "limbo.kickIdleMods", vote: "limbo.kickIdleVote", maintenance: "limbo.kickIdleMaintenance" } as const;
 /** What a wait was, in the event log's words ("join.ready" `was`). */
-const WAS: Record<HeldFor, string> = { closed: "not live", old: "old installer", mods: "missing mods", vote: "vote", play: "play" };
+const WAS: Record<HeldFor, string> = { maintenance: "maintenance", closed: "not live", old: "old installer", mods: "missing mods", vote: "vote", play: "play" };
 /** The reasons someone who has to link is held for (`decideJoin`); every other reason in HeldPlayer is the door's. */
 const LINK_REASONS = new Set(["unknown uuid", "not linked", "left the discord server"]);
 type Known = Member & { id: string };
@@ -66,13 +67,15 @@ export function decideJoin(user: { verifiedAt: Date | null; guildMember: boolean
 }
 
 /**
- * Pure: the door for a linked member, in its order. Open for them (admin, live, early access)? Then the must-vote
+ * Pure: the door for a linked member, in its order. The site's Maintenance (docs/48 B2): on, only an admin with the
+ * tick goes on. Open for them (admin, live, early access)? Then the must-vote
  * polls: `unvoted` is how many open ones they have not answered (planner 2026-10-02; admins are never held for it).
  * Then Play first: `run` is their latest run of Play or of the installer that went through. Null: in. Joining and
  * having just linked in the room both come through here (2026-09-29: a member who linked was let in without Play first).
  */
-export function doorReason(user: Member, d: { live: boolean; requirePlay: boolean; windowMin: number; run: PlayRun | null; pack: string | null; now: Date; minInstaller?: string; modsMissing?: boolean; unvoted?: number }): BlockReason | null {
-  const door = doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: true, unvoted: d.unvoted });
+export function doorReason(user: Member, d: { live: boolean; requirePlay: boolean; windowMin: number; run: PlayRun | null; pack: string | null; now: Date; minInstaller?: string; modsMissing?: boolean; unvoted?: number; maintenance?: boolean }): BlockReason | null {
+  const door = doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: true, unvoted: d.unvoted, maintenance: d.maintenance });
+  if (door === "maintenance") return "maintenance";
   if (door === "not open") return "not live";
   if (door === "vote first") return "vote";
   if (doorRule(user, { live: d.live, requirePlay: d.requirePlay, hasPlayed: false }) === "in") return null; // Play is not asked of them
@@ -182,7 +185,7 @@ export class Limbo {
     for (const name of names) {
       if (this.held.has(name)) continue;
       let uuid = this.tail.uuidByName.get(name) ?? null;
-      const select = { id: true, verifiedAt: true, guildMember: true, outsideAuth: true, mcUuid: true, mcUsername: true, role: true, earlyAccess: true } as const;
+      const select = { id: true, verifiedAt: true, guildMember: true, outsideAuth: true, mcUuid: true, mcUsername: true, role: true, earlyAccess: true, maintenanceJoin: true } as const;
       const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select }) : await db.user.findFirst({ where: { mcUsername: name }, select });
       if (!uuid && user?.mcUuid) uuid = user.mcUuid;
       const row = uuid ? await this.store.get(uuid) : await this.store.byName(name);
@@ -247,7 +250,7 @@ export class Limbo {
       await new Promise((r) => setTimeout(r, 400));
       uuid = this.tail.uuidByName.get(name);
     }
-    const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, verifiedAt: true, guildMember: true, outsideAuth: true, mcUsername: true, role: true, earlyAccess: true } }) : null;
+    const user = uuid ? await db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, verifiedAt: true, guildMember: true, outsideAuth: true, mcUsername: true, role: true, earlyAccess: true, maintenanceJoin: true } }) : null;
     const decision = decideJoin(user);
     this.log({ name, uuid, decision }, "join");
     if (decision.action === "release" && user && uuid) {
@@ -305,14 +308,18 @@ export class Limbo {
     }
   }
 
-  private liveSeen: { at: number; live: boolean } | null = null;
+  private siteSeen: { at: number; live: boolean; maintenance: boolean } | null = null;
 
-  /** "We're live" on the portal; asked again when the answer is ten seconds old. Not live when nothing says. */
-  private async live(): Promise<boolean> {
-    if (this.liveSeen && Date.now() - this.liveSeen.at < 10_000) return this.liveSeen.live;
-    const live = (await db.siteSettings.findUnique({ where: { id: "site" }, select: { live: true } }).catch(() => null))?.live ?? false;
-    this.liveSeen = { at: Date.now(), live };
-    return live;
+  /**
+   * "We're live" and the site's Maintenance (docs/48), as the portal has them; asked again when the answer is ten
+   * seconds old, and at once after the Maintenance switch (`maintenanceSwitched`). Not live and no Maintenance when
+   * nothing says.
+   */
+  private async site(): Promise<{ live: boolean; maintenance: boolean }> {
+    if (this.siteSeen && Date.now() - this.siteSeen.at < 10_000) return this.siteSeen;
+    const row = await db.siteSettings.findUnique({ where: { id: "site" }, select: { live: true, maintenance: true } }).catch(() => null);
+    this.siteSeen = { at: Date.now(), live: row?.live ?? false, maintenance: row?.maintenance ?? false };
+    return this.siteSeen;
   }
 
   private readonly lastRefused = new Map<string, number>();
@@ -332,8 +339,8 @@ export class Limbo {
 
   /** Why this member may not come in yet, or null when they may (`doorReason`). */
   protected async atTheDoor(user: Known): Promise<BlockReason | null> {
-    const [live, joining, run, pack, required] = await Promise.all([
-      this.live(),
+    const [{ live, maintenance }, joining, run, pack, required] = await Promise.all([
+      this.site(),
       getSection("joining"),
       db.installReport.findFirst({ where: { userId: user.id, mode: { in: [...PLAY_MODES] }, outcome: "ok" }, orderBy: { at: "desc" }, select: { at: true, packVersion: true, installerVersion: true } }),
       serverPack(),
@@ -344,7 +351,7 @@ export class Limbo {
     const rules = this.env.TEST_MODE === "1"
       ? testDoorInputs(readTestDoor((await db.setting.findUnique({ where: { key: DOOR_KEY } }).catch(() => null))?.value), { requirePlay: joining.requirePlay, minInstaller: required, unvoted })
       : { requirePlay: joining.requirePlay, minInstaller: required, unvoted };
-    return doorReason(user, { live, windowMin: joining.windowMin, run, pack, now: new Date(), modsMissing, ...rules });
+    return doorReason(user, { live, maintenance, windowMin: joining.windowMin, run, pack, now: new Date(), modsMissing, ...rules });
   }
 
   /** Asks the server where they are and waits for the answer; null when none comes. */
@@ -467,7 +474,7 @@ export class Limbo {
         if (h.kind !== "link") {
           // The site may have gone live, the flag may have been given, they may have voted or pressed Play: looked at
           // every round, so that the door opens within seconds.
-          const user = h.userId ? await db.user.findUnique({ where: { id: h.userId }, select: { id: true, role: true, earlyAccess: true } }) : null;
+          const user = h.userId ? await db.user.findUnique({ where: { id: h.userId }, select: { id: true, role: true, earlyAccess: true, maintenanceJoin: true } }) : null;
           const blocked = user ? await this.atTheDoor(user) : null;
           if (user && blocked === null) {
             await this.releaseBack(name, h);
@@ -518,7 +525,31 @@ export class Limbo {
     return { released: r.ok, name };
   }
 
-  /** Who is in the room and why, for Admin → Control Room (docs/32 §7 item 10). */
+  /**
+   * docs/48 B2: an admin switched the site's Maintenance (Admin → Server). The door reads the switch again now. On:
+   * everybody on the server without the tick is kicked at once with the words, the room's people included; nobody is
+   * moved into the room (the game keeps where they stood). Off: whoever is held for it is looked at again now, and goes
+   * on through the rest of the door, back to where they stood.
+   */
+  async maintenanceSwitched(on: boolean, adminId: string | null): Promise<{ kicked: string[]; failed: string[] }> {
+    this.siteSeen = null;
+    const kicked: string[] = [], failed: string[] = [];
+    if (!on) {
+      await this.tick();
+      return { kicked, failed };
+    }
+    if (this.tail.state !== 20) return { kicked, failed };
+    for (const name of [...this.tail.online]) {
+      const uuid = this.tail.uuidByName.get(name);
+      const user = await db.user.findFirst({ where: uuid ? { mcUuid: uuid } : { mcUsername: name }, select: { role: true, maintenanceJoin: true } }).catch(() => null);
+      if (user && joinsDuringMaintenance(user)) continue;
+      const r = await runAction(this.amp, this.ctx, "maintenance.kick", { name }, adminId);
+      (r.ok ? kicked : failed).push(name);
+    }
+    return { kicked, failed };
+  }
+
+  /** Who is in the room and why, for Admin → Joining → Who's waiting (docs/32 §7 item 10). */
   heldList(): Array<{ name: string; uuid: string | null; kind: Held["kind"]; reason: string | null; since: string; member: boolean; back: boolean }> {
     return [...this.held.entries()].map(([name, h]) => ({ name, uuid: h.uuid || null, kind: h.kind, reason: h.reason ?? null, since: new Date(h.since).toISOString(), member: Boolean(h.userId), back: Boolean(h.back) }));
   }
@@ -543,7 +574,7 @@ export class Limbo {
   }
 
   protected memberByUuid(uuid: string): Promise<(Known & Linked) | null> {
-    return db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, role: true, earlyAccess: true, verifiedAt: true, guildMember: true, outsideAuth: true } });
+    return db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, role: true, earlyAccess: true, maintenanceJoin: true, verifiedAt: true, guildMember: true, outsideAuth: true } });
   }
 
   protected letIn(name: string) {

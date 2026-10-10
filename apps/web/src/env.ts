@@ -22,7 +22,7 @@ export const env = {
   DESIGNER_DAILY: Math.max(1, Number.parseInt(str("DESIGNER_DAILY", "80"), 10) || 80),
   // docs/42: TEST_MODE=1 only in deepslate-web-test, the test server's site; LIVE_SITE_URL and LIVE_MODPACK_DIR are its
   // way back to the live site. TEST_STACK, TEST_SITE_URL, TEST_API_URL and TEST_SUMMARY_TOKEN are the live site's way to
-  // the test server (the Control Room card, the Live | Test switch); nothing of them shows unless TEST_STACK=1.
+  // the test server (the Admin → Overview card, the Live | Test switch); nothing of them shows unless TEST_STACK=1.
   TEST_MODE: str("TEST_MODE") === "1",
   LIVE_SITE_URL: str("LIVE_SITE_URL").replace(/\/+$/, ""),
   LIVE_MODPACK_DIR: str("LIVE_MODPACK_DIR"),

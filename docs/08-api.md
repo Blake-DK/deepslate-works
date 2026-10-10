@@ -39,7 +39,7 @@ Every call carries `Authorization: Bearer <API_SERVICE_TOKEN>` and who is asking
 | GET | `/actions` | the names of the actions an admin may run |
 | POST | `/actions/<name>` | run one (below). 404 for a name that is not an admin's, 409 `server_offline` while the server is not running, 400 `validation` for input that does not pass |
 | POST | `/server/start`, `/server/stop`, `/server/restart` | AMP's own. Before a stop or a restart a running pre-generation is paused and the save waited for |
-| POST | `/server/kill` | ends the process. 409 `not_stopping` unless the server is in state 45 (Stopping) |
+| POST | `/server/kill` | ends the process. 409 `not_stopping` unless the server is in state 40 (Stopping) |
 | GET, POST, DELETE | `/server/schedule`, `/server/restart-in {minutes 1..120}` | the planned restart, with warnings in the game every minute for the last five; one at a time, in memory |
 | GET, POST | `/server/backup` | whether `webapp` may take and list backups, the list, and taking one |
 | GET | `/console/tail?lines=`, `/console/stream?since=` | the last lines (`entries[{seq, at, text}]`, `state`); the console as it happens, as newline-delimited JSON with a heartbeat every 15 s |

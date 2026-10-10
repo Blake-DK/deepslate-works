@@ -15,7 +15,7 @@ const up = { reachable: true, waking: false, crashed: false };
 
 describe("serverState: the table", () => {
   it("maps AMP's states", () => {
-    const cases: Array<[number | null, ServerState]> = [[20, "online"], [30, "asleep"], [50, "asleep"], [5, "starting"], [7, "starting"], [10, "starting"], [60, "starting"], [40, "restarting"], [45, "stopping"], [0, "off"], [100, "crashed"], [200, "off"], [250, "off"], [null, "unreachable"], [-1, "unreachable"], [999, "unreachable"]];
+    const cases: Array<[number | null, ServerState]> = [[20, "online"], [45, "asleep"], [50, "asleep"], [5, "starting"], [7, "starting"], [10, "starting"], [60, "starting"], [30, "restarting"], [40, "stopping"], [0, "off"], [100, "crashed"], [200, "off"], [250, "off"], [null, "unreachable"], [-1, "unreachable"], [999, "unreachable"]];
     for (const [code, want] of cases) expect([code, serverState({ ...up, stateCode: code })]).toEqual([code, want]);
   });
   it("says Crashed for a stop without a stop line, Switched off for a clean one", () => {
@@ -26,7 +26,7 @@ describe("serverState: the table", () => {
     for (const code of [0, 20, 30, 100]) expect(serverState({ ...up, stateCode: code, reachable: false })).toBe("unreachable");
   });
   it("is Waking while a wake runs, until it is Running", () => {
-    for (const code of [30, 50, 5, 10]) expect(serverState({ ...up, stateCode: code, waking: true })).toBe("waking");
+    for (const code of [45, 50, 5, 10]) expect(serverState({ ...up, stateCode: code, waking: true })).toBe("waking");
     expect(serverState({ ...up, stateCode: 20, waking: true })).toBe("online");
   });
   it("counts Asleep and Waking as available and joinable", () => {
@@ -90,7 +90,7 @@ function setup(o: { state?: number | null; crashed?: boolean; member?: { role: "
     }
   })();
   const wake = new Wake(amp, async (a) => { audits.push(a as never); }, now);
-  let current: LiveStatus | null = o.state === null ? null : live(o.state ?? 30);
+  let current: LiveStatus | null = o.state === null ? null : live(o.state ?? 50);
   const poller = { fresh: () => current, lastError: o.state === null ? "AMP login failed: unknown" : null };
   const view = new ServerView({ poller: poller as never, wake, lastDown: () => (o.crashed ? "crash" : null), sleep: () => ({ on: true, delayMin: 5 }), tunnelUp: () => true, now });
   const deps: WakeDeps = { member: async () => (o.member === null ? null : { role: "PLAYER", earlyAccess: false, displayName: "Bramble09", ...(o.member ?? {}) }), live: async () => { if (o.liveAfterMs) await new Promise((r) => setTimeout(r, o.liveAfterMs)); return o.live ?? true; } };
@@ -103,14 +103,14 @@ function setup(o: { state?: number | null; crashed?: boolean; member?: { role: "
 
 describe("POST /server/wake", () => {
   it("wakes a sleeping server once, audited as <name> woke the server (Play)", async () => {
-    const t = setup({ state: 30 });
+    const t = setup({ state: 50 });
     const r = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: {} });
     expect([r.statusCode, r.json().result, r.json().wake.phase, r.json().wake.leftS]).toEqual([202, "started", "waking", 30]);
     expect(t.calls).toEqual(["Start"]);
     expect(t.audits).toEqual([{ userId: "u1", action: "server.wake", params: { name: "Bramble09", via: "play" }, result: "OK" }]);
   });
   it("says (app) when Deepslate Works asked: on opening, or on its Play (planner 2026-10-02)", async () => {
-    const t = setup({ state: 30 });
+    const t = setup({ state: 50 });
     const r = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: { via: "app" } });
     expect([r.statusCode, r.json().result]).toEqual([202, "started"]);
     expect(t.audits).toEqual([{ userId: "u1", action: "server.wake", params: { name: "Bramble09", via: "app" }, result: "OK" }]);
@@ -127,7 +127,7 @@ describe("POST /server/wake", () => {
     }
   });
   it("sends no second start while a wake runs (the debounce)", async () => {
-    const t = setup({ state: 30 });
+    const t = setup({ state: 50 });
     await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: {} });
     t.set(10);
     const again = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: {} });
@@ -135,14 +135,14 @@ describe("POST /server/wake", () => {
     expect(t.calls).toEqual(["Start"]);
   });
   it("sends one start for two requests a moment apart (R-32)", async () => {
-    const t = setup({ state: 30, liveAfterMs: 5 }); // both are still asking the database when the second arrives
+    const t = setup({ state: 50, liveAfterMs: 5 }); // both are still asking the database when the second arrives
     const press = () => t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: {} });
     const [a, b] = await Promise.all([press(), press()]);
     expect([a.json().result, b.json().result].sort()).toEqual(["already", "started"]);
     expect(t.calls).toEqual(["Start"]);
   });
   it("never starts a server that is switched off, crashed, busy or out of reach", async () => {
-    for (const [o, code, err] of [[{ state: 0 }, 409, "off"], [{ state: 0, crashed: true }, 409, "crashed"], [{ state: 100 }, 409, "crashed"], [{ state: null }, 503, "unreachable"], [{ state: 10 }, 409, "busy"], [{ state: 45 }, 409, "busy"]] as const) {
+    for (const [o, code, err] of [[{ state: 0 }, 409, "off"], [{ state: 0, crashed: true }, 409, "crashed"], [{ state: 100 }, 409, "crashed"], [{ state: null }, 503, "unreachable"], [{ state: 10 }, 409, "busy"], [{ state: 40 }, 409, "busy"]] as const) {
       const t = setup(o);
       const r = await t.f.inject({ method: "POST", url: "/server/wake", headers: t.as(), payload: {} });
       expect([JSON.stringify(o), r.statusCode, r.json().error.code]).toEqual([JSON.stringify(o), code, err]);
@@ -150,14 +150,14 @@ describe("POST /server/wake", () => {
     }
   });
   it("is refused to a player the server is not open for, and to a caller who is not a member", async () => {
-    const closed = setup({ state: 30, live: false });
+    const closed = setup({ state: 50, live: false });
     const r = await closed.f.inject({ method: "POST", url: "/server/wake", headers: closed.as(), payload: {} });
     expect([r.statusCode, r.json().error.code]).toEqual([403, "not_open"]);
-    const early = setup({ state: 30, live: false, member: { role: "PLAYER", earlyAccess: true } });
+    const early = setup({ state: 50, live: false, member: { role: "PLAYER", earlyAccess: true } });
     expect((await early.f.inject({ method: "POST", url: "/server/wake", headers: early.as(), payload: {} })).statusCode).toBe(202);
-    const nobody = setup({ state: 30, member: null });
+    const nobody = setup({ state: 50, member: null });
     expect((await nobody.f.inject({ method: "POST", url: "/server/wake", headers: nobody.as(), payload: {} })).json().error.code).toBe("not_member");
-    const noRole = setup({ state: 30 });
+    const noRole = setup({ state: 50 });
     expect((await noRole.f.inject({ method: "POST", url: "/server/wake", headers: noRole.as(""), payload: {} })).json().error.code).toBe("not_member");
     for (const t of [closed, nobody, noRole]) expect(t.calls).toEqual([]);
   });
@@ -171,7 +171,7 @@ describe("POST /server/wake", () => {
 
 describe("Wake", () => {
   it("is ready once AMP reports Running", async () => {
-    const t = setup({ state: 30 });
+    const t = setup({ state: 50 });
     await t.wake.start("u1", "Bramble09");
     await t.wake.update(10);
     expect(t.wake.view().phase).toBe("waking");
@@ -180,7 +180,7 @@ describe("Wake", () => {
     expect(t.wake.view()).toMatchObject({ phase: "ready", by: "Bramble09" });
   });
   it("fails after three minutes without Running, and logs the failed wake", async () => {
-    const t = setup({ state: 30 });
+    const t = setup({ state: 50 });
     await t.wake.start("u1", "Bramble09");
     t.tick(179_000);
     await t.wake.update(10);
@@ -234,7 +234,7 @@ describe("GET /status when AMP can't be reached", () => {
     const get = withPoller(null, async () => {
       asked++;
       await new Promise((r) => setTimeout(r, 10));
-      return { state: "Sleeping", stateCode: 30, players: [], maxPlayers: 20, cpu: 0, memMb: 0, memMaxMb: 6144, tps: null, uptime: "0" };
+      return { state: "Sleeping", stateCode: 50, players: [], maxPlayers: 20, cpu: 0, memMb: 0, memMaxMb: 6144, tps: null, uptime: "0" };
     });
     const [a, b, c] = await Promise.all([get(), get(), get()]);
     expect([a.json().server, b.json().server, c.json().server]).toEqual(["asleep", "asleep", "asleep"]);

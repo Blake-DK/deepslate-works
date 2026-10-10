@@ -9,8 +9,8 @@ Who it waits on: **Alex**, **planner**, **VPS** (the VPS session), **AMP host** 
 
 ## Next up, in order
 
-1. Check the "Play first" and "We're live" switches, then fix the AMP state names (below, API). Until that fix, nobody
-   presses "End the process": it can kill the server mid-save while it is going to sleep.
+1. Check the "Play first" and "We're live" switches, then deploy the AMP state fix (on `dev`, below, API). Until it is
+   live, nobody presses "End the process": it can kill the server mid-save while it is going to sleep.
 2. The refill with nobody online, then the AMP host's after check.
 3. Live's own mod capture into `server-loaded.json`, and check-sides in `deploy/check.sh`. Today CI checks the sides
    against the test server's capture.
@@ -58,7 +58,7 @@ Who it waits on: **Alex**, **planner**, **VPS** (the VPS session), **AMP host** 
 
 | Item | What remains | Source | Status | Waits on |
 |---|---|---|---|---|
-| AMP state names | Wrong for 30, 40, 45 and 50 in `server-state.ts`; see "Next up" 1. | docs/47 §5.7 | open, urgent | VPS |
+| AMP state names | Fixed on `dev` 2026-10-10 (docs/11); deploy it, then the kill button is safe. | docs/47 §5.7 | fixed, not deployed | Alex (deploy) |
 | R-04 | An AMP refusal returned as HTTP 200 counts as success; needs AMP's real answers first. | docs/35 | open | AMP host |
 | AMP call timing | No duration log or slow-call warning. | docs/10 item 9b; docs/43 §3 | open | VPS |
 | Review leftovers | R-06, R-16, R-21, R-43. | docs/35 | open | VPS |

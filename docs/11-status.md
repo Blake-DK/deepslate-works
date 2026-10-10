@@ -59,6 +59,20 @@ is not started.
   shown on the test site: its designer is not set up (live's is); the redirect itself is proven.
 - **`grep -ri "control room" apps/`** prints nothing.
 
+## AMP state numbers corrected (2026-10-10, on `dev`, not deployed)
+
+docs/47 §5.7. AMP's `ApplicationState` is 30 Restarting, 40 Stopping, 45 PreparingForSleep, 50 Sleeping; the code had
+30 Sleeping, 40 Restarting, 45 Stopping, 50 PreparingForSleep (live confirmed 50 = asleep on 2026-10-08, see the OPAC
+section). Effects until now: every time the server went to sleep it passed through 45, which showed as "Stopping…"
+and offered admins "End the process"; a stop (40) showed as "Restarting…"; a restart (30) showed as "Asleep" and was
+open to Play.
+
+Fixed in `amp/client.ts` (names and `availability()`), both `shared/server-state.ts` (30 restarting, 40 stopping, 45 and
+50 asleep), `POST /server/kill` and the kill box (only at 40), docs/08, and the tests. Not changed: the state names
+already stored in status snapshots and event metadata. Rows written before the deploy carry the old names (a sleep
+stored as "PreparingForSleep", a restart as "Sleeping"); the uptime query counts both as available, so the uptime
+figure for restarts before the deploy is slightly high. The "End the process" button is safe to use once this is live.
+
 ## All open work in one list (2026-10-10, on `dev`)
 
 `docs/49-leftover-work.md` gathers every open item from docs/10, 28, 34 to 48 and the VPS session's reports, each

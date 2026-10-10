@@ -518,7 +518,7 @@ export class Limbo {
     return { released: r.ok, name };
   }
 
-  /** Who is in the room and why, for Admin → Control Room (docs/32 §7 item 10). */
+  /** Who is in the room and why, for Admin → Joining → Who's waiting (docs/32 §7 item 10). */
   heldList(): Array<{ name: string; uuid: string | null; kind: Held["kind"]; reason: string | null; since: string; member: boolean; back: boolean }> {
     return [...this.held.entries()].map(([name, h]) => ({ name, uuid: h.uuid || null, kind: h.kind, reason: h.reason ?? null, since: new Date(h.since).toISOString(), member: Boolean(h.userId), back: Boolean(h.back) }));
   }

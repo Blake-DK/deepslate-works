@@ -75,10 +75,11 @@ export async function deleteVoteAction(formData: FormData) {
 
 // ---- quick polls (planner 2026-10-02, "votes before play") ---------------------------------------------------------
 
-const POLLS = "/admin/votes";
-const pollBack = (msg: string) => `${POLLS}?poll=${encodeURIComponent(msg)}#polls`;
+// docs/48 A4: the polls are the second tab of Admin → News & polls
+const POLLS = "/admin/news?tab=polls";
+const pollBack = (msg: string) => `${POLLS}&poll=${encodeURIComponent(msg)}#polls`;
 /** A problem with the New poll form reopens it (it is shown only after "New poll" is pressed); an edit's goes to the list. */
-const formBack = (formData: FormData, msg: string) => (formData.get("form") === "new" ? `${POLLS}?new=1&poll=${encodeURIComponent(msg)}#new-poll` : pollBack(msg));
+const formBack = (formData: FormData, msg: string) => (formData.get("form") === "new" ? `${POLLS}&new=1&poll=${encodeURIComponent(msg)}#new-poll` : pollBack(msg));
 
 /** The form's option rows (text, picture, link or mod, and for an edit the option's id), in order. Stops at a bad picture. */
 async function readRows(formData: FormData): Promise<EditRow[]> {
@@ -123,7 +124,7 @@ function readCloses(formData: FormData): Date | null {
 }
 
 function pollsChanged() {
-  revalidatePath("/admin/votes");
+  revalidatePath("/admin/news");
   revalidatePath("/votes");
   revalidatePath("/");
 }
@@ -163,7 +164,7 @@ export async function pollMustVoteAction(id: string, on: boolean) {
 export async function closePollAction(id: string) {
   const admin = await requireAdmin();
   await closePoll({ id: admin.id, role: "ADMIN" }, id);
-  revalidatePath("/admin/votes");
+  revalidatePath("/admin/news");
   revalidatePath("/votes");
   redirect(pollBack("closed"));
 }
@@ -171,7 +172,7 @@ export async function closePollAction(id: string) {
 export async function deletePollAction(id: string) {
   const admin = await requireAdmin();
   await deletePoll({ id: admin.id, role: "ADMIN" }, id);
-  revalidatePath("/admin/votes");
+  revalidatePath("/admin/news");
   revalidatePath("/votes");
   redirect(pollBack("deleted"));
 }

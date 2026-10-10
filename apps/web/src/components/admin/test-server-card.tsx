@@ -6,7 +6,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { STATE_LABEL, TONE, type ServerState } from "@/shared/server-state";
 import { ukDayTime } from "@/lib/uk-time";
 
-// docs/42 §8: the test server on the live Control Room, for admins. Asked every 20 s while the tab is seen, from the
+// docs/42 §8: the test server on the live site's Admin → Overview, for admins. Asked every 20 s while the tab is seen, from the
 // page itself, so nothing else on the page waits for it and a test server that does not answer only greys this card.
 
 type Summary = {

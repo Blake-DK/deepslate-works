@@ -88,7 +88,7 @@ function app(state = 20) {
   return { f, sent, post, as, book: () => book };
 }
 
-describe("Admin → Seasons, Builds", () => {
+describe("Admin → Builds", () => {
   const corners = { name: "temple", dimension: "minecraft:overworld", from: { x: 10, y: 64, z: 10 }, to: { x: 30, y: 80, z: 25 } };
 
   it("is for admins, and needs the server running", async () => {

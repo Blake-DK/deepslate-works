@@ -35,7 +35,7 @@ async function builderOff(adminId: string, userId: string) {
 
 /**
  * docs/37 Step 2: Builder tools, for admins only and only the ones ticked. With them, the admin may switch Builder
- * mode (creative, where WorldEdit works) on for themselves on Admin → Seasons → Builds. Unticked: Builder mode off.
+ * mode (creative, where WorldEdit works) on for themselves on Admin → Builds. Unticked: Builder mode off.
  */
 export async function setBuilderToolsAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -48,7 +48,7 @@ export async function setBuilderToolsAction(formData: FormData) {
   await audit({ userId: admin.id, action: "user.builderTools", params: { id: parsed.data.id, displayName: u.displayName, on }, result: "OK" });
   if (!on) await builderOff(admin.id, parsed.data.id);
   revalidatePath("/admin/people");
-  revalidatePath("/admin/seasons");
+  revalidatePath("/admin/builds");
   revalidatePath("/players/[uuid]", "page");
 }
 

@@ -15,7 +15,7 @@ import { readTestDoor, type TestDoor } from "./door.js";
 
 // docs/42: what only the test server's api answers. With TEST_MODE unset every route here says 404 and does nothing.
 //
-//   GET  /test/summary       the live site's Control Room card (T9). Its own token, TEST_SUMMARY_TOKEN, and no other
+//   GET  /test/summary       the live site's Admin → Overview card (T9). Its own token, TEST_SUMMARY_TOKEN, and no other
 //                            (auth.ts serviceAuth); that token opens nothing but this.
 //   GET  /test/state         the test site: its stripe, footer and test tools
 //   POST /test/clock         "Pretend it is" / "Back to the real time" (§7.1), admins

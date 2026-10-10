@@ -19,6 +19,9 @@ import { MemberMenu } from "./member-menu";
 import { stripLink } from "@/components/strip-link";
 import { fieldClasses } from "@/components/ui/input";
 import { TEST_MODES } from "@/shared/join-gate";
+import { getStatus } from "@/server/status";
+import { pingTone } from "@/lib/ping";
+import { Flash, KickCard, loadPlayers } from "../server/cards";
 
 const ERRORS: Record<string, string> = {
   name: "Minecraft names are 3 to 16 letters, numbers or underscores.",
@@ -32,10 +35,10 @@ const WIDTHS = ["25%", "20%", "9%", "14%", "11%", "12%", "56px"];
 // docs/35: once the site is live the early-access switch changes nothing, so its column goes (it is on Joining → Rules while not live)
 const WIDTHS_LIVE = ["29%", "24%", "10%", "16%", "12%", "56px"];
 
-export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; show?: string; q?: string }> }) {
+export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; show?: string; q?: string; msg?: string; detail?: string }> }) {
   const me = await requireAdmin();
-  const { error, show, q } = await searchParams;
-  const [users, settings, lastRuns, installer, linkRuns] = await Promise.all([
+  const { error, show, q, msg, detail } = await searchParams;
+  const [users, settings, lastRuns, installer, linkRuns, status, players] = await Promise.all([
     db.user.findMany({ orderBy: [{ role: "asc" }, { createdAt: "asc" }], include: { adminLogin: { select: { enabled: true } } } }),
     getSettings(),
     // the installer each member used last: their latest report
@@ -43,7 +46,15 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     getInstaller(),
     // installer 1.5.6: the latest report that says whether the Play button has a working link on their PC
     db.installReport.findMany({ where: { playLinkMissing: { not: null }, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, distinct: ["userId"], select: { userId: true, playLinkMissing: true } }),
+    getStatus(),
+    // who of those on the server is in the entrance room: on the server, but not playing
+    loadPlayers({ id: me.id, role: "ADMIN" }),
   ]);
+  // docs/48 A4: who is playing now, with their ping; they sort first
+  const running = status.server === "online";
+  const held = new Set((players?.held ?? []).map((h) => h.name.toLowerCase()));
+  const playing = new Map((running ? status.online : []).filter((p) => p.uuid && !held.has(p.name.toLowerCase())).map((p) => [p.uuid!, p.ping]));
+  const isOn = (u: { mcUuid: string | null }) => u.mcUuid !== null && playing.has(u.mcUuid);
   const current = installer?.current ?? null;
   const noPlayLink = new Set(linkRuns.filter((r) => r.playLinkMissing).map((r) => r.userId));
   const lastInstaller = new Map(lastRuns.map((r) => [r.userId, r.installerVersion]));
@@ -52,7 +63,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     const installerVersion = lastInstaller.get(u.id) ?? null;
     return { ...u, passwordSignIn: Boolean(u.adminLogin?.enabled), installerVersion, installerOutdated: installerVersion !== null && isOutdated(installerVersion, current) };
   });
-  const { rows, only, query, count } = memberRows(all, show, q);
+  const { rows: found, only, query, count } = memberRows(all, show, q);
+  const rows = [...found.filter(isOn), ...found.filter((u) => !isOn(u))];
   const early = `While "We're live" is off, a member with early access can download, press Play and join like any player once it is on. Nothing of an admin's.${settings.live ? " The site is live, so it changes nothing right now." : ""}`;
   const showEarly = !settings.live || only === "early" || only === "rest";
   const href = (k: Show) => {
@@ -74,9 +86,11 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       installer: uninstalled.has(u.id) ? <span className="text-muted-foreground" title="Their latest report is the uninstaller's">uninstalled</span> : noPlayLink.has(u.id)
         ? <span className="flex min-w-0 items-center gap-1"><InstallerVersion version={u.installerVersion} current={current} outdated={u.installerOutdated} /><Badge tone="warn" className="shrink-0 whitespace-nowrap" title="Setup could not set up the Play button on their PC; it clears when a later run reports it in place">Play button not set up</Badge></span>
         : <InstallerVersion version={u.installerVersion} current={current} outdated={u.installerOutdated} />,
-      seen: <span className="text-muted-foreground" title={u.lastSeenAt ? u.lastSeenAt.toISOString() : "never"}>{timeAgo(u.lastSeenAt)}</span>,
+      seen: isOn(u) ? (
+        <span className="inline-flex items-center gap-1" data-testid="member-online"><Badge tone="good" className="shrink-0">online</Badge>{playing.get(u.mcUuid!) != null && <Badge tone={pingTone(playing.get(u.mcUuid!)!)} className="shrink-0 tabular-nums">{playing.get(u.mcUuid!)} ms</Badge>}</span>
+      ) : <span className="text-muted-foreground" title={u.lastSeenAt ? u.lastSeenAt.toISOString() : "never"}>{timeAgo(u.lastSeenAt)}</span>,
       early: <Switch action={setEarlyAccessAction} fields={{ id: u.id, on: u.earlyAccess ? "0" : "1" }} on={u.earlyAccess} label={`Early access for ${u.displayName}`} disabled={admin} why={admin ? "Admins don't need it" : early} />,
-      menu: <MemberMenu u={u} meId={me.id} />,
+      menu: <MemberMenu u={u} meId={me.id} row={{ running }} />,
     };
   };
 
@@ -87,6 +101,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         <p className="text-sm text-muted-foreground">Minecraft accounts link themselves in game; &quot;Link by name…&quot; in a row&apos;s menu is the fallback.</p>
       </div>
       {error && <Alert tone="error">{ERRORS[error] ?? "Something went wrong."}</Alert>}
+      <Flash msg={msg} detail={detail} />
       <div className="flex flex-wrap items-center gap-3">
         <nav className="flex max-w-full overflow-x-auto whitespace-nowrap border-b" aria-label="Filter the members">
           {(Object.keys(SHOW) as Show[]).map((k) => <Link key={k} href={href(k)} aria-current={only === k ? "page" : undefined} className={cn("-mb-px", stripLink(only === k))}>{SHOW[k]} ({count[k]})</Link>)}
@@ -151,6 +166,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           </ul>
         </>
       )}
+      <KickCard running={running} />
       <BlockedList />
     </div>
   );

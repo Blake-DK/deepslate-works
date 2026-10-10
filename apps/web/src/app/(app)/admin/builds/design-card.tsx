@@ -13,7 +13,7 @@ import type { DesignJob } from "@/server/design-jobs";
 import { clearJobAction, designAction, designBackAction, designKeepAction, openDesignAction, type DesignResult, type StartResult } from "./design-actions";
 import { DesignPicture } from "./design-picture";
 
-// docs/39 Step 2, docs/40: Admin → Seasons → Builds, "Design a build". Say what it should be, under any name; the
+// docs/39 Step 2, docs/40: Admin → Builds, "Design a build". Say what it should be, under any name; the
 // designer answers with a recipe, drawn here; ask for changes in words; keep it when it is right, and it becomes an
 // ordinary upload. A design carries on when the page is left: the card shows the job with the page and, while it
 // runs, asks how far it has got every 5 seconds while the tab is seen.

@@ -203,7 +203,7 @@ describe("a permission the portal's AMP user does not have", () => {
       let t = now();
       Date.now = () => t;
       try {
-        // the test site's Control Room, every 30 s for ten minutes: the backup permissions, refused
+        // the test site's Admin → Overview, every 30 s for ten minutes: the backup permissions, refused
         for (let i = 0; i < 20; i++) {
           expect(await amp.hasPermission("LocalFileBackupPlugin.Backups.ViewBackups")).toBe(false);
           expect(await amp.hasPermission("LocalFileBackupPlugin.Backups.CreateBackup")).toBe(false);

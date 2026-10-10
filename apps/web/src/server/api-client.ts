@@ -74,7 +74,7 @@ export async function* apiStream<T>(path: string, opts: Opts = {}): AsyncGenerat
 }
 
 /**
- * docs/42 T9, the live site only: the test server's api, for the Control Room card. Its own address and its own token
+ * docs/42 T9, the live site only: the test server's api, for the Admin → Overview card. Its own address and its own token
  * (TEST_SUMMARY_TOKEN), which api-test takes for GET /test/summary and nothing else; null while the test server is off.
  */
 export async function testServerSummary<T>(timeoutMs = 4000): Promise<T | null> {

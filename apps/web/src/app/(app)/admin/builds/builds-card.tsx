@@ -62,7 +62,7 @@ export function BuildsCard({ view, files = [], frontiers, mods = {}, builder = n
   const ready = new Map((view.uploads ?? []).map((u) => [u.name, u]));
   const problems = new Map((view.problems ?? []).map((p) => [p.file, p.why]));
   return (
-    <Card data-testid="season-builds">
+    <Card id="builds" data-testid="season-builds">
       <CardHeader>
         <CardTitle>Builds</CardTitle>
         <CardDescription>
@@ -112,7 +112,7 @@ export function BuildsCard({ view, files = [], frontiers, mods = {}, builder = n
                 return (
                   <li key={f.name} className="flex flex-wrap items-center gap-2 py-1.5">
                     <span className="min-w-0 flex-1">
-                      <span className="font-mono">{f.name}</span>{designed.includes(f.name) && <> <a href={`/admin/seasons?design=${f.name}#design`} className="text-xs text-primary underline">designed</a></>} <span className="text-muted-foreground">.{f.format}, {Math.max(1, Math.round(f.bytes / 1024))} KB, {ukShort(f.at)}
+                      <span className="font-mono">{f.name}</span>{designed.includes(f.name) && <> <a href={`/admin/builds?design=${f.name}#design`} className="text-xs text-primary underline">designed</a></>} <span className="text-muted-foreground">.{f.format}, {Math.max(1, Math.round(f.bytes / 1024))} KB, {ukShort(f.at)}
                         {f.note && <> · {f.note.check.size.x} by {f.note.check.size.y} by {f.note.check.size.z}, {needsLine(f.note, mods)}</>}
                         {f.note && f.note.check.missing.length > 0 && <> · <span className="text-warn">{f.note.check.missing.map((ns) => mods[ns] ?? ns).join(", ")} not in the pack: those blocks will be air</span></>}
                         {" · "}{why ? <span className="text-danger">Build left it out: {why}</span> : on ? `built${on.airFor ? `, ${on.airFor.toLocaleString("en-GB")} blocks made air` : ""}` : "not built yet"}</span>

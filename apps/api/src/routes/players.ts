@@ -15,7 +15,7 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
     held: [...limbo.held.entries()].map(([name, h]) => ({ name, since: new Date(h.since).toISOString() })),
   }));
 
-  // Admin → Control Room, "who is held and why" (docs/32 §7 item 10): the list, and Release for a linked member.
+  // Admin → Joining → Who's waiting, "who is held and why" (docs/32 §7 item 10): the list, and Release for a linked member.
   app.get("/held", async (req, reply) => {
     if (!(await requireAdmin(req, reply))) return;
     return { state: tail.state, held: limbo.heldList() };

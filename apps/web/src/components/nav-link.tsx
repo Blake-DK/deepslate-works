@@ -34,20 +34,20 @@ export function Strip({ label, children }: { label: string; children: React.Reac
 
 const SITES = ["Live", "Test"] as const;
 
-/** The admin pages' own strip, under the main one on /admin and below (docs/23 §4). */
+/** The admin pages' own strip, under the main one on /admin and below (docs/23 §4; the pages as docs/48 A2). */
 export function AdminStrip({ other = null }: { other?: { label: "Live" | "Test"; url: string } | null }) {
   const path = usePathname();
   if (path !== "/admin" && !path.startsWith("/admin/")) return null;
   return (
     <Strip label="Run the server">
-      <NavLink href="/admin" exact>Control Room</NavLink>
+      <NavLink href="/admin" exact>Overview</NavLink>
       <NavLink href="/admin/server">Server</NavLink>
       <NavLink href="/admin/joining">Joining</NavLink>
       <NavLink href="/admin/people" also={["/admin/installs"]}>People</NavLink>
       <NavLink href="/admin/pack">Modpack</NavLink>
+      <NavLink href="/admin/builds">Builds</NavLink>
       <NavLink href="/admin/seasons">Seasons</NavLink>
-      <NavLink href="/admin/news">News</NavLink>
-      <NavLink href="/admin/votes">Votes</NavLink>
+      <NavLink href="/admin/news">News &amp; polls</NavLink>
       <NavLink href="/admin/discord">Discord</NavLink>
       <NavLink href="/admin/site">Site</NavLink>
       {/* docs/42 §8: Live | Test, the same page on the other site of the pair; only while there is a test server. Always

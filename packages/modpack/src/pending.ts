@@ -29,7 +29,7 @@ export type PendingFacts = {
   builtScript: string | null;
   /** A logo was picked in Admin → Branding after the last Build made its sizes. */
   brandingPicked: boolean;
-  /** docs/37: builds uploaded, replaced or removed on Admin → Seasons since the last Build (uploadsSinceBuild). */
+  /** docs/37: builds uploaded, replaced or removed on Admin → Builds since the last Build (uploadsSinceBuild). */
   uploadsChanged?: string[];
   /** The pack the server was last synced to, and when; when dist/server was last built. */
   synced: { version: string; at: Date } | null;

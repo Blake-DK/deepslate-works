@@ -109,7 +109,7 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
         <NavLink href="/votes" badge={polls ? <TabBadge>{polls === 1 ? "new" : polls}</TabBadge> : null}>Votes</NavLink>
         <NavLink href="/activity">Activity</NavLink>
         <span className="min-w-4 flex-1" aria-hidden />
-        {admin && <NavLink href="/admin" copper>Control Room</NavLink>}
+        {admin && <NavLink href="/admin" copper>Admin</NavLink>}
         <NavLink href="/me">Me</NavLink>
         {signOutForm}
       </Strip>

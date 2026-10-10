@@ -14,7 +14,7 @@ type Step = "lock" | "build" | "sync";
 type Data = { steps: Step[]; reasons: Array<{ step: Step; text: string }>; headline: string; checkedAt: string };
 const LABEL: Record<Step, string> = { lock: "Lock", build: "Build", sync: "Sync server" };
 
-/** `link`: the Control Room's copy, shown only while something has to be pressed, with a link to Modpack. */
+/** `link`: Admin → Overview's copy, shown only while something has to be pressed, with a link to Modpack. */
 export function PackPending({ link = false }: { link?: boolean }) {
   const [data, setData] = useState<Data | null>(null);
   const [failed, setFailed] = useState(false);

@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-06T18:25:49.504Z",
+  "at": "2026-10-09T21:27:19.933Z",
   "source": "logs/latest.log",
   "files": [
     {
@@ -79,14 +79,6 @@
       "nested": false
     },
     {
-      "filename": "curios-neoforge-9.5.1+1.21.1.jar",
-      "nested": false
-    },
-    {
-      "filename": "edf-remastered-5.0.2.jar",
-      "nested": false
-    },
-    {
       "filename": "FallingTree-1.21.1-1.21.1.11.jar",
       "nested": false
     },
@@ -104,10 +96,6 @@
     },
     {
       "filename": "ferritecore-7.0.3-neoforge.jar",
-      "nested": false
-    },
-    {
-      "filename": "geckolib-neoforge-1.21.1-4.9.3.jar",
       "nested": false
     },
     {
@@ -136,14 +124,6 @@
     },
     {
       "filename": "jei-1.21.1-neoforge-19.51.0.418.jar",
-      "nested": false
-    },
-    {
-      "filename": "L_Ender's Cataclysm 1.21.1-3.33.jar",
-      "nested": false
-    },
-    {
-      "filename": "lionfishapi-3.1.jar",
       "nested": false
     },
     {
@@ -188,10 +168,6 @@
     },
     {
       "filename": "modernfix-neoforge-5.27.24+mc1.21.1.jar",
-      "nested": false
-    },
-    {
-      "filename": "mowziesmobs-1.21.1-1.8.2.jar",
       "nested": false
     },
     {

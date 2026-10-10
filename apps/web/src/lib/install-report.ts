@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { extrasReportSchema } from "./extras-line";
 import { reportedVersion } from "./installer-version";
+import { TEST_MODES } from "@/shared/join-gate";
 
 // docs/07 "Install reports". The installer redacts before it sends; everything is redacted again here
 // before it is stored, because a copy of the script someone edited, or a bug in it, must not be able to put
@@ -20,6 +21,15 @@ export type Outcome = (typeof OUTCOMES)[number];
 // the live figures never count it. 3.6.1: "test_game_check" = the game check after such a Play, likewise (TEST_MODES)
 export const MODES = ["test_play", "test_game_check", "install", "play", "first_install", "update", "already_running", "uninstall", "game_check", "handover", "update_only", "log_sent", "unfinished"] as const;
 /** What a run of each kind is called on the admin pages. */
+/**
+ * Runs whose report says nothing about the PC: the uninstaller, the game check after the game starts (3.4.0), a log
+ * sent from the app, a run that never finished, and the test server's runs (docs/45). None of them sets a measured
+ * tier. Also no PC: a report with reports switched off (`minimal`), see `PC_REPORT`.
+ */
+export const NO_PC_MODES: readonly string[] = ["uninstall", "game_check", "log_sent", "unfinished", ...TEST_MODES];
+/** Where to find a member's latest report that says what their PC is (Admin → Installs, the player page's PC tab). */
+export const PC_REPORT = { mode: { notIn: [...NO_PC_MODES] }, minimal: false };
+
 export const MODE_LABEL: Record<string, string> = { install: "Setup.bat", play: "Play", first_install: "First install", update: "Play (new pack)", already_running: "Already running", uninstall: "Uninstall", game_check: "Game check", handover: "Hand-over", update_only: "Update", log_sent: "Log sent", unfinished: "Unfinished run", test_play: "Test Play", test_game_check: "Test game check" };
 export type Mode = (typeof MODES)[number];
 

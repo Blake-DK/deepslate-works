@@ -26,6 +26,16 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The group's PCs show again (2026-10-10, on `dev`, in its own `dev` → `main` PR)
+
+The installer never stopped measuring: 3.6.1 sends the same PC details as the 2.x script (`installer/app/src/Core/Report.cs`
+`SystemInfo`), and every Play, update and install report of the last 14 days has them. Admin → Installs ("the group's
+PCs") and the player page's PC tab showed each member's latest report, and since 3.6 that is mostly the game check, sent
+on purpose without PC details: 4 of 8 members read "not known". Both now take the latest report that says what the PC
+is (`lib/install-report.ts` `PC_REPORT`: not the uninstaller, game check, log sent, unfinished run, test runs or a ping
+with reports off); "Uninstalled on" and the last install still come from the latest report of all. On live's data: 8
+of 8. The report route decides a measured tier from the same list (`NO_PC_MODES`), unchanged in effect.
+
 ## The site's Maintenance: docs/48 Part B (2026-10-10, on `dev`, in the `dev` → `main` PR, not deployed)
 
 - **Built:** `SiteSettings.maintenance` (with when and by whom) and `User.maintenanceJoin`, migration 0032 (off after

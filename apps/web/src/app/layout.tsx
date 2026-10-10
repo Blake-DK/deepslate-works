@@ -37,7 +37,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [b, user] = await Promise.all([getBranding(), loadCurrentUser().catch(() => null)]);
   // docs/23 §3: one theme with fixed colours; the branding accent no longer reaches the page (it still colours Discord's embeds).
   return (
-    <html lang="en-GB">
+    // data-test-site: only on the test server's site (TEST_MODE); globals.css keys the stripe's scroll padding on it
+    <html lang="en-GB" data-test-site={env.TEST_MODE ? "" : undefined}>
       <body className="min-h-dvh flex flex-col">
         <TestStripe />
         <AppFrame

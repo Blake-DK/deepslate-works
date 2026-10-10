@@ -40,7 +40,7 @@ export function ModsSearch() {
   }, [query]);
 
   return (
-    <div className="sticky top-0 z-10 -mx-1 bg-background px-1 py-2">
+    <div className="sticky top-[var(--stripe-h,0px)] z-10 -mx-1 bg-background px-1 py-2">
       <label htmlFor="mods-search" className="sr-only">Search the mods</label>
       <input
         id="mods-search"

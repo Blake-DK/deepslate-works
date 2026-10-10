@@ -26,8 +26,8 @@ export default async function MapPage() {
     );
   }
   return (
-    // Full bleed: covers the page chrome. The back button stays on top of the map.
-    <div className="fixed inset-0 z-40 bg-background">
+    // Full bleed: covers the page chrome, below the test site's stripe (0 on the live site). The back button stays on top.
+    <div className="fixed inset-x-0 bottom-0 top-[var(--stripe-h,0px)] z-40 bg-background">
       <iframe src={env.MAP_URL} title="Live map of the world" className="h-full w-full border-0" allow="fullscreen" referrerPolicy="strict-origin-when-cross-origin" />
       <Link href="/" className={`${buttonClasses("secondary", "sm")} fixed bottom-4 left-4 z-50`}>← Back</Link>
       <a href={env.MAP_URL} target="_blank" rel="noreferrer" className={`${buttonClasses("secondary", "sm")} fixed bottom-4 left-28 z-50`}>Open in a new tab</a>

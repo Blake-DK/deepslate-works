@@ -32,7 +32,7 @@ export type Backup = { allowed: boolean; canList?: boolean; stopsServer: boolean
 type Caller = { id: string; role: "ADMIN" };
 
 export const loadPlayers = (caller: Caller) => apiFetch<Players>("/players", { caller }).catch(() => null);
-export type HeldEntry = { name: string; uuid: string | null; kind: "link" | "play" | "closed" | "old" | "mods" | "vote"; reason: string | null; since: string; member: boolean; back: boolean };
+export type HeldEntry = { name: string; uuid: string | null; kind: "link" | "play" | "closed" | "old" | "mods" | "vote" | "maintenance"; reason: string | null; since: string; member: boolean; back: boolean };
 export const loadHeld = (caller: Caller) => apiFetch<{ state: number; held: HeldEntry[] }>("/held", { caller }).catch(() => null);
 export type HealthCheck = { ok: boolean | null; text: string };
 export type WatchView = { watch?: boolean; checks?: Record<string, HealthCheck> | null; checkedAt?: string | null };
@@ -47,6 +47,9 @@ export const consoleLines = (tail: Tail | null) => tail?.entries ?? (tail?.lines
 
 const MSG: Record<string, string> = {
   testDoor: "Saved. The test server's door goes by these rules from the next join.", // docs/42 T8
+  // docs/48 B3
+  maintenanceOn: "Maintenance is on. Only admins with the tick can join; everybody else waits at the door.",
+  maintenanceOff: "Maintenance is off. Whoever was held for it goes on through the door within seconds.",
   pregenOn: "Pre-generation is on.", pregenPaused: "Pre-generation stopped; where it got to is kept.", pregenOff: "The area is called off.", killed: "The server's process has been ended.", mapReloaded: "BlueMap read its settings again; a render in hand is asked for again.",
   start: "Start sent to AMP.", stop: "Stop sent to AMP.", restart: "Restart sent to AMP.", action: "Done:", confirm: "Tick the confirmation box first.",
   groundClear: "Players have been warned in chat; items on the ground are cleared in 60 seconds.", groundPlan: "Saved.",

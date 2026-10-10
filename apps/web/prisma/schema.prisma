@@ -73,6 +73,7 @@ model User {
   installs     InstallReport[]
   earlyAccess  Boolean  @default(false) // docs/13: uses the portal as if it were live while it is not
   builderTools Boolean  @default(false) // docs/37: an admin who may switch Builder mode (creative, WorldEdit) on
+  maintenanceJoin Boolean @default(false) // docs/48 B1: an admin who can join during the site's Maintenance
   sessionVersion Int    @default(0) // raised to end every session the member has (made a player, password sign-in turned off)
   signInNoticeSeenAt DateTime? // an admin's "seen up to" for the password sign-in notice: sign-ins at or before it are not shown to them
   adminLogin   AdminLogin?
@@ -249,6 +250,10 @@ model SiteSettings {
   id          String    @id @default("site")
   live        Boolean   @default(false)
   launchAt    DateTime?
+  // docs/48: the site's Maintenance (not AMP's state of that name): only admins with maintenanceJoin come in
+  maintenance     Boolean   @default(false)
+  maintenanceAt   DateTime? // when it was last switched on or off
+  maintenanceById String?   // who did it
   updatedAt   DateTime  @updatedAt
   updatedById String?
 }

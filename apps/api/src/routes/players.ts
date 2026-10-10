@@ -7,6 +7,7 @@ import { requireAdmin } from "../auth.js";
 import { runAction } from "../actions/run.js";
 import { ADMIN_ACTIONS, OWN_ROUTE, actions, type ActionName } from "../actions/registry.js";
 import { audit } from "../audit.js";
+import { db } from "../db.js";
 
 export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, limbo: Limbo, beforeStop: () => Promise<unknown> = async () => undefined) {
   app.get("/players", async () => ({
@@ -28,6 +29,23 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
     if (r.ok) return { ok: true };
     const message = r.code === "not_held" ? "They are not in the entrance room any more." : r.code === "not_linked" ? "They have not linked their Minecraft account yet, so they cannot be let in from here." : "The server did not take the command.";
     return reply.code(r.code === "failed" ? 502 : 409).send({ error: { code: r.code, message } });
+  });
+
+  // docs/48 B3: the site's Maintenance, switched on Admin → Overview (not AMP's state of that name). Kept in the site's
+  // settings; the door reads it. On kicks whoever has no tick; off looks at whoever is held for it again at once.
+  app.post("/maintenance", async (req, reply) => {
+    if (!(await requireAdmin(req, reply))) return;
+    const body = z.object({ on: z.boolean() }).safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "on" } });
+    const on = body.data.on;
+    const by = req.caller.userId;
+    const was = (await db.siteSettings.findUnique({ where: { id: "site" }, select: { maintenance: true } }))?.maintenance ?? false;
+    if (was === on) return reply.code(409).send({ error: { code: "unchanged", message: on ? "Maintenance is on already." : "Maintenance is off already." } });
+    const at = new Date();
+    await db.siteSettings.upsert({ where: { id: "site" }, create: { id: "site", maintenance: on, maintenanceAt: at, maintenanceById: by }, update: { maintenance: on, maintenanceAt: at, maintenanceById: by } });
+    const r = await limbo.maintenanceSwitched(on, by);
+    await audit({ userId: by, action: "site.maintenance", params: { on, kicked: r.kicked, failed: r.failed }, result: r.failed.length ? "FAILED" : "OK", detail: r.failed.length ? `not kicked: ${r.failed.join(", ")}` : null });
+    return { on, at: at.toISOString(), kicked: r.kicked, failed: r.failed };
   });
 
   // Portal → api after a successful /link: release now if online.

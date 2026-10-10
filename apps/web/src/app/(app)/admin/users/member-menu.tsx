@@ -4,9 +4,9 @@ import { ConfirmItem, LinkByName } from "@/components/admin/menu-actions";
 import Link from "next/link";
 import { runActionAction } from "../server/actions";
 import { KICK_REASON } from "../server/cards";
-import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setBuilderToolsAction, setMinecraftNameAction, setOutsideAuthAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";
+import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setBuilderToolsAction, setMaintenanceJoinAction, setMinecraftNameAction, setOutsideAuthAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";
 
-type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUsername: string | null; mcUuid?: string | null; passwordSignIn?: boolean; discordId?: string | null; outsideAuth?: boolean; builderTools?: boolean };
+type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUsername: string | null; mcUuid?: string | null; passwordSignIn?: boolean; discordId?: string | null; outsideAuth?: boolean; builderTools?: boolean; maintenanceJoin?: boolean };
 
 /**
  * A member's admin menu: on People → Members and on their player page (docs/13 §11 layout). `row` is People's: there
@@ -34,6 +34,10 @@ export function MemberMenu({ u, meId, row }: { u: Member; meId: string; row?: { 
       {admin && (u.builderTools
         ? <ConfirmItem action={setBuilderToolsAction} fields={{ id: u.id, on: "0" }} question={`Take Builder tools away from ${u.displayName}? If they are in Builder mode on the server, they go back to survival now.`}>Take Builder tools away</ConfirmItem>
         : <ConfirmItem action={setBuilderToolsAction} fields={{ id: u.id, on: "1" }} question={`Give ${u.displayName} Builder tools? They can then switch Builder mode on for themselves (creative, where WorldEdit works) to place uploaded builds.`}>Give Builder tools</ConfirmItem>)}
+      {/* docs/48 B1: admins only, like Builder tools */}
+      {admin && (u.maintenanceJoin
+        ? <ConfirmItem action={setMaintenanceJoinAction} fields={{ id: u.id, on: "0" }} question={`Take "Can join during maintenance" away from ${u.displayName}? While maintenance is on they then wait at the door like everyone else.`}>Take away joining during maintenance</ConfirmItem>
+        : <ConfirmItem action={setMaintenanceJoinAction} fields={{ id: u.id, on: "1" }} question={`Let ${u.displayName} join during maintenance? While it is on, the door lets in admins with this tick and nobody else.`}>Can join during maintenance</ConfirmItem>)}
       {u.mcUsername && (
         <form action={clearMinecraftNameAction}>
           <input type="hidden" name="id" value={u.id} />

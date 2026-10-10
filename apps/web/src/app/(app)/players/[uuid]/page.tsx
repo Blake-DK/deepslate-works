@@ -52,7 +52,7 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   if (!ID.test(id)) notFound();
   const now = new Date();
   const [member, rows, status] = await Promise.all([
-    db.user.findFirst({ where: { mcUuid: id }, select: { id: true, displayName: true, pcTier: true, pcTierSource: true, mcUsername: true, verifiedAt: true, guildMember: true, outsideAuth: true, discordId: true, role: true, earlyAccess: true, builderTools: true } }),
+    db.user.findFirst({ where: { mcUuid: id }, select: { id: true, displayName: true, pcTier: true, pcTierSource: true, mcUsername: true, verifiedAt: true, guildMember: true, outsideAuth: true, discordId: true, role: true, earlyAccess: true, builderTools: true, maintenanceJoin: true } }),
     db.session.findMany({ where: { mcUuid: id }, orderBy: { joinedAt: "desc" }, take: 2000 }),
     getStatus(),
   ]);

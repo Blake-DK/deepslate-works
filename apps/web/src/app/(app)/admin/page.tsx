@@ -17,6 +17,8 @@ import type { PageQuery } from "@/components/tabs";
 import { consoleLines, Flash, HealthCard, loadBackup, loadHeld, loadSchedule, loadTail, loadWatch, type Backup } from "./server/cards";
 import { env } from "@/env";
 import { TestServerCard } from "@/components/admin/test-server-card";
+import { getMaintenance } from "@/server/settings";
+import { MaintenanceCard } from "./maintenance-card";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -49,8 +51,8 @@ function backupLine(b: Backup | null): React.ReactNode {
 }
 
 // docs/48 A3: the admin's first page answers one question, is anything wrong and where do I go. It holds no second copy
-// of a control that lives on another page. Top to bottom: the heading row, what needs attention, (Maintenance, Part
-// B), the tiles, the last console lines (docs/13 §13: the console itself is on Admin → Server → Console), what admins
+// of a control that lives on another page, Maintenance aside. Top to bottom: the heading row, what needs attention,
+// Maintenance (Part B), the tiles, the last console lines (docs/13 §13: the console itself is on Admin → Server → Console), what admins
 // did lately. The figures refresh every 30 s (router.refresh); the console streams on its own page.
 export default async function AdminOverview({ searchParams }: { searchParams: PageQuery }) {
   const admin = await requireAdmin();
@@ -58,7 +60,7 @@ export default async function AdminOverview({ searchParams }: { searchParams: Pa
   // docs/48 A5: a player's inventory is on their page, the Inventory tab
   if (typeof q.p === "string" && /^[0-9a-f-]{36}$/i.test(q.p)) redirect(`/players/${q.p.toLowerCase()}?tab=inventory`);
   const caller = { id: admin.id, role: "ADMIN" as const };
-  const [status, tail, schedule, backup, heldNow, watch, members, invites, recent, designer, linked] = await Promise.all([
+  const [status, tail, schedule, backup, heldNow, watch, members, invites, recent, designer, linked, maintenance, ticked] = await Promise.all([
     getStatus(),
     loadTail(caller),
     loadSchedule(caller),
@@ -70,6 +72,8 @@ export default async function AdminOverview({ searchParams }: { searchParams: Pa
     db.event.findMany({ where: { kind: { in: ["ADMIN_ACTION", "PLAYER_ACTION", "LINK", "REVOKE", "SYNC", "BACKUP"] } }, orderBy: { at: "desc" }, take: 10, select: { id: true, at: true, kind: true, message: true, meta: true } }),
     designerHealth(),
     db.user.findMany({ where: { mcUuid: { not: null } }, select: { mcUuid: true } }),
+    getMaintenance(),
+    db.user.findMany({ where: { role: "ADMIN", maintenanceJoin: true }, orderBy: { displayName: "asc" }, select: { id: true, displayName: true, mcUuid: true } }),
   ]);
   const a = statusText(status, true);
   const held = heldNow?.held ?? [];
@@ -77,6 +81,10 @@ export default async function AdminOverview({ searchParams }: { searchParams: Pa
   const playing = (status.server === "online" ? status.online : []).filter((p) => !heldNames.has(p.name.toLowerCase()));
   const linkedUuids = new Set(linked.map((m) => m.mcUuid));
   const planned = schedule?.restart ?? null;
+  // docs/48 B3: everybody on the server but the admins with the tick goes when it is switched on, the room's people too
+  const tickedUuids = new Set(ticked.map((t) => t.mcUuid).filter(Boolean));
+  const onServer = status.server === "online" ? status.online : [];
+  const by = maintenance.byId ? await db.user.findUnique({ where: { id: maintenance.byId }, select: { displayName: true } }) : null;
 
   return (
     <div className="space-y-3">
@@ -86,7 +94,7 @@ export default async function AdminOverview({ searchParams }: { searchParams: Pa
         <span className="text-sm text-muted-foreground" data-testid="admin-status">{a.line}{status.server === "online" && <> · TPS {status.tps?.toFixed(1) ?? "?"} · RAM {status.memMb ?? "?"}{status.memMaxMb ? ` / ${status.memMaxMb}` : ""} MB</>}{status.server === "unreachable" && status.reason && <> · {status.reason}</>}</span>
       </div>
 
-      {/* what needs attention: each only when there is something to say */}
+      {/* what needs attention: each only when there is something to say; then Maintenance (docs/48 B3) */}
       <Flash msg={typeof q.msg === "string" ? q.msg : undefined} detail={typeof q.detail === "string" ? q.detail : undefined} />
       <HealthCard view={watch} />
       <PackPending link />
@@ -96,6 +104,8 @@ export default async function AdminOverview({ searchParams }: { searchParams: Pa
           {designer.signedIn === false ? "The build designer is signed out: sign in on the VPS as its own user (no restart needed)." : `The build designer is not well: ${designer.error ?? "its CLI does not answer"}.`}
         </p>
       )}
+
+      <MaintenanceCard v={{ on: maintenance.on, at: maintenance.at, by: by?.displayName ?? null, ticked: ticked.map((t) => t.displayName), mine: ticked.some((t) => t.id === admin.id), online: onServer.length, wouldGo: onServer.filter((p) => !(p.uuid && tickedUuids.has(p.uuid))).length, held: held.filter((h) => h.reason === "maintenance").map((h) => h.name) }} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="At a glance" role="group" data-testid="at-a-glance">
         <Tile href="/admin/server" title="Server" testId="tile-server">

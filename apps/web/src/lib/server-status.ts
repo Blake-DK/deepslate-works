@@ -3,10 +3,17 @@ import { STATE_LABEL, stateHint, stateLine, TONE, type ServerState, type Tone } 
 // docs/13 §12 A: how a status reads on the page. One place, so Home, the sidebar, Admin → Overview, the Play button
 // and the map all say the same thing.
 
-export type StatusLike = { server: ServerState; online: unknown[]; sleepInMin: number | null; reason: string | null; wake: { leftS: number | null } };
+export type StatusLike = { server: ServerState; online: unknown[]; sleepInMin: number | null; reason: string | null; wake: { leftS: number | null }; maintenance?: boolean };
+
+/** docs/48 B4: what members read while the site's Maintenance is on (not AMP's state of that name). */
+export const MAINTENANCE_LINE = "Down for maintenance";
+export const MAINTENANCE_HINT = "The server is being worked on. You'll be let in when it's done.";
 export type StatusText = { state: ServerState; line: string; label: string; tone: Tone; hint: string; reason: string | null };
 
 export function statusText(s: StatusLike, admin: boolean): StatusText {
+  // docs/48 B4: members get "Down for maintenance" as their line, here and in the app (it takes the line from the
+  // site); the state stays what it is, so Play and the wake do as before. Admins keep the server's own line.
+  if (s.maintenance && !admin) return { state: s.server, line: MAINTENANCE_LINE, label: STATE_LABEL[s.server], tone: "warn", hint: MAINTENANCE_HINT, reason: null };
   return {
     state: s.server,
     line: stateLine(s.server, { players: s.online.length, sleepInMin: s.sleepInMin, wakeLeftS: s.wake.leftS }),
@@ -31,7 +38,9 @@ export function testServerText(state: string, players: number) {
 /** docs/23 §4: the banner's pill, the short line the app's window uses (SiteHome.HeroLine), and its dot. */
 export type Pill = { line: string; dot: "up" | "waking" | "asleep" | "down" };
 
-export function pillFor(s: StatusLike): Pill {
+export function pillFor(s: StatusLike, admin = false): Pill {
+  // docs/48 B3, B4: while the site's Maintenance is on, admins read "Maintenance" on every page, members its line
+  if (s.maintenance) return { line: admin ? "Maintenance" : MAINTENANCE_LINE, dot: "waking" };
   switch (s.server) {
     case "online": return { line: s.online.length > 0 ? `Server is up · ${s.online.length} playing` : "Server is up", dot: "up" };
     case "waking": {

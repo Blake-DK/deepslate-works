@@ -10,6 +10,7 @@ import { canSeeServer, getSettings } from "@/server/settings";
 import { getStatus, playersLast24h } from "@/server/status";
 import { getAnnouncements } from "@/server/announcements";
 import { LaunchBanner } from "@/components/launch-banner";
+import { MaintenanceBanner } from "@/components/maintenance-banner";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { StatusCard } from "@/components/server/status-card";
 import { MapEmbed } from "@/components/server/map-embed";
@@ -42,6 +43,8 @@ export default async function HomePage() {
     getSeasonCurrent().then(lineFor).catch(() => null),
   ]);
   const showServer = canSeeServer(user, settings);
+  const admin = user.role === "ADMIN";
+  // docs/48 B4: the site's Maintenance takes the place of the address (and of the "Not live yet" line) for members
   const mapUp = Boolean(env.MAP_URL) && status.server === "online";
   return (
     <div className="space-y-6">
@@ -51,11 +54,11 @@ export default async function HomePage() {
         <h1 className="text-2xl font-semibold">Welcome back, {user.displayName}</h1>
         <p className="text-muted-foreground">{user.mcUsername ? <>Linked to Minecraft account <span className="font-mono">{user.mcUsername}</span>.</> : <>Your Minecraft account gets linked the first time you join the server.</>} {members} {members === 1 ? "person" : "people"} in the group so far.</p>
       </div>
-      {!settings.live && !(user.earlyAccess && user.role !== "ADMIN") && <LaunchBanner launchAt={settings.launchAt} admin={user.role === "ADMIN"} />}
+      {status.maintenance ? <MaintenanceBanner admin={admin} /> : !settings.live && !(user.earlyAccess && !admin) && <LaunchBanner launchAt={settings.launchAt} admin={admin} />}
       <VoteBanner pending={pending} />
       {season && <p className="rounded-[4px] border bg-card px-4 py-3 text-sm" data-testid="season-line"><Link href="/season" className="font-medium text-primary hover:underline">Season</Link> · {season}</p>}
       <div className="grid gap-4 sm:grid-cols-2">
-        <StatusCard status={status} series={series} address={showServer ? env.SERVER_ADDRESS : null} admin={user.role === "ADMIN"} />
+        <StatusCard status={status} series={series} address={showServer && (admin || !status.maintenance) ? env.SERVER_ADDRESS : null} admin={admin} />
         <div className="space-y-4">
           {showServer && (
             <Card data-testid="play-card">

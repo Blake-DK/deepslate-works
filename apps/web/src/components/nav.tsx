@@ -49,7 +49,7 @@ export async function AppFrame({ children, footer }: { children: React.ReactNode
   let pill: React.ReactNode = null;
   if (status) {
     const a = statusText(status, admin);
-    const p = pillFor(status);
+    const p = pillFor(status, admin);
     pill = (
       <span className="inline-flex max-w-full items-center gap-2 rounded-full border bg-[rgba(12,13,16,.8)] px-3 py-1 text-[13px] font-semibold text-foreground" data-testid="nav-status" title={`${a.line}. ${a.hint}`}>
         <span className={`inline-block h-[9px] w-[9px] shrink-0 rounded-full ${DOT[p.dot]}`} aria-hidden />

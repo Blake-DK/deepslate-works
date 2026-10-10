@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/server/db";
 import { apiFetch } from "@/server/api-client";
+import { getMaintenance } from "@/server/settings";
 import { fillBuckets, type Bucket } from "@/lib/series";
 import { serverState, type ServerState } from "@/shared/server-state";
 
@@ -28,13 +29,15 @@ export type LiveStatus = {
   tps: number | null;
   uptime: string | null;
   at: string;
+  /** docs/48: the site's Maintenance is on (not AMP's state of that name); members read "Down for maintenance". */
+  maintenance: boolean;
 };
 
 const NO_WAKE: WakeView = { phase: "idle", startedAt: null, endedAt: null, leftS: null, by: null };
 
 /** What the site knows when it cannot ask: nothing, and it says so ("Can't reach the server"), never "offline". */
 export function unreachableStatus(reason: string): LiveStatus {
-  return { state: "Unknown", stateCode: null, availability: "unknown", server: "unreachable", reason, sleepInMin: null, wake: NO_WAKE, players: [], online: [], maxPlayers: null, cpu: null, memMb: null, memMaxMb: null, tps: null, uptime: null, at: new Date().toISOString() };
+  return { state: "Unknown", stateCode: null, availability: "unknown", server: "unreachable", reason, sleepInMin: null, wake: NO_WAKE, players: [], online: [], maxPlayers: null, cpu: null, memMb: null, memMaxMb: null, tps: null, uptime: null, at: new Date().toISOString(), maintenance: false };
 }
 
 let cache: { at: number; value: LiveStatus } | null = null;
@@ -64,12 +67,19 @@ export async function getStatus(): Promise<LiveStatus> {
       reason: s.reason ?? null,
       sleepInMin: typeof s.sleepInMin === "number" ? s.sleepInMin : null,
       wake: s.wake ?? NO_WAKE,
+      maintenance: false,
     };
   } catch {
     value = unreachableStatus("the site's backend (api) isn't answering");
   }
+  value.maintenance = await getMaintenance().then((m) => m.on).catch(() => false);
   cache = { at: Date.now(), value };
   return value;
+}
+
+/** After the Maintenance switch, so the next page reads it at once. */
+export function forgetStatus() {
+  cache = null;
 }
 
 /** Most players online at once, per half hour, for the last 24 hours (48 slots, null where nothing was recorded). */

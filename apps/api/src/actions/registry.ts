@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { NOT_OPEN_TEXT } from "../shared/access.js";
+import { MAINTENANCE_TEXT, NOT_OPEN_TEXT } from "../shared/access.js";
 import { MISSING_MODS_TEXT } from "../shared/join-gate.js";
 import { VOTE_FIRST_TEXT } from "../shared/polls.js";
 import { CODE_RE, showCode } from "../shared/join-code.js";
@@ -241,7 +241,7 @@ export function bookCheckCommands(name: string, portalUrl: string, code: string)
 }
 
 /** Who waits in the room, and for what: to link their Discord, for Play first, for the server to open, or for a new installer. */
-export type HeldKind = "link" | "play" | "closed" | "old" | "mods" | "vote";
+export type HeldKind = "link" | "play" | "closed" | "old" | "mods" | "vote" | "maintenance";
 
 /** What stays on their screen while they wait (docs/14 "The prompt"). */
 export function screenText(kind: HeldKind, portalUrl: string, code = ""): { title: string; subtitle: string; bar?: string } {
@@ -254,6 +254,8 @@ export function screenText(kind: HeldKind, portalUrl: string, code = ""): { titl
   if (kind === "mods") return { title: "Your game is missing some mods", subtitle: `Press Play on ${host} to fix it` };
   // planner 2026-10-02: a must-vote poll they have not answered
   if (kind === "vote") return { title: "There's a new vote", subtitle: `Open Deepslate Works or ${host} to vote, then you're in` };
+  // docs/48 B2: the site's Maintenance; the action bar has the whole sentence
+  if (kind === "maintenance") return { title: "Down for maintenance", subtitle: "You'll be let in when it's done.", bar: MAINTENANCE_TEXT };
   return { title: "Not open yet", subtitle: "You'll be let in when the server goes live" };
 }
 
@@ -276,6 +278,10 @@ export function screenCommands(name: string, kind: HeldKind, portalUrl: string, 
 export const clearScreen = (who: string) => [`title ${who} clear`, `title ${who} reset`, `title ${who} actionbar ""`];
 
 const COORD = z.number().finite().min(-30_000_000).max(30_000_000);
+
+export function maintenanceTellraw(name: string): string {
+  return `tellraw ${name} ${JSON.stringify(["", { text: MAINTENANCE_TEXT, color: "gold" }])}`;
+}
 
 export function closedTellraw(name: string): string {
   return `tellraw ${name} ${JSON.stringify(["", { text: NOT_OPEN_TEXT, color: "gold" }])}`;
@@ -379,7 +385,7 @@ export const actions = {
   "limbo.bar": define({
     name: "limbo.bar",
     role: "system",
-    input: z.object({ name: MC_NAME, kind: z.enum(["link", "play", "closed", "old", "mods", "vote"]), code: z.string().regex(CODE_RE).optional() }),
+    input: z.object({ name: MC_NAME, kind: z.enum(["link", "play", "closed", "old", "mods", "vote", "maintenance"]), code: z.string().regex(CODE_RE).optional() }),
     build: (ctx, { name, kind, code }) => {
       const t = screenText(kind, ctx.portalUrl, code);
       return [`title @a[name=${name},tag=!verified] actionbar ${component(t.bar ?? t.subtitle, "yellow")}`];
@@ -467,6 +473,18 @@ export const actions = {
   }),
   "limbo.remindClosed": define({ name: "limbo.remindClosed", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [...screenCommands(name, "closed", ctx.portalUrl), closedTellraw(name)] }),
   "limbo.kickIdleClosed": define({ name: "limbo.kickIdleClosed", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${NOT_OPEN_TEXT}`] }),
+  // docs/48 B2: the site's Maintenance. Held until it ends, or kicked when it is switched on (`maintenance.kick`).
+  "limbo.holdMaintenance": define({
+    name: "limbo.holdMaintenance",
+    role: "system",
+    input: z.object({ name: MC_NAME }),
+    build: (ctx, { name }) => [...intoRoom(ctx, name), ...screenCommands(name, "maintenance", ctx.portalUrl), maintenanceTellraw(name)],
+  }),
+  "limbo.remindMaintenance": define({ name: "limbo.remindMaintenance", role: "system", input: z.object({ name: MC_NAME }), build: (ctx, { name }) => [...screenCommands(name, "maintenance", ctx.portalUrl), maintenanceTellraw(name)] }),
+  "limbo.kickIdleMaintenance": define({ name: "limbo.kickIdleMaintenance", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${MAINTENANCE_TEXT}`] }),
+  // Switched on by an admin: whoever is on the server without the tick goes, at once. A plain kick: the game keeps
+  // where they stood, and the door holds them if they come back before it ends.
+  "maintenance.kick": define({ name: "maintenance.kick", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${MAINTENANCE_TEXT}`] }),
   // Held until a run from the app the site hands out now arrives (players/app-version.ts).
   "limbo.holdOld": define({
     name: "limbo.holdOld",

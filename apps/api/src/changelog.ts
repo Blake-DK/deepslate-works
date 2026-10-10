@@ -151,6 +151,7 @@ export const CHANGES: Change[] = [
     // live check (the rule above).
     id: "2026-10-10-server-words-maintenance",
     date: "2026-10-10",
+    live: true,
     lines: [
       "The site and the app now say the right thing when the server goes to sleep, stops or restarts. Before, a server going to sleep showed as \"Stopping\" and a restart could show as \"Asleep\".",
       "When the server is down for maintenance, the site and the app now say so. Anyone playing is sent off with that message, and if you join while it lasts you wait in the entrance room and are let in as soon as it's over.",

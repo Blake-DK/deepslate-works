@@ -175,7 +175,7 @@ S3 and S4 go to `main` together in one PR: the profile is inert without `TEST_ST
 
 1. **Memory on the AMP host.** It has 15.5 GB and the live server may take 10 GB of heap (docs/33 §3). A test server with 4 GB beside it is too tight when both are busy. Recommended: raise the VM to 24 GB if the Proxmox host has it. Otherwise the test server is used while the live one sleeps or with 3 GB.
 2. **The two names**, real ones in `deploy/.env`: the test site (it must sit under the live site's domain for the admin gate to work) and the game address (anything that does not say "test" or "season").
-3. **Actions minutes.** Each press of `test-images.yml` costs about what one push to `main` costs. If the month's budget is tight, the test stack can run `main`'s images until a season change needs `dev`.
+3. **Actions minutes.** Since 2026-10-10 every push to `dev` that changes an image builds one (`dev-images.yml`), about 7 billed minutes each, about 100 a week at the pace of that week: some 700 minutes. Free while the repository is public (standard runners). If it goes private again (2,000 minutes a month on the free plan), the limit: drop `push` from `dev-images.yml` and give it `workflow_dispatch` and a nightly `schedule` instead (at most one build a day, about 210 minutes a month, plus any press by hand); its check job can go too, as `ci.yml` already checks every push to `dev`.
 4. **Who else tests.** The plan assumes admins. A second player is needed for the 48-block group credit; that is one invite on the test site and one whitelist line.
 
 ## 13. Silent on Discord (2026-10-08, Alex; for docs/42a too, which is not in the repo)

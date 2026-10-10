@@ -32,6 +32,8 @@ export function Strip({ label, children }: { label: string; children: React.Reac
   );
 }
 
+const SITES = ["Live", "Test"] as const;
+
 /** The admin pages' own strip, under the main one on /admin and below (docs/23 §4). */
 export function AdminStrip({ other = null }: { other?: { label: "Live" | "Test"; url: string } | null }) {
   const path = usePathname();
@@ -48,12 +50,18 @@ export function AdminStrip({ other = null }: { other?: { label: "Live" | "Test";
       <NavLink href="/admin/votes">Votes</NavLink>
       <NavLink href="/admin/discord">Discord</NavLink>
       <NavLink href="/admin/site">Site</NavLink>
-      {/* docs/42 §8: Live | Test, the same page on the other site of the pair; only while there is a test server */}
+      {/* docs/42 §8: Live | Test, the same page on the other site of the pair; only while there is a test server. Always
+          Live then Test on both sites, so the two never trade places: only the highlight moves. */}
       {other && (
         <>
           <span className="min-w-4 flex-1" aria-hidden />
-          <span className={stripLink(true)} aria-current="page" data-testid="site-switch-here">{other.label === "Test" ? "Live" : "Test"}</span>
-          <a href={`${other.url}${path}`} className={stripLink(false)} data-testid="site-switch-other">{other.label}</a>
+          {SITES.map((label) =>
+            label === other.label ? (
+              <a key={label} href={`${other.url}${path}`} className={stripLink(false)} data-testid="site-switch-other">{label}</a>
+            ) : (
+              <span key={label} className={stripLink(true)} aria-current="page" data-testid="site-switch-here">{label}</span>
+            ),
+          )}
         </>
       )}
     </Strip>

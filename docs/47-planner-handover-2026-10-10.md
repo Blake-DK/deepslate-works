@@ -82,6 +82,10 @@ Not built:
 10. The app lists the removed jars by name to every player at their next Play.
 11. The site's health output names a tool. If that page can be read from outside, it should not.
 12. The grave mod rewrites its config at every start after a Sync, so the repo's version is not what runs.
+17. A docs-only PR never reports the required "check": ci.yml skips docs-only pull requests (paths-ignore), so the PR
+   waits forever. Fix: drop paths-ignore from `pull_request` only. A docs-only merge to main still builds no images;
+   deploy.sh then deploys the last code commit's images (deploy.sh 124-144), checked by computation only, never in a
+   real deploy. **Fixed by PR #25 (ci.yml): every pull request now runs ci; pushes still skip docs-only changes.**
 
 Housekeeping:
 13. The pre-push hook and the placeholder note, both waiting since 2026-10-09.

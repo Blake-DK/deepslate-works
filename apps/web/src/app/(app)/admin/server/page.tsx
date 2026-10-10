@@ -13,7 +13,8 @@ import { BrandingSaved, brandingValues } from "../branding/section";
 import { saveBrandingAction } from "../branding/actions";
 import { getFrontiers } from "@/server/season";
 import { loadRouter, RouterPage } from "./router";
-import { BackupCard, consoleLines, DistanceCard, EntityCountsCard, Flash, GroundClearCard, loadGround, loadBackup, loadDistance, loadPlayers, loadPregen, loadSchedule, loadTail, MapCard, PowerCard, PregenCard, RestartCard } from "./cards";
+import { loadMaintenanceView, MaintenanceCard } from "../maintenance-card";
+import { BackupCard, consoleLines, DistanceCard, EntityCountsCard, Flash, GroundClearCard, loadGround, loadBackup, loadDistance, loadHeld, loadPlayers, loadPregen, loadSchedule, loadTail, MapCard, PowerCard, PregenCard, RestartCard } from "./cards";
 
 export const metadata: Metadata = { title: "Server" };
 
@@ -48,8 +49,10 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
 
   let body: React.ReactNode;
   if (tab === "power") {
-    const [players, schedule] = await Promise.all([loadPlayers(caller), loadSchedule(caller)]);
-    body = <div className="grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><PowerCard status={status} players={players} /></div><RestartCard schedule={schedule} running={running} /></div>;
+    const [players, schedule, held] = await Promise.all([loadPlayers(caller), loadSchedule(caller), loadHeld(caller)]);
+    const maintenance = await loadMaintenanceView(admin.id, status, held?.held ?? null);
+    // docs/48 B3 (Alex, 2026-10-10): the site's Maintenance is switched here, beside Power and Restart
+    body = <div className="grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><PowerCard status={status} players={players} /></div><div className="md:col-span-2"><MaintenanceCard v={maintenance} /></div><RestartCard schedule={schedule} running={running} /></div>;
   } else if (tab === "performance") {
     const [distance, schedule, ground] = await Promise.all([loadDistance(caller), loadSchedule(caller), loadGround(caller)]);
     body = (

@@ -526,7 +526,7 @@ export class Limbo {
   }
 
   /**
-   * docs/48 B2: an admin switched the site's Maintenance (Admin → Overview). The door reads the switch again now. On:
+   * docs/48 B2: an admin switched the site's Maintenance (Admin → Server). The door reads the switch again now. On:
    * everybody on the server without the tick is kicked at once with the words, the room's people included; nobody is
    * moved into the room (the game keeps where they stood). Off: whoever is held for it is looked at again now, and goes
    * on through the rest of the door, back to where they stood.

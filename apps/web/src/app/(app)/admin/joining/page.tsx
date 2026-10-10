@@ -81,7 +81,7 @@ export default async function JoiningAdminPage({ searchParams }: { searchParams:
       <div className="space-y-4">
         {env.TEST_MODE && flash}
         {/* docs/48 B3: one line, not a second switch */}
-        <p className="text-sm" data-testid="maintenance-line">Maintenance is <strong>{maintenance.on ? "on" : "off"}</strong>. It is switched on <Link href="/admin" className="underline">Admin → Overview</Link>.</p>
+        <p className="text-sm" data-testid="maintenance-line">Maintenance is <strong>{maintenance.on ? "on" : "off"}</strong>. It is switched on <Link href="/admin/server" className="underline">Admin → Server → Power &amp; restarts</Link>.</p>
         {env.TEST_MODE && <TestDoorCard door={test?.door ?? null} />}
         <SettingsSection searchParams={asSectionQuery(q)} cards={["launch", "joining"]} />
         <Card data-testid="must-vote">

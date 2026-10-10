@@ -26,6 +26,33 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The site's Maintenance: docs/48 Part B (2026-10-10, on `dev`, in the `dev` → `main` PR, not deployed)
+
+- **Built:** `SiteSettings.maintenance` (with when and by whom) and `User.maintenanceJoin`, migration 0032 (off after
+  it, nobody ticked). The door (`shared/access.ts` `doorRule`, `players/limbo.ts`): after the link and the Discord server
+  rule, before "We're live", the vote and Play first; only an admin with the tick goes on. Held for it: "Down for
+  maintenance. You'll be let in when it's done." on screen, in chat, the reminder and the idle kick. api `POST
+  /maintenance`: on kicks everybody on the server without the tick (`maintenance.kick`, role system: not sendable
+  through `/actions`); off looks at whoever is held for it at once (release back to where they stood). Activity:
+  `site.maintenance`, `maintenance.kick`, `user.maintenanceJoin`, "<name> was held: the server is down for maintenance".
+  Members: "Down for maintenance" as `statusText`'s line (site, `/api/app/home`, `/api/version`) and the pill; a banner
+  on Home and Getting started in place of the address; Downloads and Play unchanged; no Discord post. Admins: the pill
+  reads "Maintenance" on every page.
+- **Where (Alex, 2026-10-10, overriding docs/48 B3):** the card is on Admin → Server → Power & restarts, not Overview.
+  Overview shows only a line while it is on, with a link there; Joining → Rules says on or off and where it is switched.
+- **Checks:** web 634, api 745 (`tests/maintenance.test.ts`: hold, release on off, kick on on, the words), modpack 217,
+  typecheck, lint. Test pair on `afa44a12` (18:37 UTC), migration 0032 applied to `deepslate_test`.
+- **Not done:** Alex's three checks of B5 and the in-game lines of A6 (online mark, kicks, Builder mode, place and
+  lock). The test server was switched off and only Alex is linked on the test database.
+- **Stop point (B4), for Alex or the planner:** app 3.6.1 shows the site's line on its Play tab, but its banner pill is
+  made from the state, so it reads "Server is up · N playing" with a green dot while Maintenance is on; Play goes
+  through and opens the launcher, and the member is held only after joining. Not worked round on the site (changing
+  the state would change what Play does); an app change is outside docs/48.
+- **The test site's backups:** none listed because the test instance's AMP user lacks `LocalFileBackup.Backup.ViewBackupsList`
+  and the backup permission (live lists 13). An AMP role setting, not code.
+- **`.git/config`:** two other sessions added `[branch "work/docs-tidy"]` and `[branch "work/amp-state-names"]`;
+  deploy.sh's S4 check stops on such sections. To remove before the deploy.
+
 ## Admin, not Control Room: docs/48 Part A (2026-10-10, on `dev` `ee78660a`, not deployed)
 
 The rename and the new layout, with no change to the api, the database or what any action does. Part B (Maintenance)

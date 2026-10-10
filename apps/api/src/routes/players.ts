@@ -31,7 +31,7 @@ export function playerRoutes(app: FastifyInstance, amp: Amp, tail: ConsoleTail, 
     return reply.code(r.code === "failed" ? 502 : 409).send({ error: { code: r.code, message } });
   });
 
-  // docs/48 B3: the site's Maintenance, switched on Admin → Overview (not AMP's state of that name). Kept in the site's
+  // docs/48 B3: the site's Maintenance, switched on Admin → Server → Power & restarts (not AMP's state of that name). Kept in the site's
   // settings; the door reads it. On kicks whoever has no tick; off looks at whoever is held for it again at once.
   app.post("/maintenance", async (req, reply) => {
     if (!(await requireAdmin(req, reply))) return;

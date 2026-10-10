@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Check } from "@/components/ui/check";
 import { ukDayTime } from "@/lib/uk-time";
 import { timeAgo } from "@/lib/series";
+import { db } from "@/server/db";
+import { getMaintenance } from "@/server/settings";
+import type { LiveStatus } from "@/server/status";
 import { maintenanceAction } from "./maintenance-actions";
+import type { HeldEntry } from "./server/cards";
 
 export type MaintenanceView = {
   on: boolean;
@@ -22,10 +26,28 @@ export type MaintenanceView = {
   held: string[];
 };
 
+/** What the card shows. `held`: the entrance room now (api /held); null when api did not answer. */
+export async function loadMaintenanceView(adminId: string, status: LiveStatus, held: HeldEntry[] | null): Promise<MaintenanceView> {
+  const [m, ticked] = await Promise.all([
+    getMaintenance(),
+    db.user.findMany({ where: { role: "ADMIN", maintenanceJoin: true }, orderBy: { displayName: "asc" }, select: { id: true, displayName: true, mcUuid: true } }),
+  ]);
+  const by = m.byId ? await db.user.findUnique({ where: { id: m.byId }, select: { displayName: true } }) : null;
+  // everybody on the server but the admins with the tick goes when it is switched on, the room's people too
+  const tickedUuids = new Set(ticked.map((t) => t.mcUuid).filter(Boolean));
+  const onServer = status.server === "online" ? status.online : [];
+  return {
+    on: m.on, at: m.at, by: by?.displayName ?? null,
+    ticked: ticked.map((t) => t.displayName), mine: ticked.some((t) => t.id === adminId),
+    online: onServer.length, wouldGo: onServer.filter((p) => !(p.uuid && tickedUuids.has(p.uuid))).length,
+    held: (held ?? []).filter((h) => h.reason === "maintenance").map((h) => h.name),
+  };
+}
+
 /**
- * docs/48 B3: the site's Maintenance (not AMP's state of the same name), on Admin → Overview of both sites, each with
- * its own switch. The only control on Overview. Off: what it does, who has the tick, who would be kicked, "I'm sure"
- * and Start. On: since when and by whom, who is held for it, End.
+ * docs/48 B3: the site's Maintenance (not AMP's state of the same name), on both sites, each with its own switch. On
+ * Admin → Server → Power & restarts (Alex, 2026-10-10: not on Overview, which only says when it is on). Off: what
+ * it does, who has the tick, who would be kicked, "I'm sure" and Start. On: since when and by whom, who is held, End.
  */
 export function MaintenanceCard({ v }: { v: MaintenanceView }) {
   return (

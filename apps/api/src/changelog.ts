@@ -146,6 +146,15 @@ export const CHANGES: Change[] = [
     live: true,
     lines: ["A small pack update, a tidy-up of the world and a new version of the app. Press Play as usual."],
   },
+  {
+    id: "2026-10-10-maintenance",
+    date: "2026-10-10",
+    lines: [
+      "When the server is being worked on, the site and the app now say \"Down for maintenance\". Anyone who joins then waits in the entrance room and is let in, back where they were, as soon as it is done.",
+      "The server's status now says the right thing while it is restarting, stopping or going to sleep.",
+      "The rows of tabs at the top of the site no longer show a little scrollbar of their own.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

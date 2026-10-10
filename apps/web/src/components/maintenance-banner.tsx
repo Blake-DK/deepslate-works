@@ -8,7 +8,7 @@ export function MaintenanceBanner({ admin }: { admin: boolean }) {
   return (
     <div className="rounded-[4px] border-2 border-primary bg-card px-4 py-3 text-sm" data-testid="maintenance-banner">
       <span className="font-medium">{MAINTENANCE_LINE}.</span> {MAINTENANCE_HINT}
-      {admin && <span className="text-muted-foreground"> Members see this instead of the address. It is switched on Admin → Overview.</span>}
+      {admin && <span className="text-muted-foreground"> Members see this instead of the address. It is switched on Admin → Server.</span>}
     </div>
   );
 }

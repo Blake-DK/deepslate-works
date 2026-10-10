@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { markLog, MAX_LOG_BYTES, redactLog, redactText, reportSchema, sanitizeReport, suggestTier, summary, truncateMiddle } from "@/lib/install-report";
+import { markLog, MAX_LOG_BYTES, NO_PC_MODES, PC_REPORT, redactLog, redactText, reportSchema, sanitizeReport, suggestTier, summary, truncateMiddle } from "@/lib/install-report";
 
 describe("redaction", () => {
   it("takes the name out of paths under Users, however they are written", () => {
@@ -148,6 +148,18 @@ describe("the tier is measured, not asked", () => {
     expect(describeAction("installer.report", { role: "PLAYER", name: "m1owl" }, { outcome: "ok", packVersion: "0.1.0+47b0b579" }, "OK")).toBe("m1owl installed 0.1.0+47b0b579: all good");
     expect(describeAction("installer.report", { role: "PLAYER", name: "m1owl" }, { outcome: "failed", failedStep: "Checking the Minecraft Launcher" }, "FAILED")).toBe('m1owl ran the installer and it failed at "Checking the Minecraft Launcher"');
     expect(kindOf("installer.report", "PLAYER")).toBe("INSTALL");
+  });
+});
+
+describe("which report says what a member's PC is (Admin → Installs, the player page)", () => {
+  it("not the game check 3.6 sends after every Play, nor a log sent, an unfinished run, the uninstaller or a test run", () => {
+    for (const m of ["game_check", "log_sent", "unfinished", "uninstall", "test_play", "test_game_check"]) expect(NO_PC_MODES).toContain(m);
+    for (const m of ["play", "update", "first_install", "install", "handover", "update_only"]) expect(NO_PC_MODES).not.toContain(m);
+    expect(PC_REPORT).toEqual({ mode: { notIn: [...NO_PC_MODES] }, minimal: false }); // nor a ping with reports off
+  });
+  it("a game check's PC, as it is stored, says nothing: no tier from it", () => {
+    const stored = reportSchema.parse({ packVersion: "0.1.0+d44eb2ba", installerVersion: "3.6.1", mode: "game_check", outcome: "ok", durationSec: 0, log: "game check: all 71 mods loaded", system: null }).system;
+    expect(suggestTier(stored)).toBeNull();
   });
 });
 

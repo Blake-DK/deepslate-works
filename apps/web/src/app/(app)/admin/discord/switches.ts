@@ -27,6 +27,6 @@ export const SWITCHES: ReadonlyArray<{ key: Key; title: string; example: string 
 export const BOT_SWITCHES: ReadonlyArray<{ key: BotKey; title: string; example: string }> = [
   { key: "voteButtons", title: "Vote buttons", example: "Polls are posted by the bot in season-updates with a button per option; a press votes for the member whose Discord account pressed it." },
   { key: "commands", title: "Slash commands", example: "/online, /status, /votes, /season, /me, /wake; for the portal's admins /restart, /cancel-restart, /say and /feed." },
-  { key: "chatToDiscord", title: "Chat, game → Discord", example: "What linked players say in the game shows in the chat channel, as them with their head." },
+  { key: "chatToDiscord", title: "Chat, game → Discord", example: "What linked players say in the game shows in the chat channel, as them with their head. Players let in without the Discord server are not relayed." },
   { key: "chatToGame", title: "Chat, Discord → game", example: "What people write in the chat channel shows in the game as [Discord] name: text, while somebody is on. Leave off until it has been tried in the game." },
 ];

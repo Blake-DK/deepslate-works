@@ -26,6 +26,31 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Invited players' chat stays in the game: docs/50 (2026-10-10, on `dev`, in PR #31, not deployed)
+
+- **Built:** `chatStaysInGame` (`apps/api/src/discord/announcer.ts`): `outsideAuth` and (`discordId` null or
+  `guildMember` false). `store.member` (`discord/store.ts`) now reads `outsideAuth`, `discordId` and `guildMember` with
+  the id and returns `inGameOnly`; only `Announcer.chat` reads it, so deaths, joins, leaves, advancements and first-join
+  lines are as before. Such a player's lines are handled without a post: the feed's position moves on, no retry.
+  Admin → Discord's "Chat, game → Discord" line and the member menu's "Let in without the Discord server" question say
+  so; docs/22 §5 has one line. No migration, no setting, nothing on the door or Discord → game.
+- **Checks:** docs/50 §5 tests 1 to 6 and the rule itself in `tests/discord-feed.test.ts` (29 there); api 752, web 636,
+  modpack 217, typecheck and lint.
+- **On live's data (read only, counts):** 10 members, 3 let in without the Discord server, all 3 not in it now, so
+  all 3 would be kept in the game; none invited and now in the server.
+- **Unproven:** on live after the deploy, an invited player's line in the game and not in #game-chat while a Discord
+  member's line of the same minute is; Activity shows the line as a normal chat event. The test server has no bot.
+
+## The group's PCs show again (2026-10-10, on `dev`, in its own `dev` → `main` PR)
+
+The installer never stopped measuring: 3.6.1 sends the same PC details as the 2.x script (`installer/app/src/Core/Report.cs`
+`SystemInfo`), and every Play, update and install report of the last 14 days has them. Admin → Installs ("the group's
+PCs") and the player page's PC tab showed each member's latest report, and since 3.6 that is mostly the game check, sent
+on purpose without PC details: 4 of 8 members read "not known". Both now take the latest report that says what the PC
+is (`lib/install-report.ts` `PC_REPORT`: not the uninstaller, game check, log sent, unfinished run, test runs or a ping
+with reports off); "Uninstalled on" and the last install still come from the latest report of all. On live's data: 8
+of 8. The report route decides a measured tier from the same list (`NO_PC_MODES`), unchanged in effect.
+
 ## The site's Maintenance: docs/48 Part B (2026-10-10, on `dev`, in the `dev` → `main` PR, not deployed)
 
 - **Built:** `SiteSettings.maintenance` (with when and by whom) and `User.maintenanceJoin`, migration 0032 (off after
@@ -86,7 +111,7 @@ is not started.
   shown on the test site: its designer is not set up (live's is); the redirect itself is proven.
 - **`grep -ri "control room" apps/`** prints nothing.
 
-## AMP state numbers corrected (2026-10-10, on `dev`, not deployed)
+## AMP state numbers corrected (2026-10-10, live: PR #30, `main` `1fd4bbba`, deployed 19:03 UTC)
 
 docs/47 §5.7. AMP's `ApplicationState` is 30 Restarting, 40 Stopping, 45 PreparingForSleep, 50 Sleeping; the code had
 30 Sleeping, 40 Restarting, 45 Stopping, 50 PreparingForSleep (live confirmed 50 = asleep on 2026-10-08, see the OPAC
@@ -98,7 +123,7 @@ Fixed in `amp/client.ts` (names and `availability()`), both `shared/server-state
 50 asleep), `POST /server/kill` and the kill box (only at 40), docs/08, and the tests. Not changed: the state names
 already stored in status snapshots and event metadata. Rows written before the deploy carry the old names (a sleep
 stored as "PreparingForSleep", a restart as "Sleeping"); the uptime query counts both as available, so the uptime
-figure for restarts before the deploy is slightly high. The "End the process" button is safe to use once this is live.
+figure for restarts before the deploy is slightly high. Deployed 19:03 UTC with docs/48 Parts A and B (migration 0032); api healthy, no errors, the server read as Running. "End the process" is now only offered at 40. Change log entry `2026-10-10-server-words-maintenance` set live; the next deploy posts it.
 
 ## All open work in one list (2026-10-10, on `dev`)
 

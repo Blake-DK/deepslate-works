@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { formatDate } from "@/lib/utils";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { MODE_LABEL, OUTCOMES, memoryLine, settingsSchema, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
+import { MODE_LABEL, OUTCOMES, PC_REPORT, memoryLine, settingsSchema, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
 import { timeAgo } from "@/lib/series";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,9 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   // The group's PCs: each member's latest report, whatever the filter above says. 3.6.1: never a test run's (an admin's
   // test Play or test game check is not their PC's latest, and has no measured tier)
   const latest = await db.installReport.findMany({ where: { mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, userId: true, at: true, system: true, tierMeasured: true, mode: true, outcome: true, extras: true, user: { select: { displayName: true, mcUuid: true } } } });
+  // What their PC is: their latest report that says. Since 3.6 their latest report is mostly the game check, which
+  // carries no PC details (nor does a log sent, an unfinished run, a ping with reports off or the uninstaller)
+  const measuredBy = new Map((await db.installReport.findMany({ where: PC_REPORT, orderBy: { at: "desc" }, distinct: ["userId"], take: 100, select: { id: true, userId: true, at: true, system: true, tierMeasured: true } })).map((r) => [r.userId, r]));
   // 3.5.0 (docs/30 §6): the memory the game got on each member's PC, and whether they chose it, from their latest report
   // that says (a ping, a game check and apps before 3.5.0 do not)
   const memory = new Map(
@@ -56,18 +59,25 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
     .filter((r) => r.line);
   const members = await db.user.count();
   const tiers = { HIGH: 0, MID: 0, LOW: 0 } as Record<string, number>;
-  for (const l of latest) if (l.tierMeasured) tiers[l.tierMeasured] = (tiers[l.tierMeasured] ?? 0) + 1;
-  // One line for each thing; what does not fit is cut with an ellipsis and whole on hover.
-  const pc = (l: (typeof latest)[number]) => ({
-    s: summary(l.system as SystemInfo),
-    game: memory.get(l.userId) ?? null,
-    who: <Link href={`/admin/installs/${l.id}`} className="block min-w-0 font-medium hover:underline"><Clip text={l.user.displayName} /></Link>,
-    cpu: <Short full={summary(l.system as SystemInfo).cpu} short={shortCpu(summary(l.system as SystemInfo).cpu)} />,
-    gpu: <Short full={summary(l.system as SystemInfo).gpu} short={shortGpu(summary(l.system as SystemInfo).gpu)} />,
-    tier: l.tierMeasured ? <Badge tone={l.tierMeasured === "HIGH" ? "good" : l.tierMeasured === "LOW" ? "warn" : "neutral"} className="whitespace-nowrap">{TIER[l.tierMeasured]}</Badge> : <span className="text-muted-foreground" title="Not enough in the report to go on">–</span>,
-    // the member took Deepslate Works off their PC (the uninstaller, 1.5.2): their account and link stay
-    when: l.mode === "uninstall" && l.outcome === "ok" ? <Badge className="whitespace-nowrap" title={l.at.toISOString()}>Uninstalled on {formatDate(l.at)}</Badge> : <span title={l.at.toISOString()}>{timeAgo(l.at, now)}</span>,
-  });
+  for (const l of latest) {
+    const t = measuredBy.get(l.userId)?.tierMeasured;
+    if (t) tiers[t] = (tiers[t] ?? 0) + 1;
+  }
+  // One line for each thing; what does not fit is cut with an ellipsis and whole on hover. The PC from the latest
+  // report that says (`measuredBy`); when, and "Uninstalled", from the latest report of all.
+  const pc = (latestRun: (typeof latest)[number]) => {
+    const l = { ...latestRun, ...(measuredBy.get(latestRun.userId) ?? {}) };
+    return {
+      s: summary(l.system as SystemInfo),
+      game: memory.get(l.userId) ?? null,
+      who: <Link href={`/admin/installs/${l.id}`} className="block min-w-0 font-medium hover:underline"><Clip text={l.user.displayName} /></Link>,
+      cpu: <Short full={summary(l.system as SystemInfo).cpu} short={shortCpu(summary(l.system as SystemInfo).cpu)} />,
+      gpu: <Short full={summary(l.system as SystemInfo).gpu} short={shortGpu(summary(l.system as SystemInfo).gpu)} />,
+      tier: l.tierMeasured ? <Badge tone={l.tierMeasured === "HIGH" ? "good" : l.tierMeasured === "LOW" ? "warn" : "neutral"} className="whitespace-nowrap">{TIER[l.tierMeasured]}</Badge> : <span className="text-muted-foreground" title="Not enough in the report to go on">–</span>,
+      // the member took Deepslate Works off their PC (the uninstaller, 1.5.2): their account and link stay
+      when: latestRun.mode === "uninstall" && latestRun.outcome === "ok" ? <Badge className="whitespace-nowrap" title={latestRun.at.toISOString()}>Uninstalled on {formatDate(latestRun.at)}</Badge> : <span title={l.at.toISOString()}>{timeAgo(l.at, now)}</span>,
+    };
+  };
   const run = (r: (typeof rows)[number]) => {
     const changed = r.tierMeasured && r.tierBefore && r.tierMeasured !== r.tierBefore;
     const about = [r.failedStep ? `at "${r.failedStep}"` : null, r.updatedFrom ? `the installer updated itself, ${r.updatedFrom} to ${r.installerVersion}` : null, r.updateProblem ? "the installer could not update itself" : null].filter(Boolean).join("; ");
@@ -93,7 +103,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
         <CardContent className="space-y-3 p-4">
           <div>
             <h2 className="text-lg font-semibold">The group&apos;s PCs</h2>
-            <p className="text-sm text-muted-foreground">Measured by the installer, the latest run of each member. {latest.length} of {members} members measured: {tiers.HIGH} gaming PC, {tiers.MID} decent, {tiers.LOW} older. Members who have not run the installer yet keep the tier they picked.</p>
+            <p className="text-sm text-muted-foreground">Measured by the installer: each member&apos;s latest run that says what their PC is (a game check does not). {latest.length} of {members} members measured: {tiers.HIGH} gaming PC, {tiers.MID} decent, {tiers.LOW} older. Members who have not run the installer yet keep the tier they picked.</p>
           </div>
           {latest.length > 0 && (
             <>

@@ -38,13 +38,23 @@ export type LogEntry = { at: string; channel: Channel; what: string; ok: boolean
 export type LeftOut = { count: number; since: string; last: string | null };
 export type FeedState = { cursor: string | null; hash: string; refused: Partial<Record<Channel, string>>; log: LogEntry[]; leftOut?: LeftOut };
 
+/**
+ * docs/50 §1: whose game chat stays in the game. Let in without the Discord server (`outsideAuth`) and not in it now:
+ * no Discord account on the portal (`guildMember` defaults to true, so a null `discordId` is looked at on its own),
+ * or one that is not in the server. An invited player who has joined the server since is relayed like everybody else.
+ */
+export function chatStaysInGame(u: { outsideAuth: boolean; discordId: string | null; guildMember: boolean }): boolean {
+  return u.outsideAuth && (u.discordId === null || !u.guildMember);
+}
+
 export type FeedStore = {
   newestEventId(): Promise<bigint>;
   eventsAfter(id: bigint, limit: number): Promise<FeedEvent[]>;
   loadState(): Promise<FeedState | null>;
   saveState(s: FeedState): Promise<void>;
   /** A linked member's Minecraft account; null for anybody who has not linked (they are not named, §3). */
-  member(uuid: string): Promise<{ userId: string } | null>;
+  /** A linked player. `inGameOnly`: their game chat is not posted to Discord (docs/50, `chatStaysInGame`). */
+  member(uuid: string): Promise<{ userId: string; inGameOnly?: boolean } | null>;
   online(): Promise<number>;
   vote(kind: PollView["kind"], id: string): Promise<PollView | null>;
   /** Open votes with a closing date in the next 24 hours that were open before that mark. */
@@ -583,10 +593,16 @@ export class Announcer {
     }
   }
 
-  /** docs/22 §5: game chat to #game-chat, as the player with their head. Linked players only; needs the bot's channel. */
+  /**
+   * docs/22 §5: game chat to #game-chat, as the player with their head. Linked players only; needs the bot's channel.
+   * docs/50: a player let in without the Discord server and not in it now chats in the game only; their lines are
+   * handled (the position moves on) but not posted.
+   */
   private async chat(group: FeedEvent[], sw: Switches): Promise<boolean> {
     const e = group[0]!;
-    if (!this.d.chatRelay || !sw.chatToDiscord || !sw.chatChannel || !e.actor || !(await this.d.store.member(e.actor))) return true;
+    if (!this.d.chatRelay || !sw.chatToDiscord || !sw.chatChannel || !e.actor) return true;
+    const who = await this.d.store.member(e.actor);
+    if (!who || who.inGameOnly) return true;
     const name = String(metaOf(e).name ?? "");
     const text = group.map((g) => chatText(g)).filter(Boolean).join("\n").slice(0, 1900);
     if (!text) return true;

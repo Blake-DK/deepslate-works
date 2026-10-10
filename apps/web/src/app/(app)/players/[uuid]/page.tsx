@@ -20,7 +20,7 @@ import { PlayerHead } from "@/components/server/player-head";
 import { Tile } from "@/components/analytics/tile";
 import { AreaChart } from "@/components/analytics/area-chart";
 import { EventItem } from "@/components/events/event-list";
-import { suggestTier, summary, type SystemInfo } from "@/lib/install-report";
+import { PC_REPORT, suggestTier, summary, type SystemInfo } from "@/lib/install-report";
 import { pingReadings, sessionPings } from "@/server/ping";
 import { average, pingSlots, pingTone } from "@/lib/ping";
 import { Sparkline } from "@/components/server/sparkline";
@@ -80,11 +80,13 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
   ]);
   // Admins only: what the installer last reported from this member's PC (docs/07 "Install reports").
   const install = admin && member ? await db.installReport.findFirst({ where: { userId: member.id, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, select: { id: true, at: true, outcome: true, failedStep: true, packVersion: true, system: true } }) : null;
+  // What their PC is: from their latest report that says (since 3.6 the latest is mostly the game check, which does not)
+  const pcRun = admin && member ? await db.installReport.findFirst({ where: { userId: member.id, ...PC_REPORT }, orderBy: { at: "desc" }, select: { at: true, system: true } }) : null;
   // 2.0.1: their Extras tab, from the latest report that says
   const extrasRun = admin && member ? await db.installReport.findFirst({ where: { userId: member.id, extras: { not: Prisma.DbNull }, mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, select: { extras: true } }) : null;
   const extrasText = extrasRun ? extrasLine(extrasReportSchema.safeParse(extrasRun.extras).data ?? null, await getExtraNames()) : null;
-  const pc = install ? summary(install.system as SystemInfo) : null;
-  const guess = install ? suggestTier(install.system as SystemInfo) : null;
+  const pc = install ? summary((pcRun ?? install).system as SystemInfo) : null;
+  const guess = pcRun ? suggestTier(pcRun.system as SystemInfo) : null;
   // docs/31 B-36: "Players can see the Stats tab" off means a member does not see where and when another member
   // played here either. Admins always do; a member always sees their own.
   const stats = admin || member?.id === viewer.id || (await getSection("privacy")).analyticsForPlayers;
@@ -236,14 +238,14 @@ export default async function PlayerPage({ params, searchParams }: { params: Pro
         <Card>
           <CardHeader>
             <CardTitle>Their PC and last install</CardTitle>
-            <CardDescription>Admins only. From the installer&apos;s last report.</CardDescription>
+            <CardDescription>Admins only. The last install, and their PC from the last report that says what it is.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             {!install || !pc ? <p className="text-muted-foreground">No install report from them yet.</p> : (
               <>
                 {extrasText && <p data-testid="player-extras">{extrasText}</p>}
                 <p><Link href={`/admin/installs/${install.id}`} className="underline">{install.outcome === "ok" ? `Installed ${install.packVersion}` : install.outcome === "cancelled" ? "Stopped the installer" : "The installer failed"}{install.failedStep ? ` at "${install.failedStep}"` : ""}</Link> <span className="text-muted-foreground">{timeAgo(install.at, now)}</span></p>
-                <p className="text-muted-foreground">{pc.os} · {pc.cpu} · {pc.ram} · {pc.gpu}</p>
+                <p className="text-muted-foreground">{pc.os} · {pc.cpu} · {pc.ram} · {pc.gpu}{pcRun && pcRun.at.getTime() !== install.at.getTime() ? <> · measured {timeAgo(pcRun.at, now)}</> : null}</p>
                 {guess ? <p>Tier, measured: <strong>{TIER[guess.tier]}</strong> <span className="text-muted-foreground">({guess.why})</span></p> : <p className="text-muted-foreground">Not enough in the report to work out the tier.</p>}
               </>
             )}

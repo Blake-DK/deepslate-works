@@ -143,6 +143,7 @@ export const CHANGES: Change[] = [
     // after the live check (the rule above).
     id: "2026-10-09-reopening",
     date: "2026-10-09",
+    live: true,
     lines: ["A small pack update, a tidy-up of the world and a new version of the app. Press Play as usual."],
   },
 ];

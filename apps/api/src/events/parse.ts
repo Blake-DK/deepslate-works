@@ -296,6 +296,62 @@ const KNOWN_HARMLESS: RegExp[] = [
 ];
 export const isKnownHarmless = (message: string): boolean => KNOWN_HARMLESS.some((k) => k.test(message.trim()));
 
+/**
+ * Errors the server prints about things in the world that belong to a mod which is no longer in the pack (Alex,
+ * 2026-10-10: after mods came off, every join and every chunk with their content printed one). They are expected and
+ * say nothing new, so the admin channel leaves them out; they stay in the event log and are counted (announcer.ts).
+ *
+ * Only three kinds, each naming ids from registries that only mods can fill (items, blocks, data attachments; a
+ * datapack cannot add to them). So an id whose namespace is not among the mods the server loaded at its last start
+ * (modpack/server-mods.ts, parseModIds) can only be left over from a mod that came off. No mod is named here: which
+ * namespaces are gone follows from what the server itself says it loaded. A line that names a loaded mod, or any line
+ * of another kind (a crash, a chunk that cannot be read), is posted as before.
+ *
+ * Each pattern is the line as the real server printed it (live, 2026-10-10 07:53 UTC onwards).
+ */
+const LEFTOVER_ID = String.raw`([a-z0-9_.-]+):[a-z0-9_./-]+`;
+const LEFTOVER_ATTACHMENT = new RegExp(String.raw`^Encountered unknown or non-serializable data attachment ${LEFTOVER_ID}\. Skipping\.$`);
+const LEFTOVER_ITEM = new RegExp(String.raw`^Tried to load invalid item: 'Unknown registry key in ResourceKey\[minecraft:root / minecraft:item\]: ${LEFTOVER_ID}'$`);
+const LEFTOVER_SECTION = /^Recoverable errors when loading section \[-?\d+, -?\d+, -?\d+\]: (.+)$/;
+const LEFTOVER_BLOCK = new RegExp(String.raw`^\(Unknown registry key in ResourceKey\[minecraft:root / minecraft:block\]: ${LEFTOVER_ID} -> using default\)$`);
+const LEFTOVER_BLOCK_START = "(Unknown registry key in ResourceKey[minecraft:root / minecraft:block]: ";
+/** parse() keeps the first 500 characters of a problem line, so a long section line can end in the middle of an entry. */
+const LEFTOVER_CUT_AT = 500;
+
+/** The namespaces a line of one of the three kinds names; null for any other line. */
+export function leftoverNamespaces(message: string): string[] | null {
+  const t = message.trim();
+  const one = LEFTOVER_ATTACHMENT.exec(t) ?? LEFTOVER_ITEM.exec(t);
+  if (one) return [one[1]!];
+  const s = LEFTOVER_SECTION.exec(t);
+  if (!s) return null;
+  const parts = s[1]!.split("; ");
+  const out: string[] = [];
+  for (const [i, p] of parts.entries()) {
+    const b = LEFTOVER_BLOCK.exec(p);
+    if (b) { out.push(b[1]!); continue; }
+    // the last entry of a line that was cut: it must still read like the same entry, as far as it goes
+    if (i !== parts.length - 1 || message.length < LEFTOVER_CUT_AT) return null;
+    if (LEFTOVER_BLOCK_START.startsWith(p)) continue;
+    if (!p.startsWith(LEFTOVER_BLOCK_START)) return null;
+    const ns = /^([a-z0-9_.-]+):/.exec(p.slice(LEFTOVER_BLOCK_START.length));
+    if (ns) out.push(ns[1]!);
+    else if (!/^[a-z0-9_.-]*$/.test(p.slice(LEFTOVER_BLOCK_START.length))) return null;
+  }
+  return out.length ? out : null;
+}
+
+/**
+ * Is this line only about content of mods the server no longer loads? True when it is one of the three kinds and
+ * every namespace it names is missing from `loaded` (the mod ids of the last start). With no list of loaded mods
+ * (no capture yet, or a log without one) it is false: the line is posted as before.
+ */
+export function aboutModsNoLongerLoaded(message: string, loaded: ReadonlySet<string> | null): boolean {
+  if (!loaded || loaded.size === 0) return false;
+  const ns = leftoverNamespaces(message);
+  return ns !== null && ns.every((n) => n !== "minecraft" && !loaded.has(n));
+}
+
 // Printed on every start by the mod loader and harmless; they would only bury the lines that matter.
 const NOISE = [
   /^Reference map '.*refmap\.json' for .* could not be read/,

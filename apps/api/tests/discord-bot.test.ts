@@ -339,7 +339,7 @@ const SW: Switches = { deaths: true, joins: true, challenges: true, advancements
 const FEED = "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz0123456789ABCD";
 const UPDATES = "https://discord.com/api/webhooks/323456789012345678/ubcdefghijklmnopqrstuvwxyz0123456789ABCD";
 
-function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; adminChannel?: string; botRefuses?: string; botState?: { inGuild: boolean; connecting: boolean }; remind?: boolean } = {}) {
+function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; adminChannel?: string; botRefuses?: string; botState?: { inGuild: boolean; connecting: boolean }; remind?: boolean; loaded?: string[] } = {}) {
   const clock = Date.parse("2026-10-02T19:00:00Z");
   const calls: Array<{ method: string; url: string; body: Record<string, unknown> }> = [];
   let ids = 5000;
@@ -392,6 +392,7 @@ function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; a
     addError: async () => {},
     switches: async () => ({ ...SW, adminChannel: opts.adminChannel ?? "" }),
     brand: async () => ({ name: "Deepslate Works", avatar: null }),
+    loadedMods: async () => (opts.loaded ? new Set(opts.loaded) : null),
   };
   const feedHook = hook(FEED);
   const updatesHook = hook(UPDATES);
@@ -400,7 +401,7 @@ function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; a
   let next = 100n;
   const add = (e: Partial<FeedEvent>, base?: FeedEvent) => events.push({ ...(base ?? { kind: "ADMIN_ACTION", actor: null, message: "", meta: {} }), ...e, id: ++next, at: new Date(clock) } as FeedEvent);
   const where = (c: { url: string }) => (c.url.includes("323456789012345678") ? "updates" : "feed");
-  return { a, add, calls, posts, votes, poll, botCalls, where };
+  return { a, add, calls, posts, votes, poll, botCalls, where, state: () => state };
 }
 
 describe("where things go (docs/22 §13)", () => {
@@ -628,6 +629,31 @@ describe("the admin channel picked on the card (Alex, 2026-10-02)", () => {
     t.add({ kind: "ERROR", message: "Something broke", meta: {} });
     await t.a.round();
     expect(t.botCalls.filter((c) => c.what === "sendTo").map((c) => (c.args[1] as { content: string }).content)).toEqual(["Problem: Something broke"]);
+  });
+
+  it("a problem line only about mods that are no longer loaded is left out and counted; one about a loaded mod, and a crash, are posted (Alex, 2026-10-10)", async () => {
+    const t = routed({ bot: true, adminChannel: "900", botState: { inGuild: true, connecting: false }, loaded: ["minecraft", "neoforge", "keptmod"] });
+    const gone = "Tried to load invalid item: 'Unknown registry key in ResourceKey[minecraft:root / minecraft:item]: oldmod:ember_seed'";
+    const kept = "Tried to load invalid item: 'Unknown registry key in ResourceKey[minecraft:root / minecraft:item]: keptmod:no_such_item'";
+    t.add({ kind: "ERROR", message: "Encountered unknown or non-serializable data attachment oldmod:frozen_data. Skipping.", meta: {} });
+    t.add({ kind: "ERROR", message: gone, meta: {} });
+    t.add({ kind: "ERROR", message: kept, meta: {} });
+    t.add({ kind: "CRASH" }, REAL.crash);
+    await t.a.round();
+    const sent = t.botCalls.filter((c) => c.what === "sendTo").map((c) => (c.args[1] as { content: string }).content);
+    // Discord's escaping aside: the line about the loaded mod, then the crash; nothing about the mod that came off
+    expect(sent).toEqual([expect.stringMatching(/^Problem: Tried to load invalid item.*keptmod/), expect.stringMatching(/^The server crashed at /)]);
+    expect(sent.join("\n")).not.toContain("oldmod");
+    expect(t.state()?.leftOut).toMatchObject({ count: 2 });
+    expect((await t.a.overview()).leftOut).toMatchObject({ count: 2 });
+  });
+
+  it("without a list of loaded mods (no start captured yet) such a line is posted as before", async () => {
+    const t = routed({ bot: true, adminChannel: "900", botState: { inGuild: true, connecting: false } });
+    t.add({ kind: "ERROR", message: "Encountered unknown or non-serializable data attachment oldmod:frozen_data. Skipping.", meta: {} });
+    await t.a.round();
+    expect(t.botCalls.filter((c) => c.what === "sendTo")).toHaveLength(1);
+    expect(t.state()?.leftOut).toBeUndefined();
   });
 
   it("a bot that is not in the server and not connecting is gone round: the admin line is simply not sent", async () => {

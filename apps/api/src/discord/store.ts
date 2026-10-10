@@ -5,6 +5,7 @@ import { db } from "../db.js";
 import { getSection } from "../settings.js";
 import { readOptions, tallyPoll } from "../shared/polls.js";
 import { SYNCED_KEY } from "../players/pack.js";
+import { SERVER_MODS_KEY } from "../modpack/server-mods.js";
 import type { FeedState, FeedStore, PostRow } from "./announcer.js";
 import type { PollView } from "./lines.js";
 import { currentSeasonId, readSeasonFile, seasonsDir } from "../seasons/files.js";
@@ -67,6 +68,7 @@ async function ballotView(id: string): Promise<PollView | null> {
 }
 
 export function prismaFeedStore(portal: string, repoDir?: string): FeedStore {
+  let loadedCache: { at: number; ids: ReadonlySet<string> | null } | null = null;
   return {
     // docs/21 §6: the season's file, for the posts' titles and first messages
     async season(id) {
@@ -155,6 +157,15 @@ export function prismaFeedStore(portal: string, repoDir?: string): FeedStore {
     },
     async switches() {
       return getSection("discord");
+    },
+    async loadedMods() {
+      // asked for each ERROR event; the list changes only when the server starts, so a minute's cache is plenty
+      if (loadedCache && Date.now() - loadedCache.at < 60_000) return loadedCache.ids;
+      const row = await db.setting.findUnique({ where: { key: SERVER_MODS_KEY } });
+      const ids = (row?.value as { modIds?: unknown } | null)?.modIds;
+      const set = Array.isArray(ids) && ids.length ? new Set(ids.filter((x): x is string => typeof x === "string")) : null;
+      loadedCache = { at: Date.now(), ids: set };
+      return set;
     },
     async brand() {
       const b = await getSection("branding");

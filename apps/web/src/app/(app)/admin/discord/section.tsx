@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin } from "@/server/auth/session";
 import { getSection } from "@/server/site-settings";
 import { apiFetch } from "@/server/api-client";
@@ -21,7 +22,7 @@ type BotView =
   | { state: "connecting" | "on" | "reconnecting" | "refused" | "stopped"; tag: string | null; refused: string | null; missingIntents: boolean; inGuild: boolean; textChannels: Channel[]; forums: Channel[]; invite: string | null };
 // planner 2026-10-09: the Minecraft role on everyone who plays (api discord/role.ts)
 type RoleView = { state: "off" } | { state: "on"; holders: number | null; lastRunAt: string | null; lastError: string | null };
-type Overview = { feed: Hook; admin: Hook; updates?: Hook; bot?: BotView; role?: RoleView; recent: Array<{ at: string; channel: "feed" | "admin" | "updates"; what: string; ok: boolean; error?: string }> };
+type Overview = { feed: Hook; admin: Hook; updates?: Hook; bot?: BotView; role?: RoleView; recent: Array<{ at: string; channel: "feed" | "admin" | "updates"; what: string; ok: boolean; error?: string }>; leftOut?: { count: number; since: string; last: string | null } | null };
 
 /** docs/22 §7: the bot's state in one line. */
 function botLine(b: BotView | undefined): React.ReactNode {
@@ -89,7 +90,14 @@ export default async function DiscordSection({ searchParams, tab }: { searchPara
               <dt className="font-medium">season-updates</dt>
               <dd>{!overview.updates || overview.updates.state === "unset" ? <>No webhook set{overview.bot && overview.bot.state !== "unset" ? <>: votes, news and the season are not posted. Ask the VPS session to add <span className="font-mono">DISCORD_WEBHOOK_UPDATES</span>.</> : <> (optional): votes and news go to #game-chat as before.</>}</> : where(overview.updates, "DISCORD_WEBHOOK_UPDATES")}</dd>
               <dt className="font-medium">Admin channel</dt>
-              <dd>{overview.admin.state === "unset" ? <>None. Pick a private channel as the admin channel on the Channels &amp; bot tab; crashes and problems are not posted until then.</> : where(overview.admin, "DISCORD_WEBHOOK_ADMIN")}</dd>
+              <dd>{overview.admin.state === "unset" ? <>None. Pick a private channel as the admin channel on the Channels &amp; bot tab; crashes and problems are not posted until then.</> : where(overview.admin, "DISCORD_WEBHOOK_ADMIN")}
+                {overview.leftOut && overview.leftOut.count > 0 && (
+                  <span className="mt-1 block text-muted-foreground" data-testid="left-out">
+                    Left out: {overview.leftOut.count} problem {overview.leftOut.count === 1 ? "line" : "lines"} about mods that are no longer in the pack, since {ukShort(new Date(overview.leftOut.since))}
+                    {overview.leftOut.last ? `, the last ${ukShort(new Date(overview.leftOut.last))}` : ""}. They are expected after mods come off; every one is in <Link href="/activity?kind=ERROR" className="underline">Activity</Link>.
+                  </span>
+                )}
+              </dd>
               <dt className="font-medium">Minecraft role</dt>
               <dd>
                 {!overview.role || overview.role.state === "off" ? (

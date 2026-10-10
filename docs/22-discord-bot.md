@@ -79,6 +79,7 @@ The channel is **#game-chat**, picked on the card (§7).
 **Game → Discord.** From `CHAT` events, through the Announcer, through the #game-chat webhook (`DISCORD_WEBHOOK_FEED`, §13), as the player with their head, the text and nothing else. Linked players only, as every feed line. Same escaping as docs/21 §3; nobody can be pinged from the game.
 
 - Several lines inside a second are sent as one message per player, so a busy evening stays under Discord's limit.
+- A player let in without the Discord server who is not in it now chats in the game only: their lines are not posted (docs/50).
 - The stale rule is 2 minutes for chat: old chat is not replayed.
 - Chat relay needs chat logging (Admin → Site settings → Privacy). With logging off there are no `CHAT` events and the card says "Chat relay is off because chat logging is off."
 - Private messages (`/msg`, party chat) are not chat events and never leave the game. Verify with a real `/msg` and an Open Parties and Claims party message before this ships.

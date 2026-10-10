@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Announcer, type FeedState, type FeedStore, type PostRow } from "../src/discord/announcer.js";
+import { Announcer, chatStaysInGame, type FeedState, type FeedStore, type PostRow } from "../src/discord/announcer.js";
 import { Webhook } from "../src/discord/webhook.js";
 import { escapeText, type FeedEvent, type PollView, type Switches } from "../src/discord/lines.js";
 import { modsChanged } from "../src/players/pack.js";
@@ -25,7 +25,9 @@ function discord(answer: (c: Call, n: number) => Response | null = () => null) {
   return { calls, f };
 }
 
-function setup(opts: { events?: FeedEvent[]; feed?: string | null; admin?: string | null; answer?: Parameters<typeof discord>[0]; sw?: Partial<Switches>; state?: FeedState | null; now?: string; votes?: Record<string, PollView>; unvoted?: { discordIds: string[]; others: number } } = {}) {
+type Account = { outsideAuth: boolean; discordId: string | null; guildMember: boolean };
+
+function setup(opts: { events?: FeedEvent[]; feed?: string | null; admin?: string | null; answer?: Parameters<typeof discord>[0]; sw?: Partial<Switches>; state?: FeedState | null; now?: string; votes?: Record<string, PollView>; unvoted?: { discordIds: string[]; others: number }; chatRelay?: boolean; accounts?: Record<string, Account> } = {}) {
   const events: FeedEvent[] = [...(opts.events ?? [])];
   const posts = new Map<string, PostRow>();
   const errors: string[] = [];
@@ -43,7 +45,8 @@ function setup(opts: { events?: FeedEvent[]; feed?: string | null; admin?: strin
     eventsAfter: async (id, limit) => events.filter((e) => e.id > id).sort((a, b) => Number(a.id - b.id)).slice(0, limit),
     loadState: async () => (state ? structuredClone(state) : null),
     saveState: async (s) => { state = structuredClone(s); },
-    member: async (uuid) => (LINKED.has(uuid) ? { userId: `u-${uuid.slice(0, 4)}` } : null),
+    // docs/50: with `accounts`, the members are those, and whose chat stays in the game is worked out as store.ts does
+    member: async (uuid) => (opts.accounts ? (opts.accounts[uuid] ? { userId: `u-${uuid.slice(0, 4)}`, inGameOnly: chatStaysInGame(opts.accounts[uuid]!) } : null) : LINKED.has(uuid) ? { userId: `u-${uuid.slice(0, 4)}` } : null),
     online: async () => 3,
     vote: async (kind, id) => opts.votes?.[`${kind}:${id}`] ?? null,
     remindable: async () => Object.values(opts.votes ?? {}).filter((v) => v.status === "OPEN" && v.closesAt),
@@ -57,7 +60,7 @@ function setup(opts: { events?: FeedEvent[]; feed?: string | null; admin?: strin
     switches: async () => sw,
     brand: async () => ({ name: "Deepslate Works", avatar: null }),
   };
-  const a = new Announcer({ store, feed: feedHook, admin: adminHook, portal: "https://deepslate.dsw.test", log: () => {}, now: () => new Date(clock) });
+  const a = new Announcer({ store, feed: feedHook, admin: adminHook, chatRelay: opts.chatRelay, portal: "https://deepslate.dsw.test", log: () => {}, now: () => new Date(clock) });
   let next = 10_000n;
   const add = (e: Partial<FeedEvent> & Pick<FeedEvent, "kind">, base: FeedEvent | null = null) => {
     const row: FeedEvent = { ...(base ?? { actor: null, message: "", meta: {} }), ...e, id: ++next, at: new Date(clock) } as FeedEvent;
@@ -351,5 +354,79 @@ describe("Discord feed (docs/21 §3, §11)", () => {
     expect(t.d.calls).toHaveLength(0);
     expect(t.a.feedState()).toBe("refused");
     expect(t.errors).toEqual(["Discord feed: the webhook was refused"]);
+  });
+});
+
+describe("invited players' chat stays in the game (docs/50)", () => {
+  const BRAMBLE = REAL.join.actor!; // an ordinary member
+  const KANE = REAL.death.actor!; // invited, no Discord account on the portal
+  const AWAY = "5b9e1c2a-3d4f-4a6b-8c7d-9e0f1a2b3c4d"; // invited, has a Discord account, not in the server
+  const BACK = "7c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f"; // invited, in the server now
+  const accounts: Record<string, Account> = {
+    [BRAMBLE]: { outsideAuth: false, discordId: "100000000000000001", guildMember: true },
+    [KANE]: { outsideAuth: true, discordId: null, guildMember: true }, // guildMember defaults to true: discordId decides
+    [AWAY]: { outsideAuth: true, discordId: "100000000000000003", guildMember: false },
+    [BACK]: { outsideAuth: true, discordId: "100000000000000004", guildMember: true },
+  };
+  const NAMES: Record<string, string> = { [BRAMBLE]: "Bramble09", [KANE]: "KaneFinch", [AWAY]: "samoyedx", [BACK]: "m1_owl" };
+  const relay = () => setup({ chatRelay: true, sw: { chatToDiscord: true, chatChannel: "700" }, accounts });
+  const chat = (actor: string, text: string) => ({ kind: "CHAT" as const, actor, message: `<${NAMES[actor]}> ${text}`, meta: { name: NAMES[actor] } });
+  const said = (t: ReturnType<typeof setup>) => t.sent().map((c) => [c.body.username, c.body.content]);
+
+  it("1. an ordinary member's line is posted", async () => {
+    const t = relay();
+    t.add(chat(BRAMBLE, "anyone on?"));
+    await t.a.round();
+    expect(said(t)).toEqual([["Bramble09", "anyone on?"]]);
+  });
+
+  it("2. invited, no Discord account: not posted, the position moves on, never tried again", async () => {
+    const t = relay();
+    const e = t.add(chat(KANE, "hello"));
+    await t.a.round();
+    expect(t.d.calls).toHaveLength(0);
+    expect(t.state?.cursor).toBe(e.id.toString());
+    t.tick(5_000);
+    await t.a.round();
+    expect(t.d.calls).toHaveLength(0);
+  });
+
+  it("3. invited, a Discord account that is not in the server: not posted", async () => {
+    const t = relay();
+    const e = t.add(chat(AWAY, "hi all"));
+    await t.a.round();
+    expect(t.d.calls).toHaveLength(0);
+    expect(t.state?.cursor).toBe(e.id.toString());
+  });
+
+  it("4. invited, in the server now: posted like everybody else, with no admin step", async () => {
+    const t = relay();
+    t.add(chat(BACK, "joined the Discord"));
+    await t.a.round();
+    expect(said(t)).toEqual([["m1_owl", "joined the Discord"]]);
+  });
+
+  it("5. a death of the invited player without Discord is still posted", async () => {
+    const t = relay();
+    t.add({ kind: "DEATH" }, REAL.death);
+    await t.a.round();
+    expect(said(t)).toEqual([["KaneFinch", "was slain by Vindicator"]]);
+  });
+
+  it("6. a burst from the invited player, then a line from Bramble09: only Bramble09's is posted", async () => {
+    const t = relay();
+    t.add(chat(KANE, "one"));
+    t.add(chat(KANE, "two"));
+    t.add(chat(KANE, "three"));
+    t.tick(1_500);
+    const last = t.add(chat(BRAMBLE, "evening"));
+    await t.a.round();
+    expect(said(t)).toEqual([["Bramble09", "evening"]]);
+    expect(t.state?.cursor).toBe(last.id.toString());
+  });
+
+  it("the rule as docs/50 §1 writes it", () => {
+    expect(Object.fromEntries(Object.entries(accounts).map(([u, a]) => [NAMES[u], chatStaysInGame(a)]))).toEqual({ Bramble09: false, KaneFinch: true, samoyedx: true, m1_owl: false });
+    expect(chatStaysInGame({ outsideAuth: false, discordId: null, guildMember: true })).toBe(false); // not invited: unchanged
   });
 });

@@ -26,6 +26,21 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Invited players' chat stays in the game: docs/50 (2026-10-10, on `dev`, in PR #31, not deployed)
+
+- **Built:** `chatStaysInGame` (`apps/api/src/discord/announcer.ts`): `outsideAuth` and (`discordId` null or
+  `guildMember` false). `store.member` (`discord/store.ts`) now reads `outsideAuth`, `discordId` and `guildMember` with
+  the id and returns `inGameOnly`; only `Announcer.chat` reads it, so deaths, joins, leaves, advancements and first-join
+  lines are as before. Such a player's lines are handled without a post: the feed's position moves on, no retry.
+  Admin → Discord's "Chat, game → Discord" line and the member menu's "Let in without the Discord server" question say
+  so; docs/22 §5 has one line. No migration, no setting, nothing on the door or Discord → game.
+- **Checks:** docs/50 §5 tests 1 to 6 and the rule itself in `tests/discord-feed.test.ts` (29 there); api 752, web 636,
+  modpack 217, typecheck and lint.
+- **On live's data (read only, counts):** 10 members, 3 let in without the Discord server, all 3 not in it now, so
+  all 3 would be kept in the game; none invited and now in the server.
+- **Unproven:** on live after the deploy, an invited player's line in the game and not in #game-chat while a Discord
+  member's line of the same minute is; Activity shows the line as a normal chat event. The test server has no bot.
+
 ## The group's PCs show again (2026-10-10, on `dev`, in its own `dev` → `main` PR)
 
 The installer never stopped measuring: 3.6.1 sends the same PC details as the 2.x script (`installer/app/src/Core/Report.cs`

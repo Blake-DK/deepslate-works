@@ -146,6 +146,17 @@ export const CHANGES: Change[] = [
     live: true,
     lines: ["A small pack update, a tidy-up of the world and a new version of the app. Press Play as usual."],
   },
+  {
+    // AMP state numbers (docs/47 §5.7), Maintenance (docs/48 Part B), the tab strips. Set `live: true` only after the
+    // live check (the rule above).
+    id: "2026-10-10-server-words-maintenance",
+    date: "2026-10-10",
+    lines: [
+      "The site and the app now say the right thing when the server goes to sleep, stops or restarts. Before, a server going to sleep showed as \"Stopping\" and a restart could show as \"Asleep\".",
+      "When the server is down for maintenance, the site and the app now say so. Anyone playing is sent off with that message, and if you join while it lasts you wait in the entrance room and are let in as soon as it's over.",
+      "On Windows, the rows of tabs on the site no longer show a small scrollbar at their end.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

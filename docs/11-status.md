@@ -111,7 +111,7 @@ is not started.
   shown on the test site: its designer is not set up (live's is); the redirect itself is proven.
 - **`grep -ri "control room" apps/`** prints nothing.
 
-## AMP state numbers corrected (2026-10-10, on `dev`, not deployed)
+## AMP state numbers corrected (2026-10-10, live: PR #30, `main` `1fd4bbba`, deployed 19:03 UTC)
 
 docs/47 §5.7. AMP's `ApplicationState` is 30 Restarting, 40 Stopping, 45 PreparingForSleep, 50 Sleeping; the code had
 30 Sleeping, 40 Restarting, 45 Stopping, 50 PreparingForSleep (live confirmed 50 = asleep on 2026-10-08, see the OPAC
@@ -123,7 +123,7 @@ Fixed in `amp/client.ts` (names and `availability()`), both `shared/server-state
 50 asleep), `POST /server/kill` and the kill box (only at 40), docs/08, and the tests. Not changed: the state names
 already stored in status snapshots and event metadata. Rows written before the deploy carry the old names (a sleep
 stored as "PreparingForSleep", a restart as "Sleeping"); the uptime query counts both as available, so the uptime
-figure for restarts before the deploy is slightly high. The "End the process" button is safe to use once this is live.
+figure for restarts before the deploy is slightly high. Deployed 19:03 UTC with docs/48 Parts A and B (migration 0032); api healthy, no errors, the server read as Running. "End the process" is now only offered at 40. Change log entry `2026-10-10-server-words-maintenance` set live; the next deploy posts it.
 
 ## All open work in one list (2026-10-10, on `dev`)
 

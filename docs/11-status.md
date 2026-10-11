@@ -26,6 +26,26 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The Mods guide sectioned by type: docs/52 (2026-10-11, a PR onto `dev`; not on `main`)
+
+- **Built:** `topic` on a mod in `mods.json` (`GUIDE_TOPICS`: travel, friends, mining, storage, building, factories,
+  farming, combat, bosses), set on all 43 `guide: "game"` mods as docs/52 §2 lists them. Lint: a listed `game` mod
+  without a topic is an error, and so is a topic on a mod that is not `game`. `/mods` shows a section per topic
+  (heading id `topic-<id>`, `scroll-mt-20` like the cards) where "What's in the game" was, then Helpers, Your extras,
+  Behind the scenes (ids `part-helper`, `part-extras`, `part-behind`). Under the search box, a row of links in the
+  site's tab strip style (`TabStrip` + `stripLink`, scrolls sideways on a phone); the search hides a part's link with
+  the part. `category`, the vote and `/pack` are untouched.
+- **Beyond docs/52:** a `game` mod with no topic still shows, under the old "What's in the game", after the topic
+  sections. Lint never lets one into `mods.json`, but the test checkout is held at `86bdcc5`, whose `mods.json` has no
+  topics: without this, the new image on the test site would show no playable mods at all.
+- **Pack check (§4):** against the real lock, `lockReasons` gives nothing before and after the edit, mods.json's
+  settings (everything but `mods`) are unchanged, and `mods.json` is not a Build input, so the out-of-date box asks
+  for no Lock and no Build. Shipping nothing: 71 files, `d44eb2ba`; the whole lock 77, `f652ffca`; as before.
+- **Checks:** modpack 231, api 758, web 643, typecheck, lint (`deploy/check.sh`).
+- **Not yet checked in a browser.** The test site reads `mods.json` from the held checkout, so it shows the topic
+  sections only once the hold is lifted and the checkout pulled (the planner's word), and the new `dev` image is up
+  (`sudo deploy/test-up.sh`). The §6 browser checks wait for that.
+
 ## Season calendar and season mods: docs/51 A1 and A2 (2026-10-11, on `dev`, for the test site; not on `main`)
 
 - **A1, `79b4a989`:** lint holds a numbered season to 19:00 UK on the 1st, two months, the finale on the last Sunday

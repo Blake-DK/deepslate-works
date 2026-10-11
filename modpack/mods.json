@@ -433,6 +433,7 @@
       "version": "Q1tuMQBB",
       "requires": [],
       "guide": "game",
+      "topic": "travel",
       "howTo": "The minimap sits in the corner and shows waypoints, party members and where you last died. Press **B** to drop a waypoint where you stand (mark your base!) and **U** for the list of waypoints.",
       "keys": [
         {
@@ -482,6 +483,7 @@
       "version": "9Ckiihkz",
       "requires": [],
       "guide": "game",
+      "topic": "travel",
       "howTo": "Press **M** for a full map of everywhere you've been. Drag to move, scroll to zoom, right-click a spot to add a waypoint or (with Open Parties and Claims) claim chunks.",
       "keys": [
         {
@@ -519,6 +521,7 @@
       "version": "3i48dTzz",
       "requires": [],
       "guide": "game",
+      "topic": "friends",
       "howTo": "Press **'** (apostrophe, next to Enter), **create a party** and invite friends by their Minecraft name; party members show on each other's maps at any distance. To claim your base, open the world map (**M**), right-click a chunk and choose **Claim**: then only your party can build, break and open chests there.",
       "keys": [
         {
@@ -632,6 +635,7 @@
       "version": "Zwf8nv8y",
       "requires": [],
       "guide": "game",
+      "topic": "friends",
       "howTo": "When you die, your things stay in your body where you fell. It never disappears. For 30 minutes only you can open it; after that your friends can too, so they can bring your things back if you're offline. Your minimap marks where you died.\n\nRight-click the body to open it. The 30 minutes only run while someone is near it. Press **U** for your death history.",
       "keys": [
         {
@@ -669,6 +673,7 @@
       "version": "qqNx1Yjm",
       "requires": [],
       "guide": "game",
+      "topic": "friends",
       "howTo": "Press **V** the first time: it asks whether you want **push to talk** or **voice activation** and lets you pick and test your microphone. People near you hear you, quieter with distance. Push to talk has no key until you set one in Options \u2192 Controls \u2192 Simple Voice Chat. **Groups** (G) let you talk to friends anywhere on the map.",
       "keys": [
         {
@@ -718,6 +723,7 @@
       "version": "wxGXaJMA",
       "requires": [],
       "guide": "game",
+      "topic": "mining",
       "howTo": "Break the bottom log of a tree and the whole tree comes down, with an axe or by hand. **Sneak** while breaking to take just one log. Leaves decay quickly afterwards."
     },
     {
@@ -981,6 +987,7 @@
       "version": "UjX6dr61",
       "requires": [],
       "guide": "game",
+      "topic": "factories",
       "howTo": "Start with a **water wheel** next to flowing water and a **shaft**: anything on the shaft turns. Make **andesite alloy** (andesite + iron nugget) for shafts, cogwheels and the **mechanical press**. Next: a press over a belt for automatic plates, a millstone for flour and dyes.\n\nIn JEI, hold **W** over any Create block to watch its Ponder animation; the **Engineer's Goggles** show speed and stress when you look at a machine.",
       "keys": [
         {
@@ -1025,6 +1032,7 @@
         "create"
       ],
       "guide": "game",
+      "topic": "factories",
       "howTo": "Turns Create's rotation into electricity. Put an **alternator** on a spinning shaft, run **copper wire** (spools) from its connector to a machine's connector, and it has power. **Electric motors** turn power back into rotation; **accumulators** store it."
     },
     {
@@ -1060,6 +1068,7 @@
         "rpl"
       ],
       "guide": "game",
+      "topic": "combat",
       "howTo": "Build a cannon from a **cannon mount** and barrel blocks, load a shell and powder charges with a deployer or by hand, then fire it with redstone. Ponder (hold **W** over a block in JEI) shows each step."
     },
     {
@@ -1091,6 +1100,7 @@
       "version": "uNRARSH2",
       "requires": [],
       "guide": "game",
+      "topic": "factories",
       "howTo": "Start with the **Engineer's Manual** (craft a book with a lever): it explains every machine. Early on: a **coke oven** for coal coke, a **water wheel** or **windmill** with **LV wire** to power machines, then the multiblocks shown in the manual, built and finished with the **Engineer's Hammer**."
     },
     {
@@ -1122,6 +1132,7 @@
       "version": "latest",
       "requires": [],
       "guide": "game",
+      "topic": "factories",
       "howTo": "Start with an **Enrichment Chamber** (2 dust per ore) powered by a generator from Mekanism Generators. Upgrade machines with **speed** and **energy** upgrades. Cables carry power, **logistical transporters** carry items. JEI shows every recipe."
     },
     {
@@ -1156,6 +1167,7 @@
         "mekanism"
       ],
       "guide": "game",
+      "topic": "factories",
       "howTo": "Power for Mekanism: start with a **Heat Generator** (burns fuel or sits next to lava), then **solar** or **wind generators**. Connect them to machines with universal cables."
     },
     {
@@ -1186,6 +1198,7 @@
         "mekanism"
       ],
       "guide": "game",
+      "topic": "factories",
       "howTo": "Tools and armour from Mekanism's metals (osmium, bronze, steel and more). Craft them like vanilla tools; JEI shows the recipes."
     },
     {
@@ -1217,6 +1230,7 @@
       "version": "erRsRPki",
       "requires": [],
       "guide": "game",
+      "topic": "factories",
       "howTo": "Machines that farm and breed for you. Power them with a **Pitiful Generator** to start. Place a machine, then right-click it to set its **working area**; add range upgrades for a bigger area."
     },
     {
@@ -1248,6 +1262,7 @@
       "version": "KDnFUmMm",
       "requires": [],
       "guide": "game",
+      "topic": "storage",
       "howTo": "Grow **certus quartz** in your first inscriber recipes, build an **ME Controller**, a **Drive** with **storage cells** and an **ME Terminal**, all joined with cables. Everything in the cells shows up in the terminal, searchable. Autocrafting comes later with pattern providers."
     },
     {
@@ -1279,6 +1294,7 @@
       "version": "syKekkIm",
       "requires": [],
       "guide": "game",
+      "topic": "mining",
       "howTo": "Just mine: break one ore block with the right pickaxe and the rest of the vein (up to 100 blocks) comes out with it. No key to hold. It costs hunger and tool durability, so bring food and a spare pickaxe. Trees are FallingTree's job."
     },
     {
@@ -1312,6 +1328,7 @@
         "sophisticated-core"
       ],
       "guide": "game",
+      "topic": "storage",
       "howTo": "Craft a **backpack** (leather and a chest) as soon as you can. Wear it in the chest slot and press **B** to open it, or hold it and right-click. Upgrade it later (iron, gold, diamond, netherite) and put upgrades in its side slots: **Pickup** collects items for you, **Magnet** pulls them in, **Crafting** gives a crafting grid inside.",
       "keys": [
         {
@@ -1363,6 +1380,7 @@
         "scalable-cats-force"
       ],
       "guide": "game",
+      "topic": "mining",
       "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock."
     },
     {
@@ -1395,6 +1413,7 @@
       "version": "62q6mB5Q",
       "requires": [],
       "guide": "game",
+      "topic": "combat",
       "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Watch out: several of TaCZ's keys are also used by other mods (V, G, H, C, Z); change them in Options \u2192 Controls if something clashes.",
       "keys": [
         {
@@ -1461,6 +1480,7 @@
       "version": "latest",
       "requires": [],
       "guide": "game",
+      "topic": "combat",
       "howTo": "Guns are crafted at the **gun workbench**. Left-click to shoot, right-click to aim; ammo is crafted at the same bench."
     },
     {
@@ -1492,6 +1512,7 @@
       "version": "6Z6MQ6os",
       "requires": [],
       "guide": "game",
+      "topic": "travel",
       "howTo": "Find **waystones** in villages and the wild, or craft one. Right-click it to activate and name it. From any waystone (or with a **warp scroll** or **warp stone**) you can teleport to every waystone you've activated; it costs a little XP."
     },
     {
@@ -1523,6 +1544,7 @@
       "version": "XTVZDOol",
       "requires": [],
       "guide": "game",
+      "topic": "farming",
       "howTo": "Craft a **cooking pot** and put it on a campfire or stove; meals give long-lasting saturation. A **cutting board** with a knife slices ingredients. Plant **rice** in water and **tomatoes**, **cabbages** and **onions** you find in the wild."
     },
     {
@@ -1554,6 +1576,7 @@
       "version": "BPGKb8pi",
       "requires": [],
       "guide": "game",
+      "topic": "storage",
       "howTo": "Place a pipe against a chest or machine; one pipe each for items, fluids, energy and gas. Right-click a pipe's end with the **wrench** to choose whether it pulls out of or pushes into the block. Add filters and speed upgrades in the end's menu."
     },
     {
@@ -1580,6 +1603,7 @@
         "create"
       ],
       "guide": "game",
+      "topic": "building",
       "howTo": "Metal bricks, catwalks, lamps, doors and windows in Create's style. Craft them from Create's metals; JEI shows every block (search `@createdeco`)."
     },
     {
@@ -1606,6 +1630,7 @@
         "create"
       ],
       "guide": "game",
+      "topic": "building",
       "howTo": "Place a copycat block (slope, step, panel, stair\u2026), then right-click it with any block to make it take on that block's look. Right-click with a wrench to change its shape.",
       "keys": [
         {
@@ -1639,6 +1664,7 @@
       "version": "jiXRXiSt",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "Craft roof pieces from planks, stone or terracotta at a crafting table; JEI lists them all (search `@mcwroofs`). They place like stairs: the direction you face decides the slope."
     },
     {
@@ -1666,6 +1692,7 @@
       "version": "rQUE4LCz",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "Windows, shutters, curtains and window boxes in every wood. Craft at a crafting table; right-click a window or shutter to open and close it."
     },
     {
@@ -1693,6 +1720,7 @@
       "version": "u7BRX44F",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "Dozens of doors in every wood: barn, stable, glass and more. Craft at a crafting table; JEI lists them (search `@mcwdoors`)."
     },
     {
@@ -1722,6 +1750,7 @@
         "resourceful-lib"
       ],
       "guide": "game",
+      "topic": "building",
       "howTo": "Furniture you can use: right-click a chair or bench to sit, put items on shelves and tables, store things in cupboards. Most pieces are made with a **hammer** at a crafting table."
     },
     {
@@ -1749,6 +1778,7 @@
       "version": "Z5V3Ps7S",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "Tables, chairs, desks, wardrobes and kitchen counters in every wood. Right-click chairs to sit and drawers to store things. JEI lists them all."
     },
     {
@@ -1776,6 +1806,7 @@
       "version": "jVdb0r4W",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "Fences, walls and railings in many styles. Craft at a crafting table; JEI lists them all."
     },
     {
@@ -1803,6 +1834,7 @@
       "version": "aQ7rY7ng",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "Bridge pieces and rope bridges with railings and supports. Craft at a crafting table and place them in a row; JEI lists them all."
     },
     {
@@ -1826,6 +1858,7 @@
       "version": "tlymsxUG",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "Paths, paving and edgings. Craft at a crafting table and lay them like slabs; JEI lists them all."
     },
     {
@@ -1853,6 +1886,7 @@
       "version": "5U2kQZIL",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "Lamps, lanterns, chandeliers and wall lights. Craft at a crafting table; right-click a lamp to switch it on or off."
     },
     {
@@ -1876,6 +1910,7 @@
       "version": "latest",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "Many more trapdoor designs in every wood, for shutters and details. Craft at a crafting table."
     },
     {
@@ -1899,6 +1934,7 @@
       "version": "4t8L0dGP",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "More stairs, railings and balconies in every wood. Craft at a crafting table; JEI lists them all."
     },
     {
@@ -1922,6 +1958,7 @@
       "version": "cugGiMKt",
       "requires": [],
       "guide": "game",
+      "topic": "building",
       "howTo": "Chairs, tables, benches, shelves, curtains and lamps. Right-click to sit or use; JEI lists every piece."
     },
     {
@@ -1951,6 +1988,7 @@
         "moonlight"
       ],
       "guide": "game",
+      "topic": "building",
       "howTo": "Jars, signposts, planters, item shelves and lots of small details. JEI shows what each one is made of and what it does."
     },
     {
@@ -1982,6 +2020,7 @@
         "fusion-connected-textures"
       ],
       "guide": "game",
+      "topic": "building",
       "howTo": "Craft a **chiseling table**, put in a stack of an ordinary block and pick a new look for it. No new materials, just new textures."
     },
     {
@@ -2009,6 +2048,7 @@
         "create"
       ],
       "guide": "game",
+      "topic": "building",
       "howTo": "Chiseled versions of Create's blocks, made in Rechiseled's **chiseling table**."
     },
     {
@@ -2307,6 +2347,7 @@
       "version": "PsPYpoCC",
       "requires": [],
       "guide": "game",
+      "topic": "bosses",
       "howTo": "Big dungeons generate in the world: a ruined citadel, a sunken city, a burning arena and more, each guarded by a boss. Most are fights for a **group**: go together and bring food, armour and a bed nearby. What they drop is gear you can't get any other way.",
       "season": "s1"
     },
@@ -2340,6 +2381,7 @@
       "version": "xgAXTl17",
       "requires": [],
       "guide": "game",
+      "topic": "bosses",
       "howTo": "You'll meet these while exploring: a frost beast in snowy plains, a sun chief in savanna villages, an armoured knight in a hidden hall underground. Each fight has a pattern: watch it once before you swing. Their drops are unusual tools and weapons.",
       "season": "s1"
     },
@@ -2369,6 +2411,7 @@
       "version": "latest",
       "requires": [],
       "guide": "game",
+      "topic": "bosses",
       "howTo": "A gateway is an item: use it on open ground and a portal opens that sends **waves** of monsters at you. Beat every wave before the timer runs out and it pays out its reward. Walk too far away and it fails. Season trials come as gateways.",
       "note": "Held: Apothic Attributes changes combat (docs/20 \u00a73), waiting for the planner"
     },

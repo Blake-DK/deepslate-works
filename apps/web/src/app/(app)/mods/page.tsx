@@ -8,6 +8,8 @@ import { getModIcons } from "@/server/modpack/icons";
 import { Markdown } from "@/components/markdown";
 import { Badge } from "@/components/ui/badge";
 import { ModsSearch } from "@/components/mods-guide/search";
+import { TabStrip } from "@/components/tabs";
+import { stripLink } from "@/components/strip-link";
 import { guideParts, searchText, WHERE_TEXT, type ExtraEntry, type GuideCard, type GuidePart } from "@/lib/mods-guide";
 
 export const metadata: Metadata = { title: "Mods guide" };
@@ -90,13 +92,13 @@ function Line({ card }: { card: GuideCard }) {
 function Part({ part }: { part: GuidePart }) {
   const heading = (
     <>
-      <h2 className="text-xl font-semibold">{part.title} <span className="text-sm font-normal text-muted-foreground">({part.cards.length})</span></h2>
+      <h2 id={part.anchor} className="scroll-mt-20 text-xl font-semibold">{part.title} <span className="text-sm font-normal text-muted-foreground">({part.cards.length})</span></h2>
       <p className="text-sm text-muted-foreground">{part.blurb}</p>
     </>
   );
   if (part.collapsed) {
     return (
-      <section data-mod-part aria-label={part.title} className="space-y-2" data-testid={`part-${part.key}`}>
+      <section data-mod-part={part.key} aria-label={part.title} className="space-y-2" data-testid={`part-${part.key}`}>
         <details className="rounded-[4px] border bg-card p-4">
           <summary className="cursor-pointer select-none">{heading}</summary>
           <ul className="mt-2 divide-y">{part.cards.map((c) => <Line key={c.id} card={c} />)}</ul>
@@ -105,7 +107,7 @@ function Part({ part }: { part: GuidePart }) {
     );
   }
   return (
-    <section data-mod-part aria-label={part.title} className="space-y-3" data-testid={`part-${part.key}`}>
+    <section data-mod-part={part.key} aria-label={part.title} className="space-y-3" data-testid={`part-${part.key}`}>
       {heading}
       <div className="grid gap-3 lg:grid-cols-2">{part.cards.map((c) => <Card key={c.id} card={c} />)}</div>
     </section>
@@ -125,6 +127,12 @@ export default async function ModsGuidePage() {
         </p>
       </div>
       <ModsSearch />
+      {/* docs/52: a link to each part, in the page's order; the search hides a part's link with the part */}
+      <TabStrip label="Jump to a section" className="-mt-4" data-testid="mods-jump">
+        {parts.map((p) => (
+          <a key={p.key} href={`#${p.anchor}`} data-mod-jump={p.key} className={stripLink(false)}>{p.title} ({p.cards.length})</a>
+        ))}
+      </TabStrip>
       <p id="mods-none" hidden className="text-sm text-muted-foreground">Nothing matches that.</p>
       {parts.map((p) => <Part key={p.key} part={p} />)}
     </div>

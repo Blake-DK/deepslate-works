@@ -111,10 +111,6 @@ export function searchText(c: GuideCard): string {
   return [c.name, c.id, c.description, c.howTo ?? "", ...c.keys.flatMap((k) => [k.key, k.does])].join(" ").toLowerCase();
 }
 
-/** Every word of the query somewhere in the card. An empty query matches everything. */
-export function matches(text: string, query: string): boolean {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-  return words.every((w) => text.includes(w));
-}
+export { matches } from "./mods-search";
 
 export const WHERE_TEXT: Record<Where, string> = { everyone: "In everyone's game", optional: "Optional, your PC only", server: "On the server only" };

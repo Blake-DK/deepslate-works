@@ -224,3 +224,69 @@ is not a player's way in; the fallback is a single portal frame at spawn with no
 Never cut: recording, the freeze, the Frontier.
 
 For Season 2: Monument Men first, then the Captain's trial, then Aquamirae (the season runs on Cataclysm's five).
+
+## 8. The season mods only in their own dimension (Alex, 2026-10-11)
+
+**Alex: the new mods are in a new dimension, and people go through to it.** Their structures, bosses and mobs are
+made in the season's Frontier and nowhere else: not on the main world (not even in chunks first made after the mods
+come back), not in the Nether, not in the End. The way through is the portal in the temple at spawn (§5 B4, C3).
+
+### How each mod puts itself in the world (read from the jars, 2026-10-11)
+
+The jars were read, not run: data files and the names in their classes. "Read" is seen in the jar; "inferred" is not.
+
+| Mod | Its bosses | How their structures are placed | Its other mobs | Config that helps |
+|---|---|---|---|---|
+| L_Ender's Cataclysm 3.33 | every boss in a structure | biome tags `cataclysm:has_structure/<name>_biomes` (the amethyst nest names `minecraft:lush_caves` directly) | added in code by biome tags `cataclysm:deeplings_spawn`, `amethyst_crab_spawn`, `koboleton_spawn`; the Ignited Berserker by the Nether fortress | spawn weights only (`<mob>_spawn_weight`, 0 = off); nothing by dimension (read) |
+| Mowzie's Mobs 1.8.2 | every boss in a structure (Frostmaw, the Wroughtnaut, Umvuthi, the Sculptor) | one tag for all four, `mowziesmobs:has_structure/has_mowzie_structure` (= `#c:is_overworld`), then a biome filter from its config | added in code, none a boss | `mobs.<mob>.spawn_config.dimensions`, default `["minecraft:overworld"]` (read) |
+| Aquamirae 7.2.12 (Season 2) | Captain Cornelia on the ghost ship; the Maze Mother from anglerfish | everything hangs on `aquamirae:ice_maze`; Fragmentum adds the config's list to that tag after the datapacks, so a datapack alone cannot take it away | its own spawns, and with `biome_spawner_mode = OVERRIDE` the biome's others are cleared | `ice_maze_biomes` (default deep frozen and deep cold ocean) (read) |
+| Ender Dragon Fight Remastered | the Dragon, in the End | functions only, no world generation | — | — |
+
+**The trap in Aquamirae:** its ice maze rewrites the biome itself (temperature, colours, fog, spawns). Left on the
+vanilla ids, every deep frozen and deep cold ocean of the main world would become an ice maze. It has to be pointed at
+biomes of the Season 2 Frontier only.
+
+### The way: biomes of the Frontier's own
+
+A dimension only places the structures whose biomes are in its own list of biomes. The vanilla biomes are shared by
+the main world and every overworld-shaped Frontier, so a tag cannot tell the two apart. So:
+
+1. **The Frontier gets copies of the biomes the boss content needs**, under ids of its own (`deepslate:frontier_s1_…`):
+   snowy plains, desert, savanna, warm ocean, the four deep oceans, lush and dripstone caves, the deep dark, the
+   peaks. Every other biome stays the vanilla one. Season 2 gets its own copies (`deepslate:frontier_s2_…`) of the
+   two deep oceans for the ice maze.
+2. **The mods' tags are replaced** (`replace: true`) to name only those copies: every Cataclysm
+   `has_structure/*` tag and its three spawn tags, the amethyst nest's structure file, Mowzie's one tag. The
+   overworld, the Nether and the End then cannot place them at all.
+3. **Configs:** Mowzie's `spawn_config.dimensions` = the season's Frontier for every mob; Cataclysm's Ignited
+   Berserker weight 0; Aquamirae's `ice_maze_biomes` = the Season 2 copies.
+4. **What the copies need so nothing else breaks:** a copy of the noise settings with the copies beside the vanilla
+   ids in the surface rules (sand on the desert copy, and so on); the Frontier's biome list written out in full, not
+   the `minecraft:overworld` preset; the copies in `#minecraft:is_overworld`, `#c:is_overworld` and the `is_*` tags
+   they stand for, so Create's ores and the vanilla structures and mobs come with them.
+5. **Cataclysm's Nether and End bosses** (Ignis, the Netherite Monstrosity, the Ender Guardian) are Seasons 3 and 4.
+   Until a Nether-type or End-type Frontier exists, their structure tags are empty: they are made nowhere.
+
+**Small losses in the copies:** villager, wolf and frog kinds that go by biome id, and the "Adventuring Time"
+advancement does not count them.
+
+### What this changes in §5
+
+- **New item A5 (VPS, L), before B2:** `build seasons` writes the Frontier with its biome copies, the noise settings,
+  the tag overrides and the three configs, from the season file; lint and tests. It replaces "large biomes as built"
+  for the Frontier's biome list; the noise can stay large biomes (§6 decision 3).
+- **B2 grows:** `locate structure` fails for every boss structure on the main world, in the Nether and in the End,
+  and finds it in the Frontier; the Frontier's ground is right (sand on the desert copy); Create's ores are in the
+  copies; BlueMap colours the copies; a PC joins without anything new. On the test server, with `TEST_SEASONS_SHIP=s1`.
+- **Mods' "how to" text** in `mods.json` for Cataclysm and Mowzie's says "in the world"; it says "in the Frontier"
+  once A5 is proven.
+- **Already on the main world:** the trim took the boss structures out and the refill makes the inner circle
+  without the mods. Chunks at the edge of where anyone has been may hold the start of a structure saved before
+  2026-10-09, which would finish building there later. To check on test with `locate` after A5.
+
+### Built 2026-10-11 (on `dev`)
+
+- **A1** (`79b4a989`): the vote's calendar in the lint and in `s1.json` (§3), README and ROADMAP.
+- **A2** (`395f7332`): docs/44's season mods. The six Season 1 mods are back in `mods.json` and the lock as
+  `"season": "s1"`, with the files they had. Live ships nothing, so its pack stays `0.1.0+d44eb2ba`; the test server
+  with `TEST_SEASONS_SHIP=s1` gets all 77 files and its own pack version.

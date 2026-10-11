@@ -26,6 +26,30 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Season calendar and season mods: docs/51 A1 and A2 (2026-10-11, on `dev`, for the test site; not on `main`)
+
+- **A1, `79b4a989`:** lint holds a numbered season to 19:00 UK on the 1st, two months, the finale on the last Sunday
+  before the end at 18:00 UK, things opening at 19:00 UK (by UK time, summer and winter). `s1.json`: 1 Dec to 1 Feb,
+  finale Sun 31 Jan `18:00Z`, Christmas Dinner (five Farmer's Delight meals, ids from the pack's catalogue) on 23 Dec,
+  the boss mods' bosses "in the Frontier"; the guide says the season's bosses live there. README and ROADMAP.
+- **A2, `395f7332`:** docs/44 built. `season` on a mod and its lock entry (a library only that season needs inherits
+  it; Lock refuses a season's mod something else needs); `shippedLock(lock, ship)`; the ship list is `index.json`'s,
+  or `SEASONS_SHIP` with `TEST_MODE`. Readers: Build (server, installer, `PACK_VERSION`), the mod list, the app's
+  update check, the site's pack lines, Sync, the out-of-date box (Lock against the whole lock, Build against what
+  ships), main's pack in the drift check, the test site's pack line; in api the synced mods, the server's jar check,
+  the health watch's pack, the app's Test pack (`apps/api/src/modpack/ship.ts`, held to the package's answer by
+  `tests/pack-ship.test.ts`). `web-test` now gets `SEASONS_SHIP` as `api-test` does.
+- **The data:** the six Season 1 mods back in `mods.json` (enabled, `"season": "s1"`) and the lock, their entries
+  taken unchanged from `9a451555`'s lock; the lock's own hash is `f652ffca` (all 77). Shipping nothing gives 71 files
+  and `d44eb2ba`, live's pack today, so a deploy of this changes nothing for live or any PC.
+- **Checks:** modpack 229, api 758, web 638, typecheck, lint (`deploy/check.sh`); CI on both pushes.
+- **For the test site (Alex's steps):** the test checkout is held at `86bdcc5` (`.git/deepslate-hold`, "lift only on
+  the planner's word"); `TEST_SEASONS_SHIP` in `deploy/.env` is empty. To try Season 1's mods on test: lift the hold,
+  set `TEST_SEASONS_SHIP=s1`, `sudo deploy/test-pull.sh`, `sudo deploy/test-up.sh`, then Build and Sync on the test
+  site. Not done by this session.
+- **New from Alex the same day: the season mods only in their own dimension** (docs/51 §8): what each mod's jar
+  says, and the plan (Frontier biome copies, the mods' tags pointed at them). Item A5, not built.
+
 ## Seasons 1 and 2 planned again: docs/51 (2026-10-11, docs only)
 
 - **Alex: follow the players' vote.** A season opens at 19:00 UK on the 1st of a month, lasts two months, and its

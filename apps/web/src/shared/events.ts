@@ -115,6 +115,8 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "invite.revoke": "revoked an invite",
   "user.earlyAccess": (p) => (p.on ? `gave ${s(p.displayName, "a member")} early access` : `took early access away from ${s(p.displayName, "a member")}`),
   "user.outsideAuth": (p) => (p.on ? `let ${s(p.displayName, "a member")} in without the Discord server` : `put ${s(p.displayName, "a member")} back under the Discord server rule`),
+  // Alex, 2026-10-11: game chat to Discord, per member
+  "user.chatRelay": (p) => (p.relay === "ALWAYS" ? `set ${s(p.displayName, "a member")}'s game chat to always be posted to Discord` : p.relay === "NEVER" ? `set ${s(p.displayName, "a member")}'s game chat to stay in the game` : `set ${s(p.displayName, "a member")}'s game chat to Discord back to automatic`),
   "user.setRole": (p) => `changed a member's role to ${s(p.role).toLowerCase()}`,
   "user.remove": (p) => `removed ${s(p.displayName, "a member")} from the group${p.blocked ? " and blocked their Discord account" : ""}`,
   "user.unblock": (p) => `unblocked the Discord account of ${s(p.displayName, "a removed member")}`,

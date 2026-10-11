@@ -166,6 +166,15 @@ export const CHANGES: Change[] = [
     live: true,
     lines: ["On Players, click anywhere on someone's row to open their page. On Stats, every player's name now opens their page too."],
   },
+  {
+    // The Mods guide by type (docs/52). Set `live: true` only after the live check (the rule above).
+    id: "2026-10-11-mods-guide-by-type",
+    date: "2026-10-11",
+    lines: [
+      "The Mods guide is now split up by type: getting around, mining, storage, building, factories, farming and more, so you can find the mods for what you want to do.",
+      "Under the search box, a row of links takes you straight to each section. When you search, sections with nothing that matches are hidden, and so are their links.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

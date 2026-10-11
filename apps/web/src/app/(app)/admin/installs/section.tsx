@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { formatDate } from "@/lib/utils";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { MODE_LABEL, OUTCOMES, PC_REPORT, memoryLine, settingsSchema, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
+import { GAME_CHECK_WINDOW_MS, MODE_LABEL, OUTCOMES, PC_REPORT, memoryLine, pairGameChecks, settingsSchema, shortCpu, shortGpu, shortOs, summary, type SystemInfo } from "@/lib/install-report";
 import { timeAgo } from "@/lib/series";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,11 +30,19 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   await requireAdmin();
   const { outcome } = await searchParams;
   const only = (OUTCOMES as readonly string[]).includes(outcome ?? "") ? outcome : undefined;
-  const [rows, counts, installer] = await Promise.all([
-    db.installReport.findMany({ where: only ? { outcome: only, mode: { notIn: TEST_MODES } } : { mode: { notIn: TEST_MODES } }, orderBy: { at: "desc" }, take: 200, select: { id: true, userId: true, at: true, mode: true, minimal: true, playLinkMissing: true, updatedFrom: true, updateProblem: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } }),
-    db.installReport.groupBy({ by: ["outcome"], where: { mode: { notIn: TEST_MODES } }, _count: { _all: true } }),
+  // Every run but the game checks; each check is shown with the Play before it (pairGameChecks), so a Play is one line.
+  const notChecks = { mode: { notIn: [...TEST_MODES, "game_check"] } };
+  const select = { id: true, userId: true, at: true, mode: true, minimal: true, playLinkMissing: true, updatedFrom: true, updateProblem: true, outcome: true, failedStep: true, packVersion: true, installerVersion: true, durationSec: true, system: true, tierBefore: true, tierMeasured: true, user: { select: { displayName: true, pcTier: true, mcUuid: true } } } as const;
+  const [runs, counts, installer] = await Promise.all([
+    db.installReport.findMany({ where: only ? { outcome: only, ...notChecks } : notChecks, orderBy: { at: "desc" }, take: 200, select }),
+    db.installReport.groupBy({ by: ["outcome"], where: notChecks, _count: { _all: true } }),
     getInstaller(),
   ]);
+  const since = runs.length ? new Date(runs[runs.length - 1]!.at.getTime() - GAME_CHECK_WINDOW_MS) : undefined;
+  const checks = await db.installReport.findMany({ where: { mode: "game_check", ...(since ? { at: { gte: since } } : {}) }, orderBy: { at: "desc" }, take: 400, select });
+  const { checkOf, leftOver } = pairGameChecks(runs, checks);
+  // A check with no Play before it (in the window) keeps its own row, under the filter like any run
+  const rows = [...runs, ...leftOver.filter((c) => !only || c.outcome === only)].sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, 200);
   const current = installer?.current ?? null;
   const n = (o: string) => counts.find((c) => c.outcome === o)?._count._all ?? 0;
   const total = counts.reduce((a, c) => a + c._count._all, 0);
@@ -80,6 +88,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
   };
   const run = (r: (typeof rows)[number]) => {
     const changed = r.tierMeasured && r.tierBefore && r.tierMeasured !== r.tierBefore;
+    const check = checkOf.get(r.id);
     const about = [r.failedStep ? `at "${r.failedStep}"` : null, r.updatedFrom ? `the installer updated itself, ${r.updatedFrom} to ${r.installerVersion}` : null, r.updateProblem ? "the installer could not update itself" : null].filter(Boolean).join("; ");
     return {
       s: summary(r.system as SystemInfo),
@@ -90,7 +99,7 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
       when: <span title={r.at.toISOString()}>{timeAgo(r.at, now)}</span>,
       installer: <InstallerVersion version={r.installerVersion} current={current} outdated={isOutdated(r.installerVersion, current)} />,
       from: <span title={r.updatedFrom ? `updated itself, ${r.updatedFrom} to ${r.installerVersion}` : `installer ${r.installerVersion}`}>{MODE_LABEL[r.mode] ?? r.mode}{r.minimal ? <span className="text-muted-foreground" title="Install reports are switched off in their app: only &quot;pressed Play, pack version&quot; arrives, no log"> (ping only)</span> : null}{r.updateProblem ? <span className="text-danger" title="The installer could not update itself"> !</span> : null}</span>,
-      outcome: <span className="flex min-w-0 flex-wrap items-center gap-1"><Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"} className="whitespace-nowrap" title={about || undefined}>{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}{r.failedStep ? " …" : ""}</Badge>{r.playLinkMissing ? <Badge tone="warn" className="ml-1 whitespace-nowrap" title="Setup could not set up the Play button on this PC (installer 1.5.6 and later say why)">Play button not set up</Badge> : null}</span>,
+      outcome: <span className="flex min-w-0 flex-wrap items-center gap-1"><Badge tone={TONE[r.outcome as keyof typeof TONE] ?? "neutral"} className="whitespace-nowrap" title={about || undefined}>{LABEL[r.outcome as keyof typeof LABEL] ?? r.outcome}{r.failedStep ? " …" : ""}</Badge>{check ? <Link href={`/admin/installs/${check.id}`} title={`Game check ${timeAgo(check.at, now)}: ${LABEL[check.outcome as keyof typeof LABEL] ?? check.outcome}. Open it for the mods it found.`}><Badge tone={check.outcome === "ok" ? "good" : check.outcome === "failed" ? "bad" : "neutral"} className="whitespace-nowrap">{check.outcome === "ok" ? "Game ✓" : check.outcome === "failed" ? "Game check failed" : "Game check"}</Badge></Link> : null}{r.playLinkMissing ? <Badge tone="warn" className="ml-1 whitespace-nowrap" title="Setup could not set up the Play button on this PC (installer 1.5.6 and later say why)">Play button not set up</Badge> : null}</span>,
     };
   };
   return (
@@ -153,7 +162,10 @@ export default async function InstallsPage({ searchParams }: { searchParams: Pro
           </CardContent>
         </Card>
       )}
-      <h2 className="pt-2 text-lg font-semibold">Every run</h2>
+      <div className="pt-2">
+        <h2 className="text-lg font-semibold">Every run</h2>
+        <p className="text-sm text-muted-foreground">The game check the app sends once the game has started is on the row of the Play before it (&quot;Game ✓&quot;; click it for the mods it found), and not counted as a run.</p>
+      </div>
       <TabStrip label="Filter by outcome" className="max-w-full">
         <Link href="/admin/people?tab=installs" aria-current={!only ? "page" : undefined} className={stripLink(!only)}>All ({total})</Link>
         {OUTCOMES.map((o) => <Link key={o} href={`/admin/people?tab=installs&outcome=${o}`} aria-current={only === o ? "page" : undefined} className={stripLink(only === o)}>{LABEL[o]} ({n(o)})</Link>)}

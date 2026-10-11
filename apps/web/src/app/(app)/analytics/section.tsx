@@ -38,6 +38,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   // docs/05 "Connection"
   const [status, low, pings, held] = await Promise.all([getStatus(), tpsLow(now), pingByPlayer(range.from, range.to), heldAtTheDoor(range.from, range.to)]);
   const worst = status.server === "online" ? worstPing(status.online) : null;
+  const worstUuid = worst ? (status.online.find((p) => p.name === worst.name)?.uuid ?? null) : null;
 
   const t = totals(sessions, range.from, range.to, now, firstSeen);
   const p = range.prevFrom ? totals(sessions, range.prevFrom, range.from, now, firstSeen) : null;
@@ -143,7 +144,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Worst ping right now</dt>
-                <dd>{worst ? <><Badge tone={pingTone(worst.ms)}>{worst.ms} ms</Badge> <span className="font-mono text-xs text-muted-foreground">{worst.name}</span></> : <span className="text-muted-foreground">{status.server === "online" && status.online.length > 0 ? "not measured yet" : "nobody on"}</span>}</dd>
+                <dd>{worst ? <><Badge tone={pingTone(worst.ms)}>{worst.ms} ms</Badge> {worstUuid ? <Link href={`/players/${worstUuid}`} className="font-mono text-xs text-muted-foreground hover:underline">{worst.name}</Link> : <span className="font-mono text-xs text-muted-foreground">{worst.name}</span>}</> : <span className="text-muted-foreground">{status.server === "online" && status.online.length > 0 ? "not measured yet" : "nobody on"}</span>}</dd>
               </div>
             </dl>
           </CardContent>
@@ -202,7 +203,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           <CardHeader><CardTitle>Who plays together</CardTitle><CardDescription>Pairs by the time both were on at once.</CardDescription></CardHeader>
           <CardContent>
             {pairs.length === 0 ? <p className="text-sm text-muted-foreground">No two people have been on at the same time in this period.</p> : (
-              <ol className="space-y-2 text-sm">{pairs.map((pr) => <li key={`${pr.a}|${pr.b}`} className="flex items-center justify-between gap-3"><span className="font-mono">{nameOf(pr.a)} + {nameOf(pr.b)}</span><span className="tabular-nums text-muted-foreground">{hours(pr.minutes * 60_000)}</span></li>)}</ol>
+              <ol className="space-y-2 text-sm">{pairs.map((pr) => <li key={`${pr.a}|${pr.b}`} className="flex items-center justify-between gap-3"><span className="font-mono"><Link href={`/players/${encodeURIComponent(pr.a)}`} className="hover:underline">{nameOf(pr.a)}</Link> + <Link href={`/players/${encodeURIComponent(pr.b)}`} className="hover:underline">{nameOf(pr.b)}</Link></span><span className="tabular-nums text-muted-foreground">{hours(pr.minutes * 60_000)}</span></li>)}</ol>
             )}
           </CardContent>
         </Card>

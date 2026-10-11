@@ -158,6 +158,13 @@ export const CHANGES: Change[] = [
       "On Windows, the rows of tabs on the site no longer show a small scrollbar at their end.",
     ],
   },
+  {
+    // Players & stats: whole rows and every name open the player's page. Set `live: true` only after the live check
+    // (the rule above).
+    id: "2026-10-11-player-pages",
+    date: "2026-10-11",
+    lines: ["On Players, click anywhere on someone's row to open their page. On Stats, every player's name now opens their page too."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

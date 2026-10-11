@@ -283,3 +283,25 @@ export function shortOs(os: string): string {
   if (!os || os === "not known") return os;
   return os.replace(/^Windows\s+/i, "").replace(/\bSingle Language\b/i, "SL").replace(/\s*\(\d+\)\s*$/, "").replace(/\s+/g, " ").trim() || os;
 }
+
+/** Runs that start the game, so a game check follows them (the app reads the game's log once it is up). */
+export const LAUNCH_MODES: readonly string[] = ["play", "update", "first_install"];
+/** How long after its launch a game check still counts as that launch's. */
+export const GAME_CHECK_WINDOW_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * Admin → Installs: each game check shown with the launch before it rather than as a run of its own (every Play sent
+ * two lines). A check goes to the same member's latest launch at or before it, within the window, that has no check
+ * yet; one that finds none is left over and keeps its own row.
+ */
+export function pairGameChecks<R extends { id: string; userId: string; at: Date; mode: string }, C extends { userId: string; at: Date }>(runs: R[], checks: C[]): { checkOf: Map<string, C>; leftOver: C[] } {
+  const checkOf = new Map<string, C>();
+  const leftOver: C[] = [];
+  const launches = runs.filter((r) => LAUNCH_MODES.includes(r.mode)).sort((a, b) => b.at.getTime() - a.at.getTime());
+  for (const c of [...checks].sort((a, b) => a.at.getTime() - b.at.getTime())) {
+    const run = launches.find((r) => r.userId === c.userId && r.at <= c.at && c.at.getTime() - r.at.getTime() <= GAME_CHECK_WINDOW_MS && !checkOf.has(r.id));
+    if (run) checkOf.set(run.id, c);
+    else leftOver.push(c);
+  }
+  return { checkOf, leftOver };
+}

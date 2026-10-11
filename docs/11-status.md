@@ -26,7 +26,40 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Game chat to Discord, per member (2026-10-11, on `dev`, not deployed)
+## Seasons 1 and 2 planned again: docs/51 (2026-10-11, docs only)
+
+- **Alex: follow the players' vote.** A season opens at 19:00 UK on the 1st of a month, lasts two months, and its
+  finale is the last Sunday at 18:00 UK. Season 1: Tue 1 Dec 2026 to Mon 1 Feb 2027, finale Sun 31 Jan. Season 2:
+  1 Feb to Thu 1 Apr 2027, finale Sun 28 Mar (`17:00Z`, the clocks change that day). Season 2's mod is Aquamirae.
+  Poll counts read at 17:05 UTC, before the 19:00 close; to be checked again before a date goes in a file.
+- **Not yet in code:** `s1.json`, the last-Monday lint rule and the words that say "a month" still carry the old
+  calendar. docs/51 §5 A1 changes them.
+- **Found:** the main world has no boss structures inside radius 10,176 after the trim and refill, so the Frontier is
+  the only boss world; nobody has checked that a large-biomes Frontier of radius 3,000 holds every Season 1 boss
+  structure; the Frontier on live must be generated with the season mods loaded (docs/51 §6 decision 1). `s1.json`'s
+  Dragon hint says 26 December while its finale is 19 December.
+- **Order of work:** docs/51 §5: A (calendar in code, docs/44, docs/41), B (proven on the test server, the rehearsal
+  there instead of on live), C (live before 1 December), D and E (during the seasons).
+
+## Players rows and Installs' game checks (2026-10-11, on `dev`, not deployed)
+
+- **Players → People:** the whole row opens the player's page (only the name did, with no sign it could); a row
+  without a linked Minecraft account has no page and stays plain. Stats: the names in "Who plays together" and
+  "Worst ping right now" link to the player's page too, like the other lists there. `0275fa89`.
+- **Admin → Installs, Every run:** since 3.4 each Play sends two reports, the Play and the game check once the game
+  is up, so every Play was two lines. `pairGameChecks` (`lib/install-report.ts`) gives each game check to the same
+  member's latest Play, Play (new pack) or First install at or before it, within 12 hours, one check per launch; the
+  row shows "Game ✓", "Game check failed" or "Game check", linking to the check's report. A check that finds no
+  launch keeps its own row. The counts on the outcome tabs no longer count game checks. 2 tests.
+- **Admin channel:** "Tried to load unrecognized recipe: <id> removed now." is in `KNOWN_HARMLESS` (`events/parse.ts`):
+  a player's recipe book naming a recipe the server no longer has, dropped by the game once per recipe and player. In
+  the event log as before, no longer posted as a Problem (Alex, 2026-10-11, after Mowzie's Mobs and Cataclysm lines).
+- **Unproven:** both pages and the muted line on the test site or live.
+
+## Game chat to Discord, per member (2026-10-11, live: PR #32, `main` `5121dee7`)
+
+- **Live:** deployed 16:26 UTC 2026-10-11; `deepslate-web` and `deepslate-api` on `5121dee7`, healthy (db, api, pack
+  same); `0033_chat_relay` applied at web's start; no errors in either log in the first minutes.
 
 Alex, 2026-10-11, after docs/50 went live: whether a member's game chat goes to Discord is a setting per member,
 changed by admins only. Default "Automatic" is the docs/50 rule, so nothing changes on live until an admin picks.
@@ -44,8 +77,8 @@ changed by admins only. Default "Automatic" is the docs/50 rule, so nothing chan
 - **Row menus (`ff723e8e`):** "Take away joining during maintenance" ran out of the fixed-width (`w-52`) menu on
   People. The menu is now as wide as its longest item (at least `w-52`, at most 20rem or the screen less 2rem), and an
   item wraps only past that. Seen right on the test site (`web-test` on `ff723e8e`) by Alex, 2026-10-11.
-- **Unproven:** the migration on live's database (it runs at the deploy); the dialog in a browser; a forced choice
-  seen in #game-chat on live.
+- **Unproven:** the dialog on live (saving a choice, the badge); a forced choice seen in #game-chat with a real
+  invited player online.
 
 ## Invited players' chat stays in the game: docs/50 (2026-10-10, live: PR #31, `main` `c733c952`)
 

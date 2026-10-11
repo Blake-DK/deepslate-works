@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { markLog, MAX_LOG_BYTES, NO_PC_MODES, PC_REPORT, redactLog, redactText, reportSchema, sanitizeReport, suggestTier, summary, truncateMiddle } from "@/lib/install-report";
+import { markLog, MAX_LOG_BYTES, NO_PC_MODES, PC_REPORT, pairGameChecks, redactLog, redactText, reportSchema, sanitizeReport, suggestTier, summary, truncateMiddle } from "@/lib/install-report";
 
 describe("redaction", () => {
   it("takes the name out of paths under Users, however they are written", () => {
@@ -187,5 +187,26 @@ describe("short names for a column", () => {
     expect(shortOs("Windows 11 Pro 25H2 (26200)")).toBe("11 Pro 25H2");
     expect(shortOs("Windows 10 Home 22H2 (19045)")).toBe("10 Home 22H2");
     expect(shortOs("not known")).toBe("not known");
+  });
+});
+
+describe("pairGameChecks: a game check is shown with the Play before it", () => {
+  const at = (h: number, m = 0) => new Date(Date.UTC(2026, 9, 11, h, m));
+  const run = (id: string, userId: string, mode: string, a: Date) => ({ id, userId, mode, at: a });
+  const check = (id: string, userId: string, a: Date) => ({ id, userId, at: a });
+
+  it("pairs each check with the same member's latest launch before it", () => {
+    const runs = [run("p1", "kane", "play", at(10)), run("p2", "bramble", "update", at(10, 5)), run("p3", "kane", "play", at(14))];
+    const { checkOf, leftOver } = pairGameChecks(runs, [check("c1", "kane", at(10, 3)), check("c2", "bramble", at(10, 9)), check("c3", "kane", at(14, 2))]);
+    expect(Object.fromEntries([...checkOf].map(([k, v]) => [k, v.id]))).toEqual({ p1: "c1", p2: "c2", p3: "c3" });
+    expect(leftOver).toEqual([]);
+  });
+
+  it("leaves over a check with no launch before it, another member's, one too old, or a second check of one Play", () => {
+    const runs = [run("p1", "kane", "play", at(1)), run("u1", "kane", "uninstall", at(20)), run("p2", "owly", "play", at(20))];
+    const { checkOf, leftOver } = pairGameChecks(runs, [check("early", "kane", at(0)), check("c1", "kane", at(1, 5)), check("again", "kane", at(1, 30)), check("late", "kane", at(20, 5))]);
+    expect([...checkOf.keys()]).toEqual(["p1"]);
+    expect(checkOf.get("p1")?.id).toBe("c1");
+    expect(leftOver.map((c) => c.id)).toEqual(["early", "again", "late"]);
   });
 });

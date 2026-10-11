@@ -293,6 +293,10 @@ const KNOWN_HARMLESS: RegExp[] = [
   // Industrial Foregoing's Curios file names a slot "example" that no mod registers; at every start and reload,
   // 3.6.27 to 3.6.39 alike (docs/11, 2026-10-05)
   /^example is not a registered slot type!$/,
+  // A player's recipe book naming a recipe the server no longer has (a mod came off, or a recipe was taken out): the
+  // game drops it from their book, once per recipe and player, and says so as an error. Alex, 2026-10-11, from the
+  // admin channel: "Tried to load unrecognized recipe: mowziesmobs:spear removed now."
+  /^Tried to load unrecognized recipe: [a-z0-9_.-]+:[a-z0-9_./-]+ removed now\.$/,
 ];
 export const isKnownHarmless = (message: string): boolean => KNOWN_HARMLESS.some((k) => k.test(message.trim()));
 

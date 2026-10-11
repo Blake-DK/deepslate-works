@@ -1,8 +1,8 @@
 {
   "id": "s1",
   "name": "Season 1 · First Blood",
-  "startsAt": "2026-11-30T19:00:00Z",
-  "endsAt": "2026-12-28T19:00:00Z",
+  "startsAt": "2026-12-01T19:00:00Z",
+  "endsAt": "2027-02-01T19:00:00Z",
   "accent": "#b8652c",
   "icon": "minecraft:netherite_sword",
   "groupRadius": 48,
@@ -18,7 +18,7 @@
       "entity": "minecraft:elder_guardian",
       "tier": 1,
       "points": 10,
-      "opensAt": "2026-11-30T19:00:00Z",
+      "opensAt": "2026-12-01T19:00:00Z",
       "where": "Ocean monument",
       "hint": "Bring milk for the mining fatigue, and a door to breathe behind.",
       "trophy": {
@@ -32,8 +32,8 @@
       "entity": "mowziesmobs:frostmaw",
       "tier": 1,
       "points": 10,
-      "opensAt": "2026-11-30T19:00:00Z",
-      "where": "Snowy biomes",
+      "opensAt": "2026-12-01T19:00:00Z",
+      "where": "Snowy biomes in the Frontier",
       "hint": "It sleeps until you come close. Bring a shield and a friend.",
       "trophy": {
         "item": "minecraft:blue_ice",
@@ -46,8 +46,8 @@
       "entity": "mowziesmobs:ferrous_wroughtnaut",
       "tier": 1,
       "points": 10,
-      "opensAt": "2026-11-30T19:00:00Z",
-      "where": "A wrought chamber, underground",
+      "opensAt": "2026-12-01T19:00:00Z",
+      "where": "A wrought chamber, underground in the Frontier",
       "hint": "It can only be hurt from behind, after it swings.",
       "trophy": {
         "item": "minecraft:iron_block",
@@ -61,7 +61,7 @@
       "tier": 2,
       "points": 15,
       "opensAt": "2026-12-11T19:00:00Z",
-      "where": "An Umvuthana grove, in the savanna",
+      "where": "An Umvuthana grove, in the Frontier's savanna",
       "hint": "His followers come first. Do not stand in the sun beam.",
       "trophy": {
         "item": "minecraft:sunflower",
@@ -102,8 +102,8 @@
       "entity": "cataclysm:amethyst_crab",
       "tier": 2,
       "points": 10,
-      "opensAt": "2026-12-18T19:00:00Z",
-      "where": "An amethyst nest",
+      "opensAt": "2027-01-08T19:00:00Z",
+      "where": "An amethyst nest in the Frontier",
       "hint": "Its shell turns blows; wait for it to open.",
       "trophy": {
         "item": "minecraft:amethyst_cluster",
@@ -116,8 +116,8 @@
       "entity": "cataclysm:coralssus",
       "tier": 2,
       "points": 10,
-      "opensAt": "2026-12-18T19:00:00Z",
-      "where": "The sunken city",
+      "opensAt": "2027-01-08T19:00:00Z",
+      "where": "The sunken city, in the Frontier's oceans",
       "hint": "Bring water breathing for the whole group.",
       "trophy": {
         "item": "minecraft:brain_coral_block",
@@ -130,8 +130,8 @@
       "entity": "cataclysm:kobolediator",
       "tier": 2,
       "points": 10,
-      "opensAt": "2026-12-18T19:00:00Z",
-      "where": "The cursed pyramid, in the desert",
+      "opensAt": "2027-01-08T19:00:00Z",
+      "where": "The cursed pyramid, in the Frontier's deserts",
       "hint": "Keep moving: it charges in a straight line.",
       "trophy": {
         "item": "minecraft:chiseled_sandstone",
@@ -144,9 +144,9 @@
       "entity": "minecraft:ender_dragon",
       "tier": 3,
       "points": 30,
-      "opensAt": "2026-11-30T19:00:00Z",
+      "opensAt": "2026-12-01T19:00:00Z",
       "where": "The End",
-      "hint": "The finale: Saturday 26 December, 20:00 UK, everybody together.",
+      "hint": "The finale: Sunday 31 January, 18:00 UK, everybody together.",
       "trophy": {
         "item": "minecraft:dragon_egg",
         "name": "First Blood: the Dragon's Scale"
@@ -158,7 +158,7 @@
     {
       "id": "iron_week",
       "title": "Iron Week",
-      "opensAt": "2026-11-30T19:00:00Z",
+      "opensAt": "2026-12-01T19:00:00Z",
       "points": 5,
       "solo": true,
       "hint": "Have a full set of iron armour and a shield on you.",
@@ -254,9 +254,60 @@
       }
     },
     {
+      "id": "christmas_dinner",
+      "title": "Christmas Dinner",
+      "opensAt": "2026-12-23T19:00:00Z",
+      "points": 10,
+      "solo": true,
+      "hint": "Eat a Farmer's Delight Christmas dinner: roast chicken, honey glazed ham, stuffed pumpkin, shepherd's pie and pumpkin soup.",
+      "icon": "farmersdelight:roast_chicken",
+      "criteria": {
+        "roast_chicken": {
+          "trigger": "minecraft:consume_item",
+          "conditions": {
+            "item": {
+              "items": "farmersdelight:roast_chicken"
+            }
+          }
+        },
+        "honey_glazed_ham": {
+          "trigger": "minecraft:consume_item",
+          "conditions": {
+            "item": {
+              "items": "farmersdelight:honey_glazed_ham"
+            }
+          }
+        },
+        "stuffed_pumpkin": {
+          "trigger": "minecraft:consume_item",
+          "conditions": {
+            "item": {
+              "items": "farmersdelight:stuffed_pumpkin"
+            }
+          }
+        },
+        "shepherds_pie": {
+          "trigger": "minecraft:consume_item",
+          "conditions": {
+            "item": {
+              "items": "farmersdelight:shepherds_pie"
+            }
+          }
+        },
+        "pumpkin_soup": {
+          "trigger": "minecraft:consume_item",
+          "conditions": {
+            "item": {
+              "items": "farmersdelight:pumpkin_soup"
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "hero_of_the_village",
       "title": "Hero of the Village, Together",
-      "opensAt": "2026-12-23T19:00:00Z",
+      "opensAt": "2027-01-15T19:00:00Z",
       "points": 15,
       "solo": false,
       "hint": "Win a raid.",
@@ -273,7 +324,7 @@
     "target": 50
   },
   "finale": {
-    "at": "2026-12-19T20:00:00Z",
+    "at": "2027-01-31T18:00:00Z",
     "title": "The Dragon, together",
     "boss": "ender_dragon"
   }

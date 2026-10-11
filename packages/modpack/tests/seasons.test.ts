@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildSeasons, frontierDatapack, frontierMapConf, isLastMondayOfItsMonth, lastMonday, lintSeasons, loadSeasons, seasonDatapack, seasonSchema, TRIGGERS_1_21_1, wakeTitle, type Season } from "../src/seasons";
+import { buildSeasons, frontierDatapack, frontierMapConf, isFinaleTime, isSeasonChangeover, lintSeasons, loadSeasons, seasonDatapack, seasonSchema, TRIGGERS_1_21_1, wakeTitle, type Season } from "../src/seasons";
 
 // docs/20 §4, docs/34 §2 and §3 (W1.1): the season files, their lint, and the datapack built from one.
 
@@ -38,31 +38,45 @@ describe("the season files in the repo", () => {
     if (Date.now() < Date.parse(s1.startsAt)) expect(index.ship).not.toContain("s1");
   });
 
-  it("Season 1 is docs/32 §2 in a month: ten bosses on three tiers, five trials, the Dragon for everybody; last Monday to last Monday", async () => {
+  it("Season 1 is docs/32 §2 over two months: ten bosses on three tiers, six trials, the Dragon for everybody (docs/51 §3)", async () => {
     const s1 = (await loadSeasons(SEASONS)).seasons.find((s) => s.id === "s1")!;
-    expect(s1.startsAt).toBe("2026-11-30T19:00:00Z"); // the last Monday of November, 19:00 UK
-    expect(s1.endsAt).toBe("2026-12-28T19:00:00Z"); // the last Monday of December
+    expect(s1.startsAt).toBe("2026-12-01T19:00:00Z"); // Tuesday 1 December, 19:00 UK
+    expect(s1.endsAt).toBe("2027-02-01T19:00:00Z"); // Monday 1 February
     expect(s1.bosses.map((b) => b.tier).sort()).toEqual([1, 1, 1, 2, 2, 2, 2, 2, 2, 3]);
-    // opening Monday, three Fridays, and the Christmas one moved from Friday the 25th to Wednesday the 23rd
-    expect(s1.trials.map((t) => t.opensAt)).toEqual(["2026-11-30T19:00:00Z", "2026-12-04T19:00:00Z", "2026-12-11T19:00:00Z", "2026-12-18T19:00:00Z", "2026-12-23T19:00:00Z"]);
+    // the opening, three Fridays, Christmas Dinner on Wednesday 23 December, then nothing until January
+    expect(s1.trials.map((t) => t.opensAt)).toEqual(["2026-12-01T19:00:00Z", "2026-12-04T19:00:00Z", "2026-12-11T19:00:00Z", "2026-12-18T19:00:00Z", "2026-12-23T19:00:00Z", "2027-01-15T19:00:00Z"]);
     expect(s1.bosses.find((b) => b.id === "ender_dragon")).toMatchObject({ tier: 3, points: 30, groupRadius: 0 });
-    expect(s1.finale).toMatchObject({ at: "2026-12-19T20:00:00Z", boss: "ender_dragon" }); // Alex, 2026-10-05: the Saturday before Boxing Day, 20:00 UK
+    expect(s1.finale).toMatchObject({ at: "2027-01-31T18:00:00Z", boss: "ender_dragon" }); // the last Sunday, 18:00 UK
+    // the boss mods' bosses live in the Frontier only (docs/51 §2), and the hints say so
+    for (const b of s1.bosses.filter((x) => !x.entity.startsWith("minecraft:"))) expect(b.where).toMatch(/in the Frontier/);
+    expect(s1.bosses.find((b) => b.id === "ender_dragon")!.hint).toMatch(/Sunday 31 January, 18:00 UK/);
   });
 });
 
-describe("a season runs from the last Monday of a month to the last Monday of the next (Alex, 2026-10-04)", () => {
-  it("the last Mondays of the coming months", () => {
-    expect([[2026, 10], [2026, 11], [2026, 12], [2027, 1], [2027, 2], [2027, 3], [2027, 4]].map(([y, m]) => lastMonday(y!, m!))).toEqual([26, 30, 28, 25, 22, 29, 26]);
-    expect(isLastMondayOfItsMonth("2026-11-30T19:00:00Z")).toBe(true);
-    expect(isLastMondayOfItsMonth("2026-11-23T19:00:00Z")).toBe(false); // a Monday, not the last
-    expect(isLastMondayOfItsMonth("2026-12-01T19:00:00Z")).toBe(false); // a Tuesday
-    expect(isLastMondayOfItsMonth("2027-03-29T18:00:00Z")).toBe(true); // summer time: 19:00 UK is 18:00 UTC
+describe("a season runs two months, from 19:00 UK on the 1st to the 1st (the players' vote, docs/51 §1)", () => {
+  it("the 1st at 19:00 UK, in winter and in summer time", () => {
+    expect(isSeasonChangeover("2026-12-01T19:00:00Z")).toBe(true);
+    expect(isSeasonChangeover("2027-04-01T18:00:00Z")).toBe(true); // summer time: 19:00 UK is 18:00 UTC
+    expect(isSeasonChangeover("2027-04-01T19:00:00Z")).toBe(false); // 20:00 UK
+    expect(isSeasonChangeover("2026-11-30T19:00:00Z")).toBe(false); // the last Monday, as before the vote
+  });
+  it("the finale: the last Sunday before the end, 18:00 UK", () => {
+    expect(isFinaleTime("2027-01-31T18:00:00Z", "2027-02-01T19:00:00Z")).toBe(true);
+    expect(isFinaleTime("2027-03-28T17:00:00Z", "2027-04-01T18:00:00Z")).toBe(true); // the clocks went forward that morning
+    expect(isFinaleTime("2027-03-28T18:00:00Z", "2027-04-01T18:00:00Z")).toBe(false); // 19:00 UK
+    expect(isFinaleTime("2027-01-24T18:00:00Z", "2027-02-01T19:00:00Z")).toBe(false); // a Sunday, not the last
+    expect(isFinaleTime("2027-07-25T17:00:00Z", "2027-08-01T18:00:00Z")).toBe(true); // a Sunday changeover: the Sunday before
+    expect(isFinaleTime("2027-01-30T20:00:00Z", "2027-02-01T19:00:00Z")).toBe(false); // the old Saturday 20:00
   });
   it("lint holds the numbered seasons to it, and leaves the sample alone", () => {
     const s = (over: Record<string, unknown>) => ({ ...base({ trials: [], ...over }), id: "s7" }) as Season;
-    expect(messages([s({ startsAt: "2026-11-30T19:00:00Z", endsAt: "2026-12-28T19:00:00Z" })])).toEqual([]);
-    expect(messages([s({ startsAt: "2026-11-04T19:00:00Z", endsAt: "2026-12-28T19:00:00Z" })])[0]).toMatch(/startsAt 2026-11-04T19:00:00Z is not the last Monday of its month/);
-    expect(messages([s({ startsAt: "2026-11-30T19:00:00Z", endsAt: "2027-01-25T19:00:00Z" })])[0]).toMatch(/spans 2 month/);
+    const ok = { startsAt: "2026-12-01T19:00:00Z", endsAt: "2027-02-01T19:00:00Z" };
+    expect(messages([s(ok)])).toEqual([]);
+    expect(messages([s({ ...ok, startsAt: "2026-11-30T19:00:00Z" })])[0]).toMatch(/startsAt 2026-11-30T19:00:00Z is not 19:00 UK on the 1st of a month/);
+    expect(messages([s({ ...ok, endsAt: "2027-01-01T19:00:00Z" })])[0]).toMatch(/spans 1 month/);
+    expect(messages([s({ ...ok, finale: { at: "2027-01-30T20:00:00Z", title: "x", boss: "frostmaw" } })])).toEqual(["the finale (2027-01-30T20:00:00Z) is not the last Sunday before the end, at 18:00 UK"]);
+    expect(messages([s({ ...ok, finale: { at: "2027-01-31T18:00:00Z", title: "x", boss: "frostmaw" } })])).toEqual([]);
+    expect(messages([s({ ...ok, trials: [{ id: "bed", title: "Sleep On It", opensAt: "2026-12-04T20:00:00Z", points: 5, criteria: { trigger: "minecraft:slept_in_bed" } }] })])).toEqual(["trial bed: opensAt 2026-12-04T20:00:00Z is not 19:00 UK"]);
     expect(messages([base()])).toEqual([]); // t1 is not a numbered season
   });
 });

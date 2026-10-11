@@ -45,10 +45,11 @@ describe("the guide's Season section (docs/20 §7)", () => {
   it("is written from the real Season 1 file: the ladder, the 48 blocks, the Frontier and its wipe, the finale", () => {
     const text = seasonGuide(real, "running", at);
     expect(text.startsWith("## The season\n")).toBe(true);
-    expect(text).toContain("**Season 1 · First Blood** runs from Mon 30 Nov, 19:00 to Mon 28 Dec, 19:00, UK time.");
+    expect(text).toContain("**Season 1 · First Blood** runs from Tue 1 Dec, 19:00 to Mon 1 Feb, 19:00, UK time.");
     expect(text).toContain(`There are ${real.bosses.length} on the ladder, in 3 tiers`);
     expect(text).toContain("everyone within 48 blocks of you");
     expect(text).toContain("**The Frontier is wiped when the season ends.**");
+    expect(text).toContain("The bosses from this season's mods live there, not in the main world."); // docs/51 §2
     expect(text).toContain(`- **The finale.** ${real.finale!.title}: ${at(real.finale!.at)}.`);
     expect(text).toContain("50 boss kills between us");
   });
@@ -59,7 +60,7 @@ describe("the guide's Season section (docs/20 §7)", () => {
     expect(plain).not.toContain("Together");
     expect(plain).toContain("There is 1 on the ladder.");
     const over = seasonGuide(real, "ended", at);
-    expect(over).toContain("ended on Mon 28 Dec, 19:00");
+    expect(over).toContain("ended on Mon 1 Feb, 19:00");
     expect(over).not.toContain("Bosses");
   });
 });

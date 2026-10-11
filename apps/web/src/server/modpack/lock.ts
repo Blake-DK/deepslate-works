@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import type { LockFile } from "modpack";
+import { readShip, shippedLock, type LockFile } from "modpack";
 import { modpackPaths } from "modpack/paths";
 import { installerInfo, type InstallerInfo } from "@/shared/installer-info";
 
@@ -11,7 +11,8 @@ export const P = modpackPaths(process.env.MODPACK_DIR);
 
 let cache: { mtimeMs: number; lock: LockFile } | null = null;
 
-export async function getLock(): Promise<LockFile | null> {
+/** mods.lock.json as committed, every season's mods in it: for Lock and what it changes, never for a PC or the server. */
+export async function getFullLock(): Promise<LockFile | null> {
   try {
     const { mtimeMs } = await stat(P.lock);
     if (cache && cache.mtimeMs === mtimeMs) return cache.lock;
@@ -21,6 +22,18 @@ export async function getLock(): Promise<LockFile | null> {
   } catch {
     return null;
   }
+}
+
+/** The seasons this site's server ships (docs/44): index.json's `ship`, or SEASONS_SHIP on the test site. */
+export const getShip = () => readShip(P.seasons);
+
+/**
+ * The pack this site's server and its PCs have (docs/44): the lock without the mods of seasons it does not ship, and
+ * the hash, so the pack's version, over what is left. What the mod list, the app's update check and the pages show.
+ */
+export async function getLock(): Promise<LockFile | null> {
+  const [lock, ship] = await Promise.all([getFullLock(), getShip()]);
+  return lock ? shippedLock(lock, ship) : null;
 }
 
 export async function distFile(name: string): Promise<{ file: string; size: number; mtime: Date } | null> {

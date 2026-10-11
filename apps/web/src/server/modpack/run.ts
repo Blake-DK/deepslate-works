@@ -2,7 +2,7 @@ import "server-only";
 import { rename, writeFile } from "node:fs/promises";
 import { buildLock, diffLocks, lintManifest, lockExtras, type LockFile } from "modpack";
 import { getManifest, commitManifest } from "./manifest";
-import { getLock, P } from "./lock";
+import { getFullLock, getLock, P } from "./lock";
 import { apiFetch, apiStream } from "@/server/api-client";
 import { testRefusal } from "@/server/test-mode";
 
@@ -27,7 +27,7 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
     }
     if (cmd === "lock") {
       const m = await getManifest();
-      const prev = await getLock();
+      const prev = await getFullLock();
       const lines: string[] = [];
       const { lock, warnings } = await buildLock(m, { configDir: P.config, resourcepackDir: P.resourcepack, onProgress: (s) => lines.push(s), previousNeoForge: prev?.neoforge });
       for (const l of lines) yield l;
@@ -57,7 +57,7 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
       const commit = await commitManifest(`chore(modpack): lock ${lock.hash.slice(0, 8)} (${changed} change${changed === 1 ? "" : "s"})`, { name: admin.displayName }, ["modpack/mods.lock.json", ...(ex.written ? ["modpack/extras.lock.json"] : [])]);
       yield commit.ok ? `committed (${commit.output || "ok"})` : `git commit failed: ${commit.output}`;
     } else if (cmd === "build") {
-      const lock = await getLock();
+      const lock = await getFullLock();
       if (!lock) {
         yield "no mods.lock.json yet: run Lock first";
         return;
@@ -75,7 +75,7 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
       if (!finished) yield "ERROR the build stream ended early: check `docker logs deepslate-api`";
     } else if (cmd === "sync" || cmd === "sync-dry") {
       const dryRun = cmd === "sync-dry";
-      const lock = await getLock();
+      const lock = await getLock(); // the pack this server ships (docs/44)
       if (!lock) {
         yield "no mods.lock.json yet: run Lock, then Build";
         return;
@@ -95,7 +95,7 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
 /** Lock status for the admin table: per mod, resolved version and any problem. */
 export async function modpackStatus() {
   const m = await getManifest();
-  const lock = await getLock();
+  const lock = await getFullLock();
   const bySlug = new Map((lock?.files ?? []).map((f) => [f.slug, f]));
   const { issues } = lintManifest(m);
   return {

@@ -1,5 +1,5 @@
 import type { ConfigHash } from "./hashes";
-import type { LockFile } from "./lock";
+import { shippedLock, type LockFile } from "./lock";
 import type { Manifest } from "./schema";
 
 // Admin → Modpack's "out of date" box (Alex, 2026-10-06): which of Lock, Build and Sync server have to be pressed,
@@ -12,6 +12,8 @@ export type Step = "lock" | "build" | "sync";
 export type PendingFacts = {
   manifest: Manifest;
   lock: LockFile | null;
+  /** docs/44: the seasons this server ships (readShip); the pack it is built from leaves the others' mods out. */
+  ship?: readonly string[];
   /** modpack/config/ and modpack/resourcepack/ as they are now (hashes.ts), to hold against the lock's. */
   configs: ConfigHash[];
   resourcepack: string | undefined;
@@ -84,7 +86,7 @@ export function pendingSteps(f: PendingFacts): Pending {
   for (const t of lockReasons(f)) add("lock", t);
   const lockNeeded = reasons.length > 0;
 
-  const repo = f.lock ? `${f.manifest.version}+${f.lock.hash.slice(0, 8)}` : null;
+  const repo = f.lock ? `${f.manifest.version}+${shippedLock(f.lock, f.ship ?? []).hash.slice(0, 8)}` : null;
   if (repo && !f.builtPack) {
     add("build", "Nothing has been built yet.");
     serverBuild = true;

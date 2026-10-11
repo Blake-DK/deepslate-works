@@ -1,5 +1,5 @@
 import "server-only";
-import { getLock } from "@/server/modpack/lock";
+import { getFullLock } from "@/server/modpack/lock";
 
 // The Mods guide's icons (/mods): each mod's own icon on Modrinth, asked for in one request for the whole pack and
 // kept for a day. Modrinth out of reach: no icons (the cards show the first letter), never an error.
@@ -7,7 +7,7 @@ const DAY_MS = 24 * 60 * 60_000;
 let cache: { at: number; key: string; icons: Record<string, string> } | null = null;
 
 export async function getModIcons(): Promise<Record<string, string>> {
-  const lock = await getLock();
+  const lock = await getFullLock();
   if (!lock) return {};
   const ids = lock.files.map((f) => f.projectId).filter(Boolean);
   const key = ids.join(",");

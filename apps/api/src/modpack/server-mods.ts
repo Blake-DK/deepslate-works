@@ -1,11 +1,10 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import type { Prisma } from "@prisma/client";
 import type { Amp } from "../amp/client.js";
 import type { ConsoleTail } from "../amp/console.js";
 import { db } from "../db.js";
 import { audit } from "../audit.js";
 import { chunks, stat } from "../files/browse.js";
+import { readShippedLock } from "./ship.js";
 
 // 2.1.0 (kanefinch's TaCZ kick, 2026-10-01): which mod files the server really loaded at its last start, against the
 // set PCs are given. A mod the server loads that registers network channels has to be on every PC as well, or NeoForge
@@ -95,7 +94,8 @@ export class ServerMods {
     let loaded = parseLoadedMods(text);
     if (loaded.length === 0) { source = "logs/debug.log"; text = (await this.read(source)) ?? ""; loaded = parseLoadedMods(text); }
     if (loaded.length === 0) { this.log({}, "server mods: no 'Found mod file' lines in latest.log or debug.log"); return null; }
-    const lock = JSON.parse(await readFile(path.join(this.repoDir, "modpack", "mods.lock.json"), "utf8")) as LockLike;
+    // docs/44: the server is held to the files of the seasons it ships, not to the whole lock
+    const lock = (await readShippedLock(this.repoDir)) as unknown as LockLike;
     const problems = compareLoaded(loaded, lock);
     const modIds = parseModIds(text);
     const value = { at: new Date().toISOString(), source, files: loaded, problems, modIds } as unknown as Prisma.InputJsonValue;

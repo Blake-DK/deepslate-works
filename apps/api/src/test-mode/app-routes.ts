@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { wakeDecision, type ServerState } from "../shared/server-state.js";
 import type { Wake } from "../status/wake.js";
+import { readShippedLock } from "../modpack/ship.js";
 
 // The launcher's Test section, version one (planner and Alex, 2026-10-09; docs/45). What the test server's api tells the
 // LIVE web, which asks on behalf of an admin's app: the test pack, its settings bundle, the test server's state, and a
@@ -38,7 +39,8 @@ export function testAppRoutes(app: FastifyInstance, d: TestAppDeps) {
     try {
       const [mods, lock] = await Promise.all([
         readFile(path.join(d.repoDir, "modpack", "mods.json"), "utf8").then((t) => JSON.parse(t) as unknown),
-        readFile(path.join(d.repoDir, "modpack", "mods.lock.json"), "utf8").then((t) => JSON.parse(t) as unknown),
+        // docs/44: the test server's pack, the seasons it ships and no others, so the app installs what it runs
+        readShippedLock(d.repoDir),
       ]);
       return reply.header("cache-control", "no-store").send({ mods, lock });
     } catch {

@@ -97,4 +97,12 @@ describe("the Mods guide", () => {
       expect(sections.map((p) => p.key)).toEqual(GUIDE_TOPICS.map((t) => `topic-${t}`).filter((k) => sections.some((p) => p.key === k)));
     });
   });
+
+  it("the search box's browser code carries none of the guide's text (a hidden section's title stays on the server)", () => {
+    const src = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
+    const box = src("components/mods-guide/search.tsx");
+    expect(box).not.toMatch(/from "@\/lib\/mods-guide"|from "modpack/);
+    expect(box).toMatch(/from "@\/lib\/mods-search"/);
+    expect(src("lib/mods-search.ts")).not.toMatch(/^import /m);
+  });
 });

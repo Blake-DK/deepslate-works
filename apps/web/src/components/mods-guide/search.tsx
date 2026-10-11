@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { matches } from "@/lib/mods-guide";
+import { matches } from "@/lib/mods-search";
 import { cn } from "@/lib/utils";
 import { fieldClasses } from "@/components/ui/input";
 

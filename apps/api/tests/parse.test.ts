@@ -85,6 +85,10 @@ describe("parse", () => {
     expect(isKnownHarmless("example is not a registered slot type!")).toBe(true);
     expect(isKnownHarmless("ring is not a registered slot type!")).toBe(false);
     expect(isKnownHarmless("Encountered an unexpected exception")).toBe(false);
+    // a recipe a player's book still names, dropped from it (the admin channel, 2026-10-11)
+    expect(isKnownHarmless("Tried to load unrecognized recipe: mowziesmobs:spear removed now.")).toBe(true);
+    expect(isKnownHarmless("Tried to load unrecognized recipe: cataclysm:stonecutting/chiseled_stone_brick_pillar_from_stonecutting removed now.")).toBe(true);
+    expect(isKnownHarmless("Tried to load unrecognized recipe: mowziesmobs:spear")).toBe(false);
     expect(parse(L("example is not a registered slot type!", "Server thread", "ERROR"))).toMatchObject([{ type: "problem", level: "ERROR", text: "example is not a registered slot type!" }]);
   });
   it("reports warnings and errors, but not the mod loader's start-up noise (real lines)", () => {

@@ -36,7 +36,10 @@ say live is stopped, held or to be trimmed in place, this section wins.
   member's latest Play, Play (new pack) or First install at or before it, within 12 hours, one check per launch; the
   row shows "Game ✓", "Game check failed" or "Game check", linking to the check's report. A check that finds no
   launch keeps its own row. The counts on the outcome tabs no longer count game checks. 2 tests.
-- **Unproven:** both pages on the test site or live.
+- **Admin channel:** "Tried to load unrecognized recipe: <id> removed now." is in `KNOWN_HARMLESS` (`events/parse.ts`):
+  a player's recipe book naming a recipe the server no longer has, dropped by the game once per recipe and player. In
+  the event log as before, no longer posted as a Problem (Alex, 2026-10-11, after Mowzie's Mobs and Cataclysm lines).
+- **Unproven:** both pages and the muted line on the test site or live.
 
 ## Game chat to Discord, per member (2026-10-11, live: PR #32, `main` `5121dee7`)
 

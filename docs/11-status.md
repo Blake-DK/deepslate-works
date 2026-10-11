@@ -45,7 +45,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
 
 - **Live:** deployed 17:47 UTC 2026-10-11 (the first try stopped before CI had built the images; nothing changed);
   `deepslate-web` and `deepslate-api` on `a2ee06f2`, healthy (db, api, pack same), no errors in either log. Change
-  log entry `2026-10-11-player-pages` is not `live` yet: set it after the live check.
+  log entry `2026-10-11-player-pages` set `live` on Alex's word, 2026-10-11; the deploy after that posts it.
 
 - **Players → People:** the whole row opens the player's page (only the name did, with no sign it could); a row
   without a linked Minecraft account has no page and stays plain. Stats: the names in "Who plays together" and

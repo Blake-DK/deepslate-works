@@ -41,6 +41,9 @@ changed by admins only. Default "Automatic" is the docs/50 rule, so nothing chan
 - **Checks:** api 755 (3 new in `tests/discord-feed.test.ts`: Always post, Never post with the death still posted,
   the setting against the rule), web 636 (the three audit lines added to an existing test), modpack 217, typecheck
   and lint.
+- **Row menus (`ff723e8e`):** "Take away joining during maintenance" ran out of the fixed-width (`w-52`) menu on
+  People. The menu is now as wide as its longest item (at least `w-52`, at most 20rem or the screen less 2rem), and an
+  item wraps only past that.
 - **Unproven:** the migration on live's database (it runs at the deploy); the dialog in a browser; a forced choice
   seen in #game-chat on live.
 

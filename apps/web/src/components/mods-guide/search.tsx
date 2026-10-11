@@ -4,8 +4,9 @@ import { matches } from "@/lib/mods-guide";
 import { cn } from "@/lib/utils";
 import { fieldClasses } from "@/components/ui/input";
 
-// The Mods guide's search box (/mods): hides the cards that don't match and opens the folded "Behind the scenes"
-// while searching. A link to /mods#something inside the folded part opens it too.
+// The Mods guide's search box (/mods): hides the cards that don't match, the parts left with none and their links in
+// the row under the box (docs/52), and opens the folded "Behind the scenes" while searching. A link to /mods#something
+// inside the folded part opens it too.
 export function ModsSearch() {
   const [query, setQuery] = useState("");
 
@@ -29,11 +30,16 @@ export function ModsSearch() {
       el.hidden = !hit;
       if (hit) shown++;
     });
+    const hiddenParts = new Set<string>();
     document.querySelectorAll<HTMLElement>("[data-mod-part]").forEach((part) => {
       const any = part.querySelector("[data-mod-card]:not([hidden])") !== null;
       part.hidden = !any;
+      if (!any) hiddenParts.add(part.dataset.modPart ?? "");
       const details = part.querySelector("details");
       if (details && query) details.open = true;
+    });
+    document.querySelectorAll<HTMLElement>("[data-mod-jump]").forEach((a) => {
+      a.hidden = hiddenParts.has(a.dataset.modJump ?? "");
     });
     const none = document.getElementById("mods-none");
     if (none) none.hidden = shown > 0;

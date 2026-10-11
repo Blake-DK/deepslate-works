@@ -26,6 +26,29 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The Mods guide sectioned by type: docs/52 (2026-10-11, a PR to `main` with this work only)
+
+- **Built:** `topic` on a mod in `mods.json` (`GUIDE_TOPICS`: travel, friends, mining, storage, building, factories,
+  farming, combat, bosses), set on all 43 `guide: "game"` mods as docs/52 §2 lists them. Lint: a listed `game` mod
+  without a topic is an error, and so is a topic on a mod that is not `game`. `/mods` shows a section per topic
+  (heading id `topic-<id>`, `scroll-mt-20` like the cards) where "What's in the game" was, then Helpers, Your extras,
+  Behind the scenes (ids `part-helper`, `part-extras`, `part-behind`). Under the search box, a row of links in the
+  site's tab strip style (`TabStrip` + `stripLink`, scrolls sideways on a phone); the search hides a part's link with
+  the part. `category`, the vote and `/pack` are untouched. Change log entry `2026-10-11-mods-guide-by-type`, not
+  yet `live`.
+- **Beyond docs/52:** a `game` mod with no topic still shows, under the old "What's in the game", after the topic
+  sections; lint never lets one into `mods.json`, but an older one (the held test checkout) has none. The search
+  box's browser code no longer imports `mods-guide.ts` (its `matches` is in `lib/mods-search.ts`), so no section's
+  title reaches a viewer it is not shown to.
+- **Alex, 2026-10-11:** to `main` before a look on the test site (the test checkout is held at `86bdcc5`, so the test
+  site could not show it), and without docs/44 A2 (`395f7332`), which stays on `dev` only. This PR is built from
+  `main` with the Mods guide commits alone; `dev` has the same work as `3ad80538`, `1c11c25b`.
+- **Pack check (§4):** the out-of-date box's Lock reasons are empty before and after the edit, mods.json's settings
+  (all but `mods`) are unchanged, and `mods.json` is not a Build input: no Lock, no Build. Pack `0.1.0+d44eb2ba`,
+  71 files, as before.
+- **After the deploy, in a browser:** docs/52 §6 as a player and as an admin, at 1280 and 390 px; then `live: true`
+  on the change log entry.
+
 ## Seasons 1 and 2 planned again: docs/51 (2026-10-11, docs only)
 
 - **Alex: follow the players' vote.** A season opens at 19:00 UK on the 1st of a month, lasts two months, and its

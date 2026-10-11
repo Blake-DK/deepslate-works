@@ -31,6 +31,9 @@ export const modSchema = z.object({
   // Alex, 2026-10-05: kept for the coming season. Installed and run as usual, but the site lists it to admins only (the
   // Mods guide, the Mod list). Never up for vote: lint refuses it in a votable category.
   adminOnly: z.boolean().optional(),
+  // docs/44: a season's mod. Locked and pinned like any other, but it goes to a server and its PCs only while that
+  // season is in the server's ship list (seasons/index.json `ship`; SEASONS_SHIP on the test server).
+  season: z.string().regex(/^[a-z0-9_]{1,32}$/).optional(),
   exclusiveGroup: z.string().nullable().default(null),
   description: z.string().min(1).max(240),
   note: z.string().max(160).optional(), // shown small on the card, e.g. "Needs Mekanism"

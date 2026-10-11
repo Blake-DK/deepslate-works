@@ -42,6 +42,8 @@ export type LockEntry = {
   modrinth?: { client: string; server: string };
   /** 2.1.0: NeoForge network channels the jar registers (sides.ts `jarChannels`); null when the jar was not looked at. */
   channels?: "required" | "optional" | "none" | null;
+  /** docs/44: the season this file belongs to (mods.json `season`, or the season of every mod that needs it). */
+  season?: string;
 };
 
 export type LockWarning = string;
@@ -110,6 +112,7 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
       slug: project.slug, name: mod?.name ?? project.title, projectId: project.id, versionId: version.id, versionNumber: version.version_number,
       versionType: version.version_type, filename: file.filename, url: file.url, sha512: file.hashes.sha512, sha1: file.hashes.sha1, size: file.size,
       side, requiredBy: item.requiredBy ? [item.requiredBy] : [], modrinth: { client: project.client_side, server: project.server_side },
+      ...(mod?.season ? { season: mod.season } : {}),
     });
     log(`${project.slug} ${version.version_number} (${(file.size / 1048576).toFixed(1)} MB)${item.requiredBy ? ` <- ${item.requiredBy}` : ""}`);
     for (const dep of version.dependencies) {
@@ -123,6 +126,7 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
 
   const files = [...entries.values()].sort((a, b) => a.slug.localeCompare(b.slug));
   widenForDependents(files, warn);
+  seasonDependencies(files);
   if (opts.jarCache) {
     await mkdir(opts.jarCache, { recursive: true });
     for (const f of files) {
@@ -143,6 +147,46 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
   const resourcepack = await hashResourcePack(opts.resourcepackDir);
   const lock: LockFile = { generatedAt: new Date().toISOString(), minecraft: m.minecraft, neoforge, hash: packHash(neoforge, files, configs, resourcepack), files, configs, ...(resourcepack ? { resourcepack } : {}) };
   return { lock, warnings };
+}
+
+/**
+ * docs/44: a library pulled in only by one season's mods belongs to that season too, so it ships with them and not
+ * without them. A season's file that something outside that season needs would leave the other without it: refused.
+ */
+export function seasonDependencies(files: LockEntry[]): void {
+  const bySlug = new Map(files.map((f) => [f.slug, f]));
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const f of files) {
+      if (f.season || f.requiredBy.length === 0) continue;
+      const seasons = new Set(f.requiredBy.map((r) => bySlug.get(r)?.season ?? null));
+      const [only] = [...seasons];
+      if (seasons.size === 1 && only) {
+        f.season = only;
+        changed = true;
+      }
+    }
+  }
+  for (const f of files) {
+    if (!f.season) continue;
+    const others = f.requiredBy.filter((r) => bySlug.get(r)?.season !== f.season);
+    if (others.length) throw new Error(`${f.slug} is a Season ${f.season} mod, but ${others.join(", ")} needs it outside that season: take "season" off ${f.slug} in mods.json`);
+  }
+}
+
+/** docs/44: the lock's files that go to a server whose ship list is `ship`: every file without a season, and the files of the seasons in it. */
+export function shippedFiles(lock: Pick<LockFile, "files">, ship: readonly string[]): LockEntry[] {
+  return lock.files.filter((f) => !f.season || ship.includes(f.season));
+}
+
+/**
+ * docs/44: the lock as one server and its PCs see it: only its shipped files, and the hash (so the pack's version)
+ * over those. With nothing left out it is the lock itself, hash and all.
+ */
+export function shippedLock(lock: LockFile, ship: readonly string[]): LockFile {
+  const files = shippedFiles(lock, ship);
+  if (files.length === lock.files.length) return lock;
+  return { ...lock, files, hash: packHash(lock.neoforge, files, lock.configs, lock.resourcepack) };
 }
 
 /**

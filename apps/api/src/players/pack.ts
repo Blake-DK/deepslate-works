@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { Prisma } from "@prisma/client";
 import { db } from "../db.js";
+import { readShippedLock } from "../modpack/ship.js";
 
 // docs/14 "Play first": which pack the server runs. Written down at every sync (Setting "_packSynced"), because
 // what is built and what has been synced are not the same thing between a Build and the Sync that follows it.
@@ -18,12 +19,10 @@ async function built(): Promise<string | null> {
   }
 }
 
-const LOCK = path.join(process.env.REPO_DIR ?? "/repo", "modpack", "mods.lock.json");
-
-/** The mods of the locked pack, slug → Modrinth version id; null when the lock cannot be read. */
+/** The mods of the pack this server ships (docs/44), slug → Modrinth version id; null when the lock cannot be read. */
 async function lockedMods(): Promise<Record<string, string> | null> {
   try {
-    const lock = JSON.parse(await readFile(LOCK, "utf8")) as { files?: Array<{ slug?: unknown; versionId?: unknown }> };
+    const lock = await readShippedLock(process.env.REPO_DIR ?? "/repo");
     const out: Record<string, string> = {};
     for (const f of lock.files ?? []) if (typeof f.slug === "string" && typeof f.versionId === "string") out[f.slug] = f.versionId;
     return out;

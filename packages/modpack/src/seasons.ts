@@ -496,9 +496,26 @@ export const parseShip = (raw: string): string[] => [...new Set(raw.split(/[\s,]
  * where SEASONS_SHIP replaces it when set, so the real season can be tried there without a commit that would put it
  * on the live server too. Anywhere else SEASONS_SHIP is ignored.
  */
-export function shipFor(indexShip: string[], env: NodeJS.ProcessEnv): string[] {
+/** Where TEST_MODE and SEASONS_SHIP are read from; process.env will do. */
+export type ShipEnv = Readonly<Record<string, string | undefined>>;
+
+export function shipFor(indexShip: string[], env: ShipEnv): string[] {
   const raw = env.SEASONS_SHIP?.trim();
   return env.TEST_MODE === "1" && raw ? parseShip(raw) : indexShip;
+}
+
+/**
+ * docs/44: the seasons a server ships, from modpack/seasons/index.json and the environment (shipFor). A missing or
+ * unreadable index ships nothing. Every reader of the lock goes through this and `shippedLock`.
+ */
+export async function readShip(seasonsDir: string, env: ShipEnv = process.env): Promise<string[]> {
+  let ship: string[] = [];
+  try {
+    ship = seasonIndexSchema.parse(JSON.parse(await readFile(path.join(seasonsDir, "index.json"), "utf8"))).ship;
+  } catch {
+    // no index: nothing ships
+  }
+  return shipFor(ship, env);
 }
 
 /** The Build's first line about SEASONS_SHIP, when it is set: what it does here. Null when it is not set. */

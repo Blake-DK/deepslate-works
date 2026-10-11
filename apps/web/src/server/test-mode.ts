@@ -4,6 +4,7 @@ import path from "node:path";
 import { env } from "@/env";
 import { apiFetch } from "@/server/api-client";
 import { db } from "@/server/db";
+import { readShip, shippedLock, type LockFile, type ShipEnv } from "modpack";
 
 // docs/42: what the test server's site (TEST_MODE=1) knows about itself. On the live site every function here answers
 // as if there were no test server: getTestState() is null, seasonNow() the real time, testRefusal() null.
@@ -44,13 +45,17 @@ export async function seasonNow(): Promise<Date> {
   return Number.isFinite(p) && Number.isFinite(s) ? new Date(Date.now() + (p - s)) : new Date();
 }
 
-/** "1.0.0+abcd1234", as the footer shows a pack: mods.json's version and the lock's hash. Null when it does not read. */
-export async function packIn(modpackDir: string): Promise<string | null> {
+/**
+ * "1.0.0+abcd1234", as the footer shows a pack: mods.json's version and the hash of the lock as that server ships it
+ * (docs/44). `env`: whose ship list; the live checkout's is its index.json alone. Null when it does not read.
+ */
+export async function packIn(modpackDir: string, env: ShipEnv = {}): Promise<string | null> {
   try {
-    const [m, lock] = await Promise.all([readFile(path.join(modpackDir, "mods.json"), "utf8"), readFile(path.join(modpackDir, "mods.lock.json"), "utf8")]);
+    const [m, raw, ship] = await Promise.all([readFile(path.join(modpackDir, "mods.json"), "utf8"), readFile(path.join(modpackDir, "mods.lock.json"), "utf8"), readShip(path.join(modpackDir, "seasons"), env)]);
     const version = (JSON.parse(m) as { version?: unknown }).version;
-    const hash = (JSON.parse(lock) as { hash?: unknown }).hash;
-    return typeof version === "string" && typeof hash === "string" && hash.length >= 8 ? `${version}+${hash.slice(0, 8)}` : null;
+    const lock = JSON.parse(raw) as LockFile;
+    const hash = typeof lock.hash === "string" && Array.isArray(lock.files) ? shippedLock(lock, ship).hash : null;
+    return typeof version === "string" && hash && hash.length >= 8 ? `${version}+${hash.slice(0, 8)}` : null;
   } catch {
     return null;
   }
@@ -62,6 +67,6 @@ export async function packIn(modpackDir: string): Promise<string | null> {
  */
 export async function packDrift(): Promise<{ test: string; live: string } | null> {
   if (!env.TEST_MODE || !env.LIVE_MODPACK_DIR) return null;
-  const [test, live] = await Promise.all([packIn(process.env.MODPACK_DIR ?? "/repo/modpack"), packIn(env.LIVE_MODPACK_DIR)]);
+  const [test, live] = await Promise.all([packIn(process.env.MODPACK_DIR ?? "/repo/modpack", process.env), packIn(env.LIVE_MODPACK_DIR)]);
   return test && live && test !== live ? { test, live } : null;
 }

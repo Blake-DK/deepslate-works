@@ -308,6 +308,7 @@ services:
       SERVER_ADDRESS: ${TEST_SERVER_ADDRESS:-lab.dsw.test}
       MODRINTH_USER_AGENT: ${MODRINTH_USER_AGENT:-deepslate-works/0.1}
       TEST_MODE: "1"
+      SEASONS_SHIP: ${TEST_SEASONS_SHIP:-}   # docs/44: the seasons whose mods the test site hands out, as api-test builds
       LIVE_SITE_URL: ${AUTH_URL}
       LIVE_MODPACK_DIR: /live-modpack
     volumes:

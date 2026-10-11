@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { db } from "@/server/db";
 import type { PackDrift } from "@/lib/pack-drift";
+import { seasonIndexSchema, shipFor, shippedLock, type LockFile } from "modpack";
 
 const MODPACK_DIR = process.env.MODPACK_DIR ?? path.resolve(process.cwd(), "..", "..", "modpack");
 const REPO_DIR = process.env.REPO_DIR ?? path.resolve(MODPACK_DIR, "..");
@@ -14,13 +15,23 @@ export function git(args: string[]): Promise<string | null> {
   });
 }
 
-/** origin/main's pack, "<mods.json version>+<lock hash, 8>", as of the checkout's last fetch (deploy.sh fetches). */
+/**
+ * origin/main's pack, "<mods.json version>+<lock hash, 8>", as of the checkout's last fetch (deploy.sh fetches): the
+ * lock as this server ships it (docs/44), by main's index.json.
+ */
 async function mainPack(): Promise<string | null> {
-  const [m, l] = await Promise.all([git(["show", "refs/remotes/origin/main:modpack/mods.json"]), git(["show", "refs/remotes/origin/main:modpack/mods.lock.json"])]);
+  const [m, l, i] = await Promise.all(["mods.json", "mods.lock.json", "seasons/index.json"].map((f) => git(["show", `refs/remotes/origin/main:modpack/${f}`])));
   try {
     const version = (JSON.parse(m ?? "") as { version?: unknown }).version;
-    const hash = (JSON.parse(l ?? "") as { hash?: unknown }).hash;
-    return typeof version === "string" && typeof hash === "string" ? `${version}+${hash.slice(0, 8)}` : null;
+    const lock = JSON.parse(l ?? "") as LockFile;
+    let ship: string[] = [];
+    try {
+      ship = seasonIndexSchema.parse(JSON.parse(i ?? "")).ship;
+    } catch {
+      // no index on main: nothing ships
+    }
+    const hash = typeof lock.hash === "string" && Array.isArray(lock.files) ? shippedLock(lock, shipFor(ship, process.env)).hash : null;
+    return typeof version === "string" && hash ? `${version}+${hash.slice(0, 8)}` : null;
   } catch {
     return null;
   }

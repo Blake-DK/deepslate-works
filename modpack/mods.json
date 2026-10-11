@@ -2282,8 +2282,7 @@
       "name": "L_Ender's Cataclysm",
       "category": "adventure",
       "side": "both",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "M",
       "recommended": false,
       "hidden": false,
@@ -2308,15 +2307,15 @@
       "version": "PsPYpoCC",
       "requires": [],
       "guide": "game",
-      "howTo": "Big dungeons generate in the world: a ruined citadel, a sunken city, a burning arena and more, each guarded by a boss. Most are fights for a **group**: go together and bring food, armour and a bed nearby. What they drop is gear you can't get any other way."
+      "howTo": "Big dungeons generate in the world: a ruined citadel, a sunken city, a burning arena and more, each guarded by a boss. Most are fights for a **group**: go together and bring food, armour and a bed nearby. What they drop is gear you can't get any other way.",
+      "season": "s1"
     },
     {
       "slug": "mowzies-mobs",
       "name": "Mowzie's Mobs",
       "category": "adventure",
       "side": "both",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "M",
       "recommended": false,
       "hidden": false,
@@ -2341,7 +2340,8 @@
       "version": "xgAXTl17",
       "requires": [],
       "guide": "game",
-      "howTo": "You'll meet these while exploring: a frost beast in snowy plains, a sun chief in savanna villages, an armoured knight in a hidden hall underground. Each fight has a pattern: watch it once before you swing. Their drops are unusual tools and weapons."
+      "howTo": "You'll meet these while exploring: a frost beast in snowy plains, a sun chief in savanna villages, an armoured knight in a hidden hall underground. Each fight has a pattern: watch it once before you swing. Their drops are unusual tools and weapons.",
+      "season": "s1"
     },
     {
       "slug": "gateways-to-eternity",
@@ -2377,8 +2377,7 @@
       "name": "Ender Dragon Fight Remastered",
       "category": "adventure",
       "side": "server",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -2394,7 +2393,8 @@
       ],
       "version": "5OYoqItD",
       "requires": [],
-      "guide": "behind"
+      "guide": "behind",
+      "season": "s1"
     },
     {
       "slug": "multiplayerbosses",
@@ -2420,8 +2420,7 @@
       "name": "Lionfish API",
       "category": "adventure",
       "side": "both",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": true,
@@ -2430,15 +2429,15 @@
       "wiki": "https://modrinth.com/mod/lionfish-api",
       "videos": [],
       "version": "fTRMVgyZ",
-      "requires": []
+      "requires": [],
+      "season": "s1"
     },
     {
       "slug": "curios",
       "name": "Curios API",
       "category": "adventure",
       "side": "both",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": true,
@@ -2447,15 +2446,15 @@
       "wiki": "https://modrinth.com/mod/curios",
       "videos": [],
       "version": "yohfFbgD",
-      "requires": []
+      "requires": [],
+      "season": "s1"
     },
     {
       "slug": "geckolib",
       "name": "GeckoLib",
       "category": "adventure",
       "side": "both",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": true,
@@ -2464,7 +2463,8 @@
       "wiki": "https://modrinth.com/mod/geckolib",
       "videos": [],
       "version": "Grwn5rUB",
-      "requires": []
+      "requires": [],
+      "season": "s1"
     },
     {
       "slug": "apothic-attributes",

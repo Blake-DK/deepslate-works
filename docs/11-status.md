@@ -43,7 +43,7 @@ changed by admins only. Default "Automatic" is the docs/50 rule, so nothing chan
   and lint.
 - **Row menus (`ff723e8e`):** "Take away joining during maintenance" ran out of the fixed-width (`w-52`) menu on
   People. The menu is now as wide as its longest item (at least `w-52`, at most 20rem or the screen less 2rem), and an
-  item wraps only past that.
+  item wraps only past that. Seen right on the test site (`web-test` on `ff723e8e`) by Alex, 2026-10-11.
 - **Unproven:** the migration on live's database (it runs at the deploy); the dialog in a browser; a forced choice
   seen in #game-chat on live.
 

@@ -26,7 +26,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## The Mods guide sectioned by type: docs/52 (2026-10-11, a PR onto `dev`; not on `main`)
+## The Mods guide sectioned by type: docs/52 (2026-10-11, `3ad80538` on `dev`; not on `main`)
 
 - **Built:** `topic` on a mod in `mods.json` (`GUIDE_TOPICS`: travel, friends, mining, storage, building, factories,
   farming, combat, bosses), set on all 43 `guide: "game"` mods as docs/52 §2 lists them. Lint: a listed `game` mod
@@ -41,7 +41,8 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Pack check (§4):** against the real lock, `lockReasons` gives nothing before and after the edit, mods.json's
   settings (everything but `mods`) are unchanged, and `mods.json` is not a Build input, so the out-of-date box asks
   for no Lock and no Build. Shipping nothing: 71 files, `d44eb2ba`; the whole lock 77, `f652ffca`; as before.
-- **Checks:** modpack 231, api 758, web 643, typecheck, lint (`deploy/check.sh`).
+- **Checks:** modpack 231, api 758, web 643, typecheck, lint (`deploy/check.sh`); CI `ci` and `dev-images` green
+  on the push. Pushed straight to `dev`, no PR of its own (Alex, 2026-10-11).
 - **Not yet checked in a browser.** The test site reads `mods.json` from the held checkout, so it shows the topic
   sections only once the hold is lifted and the checkout pulled (the planner's word), and the new `dev` image is up
   (`sudo deploy/test-up.sh`). The §6 browser checks wait for that.

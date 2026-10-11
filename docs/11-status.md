@@ -41,7 +41,11 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Order of work:** docs/51 §5: A (calendar in code, docs/44, docs/41), B (proven on the test server, the rehearsal
   there instead of on live), C (live before 1 December), D and E (during the seasons).
 
-## Players rows and Installs' game checks (2026-10-11, on `dev`, not deployed)
+## Players rows and Installs' game checks (2026-10-11, live: PR #33, `main` `a2ee06f2`)
+
+- **Live:** deployed 17:47 UTC 2026-10-11 (the first try stopped before CI had built the images; nothing changed);
+  `deepslate-web` and `deepslate-api` on `a2ee06f2`, healthy (db, api, pack same), no errors in either log. Change
+  log entry `2026-10-11-player-pages` is not `live` yet: set it after the live check.
 
 - **Players → People:** the whole row opens the player's page (only the name did, with no sign it could); a row
   without a linked Minecraft account has no page and stays plain. Stats: the names in "Who plays together" and
@@ -54,7 +58,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Admin channel:** "Tried to load unrecognized recipe: <id> removed now." is in `KNOWN_HARMLESS` (`events/parse.ts`):
   a player's recipe book naming a recipe the server no longer has, dropped by the game once per recipe and player. In
   the event log as before, no longer posted as a Problem (Alex, 2026-10-11, after Mowzie's Mobs and Cataclysm lines).
-- **Unproven:** both pages and the muted line on the test site or live.
+- **Unproven:** both pages and the muted line on live.
 
 ## Game chat to Discord, per member (2026-10-11, live: PR #32, `main` `5121dee7`)
 

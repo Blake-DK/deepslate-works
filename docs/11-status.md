@@ -26,6 +26,21 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Seasons 1 and 2 planned again: docs/51 (2026-10-11, docs only)
+
+- **Alex: follow the players' vote.** A season opens at 19:00 UK on the 1st of a month, lasts two months, and its
+  finale is the last Sunday at 18:00 UK. Season 1: Tue 1 Dec 2026 to Mon 1 Feb 2027, finale Sun 31 Jan. Season 2:
+  1 Feb to Thu 1 Apr 2027, finale Sun 28 Mar (`17:00Z`, the clocks change that day). Season 2's mod is Aquamirae.
+  Poll counts read at 17:05 UTC, before the 19:00 close; to be checked again before a date goes in a file.
+- **Not yet in code:** `s1.json`, the last-Monday lint rule and the words that say "a month" still carry the old
+  calendar. docs/51 §5 A1 changes them.
+- **Found:** the main world has no boss structures inside radius 10,176 after the trim and refill, so the Frontier is
+  the only boss world; nobody has checked that a large-biomes Frontier of radius 3,000 holds every Season 1 boss
+  structure; the Frontier on live must be generated with the season mods loaded (docs/51 §6 decision 1). `s1.json`'s
+  Dragon hint says 26 December while its finale is 19 December.
+- **Order of work:** docs/51 §5: A (calendar in code, docs/44, docs/41), B (proven on the test server, the rehearsal
+  there instead of on live), C (live before 1 December), D and E (during the seasons).
+
 ## Players rows and Installs' game checks (2026-10-11, on `dev`, not deployed)
 
 - **Players → People:** the whole row opens the player's page (only the name did, with no sign it could); a row

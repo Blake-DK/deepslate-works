@@ -26,8 +26,11 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Invited players' chat stays in the game: docs/50 (2026-10-10, on `dev`, in PR #31, not deployed)
+## Invited players' chat stays in the game: docs/50 (2026-10-10, live: PR #31, `main` `c733c952`)
 
+- **Live:** `dev` commit `a5b4244a`, merged to `main` by PR #31 at 19:15 UTC; `deepslate-api` and `deepslate-web` run
+  `c733c952` since 19:21 UTC (image tag and revision label read 2026-10-11). Checks re-run 2026-10-11 on that tree:
+  same counts as below, all pass.
 - **Built:** `chatStaysInGame` (`apps/api/src/discord/announcer.ts`): `outsideAuth` and (`discordId` null or
   `guildMember` false). `store.member` (`discord/store.ts`) now reads `outsideAuth`, `discordId` and `guildMember` with
   the id and returns `inGameOnly`; only `Announcer.chat` reads it, so deaths, joins, leaves, advancements and first-join
@@ -38,7 +41,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   modpack 217, typecheck and lint.
 - **On live's data (read only, counts):** 10 members, 3 let in without the Discord server, all 3 not in it now, so
   all 3 would be kept in the game; none invited and now in the server.
-- **Unproven:** on live after the deploy, an invited player's line in the game and not in #game-chat while a Discord
+- **Unproven:** on live since the deploy, an invited player's line in the game and not in #game-chat while a Discord
   member's line of the same minute is; Activity shows the line as a normal chat event. The test server has no bot.
 
 ## The group's PCs show again (2026-10-10, on `dev`, in its own `dev` → `main` PR)

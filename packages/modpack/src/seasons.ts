@@ -109,23 +109,27 @@ export const TRIGGERS_1_21_1 = new Set([
 
 export type SeasonIssue = { season: string; message: string };
 
-/**
- * Is this moment on the last Monday of its month, by the UK's calendar? (An evening hour in UTC is the same day in
- * the UK, summer and winter; the UK day is asked for all the same.)
- */
-export function isLastMondayOfItsMonth(iso: string): boolean {
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "numeric", year: "numeric" }).formatToParts(new Date(iso));
+/** A moment as the UK's clock and calendar show it: the file is in UTC, the rules are in UK time, summer and winter. */
+export function ukTime(iso: string): { year: number; month: number; day: number; weekday: string; time: string } {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(iso));
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  if (get("weekday") !== "Mon") return false;
-  const daysInMonth = new Date(Date.UTC(Number(get("year")), Number(get("month")), 0)).getUTCDate();
-  return Number(get("day")) + 7 > daysInMonth;
+  return { year: Number(get("year")), month: Number(get("month")), day: Number(get("day")), weekday: get("weekday"), time: `${get("hour")}:${get("minute")}` };
 }
 
-/** The last Monday of a month (1 to 12), as a day of the month. */
-export function lastMonday(year: number, month: number): number {
-  const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  for (let d = days; d > days - 7; d--) if (new Date(Date.UTC(year, month - 1, d)).getUTCDay() === 1) return d;
-  return days;
+/** 19:00 UK on the 1st of a month: when a numbered season opens and ends (the players' vote, docs/51 §1). */
+export function isSeasonChangeover(iso: string): boolean {
+  const t = ukTime(iso);
+  return t.day === 1 && t.time === "19:00";
+}
+
+/**
+ * The finale is the last Sunday before the season ends, at 18:00 UK (docs/51 §1). "Last" is within the 8 days before
+ * the end: a Sunday changeover puts it a week and an hour earlier.
+ */
+export function isFinaleTime(iso: string, endsAt: string): boolean {
+  const t = ukTime(iso);
+  const before = Date.parse(endsAt) - Date.parse(iso);
+  return t.weekday === "Sun" && t.time === "18:00" && before > 0 && before < 8 * 86_400_000;
 }
 
 const criteriaOf = (t: SeasonTrial): Record<string, z.infer<typeof criterion>> => ("trigger" in t.criteria && typeof t.criteria.trigger === "string" ? { done: t.criteria as z.infer<typeof criterion> } : (t.criteria as Record<string, z.infer<typeof criterion>>));
@@ -150,14 +154,21 @@ export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>, va
     const start = Date.parse(s.startsAt);
     const end = Date.parse(s.endsAt);
     if (!(end > start)) err(`endsAt (${s.endsAt}) is not after startsAt (${s.startsAt})`);
-    // Alex, 2026-10-04: a season opens on the last Monday of a month and ends on the last Monday of the next.
+    // The players' vote, 2026-10-11 (docs/51 §1): a season opens at 19:00 UK on the 1st of a month and ends on the 1st
+    // two months later; the finale is the last Sunday before the end at 18:00 UK; things open at 19:00 UK.
     // Checked for the numbered seasons (s1, s2, …); the sample and any test season keep their own dates.
-    if (/^s\d+$/.test(s.id)) {
-      if (!isLastMondayOfItsMonth(s.startsAt)) err(`startsAt ${s.startsAt} is not the last Monday of its month (UK time)`);
-      if (!isLastMondayOfItsMonth(s.endsAt)) err(`endsAt ${s.endsAt} is not the last Monday of its month (UK time)`);
-      const months = (new Date(end).getUTCFullYear() - new Date(start).getUTCFullYear()) * 12 + new Date(end).getUTCMonth() - new Date(start).getUTCMonth();
-      if (months !== 1) err(`a season runs from the last Monday of one month to the last Monday of the next; this one spans ${months} month(s)`);
+    const numbered = /^s\d+$/.test(s.id);
+    if (numbered) {
+      if (!isSeasonChangeover(s.startsAt)) err(`startsAt ${s.startsAt} is not 19:00 UK on the 1st of a month`);
+      if (!isSeasonChangeover(s.endsAt)) err(`endsAt ${s.endsAt} is not 19:00 UK on the 1st of a month`);
+      const a = ukTime(s.startsAt);
+      const b = ukTime(s.endsAt);
+      const months = (b.year - a.year) * 12 + b.month - a.month;
+      if (months !== 2) err(`a season runs two months, from the 1st to the 1st; this one spans ${months} month(s)`);
     }
+    const at1900 = (iso: string, what: string) => {
+      if (numbered && ukTime(iso).time !== "19:00") err(`${what}: opensAt ${iso} is not 19:00 UK`);
+    };
     const inside = (t: string) => Date.parse(t) >= start && Date.parse(t) <= end;
     const title = (text: string, what: string) => {
       const key = text.toLowerCase();
@@ -186,12 +197,14 @@ export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>, va
       else bossOf.set(b.entity, b.id);
       item(b.trophy.item, `the trophy of boss ${b.id}`);
       if (b.opensAt && !inside(b.opensAt)) err(`boss ${b.id}: opensAt ${b.opensAt} is outside the season`);
+      if (b.opensAt) at1900(b.opensAt, `boss ${b.id}`);
     }
     for (const t of s.trials) {
       if (ids.has(`trial:${t.id}`)) err(`two trials have the id ${t.id}`);
       ids.add(`trial:${t.id}`);
       title(t.title, `trial ${t.id}`);
       if (!inside(t.opensAt)) err(`trial ${t.id}: opensAt ${t.opensAt} is outside the season`);
+      at1900(t.opensAt, `trial ${t.id}`);
       item(t.icon, `the icon of trial ${t.id}`);
       for (const [name, c] of Object.entries(criteriaOf(t))) {
         const [ns, key] = c.trigger.split(":");
@@ -203,6 +216,7 @@ export function lintSeasons(seasons: Season[], entities: ReadonlySet<string>, va
     if (s.finale) {
       if (!s.bosses.some((b) => b.id === s.finale!.boss)) err(`the finale names the boss ${s.finale.boss}, which is not on the ladder`);
       if (!inside(s.finale.at)) err(`the finale (${s.finale.at}) is outside the season`);
+      else if (numbered && !isFinaleTime(s.finale.at, s.endsAt)) err(`the finale (${s.finale.at}) is not the last Sunday before the end, at 18:00 UK`);
     }
     if (s.frontier) {
       const f = s.frontier;

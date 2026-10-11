@@ -163,6 +163,7 @@ export const CHANGES: Change[] = [
     // (the rule above).
     id: "2026-10-11-player-pages",
     date: "2026-10-11",
+    live: true,
     lines: ["On Players, click anywhere on someone's row to open their page. On Stats, every player's name now opens their page too."],
   },
 ];

@@ -26,6 +26,18 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Players rows and Installs' game checks (2026-10-11, on `dev`, not deployed)
+
+- **Players → People:** the whole row opens the player's page (only the name did, with no sign it could); a row
+  without a linked Minecraft account has no page and stays plain. Stats: the names in "Who plays together" and
+  "Worst ping right now" link to the player's page too, like the other lists there. `0275fa89`.
+- **Admin → Installs, Every run:** since 3.4 each Play sends two reports, the Play and the game check once the game
+  is up, so every Play was two lines. `pairGameChecks` (`lib/install-report.ts`) gives each game check to the same
+  member's latest Play, Play (new pack) or First install at or before it, within 12 hours, one check per launch; the
+  row shows "Game ✓", "Game check failed" or "Game check", linking to the check's report. A check that finds no
+  launch keeps its own row. The counts on the outcome tabs no longer count game checks. 2 tests.
+- **Unproven:** both pages on the test site or live.
+
 ## Game chat to Discord, per member (2026-10-11, live: PR #32, `main` `5121dee7`)
 
 - **Live:** deployed 16:26 UTC 2026-10-11; `deepslate-web` and `deepslate-api` on `5121dee7`, healthy (db, api, pack

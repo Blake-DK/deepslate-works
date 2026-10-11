@@ -26,7 +26,10 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Game chat to Discord, per member (2026-10-11, on `dev`, not deployed)
+## Game chat to Discord, per member (2026-10-11, live: PR #32, `main` `5121dee7`)
+
+- **Live:** deployed 16:26 UTC 2026-10-11; `deepslate-web` and `deepslate-api` on `5121dee7`, healthy (db, api, pack
+  same); `0033_chat_relay` applied at web's start; no errors in either log in the first minutes.
 
 Alex, 2026-10-11, after docs/50 went live: whether a member's game chat goes to Discord is a setting per member,
 changed by admins only. Default "Automatic" is the docs/50 rule, so nothing changes on live until an admin picks.
@@ -44,8 +47,8 @@ changed by admins only. Default "Automatic" is the docs/50 rule, so nothing chan
 - **Row menus (`ff723e8e`):** "Take away joining during maintenance" ran out of the fixed-width (`w-52`) menu on
   People. The menu is now as wide as its longest item (at least `w-52`, at most 20rem or the screen less 2rem), and an
   item wraps only past that. Seen right on the test site (`web-test` on `ff723e8e`) by Alex, 2026-10-11.
-- **Unproven:** the migration on live's database (it runs at the deploy); the dialog in a browser; a forced choice
-  seen in #game-chat on live.
+- **Unproven:** the dialog on live (saving a choice, the badge); a forced choice seen in #game-chat with a real
+  invited player online.
 
 ## Invited players' chat stays in the game: docs/50 (2026-10-10, live: PR #31, `main` `c733c952`)
 

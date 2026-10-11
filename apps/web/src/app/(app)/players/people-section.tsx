@@ -36,18 +36,29 @@ export default async function PlayersPage() {
       <Card>
         <CardContent className="p-0">
           <ul className="divide-y">
-            {rows.map((u) => (
-              <li key={u.id} className="flex items-center gap-3 px-4 py-3">
-                <PlayerHead uuid={u.mcUuid} name={u.mcUsername} size={32} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{u.mcUuid ? <Link href={`/players/${u.mcUuid}`} className="hover:underline">{u.displayName}</Link> : u.displayName} {u.role === "ADMIN" && <Badge className="ml-1">Admin</Badge>}</p>
-                  <p className="truncate text-sm text-muted-foreground">{u.mcUsername ? <span className="font-mono">{u.mcUsername}</span> : "No Minecraft account linked yet"}{u.pcTier && <> · {TIER[u.pcTier]}</>}</p>
-                </div>
-                <div className="text-right text-sm">
-                  {u.online ? <Badge tone="good">Playing</Badge> : <span className="text-muted-foreground">{u.lastPlayed ? `Last played ${timeAgo(u.lastPlayed, now)}` : "Hasn't played yet"}</span>}
-                </div>
-              </li>
-            ))}
+            {rows.map((u) => {
+              const row = (
+                <>
+                  <PlayerHead uuid={u.mcUuid} name={u.mcUsername} size={32} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium"><span className={u.mcUuid ? "group-hover:underline" : undefined}>{u.displayName}</span> {u.role === "ADMIN" && <Badge className="ml-1">Admin</Badge>}</p>
+                    <p className="truncate text-sm text-muted-foreground">{u.mcUsername ? <span className="font-mono">{u.mcUsername}</span> : "No Minecraft account linked yet"}{u.pcTier && <> · {TIER[u.pcTier]}</>}</p>
+                  </div>
+                  <div className="text-right text-sm">
+                    {u.online ? <Badge tone="good">Playing</Badge> : <span className="text-muted-foreground">{u.lastPlayed ? `Last played ${timeAgo(u.lastPlayed, now)}` : "Hasn't played yet"}</span>}
+                  </div>
+                  {u.mcUuid && <span aria-hidden className="text-muted-foreground">›</span>}
+                </>
+              );
+              // The whole row opens the player's page; without a linked Minecraft account there is no page yet.
+              return (
+                <li key={u.id}>
+                  {u.mcUuid
+                    ? <Link href={`/players/${u.mcUuid}`} className="group flex items-center gap-3 px-4 py-3 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">{row}</Link>
+                    : <div className="flex items-center gap-3 px-4 py-3">{row}</div>}
+                </li>
+              );
+            })}
           </ul>
         </CardContent>
       </Card>

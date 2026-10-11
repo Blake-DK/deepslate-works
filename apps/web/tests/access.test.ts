@@ -134,6 +134,9 @@ describe("the door while the site's Maintenance is on (docs/48 B1, B2)", () => {
     expect(describeAction("site.maintenance", alex, { on: true, kicked: ["KaneFinch", "owly"] })).toBe("Bramble09 started maintenance: only admins with the tick can join; kicked KaneFinch, owly");
     expect(describeAction("site.maintenance", alex, { on: false })).toBe("Bramble09 ended maintenance: the door is as before");
     expect(describeAction("user.maintenanceJoin", alex, { displayName: "m1_owl", on: true })).toBe("Bramble09 let m1_owl join during maintenance");
+    expect(describeAction("user.chatRelay", alex, { displayName: "KaneFinch", relay: "ALWAYS" })).toBe("Bramble09 set KaneFinch's game chat to always be posted to Discord");
+    expect(describeAction("user.chatRelay", alex, { displayName: "KaneFinch", relay: "NEVER" })).toBe("Bramble09 set KaneFinch's game chat to stay in the game");
+    expect(describeAction("user.chatRelay", alex, { displayName: "KaneFinch", relay: "AUTO" })).toBe("Bramble09 set KaneFinch's game chat to Discord back to automatic");
     expect(describeAction("join.ready", { role: "system", name: null }, { name: "KaneFinch", was: "maintenance", back: true })).toBe("KaneFinch was let in: the maintenance is over, back to where they were");
   });
 });

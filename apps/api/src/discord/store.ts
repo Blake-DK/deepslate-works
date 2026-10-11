@@ -6,7 +6,8 @@ import { getSection } from "../settings.js";
 import { readOptions, tallyPoll } from "../shared/polls.js";
 import { SYNCED_KEY } from "../players/pack.js";
 import { SERVER_MODS_KEY } from "../modpack/server-mods.js";
-import { chatStaysInGame, type FeedState, type FeedStore, type PostRow } from "./announcer.js";
+import type { FeedState, FeedStore, PostRow } from "./announcer.js";
+import { chatStaysInGame } from "../shared/chat-relay.js";
 import type { PollView } from "./lines.js";
 import { currentSeasonId, readSeasonFile, seasonsDir } from "../seasons/files.js";
 import { findByTitle } from "../shared/season.js";
@@ -96,7 +97,7 @@ export function prismaFeedStore(portal: string, repoDir?: string): FeedStore {
       await db.setting.upsert({ where: { key: STATE_KEY }, create: { key: STATE_KEY, value }, update: { value } });
     },
     async member(uuid) {
-      const u = await db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, outsideAuth: true, discordId: true, guildMember: true } });
+      const u = await db.user.findFirst({ where: { mcUuid: uuid }, select: { id: true, outsideAuth: true, discordId: true, guildMember: true, chatRelay: true } });
       return u ? { userId: u.id, inGameOnly: chatStaysInGame(u) } : null; // docs/50: read only by the chat relay
     },
     async online() {

@@ -26,8 +26,32 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Invited players' chat stays in the game: docs/50 (2026-10-10, on `dev`, in PR #31, not deployed)
+## Game chat to Discord, per member (2026-10-11, on `dev`, not deployed)
 
+Alex, 2026-10-11, after docs/50 went live: whether a member's game chat goes to Discord is a setting per member,
+changed by admins only. Default "Automatic" is the docs/50 rule, so nothing changes on live until an admin picks.
+
+- **Built:** `User.chatRelay` (enum `ChatRelay`: `AUTO`, `ALWAYS`, `NEVER`; migration `0033_chat_relay`, default
+  `AUTO` for everybody). The rule moved to `shared/chat-relay.ts` (`chatStaysInGame`: Always or Never wins, Automatic
+  is docs/50 §1); `store.member` reads `chatRelay` with the three docs/50 fields. Admin → People, a member's menu →
+  "Game chat to Discord…": a dialog with the three choices and what Automatic does for that member now. Saving is
+  `setChatRelayAction` (admin only, audited as `user.chatRelay`). People shows a "chat kept" or "chat posted" badge
+  when an admin has picked. The Discord page's chat switch line and the "Let in without the Discord server" question
+  point to it. docs/22 §5 has one sentence. Deaths, joins and the rest are as before for everybody.
+- **Checks:** api 755 (3 new in `tests/discord-feed.test.ts`: Always post, Never post with the death still posted,
+  the setting against the rule), web 636 (the three audit lines added to an existing test), modpack 217, typecheck
+  and lint.
+- **Row menus (`ff723e8e`):** "Take away joining during maintenance" ran out of the fixed-width (`w-52`) menu on
+  People. The menu is now as wide as its longest item (at least `w-52`, at most 20rem or the screen less 2rem), and an
+  item wraps only past that. Seen right on the test site (`web-test` on `ff723e8e`) by Alex, 2026-10-11.
+- **Unproven:** the migration on live's database (it runs at the deploy); the dialog in a browser; a forced choice
+  seen in #game-chat on live.
+
+## Invited players' chat stays in the game: docs/50 (2026-10-10, live: PR #31, `main` `c733c952`)
+
+- **Live:** `dev` commit `a5b4244a`, merged to `main` by PR #31 at 19:15 UTC; `deepslate-api` and `deepslate-web` run
+  `c733c952` since 19:21 UTC (image tag and revision label read 2026-10-11). Checks re-run 2026-10-11 on that tree:
+  same counts as below, all pass.
 - **Built:** `chatStaysInGame` (`apps/api/src/discord/announcer.ts`): `outsideAuth` and (`discordId` null or
   `guildMember` false). `store.member` (`discord/store.ts`) now reads `outsideAuth`, `discordId` and `guildMember` with
   the id and returns `inGameOnly`; only `Announcer.chat` reads it, so deaths, joins, leaves, advancements and first-join
@@ -38,7 +62,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   modpack 217, typecheck and lint.
 - **On live's data (read only, counts):** 10 members, 3 let in without the Discord server, all 3 not in it now, so
   all 3 would be kept in the game; none invited and now in the server.
-- **Unproven:** on live after the deploy, an invited player's line in the game and not in #game-chat while a Discord
+- **Unproven:** on live since the deploy, an invited player's line in the game and not in #game-chat while a Discord
   member's line of the same minute is; Activity shows the line as a normal chat event. The test server has no bot.
 
 ## The group's PCs show again (2026-10-10, on `dev`, in its own `dev` → `main` PR)

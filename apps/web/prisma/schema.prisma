@@ -13,6 +13,13 @@ enum Role {
   PLAYER
 }
 
+// Whether a member's game chat is posted to Discord (Alex, 2026-10-11). AUTO: docs/50 §1 decides.
+enum ChatRelay {
+  AUTO
+  ALWAYS
+  NEVER
+}
+
 enum PcTier {
   LOW
   MID
@@ -65,6 +72,7 @@ model User {
   verifiedAt   DateTime? // when the in-game link (docs/14) or an admin verified the Minecraft account
   guildMember  Boolean   @default(true) // cache of the last Discord server membership check
   outsideAuth  Boolean   @default(false) // came in by an invite link: the Discord server rule is not applied to them
+  chatRelay    ChatRelay @default(AUTO) // game chat to Discord: AUTO is the docs/50 rule; an admin can pick ALWAYS or NEVER (shared/chat-relay.ts)
   createdAt    DateTime  @default(now())
   lastSeenAt   DateTime?
   invitedById  String?

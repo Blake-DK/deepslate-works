@@ -11,6 +11,7 @@ import { apiFetch } from "@/server/api-client";
 import { audit } from "@/server/events";
 import { onDemoted, removeAdminLogin } from "@/server/auth/admin-login";
 import { block, unblock } from "@/server/auth/blocked";
+import { CHAT_RELAYS } from "@/shared/chat-relay";
 
 export async function setRoleAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -80,6 +81,21 @@ export async function setEarlyAccessAction(formData: FormData) {
   const u = await db.user.update({ where: { id: parsed.data.id }, data: { earlyAccess: on }, select: { displayName: true } }).catch(() => null);
   if (u) await audit({ userId: admin.id, action: "user.earlyAccess", params: { id: parsed.data.id, displayName: u.displayName, on }, result: "OK" });
   for (const p of ["/admin/people", "/admin/joining", "/", "/help", "/me"]) revalidatePath(p);
+  revalidatePath("/players/[uuid]", "page");
+}
+
+/**
+ * Game chat to Discord, per member (Alex, 2026-10-11): Automatic (docs/50 §1), Always post or Never post. Admins only;
+ * the chat relay reads it at the member's next line.
+ */
+export async function setChatRelayAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const parsed = z.object({ id: z.string().min(1), relay: z.enum(CHAT_RELAYS) }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const u = await db.user.update({ where: { id: parsed.data.id }, data: { chatRelay: parsed.data.relay }, select: { displayName: true } }).catch(() => null);
+  if (!u) return;
+  await audit({ userId: admin.id, action: "user.chatRelay", params: { id: parsed.data.id, displayName: u.displayName, relay: parsed.data.relay }, result: "OK" });
+  revalidatePath("/admin/people");
   revalidatePath("/players/[uuid]", "page");
 }
 

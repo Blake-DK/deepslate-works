@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { Announcer, chatStaysInGame, type FeedState, type FeedStore, type PostRow } from "../src/discord/announcer.js";
+import { Announcer, type FeedState, type FeedStore, type PostRow } from "../src/discord/announcer.js";
+import { chatStaysInGame, type ChatRelay } from "../src/shared/chat-relay.js";
 import { Webhook } from "../src/discord/webhook.js";
 import { escapeText, type FeedEvent, type PollView, type Switches } from "../src/discord/lines.js";
 import { modsChanged } from "../src/players/pack.js";
@@ -25,7 +26,7 @@ function discord(answer: (c: Call, n: number) => Response | null = () => null) {
   return { calls, f };
 }
 
-type Account = { outsideAuth: boolean; discordId: string | null; guildMember: boolean };
+type Account = { outsideAuth: boolean; discordId: string | null; guildMember: boolean; chatRelay?: ChatRelay };
 
 function setup(opts: { events?: FeedEvent[]; feed?: string | null; admin?: string | null; answer?: Parameters<typeof discord>[0]; sw?: Partial<Switches>; state?: FeedState | null; now?: string; votes?: Record<string, PollView>; unvoted?: { discordIds: string[]; others: number }; chatRelay?: boolean; accounts?: Record<string, Account> } = {}) {
   const events: FeedEvent[] = [...(opts.events ?? [])];
@@ -428,5 +429,33 @@ describe("invited players' chat stays in the game (docs/50)", () => {
   it("the rule as docs/50 §1 writes it", () => {
     expect(Object.fromEntries(Object.entries(accounts).map(([u, a]) => [NAMES[u], chatStaysInGame(a)]))).toEqual({ Bramble09: false, KaneFinch: true, samoyedx: true, m1_owl: false });
     expect(chatStaysInGame({ outsideAuth: false, discordId: null, guildMember: true })).toBe(false); // not invited: unchanged
+  });
+
+  // Alex, 2026-10-11: an admin picks per member; Automatic is the rule above
+  it("Always post: the invited player without Discord is posted", async () => {
+    const t = setup({ chatRelay: true, sw: { chatToDiscord: true, chatChannel: "700" }, accounts: { ...accounts, [KANE]: { ...accounts[KANE]!, chatRelay: "ALWAYS" } } });
+    t.add(chat(KANE, "hello"));
+    await t.a.round();
+    expect(said(t)).toEqual([["KaneFinch", "hello"]]);
+  });
+
+  it("Never post: an ordinary member's line stays in the game, the position moves on, their death is still posted", async () => {
+    const t = setup({ chatRelay: true, sw: { chatToDiscord: true, chatChannel: "700" }, accounts: { ...accounts, [BRAMBLE]: { ...accounts[BRAMBLE]!, chatRelay: "NEVER" }, [KANE]: { ...accounts[KANE]!, chatRelay: "NEVER" } } });
+    const e = t.add(chat(BRAMBLE, "anyone on?"));
+    await t.a.round();
+    expect(t.d.calls).toHaveLength(0);
+    expect(t.state?.cursor).toBe(e.id.toString());
+    t.add({ kind: "DEATH" }, REAL.death);
+    await t.a.round();
+    expect(said(t)).toEqual([["KaneFinch", "was slain by Vindicator"]]);
+  });
+
+  it("the per-member setting wins over the rule; Automatic and no setting are the rule", () => {
+    for (const [u, a] of Object.entries(accounts)) {
+      expect(chatStaysInGame({ ...a, chatRelay: "ALWAYS" }), NAMES[u]).toBe(false);
+      expect(chatStaysInGame({ ...a, chatRelay: "NEVER" }), NAMES[u]).toBe(true);
+      expect(chatStaysInGame({ ...a, chatRelay: "AUTO" }), NAMES[u]).toBe(chatStaysInGame(a));
+      expect(chatStaysInGame({ ...a, chatRelay: null }), NAMES[u]).toBe(chatStaysInGame(a));
+    }
   });
 });

@@ -1,12 +1,13 @@
 import { RowMenu } from "@/components/admin/row-menu";
 import { menuItem } from "@/components/admin/menu-item";
-import { ConfirmItem, LinkByName } from "@/components/admin/menu-actions";
+import { ChatRelayItem, ConfirmItem, LinkByName } from "@/components/admin/menu-actions";
+import { chatStaysInGame, type ChatRelay } from "@/shared/chat-relay";
 import Link from "next/link";
 import { runActionAction } from "../server/actions";
 import { KICK_REASON } from "../server/cards";
-import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setBuilderToolsAction, setMaintenanceJoinAction, setMinecraftNameAction, setOutsideAuthAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";
+import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setBuilderToolsAction, setChatRelayAction, setMaintenanceJoinAction, setMinecraftNameAction, setOutsideAuthAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";
 
-type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUsername: string | null; mcUuid?: string | null; passwordSignIn?: boolean; discordId?: string | null; outsideAuth?: boolean; builderTools?: boolean; maintenanceJoin?: boolean };
+type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUsername: string | null; mcUuid?: string | null; passwordSignIn?: boolean; discordId?: string | null; outsideAuth?: boolean; guildMember?: boolean; chatRelay?: ChatRelay; builderTools?: boolean; maintenanceJoin?: boolean };
 
 /**
  * A member's admin menu: on People → Members and on their player page (docs/13 §11 layout). `row` is People's: there
@@ -15,6 +16,8 @@ type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUse
  */
 export function MemberMenu({ u, meId, row }: { u: Member; meId: string; row?: { running: boolean } }) {
   const admin = u.role === "ADMIN";
+  const relay = u.chatRelay ?? "AUTO";
+  const auto = { outsideAuth: u.outsideAuth ?? false, discordId: u.discordId ?? null, guildMember: u.guildMember ?? true };
   return (
     <RowMenu label={`Actions for ${u.displayName}`}>
       {row && u.mcUuid && <Link href={`/players/${u.mcUuid}?tab=inventory`} role="menuitem" className={menuItem}>Inventory</Link>}
@@ -52,9 +55,10 @@ export function MemberMenu({ u, meId, row }: { u: Member; meId: string; row?: { 
         <input type="hidden" name="id" value={u.id} />
         <button type="submit" role="menuitem" className={menuItem}>Sign out installer</button>
       </form>
+      <ChatRelayItem action={setChatRelayAction} id={u.id} who={u.displayName} relay={relay} now={chatStaysInGame(auto) ? "kept" : "posted"} />
       {u.discordId && (u.outsideAuth
         ? <ConfirmItem action={setOutsideAuthAction} fields={{ id: u.id, on: "0" }} question={`Apply the Discord server rule to ${u.displayName} again? If they are not in the Discord server they are signed out and wait in the entrance room until they join it.`}>Apply the Discord server rule</ConfirmItem>
-        : <ConfirmItem action={setOutsideAuthAction} fields={{ id: u.id, on: "1" }} question={`Let ${u.displayName} in without the Discord server? They can sign in and play whether or not they are in it, the same as someone who came in by an invite link. Their game chat will not be posted to Discord.`}>Let in without the Discord server</ConfirmItem>)}
+        : <ConfirmItem action={setOutsideAuthAction} fields={{ id: u.id, on: "1" }} question={`Let ${u.displayName} in without the Discord server? They can sign in and play whether or not they are in it, the same as someone who came in by an invite link.${relay === "AUTO" ? " Their game chat will not be posted to Discord while they are not in it (Game chat to Discord in this menu changes that)." : ""}`}>Let in without the Discord server</ConfirmItem>)}
       {u.id !== meId && <ConfirmItem action={removeUserAction} fields={{ id: u.id }} question={`Remove ${u.displayName} from the group? Their votes and their link to Minecraft go with them. While they are in the Discord server they can sign in again and start afresh.`}>Remove</ConfirmItem>}
       {u.id !== meId && u.discordId && <ConfirmItem action={removeUserAction} fields={{ id: u.id, block: "1" }} question={`Remove ${u.displayName} and block their Discord account? They cannot sign in again until you unblock them on People.`}>Remove and block</ConfirmItem>}
     </RowMenu>

@@ -9,7 +9,8 @@
 # PC needs this file.
 #
 # The Adv. Quarry is switched off (Alex, 2026-10-12): its costs were never raised, so it would dig at the old price. A
-# placed one does no work. Its recipe is not conditional in the mod, so switching it off here does not remove it.
+# placed one does no work. The mod's recipe for it has no condition, so it is removed by the server datapack:
+# modpack/datapacks/deepslate-tools/data/quarryplus/recipe/adv_quarry.json.
 # Every other key stays at the default.
 
 [powerMap.quarry]

@@ -207,3 +207,13 @@ describe("the createdeco:placard fix, in deepslate-tools", () => {
     expect(r["neoforge:conditions"]).toEqual([{ type: "neoforge:mod_loaded", modid: "createdeco" }]);
   });
 });
+
+describe("the Adv. Quarry's recipe, removed in deepslate-tools", () => {
+  // Alex, 2026-10-12 (docs/56): the Adv. Quarry is switched off on the server (quarryplus.toml), and the mod's recipe
+  // for it has no condition, so it would still be craftable. This file replaces the jar's and never loads.
+  const RECIPE = path.join(__dirname, "../../../modpack/datapacks/deepslate-tools/data/quarryplus/recipe/adv_quarry.json");
+
+  it("is only a false condition, so no recipe for quarryplus:adv_quarry loads", async () => {
+    expect(JSON.parse(await readFile(RECIPE, "utf8"))).toEqual({ "neoforge:conditions": [{ type: "neoforge:false" }] });
+  });
+});

@@ -22,7 +22,7 @@
     "spawn-protection": "0",
     "motd": "Deepslate Works",
     "max-players": "20",
-    "view-distance": "12",
+    "view-distance": "20",
     "simulation-distance": "8",
     "difficulty": "normal",
     "pvp": "false"

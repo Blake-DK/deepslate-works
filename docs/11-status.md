@@ -26,6 +26,19 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Render distance up to 32, app 3.6.2 (2026-10-12, on `dev`; not built or deployed)
+
+- **Why:** Admin → Server → Performance showed view distance 20 (what live runs since Alex's decision of 2026-10-09),
+  but its slider and the app's render distance slider both stopped at 16, and the app said "the server shows 12"
+  (`mods.json` still held 12).
+- **Changed:** the api's view distance limit 4 to 32 (`LIMITS`, and the web form's check); the app's render distance
+  4 to 32 (`GameOptions.Known`), app **3.6.2**; `mods.json` `server_properties` `view-distance` 12 → 20, so the mod
+  list's `server_view_distance` is 20. Change log entry `2026-10-12-app-3-6-2-render-distance`, without `live`.
+- **Not changed:** simulation distance (4 to 12); the tiers' recommended render distances (12 / 10 / 8). docs/06 and
+  docs/30 still say 12 and 4 to 16; docs/07 "3.6.2" is the record.
+- **To prove:** the Windows runner's tests (SettingsTests changed); on a PC, the slider reaches 32 and the note appears
+  above 20. Then `live: true` on the entry.
+
 ## GitHub security: docs/54 (2026-10-12, PR to `dev`; Dependabot unproven until `main`)
 
 - **Alex, in Settings:** private vulnerability reporting, secret scanning and push protection, Dependabot alerts on.

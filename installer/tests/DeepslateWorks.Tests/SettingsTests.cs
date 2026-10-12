@@ -115,12 +115,12 @@ namespace DeepslateWorks.Tests
         {
             var fab = GameOptions.Show("graphicsMode", "2", 1);
             Assert.Equal(1, fab.Value); Assert.False(fab.Fits); Assert.Equal("Fabulous", fab.InGame);
-            var far = GameOptions.Show("renderDistance", "24", 10);
-            Assert.Equal(16, far.Value); Assert.False(far.Fits); Assert.Equal("24", far.InGame);
+            var far = GameOptions.Show("renderDistance", "24", 10);   // the slider goes to the game's own 32, past the server's 20
+            Assert.Equal(24, far.Value); Assert.True(far.Fits); Assert.Null(far.InGame);
             var big = GameOptions.Show("guiScale", "6", 0);
             Assert.Equal(4, big.Value); Assert.False(big.Fits); Assert.Equal("6", big.InGame);
             var past = GameOptions.Show("renderDistance", "40", 10);   // a value the game itself would not keep
-            Assert.Equal(16, past.Value); Assert.Equal("40", past.InGame);
+            Assert.Equal(32, past.Value); Assert.False(past.Fits); Assert.Equal("40", past.InGame);
             var junk = GameOptions.Show("renderClouds", "\"maybe\"", 1);
             Assert.Equal(1, junk.Value); Assert.False(junk.Fits); Assert.Equal("maybe", junk.InGame);
             Assert.Equal("60 %", GameOptions.Show("entityDistanceScaling", "0.6", 100).InGame);

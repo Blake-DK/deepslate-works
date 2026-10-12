@@ -47,12 +47,12 @@ describe("Building and decoration", () => {
 });
 
 describe("render distance by PC tier", () => {
-  it("is 12 / 10 / 8 to see and 8 / 8 / 6 to simulate, and the server sees 12", async () => {
+  it("is 12 / 10 / 8 to see and 8 / 8 / 6 to simulate, and the server sees 20", async () => {
     const m = await load();
     expect(distancesFor(m, "HIGH")).toEqual({ render: 12, simulation: 8 });
     expect(distancesFor(m, "MID")).toEqual({ render: 10, simulation: 8 });
     expect(distancesFor(m, "LOW")).toEqual({ render: 8, simulation: 6 });
-    expect(m.server_properties["view-distance"]).toBe("12");
+    expect(m.server_properties["view-distance"]).toBe("20");
     expect(m.server_properties["simulation-distance"]).toBe("8");
   });
   it("gives a member with no tier (or nonsense) the weak PC's values", async () => {

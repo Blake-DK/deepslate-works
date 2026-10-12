@@ -26,7 +26,35 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## The quarry, second pass: docs/56 (2026-10-12, planned, nothing built)
+## The quarry, second pass: docs/56 (2026-10-12, measured on test; stopped at §2 step 5 for the planner)
+
+- **Measured on the test server, 2026-10-12, 14:13 to 14:40 UTC** (pack of docs/53 A, B, E1; nobody online). Rigs built
+  by console in the sky at x 8000 to 8310, z 8000, each a plain 9 × 9 column of `minecraft:stone` (or `deepslate`)
+  under an 11 × 11 frame, one Pitiful Generator fed coal blocks by a hopper, a chest beside the quarry. Read by
+  `data get block` on the quarry (`energy`, `storage`, `state`) and the chests; rates in game ticks, so the test
+  server's sleep after 5 empty minutes and its restarts do not count. The quarry's area, state and enchantments were
+  set with `data merge block` (its `area`, `state`, `components`, `maxEnergy`), as placing it by hand would.
+  - Step 1: `config/industrialforegoing/machine-generator.toml`, `[MachineGeneratorConfig.PitifulGeneratorConfig]`
+    `powerPerTick = 30` (also `maxStoredPower = 100000`, `extractionRate = 1000`). §1's sums stand.
+  - Step 2, k = 4: 1,499 stone in 7,549 ticks, **238 a minute** (the mod's formula: 1.5 × 100 = 150 FE a stone).
+  - Step 3: k = 4 × 238 / 30 = 31.8, **k = 32**: `breakBlockBase` 800, `moveHeadBase` 32, `makeFrame` 480, on `dev`
+    as `1429ec09` (test checkout pulled, Build server, Sync; the file on test read back with those values).
+  - Step 4, k = 32, over 5.9 minutes each: stone **30.0 a minute**, deepslate **15.0**.
+  - Step 5, k = 32: Unbreaking III **119.6 a minute** (above 60: **stopped here**, for the planner), Efficiency V
+    **6.0 a minute**. Steps 6 and 7 not run.
+  - From the jar's source (21.1.164), not measured: a stone costs `breakBlockBase` × hardness × 1.38^Efficiency ÷
+    (1 + Unbreaking). Unbreaking's divisor has no config key. Efficiency makes a block dearer (×5 at V); it gives a
+    bigger buffer (×6) and a faster head. `moveHeadBase` is the head's speed in blocks a tick (each block moved costs
+    1 FE whatever it says), so ×k makes the head faster, not dearer. One block a tick at most (1,200 a minute).
+- **§3 step 1, seen on test:** no config key touches output or storage. The quarry keeps an unbounded internal
+  storage (one count per item type, kept in the block's data). A small chest filled up and the quarry went on for
+  5 minutes more at the same rate, storage growing (20 to 1,318 cobblestone), power used as before, nothing on the
+  ground. Emptying the chest: the whole storage moved into it at once. Breaking the quarry (31 in storage): it
+  dropped only itself (`quarryplus:quarry`, no components); the 31 were lost. §3 step 3 applies: options reported,
+  nothing built.
+- Cleanup: the four quarries removed and the force-loads taken off; the stone columns and frames stay in the test
+  world (the rehearsal starts from a fresh copy of live).
+
 
 - **Alex, 2026-10-12, after docs/53 Part A was built:** "the generator is still too powerful". At k = 4 one Pitiful
   Generator still mines about 4 stone a second. His answers: about **30 stone blocks a minute** from one Pitiful

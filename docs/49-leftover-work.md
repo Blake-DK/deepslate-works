@@ -46,7 +46,7 @@ Who it waits on: **Alex**, **planner**, **VPS** (the VPS session), **AMP host** 
 |---|---|---|---|---|
 | docs/48 Part A | On `dev` (`ee78660a`), not deployed; the A6 proof on the test site. | docs/48 | in progress | VPS |
 | docs/48 Part B | Maintenance switch and per-admin tick, not built. Until then, "We're live" off shows players launch wording. | docs/48; docs/47 §5.6 | open | VPS |
-| Tester tick for non-admins | Not built. | docs/45; docs/46 §7.5 | open | planner |
+| Tester tick for non-admins | Planned in docs/57 (2026-10-12): one-click Tester switch on live People, app 3.6.3. | docs/45; docs/46 §7.5; docs/57 | planned | VPS |
 | Phase 4 self-service | Player actions, homes, `/me`, "My stats" (its endpoint, docs/12 §4); the registry has no player actions. | docs/10 Phase 4 | open | — |
 | Phase 5 and the admin assistant | Not begun; needs an API key. | docs/19; docs/10 P2.12 | open | Alex |
 | Small gaps | Origin check in middleware; `window.confirm` in 3 components; the BACKUP event only from the button. | docs/10 item 9; docs/43 | open | VPS |

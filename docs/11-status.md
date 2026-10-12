@@ -26,6 +26,68 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## A patched mod jar in the pack: docs/58 (2026-10-12, planned)
+
+- **Why:** opening the Sculptor's trade screen on the test server crashed Alex's game (Mowzie's Mobs 1.8.2, the
+  newest on Modrinth). A fix is in Alex's fork (`fix/trade-screen-missing-mob`, for the mod's author; `dsw-build`
+  builds `1.8.2-dsw.1`, run 38262710258). Nobody has run the patched jar yet.
+- **Upstream PR:** BobMowzie/MowziesMobs-Public#66, from the fork's `fix/trade-screen-missing-mob` (`c9981ca`, one
+  commit on the author's `main` at `7aa1730`), opened 2026-10-12 at Alex's word. It says the fix builds and has not been
+  tried in game yet.
+- **The jar is never published** (the mod's licence): no release, no public URL, not in this repo. Members get it
+  only through the site's gated downloads.
+- **Planned, one feature PR to `dev` (§3):** a mod in `mods.json` may carry `source.private` (file name and sha512).
+  The file sits in a git-ignored `data/private-jars/` on each stack. Lock takes size and sha512 from the file and
+  writes a URL on the site itself, `/downloads/mods/<filename>`; that host (from `AUTH_URL`, only that path) is the
+  one addition to `mod-url.ts` and to the app's host check. The route is gated like the manifest and serves only
+  files named in the lock. Build copies the file for the server and fails if it is missing or different. docs/38
+  gains a line.
+- **Then (§4):** the jar onto the **test** stack only, `mowzies-mobs` pointed at it (still `s1`, still
+  `adminOnly`), Lock, Build, Sync on test. Alex tries it on his own PC through the Test tab. Live only with Season
+  1's opening, after a backup, on Alex's yes. Back to Modrinth the day the author ships a fix.
+- **Built (§3; PR `private-jars` → `dev`, #47, not merged, nothing deployed):** `source.private` in the schema; Lock
+  reads the jar (size, sha512, sha1, version from its `neoforge.mods.toml`, version id `private-<sha512's first 16>`,
+  what it needs from `requires`); a jar missing on the machine keeps the lock's entry only when it names that very
+  file. `mod-url.ts`: the bare path `/downloads/mods/<file>` in the lock, or `AUTH_URL`'s own address for it; lint
+  refuses anything else. Build copies from `data/private-jars/` (read-only in web, api, web-test, api-test). Not in
+  the spec: the app's Test tab reaches the test pack only through the live site, so live passes a test jar on at
+  `/downloads/mods/test/<file>` (admins and testers) from `api-test` `GET /test/app/mod?file=` (the test app token's
+  sixth path). **The app had no host check at all**; 3.6.4 adds one (`Engine.ModUrlProblem`).
+- **§4 step 2, done so far:** the artifact of run 38262710258 downloaded as ladm; its sha512 `b66b6eb2…09ab4d` is the
+  run log's; the jar is in `/home/ladm/Minecraft-site-test/data/private-jars/` (test only). The `mods.json` change
+  (Mowzie's `source`, `requires: ["geckolib"]`, no pinned `version`) is ready but **not on `dev`**: see the two
+  blockers below.
+- **Blockers for §4 steps 2 and 3, Alex's call:** (1) web-test and api-test take their mounts from the **live
+  checkout's** compose file (`sudo deploy/test-up.sh` runs it), so api-test sees `data/private-jars/` only once the
+  compose change is on `main` in the live checkout; until then the test Build fails ("not in /repo/data/private-jars").
+  (2) The app's Test tab gets the test pack from the **live** web (`/api/app/test/manifest`). Once `dev`'s lock names
+  the private jar, the app is sent to `/downloads/mods/test/<file>` on live, which only exists once live runs this
+  PR. Before that, Test Play would fail for every admin and tester. So the pack change waits for live to carry this
+  code. Live's own pack does not change (it does not ship `s1`).
+- **CI on #47:** ci green (modpack 251, api 802, web 668 tests; lint, typecheck, check-sides "sides OK"), installer
+  green (the Windows build and 298 xUnit tests, `ModUrlProblem` among them), codeql green.
+- **§5 seen in the real state, as far as it goes before a deploy** (the real `mods.json` with Mowzie's `source`, the
+  real jar from the test stack's folder, the CLI in a `node:22-alpine` container capped at 600 MB):
+  - Check 1: Lock with a wrong sha512 in `mods.json` exits 1 (`… is not the jar mods.json names: its sha512 is
+    b66b6eb273635294…, mods.json says ffffffffffffffff…`). Lock with the right one: `~ mowzies-mobs 1.8.2 ->
+    1.8.2-dsw.1`, entry `url /downloads/mods/mowziesmobs-1.21.1-1.8.2-dsw.1.jar`, size 36042087, channels required,
+    geckolib still required by it. Build `server` with `TEST_MODE=1 SEASONS_SHIP=s1`: exit 0, "copied … from the private
+    jars", 68 server mods, the copy's sha512 the run's. Build with the jar missing: exit 1, "not in … Build cannot fetch
+    it", no jar left in `mods/`. Build with a lock naming another sha512: exit 1, no jar left.
+  - Check 3: a lock entry on another host: `modpack lint` exits 1 (`ERROR lock: mowzies-mobs: not on
+    https://cdn.modrinth.com or this site's /downloads/mods/: https://example.com/…`), and Build exits 1 with the same
+    words. The app: `ModUrlProblem` in the Windows tests only, not yet on a PC.
+  - Check 2 (the route on a running site) and check 4 (the test server starting with `1.8.2-dsw.1`, Alex's PC) wait on
+    the blockers above. Not done.
+  - The same Lock run today also moved two unpinned mods (`kotlin-lang-forge` 2.14.1 → 2.15.0, `titanium`
+    1.21-4.0.50 → 4.0.51), so that lock was not kept. The pack commit, when it goes, is Lock on the day.
+- **#47 merged into `dev` (`f0a82ab2`). To live (Alex, 2026-10-12, option 2):** a PR to `main` with only Testers (#46)
+  and #47, cherry-picked onto `main`, so the live web has `/downloads/mods/test/` and the live checkout's compose has
+  the mounts before the pack change goes on `dev`. `main` has no seasons (docs/44 is held on `dev`), so on `main` the
+  private jar's lock entry carries no `season`, and api-test's `/test/app/pack` and `/test/app/mod` read the lock as
+  it is. On `dev` they keep docs/44's shipped lock; api-test runs `dev`'s images anyway. When `main` is next merged
+  into `dev`, take `dev`'s side in `packages/modpack/src/lock.ts` and `apps/api/src/test-mode/app-routes.ts`.
+
 ## Testers: docs/57 (2026-10-12, planned)
 
 - **Alex, 2026-10-12:** a normal player on the test server without being an admin, turned on and off with one click.

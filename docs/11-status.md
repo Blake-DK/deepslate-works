@@ -209,13 +209,14 @@ say live is stopped, held or to be trimmed in place, this section wins.
     the same: update NeoForge to 21.1.253 in each AMP instance (test first, after a backup; no PC changes, the pack's
     hash stays), or pin 21.1.252 in `mods.json` (the pack's hash changes and every PC installs NeoForge again on its
     next Play). Nothing changed.
-  - **The small PR to `main`: #49** (branch `private-jars-to-main` from `origin/main`): `395f7332`, `47e81ccf`,
-    `5b85c81f`, `c2b86295` in that order; resolutions in its description (`mods.json`: `topic` and `season` kept for
-    `l_enders-cataclysm` and `mowzies-mobs`, both now as on `dev`; docs/11: the testers section kept). Live's pack
-    worked out from the PR's lock the way Build does: 77 in the lock, **71 shipped, `d44eb2ba`**, as `main` today. The
-    six `s1` mods: the guide and the ballot drop `adminOnly` and `hidden` mods for players, and the Play manifest is
-    the shipped lock. Waits for: `check` green, the 3.6.4 exe to Alex only and his word, a backup of the live
-    database, his yes. Then the after-deploy checks in the PR, then `main` merged back into `dev` at once.
+  - **The small PR to `main`: #49, closed unmerged (2026-10-12).** Another session's #48 (`testers-private-jars`)
+    was merged into `main` at 16:18 with the same two features, testers and private jars, adapted without docs/44;
+    #49 then conflicted with it and added nothing, so it was closed and its branch deleted. What #49 found still holds
+    for `dev`'s code: #47 needs `8360fbed` (`openZipOnDisk`). **`main` at `0160985c` is not deployed** (live runs
+    `810c4423`, PR #42). The planner's conditions now apply to deploying it: the 3.6.4 exe from `main`'s installer run
+    `38276477610` to Alex only, his word, a backup of the live database (migration `0034_tester`), deploy, `sudo
+    deploy/test-up.sh` (api-test's mount of `data/private-jars/`), the after-deploy checks, then `main` merged into
+    `dev` (#48 says: take `dev`'s side in `packages/modpack/src/lock.ts` and `apps/api/src/test-mode/app-routes.ts`).
   - **For the rehearsal (planner, item 1d):** on the fresh copy of live, before the live PR, list every placed Adv.
     Quarry (`quarryplus:adv_quarry` blocks) and every `quarryplus:adv_quarry` item in chests and players'
     inventories, by location and owner.

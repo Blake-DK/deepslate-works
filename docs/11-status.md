@@ -97,6 +97,22 @@ say live is stopped, held or to be trimmed in place, this section wins.
   last sentence becomes docs/56 §4's "it stops" once the pausing mod exists. Crafts & Additions: one water wheel can't
   turn an alternator; Mekanism Generators: a Heat Generator burns lava or other fuel (lava around it adds a little), a
   wind generator makes more the higher it stands. All from the step 7 measurements.
+- **The pausing mod (Alex, 2026-10-12: "build the pausing mod"; his choices: ship it by docs/58's jar route, MIT).
+  The planner has not answered docs/56 §3 step 3 yet; Alex's word is the go.** `mods/quarry-pause/`: mod id
+  `dsw_quarry_pause` 1.0.0, server only (`IGNORE_SERVER_VERSION`, no network channels), two mixins that cancel
+  `QuarryEntity.serverTick` and `AdvQuarryEntity.serverTick` (their dig step) while the machine's `storage` holds
+  items. The push into the blocks next to it runs after the dig step in the same tick and is untouched, so a quarry
+  with room never waits, and one without carries on by itself when room appears; it uses no power while it waits.
+  Requires quarryplus `[21.1.164,21.1.165)`. Not done: dropping the storage when the quarry is broken (a mod that
+  moves blocks would duplicate items); at most the last block's drops wait inside. `build.sh`: javac in a capped
+  `eclipse-temurin:21.0.4_7-jdk-alpine` container, no network, against the quarry jar (sha512 from the lock), FML
+  loader 4.0.45 and sponge-mixin 0.15.2 (both checked against their maven sha512), plus compile-only stand-ins for
+  four Minecraft classes; fixed dates, so the same source gives the same jar: `dsw-quarry-pause-1.0.0.jar`, sha512
+  `1d96df67764d4d77f49e08744db82c0b61abc4da959fc0d3f8f074c228434da81360e34dae9554be0f4e674bc3cd53bfe6bf77eacb08a6b55242153ff9d139f3`
+  (built twice, same). **Not yet run on any server:** it needs docs/58's route (planned, not built). Then on test:
+  the server starts with it (no FATAL, the mixins applied), §3 step 2's test (chest full: quarry stopped, storage
+  not growing, power flat, nothing on the ground; chest emptied: it starts again), and the `howTo`'s last sentence
+  becomes docs/56 §4's.
 - Cleanup: every quarry removed and every force-load taken off; the stone columns, frames, generators and water
   wheels stay in the sky over x 8000 to 8640 in the test world (the rehearsal starts from a fresh copy of live).
 

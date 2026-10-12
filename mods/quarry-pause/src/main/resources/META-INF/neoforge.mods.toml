@@ -1,0 +1,29 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "dsw_quarry_pause"
+version = "1.0.0"
+displayName = "Deepslate Works: quarry pause"
+description = "A quarry (Additional Enchanted Miner) stops digging while its output has nowhere to go, and starts again by itself when there is room. Server only."
+authors = "Deepslate Works"
+# Server only: players' games connect without it.
+displayTest = "IGNORE_SERVER_VERSION"
+
+[[mixins]]
+config = "dsw_quarry_pause.mixins.json"
+
+[[dependencies.dsw_quarry_pause]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,21.2)"
+ordering = "NONE"
+side = "SERVER"
+
+[[dependencies.dsw_quarry_pause]]
+modId = "quarryplus"
+type = "required"
+versionRange = "[21.1.164,21.1.165)"
+ordering = "AFTER"
+side = "SERVER"

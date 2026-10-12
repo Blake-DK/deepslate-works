@@ -43,6 +43,18 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.2: render distance up to 32, as far as the server can show (Alex, 2026-10-12)
+
+- The Settings tab's render distance slider goes from 4 to **32** chunks (the game's own top), not 16. The live server
+  runs view distance 20 (Alex, 2026-10-09; docs/11), so 16 left players unable to see as far as the server sends and did
+  not match Admin → Server → Performance, which showed 20. That tab's view distance slider goes to 32 as well
+  (`LIMITS` in `apps/api/src/status/distance.ts`, and the form's check).
+- Above the server's view distance the tab still says "The server shows 20 chunks. Higher than that costs frames and you
+  see nothing more."; above 10 on a weak PC it still warns. Both come from 3.5.0 and are unchanged.
+- The number comes from the mod list's `server_view_distance`, which is `mods.json` `server_properties`
+  `view-distance`: corrected from 12 to 20, Alex's decision of 2026-10-09.
+- A value past 32 in `options.txt` shows as 32 with "(set in game: 40)" and is left alone unless the slider is moved.
+
 ## 3.6.1: the Test tab is the Play tab pointed at the test server (planner brief, 2026-10-09; docs/45)
 
 - **One Play view, two copies.** The Play tab's view is `AppWindow.PlayViewXaml`, parsed once per target into a

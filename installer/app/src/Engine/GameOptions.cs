@@ -35,7 +35,7 @@ namespace DeepslateWorks
         /// <summary>docs/30 §4.2, in the tab's order.</summary>
         public static readonly Option[] Known =
         {
-            Number("renderDistance", "render distance", 4, 16, 1),
+            Number("renderDistance", "render distance", 4, 32, 1),   // up to the game's own 32: the server runs 20
             Percent("entityDistanceScaling", "entity distance", 50, 500, 25),
             new Option { Key = "maxFps", Label = "frame rate limit", Min = 30, Max = UnlimitedFps, Step = 10, Parse = Whole, Write = v => v.ToString(Inv), Say = v => v >= UnlimitedFps ? "unlimited" : Fmt(v) },
             Toggle("enableVsync", "VSync"),
@@ -96,12 +96,12 @@ namespace DeepslateWorks
 
         // ---- shown on the tab -------------------------------------------------------------------------------------------
         /// <summary>A line as the tab shows it: the nearest value it can show, and, when that is not what the file holds
-        /// (Fabulous, a render distance of 24, a guiScale of 6, something unreadable), the file's value in words.</summary>
+        /// (Fabulous, a render distance of 40, a guiScale of 6, something unreadable), the file's value in words.</summary>
         public sealed class Shown
         {
             public int Value;
             public bool Fits = true;
-            public string InGame;   // "(set in game: 24)" says this; null when it fits
+            public string InGame;   // "(set in game: 40)" says this; null when it fits
         }
 
         public static Shown Show(string key, string fileText, int fallback)

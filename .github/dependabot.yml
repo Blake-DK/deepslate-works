@@ -1,0 +1,70 @@
+# docs/54: Dependabot version updates. Dependabot reads this file from main (the default branch), so it starts working
+# only after the next dev → main merge. Every pull request it opens lands on dev, where dev-images.yml rebuilds the
+# test site; from there an update reaches live the usual way, in the next dev → main pull request.
+# Majors are never offered here: they are planned work (docs/10, e.g. item 18 Next 16, and Prisma 7).
+# Security updates stay off in Settings: they target main only and would skip dev.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # the pnpm workspace root: apps/web, apps/api and packages/modpack in one lockfile
+  - package-ecosystem: npm
+    directory: "/"
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+
+  # A bump here changes the launcher: its build goes to no player or tester until Alex has tried it on his own PC.
+  - package-ecosystem: nuget
+    directory: "/installer/app"
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      nuget-minor-patch:
+        update-types: [minor, patch]
+
+  # the base images of web and api; a Node major is planned work
+  - package-ecosystem: docker
+    directories: ["/apps/web", "/apps/api"]
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      docker-minor-patch:
+        update-types: [minor, patch]

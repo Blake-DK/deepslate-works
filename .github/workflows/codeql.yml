@@ -1,0 +1,63 @@
+name: codeql
+# docs/54: CodeQL on the repository's own code, results in the Security tab (Code scanning). Four languages, none of
+# them built: JavaScript and TypeScript (apps/web, apps/api, packages/modpack, tools/designer), C# (installer/app),
+# Python (deploy/dockhand-sync.py and the icon and art scripts) and the workflow files themselves.
+# Advanced setup, not GitHub's default setup: default setup scans main only and wants C# built on a Windows runner;
+# this file scans dev as well as main and reads C# with no build. Default setup must stay off in Settings: with both
+# on, this workflow's uploads are refused.
+# Not a required check, so the docs and Markdown filter is safe here (ci.yml's `check` is required and cannot have one).
+on:
+  push:
+    branches: [main, dev]
+    paths-ignore: ["docs/**", "*.md"]
+  pull_request:
+    branches: [main, dev]
+    paths-ignore: ["docs/**", "*.md"]
+  schedule:
+    # Mondays 03:17 UTC: nobody is online, and off the top of the hour
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+# one run per ref; a newer push to a pull request cancels the older run, a push to main or dev never does
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# The token every job gets reads the repository and nothing else; the job below may also write security results.
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: javascript-typescript
+            build-mode: none
+          - language: csharp
+            build-mode: none
+          - language: python
+            build-mode: none
+          - language: actions
+            build-mode: none
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: "/language:${{ matrix.language }}"

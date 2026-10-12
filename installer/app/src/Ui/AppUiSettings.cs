@@ -270,7 +270,7 @@ namespace DeepslateWorks
                     if (key == "renderDistance") { label.ToolTip = UiText.RenderTip; sl.ToolTip = UiText.RenderTip; }
                     if (key == "entityDistanceScaling") { label.ToolTip = UiText.EntityTip; sl.ToolTip = UiText.EntityTip; }
                 }
-                // under the control: "(set in game: 24)", the server's view distance, a weak PC's warning
+                // under the control: "(set in game: 40)", the server's view distance, a weak PC's warning
                 var inGame = NewText("", 12, "Normal", "Muted"); inGame.Visibility = Visibility.Collapsed; cell.Children.Add(inGame);
                 var note = NewText("", 12, "Normal", "Muted"); note.Visibility = Visibility.Collapsed; cell.Children.Add(note);
                 var warn = NewText(UiText.WeakStruggle, 12, "Normal", "Copper"); warn.Visibility = Visibility.Collapsed; cell.Children.Add(warn);

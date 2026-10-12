@@ -31,6 +31,9 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Why:** opening the Sculptor's trade screen on the test server crashed Alex's game (Mowzie's Mobs 1.8.2, the
   newest on Modrinth). A fix is in Alex's fork (`fix/trade-screen-missing-mob`, for the mod's author; `dsw-build`
   builds `1.8.2-dsw.1`, run 38262710258). Nobody has run the patched jar yet.
+- **Upstream PR:** BobMowzie/MowziesMobs-Public#66, from the fork's `fix/trade-screen-missing-mob` (`c9981ca`, one
+  commit on the author's `main` at `7aa1730`), opened 2026-10-12 at Alex's word. It says the fix builds and has not been
+  tried in game yet.
 - **The jar is never published** (the mod's licence): no release, no public URL, not in this repo. Members get it
   only through the site's gated downloads.
 - **Planned, one feature PR to `dev` (§3):** a mod in `mods.json` may carry `source.private` (file name and sha512).

@@ -122,3 +122,7 @@ Values are never written here. "Last rotated" is filled in by the VPS or AMP hos
 - Open findings, specs and the build order: the private repository, branch `security`. The building sessions report there and in docs/11.
 - A report is reviewed with Approved, Approved with follow-ups or Blocked. "Done" without the command output or the diff stays Open.
 - When a finding is Fixed or Verified it is written here with its evidence, and the private copy is trimmed.
+
+## 8. GitHub-side controls
+
+Since 2026-10-12: private vulnerability reporting, secret scanning with push protection, Dependabot alerts and version updates (to `dev`), and CodeQL on `main` and `dev`. What is on, what is off and why, and how their results flow: docs/54. Their findings are handled like any other: open ones in the private register, closed ones in §5, triaged once when Snyk raises the same thing.

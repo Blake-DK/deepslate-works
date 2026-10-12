@@ -26,6 +26,18 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Power and gear progression: docs/53 (2026-10-12, planned, nothing built)
+
+- **Why:** a player's note: one Pitiful Generator runs the quarry, and nothing beats diamond armour, so there is no
+  reason to build further. Alex: plan all three, and Mekanism goes on with no vote.
+- **Planned, in this order:** Part D, update posts in season-updates tag the player role and big change log entries
+  get their own post (own PR, deployed and checked on live first; D3's two entries written then, post 1 set `live`
+  after that check). Then Parts A (quarry energy costs ×k in `modpack/server/config/quarryplus.toml`), B
+  (Mekanism, Generators and Tools on; ores added to old chunks by Mekanism's own retrogen, `world.toml`) and E1
+  (Mekanism Tools armour capped at netherite) together on the test server, one PR, one report; nothing on live
+  before Alex has tried the pack on his own PC, said go, and live is backed up. Part C, E2 and E3 ride with the
+  Season 1 rehearsal.
+
 ## The Mods guide sectioned by type: docs/52 (2026-10-11, merged: PR #35, `main` `d4c68f23`; deploy pending)
 
 - **Built:** `topic` on a mod in `mods.json` (`GUIDE_TOPICS`: travel, friends, mining, storage, building, factories,

@@ -10,8 +10,10 @@
 // sets `live: true` once the live check has passed; the deploy after that posts it. Without it the bot never sees it.
 //
 // docs/53 D2: an entry with a `title` (1 to 90 characters) is a big update: it is posted as a forum post of its own,
-// with that title and the News tag, instead of a reply in "Change log". Both kinds start with the player role's
-// mention (D1). No entry names a season's mods or bosses (the test reads them from mods.json and the season files).
+// with that title and the News tag, instead of a reply in "Change log", and it tags @Minecraft (D1). Alex, 2026-10-12:
+// only large features that change the game tag anyone, so give a title only to those; site and look changes and bug
+// fixes stay replies without one, and ping nobody. No entry names a season's mods or bosses (the test reads them
+// from mods.json and the season files).
 
 export type Change = { id: string; date: string; title?: string; lines: string[]; live?: true };
 

@@ -29,13 +29,13 @@ namespace DeepslateWorks
         public const string ReviewTitle = "Permissions";
         public const string ReviewStatus = "What Deepslate Works may do on this PC. Changes count from the next Play. Reset all forgets every answer, so everything is asked again.";
         public const string RunningTitle = "Getting the game ready";
-        // docs/45, 3.6.1: the Test tab (admins only), the Play tab pointed at the test server
+        // docs/45, 3.6.1: the Test tab (admins, and since 3.6.3 testers), the Play tab pointed at the test server
         public const string LiveServerName = "Live server";
         public const string TestServerName = "Test server";
         public const string TestRunningTitle = "Getting the TEST game ready";
         public const string TestRunningStatus = "The test pack, in its own folder. Then the Minecraft Launcher opens on Deepslate Works TEST and joins the test server.";
         public const string TestIdleTitle = "Deepslate Works TEST";
-        public const string TestIdleStatus = "Only admins see this tab. Play here installs the test pack into a game folder of its own and joins the test server. Your normal game is not changed.";
+        public const string TestIdleStatus = "Only admins and testers see this tab. Play here installs the test pack into a game folder of its own and joins the test server. Your normal game is not changed.";
         public const string TestAsking = "Asking the site how the test server is...";
         public static string TestPlayers(int n) => n == 0 ? "Nobody on the test server right now." : n == 1 ? "1 player on the test server." : string.Format("{0} players on the test server.", n);
         public static string TestPackLine(string pack, string serverPack) => string.Format("Test pack {0}{1}.", pack ?? "?", !string.IsNullOrEmpty(serverPack) && serverPack != pack ? string.Format(" (the test server runs {0})", serverPack) : "");

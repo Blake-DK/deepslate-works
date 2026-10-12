@@ -43,6 +43,18 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.3: the Test tab for testers too (docs/57, 2026-10-12)
+
+- The Test tab is made when the live home says `test` for this sign-in (`/api/app/home`'s `test`: an admin, or a member
+  with the Tester switch on), not only `admin`. A site from before docs/57 sends no `test`; the app then reads `admin`,
+  as 3.6.1 did. Only then is `/api/app/test` asked, so any other member's app still has no Test tab and asks nothing.
+- `admin` keeps everything else of an admin's: the Start button for a live server that is switched off or crashed stays
+  an admin's only. The Test tab's own words: "Only admins and testers see this tab."
+- 3.6.2 was already built on `main` (installer run 38239999162) when this was made, so this is 3.6.3, with 3.6.2's render
+  distance in it. An app older than 3.6.3 shows the Test tab to admins only, so a tester needs 3.6.3.
+- `installer/tests/windows-tabs.ps1` opens the window a fifth way, as a tester: the Test tab is there, the Test section is
+  asked, and there is no Start button with the live server switched off.
+
 ## 3.6.2: render distance up to 32, as far as the server can show (Alex, 2026-10-12)
 
 - The Settings tab's render distance slider goes from 4 to **32** chunks (the game's own top), not 16. The live server

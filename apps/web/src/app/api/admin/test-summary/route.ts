@@ -1,6 +1,7 @@
 import { loadCurrentUser } from "@/server/auth/session";
 import { testServerSummary } from "@/server/api-client";
 import { env } from "@/env";
+import { checkTesters } from "@/server/testers";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,8 @@ export async function GET() {
   if (!user || user.role !== "ADMIN") return Response.json({ error: { code: "forbidden", message: "admin only" } }, { status: 403 });
   if (env.TEST_MODE || !env.TEST_SITE_URL) return Response.json({ error: { code: "not_found", message: "no test server" } }, { status: 404 });
   if (!env.TEST_STACK) return Response.json({ off: true });
+  // docs/57: at most once a minute, the test server's tester list against this site's (nothing waits for it)
+  void checkTesters();
   try {
     return Response.json({ off: false, summary: await testServerSummary() });
   } catch (e) {

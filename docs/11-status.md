@@ -26,6 +26,30 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Power and gear progression: docs/53 (2026-10-12, planned, nothing built)
+
+- **Why:** a player's note: one Pitiful Generator runs the quarry, and nothing beats diamond armour, so there is no
+  reason to build further. Alex: plan all three, and Mekanism goes on with no vote.
+- **Planned, in this order:** Part D, update posts in season-updates tag the player role and big change log entries
+  get their own post (own PR, deployed and checked on live first; D3's two entries written then, post 1 set `live`
+  after that check). Then Parts A (quarry energy costs ×k in `modpack/server/config/quarryplus.toml`), B
+  (Mekanism, Generators and Tools on; ores added to old chunks by Mekanism's own retrogen, `world.toml`) and E1
+  (Mekanism Tools armour capped at netherite) together on the test server, one PR, one report; nothing on live
+  before Alex has tried the pack on his own PC, said go, and live is backed up. Part C, E2 and E3 ride with the
+  Season 1 rehearsal.
+- **Part D built (2026-10-12, PR to `dev`, not deployed):** new posts in season-updates (news, polls and the mod vote
+  when they open, We're live, every change log entry) start with `<@&role>` and carry
+  `allowed_mentions: { parse: [], roles: [role] }`; edits, closed votes, the Change log opener, the forum test and
+  everything outside the forum stay `{ parse: [] }`. The role is `RoleSync.mention()`: none without the bot and
+  `DISCORD_PLAYER_ROLE_ID`, none once Discord lists the server's roles without it (looked up at every role run) or
+  refuses a change with Unknown Role; the Admin Discord card says which. "Tag @Minecraft" (ticked) on the news and
+  poll forms, read as `tag` in the audit params; a missing `tag` tags. `Change.title`: a post of its own with the
+  News tag. Lint (test): title 1 to 90 characters, no season mod's name, slug or modded boss in any entry. D3's two
+  entries are in `changelog.ts`, without `live`.
+- **Live check still to do (Alex):** a ticked news post pings the role on a phone, an unticked one does not, a vote
+  count edit pings nobody. The webhook posts most of these; a poll the bot posts (vote buttons on) pings only if the
+  bot may mention the role (the role's "Allow anyone to @mention this role", or the bot's Mention All Roles).
+
 ## The Mods guide sectioned by type: docs/52 (2026-10-11, a PR to `main` with this work only)
 
 - **Built:** `topic` on a mod in `mods.json` (`GUIDE_TOPICS`: travel, friends, mining, storage, building, factories,

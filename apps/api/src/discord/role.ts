@@ -7,11 +7,13 @@
 // Off unless DISCORD_PLAYER_ROLE_ID is set, and made only with the bot (wire.ts), which exists only on the api marked
 // DISCORD_TALKS=1 (gate.ts): the test stack never adds or removes a role. A refusal never stops a link: it is logged,
 // and said once on the admin channel with the fix, and again only if the reason changes.
+//
+// docs/53 D1: new posts in season-updates tag this role (`mention()`), unless Discord has said it does not know it.
 import type { Rest } from "./rest.js";
 
 export type RoleView =
   | { state: "off" }
-  | { state: "on"; holders: number | null; lastRunAt: string | null; lastError: string | null };
+  | { state: "on"; holders: number | null; lastRunAt: string | null; lastError: string | null; tags?: boolean };
 
 /** A member the portal knows with a Discord account. Members who came in by an invite without Discord are never passed. */
 export type RoleUser = { id: string; discordId: string; name: string; linked: boolean };
@@ -52,6 +54,7 @@ export class RoleSync {
   private holders: number | null = null;
   private lastRunAt: Date | null = null;
   private lastError: string | null = null;
+  private unknownRole = false; // Discord said the role does not exist: posts go out without the tag (docs/53 D1)
   private raised: string | null = null;
   private cursor: bigint | null = null;
   private running = false;
@@ -64,7 +67,12 @@ export class RoleSync {
   }
 
   view(): RoleView {
-    return { state: "on", holders: this.holders, lastRunAt: this.lastRunAt?.toISOString() ?? null, lastError: this.lastError };
+    return { state: "on", holders: this.holders, lastRunAt: this.lastRunAt?.toISOString() ?? null, lastError: this.lastError, tags: !this.unknownRole };
+  }
+
+  /** The role to tag in a new post in season-updates (docs/53 D1); null while Discord says it does not know it. */
+  mention(): string | null {
+    return this.unknownRole ? null : this.d.role;
   }
 
   start() {
@@ -103,7 +111,13 @@ export class RoleSync {
     let problem: string | null = null;
     try {
       if (this.cursor === null) this.cursor = await this.d.newestEventId().catch(() => null);
-      const users = await this.d.users();
+      // the role itself first: a role deleted or mistyped in deploy/.env is said once and nothing else is tried
+      const roles = await this.d.rest.call("GET", `/guilds/${this.d.guild}/roles`);
+      if (roles.ok && Array.isArray(roles.data)) {
+        this.unknownRole = !(roles.data as Array<{ id?: string }>).some((r) => r.id === this.d.role);
+        if (this.unknownRole) problem = roleProblem({ ok: false, status: 404, code: UNKNOWN_ROLE, error: "Unknown Role" });
+      }
+      const users = this.unknownRole ? [] : await this.d.users();
       const known = new Set(users.map((u) => u.discordId));
       const removed: RoleUser[] = [...this.pending].filter((id) => !known.has(id)).map((id) => ({ id: "", discordId: id, name: "a removed member", linked: false }));
       this.pending.clear();
@@ -126,6 +140,7 @@ export class RoleSync {
           if (u.linked) { out.added++; out.holders++; } else out.removed++;
         } else {
           if (u.linked === false) out.holders++; // still holds it
+          if (!r.ok && r.code === UNKNOWN_ROLE) this.unknownRole = true;
           problem ??= roleProblem(r);
           out.problems++;
         }

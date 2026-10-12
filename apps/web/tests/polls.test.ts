@@ -11,8 +11,10 @@ const db = vi.hoisted(() => ({
 vi.mock("@/server/db", () => ({
   db: {
     poll: {
+      create: async ({ data }: { data: { question: string } }) => ({ id: "p9", ...data }),
       findUnique: async ({ include }: { include?: unknown }) => (db.poll ? { ...db.poll, ...(include ? { answers: db.answers.map((a) => ({ ...a, user: { displayName: a.userId } })) } : {}) } : null),
     },
+    announcement: { create: async () => ({ id: "n9" }) },
     pollAnswer: {
       findUnique: async ({ where }: { where: { pollId_userId: { userId: string } } }) => {
         const a = db.answers.find((x) => x.userId === where.pollId_userId.userId);
@@ -151,5 +153,18 @@ describe("voting", () => {
     const v = await getPoll("p1", { id: "alex", role: "ADMIN" });
     expect(v?.voters?.map((x) => [x.name, x.choices])).toEqual([["bramble09", ["o2"]]]);
     expect(v?.results?.voters).toBe(1);
+  });
+});
+
+describe("a new poll's post in season-updates tags @Minecraft (docs/53 D1)", () => {
+  beforeEach(() => void (db.audits.length = 0));
+  const poll = { question: "Next boss?", options: [{ id: "o1", text: "A" }, { id: "o2", text: "B" }, { ...DONT_MIND }], multiple: false, mustVote: false, closesAt: null };
+
+  it("says so in poll.open, which is what the api's Discord feed reads; the box unticked says not", async () => {
+    const { openPoll } = await import("@/server/polls");
+    await openPoll({ id: "admin", role: "ADMIN" }, { ...poll, tag: true });
+    await openPoll({ id: "admin", role: "ADMIN" }, { ...poll, tag: false });
+    await openPoll({ id: "admin", role: "ADMIN" }, poll); // not said: tagged
+    expect(db.audits.filter((a) => a.action === "poll.open").map((a) => a.params.tag)).toEqual([true, false, true]);
   });
 });

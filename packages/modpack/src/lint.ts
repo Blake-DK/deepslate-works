@@ -32,6 +32,8 @@ export function lintManifest(raw: unknown): { manifest: Manifest | null; issues:
     if (mod.noVideosFound && mod.videos.length > 0) err(`${mod.slug}: has videos and "noVideosFound": take one out`);
     // the Mods guide (/mods): every listed mod says where it goes, and every one a player uses says how
     if (!mod.hidden && !mod.guide) err(`${mod.slug}: no "guide" (game, helper or behind): the Mods guide needs to know where it goes`);
+    if (!mod.hidden && mod.guide === "game" && !mod.topic) err(`${mod.slug}: in the guide's "game" part but has no "topic" (docs/52): the Mods guide needs to know which section it goes in`);
+    if (mod.topic && mod.guide !== "game") err(`${mod.slug}: has "topic" ${mod.topic}, but only a mod with "guide": "game" has one`);
     if (isPlayerFacing(mod) && !mod.howTo) err(`${mod.slug}: switched on and player-facing, but has no "howTo" for the Mods guide`);
     if (mod.guide !== "behind" && mod.side === "server") warn(`${mod.slug}: server-only but in the guide's "${mod.guide}" part`);
     if (mod.adminOnly && votableCats.has(mod.category)) err(`${mod.slug}: admin-only, but in a votable category: a mod up for vote is seen by everyone`);

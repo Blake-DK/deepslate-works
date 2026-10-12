@@ -8,8 +8,8 @@ const base: Record<string, unknown> & { mods: Array<Record<string, unknown>> } =
   categories: [{ id: "base", title: "Base", votable: false }, { id: "guns", title: "Guns" }],
   mods: [
     { slug: "sodium", name: "Sodium", category: "base", side: "client", enabled: true, load: "L", guide: "behind", description: "x", wiki: "https://modrinth.com/mod/sodium", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
-    { slug: "gun-a", name: "A", category: "guns", side: "both", enabled: true, load: "M", exclusiveGroup: "guns", guide: "game", howTo: "Press **R** to reload.", description: "x", wiki: "https://modrinth.com/mod/gun-a", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
-    { slug: "gun-b", name: "B", category: "guns", side: "both", enabled: false, load: "M", exclusiveGroup: "guns", guide: "game", description: "x", wiki: "https://modrinth.com/mod/gun-b", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
+    { slug: "gun-a", name: "A", category: "guns", side: "both", enabled: true, load: "M", exclusiveGroup: "guns", guide: "game", topic: "combat", howTo: "Press **R** to reload.", description: "x", wiki: "https://modrinth.com/mod/gun-a", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
+    { slug: "gun-b", name: "B", category: "guns", side: "both", enabled: false, load: "M", exclusiveGroup: "guns", guide: "game", topic: "combat", description: "x", wiki: "https://modrinth.com/mod/gun-b", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] },
   ],
 };
 
@@ -67,6 +67,23 @@ describe("estimateLoad", () => {
     expect(msgs).toMatch(/sodium: no "guide"/);
     expect(msgs).toMatch(/gun-a: switched on and player-facing, but has no "howTo"/);
     expect(msgs).not.toMatch(/gun-b/); // switched off: not on the page yet
+  });
+  it("docs/52: every listed \"game\" mod has a topic, switched off ones too, and only \"game\" mods have one", () => {
+    const m = structuredClone(base);
+    delete m.mods[1]!.topic;
+    delete m.mods[2]!.topic;
+    m.mods[0]!.topic = "travel";
+    m.mods.push({ ...structuredClone(base.mods[1]!), slug: "dep", hidden: true, topic: undefined });
+    const msgs = lintManifest(m).issues.filter((i) => i.level === "error").map((i) => i.message).join("\n");
+    expect(msgs).toMatch(/gun-a: in the guide's "game" part but has no "topic"/);
+    expect(msgs).toMatch(/gun-b: in the guide's "game" part but has no "topic"/);
+    expect(msgs).toMatch(/sodium: has "topic" travel, but only a mod with "guide": "game" has one/);
+    expect(msgs).not.toMatch(/dep:/); // a dependency is never on the page
+  });
+  it("docs/52: a topic is one of GUIDE_TOPICS", () => {
+    const m = structuredClone(base);
+    m.mods[1]!.topic = "cooking";
+    expect(lintManifest(m).manifest).toBeNull();
   });
   it("keys are a short list of key + what it does", () => {
     const m = structuredClone(base);

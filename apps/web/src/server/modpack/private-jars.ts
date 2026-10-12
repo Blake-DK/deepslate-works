@@ -34,7 +34,10 @@ export async function privateJar(lock: Pick<LockFile, "files"> | null, name: str
   if (!PRIVATE_JAR.test(name)) return { ok: false, why: "not_in_lock" };
   const entry = lock?.files.find((f) => f.filename === name && privateJarOf(f.url) === name);
   if (!entry) return { ok: false, why: "not_in_lock" };
-  const file = path.join(dir, name);
+  // the path is the lock's own file name, and stays inside the folder of private jars whatever that name is
+  const root = path.resolve(dir);
+  const file = path.resolve(root, path.basename(entry.filename));
+  if (!file.startsWith(root + path.sep)) return { ok: false, why: "not_in_lock" };
   const s = await stat(file).catch(() => null);
   if (!s?.isFile()) return { ok: false, why: "missing" };
   if ((await sha512Of(file, s.size, s.mtime)) !== entry.sha512) return { ok: false, why: "other" };

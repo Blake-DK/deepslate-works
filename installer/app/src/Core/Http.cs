@@ -19,10 +19,20 @@ namespace DeepslateWorks
     /// </summary>
     public static class Http
     {
+        /// <summary>
+        /// 3.6.5: how many connections the app may hold open to one host at a time. .NET Framework's default is 2, and a
+        /// third request queues behind them. Since 3.6.4 a mod file can come from the site itself (a private jar, docs/58),
+        /// on the same host as the window's polls; with the default, a run's download and one poll took both slots, the
+        /// next poll queued, timed out, and the framework closed the connection the download was on with it (the run
+        /// failed with "A blocking operation was interrupted", seen 2026-10-12). Modrinth was never affected: a different host.
+        /// </summary>
+        public const int ConnectionsPerHost = 16;
+
         static Http()
         {
             try { ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12 | (SecurityProtocolType)12288; }   // TLS 1.2, and 1.3 where Windows has it
             catch { ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12; }
+            ServicePointManager.DefaultConnectionLimit = ConnectionsPerHost;
         }
 
         /// <summary>The launcher token (launcher.json), sent as Bearer to the site.</summary>

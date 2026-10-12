@@ -21,7 +21,8 @@ type BotView =
   | { state: "unset" | "no_guild" }
   | { state: "connecting" | "on" | "reconnecting" | "refused" | "stopped"; tag: string | null; refused: string | null; missingIntents: boolean; inGuild: boolean; textChannels: Channel[]; forums: Channel[]; invite: string | null };
 // planner 2026-10-09: the Minecraft role on everyone who plays (api discord/role.ts)
-type RoleView = { state: "off" } | { state: "on"; holders: number | null; lastRunAt: string | null; lastError: string | null };
+// docs/53 D1: `tags`, new posts in season-updates tag the role (false: Discord does not know it)
+type RoleView = { state: "off" } | { state: "on"; holders: number | null; lastRunAt: string | null; lastError: string | null; tags?: boolean };
 type Overview = { feed: Hook; admin: Hook; updates?: Hook; bot?: BotView; role?: RoleView; recent: Array<{ at: string; channel: "feed" | "admin" | "updates"; what: string; ok: boolean; error?: string }>; leftOut?: { count: number; since: string; last: string | null } | null };
 
 /** docs/22 §7: the bot's state in one line. */
@@ -101,12 +102,18 @@ export default async function DiscordSection({ searchParams, tab }: { searchPara
               <dt className="font-medium">Minecraft role</dt>
               <dd>
                 {!overview.role || overview.role.state === "off" ? (
-                  <>Off. Ask the VPS session to add <span className="font-mono">DISCORD_PLAYER_ROLE_ID</span>; then everyone who has linked their game gets the role.</>
+                  <>
+                    Off. Ask the VPS session to add <span className="font-mono">DISCORD_PLAYER_ROLE_ID</span>; then everyone who has linked their game gets the role.
+                    <span className="block text-muted-foreground">Posts in season-updates go out without tagging anyone until it is on.</span>
+                  </>
                 ) : (
                   <>
                     On: {overview.role.holders === null ? "not checked yet" : `${overview.role.holders} ${overview.role.holders === 1 ? "member holds" : "members hold"} it`}
                     {overview.role.lastRunAt ? `, checked ${new Date(overview.role.lastRunAt).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" })}` : ""}.
                     {overview.role.lastError && <span className="block text-danger">{overview.role.lastError}</span>}
+                    <span className="block text-muted-foreground">
+                      {overview.role.tags === false ? "Posts in season-updates go out without tagging the role until this is fixed." : "New posts in season-updates tag the role: news, polls and votes when they open, We're live and the change log."}
+                    </span>
                   </>
                 )}
               </dd>

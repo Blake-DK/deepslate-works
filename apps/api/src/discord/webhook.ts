@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 
 const URL_RE = /^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/api(?:\/v\d+)?\/webhooks\/(\d{5,25})\/([\w-]{20,200})\/?$/;
 
-export type Mentions = { parse: never[]; users?: string[] };
+export type Mentions = { parse: never[]; users?: string[]; roles?: string[] };
 export type Embed = {
   title?: string;
   description?: string;
@@ -15,7 +15,7 @@ export type Embed = {
   image?: { url: string };
   thumbnail?: { url: string };
 };
-/** One message as Discord takes it. `allowed_mentions` is always set: nobody is pinged unless named in `users`. */
+/** One message as Discord takes it. `allowed_mentions` is always set: nobody is pinged unless named in `users` or `roles`. */
 export type Message = {
   content?: string;
   embeds?: Embed[];

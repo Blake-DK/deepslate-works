@@ -88,7 +88,7 @@ describe("the Minecraft role (planner, 2026-10-09)", () => {
   it("a member without Discord (an invite) is never asked about: users() only lists members with a Discord id", async () => {
     const t = setup([], { "100000000000000001": [] });
     await t.sync.run("start");
-    expect(t.d.calls).toEqual([]);
+    expect(t.d.calls.filter((c) => c.path.includes("/members/"))).toEqual([]); // the role itself is still looked up (docs/53 D1)
   });
 
   it("a member removed from the portal loses the role after the remove is in the event log", async () => {
@@ -137,5 +137,49 @@ describe("the role stays off where it must (docs/42a, planner 2026-10-09)", () =
   });
   it("the live api with a role id: on", () => {
     expect(makeRoleSync({ ...base, DISCORD_TALKS: "1" } as unknown as Env, () => {})?.view()).toMatchObject({ state: "on", holders: null });
+  });
+});
+
+describe("the role in new posts (docs/53 D1)", () => {
+  /** A Discord that lists the server's roles; the members are as in `discord` above. */
+  function listing(roles: string[] | null) {
+    const t = Object.assign(setup([u("Bramble09", "100000000000000001", true)], { "100000000000000001": [] }), { setRoles: (r: string[] | null) => void (roles = r) });
+    const inner = t.d.rest.call;
+    t.d.rest.call = async (method, path) => {
+      if (path === `/guilds/${GUILD}/roles`) {
+        t.d.calls.push({ method, path });
+        return roles ? { ok: true, data: roles.map((id) => ({ id, name: id })) } : { ok: false, status: 500, code: null, error: "Discord answered 500" };
+      }
+      return inner(method, path);
+    };
+    return t;
+  }
+
+  it("is the role while Discord knows it", async () => {
+    const t = listing(["999", ROLE]);
+    await t.sync.run("start");
+    expect(t.sync.mention()).toBe(ROLE);
+    expect(t.sync.view()).toMatchObject({ state: "on", tags: true, lastError: null, holders: 1 });
+  });
+
+  it("is nothing once Discord says the role is not there, and the card says why in role.ts's words; nothing else is tried", async () => {
+    const t = listing(["999"]);
+    await t.sync.run("start");
+    expect(t.sync.mention()).toBeNull();
+    expect(t.sync.view()).toMatchObject({ tags: false, lastError: expect.stringContaining("The Minecraft role could not be found in the Discord server") });
+    expect(t.raised).toHaveLength(1);
+    expect(changes(t.d.calls)).toEqual([]);
+  });
+
+  it("a role change Discord refuses with Unknown Role stops the tag too; a later run that finds the role brings it back", async () => {
+    expect(listing(null).sync.mention()).toBe(ROLE); // not run yet: tagged, nothing is held back on a guess
+    const t = listing(null); // the listing failed: no answer either way, the run carries on
+    t.gate.r = { ok: false, status: 404, code: 10011, error: "Discord answered 404: Unknown Role" };
+    await t.sync.run("start");
+    expect(t.sync.mention()).toBeNull();
+    t.gate.r = null;
+    t.setRoles([ROLE]);
+    await t.sync.run("daily");
+    expect(t.sync.mention()).toBe(ROLE);
   });
 });

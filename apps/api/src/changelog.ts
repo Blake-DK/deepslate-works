@@ -8,8 +8,12 @@
 // Planner, 2026-10-09: an entry is posted only once the change is really live for players: deployed, synced, loaded
 // by the server and its live check passed; not at merge. So a new entry goes in without `live`, and a later commit
 // sets `live: true` once the live check has passed; the deploy after that posts it. Without it the bot never sees it.
+//
+// docs/53 D2: an entry with a `title` (1 to 90 characters) is a big update: it is posted as a forum post of its own,
+// with that title and the News tag, instead of a reply in "Change log". Both kinds start with the player role's
+// mention (D1). No entry names a season's mods or bosses (the test reads them from mods.json and the season files).
 
-export type Change = { id: string; date: string; lines: string[]; live?: true };
+export type Change = { id: string; date: string; title?: string; lines: string[]; live?: true };
 
 /** What the bot may post: only entries marked live (liveChanges(CHANGES) in server.ts). */
 export function liveChanges(all: Change[]): Change[] {
@@ -175,6 +179,30 @@ export const CHANGES: Change[] = [
       "Under the search box, a row of links takes you straight to each section. When you search, sections with nothing that matches are hidden, and so are their links.",
     ],
   },
+  {
+    // docs/53 D3 post 1, its own post. Set `live: true` once docs/53 D1 and D2's live check has passed (the rule above).
+    id: "2026-10-12-power-and-gear-coming",
+    date: "2026-10-12",
+    title: "Power and gear update incoming",
+    lines: [
+      "You told us there's no reason to build past a starter generator and nothing beats diamond. Fair. Here's what's coming.",
+      "The quarry will need real power. A small generator will still run it, just slowly. Full speed means building a proper power setup.",
+      "Mekanism is coming in: generators, energy storage, ore processing, fission and fusion reactors and the MekaSuit, a full set of power armour with a jetpack. It's heavy on weaker PCs.",
+      "Its ores will appear in old ground the first time anyone goes there. No world reset.",
+      "Both get tried on a test copy of the world first. We'll post here when they land.",
+    ],
+  },
+  {
+    // docs/53 D3 post 2, its own post. Set `live: true` only after docs/53 A and B's live check (the rule above).
+    id: "2026-10-12-power-and-gear-landed",
+    date: "2026-10-12",
+    title: "Power and gear update is live",
+    lines: [
+      "The quarry now needs real power: one small generator only crawls.",
+      "Mekanism is in: generators, reactors and the MekaSuit power armour. Press Play to update.",
+      "Its ores (osmium first) appear in old ground the first time anyone goes there.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";
@@ -188,15 +216,16 @@ export const DISCORD_MAX = 2000;
 export const CHANGE_CUT = "… and more: this update was too long for one message.";
 
 /** One entry as a Discord message: the date in bold, a bullet per line. Too long for one message: cut at a line break. */
-export function changeText(c: Change): string {
+/** `max`: less than Discord's limit when something goes in front of it (the role's mention, docs/53 D1). */
+export function changeText(c: Change, max = DISCORD_MAX): string {
   const [y, m, d] = c.date.split("-").map(Number);
   const lines = [`**${d} ${MONTHS[(m ?? 1) - 1]} ${y}**`, ...c.lines.map((l) => `• ${l}`)];
   const whole = lines.join("\n");
-  if (whole.length <= DISCORD_MAX) return whole;
+  if (whole.length <= max) return whole;
   const kept: string[] = [];
   let size = CHANGE_CUT.length;
   for (const l of lines) {
-    if (size + l.length + 1 > DISCORD_MAX) break;
+    if (size + l.length + 1 > max) break;
     kept.push(l);
     size += l.length + 1;
   }

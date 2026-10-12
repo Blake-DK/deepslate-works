@@ -26,7 +26,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## App 3.6.5: a download from the site is cut off behind the window's polls (2026-10-12, PR #50 to `dev`, not merged)
+## App 3.6.5: a download from the site is cut off behind the window's polls (2026-10-12, PR #50 merged into `dev`; not on `main`)
 
 - **Seen (Alex's log bundle, 16:53 to 16:54 UTC):** 3.6.2 updated itself to 3.6.4 from the deployed `main`; Play on the
   Test tab; "Pack 0.1.0+04e0992e → 0.1.0+8b610bea; 69 mods; this run: update"; "Setting up the mods"; 9 s later "the
@@ -49,6 +49,11 @@ say live is stopped, held or to be trimmed in place, this section wins.
   test pack holds a private jar;** Play again may get through when no poll is queued at that moment.
 - **Not tried:** the 3.6.5 exe on a PC, a Test run that downloads the private jar while the window polls. That is the
   check, on Alex's PC.
+- **Merged into `dev` (Alex, 2026-10-12, after CI passed).** The PR's `check` failed twice on the shipped-pack pins
+  (`ship.test.ts`, then `pack-ship.test.ts`: 75 files, `c0b230b4`), never on the app change; the installer workflow
+  built the 3.6.5 exe and passed its tests on the first commit. `dev`'s pack now differs from `main`'s (the pause mod,
+  docs/53's Mekanism and quarry changes), so 3.6.5 reaches PCs either with the big docs/53 and 55 PR or by a
+  cherry-pick of the app commits onto `main`, Alex's call.
 
 ## A patched mod jar in the pack: docs/58 (2026-10-12, planned)
 

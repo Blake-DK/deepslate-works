@@ -46,7 +46,11 @@ say live is stopped, held or to be trimmed in place, this section wins.
   poll forms, read as `tag` in the audit params; a missing `tag` tags. `Change.title`: a post of its own with the
   News tag. Lint (test): title 1 to 90 characters, no season mod's name, slug or modded boss in any entry. D3's two
   entries are in `changelog.ts`, without `live`.
-- **Live check still to do (Alex):** a ticked news post pings the role on a phone, an unticked one does not, a vote
+- **Live (2026-10-12):** PR #37 (`main` `fd5706d2`, built from `main` with Part D only, so docs/44 A2 stays on `dev`)
+  deployed by Alex; his live check passed: a ticked news post pinged the role on his phone, an unticked one did not,
+  a vote count edit pinged nobody. D3 post 1 (`2026-10-12-power-and-gear-coming`) set `live`; the deploy after that
+  commit posts it, tagged.
+- **Was the live check (Alex):** a ticked news post pings the role on a phone, an unticked one does not, a vote
   count edit pings nobody. The webhook posts most of these; a poll the bot posts (vote buttons on) pings only if the
   bot may mention the role (the role's "Allow anyone to @mention this role", or the bot's Mention All Roles).
 

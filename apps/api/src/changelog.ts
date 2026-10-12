@@ -180,10 +180,12 @@ export const CHANGES: Change[] = [
     ],
   },
   {
-    // docs/53 D3 post 1, its own post. Set `live: true` once docs/53 D1 and D2's live check has passed (the rule above).
+    // docs/53 D3 post 1, its own post. Set `live: true` once docs/53 D1 and D2's live check has passed (the rule above):
+    // passed on live 2026-10-12 (Alex).
     id: "2026-10-12-power-and-gear-coming",
     date: "2026-10-12",
     title: "Power and gear update incoming",
+    live: true,
     lines: [
       "You told us there's no reason to build past a starter generator and nothing beats diamond. Fair. Here's what's coming.",
       "The quarry will need real power. A small generator will still run it, just slowly. Full speed means building a proper power setup.",

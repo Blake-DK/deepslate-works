@@ -1381,7 +1381,7 @@
       ],
       "guide": "game",
       "topic": "mining",
-      "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock. It needs real power to dig fast: one small generator only crawls. **Wind generators** built high up are the easiest real power. **Unbreaking** makes it cheaper to run; **Efficiency** makes it hungrier, not faster. When its chest is full it keeps what it digs inside and empties it when there is room, so don't break a quarry that is still holding items."
+      "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock. It needs real power to dig fast: one small generator only crawls. **Wind generators** built high up are the easiest real power. **Unbreaking** makes it cheaper to run; **Efficiency** makes it hungrier, not faster. It stops when its storage is full and starts again when there is room."
     },
     {
       "slug": "quarry-pause",

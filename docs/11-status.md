@@ -26,7 +26,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## The quarry, second pass: docs/56 (2026-10-12, measured on test; stopped at §2 step 5 for the planner)
+## The quarry, second pass: docs/56 (2026-10-12, §2 measured on test, k = 32; §3 waits for the planner)
 
 - **Measured on the test server, 2026-10-12, 14:13 to 14:40 UTC** (pack of docs/53 A, B, E1; nobody online). Rigs built
   by console in the sky at x 8000 to 8310, z 8000, each a plain 9 × 9 column of `minecraft:stone` (or `deepslate`)
@@ -41,7 +41,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
     as `1429ec09` (test checkout pulled, Build server, Sync; the file on test read back with those values).
   - Step 4, k = 32, over 5.9 minutes each: stone **30.0 a minute**, deepslate **15.0**.
   - Step 5, k = 32: Unbreaking III **119.6 a minute** (above 60: **stopped here**, for the planner), Efficiency V
-    **6.0 a minute**. Steps 6 and 7 not run.
+    **6.0 a minute**. Steps 6 and 7 ran after Alex's answer (below).
   - From the jar's source (21.1.164), not measured: a stone costs `breakBlockBase` × hardness × 1.38^Efficiency ÷
     (1 + Unbreaking). Unbreaking's divisor has no config key. Efficiency makes a block dearer (×5 at V); it gives a
     bigger buffer (×6) and a faster head. `moveHeadBase` is the head's speed in blocks a tick (each block moved costs
@@ -52,8 +52,30 @@ say live is stopped, held or to be trimmed in place, this section wins.
   ground. Emptying the chest: the whole storage moved into it at once. Breaking the quarry (31 in storage): it
   dropped only itself (`quarryplus:quarry`, no components); the 31 were lost. §3 step 3 applies: options reported,
   nothing built.
-- Cleanup: the four quarries removed and the force-loads taken off; the stone columns and frames stay in the test
-  world (the rehearsal starts from a fresh copy of live).
+- **Alex, 2026-10-12, after the report:** Unbreaking stays as the mod has it (a plain quarry 30 a minute on one
+  Pitiful Generator, Unbreaking III 120: enchanting is the upgrade). For a full quarry, **our own small server-side
+  mod** that pauses it (docs/56 §3 option 2); docs/56 §3 step 3 also needs the planner's word, so nothing is built
+  yet. The `howTo` of docs/56 §4 waits with it (its second sentence is only true once that exists).
+- **Step 6, measured (k = 32), unlimited power from a quarry store of 10^9 FE read before and after:** plain
+  **1,200 a minute** (one block a tick) drawing **1,200 FE a tick**; Efficiency V the same 1,200 a minute drawing
+  **6,000 FE a tick**. So one FE a tick is about one stone a minute, up to 1,200.
+- **Step 7, measured on test** (generators placed by console, their stored energy read over time; Mekanism's J ÷ 2.5
+  = FE; stone a minute from the line above, except the gas row, which ran a quarry):
+
+  | Setup | FE a tick | Stone a minute |
+  |---|---|---|
+  | Heat Generator on one lava block, no fuel | 2 | 2 |
+  | Heat Generator with lava on all six sides | 39 | 39 |
+  | Heat Generator burning lava from its tank, one lava block under it | 55, still rising when its store filled | 55 or more |
+  | Wind Generator at y 100 / 200 / 310 | 69 / 126 / 188 | 69 / 126 / 188 |
+  | Gas-Burning Generator on ethylene, beside the quarry | what the quarry takes: full speed | **1,200**, burning 0.10 mB a tick (120 mB a minute; a full 18,000 mB tank lasts about 2.5 hours) |
+  | One water wheel, straight into a Crafts & Additions alternator | 0 (256 SU against the alternator's 512 at 8 RPM: overstressed) | 0 |
+  | Four water wheels on one shaft into the alternator | 11 | 11 |
+
+  Not measured: one wheel geared down to 4 RPM (about 5 FE a tick by the alternator's formula) and four wheels geared
+  up to 16 RPM (about 22).
+- Cleanup: every quarry removed and every force-load taken off; the stone columns, frames, generators and water
+  wheels stay in the sky over x 8000 to 8640 in the test world (the rehearsal starts from a fresh copy of live).
 
 
 - **Alex, 2026-10-12, after docs/53 Part A was built:** "the generator is still too powerful". At k = 4 one Pitiful

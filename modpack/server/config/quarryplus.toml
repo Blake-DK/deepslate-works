@@ -1,11 +1,13 @@
-# Quarry (Additional Enchanted Miner 21.1.164), settings shipped with the pack (docs/53 Part A). Sync puts this file into
-# the server's config/ folder; the mod reads it at start and adds every key not written here with its default.
+# Quarry (Additional Enchanted Miner 21.1.164), settings shipped with the pack (docs/53 Part A, numbers from docs/56).
+# Sync puts this file into the server's config/ folder; the mod reads it at start and adds every key not written here
+# with its default.
 #
-# The quarry's energy costs are the mod's defaults times k = 4 (breakBlockBase 25, moveHeadBase 1, makeFrame 15), so one
-# small generator still runs a quarry but slowly, and full speed needs a real power setup. Energy is worked out on the
-# server only, so no PC needs this file. Every other key, and the Adv. Quarry, stay at the defaults.
+# The quarry's energy costs are the mod's defaults times k = 32 (breakBlockBase 25, moveHeadBase 1, makeFrame 15), so one
+# Pitiful Generator (30 FE a tick) digs about 30 stone a minute and full speed needs a real power setup. k was set by
+# measuring on the test server (docs/56 §2): 238 stone a minute at k = 4. Energy is worked out on the server only, so no
+# PC needs this file. Every other key, and the Adv. Quarry, stay at the defaults.
 
 [powerMap.quarry]
-	breakBlockBase = 100.0
-	moveHeadBase = 4.0
-	makeFrame = 60.0
+	breakBlockBase = 800.0
+	moveHeadBase = 32.0
+	makeFrame = 480.0

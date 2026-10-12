@@ -53,6 +53,19 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Snyk** still watches `main`; a finding both raise is triaged once in docs/38. Open findings from either stay in
   the private register.
 
+## The Moon: docs/55 (2026-10-12, planned, nothing built)
+
+- **Alex, 2026-10-12:** no retrogen of the main world for Mekanism's ores. They go to a world of their own, the Moon
+  (`deepslate:moon`), reached by a portal players build themselves (Server Sided Portals; proposed: a smooth basalt
+  frame lit with an eye of ender). Everything can be mined there (Mekanism's, vanilla and other mods' ores), gravity
+  is low, hostile mobs spawn. The Frontier stays Season 1's and closed until then.
+- **Found:** the main world has no border (±10,176 is only its pre-generation), so Mekanism would put ores in every
+  new chunk past it; the plan replaces `#mekanism:spawn_ores` with the Moon's three biomes so its ores appear nowhere
+  else. The test world already had Mekanism's retrogen at its 10:57 UTC start; it is replaced by a fresh copy of
+  live for the rehearsal anyway.
+- **Order:** docs/55 §4. Mekanism, the quarry and the armour cap go live only together with the Moon. docs/53 D3
+  post 2 is rewritten before it goes out (post 1 said "ores in old ground").
+
 ## Power and gear progression: docs/53 (2026-10-12, planned, nothing built)
 
 - **Why:** a player's note: one Pitiful Generator runs the quarry, and nothing beats diamond armour, so there is no

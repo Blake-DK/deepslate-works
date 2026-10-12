@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-12T16:23:03.377Z",
+  "generatedAt": "2026-10-12T16:45:29.734Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "1436eaa2812d21474033b7c62264eecf925116b27321cbff326f69c28ddb52b1",
+  "hash": "8b610bea6f463933412fb9a1bd2492ac8ea3f47b67775fbc4751f77e827f75d9",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -17,7 +17,9 @@
       "sha1": "17debf7846d5d3b287a2920449154d85e5b9541e",
       "size": 733289,
       "side": "both",
-      "requiredBy": [],
+      "requiredBy": [
+        "quarry-pause"
+      ],
       "modrinth": {
         "client": "required",
         "server": "required"
@@ -1231,6 +1233,22 @@
         "client": "optional",
         "server": "optional"
       }
+    },
+    {
+      "slug": "quarry-pause",
+      "name": "Quarry pause",
+      "side": "server",
+      "projectId": "",
+      "versionId": "private-1ccad65bc346a47c",
+      "versionNumber": "1.0.0",
+      "versionType": "release",
+      "filename": "dsw-quarry-pause-1.0.0.jar",
+      "url": "/downloads/mods/dsw-quarry-pause-1.0.0.jar",
+      "sha512": "1ccad65bc346a47c386ddc6be6347f8a84cef676d74a4481f606fbb090263c99e188e56b2631d89620fe43db97a8dc7c1dd18f981dee18525dd738a689dd3ce7",
+      "sha1": "a4aa138ba4b0be98a0d2b219f3c84600274b92ba",
+      "size": 4311,
+      "requiredBy": [],
+      "channels": "none"
     },
     {
       "slug": "resourceful-lib",

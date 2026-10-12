@@ -1384,6 +1384,30 @@
       "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock. It needs real power to dig fast: one small generator only crawls. **Wind generators** built high up are the easiest real power. **Unbreaking** makes it cheaper to run; **Efficiency** makes it hungrier, not faster. When its chest is full it keeps what it digs inside and empties it when there is room, so don't break a quarry that is still holding items."
     },
     {
+      "slug": "quarry-pause",
+      "name": "Quarry pause",
+      "category": "mining",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Our own small addition to the quarry, on the server only: a quarry stops digging while its chest is full and starts again by itself when there is room.",
+      "wiki": "https://github.com/Blake-DK/deepslate-works/tree/dev/mods/quarry-pause",
+      "videos": [],
+      "noVideosFound": "2026-10-12",
+      "requires": [
+        "additional-enchanted-miner"
+      ],
+      "guide": "behind",
+      "source": {
+        "private": "dsw-quarry-pause-1.0.0.jar",
+        "sha512": "1ccad65bc346a47c386ddc6be6347f8a84cef676d74a4481f606fbb090263c99e188e56b2631d89620fe43db97a8dc7c1dd18f981dee18525dd738a689dd3ce7",
+        "note": "docs/56 §3: built by mods/quarry-pause/build.sh"
+      }
+    },
+    {
       "slug": "tacz-1.21.1",
       "name": "TaCZ (Timeless and Classics Zero)",
       "category": "guns",

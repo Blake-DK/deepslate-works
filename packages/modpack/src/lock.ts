@@ -182,14 +182,8 @@ export async function privateEntry(mod: Mod, dir: string | undefined, previous: 
   }
   if (sum !== src.sha512) throw new Error(`${mod.slug}: ${name} in ${dir} is not the jar mods.json names: its sha512 is ${sum.slice(0, 16)}…, mods.json says ${src.sha512.slice(0, 16)}…`);
   const zip = await openZipFile(file!);
-  let version: string | null;
-  let channels: LockEntry["channels"];
-  try {
-    version = jarVersion(zip);
-    channels = jarChannels(zip);
-  } finally {
-    zip.close?.();
-  }
+  const version = jarVersion(zip);
+  const channels = jarChannels(zip);
   if (mod.side === "server" && channels === "required") throw new Error(`${mod.slug}: server-only, but its jar registers network channels every PC must have. Anything both sides need is never server-only: make it "both" in mods.json.`);
   const sha1 = createHash("sha1");
   for await (const chunk of createReadStream(file!)) sha1.update(chunk as Buffer);

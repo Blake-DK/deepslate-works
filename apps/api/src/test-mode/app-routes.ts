@@ -90,7 +90,10 @@ export function testAppRoutes(app: FastifyInstance, d: TestAppDeps) {
     const lock = await readShippedLock(d.repoDir).catch(() => null);
     const entry = lock?.files.find((f) => f.filename === name && f.url === privateUrl(name));
     if (!entry) return missing();
-    const file = path.join(d.privateJarsDir ?? path.join(d.repoDir, "data", "private-jars"), name);
+    // the path is the lock's own file name, and stays inside the folder of private jars whatever that name is
+    const dir = path.resolve(d.privateJarsDir ?? path.join(d.repoDir, "data", "private-jars"));
+    const file = path.resolve(dir, path.basename(String(entry.filename)));
+    if (!file.startsWith(dir + path.sep)) return missing();
     const s = await stat(file).catch(() => null);
     if (!s?.isFile()) {
       req.log.warn({ file: name }, "docs/58: a private jar the test lock names is not in data/private-jars/");

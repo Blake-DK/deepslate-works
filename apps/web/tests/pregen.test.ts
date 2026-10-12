@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapProgress, modeText, pregenCost, progress, sleepText, type Pregen } from "@/lib/pregen";
+import { mapProgress, modeText, pregenCost, progress, sleepText, worldName, type Pregen } from "@/lib/pregen";
 import { describeAction } from "@/shared/events";
 
 const AREA = { x: 0, z: 0, radius: 1500 };
@@ -113,5 +113,11 @@ describe("the map render", () => {
     expect(describeAction("world.pregenOff", alex, { reason: "asked", what: "both", phase: "generate", percent: 67.4, radius: 1500 }, "OK")).toBe("Bramble09 stopped the pre-generation, at 67.4%");
     expect(describeAction("world.pregenOff", portal, { reason: "done", what: "generate", phase: "done", percent: 100, radius: 1500 }, "OK")).toBe("Pre-generation finished (100%, radius 1500)");
     expect(describeAction("map.update", alex, { map: "world", x: 0, z: 0, radius: 1500 }, "OK")).toBe("Bramble09 asked for the map to be brought up to date: 1500 blocks around 0, 0");
+  });
+});
+
+describe("worldName", () => {
+  it("names each world that can be pre-generated in plain words, the Moon among them (docs/55 M5)", () => {
+    expect([worldName(), worldName("minecraft:the_nether"), worldName("minecraft:the_end"), worldName("deepslate:moon"), worldName("deepslate:frontier_s1")]).toEqual(["the main world", "the Nether", "the End", "the Moon", "the Frontier (s1)"]);
   });
 });

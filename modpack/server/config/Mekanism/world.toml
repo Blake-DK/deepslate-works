@@ -1,11 +1,11 @@
-# Mekanism 10.7.19, settings shipped with the pack (docs/53 Part B). Sync puts this file into the server's
-# config/Mekanism/ folder (a SERVER config: NeoForge 21.1 keeps those in config/); Mekanism reads it at start and adds
-# every key not written here with its default.
+# Mekanism 10.7.19, settings shipped with the pack. Sync puts this file into the server's config/Mekanism/ folder (a
+# SERVER config: NeoForge 21.1 keeps those in config/); Mekanism reads it at start and adds every key not written here
+# with its default.
 #
-# The main world was generated without Mekanism, so it has none of Mekanism's ores or salt. With regeneration on and
-# the world version at 1, Mekanism adds them to every chunk saved below version 1 the first time that chunk is loaded,
-# and saves the chunk at version 1, so each chunk is touched once. Leave both as they are: userWorldGenVersion must stay
-# at 1 and must never be raised again without a plan (it would add the ores a second time to every chunk).
+# docs/55 M1: no retrogen. The main world is never changed to add Mekanism's ores; they are on the Moon alone
+# (modpack/datapacks/deepslate-moon replaces #mekanism:spawn_ores with the Moon's biomes). These are Mekanism's own
+# defaults. The file stays in the pack because Sync merges settings and never deletes: taking it out would leave the
+# retrogen values docs/53 Part B shipped (true, 1) on any server that had them. Do not switch regeneration on.
 
-enableRegeneration = true
-userWorldGenVersion = 1
+enableRegeneration = false
+userWorldGenVersion = 0

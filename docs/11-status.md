@@ -184,6 +184,33 @@ say live is stopped, held or to be trimmed in place, this section wins.
   only decides whether a PC's tooltip says "disabled" (it would need the file in `modpack/config/`, in the pack's
   hash). Not checked in game with a player. To remove the recipe too: one datapack file overriding it with a false
   condition, for the planner and Alex. The Mods guide never mentioned it.
+- **Planner's second answer (2026-10-12):** items 2, 3, 4 (report) and 7 accepted, loader 4.0.44 right. Alex: remove
+  the Adv. Quarry's recipe; yes to the small PR to `main`.
+  - **The recipe is gone (`76ef58f8`):** `modpack/datapacks/deepslate-tools/data/quarryplus/recipe/adv_quarry.json`
+    is only `{"neoforge:conditions": [{"type": "neoforge:false"}]}`, replacing the jar's; a test beside the placard
+    fix. Seen on test after Build, Sync (153 datapack files, one more) and a start at 16:01: `deepslate-tools` enabled,
+    **"Loaded 13012 recipes"** against 13013 in the three starts before it (14:56, 15:02, 15:50), advancements 7158
+    as before, no recipe or advancement error (the start's only ERROR is Curios' "example is not a registered slot
+    type!", as before). The jar's unlock advancement (`data/quarryplus/advancement/recipes/misc/adv_quarry.json`)
+    logs nothing, so it is left as it is. **Not seen yet, needs a player:** `/recipe give @s quarryplus:adv_quarry`
+    answering "Unknown recipe", and JEI on a PC showing no way to craft it. Nobody has looked.
+  - **NeoForge (report only):** live's server and the test server both run **21.1.252** (their `libraries/`), the
+    NeoForge AMP installed when the instances were made; nothing in the repo installs or updates it on a server.
+    `mods.json` and the lock pin **21.1.253** (`e9ce755d`, 2026-10-04): Build only prints the lock's value, and the
+    app installs exactly that one on every PC. So PCs run 253 against servers on 252, and they connect. To make them
+    the same: update NeoForge to 21.1.253 in each AMP instance (test first, after a backup; no PC changes, the pack's
+    hash stays), or pin 21.1.252 in `mods.json` (the pack's hash changes and every PC installs NeoForge again on its
+    next Play). Nothing changed.
+  - **The small PR to `main`: #49** (branch `private-jars-to-main` from `origin/main`): `395f7332`, `47e81ccf`,
+    `5b85c81f`, `c2b86295` in that order; resolutions in its description (`mods.json`: `topic` and `season` kept for
+    `l_enders-cataclysm` and `mowzies-mobs`, both now as on `dev`; docs/11: the testers section kept). Live's pack
+    worked out from the PR's lock the way Build does: 77 in the lock, **71 shipped, `d44eb2ba`**, as `main` today. The
+    six `s1` mods: the guide and the ballot drop `adminOnly` and `hidden` mods for players, and the Play manifest is
+    the shipped lock. Waits for: `check` green, the 3.6.4 exe to Alex only and his word, a backup of the live
+    database, his yes. Then the after-deploy checks in the PR, then `main` merged back into `dev` at once.
+  - **For the rehearsal (planner, item 1d):** on the fresh copy of live, before the live PR, list every placed Adv.
+    Quarry (`quarryplus:adv_quarry` blocks) and every `quarryplus:adv_quarry` item in chests and players'
+    inventories, by location and owner.
 - Cleanup: every quarry removed and every force-load taken off; the stone columns, frames, generators and water
   wheels stay in the sky over x 8000 to 8640 in the test world (the rehearsal starts from a fresh copy of live).
 

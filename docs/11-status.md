@@ -49,6 +49,23 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Live check still to do (Alex):** a ticked news post pings the role on a phone, an unticked one does not, a vote
   count edit pings nobody. The webhook posts most of these; a poll the bot posts (vote buttons on) pings only if the
   bot may mention the role (the role's "Allow anyone to @mention this role", or the bot's Mention All Roles).
+- **Parts A, B and E1 built for the test server (2026-10-12, PR to `dev`; not for `main` before Alex's go):**
+  - A: `modpack/server/config/quarryplus.toml`, `[powerMap.quarry]` `breakBlockBase` 100, `moveHeadBase` 4,
+    `makeFrame` 60 (k = 4; keys and defaults 25, 1, 15 read from the file the mod wrote on test). Server only, not
+    in the pack's hash, so Play first is not asked by it.
+  - B: `mekanism`, `mekanism-generators`, `mekanism-tools` on, pinned to 10.7.19.85 (`5KzzycBT`, `a6gl7srE`,
+    `v5zlSE9s`), added to the lock by hand from a capped `pnpm modpack lock` run (that run also moved titanium and
+    kotlin-lang-forge, unpinned libraries; those were left as they were). `modpack/server/config/Mekanism/world.toml`:
+    `enableRegeneration = true`, `userWorldGenVersion = 1` (a SERVER config, `Mekanism/world.toml` in
+    MekanismConfigHelper at tag `v1.21.1-10.7.19.85`). docs/06 says it stays at 1.
+  - E1: `modpack/config/Mekanism/tools-materials-startup.toml` (a STARTUP config, read on server and PC, so it goes to
+    both and is in the hash): Refined Obsidian 3/8/6/3, toughness 3, knockback 0.1 (was 6/12/8/5, 5, 0.2); Osmium
+    helmet 3 (was 4). Bronze, Lapis, Refined Glowstone and Steel are at or under netherite already.
+  - The pack: lock 80 files, hash `04e0992e`; what live would ship 74 files, `0.1.0+836f84d8` (was 71,
+    `d44eb2ba`). The howTo sentences for the quarry and Mekanism are in.
+  - **Not done yet, all on the test server:** Build and Sync there, the first start (no FATAL, the files the mods
+    write against the shipped keys), the quarry tables, the retrogen rehearsal on a fresh copy of live, the bases, the
+    spark numbers, Alex's own PC. None of it before this is on `dev`.
 
 ## The Mods guide sectioned by type: docs/52 (2026-10-11, merged: PR #35, `main` `d4c68f23`; deploy pending)
 

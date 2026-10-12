@@ -1,0 +1,11 @@
+# Quarry (Additional Enchanted Miner 21.1.164), settings shipped with the pack (docs/53 Part A). Sync puts this file into
+# the server's config/ folder; the mod reads it at start and adds every key not written here with its default.
+#
+# The quarry's energy costs are the mod's defaults times k = 4 (breakBlockBase 25, moveHeadBase 1, makeFrame 15), so one
+# small generator still runs a quarry but slowly, and full speed needs a real power setup. Energy is worked out on the
+# server only, so no PC needs this file. Every other key, and the Adv. Quarry, stay at the defaults.
+
+[powerMap.quarry]
+	breakBlockBase = 100.0
+	moveHeadBase = 4.0
+	makeFrame = 60.0

@@ -1108,7 +1108,7 @@
       "name": "Mekanism",
       "category": "factories",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "H",
       "recommended": false,
       "hidden": false,
@@ -1129,18 +1129,18 @@
           "url": "https://www.youtube.com/watch?v=sw2OxxtRft0"
         }
       ],
-      "version": "latest",
+      "version": "5KzzycBT",
       "requires": [],
       "guide": "game",
       "topic": "factories",
-      "howTo": "Start with an **Enrichment Chamber** (2 dust per ore) powered by a generator from Mekanism Generators. Upgrade machines with **speed** and **energy** upgrades. Cables carry power, **logistical transporters** carry items. JEI shows every recipe."
+      "howTo": "Start with an **Enrichment Chamber** (2 dust per ore) powered by a generator from Mekanism Generators. Upgrade machines with **speed** and **energy** upgrades. Cables carry power, **logistical transporters** carry items. JEI shows every recipe. Its ores (osmium first) appear in old ground the first time anyone goes there after the update."
     },
     {
       "slug": "mekanism-generators",
       "name": "Mekanism Generators",
       "category": "factories",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "H",
       "recommended": false,
       "hidden": false,
@@ -1162,7 +1162,7 @@
           "url": "https://www.youtube.com/watch?v=-SZ3FjQ1WVY"
         }
       ],
-      "version": "latest",
+      "version": "a6gl7srE",
       "requires": [
         "mekanism"
       ],
@@ -1175,7 +1175,7 @@
       "name": "Mekanism Tools",
       "category": "factories",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -1193,7 +1193,7 @@
           "url": "https://www.youtube.com/watch?v=iL4_OP5Bm-Y"
         }
       ],
-      "version": "latest",
+      "version": "v5zlSE9s",
       "requires": [
         "mekanism"
       ],
@@ -1381,7 +1381,7 @@
       ],
       "guide": "game",
       "topic": "mining",
-      "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock."
+      "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock. It needs a lot of power to run at full speed: one small generator will only crawl."
     },
     {
       "slug": "tacz-1.21.1",

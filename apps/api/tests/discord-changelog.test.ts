@@ -259,13 +259,21 @@ describe("the change log tags @Minecraft, and a big update is a post of its own 
 function seasonNames(): string[] {
   const root = new URL("../../../modpack/", import.meta.url);
   const mods = (JSON.parse(readFileSync(new URL("mods.json", root), "utf8")) as { mods: Array<{ name: string; slug: string; season?: string }> }).mods;
-  const names = mods.filter((m) => m.season).flatMap((m) => [m.name, m.slug]);
+  const season = new Set(mods.filter((m) => m.season));
+  const names: string[] = [];
+  const flat = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   for (const f of readdirSync(new URL("seasons/", root)).filter((f) => /^s\d+\.json$/.test(f))) {
     const s = JSON.parse(readFileSync(new URL(`seasons/${f}`, root), "utf8")) as { bosses?: Array<{ title: string; entity: string }> };
     // the game's own bosses (the Warden, the Wither, …) are not a season mod's
-    for (const b of s.bosses ?? []) if (!b.entity.startsWith("minecraft:")) names.push(b.title.replace(/^The /, ""));
+    for (const b of s.bosses ?? []) {
+      const ns = b.entity.split(":")[0]!;
+      if (ns === "minecraft") continue;
+      names.push(b.title.replace(/^The /, ""));
+      // the boss's mod, also where mods.json does not mark it with its season yet
+      for (const m of mods) if (flat(m.slug).includes(ns)) season.add(m);
+    }
   }
-  return names;
+  return [...names, ...[...season].flatMap((m) => [m.name, m.slug])];
 }
 
 /** docs/53 D2's lint over one entry: what is wrong with it, or nothing. */

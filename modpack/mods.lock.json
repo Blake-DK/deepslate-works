@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-06T18:24:48.116Z",
+  "generatedAt": "2026-10-12T08:10:33.197Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "f652ffca38acc3600f9a990bb3a44586fe38ab7bb0c8df2a00ab01d9f3ef3eb7",
+  "hash": "04e0992e8a6091d5b959891b755b3357b1dd77bda8b348710faf365451808b85",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -1036,6 +1036,69 @@
       }
     },
     {
+      "slug": "mekanism",
+      "name": "Mekanism",
+      "projectId": "Ce6I4WUE",
+      "versionId": "5KzzycBT",
+      "versionNumber": "10.7.19.85",
+      "versionType": "release",
+      "filename": "Mekanism-1.21.1-10.7.19.85.jar",
+      "url": "https://cdn.modrinth.com/data/Ce6I4WUE/versions/5KzzycBT/Mekanism-1.21.1-10.7.19.85.jar",
+      "sha512": "66745825330a98f3e4a5ea3a44aff8b00870f715c144edc38dd2f61b4240589600b58ae89efac3b54dbb5aa430b1059dac1a28fd71cac5cc9002bbeb5ba3f22b",
+      "sha1": "b78945c40cfe7640408f3fd1e44da385a8c8b805",
+      "size": 11976009,
+      "side": "both",
+      "requiredBy": [
+        "mekanism-generators",
+        "mekanism-tools"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
+    },
+    {
+      "slug": "mekanism-generators",
+      "name": "Mekanism Generators",
+      "projectId": "OFVYKsAk",
+      "versionId": "a6gl7srE",
+      "versionNumber": "10.7.19.85",
+      "versionType": "release",
+      "filename": "MekanismGenerators-1.21.1-10.7.19.85.jar",
+      "url": "https://cdn.modrinth.com/data/OFVYKsAk/versions/a6gl7srE/MekanismGenerators-1.21.1-10.7.19.85.jar",
+      "sha512": "6c3d5b7ea2f67f43c3d169c97de2855a7085f38019cf426e015ccc8ca9bc4f66e96b1cdf4a9afdc92bef7b2e236f16c81415ed5e48736805d5961d29525316d6",
+      "sha1": "44c4d8006597580ff7e4101b5a22f7b426cdcaf6",
+      "size": 1114598,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
+      "slug": "mekanism-tools",
+      "name": "Mekanism Tools",
+      "projectId": "tqQpq1lt",
+      "versionId": "v5zlSE9s",
+      "versionNumber": "10.7.19.85",
+      "versionType": "release",
+      "filename": "MekanismTools-1.21.1-10.7.19.85.jar",
+      "url": "https://cdn.modrinth.com/data/tqQpq1lt/versions/v5zlSE9s/MekanismTools-1.21.1-10.7.19.85.jar",
+      "sha512": "0dccc47efbb9e3bf3b7df886cefff4a6b9a3f683bf0df3e54409dc3a4c6459eef95ce0af93adf345b868e5b7dcb7a2bb0af68f0a94acfa69975bfbb278e4902f",
+      "sha1": "4433b3eec0a5a0bf415d873e710a1cecea5850bc",
+      "size": 526620,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "modernfix",
       "name": "ModernFix",
       "projectId": "nmDcB62a",
@@ -1507,6 +1570,10 @@
     }
   ],
   "configs": [
+    {
+      "path": "config/Mekanism/tools-materials-startup.toml",
+      "sha256": "918cd6295e5333721c84167453bf1e3e7e13fb64ab9493d73593fb337e0cccd0"
+    },
     {
       "path": "config/customwindowtitle-client.toml",
       "sha256": "025ebfa9df9a09900ab5deb8a667470dfcb4d8e378641c1380f40704e3523bc2"

@@ -14,15 +14,15 @@ describe("the pack a server ships, as api reads it", () => {
     const lock = JSON.parse(await readFile(path.join(REPO, "modpack", "mods.lock.json"), "utf8")) as ShippedLock;
     expect(packHash(lock, lock.files)).toBe(lock.hash);
   });
-  it("live ships nothing yet: 71 files, 0.1.0+d44eb2ba, the pack every PC has; the test server with SEASONS_SHIP=s1 gets all 77", async () => {
+  it("live ships nothing yet: 74 files, 0.1.0+836f84d8 (Mekanism in, docs/53); the test server with SEASONS_SHIP=s1 gets all 80", async () => {
     const live = await readShippedLock(REPO, {});
-    expect(live.files).toHaveLength(71);
-    expect(live.hash.slice(0, 8)).toBe("d44eb2ba");
+    expect(live.files).toHaveLength(74);
+    expect(live.hash.slice(0, 8)).toBe("836f84d8");
     expect(live.files.some((f) => f.season)).toBe(false);
     const test = await readShippedLock(REPO, { TEST_MODE: "1", SEASONS_SHIP: "s1" });
-    expect(test.files).toHaveLength(77);
+    expect(test.files).toHaveLength(80);
     expect(await readShippedLock(REPO, { SEASONS_SHIP: "s1" })).toEqual(live); // ignored without TEST_MODE
-    expect(await sitePack(REPO)).toMatch(/\+d44eb2ba$/);
+    expect(await sitePack(REPO)).toMatch(/\+836f84d8$/);
   });
   it("SEASONS_SHIP is read as the modpack package reads it", () => {
     expect(shipFor(["s1"], {})).toEqual(["s1"]);

@@ -609,6 +609,8 @@ export class Limbo {
     const stays = member || outside;
     await db.user.update({ where: { id: userId }, data: stays ? { guildMember: member } : { guildMember: false, sessionVersion: { increment: 1 } } });
     if (!stays) await db.launcherAuth.updateMany({ where: { userId, status: "approved" }, data: { status: "denied" } }).catch((err) => this.log({ err: String(err) }, "could not end the installer's tokens"));
+    // docs/57: and the Tester switch goes off. The live site sees the list change and tells the test server.
+    if (!stays) await testerOffForLeaving(userId).catch((err) => this.log({ err: String(err) }, "could not turn the Tester switch off"));
   }
 
   /** With a bot token: re-check guild membership of online, linked players every 5 min. Without one: rely on login-time checks. */
@@ -625,4 +627,12 @@ export class Limbo {
       if (!member && !u.outsideAuth && u.mcUuid) await this.revoke(u.mcUuid, null);
     }
   }
+}
+
+/** docs/57: a member who left the Discord server (and has no invite) is a tester no more. Audited when it changes. */
+export async function testerOffForLeaving(userId: string) {
+  const u = await db.user.findUnique({ where: { id: userId }, select: { tester: true, displayName: true } });
+  if (!u?.tester) return;
+  await db.user.update({ where: { id: userId }, data: { tester: false, testerAt: null } });
+  await audit({ userId: null, action: "user.tester", params: { id: userId, displayName: u.displayName, on: false, why: "left the Discord server" }, result: "OK" });
 }

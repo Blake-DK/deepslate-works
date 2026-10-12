@@ -138,7 +138,7 @@ namespace DeepslateWorks
             if (w.Height > room) w.Height = Math.Max(w.MinHeight, room);
             T Find<T>(string n) where T : class => w.FindName(n) as T ?? throw new InvalidOperationException("the window has no " + n);
             Tabs = Find<TabControl>("Tabs"); PlayTab = Find<TabItem>("PlayTab"); ExtrasTab = Find<TabItem>("ExtrasTab"); LogTab = Find<TabItem>("LogTab");
-            // 3.6.1: the Play tab's view, the live server's (the Test tab's is made for an admin only, CreateTestTab)
+            // 3.6.1: the Play tab's view, the live server's (the Test tab's is made for an admin or a tester only, CreateTestTab)
             LivePane = PlayPane.Load(PlayPane.Live);
             P = LivePane;
             PlayTab.Content = LivePane.Root;
@@ -205,7 +205,7 @@ namespace DeepslateWorks
             Timer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromMilliseconds(250) };
             Timer.Tick += (s, e) => OnTick();
             WireHome();   // 3.2.0: the server on the Play tab, and the Vote tab
-            WireTest();   // docs/45: the Test section, admins only
+            WireTest();   // docs/45: the Test section, admins and (docs/57) testers only
             WireUpdate(); // 3.3.0: the Update button
             WireLook();   // 3.4.0: the ground, the banner, the badge (docs/21)
             WireLogButtons();   // 3.4.2: Save log, Send to Alex

@@ -72,6 +72,7 @@ import { checkoutCommit } from "./test-mode/checkout.js";
 import { DOOR_KEY } from "./test-mode/door.js";
 import { testRoutes } from "./test-mode/routes.js";
 import { TEST_APP_PATHS, testAppRoutes } from "./test-mode/app-routes.js";
+import { Testers, TESTERS_KEY } from "./test-mode/testers.js";
 import { build as apiBuild } from "./status/versions.js";
 import { sitePack } from "./status/health-watch.js";
 
@@ -261,7 +262,34 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     forget: () => seasons.forget(),
   });
   // docs/45: the launcher's Test section asks for these through the live web (TEST_APP_TOKEN)
-  if (appToken) {
+  // docs/57: and who the testers are, kept in deepslate_test and put on the test instance's whitelist
+  const testers = appToken ? new Testers({
+    load: async () => (await db.setting.findUnique({ where: { key: TESTERS_KEY } }))?.value ?? null,
+    save: async (list) => {
+      await db.setting.upsert({ where: { key: TESTERS_KEY }, create: { key: TESTERS_KEY, value: list }, update: { value: list } });
+    },
+    isAdmin: async (uuid) => (await db.user.findFirst({ where: { mcUuid: { equals: uuid, mode: "insensitive" } }, select: { role: true } }))?.role === "ADMIN",
+    admit: async (t) => {
+      // linked and verified now, let in without the Discord server, open while the test site is not "live": the door
+      // releases them with no link and no sign-in of any kind. The name is let go by any other row that still holds it.
+      const now = new Date();
+      await db.$transaction([
+        db.user.updateMany({ where: { mcUsername: t.name, OR: [{ mcUuid: null }, { NOT: { mcUuid: t.uuid } }] }, data: { mcUsername: null } }),
+        db.user.upsert({
+          where: { mcUuid: t.uuid },
+          create: { displayName: t.name, role: "PLAYER", mcUuid: t.uuid, mcUsername: t.name, verifiedAt: now, guildMember: true, outsideAuth: true, earlyAccess: true },
+          update: { mcUsername: t.name, verifiedAt: now, guildMember: true, outsideAuth: true, earlyAccess: true },
+        }),
+      ]);
+    },
+    hold: async (uuid) => {
+      await db.user.updateMany({ where: { mcUuid: uuid, role: { not: "ADMIN" } }, data: { verifiedAt: null } });
+    },
+    server: () => ({ up: tail.state === 20, players: [...tail.online] }),
+    run: async (action, input) => (await runAction(ampClient, limbo.actionCtx, action, input, null)).ok,
+    log,
+  }) : null;
+  if (appToken && testers) {
     testAppRoutes(app, {
       repoDir: env.REPO_DIR,
       server: () => ({ state: view.state(), players: poller.fresh()?.players ?? [] }),
@@ -270,6 +298,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
       wake,
       refresh: () => poller.poll(),
       memberByDiscord: (discordId) => db.user.findUnique({ where: { discordId }, select: { id: true, displayName: true } }),
+      testers,
     });
   }
   let housekeeping: NodeJS.Timeout | null = null;
@@ -289,6 +318,8 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     // minutes while somebody is on; the clock, once a minute
     tail.on((e, info) => {
       if (e.type === "started" && !info?.replay) setTimeout(() => void seasons.fromFiles(), 30_000).unref();
+      // docs/57: the test instance's whitelist made to match the tester list, at every start
+      if (testers && e.type === "started" && !info?.replay) setTimeout(() => void testers.reconcile().catch((err) => log({ err: String(err) }, "testers: reconcile failed")), 3000).unref();
     });
     seasonFiles = setInterval(() => {
       if (tail.state === 20 && tail.online.size > 0) void seasons.fromFiles();

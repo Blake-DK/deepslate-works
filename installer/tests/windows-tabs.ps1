@@ -1,9 +1,9 @@
-# Deepslate Works 3.6.1: the Play tab and the Test tab in the app's own window, on a real Windows desktop (GitHub's
+# Deepslate Works 3.6.1 (3.6.3: and a tester): the Play tab and the Test tab in the app's own window, on a real Windows desktop (GitHub's
 # windows runner, .github/workflows/installer.yml, job app). Every run is a test run (-Root, its own folders) against a
 # stand-in site on 127.0.0.1: the real site is never asked and the Minecraft Launcher is never opened (Env.StandIn).
 #
-# Opened four ways: from the desktop, as the site's Play link opens it (-AsLink, only in such a run), with the live
-# server switched off, and signed in as a member who is not an admin. In each: the Play tab and the Test tab side by
+# Opened five ways: from the desktop, as the site's Play link opens it (-AsLink, only in such a run), with the live
+# server switched off, signed in as a member who is not an admin, and (3.6.3, docs/57) as a tester. In each: the Play tab and the Test tab side by
 # side in one picture (tabs/<way>-play-and-test.png), and the checks below. Each kind of run lists both game folders
 # with file hashes before and after (tabs/<way>-<when>-<folder>.txt): a test run writes nothing into the live folder and
 # a live run nothing into the test folder. Exit 1 when a check fails.
@@ -136,7 +136,8 @@ function Option([string]$file, [string]$key) {
 
 # ---- the stand-in site ----------------------------------------------------------------------------------------------
 # What it answers follows control.json, read on every request: live and test (online, asleep, off, down for the test
-# stack, or a state the app does not know). Two sign-ins: admin-token (an admin) and member-token (a member). Every
+# stack, or a state the app does not know). Three sign-ins: admin-token (an admin), member-token (a member) and
+# tester-token (docs/57: a member with the Tester switch on, so the home says `test` and the Test routes answer). Every
 # request is written to requests.txt as "METHOD /path token"; reports to reports.txt.
 $work = Join-Path $env:TEMP "tabs-site"
 Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
@@ -183,32 +184,33 @@ $siteJob = Start-Job -ArgumentList "$site/", $control, $requests, $reports, $jar
     $c = $l.GetContext(); $req = $c.Request; $p = $req.Url.AbsolutePath; $m = $req.HttpMethod
     $auth = [string]$req.Headers["Authorization"]; $token = $(if ($auth -match '^Bearer (.+)$') { $matches[1] } else { "-" })
     [IO.File]::AppendAllText($requests, "$m $p $token`n")
-    $admin = $token -eq "admin-token"; $member = $admin -or $token -eq "member-token"
+    $admin = $token -eq "admin-token"; $tester = $token -eq "tester-token"; $member = $admin -or $tester -or $token -eq "member-token"
+    $tests = $admin -or $tester
     $ctl = Get-Content -Raw $control | ConvertFrom-Json
     $code = 404; $body = '{"error":{"code":"not_here"}}'; $bytes = $null; $type = "application/json"
     switch -regex ($p) {
       '^/api/app/home$' {
         $code = 200
         $h = [ordered]@{ signedIn = $member; site = $base; server = (Words $ctl.live $admin) }
-        if ($member) { $h.name = $(if ($admin) { "Bramble09" } else { "m1_owl" }); $h.admin = $admin; $h.online = @(); $h.players = @(); $h.news = $null; $h.votes = [ordered]@{ polls = @(); ballot = $null; order = @(); button = "Vote first, it takes ten seconds" } }
+        if ($member) { $h.name = $(if ($admin) { "Bramble09" } elseif ($tester) { "KaneFinch" } else { "m1_owl" }); $h.admin = $admin; $h.test = $tests; $h.online = @(); $h.players = @(); $h.news = $null; $h.votes = [ordered]@{ polls = @(); ballot = $null; order = @(); button = "Vote first, it takes ten seconds" } }
         $body = ConvertTo-Json -Depth 6 -InputObject $h
       }
       '^/api/version$' { $code = 200; $body = ConvertTo-Json @{ pack = "0.1.0+smoke"; status = $ctl.live } }
       '^/api/modpack/manifest$' { if ($member) { $code = 200; $body = ConvertTo-Json -Depth 6 -InputObject (Manifest $false) } else { $code = 401; $body = $missing } }
       '^/api/app/test$' {
-        if (-not $admin) { $code = 401; $body = $missing }
+        if (-not $tests) { $code = 401; $body = $missing }
         elseif ($ctl.test -eq "down") { $code = 200; $body = '{"available":false,"reason":"The site can''t reach the test server right now."}' }
         else { $code = 200; $body = ConvertTo-Json -Depth 6 -InputObject ([ordered]@{ available = $true; state = $ctl.test; players = 0; address = "lab.dsw.test"; pack = "0.1.0+test"; serverPack = "0.1.0+test"; server = (Words $ctl.test $true) }) }
       }
       '^/api/app/test/manifest$' {
-        if (-not $admin) { $code = 401; $body = $missing }
+        if (-not $tests) { $code = 401; $body = $missing }
         elseif ($ctl.test -eq "down") { $code = 503; $body = '{"error":{"code":"test_unreachable","message":"The site can''t reach the test server right now."}}' }
         else { $code = 200; $body = ConvertTo-Json -Depth 6 -InputObject (Manifest $true) }
       }
       '^/api/(play|app/test)/wake$' {
         $test = $p -match 'test'
         $state = $(if ($test) { $ctl.test } else { $ctl.live })
-        if ($test -and -not $admin) { $code = 401; $body = $missing }
+        if ($test -and -not $tests) { $code = 401; $body = $missing }
         elseif ($test -and $state -eq "down") { $code = 503; $body = '{"error":{"code":"test_unreachable","message":"The site can''t reach the test server right now."}}' }
         elseif ($m -eq "GET") { $code = 200; $body = ConvertTo-Json -Depth 4 @{ wake = @{ phase = $(if ($state -eq "online") { "ready" } else { "waking" }) } } }
         elseif ($state -eq "online") { $code = 200; $body = '{"result":"awake"}' }
@@ -415,6 +417,23 @@ try {
   Check ("the app never asked for the Test section (asked " + (Requests-For "/api/app/test" "member-token") + " times)") ((Requests-For "/api/app/test" "member-token") -eq 0)
   Check "the log says nothing about a Test section" (-not ((Log-Text) -match 'Test section|Play test|test run'))
   Save-Pair "4-member"
+  }
+
+  Scenario "5. Opened by a tester (docs/57: not an admin; live switched off, test online)" {
+  Set-Site "off" "online"
+  $pc = New-Pc "tester" "tester-token"
+  Check "the window opened" (Open-App $pc)
+  Start-Sleep -Seconds 12   # the home and the Test section asked at least once
+  $root = Ui-Root
+  $test = Tab $root "TestTab"
+  Check "a tester has a Test tab" ($null -ne $test)
+  Check "the Test tab's card says 'Test server'" (Card-Says $test "Test server")
+  Check ("the app asked for the Test section (asked " + (Requests-For "/api/app/test" "tester-token") + " times)") ((Requests-For "/api/app/test" "tester-token") -gt 0)
+  $play = Tab (Ui-Root) "PlayTab"
+  $sb = Find-Id $play "StartButton"
+  Check "no Start button for a tester, though the live server is switched off (Start stays an admin's)" (($null -eq $sb) -or $sb.Current.IsOffscreen)
+  Check "no Start was ever sent" ((Requests-For "/api/app/start" "tester-token") -eq 0)
+  Save-Pair "5-tester"
   }
 } finally {
   $env:PATH = $savedPath

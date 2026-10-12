@@ -4,28 +4,38 @@ import type { LockFile, Manifest } from "modpack";
 import { distancesFor, serverViewDistance } from "modpack/schema";
 import { env } from "@/env";
 import { bearer, userFromLauncherToken } from "@/server/launcher";
+import { testFileUrl } from "@/lib/private-jar-urls";
 
-// The launcher's Test section, version one (planner and Alex, 2026-10-09; docs/45): admins only.
+// The launcher's Test section (planner and Alex, 2026-10-09; docs/45): admins, and since docs/57 testers, a member an
+// admin has turned the Tester switch on for.
 //
 // The app asks the LIVE site, with its own launcher token, under /api/app/test/*. Every route there first finds the user
-// behind the token and reads their role from the database (the token's row includes the user as the database has it
-// now); anyone else gets exactly what a path that does not exist gives (notFound()). The live site then asks the test
-// server's api on the admin's behalf with TEST_APP_TOKEN (api-client.ts testAppCall), which never reaches the app.
+// behind the token and reads their role and switch from the database (the token's row includes the user as the database
+// has it now); anyone else gets exactly what a path that does not exist gives (notFound()). The live site then asks the
+// test server's api on their behalf with TEST_APP_TOKEN (api-client.ts testAppCall), which never reaches the app.
 
 /** The test game folder and launcher profile: beside the live ones, named so they cannot be taken for live. */
 export const TEST_PROFILE = { id: "deepslate-works-test", name: "Deepslate Works TEST", dir: ".minecraft-deepslate-works-test" } as const;
 
-/** The admin behind the app's launcher token, or null (not signed in, not approved, or not an admin). */
-export async function appAdmin(req: Request) {
+/** docs/57: who the Test section is for, as the home's `test` says: an admin, or a member with the Tester switch on. */
+export function canTest(user: { role: string; tester?: boolean | null } | null | undefined): "admin" | "tester" | null {
+  if (!user) return null;
+  if (user.role === "ADMIN") return "admin";
+  return user.tester === true ? "tester" : null;
+}
+
+/** The admin or tester behind the app's launcher token, with which one (`as`), or null for anyone else. */
+export async function appTester(req: Request) {
   const user = await userFromLauncherToken(bearer(req));
-  return user && user.role === "ADMIN" ? user : null;
+  const as = canTest(user);
+  return user && as ? { user, as } : null;
 }
 
 /** What the middleware answers an app (no session cookie) on a path that does not exist: the same, word for word. */
 export const MISSING_FOR_APP = { error: { code: "unauthorized", message: "Sign in first" } } as const;
 
 /**
- * The answer for anyone who is not an admin: exactly what a path that does not exist gives this request. An app (a
+ * The answer for anyone who is neither an admin nor a tester: exactly what a path that does not exist gives this request. An app (a
  * launcher token, no session cookie) gets the middleware's 401; a signed-in browser gets Next's 404 (notFound()).
  */
 export function asMissing(req: Request): Response {
@@ -47,6 +57,8 @@ export type TestManifestInputs = {
   tier: string | null;
   /** Where the app fetches the test settings bundle: the live site's own route, never the test stack. */
   configUrl: string;
+  /** docs/58: the live site's own address, on which a private jar of the test pack is fetched (/downloads/mods/test/). */
+  site: string;
 };
 
 /**
@@ -72,7 +84,7 @@ export function testManifest(i: TestManifestInputs) {
     server_view_distance: serverViewDistance(i.mods.server_properties),
     tier: i.tier ?? null,
     config_url: i.lock.configs.length ? i.configUrl : null,
-    files: i.lock.files.map((f) => ({ slug: f.slug, name: f.name, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size, side: f.side })),
+    files: i.lock.files.map((f) => ({ slug: f.slug, name: f.name, filename: f.filename, url: testFileUrl(f.url, i.site), sha512: f.sha512, size: f.size, side: f.side })),
     configs: i.lock.configs,
     installer: i.installer,
     branding: i.branding,

@@ -18,6 +18,7 @@ import type { PageQuery } from "@/components/tabs";
 import { consoleLines, Flash, HealthCard, loadBackup, loadHeld, loadSchedule, loadTail, loadWatch, type Backup } from "./server/cards";
 import { env } from "@/env";
 import { TestServerCard } from "@/components/admin/test-server-card";
+import { TesterList } from "@/components/admin/tester-switch";
 import { getMaintenance } from "@/server/settings";
 
 
@@ -140,7 +141,7 @@ export default async function AdminOverview({ searchParams }: { searchParams: Pa
           <p>{members} members · {invites} open {invites === 1 ? "invite" : "invites"}</p>
         </Tile>
         {/* docs/42 §8: the test server, on the live site only, once one has been set up */}
-        {!env.TEST_MODE && env.TEST_SITE_URL && <TestServerCard site={env.TEST_SITE_URL} />}
+        {!env.TEST_MODE && env.TEST_SITE_URL && <TestServerCard site={env.TEST_SITE_URL} testers={<TesterList />} />}
       </div>
 
       <section aria-label="Last console lines" className="rounded-[4px] border bg-card p-3" data-testid="console-preview">

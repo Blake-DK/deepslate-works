@@ -24,7 +24,8 @@ type Answer = { off: true } | { off: false; summary: Summary | null; problem?: s
 const SEASON_STATE = { upcoming: "announced", running: "running", ended: "ended" } as const;
 const short = (c: string | null) => (c ? c.slice(0, 7) : "?");
 
-export function TestServerCard({ site }: { site: string }) {
+/** `testers` (docs/57): the testers with their switches, made on the server by the page (TesterList). */
+export function TestServerCard({ site, testers }: { site: string; testers?: React.ReactNode }) {
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -80,6 +81,7 @@ export function TestServerCard({ site }: { site: string }) {
             </button>
           )}
         </div>
+        {testers}
       </CardContent>
     </Card>
   );

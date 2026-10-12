@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import type { Manifest, Mod } from "./schema";
 import { getProject, getVersion, getVersions, NotFound, type ModrinthVersion } from "./modrinth";
-import { fetchJar } from "./download";
-import { modUrlProblem } from "./mod-url";
+import { fetchJar, sha512File } from "./download";
+import { modUrlProblem, privateUrl } from "./mod-url";
 import { jarChannels, sideFor, widenForDependents } from "./sides";
-import { openZipFile } from "./zip";
+import { openZipFile, type Zip } from "./zip";
 import { hashConfigs, hashResourcePack } from "./hashes";
 
 export { hashConfigs, hashResourcePack };
@@ -75,7 +76,7 @@ export async function resolveNeoForge(spec: string): Promise<string> {
 }
 
 
-export async function buildLock(m: Manifest, opts: { configDir: string; onProgress?: (msg: string) => void; /** The NeoForge of the lock in hand: kept when the maven cannot be read. */ previousNeoForge?: string; /** modpack/resourcepack/, hashed into the pack. */ resourcepackDir?: string; /** 2.1.0: where jars are kept, so each can be looked into for network channels. */ jarCache?: string }): Promise<{ lock: LockFile; warnings: LockWarning[] }> {
+export async function buildLock(m: Manifest, opts: { configDir: string; onProgress?: (msg: string) => void; /** The NeoForge of the lock in hand: kept when the maven cannot be read. */ previousNeoForge?: string; /** modpack/resourcepack/, hashed into the pack. */ resourcepackDir?: string; /** 2.1.0: where jars are kept, so each can be looked into for network channels. */ jarCache?: string; /** docs/58: data/private-jars/, where a mod's private jar is read from. */ privateDir?: string; /** docs/58: the lock in hand, whose entry for a private jar is kept when the jar is not on this machine. */ previous?: Pick<LockFile, "files"> | null }): Promise<{ lock: LockFile; warnings: LockWarning[] }> {
   const warnings: LockWarning[] = [];
   const warn = (w: string) => warnings.push(w);
   const log = opts.onProgress ?? (() => {});
@@ -85,6 +86,14 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
 
   while (queue.length) {
     const item = queue.shift()!;
+    // docs/58: a private jar is read from disk, not asked of Modrinth; what it needs is what mods.json says it requires
+    if (item.mod?.source) {
+      const e = await privateEntry(item.mod, opts.privateDir, opts.previous ?? null, warn);
+      entries.set(`private:${e.slug}`, e);
+      log(`${e.slug} ${e.versionNumber} (${(e.size / 1048576).toFixed(1)} MB, private jar)`);
+      for (const dep of item.mod.requires) queue.push({ ref: dep, requiredBy: e.slug });
+      continue;
+    }
     const project = await getProject(item.ref).catch((e) => {
       if (e instanceof NotFound) throw new Error(`${item.ref}: not found on Modrinth`);
       throw e;
@@ -95,6 +104,13 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
       continue;
     }
     const mod = item.mod ?? bySlug.get(project.slug);
+    if (mod?.source) {
+      // another mod needs a mod whose jar is private: that jar, never Modrinth's
+      const own = entries.get(`private:${mod.slug}`);
+      if (!own) throw new Error(`${mod.slug}: ${item.requiredBy ?? "the pack"} needs it, but it is switched off (its jar is a private one, docs/58)`);
+      if (item.requiredBy && !own.requiredBy.includes(item.requiredBy)) own.requiredBy.push(item.requiredBy);
+      continue;
+    }
     if (!project.loaders.includes(m.loader) || !project.game_versions.includes(m.minecraft)) {
       throw new Error(`${project.slug}: no ${m.loader} ${m.minecraft} build on Modrinth${item.requiredBy ? ` (required by ${item.requiredBy})` : ""}`);
     }
@@ -126,6 +142,7 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
   if (opts.jarCache) {
     await mkdir(opts.jarCache, { recursive: true });
     for (const f of files) {
+      if (f.channels !== undefined) continue; // a private jar: looked into where it lies
       const at = path.join(opts.jarCache, f.filename);
       await fetchJar(f, at);
       f.channels = jarChannels(await openZipFile(at));
@@ -143,6 +160,46 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
   const resourcepack = await hashResourcePack(opts.resourcepackDir);
   const lock: LockFile = { generatedAt: new Date().toISOString(), minecraft: m.minecraft, neoforge, hash: packHash(neoforge, files, configs, resourcepack), files, configs, ...(resourcepack ? { resourcepack } : {}) };
   return { lock, warnings };
+}
+
+/**
+ * docs/58: the lock's entry for a mod whose jar is private: name, size and checksums from the file in `dir`, which must
+ * be the very file mods.json names (`source.sha512`); its version from the jar's own neoforge.mods.toml. The version id
+ * is made from the checksum, so a new jar is a version change Lock prints like any other. A jar that is not on this
+ * machine keeps the lock's entry when that entry names the same file; otherwise Lock stops.
+ */
+export async function privateEntry(mod: Mod, dir: string | undefined, previous: Pick<LockFile, "files"> | null, warn: (w: string) => void): Promise<LockEntry> {
+  const src = mod.source!;
+  const name = src.private;
+  const fields = { slug: mod.slug, name: mod.name, side: mod.side };
+  const file = dir ? path.join(dir, name) : null;
+  const sum = file ? await sha512File(file) : null;
+  if (sum === null) {
+    const kept = previous?.files.find((f) => f.slug === mod.slug && f.filename === name && f.sha512 === src.sha512 && f.url === privateUrl(name));
+    if (!kept) throw new Error(`${mod.slug}: its private jar ${name} is not in ${dir ?? "the private jars folder"}. It is put there by hand, from the build's artifact (docs/58)`);
+    warn(`${mod.slug}: ${name} is not in ${dir ?? "the private jars folder"} here; its entry is kept from the lock as it was`);
+    return { ...kept, ...fields, requiredBy: [] };
+  }
+  if (sum !== src.sha512) throw new Error(`${mod.slug}: ${name} in ${dir} is not the jar mods.json names: its sha512 is ${sum.slice(0, 16)}…, mods.json says ${src.sha512.slice(0, 16)}…`);
+  const zip = await openZipFile(file!);
+  const version = jarVersion(zip);
+  const channels = jarChannels(zip);
+  if (mod.side === "server" && channels === "required") throw new Error(`${mod.slug}: server-only, but its jar registers network channels every PC must have. Anything both sides need is never server-only: make it "both" in mods.json.`);
+  const sha1 = createHash("sha1");
+  for await (const chunk of createReadStream(file!)) sha1.update(chunk as Buffer);
+  return {
+    ...fields, projectId: "", versionId: `private-${sum.slice(0, 16)}`, versionNumber: version ?? name.replace(/\.jar$/, ""), versionType: "release",
+    filename: name, url: privateUrl(name), sha512: sum, sha1: sha1.digest("hex"), size: (await stat(file!)).size, requiredBy: [], channels,
+  };
+}
+
+/** The version a jar gives itself in META-INF/neoforge.mods.toml (its first mod's), unless that is filled in at build time; null when there is none. */
+export function jarVersion(zip: Zip): string | null {
+  const toml = zip.read("META-INF/neoforge.mods.toml")?.toString("utf8");
+  const v = toml?.match(/^\s*version\s*=\s*"([^"]+)"/m)?.[1];
+  if (v && !v.includes("${")) return v;
+  const manifest = zip.read("META-INF/MANIFEST.MF")?.toString("utf8");
+  return manifest?.match(/^Implementation-Version:\s*(\S+)/m)?.[1] ?? null;
 }
 
 /**

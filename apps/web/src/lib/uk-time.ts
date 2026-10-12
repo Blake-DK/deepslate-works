@@ -29,3 +29,8 @@ export function ukDayTime(d: Date): string {
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return `${get("weekday")} ${get("day")} ${get("month")}, ${get("hour") === "24" ? "00" : get("hour")}:${get("minute")}`;
 }
+
+/** "12 Oct" in UK time: a day, when the hour does not matter. */
+export function ukDay(d: Date): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short" }).format(d);
+}

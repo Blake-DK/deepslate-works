@@ -7,9 +7,9 @@ using System.Windows.Controls;
 namespace DeepslateWorks
 {
     /// <summary>
-    /// docs/45, 3.6.1: the Test tab, the Play tab pointed at the test server. Only for an admin: the tab is made when the
-    /// live site's home says this sign-in is an admin's, and the Test section is asked about only then, so a member's app
-    /// has no Test tab, asks nothing about one and logs nothing of it. Its Play view is the Play tab's (PlayPane, the
+    /// docs/45, 3.6.1: the Test tab, the Play tab pointed at the test server. Only for an admin, and since 3.6.3 a tester
+    /// (docs/57): the tab is made when the live site's home says `test` for this sign-in, and the Test section is asked
+    /// about only then, so any other member's app has no Test tab, asks nothing about one and logs nothing of it. Its Play view is the Play tab's (PlayPane, the
     /// same XAML and code) with the target "test": the test pack, its own game folder and launcher profile, the test
     /// server. The card is the test server in the site's own words; a state this app does not know shows as the site
     /// words it, with no app update.
@@ -21,20 +21,20 @@ namespace DeepslateWorks
 
         void WireTest()
         {
-            // the Test section is asked about with the home, every 10 s, and only for an admin (SyncTestTab)
+            // the Test section is asked about with the home, every 10 s, and only for an admin or a tester (SyncTestTab)
             if (HomeTimer != null) HomeTimer.Tick += (s, e) => { if (TestTab != null) RefreshTestSection(); };
         }
 
-        /// <summary>Makes the Test tab for an admin, takes it away from anyone else (when no test run is going).</summary>
-        void SyncTestTab(bool admin)
+        /// <summary>Makes the Test tab for an admin or a tester, takes it away from anyone else (when no test run is going).</summary>
+        void SyncTestTab(bool test)
         {
-            if (admin && TestTab == null) CreateTestTab();
-            else if (!admin && TestTab != null && TestPane.Mode != "running" && !TestPane.Waiting)
+            if (test && TestTab == null) CreateTestTab();
+            else if (!test && TestTab != null && TestPane.Mode != "running" && !TestPane.Waiting)
             {
                 if (Tabs.SelectedItem == TestTab) Tabs.SelectedItem = PlayTab;
                 Tabs.Items.Remove(TestTab);
                 TestTab = null; TestPane = null;
-                Log.Line("window: the Test tab went (this sign-in is not an admin's any more)");
+                Log.Line("window: the Test tab went (this sign-in is not an admin's or a tester's any more)");
             }
         }
 
@@ -54,7 +54,7 @@ namespace DeepslateWorks
             pane.PlayScroll.ScrollChanged += (s, e) => FitPlayTab();
             FitBlockOn(pane.PlayButton);
             On(pane, () => { ShowIdle(); ShowTestServer(); });
-            Log.Line("window: the Test tab is shown (an admin)");
+            Log.Line("window: the Test tab is shown (an admin or a tester)");
             RefreshTestSection();
         }
 

@@ -29,7 +29,7 @@ describe("modUrlProblem", () => {
 describe("lintLock", () => {
   it("names every file not on the CDN, and only those", () => {
     const files = [{ slug: "sodium", url: CDN }, { slug: "bad", url: "https://example.com/bad.jar" }] as LockEntry[];
-    expect(lintLock({ files })).toEqual([{ level: "error", message: "lock: bad: not on https://cdn.modrinth.com: https://example.com/bad.jar" }]);
+    expect(lintLock({ files })).toEqual([{ level: "error", message: "lock: bad: not on https://cdn.modrinth.com or this site's /downloads/mods/: https://example.com/bad.jar" }]);
   });
 });
 
@@ -48,7 +48,7 @@ describe("Build and a lock with a foreign address", () => {
     const lock = { files: [bad], hash: "abcdef0123456789", neoforge: "21.1.252" } as unknown as LockFile;
     await expect(
       buildServer({ version: "0.0.1" } as Manifest, lock, { dist: path.join(dir, "dist"), config: path.join(dir, "none"), server: path.join(dir, "none") }, () => {}),
-    ).rejects.toThrow("bad-1.0.jar: not on https://cdn.modrinth.com: https://example.com/bad-1.0.jar");
+    ).rejects.toThrow("bad-1.0.jar: not on https://cdn.modrinth.com or this site's /downloads/mods/: https://example.com/bad-1.0.jar");
     expect(fetchMock).not.toHaveBeenCalled();
     expect(await readdir(path.join(dir, "dist", "server", "mods")).catch(() => [])).toEqual([]);
   });

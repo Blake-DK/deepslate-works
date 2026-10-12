@@ -10,6 +10,8 @@ import { wakeLine } from "@/shared/server-state";
 import { VOTE_FIRST_BUTTON } from "@/shared/polls";
 import { dashedUuid } from "@/lib/heads";
 import { getSeasonCurrent, lineFor } from "@/server/season";
+import { canTest } from "@/server/test-app";
+import { checkTesters } from "@/server/testers";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,8 @@ export async function GET(req: Request) {
   };
   const site = env.AUTH_URL.replace(/\/+$/, "");
   if (!user) return Response.json({ signedIn: false, site, server }, { headers: { "cache-control": "no-store" } });
+  // docs/57: at most once a minute, the test server's tester list against this site's (nothing waits for it)
+  void checkTesters();
   const [news, pending, season] = await Promise.all([getAnnouncements(0), pendingFor({ id: user.id, role: user.role }), getSeasonCurrent().then(lineFor).catch(() => null)]);
   const pinned = news.find((n) => n.pinned) ?? null;
   return Response.json(
@@ -38,6 +42,8 @@ export async function GET(req: Request) {
       site,
       name: user.displayName,
       admin,
+      // docs/57 (app 3.6.3): the Test tab, for admins and testers. `admin` keeps everything else of an admin's (Start)
+      test: canTest(user) !== null,
       server,
       online: status.online.map((p) => p.name),
       // 3.4.0 (docs/21 §7): the same players with their UUIDs, so the app can ask /api/app/head/<uuid>.png. A list of

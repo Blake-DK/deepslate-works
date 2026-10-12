@@ -43,6 +43,30 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.4: where a mod file may come from (docs/58, 2026-10-12)
+
+- Until now the app downloaded a mod file from whatever address the mod list gave and trusted the checksum beside it.
+  From 3.6.4 it checks the address first (`Engine.ModUrlProblem`, the site's rule in `packages/modpack` `mod-url.ts`):
+  Modrinth's CDN (`https://cdn.modrinth.com`), or the site the app was built for, and there only
+  `/downloads/mods/<file>` (a private jar the site hands out behind its gate, docs/58) and `/downloads/mods/test/<file>`
+  (the test pack's, passed on by the live site). Anything else stops the run before the file is fetched. The site is
+  the app's own `PortalUrl`, never an address from the mod list; the launcher token goes there and nowhere else, as before.
+- Checked on every mod download: a run, the check of every mod before the game starts, and Update while the game is
+  running (`PrefetchWaiting`). Extras are not changed.
+- An app older than 3.6.4 downloads a private jar too (it checks nothing); 3.6.4 is the hardening, not a need.
+
+## 3.6.3: the Test tab for testers too (docs/57, 2026-10-12)
+
+- The Test tab is made when the live home says `test` for this sign-in (`/api/app/home`'s `test`: an admin, or a member
+  with the Tester switch on), not only `admin`. A site from before docs/57 sends no `test`; the app then reads `admin`,
+  as 3.6.1 did. Only then is `/api/app/test` asked, so any other member's app still has no Test tab and asks nothing.
+- `admin` keeps everything else of an admin's: the Start button for a live server that is switched off or crashed stays
+  an admin's only. The Test tab's own words: "Only admins and testers see this tab."
+- 3.6.2 was already built on `main` (installer run 38239999162) when this was made, so this is 3.6.3, with 3.6.2's render
+  distance in it. An app older than 3.6.3 shows the Test tab to admins only, so a tester needs 3.6.3.
+- `installer/tests/windows-tabs.ps1` opens the window a fifth way, as a tester: the Test tab is there, the Test section is
+  asked, and there is no Start button with the live server switched off.
+
 ## 3.6.2: render distance up to 32, as far as the server can show (Alex, 2026-10-12)
 
 - The Settings tab's render distance slider goes from 4 to **32** chunks (the game's own top), not 16. The live server

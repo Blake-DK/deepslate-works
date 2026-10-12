@@ -12,6 +12,7 @@ import { audit } from "@/server/events";
 import { onDemoted, removeAdminLogin } from "@/server/auth/admin-login";
 import { block, unblock } from "@/server/auth/blocked";
 import { CHAT_RELAYS } from "@/shared/chat-relay";
+import { setTester, testerGone } from "@/server/testers";
 
 export async function setRoleAction(formData: FormData) {
   const admin = await requireAdmin();
@@ -69,6 +70,21 @@ export async function setBuilderToolsAction(formData: FormData) {
   if (!on) await builderOff(admin.id, parsed.data.id);
   revalidatePath("/admin/people");
   revalidatePath("/admin/builds");
+  revalidatePath("/players/[uuid]", "page");
+}
+
+/**
+ * docs/57: the Tester switch. One click, saved at once, no confirm: on gives the member the app's Test tab, the test
+ * server's whitelist and a test door that lets them straight in; off takes all three away (and kicks them off the test
+ * server). Only for a member with a linked Minecraft account. Audited as `user.tester` (server/testers.ts).
+ */
+export async function setTesterAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const parsed = z.object({ id: z.string().min(1), on: z.enum(["1", "0"]) }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  await setTester(parsed.data.id, parsed.data.on === "1", admin.id);
+  revalidatePath("/admin");
+  revalidatePath("/admin/people");
   revalidatePath("/players/[uuid]", "page");
 }
 
@@ -130,6 +146,8 @@ export async function removeUserAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id || id === admin.id) return;
   const removed = await db.user.delete({ where: { id } }).catch(() => null);
+  // docs/57: removed (or blocked), a tester is one no more: off the test server's whitelist, and kicked if on it
+  if (removed) await testerGone(formData.get("block") === "1" ? "removed and blocked" : "removed", admin.id, { gone: removed });
   // docs/31 B-37: "Remove and block". Without it, their next Discord sign-in makes a new account while they are in the server.
   const blocked = Boolean(removed?.discordId) && formData.get("block") === "1";
   if (blocked) await block(removed!.discordId!, removed!.displayName, admin.id);
@@ -164,6 +182,9 @@ export async function setMinecraftNameAction(formData: FormData) {
   if (!lookup.ok) redirect(`/admin/people?error=${lookup.reason}`);
   const taken = await db.user.findFirst({ where: { mcUuid: lookup.uuid, NOT: { id: parsed.data.id } }, select: { displayName: true } });
   if (taken) redirect("/admin/people?error=taken");
+  // docs/57: a tester linked to another Minecraft account is a tester no more; the switch is turned on again for the new one
+  const was = await db.user.findUnique({ where: { id: parsed.data.id }, select: { mcUuid: true } });
+  if (was?.mcUuid && was.mcUuid !== lookup.uuid) await testerGone("linked to another Minecraft account", admin.id, { id: parsed.data.id });
   // docs/35 R-30: the name is unique too; a row that still holds it from before its owner renamed lets go of it.
   await db.$transaction([
     db.user.updateMany({ where: { mcUsername: lookup.name, NOT: { id: parsed.data.id } }, data: { mcUsername: null } }),
@@ -179,6 +200,8 @@ export async function setMinecraftNameAction(formData: FormData) {
 export async function clearMinecraftNameAction(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
+  // docs/57: unlinked, a tester is one no more (told while the account is still known)
+  if (id) await testerGone("unlinked", admin.id, { id });
   const u = await db.user.update({ where: { id }, data: { mcUsername: null, mcUuid: null, verifiedAt: null } }).catch(() => null);
   if (u) await audit({ userId: admin.id, action: "user.clearMinecraft", params: { id }, result: "OK" });
   revalidatePath("/admin/people");

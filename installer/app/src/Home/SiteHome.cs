@@ -40,6 +40,9 @@ namespace DeepslateWorks
     public sealed class HomeInfo
     {
         public bool SignedIn, Admin;
+        /// <summary>3.6.3 (docs/57): the Test tab is for this sign-in, an admin's or a tester's. A site from before it sends no
+        /// `test`: then an admin's only, as in 3.6.1.</summary>
+        public bool Test;
         public string Site, Name;
         public ServerInfo Server = new ServerInfo();
         public List<string> Online = new List<string>();
@@ -65,7 +68,8 @@ namespace DeepslateWorks
         {
             var h = new HomeInfo
             {
-                SignedIn = J.Bool(j, "signedIn"), Admin = J.Bool(j, "admin"), Site = J.Str(j, "site") ?? Env.PortalUrl, Name = J.Str(j, "name"),
+                SignedIn = J.Bool(j, "signedIn"), Admin = J.Bool(j, "admin"), Test = J.Has(j, "test") ? J.Bool(j, "test") : J.Bool(j, "admin"),
+                Site = J.Str(j, "site") ?? Env.PortalUrl, Name = J.Str(j, "name"),
                 Server = ParseServer(J.Obj(j, "server")),
                 Online = J.Strs(j, "online"),
             };
@@ -238,8 +242,8 @@ namespace DeepslateWorks
         }
 
         /// <summary>
-        /// docs/45: the Test section. The live site answers an admin with the test server's state; anyone else gets "not
-        /// found", and so does a site without the section: then null, and the window shows nothing of it.
+        /// docs/45: the Test section. The live site answers an admin or a tester (docs/57) with the test server's state;
+        /// anyone else gets "not found", and so does a site without the section: then null, and the window shows nothing of it.
         /// </summary>
         public static JObj FetchTestSection()
         {

@@ -1,25 +1,27 @@
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// docs/45: the launcher's Test section, version one. Admins only; anyone else gets the missing-page answer on every route.
+// docs/45: the launcher's Test section. Admins, and since docs/57 testers; anyone else gets the missing-page answer on every route.
 
-const who = vi.hoisted(() => ({ user: null as null | { id: string; role: string; displayName: string; discordId: string | null; pcTier: string | null } }));
-const calls = vi.hoisted(() => ({ list: [] as string[] }));
+const who = vi.hoisted(() => ({ user: null as null | { id: string; role: string; displayName: string; discordId: string | null; pcTier: string | null; tester?: boolean } }));
+const calls = vi.hoisted(() => ({ list: [] as string[], bodies: [] as unknown[], audits: [] as Array<{ action: string; params: Record<string, unknown> }>, checks: [] as unknown[] }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NEXT_NOT_FOUND"); } }));
 vi.mock("@/server/launcher", () => ({ bearer: () => "t".repeat(32), userFromLauncherToken: async () => who.user }));
 vi.mock("@/env", () => ({ env: { TEST_MODE: false, TEST_STACK: true, TEST_APP_TOKEN: "a".repeat(64), TEST_API_URL: "http://deepslate-wg:4001", AUTH_URL: "https://deepslate.dsw.test" } }));
-vi.mock("@/server/events", () => ({ audit: async () => {} }));
+vi.mock("@/server/events", () => ({ audit: async (a: { action: string; params: Record<string, unknown> }) => { calls.audits.push(a); } }));
+vi.mock("@/server/testers", () => ({ checkTesters: async (seen?: string | null) => { calls.checks.push(seen); return "same"; } }));
 vi.mock("@/server/modpack/lock", () => ({ getInstaller: async () => ({ version: "3.5.5", exe: { version: "3.5.5", sha256: "x".repeat(64), size: 1 } }) }));
 vi.mock("@/server/branding", () => ({ getBranding: async () => ({ generated: null }), readLogoBase64: async () => null }));
 const LOCK = { generatedAt: "2026-10-09T08:00:00Z", minecraft: "1.21.1", neoforge: "21.1.253", hash: "d44eb2ba".padEnd(64, "0"), configs: [{ path: "config/a.toml", sha256: "0".repeat(64) }],
   files: [{ slug: "create", name: "Create", filename: "create.jar", url: "https://cdn.modrinth.com/create.jar", sha512: "1".repeat(128), size: 10, side: "both" }, { slug: "worldedit", name: "WorldEdit", filename: "we.jar", url: "https://cdn.modrinth.com/we.jar", sha512: "2".repeat(128), size: 10, side: "server" }] };
 const MODS = JSON.parse(readFileSync(new URL("../../../modpack/mods.json", import.meta.url), "utf8")) as { name: string; version: string; profile: { dir: string } };
 vi.mock("@/server/api-client", () => ({
-  testAppCall: async (p: string, init?: { method?: string }) => {
+  testAppCall: async (p: string, init?: { method?: string; body?: unknown }) => {
     calls.list.push(p);
+    if (init?.body !== undefined) calls.bodies.push(init.body);
     if (p === "/test/app/wake" && (init?.method ?? "GET") === "GET") return new Response(JSON.stringify({ server: "waking", wake: { phase: "waking" } }), { status: 200 });
     if (p === "/test/app/pack") return new Response(JSON.stringify({ mods: MODS, lock: LOCK }), { status: 200 });
-    if (p === "/test/app/state") return new Response(JSON.stringify({ state: "asleep", players: [], address: "lab.dsw.test", pack: { site: "0.1.0+d44eb2ba", server: "0.1.0+d44eb2ba" } }), { status: 200 });
+    if (p === "/test/app/state") return new Response(JSON.stringify({ state: "asleep", players: [], address: "lab.dsw.test", pack: { site: "0.1.0+d44eb2ba", server: "0.1.0+d44eb2ba" }, testers: "f".repeat(64) }), { status: 200 });
     if (p === "/test/app/wake") return new Response(JSON.stringify({ result: "started" }), { status: 202 });
     return new Response(new Uint8Array([80, 75]), { status: 200, headers: { "content-length": "2" } });
   },
@@ -34,10 +36,10 @@ const routes = async () => ({
   watch: (await import("@/app/api/app/test/wake/route")).GET,
 });
 
-beforeEach(() => { calls.list = []; });
+beforeEach(() => { calls.list = []; calls.bodies = []; calls.audits = []; calls.checks = []; });
 
 describe("a member who is not an admin, or nobody (answered as a path that does not exist)", () => {
-  for (const user of [null, { id: "u1", role: "PLAYER", displayName: "Bramble09", discordId: "123456789012345678", pcTier: null }]) {
+  for (const user of [null, { id: "u1", role: "PLAYER", displayName: "Bramble09", discordId: "123456789012345678", pcTier: null }, { id: "u2", role: "PLAYER", displayName: "Rowan", discordId: "123456789012345679", pcTier: null, tester: false }]) {
     it(`${user ? "a player's app" : "an app with no valid token"}: every route gives the middleware's 401 for an unknown path, and the test stack is never asked`, async () => {
       who.user = user;
       const r = await routes();
@@ -122,5 +124,44 @@ describe("test Play reports", () => {
     const { PLAY_MODES } = await import("@/shared/join-gate");
     expect(MODES).toContain("test_play");
     expect(PLAY_MODES as readonly string[]).not.toContain("test_play");
+  });
+});
+
+describe("a tester (docs/57): the Tester switch on, not an admin", () => {
+  beforeEach(() => { who.user = { id: "p1", role: "PLAYER", displayName: "KaneFinch", discordId: "123456789012345670", pcTier: "low", tester: true }; });
+  it("gets every route an admin gets, and each log line says it was a tester", async () => {
+    const r = await routes();
+    expect((await r.section(req("/api/app/test"))).status).toBe(200);
+    expect((await r.manifest(req("/api/app/test/manifest"))).status).toBe(200);
+    expect((await r.config(req("/api/app/test/config.zip"))).status).toBe(200);
+    expect((await r.watch(req("/api/app/test/wake"))).status).toBe(200);
+    expect((await r.wake(req("/api/app/test/wake", "POST"))).status).toBe(202);
+    expect(calls.audits.map((a) => [a.action, a.params.as])).toEqual([["test.app.manifest", "tester"], ["test.app.wake", "tester"]]);
+  });
+  it("wakes the test server as admins can (T2), and the test server is told it is a tester", async () => {
+    await (await routes()).wake(req("/api/app/test/wake", "POST"));
+    expect(calls.bodies).toEqual([{ discordId: "123456789012345670", name: "KaneFinch", as: "tester" }]);
+  });
+  it("the section's answer is checked against this site's tester list (the fingerprint passed on)", async () => {
+    await (await routes()).section(req("/api/app/test"));
+    expect(calls.checks).toEqual(["f".repeat(64)]);
+  });
+});
+
+describe("who the Test section is for (canTest: the home's `test`)", () => {
+  it("an admin, or a member with the switch on; nobody else", async () => {
+    const { canTest } = await import("@/server/test-app");
+    expect(canTest({ role: "ADMIN" })).toBe("admin");
+    expect(canTest({ role: "ADMIN", tester: true })).toBe("admin");
+    expect(canTest({ role: "PLAYER", tester: true })).toBe("tester");
+    expect(canTest({ role: "PLAYER", tester: false })).toBeNull();
+    expect(canTest({ role: "PLAYER" })).toBeNull();
+    expect(canTest(null)).toBeNull();
+  });
+  it("an admin's own log lines still say admin", async () => {
+    who.user = { id: "a1", role: "ADMIN", displayName: "Alex", discordId: "123456789012345678", pcTier: "mid", tester: false };
+    await (await routes()).wake(req("/api/app/test/wake", "POST"));
+    expect(calls.audits.map((a) => a.params.as)).toEqual(["admin"]);
+    expect(calls.bodies).toEqual([{ discordId: "123456789012345678", name: "Alex", as: "admin" }]);
   });
 });

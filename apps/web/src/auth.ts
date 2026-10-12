@@ -19,6 +19,7 @@ import { checkAdminSignIn } from "@/server/auth/admin-core";
 import { auditSignIn, countryOf, signInDeps } from "@/server/auth/admin-login";
 import { adminLockouts } from "@/server/auth/lockout";
 import { logAuthError, reportSignIn } from "@/server/auth/signin-report";
+import { testerGone } from "@/server/testers";
 
 class RateLimited extends CredentialsSignin {
   code = "rate_limited";
@@ -160,6 +161,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (leftServer && existing?.guildMember && !existing.outsideAuth) {
           await db.user.update({ where: { id: existing.id }, data: { guildMember: false, sessionVersion: { increment: 1 } } });
           await db.launcherAuth.updateMany({ where: { userId: existing.id, status: "approved" }, data: { status: "denied" } });
+          // docs/57: and the Tester switch goes off
+          await testerGone("left the Discord server", null, { id: existing.id }).catch(() => undefined);
         }
         if (why === "invite-invalid") dropInvite();
         await audit({ action: "auth.login", params: { discordId, via: "discord" }, result: "DENIED", detail });

@@ -30,6 +30,7 @@ export async function GET(req: Request) {
     branding: brand.generated ? { hash: brand.generated.hash, name: brand.name, tagline: brand.tagline, pixel: brand.generated.pixel, icon128: await readLogoBase64(128) } : null,
     tier: user.pcTier ?? null,
     configUrl: `${env.AUTH_URL}/api/app/test/config.zip`,
+    site: env.AUTH_URL,
   });
   await audit({ userId: user.id, action: "test.app.manifest", params: { version: body.version, files: body.files.filter((f) => f.side !== "server").length, as: who.as }, result: "OK" });
   return Response.json(body, { headers: { "cache-control": "no-store" } });

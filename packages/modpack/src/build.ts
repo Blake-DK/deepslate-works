@@ -74,7 +74,7 @@ export function jarStem(file: string): string {
 }
 
 /** dist/server/mods + configs + server-only files; jars are downloaded and hash-checked. */
-export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: string; config: string; server: string; datapacks?: string }, log: (s: string) => void): Promise<string> {
+export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: string; config: string; server: string; datapacks?: string; privateJars?: string }, log: (s: string) => void): Promise<string> {
   const out = path.join(paths.dist, "server");
   const modsDir = path.join(out, "mods");
   await mkdir(modsDir, { recursive: true });
@@ -82,7 +82,7 @@ export async function buildServer(m: Manifest, lock: LockFile, paths: { dist: st
   let downloaded = 0;
   for (const e of lock.files.filter(forServer)) {
     wanted.add(e.filename);
-    if ((await fetchJar(e, path.join(modsDir, e.filename), log)) === "downloaded") downloaded++;
+    if ((await fetchJar(e, path.join(modsDir, e.filename), log, { privateDir: paths.privateJars })) === "downloaded") downloaded++;
     // 2.1.0: a server-only mod with required network channels would get every player refused at the handshake
     if (e.side === "server" && jarChannels(await openZipFile(path.join(modsDir, e.filename))) === "required") throw new Error(`${e.slug} is server-only but registers network channels every PC must have: make it "both" in mods.json, Lock, Build again`);
   }

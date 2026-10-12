@@ -81,6 +81,14 @@ say live is stopped, held or to be trimmed in place, this section wins.
     the blockers above. Not done.
   - The same Lock run today also moved two unpinned mods (`kotlin-lang-forge` 2.14.1 → 2.15.0, `titanium`
     1.21-4.0.50 → 4.0.51), so that lock was not kept. The pack commit, when it goes, is Lock on the day.
+- **2026-10-12, later (Alex: "use my custom version"):** PR #48 (Testers and #47, adapted to `main` without seasons)
+  merged to `main` (`0160985c`), **not yet deployed**. The fork's `main` now holds the fix (`c9981ca`, fast-forward).
+  `dev` `f9a9331a`: Mowzie's from the private jar 1.8.2-dsw.1 (`source`, `requires: ["geckolib"]`, no pinned version;
+  still `s1`, still admin-only). Only Mowzie's lock entry and the hash changed: a full Lock would also move
+  kotlin-lang-forge and titanium, and titanium's move fails check-sides against the server's last start. Until live
+  runs #48 (`sudo deploy/deploy.sh`) and the test pair is on new images with the mount (`sudo deploy/test-up.sh`),
+  the Test tab cannot fetch the jar and a test Build cannot copy it. PR #49 (another session, the same code with
+  docs/44) duplicates #48.
 
 ## The quarry, second pass: docs/56 (2026-10-12, §2 measured on test, k = 32; the pausing mod approved for test)
 

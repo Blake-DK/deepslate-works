@@ -26,6 +26,20 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Testers: docs/57 (2026-10-12, planned)
+
+- **Alex, 2026-10-12:** a normal player on the test server without being an admin, turned on and off with one click.
+  A **Tester** switch on live Admin → People and on the Test server card; on, the member gets the app's Test tab, the
+  test server's whitelist and a test door that lets them straight in. They never see the test site (T1) and may wake
+  the test server from the app (T2). Admins count as testers without the switch.
+- **Planned, one feature PR to `dev`:** T-a (migration `User.tester`, the switch and its audit `user.tester`,
+  `appTester` on the four `/api/app/test` routes, the home's `test`, `POST /test/app/tester` on `api-test` as a fifth
+  path for `TEST_APP_TOKEN`, the whitelist made to match at every test start, the whole list sent at every `api-test`
+  start, docs/38) and T-b (the app's Test tab on `test`; 3.6.2 is already built on `main`, so this is **3.6.3**). The
+  exe goes to Alex only; no tester gets it before he has tried it on his own PC. Then docs/57 §5's nine checks with a
+  real non-admin.
+- docs/49's row "Tester tick for non-admins" is marked planned in docs/57.
+
 ## Render distance up to 32, app 3.6.2 (2026-10-12, on `dev`; not built or deployed)
 
 - **Why:** Admin → Server → Performance showed view distance 20 (what live runs since Alex's decision of 2026-10-09),

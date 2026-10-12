@@ -1033,7 +1033,7 @@
       ],
       "guide": "game",
       "topic": "factories",
-      "howTo": "Turns Create's rotation into electricity. Put an **alternator** on a spinning shaft, run **copper wire** (spools) from its connector to a machine's connector, and it has power. **Electric motors** turn power back into rotation; **accumulators** store it."
+      "howTo": "Turns Create's rotation into electricity. Put an **alternator** on a spinning shaft, run **copper wire** (spools) from its connector to a machine's connector, and it has power. **Electric motors** turn power back into rotation; **accumulators** store it. One water wheel can't turn an alternator on its own: put several on the same shaft."
     },
     {
       "slug": "create-big-cannons",
@@ -1168,7 +1168,7 @@
       ],
       "guide": "game",
       "topic": "factories",
-      "howTo": "Power for Mekanism: start with a **Heat Generator** (burns fuel or sits next to lava), then **solar** or **wind generators**. Connect them to machines with universal cables."
+      "howTo": "Power for Mekanism: start with a **Heat Generator** (burns lava or other fuel; lava around it adds a little), then **solar** or **wind generators** (the higher a wind generator stands, the more it makes). Connect them to machines with universal cables."
     },
     {
       "slug": "mekanism-tools",
@@ -1381,7 +1381,7 @@
       ],
       "guide": "game",
       "topic": "mining",
-      "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock. It needs a lot of power to run at full speed: one small generator will only crawl."
+      "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock. It needs real power to dig fast: one small generator only crawls. **Wind generators** built high up are the easiest real power. **Unbreaking** makes it cheaper to run; **Efficiency** makes it hungrier, not faster. When its chest is full it keeps what it digs inside and empties it when there is room, so don't break a quarry that is still holding items."
     },
     {
       "slug": "tacz-1.21.1",

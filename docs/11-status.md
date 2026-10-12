@@ -91,6 +91,12 @@ say live is stopped, held or to be trimmed in place, this section wins.
 
   Not measured: one wheel geared down to 4 RPM (about 5 FE a tick by the alternator's formula) and four wheels geared
   up to 16 RPM (about 22).
+- **Mods guide (Alex, 2026-10-12, "build that"):** the quarry's `howTo` now says it needs real power, that wind
+  generators built high up are the easiest real power, that Unbreaking makes it cheaper and Efficiency hungrier, and
+  what really happens when its chest is full (it keeps what it digs inside until there is room, lost if broken). That
+  last sentence becomes docs/56 §4's "it stops" once the pausing mod exists. Crafts & Additions: one water wheel can't
+  turn an alternator; Mekanism Generators: a Heat Generator burns lava or other fuel (lava around it adds a little), a
+  wind generator makes more the higher it stands. All from the step 7 measurements.
 - Cleanup: every quarry removed and every force-load taken off; the stone columns, frames, generators and water
   wheels stay in the sky over x 8000 to 8640 in the test world (the rehearsal starts from a fresh copy of live).
 

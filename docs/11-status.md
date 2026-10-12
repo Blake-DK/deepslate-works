@@ -49,6 +49,16 @@ say live is stopped, held or to be trimmed in place, this section wins.
   test pack holds a private jar;** Play again may get through when no poll is queued at that moment.
 - **Not tried:** the 3.6.5 exe on a PC, a Test run that downloads the private jar while the window polls. That is the
   check, on Alex's PC.
+- **On `main` and live, seen working (2026-10-12).** PR #51 (`app-3-6-5-main`, the one commit cherry-picked, no pack
+  change) merged as `bb2c7a35`; `deploy.sh` ran about 17:49 UTC (web and api on the `bb2c7a35` images, the exe in
+  `dist/ci`); Build (installer) on live published 3.6.5 at 17:54:30 (`dist/installer.json` exe 3.6.5, sha256
+  `4074da02…`, CI's). The site's event log: two more Test runs failed the same way at 17:53 on 3.6.4 (before the
+  publish); at 17:55:37 the app downloaded 3.6.5; at 17:55:52 the Test run fetched the private jar through the live
+  site; 17:56:13 "installed 0.1.0+8b610bea: all good"; 17:57:05 the test game started with every mod of the test pack.
+  That is the case that failed before, with the window polling: the fix holds. A Test run updates the app like a live
+  run (the test manifest carries live's `installer`); it only had nothing to offer before 17:54:30. `main` merged into
+  `dev` after it (this commit). Alex also ran Sync on live (pack `d44eb2ba`, unchanged) and restarted the live server at
+  17:55.
 - **Merged into `dev` (Alex, 2026-10-12, after CI passed).** The PR's `check` failed twice on the shipped-pack pins
   (`ship.test.ts`, then `pack-ship.test.ts`: 75 files, `c0b230b4`), never on the app change; the installer workflow
   built the 3.6.5 exe and passed its tests on the first commit. `dev`'s pack now differs from `main`'s (the pause mod,

@@ -6,6 +6,11 @@ import { describe, expect, it } from "vitest";
 import { serviceAuth } from "../src/auth.js";
 import { TEST_APP_PATHS, testAppRoutes } from "../src/test-mode/app-routes.js";
 import type { ServerState } from "../src/shared/server-state.js";
+import { Testers } from "../src/test-mode/testers.js";
+import { testersHash } from "../src/shared/testers.js";
+
+/** docs/57: a tester list with nothing behind it but what it was told. */
+const noTesters = () => new Testers({ load: async () => null, save: async () => {}, isAdmin: async () => false, admit: async () => {}, hold: async () => {}, server: () => ({ up: false, players: [] }), run: async () => true, log: () => {} });
 
 // docs/45: what the test server's api tells the live web for the launcher's Test section, behind a token of its own.
 
@@ -30,6 +35,7 @@ async function setup(state: ServerState = "asleep") {
     pack: async () => ({ site: "0.1.0+d44eb2ba", server: "0.1.0+d44eb2ba" }),
     wake: { start: async (id: string, name: string, via?: string) => { woke.push({ id, name, via: via ?? "" }); }, view: () => ({ phase: "idle" }) as never },
     memberByDiscord: async (d) => (d === "123456789012345678" ? { id: "t1", displayName: "Alex" } : null),
+    testers: noTesters(),
   });
   return { app, woke };
 }
@@ -64,6 +70,12 @@ describe("the Test section's routes on the test server (docs/45)", () => {
     expect(r.statusCode).toBe(202);
     expect(woke).toEqual([{ id: "t1", name: "Alex (live admin, through the app's Test section)", via: "app" }]);
   });
+  it("wake it for a tester too (docs/57 T2), naming them as a live tester", async () => {
+    const { app, woke } = await setup("asleep");
+    const r = await app.inject({ method: "POST", url: "/test/app/wake", headers: bearer(APP), payload: { discordId: null, name: "KaneFinch", as: "tester" } });
+    expect(r.statusCode).toBe(202);
+    expect(woke).toEqual([{ id: "", name: "KaneFinch (live tester, through the app's Test section)", via: "app" }]);
+  });
   it("do not start a switched-off test server, and say so", async () => {
     const { app, woke } = await setup("off");
     const r = await app.inject({ method: "POST", url: "/test/app/wake", headers: bearer(APP), payload: { name: "Alex" } });
@@ -87,6 +99,7 @@ describe("the test wake tells the truth (3.6.1, item 7)", () => {
       wake: { start: async (_id: string, name: string) => { woke.push(name); }, view: () => ({ phase: woke.length ? "waking" : "idle" }) as never },
       refresh: async () => { asked++; at++; },
       memberByDiscord: async () => null,
+      testers: noTesters(),
     });
     return { app, woke, asked: () => asked };
   }
@@ -123,5 +136,33 @@ describe("the test wake tells the truth (3.6.1, item 7)", () => {
     expect(r.statusCode).toBe(200);
     expect((r.json() as { wake: { phase: string } }).wake.phase).toBe("waking");
     expect((await t.app.inject({ url: "/test/app/wake", headers: bearer(SERVICE) })).statusCode).toBe(401);
+  });
+});
+
+describe("who the testers are (docs/57): POST /test/app/tester", () => {
+  const KANE = { uuid: "0f2a7c3e9d1b4c6a8e5f7a9b1c3d5e7f", name: "KaneFinch" };
+  it("is the token's fifth path, and only its", async () => {
+    const { app } = await setup();
+    expect(TEST_APP_PATHS).toHaveLength(5);
+    expect(TEST_APP_PATHS).toContain("/test/app/tester");
+    expect((await app.inject({ method: "POST", url: "/test/app/tester", headers: bearer(SERVICE), payload: { ...KANE, on: true } })).statusCode).toBe(401);
+    expect((await app.inject({ method: "POST", url: "/test/app/tester", payload: { ...KANE, on: true } })).statusCode).toBe(401);
+    expect((await app.inject({ method: "POST", url: "/test/app/tester", headers: bearer(APP), payload: { ...KANE, on: true } })).statusCode).toBe(200);
+  });
+  it("refuses anything that is not a tester or a list of them", async () => {
+    const { app } = await setup();
+    for (const payload of [{}, { uuid: KANE.uuid, name: "not a name!", on: true }, { uuid: "x", name: "KaneFinch", on: true }, { ...KANE }, { testers: [{ uuid: KANE.uuid }] }]) {
+      expect((await app.inject({ method: "POST", url: "/test/app/tester", headers: bearer(APP), payload })).statusCode).toBe(400);
+    }
+  });
+  it("the state's fingerprint is null until the whole list has come since the start, then the list's", async () => {
+    const { app } = await setup();
+    const state = async () => ((await app.inject({ url: "/test/app/state", headers: bearer(APP) })).json() as { testers: string | null }).testers;
+    expect(await state()).toBeNull();
+    await app.inject({ method: "POST", url: "/test/app/tester", headers: bearer(APP), payload: { ...KANE, on: true } });
+    expect(await state()).toBeNull(); // one change is not the whole list
+    const r = await app.inject({ method: "POST", url: "/test/app/tester", headers: bearer(APP), payload: { testers: [KANE] } });
+    expect((r.json() as { testers: string }).testers).toBe(testersHash([KANE]));
+    expect(await state()).toBe(testersHash([KANE]));
   });
 });

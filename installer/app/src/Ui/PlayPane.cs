@@ -11,7 +11,7 @@ namespace DeepslateWorks
 {
     /// <summary>
     /// 3.6.1: one Play view and everything that belongs to its server. The Play tab is the live server's, the Test tab
-    /// (admins only) the test server's: the same view (AppWindow.PlayViewXaml, parsed once for each, so each copy has
+    /// (admins and testers only) the test server's: the same view (AppWindow.PlayViewXaml, parsed once for each, so each copy has
     /// names of its own) and the same code. The window's Play code works on one pane at a time (AppUi.P): the one whose
     /// button was pressed, whose run sent the line, whose countdown ticked. Outside those it is the live one.
     /// </summary>

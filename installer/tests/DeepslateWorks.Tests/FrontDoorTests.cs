@@ -56,6 +56,21 @@ namespace DeepslateWorks.Tests
             Assert.False(player.Admin || player.Server.CanStart);
         }
 
+        [Fact] public void The_Test_tab_follows_the_homes_test_and_Start_stays_an_admins()
+        {
+            // 3.6.3 (docs/57): a tester's home says test but not admin: the Test tab, and still no Start
+            var tester = H(HomeSamples.OffAdmin.Replace("\"admin\": true", "\"admin\": false, \"test\": true").Replace("\"canStart\": true", "\"canStart\": false"));
+            Assert.True(tester.Test);
+            Assert.False(tester.Admin || tester.Server.CanStart);
+            // an admin's home from this site says both
+            Assert.True(H(HomeSamples.OffAdmin.Replace("\"admin\": true", "\"admin\": true, \"test\": true")).Test);
+            // a member: neither
+            Assert.False(H(HomeSamples.OffAdmin.Replace("\"admin\": true", "\"admin\": false, \"test\": false")).Test);
+            // a site from before 3.6.3 sends no `test`: an admin's only, as in 3.6.1
+            Assert.True(H(HomeSamples.OffAdmin).Test);
+            Assert.False(H(HomeSamples.OffAdmin.Replace("\"admin\": true", "\"admin\": false")).Test);
+        }
+
         [Fact] public void Votes_come_oldest_first_and_keep_Play_shut_until_answered()
         {
             var h = H(HomeSamples.TwoVotes);

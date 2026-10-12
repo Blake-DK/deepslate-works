@@ -162,7 +162,7 @@ namespace DeepslateWorks
             var first = SiteNow == null;
             SiteNow = h;
             ShowServer(h);
-            if (!homeSim) SyncTestTab(h.SignedIn && h.Admin);   // 3.6.1: the Test tab is made for an admin only, and asked about only then
+            if (!homeSim) SyncTestTab(h.SignedIn && h.Test);   // 3.6.3 (docs/57): the Test tab is made for an admin or a tester only, and asked about only then
             // Wake on open: a sleeping server starts booting the moment the app opens (the site decides: Asleep only, for
             // members the door would let in, one start however often). The run's own wake is the same call.
             if (!homeSim && !wokeAtOpen && h.SignedIn && h.Server.Asleep) { wokeAtOpen = true; WakeNow("opened"); }

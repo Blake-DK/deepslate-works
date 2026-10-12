@@ -53,7 +53,7 @@ namespace DeepslateWorks
         public static string WakeUrl => WakeUrlFor(Target);
         /// <summary>3.6.1: the wake of a named server, for the window: it never reads Target, which a waiting run holds.</summary>
         public static string WakeUrlFor(string target) => target == "test" ? PortalUrl + "/api/app/test/wake" : PortalUrl + "/api/play/wake";
-        /// <summary>docs/45: the Test section asks here whether to show itself (admins only; anyone else: not found).</summary>
+        /// <summary>docs/45: the Test section asks here whether to show itself (admins and, docs/57, testers only; anyone else: not found).</summary>
         public static string TestSectionUrl => PortalUrl + "/api/app/test";
 
         /// <summary>

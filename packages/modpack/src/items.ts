@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { openZip, type Zip } from "./zip";
+import { openZip, openZipOnDisk, type Zip } from "./zip";
 
 // docs/13 §13: the item catalogue for the admin's inventory editor. Every item the server knows, with a name, the mod
 // it comes from, its stack size where known and an icon. Vanilla: the list and stack sizes from Minecraft's own data
@@ -103,7 +103,17 @@ export async function buildItems(p: { dist: string; vanilla: string }, log: (s: 
   const client = openZip(await clientJar(path.join(p.dist, "cache"), v, log));
   const modsDir = path.join(p.dist, "server", "mods");
   const jars = (await readdir(modsDir).catch(() => [] as string[])).filter((f) => f.endsWith(".jar")).sort();
-  const mods = await Promise.all(jars.map(async (f) => ({ file: f, zip: openZip(await readFile(path.join(modsDir, f))) })));
+  // each jar is read from disk as its entries are asked for: all of them in memory at once outgrew the api's limit
+  const mods: Array<{ file: string; zip: Zip }> = [];
+  try {
+    for (const f of jars) mods.push({ file: f, zip: openZipOnDisk(path.join(modsDir, f)) });
+    return await catalogueOf(p, v, client, mods, log);
+  } finally {
+    for (const m of mods) m.zip.close?.();
+  }
+}
+
+async function catalogueOf(p: { dist: string }, v: Vanilla, client: Zip, mods: Array<{ file: string; zip: Zip }>, log: (s: string) => void): Promise<Catalogue> {
   const all: Sources = [{ zip: client }, ...mods.map((m) => ({ zip: m.zip }))];
   const out = path.join(p.dist, "items");
   const tmp = `${out}.tmp`;

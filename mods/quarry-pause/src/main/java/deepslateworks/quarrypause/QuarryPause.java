@@ -10,8 +10,13 @@ import net.neoforged.fml.common.Mod;
  * is left there, the mixins skip the quarry's dig step, so it breaks nothing and uses no power. The push still runs
  * every tick, so the quarry carries on by itself once a chest is emptied or a pipe frees up.
  *
- * At most the drops of the last block wait in the storage. They are not dropped when the quarry is broken: a mod that
- * moves blocks (a Create contraption) removes the block after copying its data, and dropping then would duplicate them.
+ * Only items count. Fluids (water or lava picked up with a pump module) stay in the storage and the quarry carries on
+ * digging, as before: a quarry with a pump module and no tank beside it would otherwise stop at the first water.
+ *
+ * In a quarry at most the drops of the last block wait in the storage. An Adv. Quarry breaks more per turn and the push
+ * moves about six item types a tick, so it can hold more for a few ticks. What waits is not dropped when the machine is
+ * broken: a mod that moves blocks (a Create contraption) removes the block after copying its data, and dropping then
+ * would duplicate it.
  *
  * Server only: nothing here is sent to players, and their game does not need this mod.
  */

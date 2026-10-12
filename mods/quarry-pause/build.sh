@@ -10,7 +10,8 @@
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$here/src/main/resources/META-INF/neoforge.mods.toml")
-image=eclipse-temurin:21.0.4_7-jdk-alpine
+# the JDK image by digest, so a re-tagged image cannot slip in
+image=eclipse-temurin:21.0.4_7-jdk-alpine@sha256:37abc85b7046a2301ce60e76a28ab07a339e864fd9376c4b44b64b07c44a52d6
 deps="$here/dist/deps"
 mkdir -p "$deps"
 
@@ -24,11 +25,13 @@ fetch() { # name url sha512
 # the quarry, as in modpack/mods.lock.json; the mixin targets were read from this exact jar
 fetch quarryplus.jar https://cdn.modrinth.com/data/jhxX1zVW/versions/p0XlQYuL/AdditionalEnchantedMiner-1.21.1-neoforge-21.1.164.jar \
   "$(python3 -c "import json,sys;print([f for f in json.load(open(sys.argv[1]))['files'] if f['filename']=='AdditionalEnchantedMiner-1.21.1-neoforge-21.1.164.jar'][0]['sha512'])" "$here/../../modpack/mods.lock.json")"
-# @Mod, from the FancyModLoader NeoForge 21.1.253 runs; the mixin annotations, from the Mixin it runs
-fetch loader.jar https://maven.neoforged.net/releases/net/neoforged/fancymodloader/loader/4.0.45/loader-4.0.45.jar \
-  "$(curl -sfL https://maven.neoforged.net/releases/net/neoforged/fancymodloader/loader/4.0.45/loader-4.0.45.jar.sha512)"
+# @Mod, from the FancyModLoader the server runs (libraries/ on test: NeoForge 21.1.252, loader 4.0.44), and the mixin
+# annotations, from the Mixin it runs. Both sha512 written here, never fetched next to the file: each was read from the
+# test server's own copy in libraries/ and matched the maven's published value (2026-10-12).
+fetch loader.jar https://maven.neoforged.net/releases/net/neoforged/fancymodloader/loader/4.0.44/loader-4.0.44.jar \
+  3d4ceaa328c7800f49d7c83e55947d23c0cbe017acec2f3b556617c4a6758cf4c2863abedc36ee978f6a68135dd65e0bad5245c7ba16deea1e20a7750d6bde82
 fetch mixin.jar "https://maven.fabricmc.net/net/fabricmc/sponge-mixin/0.15.2+mixin.0.8.7/sponge-mixin-0.15.2+mixin.0.8.7.jar" \
-  "$(curl -sfL "https://maven.fabricmc.net/net/fabricmc/sponge-mixin/0.15.2+mixin.0.8.7/sponge-mixin-0.15.2+mixin.0.8.7.jar.sha512")"
+  0b37c0692b37cb4ea0d0a9a2c98fa8f21f7852dad1dba313cb89bb1587af703880b3160d654875fdbca32cdf612670979476c77176ed6ac144ff5d841edfe4ae
 
 out="dsw-quarry-pause-$version.jar"
 docker run --rm --memory=512m --network=none --user "$(id -u):$(id -g)" \

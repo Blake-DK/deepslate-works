@@ -26,6 +26,30 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## App 3.6.5: a download from the site is cut off behind the window's polls (2026-10-12, PR #50 to `dev`, not merged)
+
+- **Seen (Alex's log bundle, 16:53 to 16:54 UTC):** 3.6.2 updated itself to 3.6.4 from the deployed `main`; Play on the
+  Test tab; "Pack 0.1.0+04e0992e → 0.1.0+8b610bea; 69 mods; this run: update"; "Setting up the mods"; 9 s later "the
+  Test section could not be asked: The operation has timed out", and the run failed in `Http.Download` with "Unable to
+  read data from the transport connection: A blocking operation was interrupted by a call to WSACancelBlockingCall".
+  The proxy logged "aborting with incomplete response … write: broken pipe" on
+  `/downloads/mods/test/mowziesmobs-1.21.1-1.8.2-dsw.1.jar` at 16:54:07 (the app closed the connection); api-test
+  logged "stream closed prematurely" on `/test/app/mod?file=…` 8.6 s after the request came in. Nothing was wrong on
+  the site: the live web, api and api-test logs show no error, and api-test answered every `/test/app/state` poll.
+- **Cause (read in the code; it fits every timing):** .NET Framework allows 2 connections per host and queues a third.
+  The private jar is the first mod ever downloaded from the site's own host (Modrinth is another host). The window
+  polls that host for the Play tab and the Test section on one timer (`HomeTimer` → `RefreshHome` and
+  `RefreshTestSection`, the latter `GetJson(TestSectionUrl, 8)`). The download and one poll held both connections, the
+  other poll queued, timed out after its 8 s, and the framework closed the download's connection when it aborted the
+  queued request. Not proven on a PC; the fix is the standard one.
+- **The fix, PR #50 (`app-connection-limit` → `dev`):** `ServicePointManager.DefaultConnectionLimit = 16` in `Http`'s
+  static constructor (`Http.ConnectionsPerHost`), a test in `CoreTests`, `installer/VERSION` 3.6.5,
+  `versions.test.ts`, docs/07's 3.6.5 section. The exe is built by the installer workflow on the PR; PCs get it only
+  from `main` (a `dev` → `main` PR and a deploy, Alex's call). **Until then the Test tab fails this way on any PC whose
+  test pack holds a private jar;** Play again may get through when no poll is queued at that moment.
+- **Not tried:** the 3.6.5 exe on a PC, a Test run that downloads the private jar while the window polls. That is the
+  check, on Alex's PC.
+
 ## A patched mod jar in the pack: docs/58 (2026-10-12, planned)
 
 - **Why:** opening the Sculptor's trade screen on the test server crashed Alex's game (Mowzie's Mobs 1.8.2, the
@@ -90,7 +114,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   the Test tab cannot fetch the jar and a test Build cannot copy it. PR #49 (another session, the same code with
   docs/44) duplicates #48.
 
-## The quarry, second pass: docs/56 (2026-10-12, §2 measured on test, k = 32; the pausing mod approved for test)
+## The quarry, second pass: docs/56 (2026-10-12, §2 measured on test, k = 32; the pausing mod passes §3 step 2 on test)
 
 - **Measured on the test server, 2026-10-12, 14:13 to 14:40 UTC** (pack of docs/53 A, B, E1; nobody online). Rigs built
   by console in the sky at x 8000 to 8310, z 8000, each a plain 9 × 9 column of `minecraft:stone` (or `deepslate`)
@@ -222,6 +246,41 @@ say live is stopped, held or to be trimmed in place, this section wins.
     inventories, by location and owner.
 - Cleanup: every quarry removed and every force-load taken off; the stone columns, frames, generators and water
   wheels stay in the sky over x 8000 to 8640 in the test world (the rehearsal starts from a fresh copy of live).
+- **§3 step 2 passes on the test server (2026-10-12, 16:46 to 17:10 UTC; `main` #48 deployed first, see docs/58
+  above).** The pausing mod reached the test server as a private jar: `quarry-pause` in `mods.json` (`side: server`,
+  `hidden: true`, `guide: behind`, `requires: additional-enchanted-miner`, `source.private` `dsw-quarry-pause-1.0.0.jar`),
+  its lock entry made with Lock's own `privateEntry` and the hash recomputed, as Mowzie's was (`6db3002b`; a full Lock
+  would move the unpinned mods); the jar in the test stack's `data/private-jars/` (sha512 `1ccad65b…3ce7`, the build's).
+  Build server on test: "copied dsw-quarry-pause-1.0.0.jar from the private jars"; Sync: "mods: 1 updated, 1 added,
+  added dsw-quarry-pause-1.0.0.jar" (the server was asleep, so no restart); the next start at 16:46: "Found mod file
+  dsw-quarry-pause-1.0.0.jar", "Deepslate Works: quarry pause 1.0.0 (dsw_quarry_pause)", 37.8 s to load, no FATAL,
+  the one ERROR the usual Curios line, no mixin line about this mod (none expected).
+  - The rig, by console with nobody online, at the §2 site x 8100 to 8110 z 8000 to 8010 in the sky: the 9 × 9 stone
+    column refilled, one Pitiful Generator fed coal blocks by a hopper, one single chest with 26 of its 27 slots
+    already full of cobblestone, a plain quarry set up with `data merge` as before. Read every 25 to 30 s with
+    `data get block` (the quarry's `storage`, `state`, `energy`, `targetPos`; the chest's `Items`; the generator's
+    `energyStorage`) and `execute if entity @e[type=item,…]` over the rig; game ticks, so the server's 5-minute sleeps
+    between windows do not count.
+  - Filling the last slot: 1,694 → 1,726 cobblestone in 1,258 ticks (31 a minute, as at k = 32); full by tick
+    5,007,086 at the latest.
+  - **Full, 7,676 ticks (6.4 minutes) seen:** the chest at 1,728 throughout; the quarry's storage held exactly one
+    cobblestone (the last block's drops) the whole time; `state` stayed `MOVE_HEAD` and `targetPos` stayed at
+    8102 185 8003 (the head never moved); the quarry's own store stayed at its 10,000 FE maximum (nothing drawn); the
+    generator's store rose from 8,757 to its 100,000 maximum and stayed there (it had nowhere to send power); the item
+    check answered "Test failed" (nothing on the ground) at every reading.
+  - **Emptied** (`data merge block … {Items:[]}`, tick 5,014,762): 1.5 s later the chest already held 6 cobblestone;
+    473 ticks later 104 (a burst from the two full stores), the head at 8109 183 8001, storage empty, `BREAK_BLOCK`;
+    then 18 blocks per 714 ticks (30 a minute) over the next 2,142 ticks with the stores drawn down (generator 0,
+    quarry 806 → 410 FE). Nothing on the ground at any reading.
+  - Cleanup: the quarry removed, the force-load removed ("No force loaded chunks were found in Overworld"); the column,
+    generator, hopper and chest stay at x 8100 in the sky.
+  - **The `howTo` is docs/56 §4's from this commit:** "It stops when its storage is full and starts again when there is
+    room." replaces the "keeps what it digs inside" sentence. `quarry-pause` stays hidden on the site; whether it gets a
+    line under "behind the scenes" is the planner's call. `packages/modpack/tests/ship.test.ts` pins the shipped
+    hashes again: live (shipping nothing) `c0b230b4`, 75 files; a server shipping s1 `8b610bea`, 81 (the `dev` push
+    `6db3002b` and PR #50's `check` failed on the old numbers until this).
+  - Live gets it only with the rest of docs/53 and docs/55 (docs/56 §5 item 4): a server-only jar, nothing for PCs
+    to download, but the pack's hash changes, so every PC runs one quick "update" with nothing to fetch.
 
 
 - **Alex, 2026-10-12, after docs/53 Part A was built:** "the generator is still too powerful". At k = 4 one Pitiful
@@ -244,6 +303,12 @@ say live is stopped, held or to be trimmed in place, this section wins.
   private jar's lock entry carries no `season`, and api-test's `/test/app/pack` and `/test/app/mod` read the lock as
   it is. On `dev` they keep docs/44's shipped lock; api-test runs `dev`'s images anyway. When `main` is next merged
   into `dev`, take `dev`'s side in `packages/modpack/src/lock.ts` and `apps/api/src/test-mode/app-routes.ts`.
+- **`main` `0160985c` deployed (Alex, 2026-10-12, about 16:35 UTC: the database dump before migration `0034_tester`,
+  `deploy/deploy.sh`, `deploy/test-up.sh`).** Seen: `deepslate-web` and `deepslate-api` on the `0160985c` images,
+  healthy; `deepslate-api-test` mounts `/home/ladm/Minecraft-site-test/data/private-jars` read-only. `main` merged
+  into `dev` as `c6a3844f` (dev's side in the two files, as above; every other line of `main` was already on `dev`, the
+  merge added six lines of this file). On Alex's PC the app updated itself 3.6.2 → 3.6.4 at 16:53 UTC; its first Test
+  run with the private jar failed: "App 3.6.5" above.
 
 ## Testers: docs/57 (2026-10-12, planned)
 

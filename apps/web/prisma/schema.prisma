@@ -82,6 +82,8 @@ model User {
   earlyAccess  Boolean  @default(false) // docs/13: uses the portal as if it were live while it is not
   builderTools Boolean  @default(false) // docs/37: an admin who may switch Builder mode (creative, WorldEdit) on
   maintenanceJoin Boolean @default(false) // docs/48 B1: an admin who can join during the site's Maintenance
+  tester       Boolean   @default(false) // docs/57: a member who gets the app's Test tab and the test server, without being an admin
+  testerAt     DateTime? // docs/57: when the Tester switch was last turned on ("Tester since")
   sessionVersion Int    @default(0) // raised to end every session the member has (made a player, password sign-in turned off)
   signInNoticeSeenAt DateTime? // an admin's "seen up to" for the password sign-in notice: sign-ins at or before it are not shown to them
   adminLogin   AdminLogin?

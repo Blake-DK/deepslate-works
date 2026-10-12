@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MAINTENANCE_TEXT, NOT_OPEN_TEXT } from "../shared/access.js";
 import { MISSING_MODS_TEXT } from "../shared/join-gate.js";
 import { VOTE_FIRST_TEXT } from "../shared/polls.js";
+import { TESTER_OFF_TEXT } from "../shared/testers.js";
 import { CODE_RE, showCode } from "../shared/join-code.js";
 import { COMPONENTS_RE, ITEM_RE, SLOT_RE } from "../shared/slots.js";
 
@@ -485,6 +486,16 @@ export const actions = {
   // Switched on by an admin: whoever is on the server without the tick goes, at once. A plain kick: the game keeps
   // where they stood, and the door holds them if they come back before it ends.
   "maintenance.kick": define({ name: "maintenance.kick", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${MAINTENANCE_TEXT}`] }),
+  // docs/57: testers on the test server's whitelist, sent only by the test server's api (test-mode/testers.ts) when the
+  // live site's Tester switch changes, and at every start of the test instance. Never `op`: a tester plays as a player.
+  "tester.add": define({ name: "tester.add", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`whitelist add ${name}`] }),
+  "tester.remove": define({
+    name: "tester.remove",
+    role: "system",
+    input: z.object({ name: MC_NAME, kick: z.boolean().default(false) }),
+    // kicked first, in our words: with enforce-whitelist on, the removal would kick them itself with the game's own
+    build: (_ctx, { name, kick }) => [...(kick ? [`tag ${name} remove verified`, `kick ${name} ${TESTER_OFF_TEXT}`] : []), `whitelist remove ${name}`],
+  }),
   // Held until a run from the app the site hands out now arrives (players/app-version.ts).
   "limbo.holdOld": define({
     name: "limbo.holdOld",

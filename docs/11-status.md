@@ -39,6 +39,29 @@ say live is stopped, held or to be trimmed in place, this section wins.
   exe goes to Alex only; no tester gets it before he has tried it on his own PC. Then docs/57 §5's nine checks with a
   real non-admin.
 - docs/49's row "Tester tick for non-admins" is marked planned in docs/57.
+- **Built (T-a, T-b; PR `testers` → `dev`, not deployed, no exe to anyone yet):** migration `0034_tester`
+  (`User.tester`, and `testerAt` for "Tester since", not in the spec). The switch is a one-click `Switch` in a Tester
+  column on live People (shown only where a test server is set up, never on the test site) and in a list on the Test
+  server card; greyed with "Link their Minecraft account first", and for admins ("Admins have it"). An admin made one
+  while the switch is on keeps it, so the test server does not take them off its whitelist. Off by the existing
+  paths: remove, remove and block, unlink, linked by an admin to another Minecraft account, and leaving the Discord
+  server (the live api at the five-minute check and the bot's word, the web at sign-in), each audited `user.tester`
+  with why. `appTester`/`canTest` on the four routes and the home's `test`; `test.app.*` rows carry `as`. On
+  `api-test`: `POST /test/app/tester` (the token's fifth path), the list kept in `deepslate_test` (Setting
+  `test.testers`), console actions `tester.add` (`whitelist add`) and `tester.remove` (kick in our words, then
+  `whitelist remove`, since with enforce-whitelist the removal would kick with the game's own words), a reconcile 3 s
+  after every "started". **Also set on the tester's test row, not in the spec: `earlyAccess` true**, so the test
+  door lets them in even while the test site's "We're live" is off.
+- **The whole list:** `/test/app/state` carries a fingerprint of `api-test`'s list, null until the whole list has come
+  since it started. The live web compares it with its own at every `/api/app/test`, and at most once a minute from the
+  home and the Test server card, and sends the whole list when they differ (at most every 10 s). That is how a switch
+  turned off by the live api (Discord) reaches the test server, within about a minute while any app is open.
+- **App 3.6.3:** the Test tab on `test` (a site without it: `admin`, as 3.6.1); Start stays an admin's; "Only admins
+  and testers see this tab." `windows-tabs.ps1` scenario 5 opens it as a tester. No change log entry: the test
+  server is not mentioned to players anywhere (docs/42 §3), and 3.6.3 changes nothing a non-tester can see.
+- **Checks on the VPS:** `deploy/check.sh` all green (web 663, api 799, modpack 232 tests; typecheck, lint); the app
+  and its tests compile in the capped `dotnet/sdk:8.0` container. The xUnit window tests and the tabs script run only
+  on CI's Windows job. docs/57 §5's nine checks are open until Alex and a friend have run them.
 
 ## Render distance up to 32, app 3.6.2 (2026-10-12, on `dev`; not built or deployed)
 

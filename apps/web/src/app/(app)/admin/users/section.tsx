@@ -23,6 +23,8 @@ import { TEST_MODES } from "@/shared/join-gate";
 import { getStatus } from "@/server/status";
 import { pingTone } from "@/lib/ping";
 import { Flash, KickCard, loadPlayers } from "../server/cards";
+import { TesterSwitch } from "@/components/admin/tester-switch";
+import { env } from "@/env";
 
 const ERRORS: Record<string, string> = {
   name: "Minecraft names are 3 to 16 letters, numbers or underscores.",
@@ -35,6 +37,9 @@ const PC = { HIGH: ["high", "good"], MID: ["mid", "neutral"], LOW: ["low", "warn
 const WIDTHS = ["25%", "20%", "9%", "14%", "11%", "12%", "56px"];
 // docs/35: once the site is live the early-access switch changes nothing, so its column goes (it is on Joining → Rules while not live)
 const WIDTHS_LIVE = ["29%", "24%", "10%", "16%", "12%", "56px"];
+// docs/57: with a test server set up, the Tester switch has a column of its own (live site only)
+const WIDTHS_TESTER = ["21%", "17%", "8%", "12%", "10%", "11%", "15%", "56px"];
+const WIDTHS_LIVE_TESTER = ["25%", "20%", "9%", "13%", "11%", "16%", "56px"];
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; show?: string; q?: string; msg?: string; detail?: string }> }) {
   const me = await requireAdmin();
@@ -68,6 +73,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const rows = [...found.filter(isOn), ...found.filter((u) => !isOn(u))];
   const early = `While "We're live" is off, a member with early access can download, press Play and join like any player once it is on. Nothing of an admin's.${settings.live ? " The site is live, so it changes nothing right now." : ""}`;
   const showEarly = !settings.live || only === "early" || only === "rest";
+  const showTester = !env.TEST_MODE && Boolean(env.TEST_SITE_URL);
+  const widths = showTester ? (showEarly ? WIDTHS_TESTER : WIDTHS_LIVE_TESTER) : showEarly ? WIDTHS : WIDTHS_LIVE;
   const href = (k: Show) => {
     const sp = new URLSearchParams();
     if (k !== "all") sp.set("show", k);
@@ -91,6 +98,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         <span className="inline-flex items-center gap-1" data-testid="member-online"><Badge tone="good" className="shrink-0">online</Badge>{playing.get(u.mcUuid!) != null && <Badge tone={pingTone(playing.get(u.mcUuid!)!)} className="shrink-0 tabular-nums">{playing.get(u.mcUuid!)} ms</Badge>}</span>
       ) : <span className="text-muted-foreground" title={u.lastSeenAt ? u.lastSeenAt.toISOString() : "never"}>{timeAgo(u.lastSeenAt)}</span>,
       early: <Switch action={setEarlyAccessAction} fields={{ id: u.id, on: u.earlyAccess ? "0" : "1" }} on={u.earlyAccess} label={`Early access for ${u.displayName}`} disabled={admin} why={admin ? "Admins don't need it" : early} />,
+      tester: <TesterSwitch u={u} />,
       menu: <MemberMenu u={u} meId={me.id} row={{ running }} />,
     };
   };
@@ -121,7 +129,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         <>
           <Card className="hidden min-[800px]:block" data-testid="players-table">
             <CardContent className="p-2">
-              <FixedTable label="Members" widths={showEarly ? WIDTHS : WIDTHS_LIVE} head={[{ text: "Member" }, { text: "Minecraft" }, { text: "PC" }, { text: "Installer", title: current ? `The installer each member used last; the site hands out ${current}` : "The installer each member used last" }, { text: "Seen", right: true }, ...(showEarly ? [{ text: "Early access", center: true, title: early }] : []), { text: "Actions", hidden: true }]}>
+              <FixedTable label="Members" widths={widths} head={[{ text: "Member" }, { text: "Minecraft" }, { text: "PC" }, { text: "Installer", title: current ? `The installer each member used last; the site hands out ${current}` : "The installer each member used last" }, { text: "Seen", right: true }, ...(showEarly ? [{ text: "Early access", center: true, title: early }] : []), ...(showTester ? [{ text: "Tester", title: "docs/57: the app's Test tab and the test server, as a normal player. One click turns it on or off." }] : []), { text: "Actions", hidden: true }]}>
                 {rows.map((u) => {
                   const p = parts(u);
                   return (
@@ -132,6 +140,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       <td className={cell}>{p.installer}</td>
                       <td className={`${cell} text-right`}>{p.seen}</td>
                       {showEarly && <td className={`${cell} text-center`}>{p.early}</td>}
+                      {showTester && <td className={`${cell} whitespace-normal`}>{p.tester}</td>}
                       <td className={menuCell}>{p.menu}</td>
                     </tr>
                   );
@@ -158,6 +167,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                         <Field name="Installer">{p.installer}</Field>
                         <Field name="Seen">{p.seen}</Field>
                         {showEarly && <Field name="Early access">{p.early}</Field>}
+                        {showTester && <Field name="Tester">{p.tester}</Field>}
                       </dl>
                     </CardContent>
                   </Card>

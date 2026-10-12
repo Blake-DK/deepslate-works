@@ -238,6 +238,12 @@ say live is stopped, held or to be trimmed in place, this section wins.
   is built without the planner's and Alex's word.
 - **Players read** the quarry's new `howTo` (docs/56 §4), replacing Part A's sentence.
 - **Ships** with docs/53 A, B and E1 and docs/55, in the same rehearsal and the same live PR.
+- **#47 merged into `dev` (`f0a82ab2`). To live (Alex, 2026-10-12, option 2):** a PR to `main` with only Testers (#46)
+  and #47, cherry-picked onto `main`, so the live web has `/downloads/mods/test/` and the live checkout's compose has
+  the mounts before the pack change goes on `dev`. `main` has no seasons (docs/44 is held on `dev`), so on `main` the
+  private jar's lock entry carries no `season`, and api-test's `/test/app/pack` and `/test/app/mod` read the lock as
+  it is. On `dev` they keep docs/44's shipped lock; api-test runs `dev`'s images anyway. When `main` is next merged
+  into `dev`, take `dev`'s side in `packages/modpack/src/lock.ts` and `apps/api/src/test-mode/app-routes.ts`.
 
 ## Testers: docs/57 (2026-10-12, planned)
 

@@ -208,7 +208,8 @@ export const CHANGES: Change[] = [
       "Mekanism is in: generators, reactors and the MekaSuit power armour. Press Play to update.",
       "Its ores (osmium first) appear in old ground the first time anyone goes there.",
     ],
-  },  {
+  },
+  {
     // app 3.6.2: render distance up to 32. Set `live: true` only once 3.6.2 is what the site hands out and its live
     // check passed (the rule above).
     id: "2026-10-12-app-3-6-2-render-distance",

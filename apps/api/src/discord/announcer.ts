@@ -783,7 +783,7 @@ export class Announcer {
     return second.ok || !second.retry;
   }
 
-  // ---- the change log (Alex, 2026-10-04): one forum post, a reply per deploy; a big update a post of its own (docs/53) --
+  // ---- the change log (Alex, 2026-10-04): one forum post, a reply per deploy ----------------------------------------------
 
   private changeLogAt = 0;
   private changeLogDone = false;
@@ -793,9 +793,8 @@ export class Announcer {
    * season-updates, oldest first. The post is made the first time; one deleted by hand is made again. Looked at once
    * a minute until everything is posted, so in practice once after each deploy. Without the forum's webhook: nothing.
    * An entry Discord refuses for good is marked as posted and skipped, so it cannot hold up the ones after it.
-   * docs/53 D2: an entry with a `title` is a new post of its own with that title and the News tag, not a reply, and
-   * it tags @Minecraft (D1). Alex, 2026-10-12: only those big game updates tag; a reply in "Change log" (site changes,
-   * fixes) and the post's own opening message do not.
+   * docs/53 D2 (Alex, 2026-10-12): an entry with a `title` is a big game update and tags @Minecraft (D1), unless it is
+   * marked `noPing`; the others (site changes, fixes) and the post's own opening message ping nobody.
    */
   private async changeLog(sw: Switches, brand: Brand, now: Date): Promise<void> {
     const changes = this.d.changes ?? [];
@@ -812,24 +811,16 @@ export class Announcer {
     for (const c of changes) {
       const key = `changelog:${c.id}`;
       if (await this.postOf(key)) continue;
-      const role = c.title ? this.role("updates") : null;
+      const role = c.title && !c.noPing ? this.role("updates") : null;
       const msg = tagged(asServer(brand, changeText(c, DISCORD_MAX - tagPrefix(role).length)), role);
-      let r: Outcome;
-      let thread: string | null;
-      if (c.title) {
-        r = await this.send(null, 0, "updates", "change log post", msg, undefined, { threadName: c.title, tags: this.tags(sw, "News") });
-        thread = r.ok ? r.channelId || null : null;
-      } else {
-        threadId ??= await open();
-        if (!threadId) return; // not taken, or not a forum: looked at again in a minute
+      threadId ??= await open();
+      if (!threadId) return; // not taken, or not a forum: looked at again in a minute
+      let r = await this.send(null, 0, "updates", "change log", msg, undefined, { threadId });
+      if (!r.ok && r.gone) {
+        // the post was deleted by hand in Discord: made again, and the entry goes into the new one
+        threadId = await open();
+        if (!threadId) return;
         r = await this.send(null, 0, "updates", "change log", msg, undefined, { threadId });
-        if (!r.ok && r.gone) {
-          // the post was deleted by hand in Discord: made again, and the entry goes into the new one
-          threadId = await open();
-          if (!threadId) return;
-          r = await this.send(null, 0, "updates", "change log", msg, undefined, { threadId });
-        }
-        thread = threadId;
       }
       if (!r.ok) {
         // Discord is away, the post has gone again, or the webhook itself was refused: looked at again in a minute
@@ -837,7 +828,7 @@ export class Announcer {
         // Discord will never take this entry as it is (400): marked, said once, and the later entries are not held up
         this.d.log({ id: c.id, error: this.st?.log[0]?.error }, "discord change log: Discord refused this entry; it is skipped");
       }
-      await this.keep({ key, channel: "updates", messageId: r.ok ? r.id : "", postedAt: now, editedAt: null, via: "webhook", threadId: thread });
+      await this.keep({ key, channel: "updates", messageId: r.ok ? r.id : "", postedAt: now, editedAt: null, via: "webhook", threadId });
     }
     this.changeLogDone = true;
   }

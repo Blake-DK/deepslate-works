@@ -16,6 +16,8 @@ stands: Mekanism, Mekanism Generators and Mekanism Tools go on, with A (the quar
 | Gravity | low: you jump higher, fall slowly, short falls don't hurt |
 | Who builds a portal | players can build their own |
 | Mobs | some hostile mobs |
+| Gas (added later the same day, folded in from a separate draft) | below y 0 only; it poisons, it never kills |
+| Masks | a cheap mask of our own that lasts 30 s in gas; Mekanism's hazmat mask and MekaSuit helmet count and last longer; masks wear out in gas |
 
 ## 2. What the repo and the mods already give (checked 2026-10-12)
 
@@ -113,20 +115,95 @@ No season or boss names, as always.
 
 - The Mods guide: Mekanism's howTo says its ores are on the Moon (the docs/53 sentence about "old ground" goes). A
   new line under travel: what the Moon is, how to build a portal (frame, eye of ender), that gravity is low and the
-  night never ends, and that beds don't work there.
+  night never ends, that beds don't work there and that the air below y 0 needs a mask (how to craft the gas mask).
 - The change log: docs/53 D3 post 2 ("Power and gear update is live") is rewritten before it goes out. Post 1 said
   the ores would appear in old ground; post 2 says they are on the Moon instead, how to get there, and that the main
   world was left as it was. It is still a reply in Change log, tagged.
 
+### M7 · Gas below y 0 (Alex, 2026-10-12)
+
+A function in the Moon's datapack, no mod. It runs every second (a function that reschedules itself with
+`schedule function … 20t`, started from `#minecraft:load`), never every tick.
+
+**Who:** every player not in creative or spectator, inside `deepslate:moon`, with feet below y 0 (one line in the
+function, wrapped here):
+
+```
+execute as @a[gamemode=!creative,gamemode=!spectator] at @s if dimension deepslate:moon
+  if entity @s[y=-64,dy=64] run function deepslate:gas/check
+```
+
+`deepslate:gas/check` looks at the helmet: a working mask (M8) wears and protects; anything else breathes the gas.
+
+**Exposure:** a scoreboard `deepslate.gas`, +1 per second in gas without a mask, -2 per second otherwise (never
+below 0). Stages (numbers tuned on test):
+
+| Exposure (s) | What happens |
+|---|---|
+| 1 to 10 | actionbar "The air is thick here. You need a mask."; a vanilla haze particle around the player |
+| 11 to 30 | Poison I and Slowness I for 2 s, refreshed every second |
+| 31 and up | Poison II, Slowness II and Mining Fatigue I for 2 s, refreshed every second |
+
+**The gas never kills** (Alex). Poison stops at half a heart in vanilla and nothing else in the gas does damage. At
+half a heart any mob, fall or lava finishes the player, so the danger is real. Those deaths reach Discord with the
+usual messages.
+
+### M8 · The masks (Alex, 2026-10-12)
+
+A ladder of three:
+
+| Mask | Where it comes from | Lasts in gas | Then |
+|---|---|---|---|
+| **Gas mask** (our own) | crafted early, cheap | 30 s | breaks |
+| Hazmat mask (Mekanism) | Mekanism crafting | about 30 min | breaks |
+| MekaSuit helmet (Mekanism) | end game | never wears | never breaks |
+
+Wear happens only while in gas. A mask outside the gas, or below y 0 outside the Moon, does not wear.
+
+**Our gas mask**, made by the datapack and the existing resource pack, no mod:
+
+- A crafting recipe in the datapack whose result is a `minecraft:leather_helmet` with components:
+  `custom_name` "Gas mask", `custom_data` `{deepslate_mask:"basic"}`, `dyed_color` dark grey, `max_damage` 30,
+  `custom_model_data` for its icon, `repair_cost` high enough that an anvil refuses it. Recipe, proposed and tuned
+  on test: 1 leather, 2 string, 1 charcoal, 1 glass pane. Cheap on purpose: the cost is making new ones.
+- The icon: a 16×16 texture and a model override on `leather_helmet` keyed on `custom_model_data`, added to
+  `modpack/resourcepack/` (the pack every PC gets on Play). On the head it looks like a dark leather cap; 1.21.1
+  cannot give it a worn model of its own without a mod. That is fine.
+- Players get it from the recipe book like any recipe. JEI shows it.
+
+**Wear:** `deepslate:gas/check` finds the mask by `custom_data` (ours) or by item id (Mekanism's, ids read from the
+10.7.19.85 jar), then adds damage with `item modify` on `armor.head`:
+
+- Gas mask: 1 point per second (30 points, so 30 s).
+- Hazmat mask: as much per second as makes about 30 minutes from full. **If the hazmat mask has no durability in
+  this Mekanism version, the report says so and the planner decides** (giving it durability through components
+  changes a Mekanism item, so it is not done without a look).
+- MekaSuit helmet: none.
+- When a mask reaches its last point it is removed from the head (`item replace … with air`) with the vanilla item
+  break sound and an actionbar "Your mask has given out.". Exposure starts from 0 at that moment.
+
+Mending is left alone: putting Mending on a 30 second mask is the player's choice.
+
+**Read from the jars on test before building M8:** the hazmat mask and MekaSuit helmet ids, the hazmat mask's
+durability and its recipe (so Alex knows how early a player can have one).
+
 ## 4. Order
 
 1. **The Moon's datapack and the tag changes** (M1 to M4), its own PR to `dev`, so it reaches the test server.
+   **The gas and the masks** (M7, M8, with the mask's icon in the resource pack) are their own feature PR to `dev`
+   after it.
 2. **On the test server, on a fresh copy of live:** the first start (no FATAL, the dimension exists); the portal
    (lit with an eye of ender, the far side, coming back); gravity; that new chunks of the main world beyond ±10,176
    have no osmium (a few chunks forced to load out there, counted with WorldEdit) while the Moon's do; what else
    arrived on the Moon through the overworld tags; spark on the Moon. Then pre-generation on test (M5).
-3. **docs/53 A and E1 on test** as planned (the quarry tables, the armour check), in the same rehearsal.
-4. **Alex tries it on his own PC** through the app's Test tab: through the portal, a jump, a mined osmium ore.
+   **Gas and masks:** below y 0 without a mask, the warning at 1 s, poison at 11 s, the third stage at 31 s, health
+   stops at half a heart; above y 0 exposure falls; creative feels nothing. The gas mask crafts, protects for 30 s,
+   then breaks with the sound and the message, does not wear above y 0 or outside the Moon; an anvil refuses it.
+   The hazmat mask lasts its time; the MekaSuit helmet never wears. A PC shows the mask's own icon.
+3. **docs/53 A and E1 on test** (the quarry with docs/56's numbers and its tables, the armour check), in the same
+   rehearsal.
+4. **Alex tries it on his own PC** through the app's Test tab: through the portal, a jump, a mined osmium ore, the
+   gas with and without each mask, a mask breaking.
 5. **Live:** backup, then one PR from `main` with docs/53 A, B (without the retrogen), E1 and this doc's work;
    the pre-generated Moon folder copied in with the server stopped; deploy, restart; the first live start, a quarry,
    the portal at spawn, osmium on the Moon. Then post 2 goes live in the change log.
@@ -137,3 +214,4 @@ No season or boss names, as always.
 - The gravity numbers (M3), after a try on the test server.
 - The pre-generation radius (±3,000 proposed).
 - Whether the Moon keeps going past its pre-generated square (proposed: yes, as the main world does).
+- The gas stages and the gas mask's recipe (M7, M8), after a try on the test server.

@@ -26,6 +26,23 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The quarry, second pass: docs/56 (2026-10-12, planned, nothing built)
+
+- **Alex, 2026-10-12, after docs/53 Part A was built:** "the generator is still too powerful". At k = 4 one Pitiful
+  Generator still mines about 4 stone a second. His answers: about **30 stone blocks a minute** from one Pitiful
+  Generator; the quarry costs more, the generator and every other machine stay as they are; a quarry whose storage
+  is full **stops** and starts again by itself when there is room.
+- **Replaces docs/53 Part A's numbers**, same file (`modpack/server/config/quarryplus.toml`). k ≈ 32 on paper (about
+  1,200 FE a stone block at 30 FE a tick); the real k is set by measuring on test (docs/56 §2 steps 1 to 7: the
+  Pitiful Generator's real output, k = 4 measured, the new k, stone and deepslate, Unbreaking III and Efficiency V,
+  full speed with a creative source, and what players' own setups give). The tables and the chosen k are reported
+  before the file changes.
+- **Stop when full (§3):** first read what the quarry does today when its output is full (a small chest, 5 minutes
+  past full). A config key if there is one, its own small feature PR; if none, the options are reported and nothing
+  is built without the planner's and Alex's word.
+- **Players read** the quarry's new `howTo` (docs/56 §4), replacing Part A's sentence.
+- **Ships** with docs/53 A, B and E1 and docs/55, in the same rehearsal and the same live PR.
+
 ## Testers: docs/57 (2026-10-12, planned)
 
 - **Alex, 2026-10-12:** a normal player on the test server without being an admin, turned on and off with one click.
@@ -102,6 +119,12 @@ say live is stopped, held or to be trimmed in place, this section wins.
   live for the rehearsal anyway.
 - **Order:** docs/55 §4. Mekanism, the quarry and the armour cap go live only together with the Moon. docs/53 D3
   post 2 is rewritten before it goes out (post 1 said "ores in old ground").
+- **Gas and masks, folded in the same day (M7, M8):** below y 0 on the Moon the air poisons (a function every
+  second, no mod; three stages; it never kills, poison stops at half a heart). Masks: our own gas mask (a leather
+  helmet with components from a datapack recipe, its icon in the resource pack, 30 s in gas), Mekanism's hazmat mask
+  (about 30 min) and the MekaSuit helmet (never wears); masks wear only in gas. Their own feature PR to `dev` after
+  the Moon's datapack PR. Before M8 is built: the hazmat mask and MekaSuit helmet ids, the hazmat mask's durability
+  and recipe, read from the 10.7.19.85 jars on test; if the hazmat mask has no durability, the planner decides.
 
 ## Power and gear progression: docs/53 (2026-10-12, planned, nothing built)
 
@@ -140,7 +163,8 @@ say live is stopped, held or to be trimmed in place, this section wins.
   bot may mention the role (the role's "Allow anyone to @mention this role", or the bot's Mention All Roles).
 - **Parts A, B and E1 built for the test server (2026-10-12, PR to `dev`; not for `main` before Alex's go):**
   - A: `modpack/server/config/quarryplus.toml`, `[powerMap.quarry]` `breakBlockBase` 100, `moveHeadBase` 4,
-    `makeFrame` 60 (k = 4; keys and defaults 25, 1, 15 read from the file the mod wrote on test). Server only, not
+    `makeFrame` 60 (k = 4; keys and defaults 25, 1, 15 read from the file the mod wrote on test). **docs/56 replaces
+    these numbers** (k from measuring, about 30 stone a minute from one Pitiful Generator). Server only, not
     in the pack's hash, so Play first is not asked by it.
   - B: `mekanism`, `mekanism-generators`, `mekanism-tools` on, pinned to 10.7.19.85 (`5KzzycBT`, `a6gl7srE`,
     `v5zlSE9s`), added to the lock by hand from a capped `pnpm modpack lock` run (that run also moved titanium and

@@ -16,6 +16,14 @@ namespace DeepslateWorks.Tests
             Assert.Equal("x", J.Str(back, "a"));
             Assert.Equal(new List<string> { "b", "a", "c" }, new List<string>(((JObj)back).OrderedKeys));
         }
+        [Fact] public void Http_lets_a_download_and_the_window_s_polls_share_the_site()
+        {
+            // 3.6.5: .NET's default of 2 connections per host queued the window's polls behind a download from the site, and a
+            // poll that timed out while queued took the download's connection down with it
+            Http.Token = Http.Token;   // touches Http, so its static constructor has run
+            Assert.True(System.Net.ServicePointManager.DefaultConnectionLimit >= 8, "DefaultConnectionLimit is " + System.Net.ServicePointManager.DefaultConnectionLimit);
+            Assert.Equal(Http.ConnectionsPerHost, System.Net.ServicePointManager.DefaultConnectionLimit);
+        }
         [Fact] public void Json_leaves_iso_dates_as_text() => Assert.Equal("2026-10-01T17:47:22.575Z", J.Str(Json.Parse("{\"at\":\"2026-10-01T17:47:22.575Z\"}"), "at"));
         [Fact] public void Versions()
         {

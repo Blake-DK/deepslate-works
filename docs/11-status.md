@@ -26,6 +26,23 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## A patched mod jar in the pack: docs/58 (2026-10-12, planned)
+
+- **Why:** opening the Sculptor's trade screen on the test server crashed Alex's game (Mowzie's Mobs 1.8.2, the
+  newest on Modrinth). A fix is in Alex's fork (`fix/trade-screen-missing-mob`, for the mod's author; `dsw-build`
+  builds `1.8.2-dsw.1`, run 38262710258). Nobody has run the patched jar yet.
+- **The jar is never published** (the mod's licence): no release, no public URL, not in this repo. Members get it
+  only through the site's gated downloads.
+- **Planned, one feature PR to `dev` (§3):** a mod in `mods.json` may carry `source.private` (file name and sha512).
+  The file sits in a git-ignored `data/private-jars/` on each stack. Lock takes size and sha512 from the file and
+  writes a URL on the site itself, `/downloads/mods/<filename>`; that host (from `AUTH_URL`, only that path) is the
+  one addition to `mod-url.ts` and to the app's host check. The route is gated like the manifest and serves only
+  files named in the lock. Build copies the file for the server and fails if it is missing or different. docs/38
+  gains a line.
+- **Then (§4):** the jar onto the **test** stack only, `mowzies-mobs` pointed at it (still `s1`, still
+  `adminOnly`), Lock, Build, Sync on test. Alex tries it on his own PC through the Test tab. Live only with Season
+  1's opening, after a backup, on Alex's yes. Back to Modrinth the day the author ships a fix.
+
 ## The quarry, second pass: docs/56 (2026-10-12, measured on test; stopped at §2 step 5 for the planner)
 
 - **Measured on the test server, 2026-10-12, 14:13 to 14:40 UTC** (pack of docs/53 A, B, E1; nobody online). Rigs built

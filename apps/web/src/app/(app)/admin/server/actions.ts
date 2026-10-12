@@ -104,9 +104,9 @@ export async function distanceAction(apply: string, formData: FormData) {
   const to = place(formData, "settings");
   const admin = await requireAdmin();
   const when = z.enum(["now", "next"]).safeParse(apply);
-  const view = z.coerce.number().int().min(4).max(16).safeParse(formData.get("view"));
+  const view = z.coerce.number().int().min(4).max(32).safeParse(formData.get("view"));
   const sim = z.coerce.number().int().min(4).max(12).safeParse(formData.get("sim"));
-  if (!when.success || !view.success || !sim.success) redirect(to("error", "View distance is 4 to 16, simulation distance 4 to 12."));
+  if (!when.success || !view.success || !sim.success) redirect(to("error", "View distance is 4 to 32, simulation distance 4 to 12."));
   let restart: { at: string } | null = null;
   try {
     ({ restart } = await apiFetch<{ restart: { at: string } | null }>("/server/distance", { method: "POST", body: { view: view.data, sim: sim.data, apply: when.data }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 30_000 }));

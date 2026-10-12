@@ -31,9 +31,9 @@ describe("ram.user_max_gb", () => {
 });
 
 describe("server_view_distance", () => {
-  it("is the view-distance mods.json expects, 12 today", async () => {
+  it("is the view-distance mods.json expects, 20 today (the live server's, Alex 2026-10-09)", async () => {
     const { manifest } = lintManifest(await raw());
-    expect(serverViewDistance(manifest!.server_properties)).toBe(12);
+    expect(serverViewDistance(manifest!.server_properties)).toBe(20);
   });
   it("is null when mods.json does not give a usable one", () => {
     expect(serverViewDistance({})).toBeNull();

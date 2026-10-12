@@ -111,7 +111,7 @@ describe("setting the distances", () => {
   });
   it("refuses without AMP's permission, out of range, and \"now\" while the server is not up", async () => {
     await expect(setUp({ allowed: false }).d.set({ view: 12, sim: 8 }, "next", null)).rejects.toMatchObject({ code: "amp_permission", status: 403 });
-    await expect(setUp().d.set({ view: 17, sim: 8 }, "next", null)).rejects.toBeInstanceOf(Refusal);
+    await expect(setUp().d.set({ view: 33, sim: 8 }, "next", null)).rejects.toBeInstanceOf(Refusal);
     await expect(setUp().d.set({ view: 10, sim: 3 }, "next", null)).rejects.toMatchObject({ code: "validation" });
     await expect(setUp({ state: 0 }).d.set({ view: 12, sim: 8 }, "now", null)).rejects.toMatchObject({ code: "server_offline" });
   });

@@ -18,7 +18,9 @@ export const VIEW_NODE = "MinecraftModule.Minecraft.ViewDistance";
 export const SIM_NODE = "MinecraftModule.Minecraft.SimulationDistance";
 export const VIEW_PERMISSION = `Settings.${VIEW_NODE}`;
 export const SIM_PERMISSION = `Settings.${SIM_NODE}`;
-export const LIMITS = { view: { min: 4, max: 16 }, sim: { min: 4, max: 12 } } as const;
+// View distance up to 32, the game's own top: live has run 20 since 2026-10-09 (docs/11), and the launcher's render distance
+// slider goes as high (GameOptions.cs), so the two show the same range.
+export const LIMITS = { view: { min: 4, max: 32 }, sim: { min: 4, max: 12 } } as const;
 
 /** How long a TPS reading is good for, and how long the card waits for the server's answer. */
 export const TICK_FRESH_MS = 10_000;

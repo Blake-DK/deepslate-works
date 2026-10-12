@@ -87,7 +87,7 @@ namespace DeepslateWorks
 
         /// <summary>
         /// options.txt lines a Save writes: a control whose value differs from what the tab showed, or one showing a
-        /// value it cannot hold (Fabulous, 24 chunks typed in by hand) that the player touched (moved, or "Back to
+        /// value it cannot hold (Fabulous, 40 chunks typed in by hand) that the player touched (moved, or "Back to
         /// recommended"). A value the tab cannot show is left alone otherwise.
         /// </summary>
         public Dictionary<string, string> Changes(IDictionary<string, int> now, ICollection<string> touched)

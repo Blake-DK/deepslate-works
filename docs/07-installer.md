@@ -43,6 +43,22 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.5: a download from the site no longer fails behind the window's polls (2026-10-12)
+
+- Seen on Alex's PC the day 3.6.4 went live: the first run of the Test tab with a private jar in the test pack (docs/58)
+  failed in "Setting up the mods" after 9 seconds with "Unable to read data from the transport connection: A blocking
+  operation was interrupted", and in the same second "the Test section could not be asked: The operation has timed
+  out". The site's proxy saw the app close the download's connection ("broken pipe"), and the test server's api saw its
+  stream closed early.
+- Why: .NET Framework allows **2 connections per host** unless told otherwise, and a third request queues. The window
+  polls the live site for the Play tab and for the Test section at the same time; a private jar is downloaded from
+  that same site (Modrinth is another host, so mods from there never met this). The download and one poll held both
+  connections, the other poll queued, timed out after its 8 seconds, and the framework closed the connection the
+  download was on when it aborted the queued request.
+- 3.6.5 sets `ServicePointManager.DefaultConnectionLimit` to 16 when `Http` is first used (`Http.ConnectionsPerHost`),
+  so a download, the polls and an update check each have a connection of their own. Nothing else changes; the
+  timeouts stay as they were.
+
 ## 3.6.4: where a mod file may come from (docs/58, 2026-10-12)
 
 - Until now the app downloaded a mod file from whatever address the mod list gave and trusted the checksum beside it.

@@ -82,7 +82,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   - The same Lock run today also moved two unpinned mods (`kotlin-lang-forge` 2.14.1 → 2.15.0, `titanium`
     1.21-4.0.50 → 4.0.51), so that lock was not kept. The pack commit, when it goes, is Lock on the day.
 
-## The quarry, second pass: docs/56 (2026-10-12, §2 measured on test, k = 32; §3 waits for the planner)
+## The quarry, second pass: docs/56 (2026-10-12, §2 measured on test, k = 32; the pausing mod approved for test)
 
 - **Measured on the test server, 2026-10-12, 14:13 to 14:40 UTC** (pack of docs/53 A, B, E1; nobody online). Rigs built
   by console in the sky at x 8000 to 8310, z 8000, each a plain 9 × 9 column of `minecraft:stone` (or `deepslate`)
@@ -136,22 +136,54 @@ say live is stopped, held or to be trimmed in place, this section wins.
   last sentence becomes docs/56 §4's "it stops" once the pausing mod exists. Crafts & Additions: one water wheel can't
   turn an alternator; Mekanism Generators: a Heat Generator burns lava or other fuel (lava around it adds a little), a
   wind generator makes more the higher it stands. All from the step 7 measurements.
-- **The pausing mod (Alex, 2026-10-12: "build the pausing mod"; his choices: ship it by docs/58's jar route, MIT).
-  The planner has not answered docs/56 §3 step 3 yet; Alex's word is the go.** `mods/quarry-pause/`: mod id
-  `dsw_quarry_pause` 1.0.0, server only (`IGNORE_SERVER_VERSION`, no network channels), two mixins that cancel
-  `QuarryEntity.serverTick` and `AdvQuarryEntity.serverTick` (their dig step) while the machine's `storage` holds
-  items. The push into the blocks next to it runs after the dig step in the same tick and is untouched, so a quarry
-  with room never waits, and one without carries on by itself when room appears; it uses no power while it waits.
-  Requires quarryplus `[21.1.164,21.1.165)`. Not done: dropping the storage when the quarry is broken (a mod that
-  moves blocks would duplicate items); at most the last block's drops wait inside. `build.sh`: javac in a capped
-  `eclipse-temurin:21.0.4_7-jdk-alpine` container, no network, against the quarry jar (sha512 from the lock), FML
-  loader 4.0.45 and sponge-mixin 0.15.2 (both checked against their maven sha512), plus compile-only stand-ins for
-  four Minecraft classes; fixed dates, so the same source gives the same jar: `dsw-quarry-pause-1.0.0.jar`, sha512
-  `1d96df67764d4d77f49e08744db82c0b61abc4da959fc0d3f8f074c228434da81360e34dae9554be0f4e674bc3cd53bfe6bf77eacb08a6b55242153ff9d139f3`
-  (built twice, same). **Not yet run on any server:** it needs docs/58's route (planned, not built). Then on test:
-  the server starts with it (no FATAL, the mixins applied), §3 step 2's test (chest full: quarry stopped, storage
-  not growing, power flat, nothing on the ground; chest emptied: it starts again), and the `howTo`'s last sentence
-  becomes docs/56 §4's.
+- **Against docs/56 §1:** `moveHeadBase` is the head's speed in blocks a tick, not a cost (each block the head moves
+  costs 1 FE whatever it says), so k = 32 made the head faster, not dearer. §1's "everything counted" is the break
+  (`breakBlockBase` × hardness) plus 1 FE a block of travel and the frame spread over the dig.
+- **The pausing mod (Alex, 2026-10-12, built on his word; the planner approved it for the test server the same day,
+  not for live until §3 step 2 passes on test).** `mods/quarry-pause/`: mod id `dsw_quarry_pause` 1.0.0, MIT, server
+  only (`IGNORE_SERVER_VERSION`, no network channels). Two mixins cancel `QuarryEntity.serverTick` and
+  `AdvQuarryEntity.serverTick` (the dig step) while the machine's `storage` holds items; the push into the blocks next
+  to it is a separate ticker after it in the same tick and is untouched, so a quarry with room never waits and one
+  without carries on by itself when room appears, using no power while it waits. Only items count: fluids stay
+  inside and the quarry digs on (a pump module with no tank would otherwise stop it at the first water). A quarry
+  holds at most the last block's drops; an Adv. Quarry can hold more for a few ticks (the push moves about six item
+  types a tick). Nothing is dropped when the machine is broken (a block-moving mod would duplicate it). Requires
+  quarryplus `[21.1.164,21.1.165)`. The quarry mod is LGPL-3.0; none of its code is copied.
+  - `build.sh` (planner's fixes, `ed970542`): javac in `eclipse-temurin:21.0.4_7-jdk-alpine` pinned by digest
+    (`sha256:37abc85b…a52d6`), capped, no network; the quarry jar by the lock's sha512; FML loader **4.0.44** (what
+    the test server runs: NeoForge 21.1.252 in its `libraries/`, although Build reports 21.1.253) and sponge-mixin
+    0.15.2+mixin.0.8.7, both sha512 written in the script, each read from the test server's own copy and matching the
+    maven's value. Same source, same jar (two clean builds): `dsw-quarry-pause-1.0.0.jar`, sha512
+    `1ccad65bc346a47c386ddc6be6347f8a84cef676d74a4481f606fbb090263c99e188e56b2631d89620fe43db97a8dc7c1dd18f981dee18525dd738a689dd3ce7`.
+  - **Not yet run on any server.** docs/58's route is merged into `dev` as #47, but blocker 1 stands: api-test takes
+    its mounts from the live checkout's compose file, so the test Build cannot see `data/private-jars/` until that is
+    on `main`. Then the planner's checks a to f on test, and only after b the `howTo` becomes §4's sentence.
+  - **Blocker 2 does not apply to this jar** (read in the code): the Test tab's manifest lists every lock file
+    (`testManifest`, with the test URL), but the app drops every `side: server` file before it downloads or checks a
+    URL (`Engine.cs` builds `files` without them; `PrefetchWaiting`, the download loop and the final mods check all
+    take that list). So a server-only private jar is never fetched by a PC.
+- **The smallest PR to `main` that carries #47 (report for Alex, nothing done):** #47 does not apply to `main` alone.
+  It needs the testers work (`47e81ccf`, docs/57, app 3.6.3), which needs docs/44 A2 (`395f7332`, the season ship).
+  Cherry-picked in that order onto `origin/main` in a throwaway checkout: `395f7332` (two `mods.json` conflicts, the
+  guide's `topic` beside the new `"season": "s1"`), `47e81ccf` (docs/11 only), `5b85c81f` and `c2b86295` clean;
+  83 files. None of docs/53 or docs/56's pack changes, no Mekanism. **On live it changes:** migration `0034_tester`;
+  the Tester switch on People (only where a test server is set up); the app goes to **3.6.4** (the PR builds the exe; once
+  it is published, every PC is offered it; new: the app refuses a mod URL that is not Modrinth or the site's own
+  `/downloads/mods/`); `/downloads/mods/` routes (only files the lock names; live's lock names none);
+  `data/private-jars/` made by `deploy.sh` and mounted read-only; `mods.json` and the lock gain the six Season 1 mods
+  marked `s1`, which live does not ship, so live's pack stays as it is (docs/11 recorded 71 files and `d44eb2ba` for
+  that state; Build on the PR shows it). **A player would notice:** the app update to 3.6.4 and nothing else; no
+  change log entry, as 3.6.3 and 3.6.4 change nothing a player sees. Alex decides.
+- **The Adv. Quarry is switched off (Alex, via the planner, 2026-10-12; `ed970542`):** `[enableMap] adv_quarry =
+  false` in `modpack/server/config/quarryplus.toml`, the key read from the file the mod wrote on test. Seen on test
+  after Build and Sync: the file on the server reads `adv_quarry = false`; an Adv. Quarry placed by command, given an
+  area, `WAITING` and a creative generator, stayed `WAITING` for 653 ticks: no frame, the stone untouched, its 50,000
+  FE store full and unused. **It can still be crafted:** its recipe (`data/quarryplus/recipe/adv_quarry.json` in the
+  jar) has no condition, and the switch only makes a placed one idle and its item's tooltip say it is disabled.
+  Recipes come from the server, so the client's own setting does not change what JEI or the recipe book show; it
+  only decides whether a PC's tooltip says "disabled" (it would need the file in `modpack/config/`, in the pack's
+  hash). Not checked in game with a player. To remove the recipe too: one datapack file overriding it with a false
+  condition, for the planner and Alex. The Mods guide never mentioned it.
 - Cleanup: every quarry removed and every force-load taken off; the stone columns, frames, generators and water
   wheels stay in the sky over x 8000 to 8640 in the test world (the rehearsal starts from a fresh copy of live).
 

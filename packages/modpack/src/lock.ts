@@ -7,7 +7,7 @@ import { getProject, getVersion, getVersions, NotFound, type ModrinthVersion } f
 import { fetchJar, sha512File } from "./download";
 import { modUrlProblem, privateUrl } from "./mod-url";
 import { jarChannels, sideFor, widenForDependents } from "./sides";
-import { openZipFile, openZipOnDisk, type Zip } from "./zip";
+import { openZipFile, type Zip } from "./zip";
 import { hashConfigs, hashResourcePack } from "./hashes";
 
 export { hashConfigs, hashResourcePack };
@@ -181,7 +181,7 @@ export async function privateEntry(mod: Mod, dir: string | undefined, previous: 
     return { ...kept, ...fields, requiredBy: [] };
   }
   if (sum !== src.sha512) throw new Error(`${mod.slug}: ${name} in ${dir} is not the jar mods.json names: its sha512 is ${sum.slice(0, 16)}…, mods.json says ${src.sha512.slice(0, 16)}…`);
-  const zip = openZipOnDisk(file!);
+  const zip = await openZipFile(file!);
   let version: string | null;
   let channels: LockEntry["channels"];
   try {

@@ -112,7 +112,7 @@ export default async function DiscordSection({ searchParams, tab }: { searchPara
                     {overview.role.lastRunAt ? `, checked ${new Date(overview.role.lastRunAt).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" })}` : ""}.
                     {overview.role.lastError && <span className="block text-danger">{overview.role.lastError}</span>}
                     <span className="block text-muted-foreground">
-                      {overview.role.tags === false ? "Posts in season-updates go out without tagging the role until this is fixed." : "New posts in season-updates tag the role: news, polls and votes when they open, We're live and the change log."}
+                      {overview.role.tags === false ? "Posts in season-updates go out without tagging the role until this is fixed." : "New posts in season-updates tag the role: news, polls and votes when they open, We're live, and big game updates in the change log (not its site changes and fixes)."}
                     </span>
                   </>
                 )}

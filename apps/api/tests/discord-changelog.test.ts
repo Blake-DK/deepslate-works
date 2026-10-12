@@ -199,14 +199,14 @@ const ROLE = "223456789012345678";
 const BIG: Change = { id: "big", date: "2026-10-12", title: "Power and gear update incoming", lines: ["The quarry will need real power."] };
 
 describe("the change log tags @Minecraft, and a big update is a post of its own (docs/53)", () => {
-  it("an entry without a title is a reply in Change log, tagged; the Change log post's own opening is not", async () => {
+  it("an entry without a title (site changes, fixes) is a reply in Change log that pings nobody, nor does the post's opening (Alex, 2026-10-12)", async () => {
     const t = setup([ONE], { role: ROLE });
     await t.a.round();
     const [opener, reply] = t.sent();
     expect([opener!.body.thread_name, opener!.body.allowed_mentions]).toEqual(["Change log", { parse: [] }]);
     expect(String(opener!.body.content)).not.toContain("<@&");
     expect(reply!.url).toContain(`thread_id=${t.posts.get("changelog")?.threadId}`);
-    expect([reply!.body.content, reply!.body.allowed_mentions]).toEqual([`<@&${ROLE}>\n**4 October 2026**\n• First thing.\n• Second thing.`, { parse: [], roles: [ROLE] }]);
+    expect([reply!.body.content, reply!.body.allowed_mentions]).toEqual(["**4 October 2026**\n• First thing.\n• Second thing.", { parse: [] }]);
   });
 
   it("an entry with a title is a new post with that title and the News tag, tagged, and does not open Change log", async () => {
@@ -232,6 +232,8 @@ describe("the change log tags @Minecraft, and a big update is a post of its own 
     expect(t.sent().map((c) => c.body.thread_name ?? `reply ${/thread_id=(\d+)/.exec(c.url)?.[1]}`)).toEqual([
       "Change log", `reply ${t.posts.get("changelog")?.threadId}`, "Power and gear update incoming", `reply ${t.posts.get("changelog")?.threadId}`,
     ]);
+    // only the big update pings
+    expect(t.sent().map((c) => (c.body.allowed_mentions as { roles?: string[] }).roles ?? [])).toEqual([[], [], [ROLE], []]);
   });
 
   it("no role: no mention, nothing held back", async () => {
@@ -245,10 +247,10 @@ describe("the change log tags @Minecraft, and a big update is a post of its own 
   });
 
   it("an entry cut to fit leaves room for the mention", async () => {
-    const long: Change = { id: "long", date: "2026-10-05", lines: Array.from({ length: 40 }, (_, i) => `Line ${i + 1} ${"x".repeat(80)}`) };
+    const long: Change = { id: "long", date: "2026-10-05", title: "A long one", lines: Array.from({ length: 40 }, (_, i) => `Line ${i + 1} ${"x".repeat(80)}`) };
     const t = setup([long], { role: ROLE });
     await t.a.round();
-    const content = String(t.sent()[1]!.body.content);
+    const content = String(t.sent()[0]!.body.content);
     expect(content.length).toBeLessThanOrEqual(2000);
     expect(content.startsWith(`<@&${ROLE}>\n**5 October 2026**`)).toBe(true);
     expect(content.endsWith(CHANGE_CUT)).toBe(true);

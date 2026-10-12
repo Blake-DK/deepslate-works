@@ -50,6 +50,9 @@ say live is stopped, held or to be trimmed in place, this section wins.
   deployed by Alex; his live check passed: a ticked news post pinged the role on his phone, an unticked one did not,
   a vote count edit pinged nobody. D3 post 1 (`2026-10-12-power-and-gear-coming`) set `live`; the deploy after that
   commit posts it, tagged.
+- **Alex, 2026-10-12, after the check:** in the change log only large features that change the game tag @Minecraft,
+  not site changes or bug fixes. So the tag follows `title`: an entry with one (its own post) tags, a reply in
+  "Change log" does not. docs/53 D1 said every entry; this replaces it.
 - **Was the live check (Alex):** a ticked news post pings the role on a phone, an unticked one does not, a vote
   count edit pings nobody. The webhook posts most of these; a poll the bot posts (vote buttons on) pings only if the
   bot may mention the role (the role's "Allow anyone to @mention this role", or the bot's Mention All Roles).

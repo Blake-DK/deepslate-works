@@ -793,8 +793,9 @@ export class Announcer {
    * season-updates, oldest first. The post is made the first time; one deleted by hand is made again. Looked at once
    * a minute until everything is posted, so in practice once after each deploy. Without the forum's webhook: nothing.
    * An entry Discord refuses for good is marked as posted and skipped, so it cannot hold up the ones after it.
-   * docs/53 D2: an entry with a `title` is a new post of its own with that title and the News tag, not a reply. Every
-   * entry is tagged (D1); the "Change log" post's own opening message is not.
+   * docs/53 D2: an entry with a `title` is a new post of its own with that title and the News tag, not a reply, and
+   * it tags @Minecraft (D1). Alex, 2026-10-12: only those big game updates tag; a reply in "Change log" (site changes,
+   * fixes) and the post's own opening message do not.
    */
   private async changeLog(sw: Switches, brand: Brand, now: Date): Promise<void> {
     const changes = this.d.changes ?? [];
@@ -811,7 +812,7 @@ export class Announcer {
     for (const c of changes) {
       const key = `changelog:${c.id}`;
       if (await this.postOf(key)) continue;
-      const role = this.role("updates");
+      const role = c.title ? this.role("updates") : null;
       const msg = tagged(asServer(brand, changeText(c, DISCORD_MAX - tagPrefix(role).length)), role);
       let r: Outcome;
       let thread: string | null;

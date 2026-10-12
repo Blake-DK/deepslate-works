@@ -481,9 +481,10 @@ export function AnnounceCard({ running }: { running: boolean }) {
             <label className="flex items-center gap-2">Pinned until <Input name="pinnedUntil" type="datetime-local" className="h-8 w-auto text-sm" /></label>
             <label className="flex items-center gap-2">Hide from <Input name="expiresAt" type="datetime-local" className="h-8 w-auto text-sm" /></label>
             <label className="flex items-center gap-2"><Check type="checkbox" name="say" disabled={!running} /> Also say it in game</label>
+            <label className="flex items-center gap-2"><Check type="checkbox" name="tag" defaultChecked /> Tag @Minecraft</label>
             <Button type="submit" size="sm">Post</Button>
           </div>
-          <HowThisWorks>A picture may be PNG, JPEG or WebP, 3 MB at most. &quot;Also say it in game&quot; says the first line (200 characters) in chat. Dates are UK time and optional: &quot;Pinned until&quot; pins it until then, &quot;Hide from&quot; takes it off the home page from then.</HowThisWorks>
+          <HowThisWorks>A picture may be PNG, JPEG or WebP, 3 MB at most. &quot;Also say it in game&quot; says the first line (200 characters) in chat. &quot;Tag @Minecraft&quot; pings everyone with the Minecraft role when it is posted in season-updates on Discord. Dates are UK time and optional: &quot;Pinned until&quot; pins it until then, &quot;Hide from&quot; takes it off the home page from then.</HowThisWorks>
         </form>
       </CardContent>
     </Card>

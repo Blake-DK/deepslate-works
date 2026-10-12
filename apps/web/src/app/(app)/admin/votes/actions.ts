@@ -136,7 +136,7 @@ export async function createPollAction(formData: FormData) {
   const made = makeOptions(await readRows(formData));
   if (!made.ok) redirect(formBack(formData, made.reason));
   const closesAt = readCloses(formData);
-  await openPoll({ id: admin.id, role: "ADMIN" }, { question, options: made.options, multiple: formData.get("multiple") === "on", mustVote: formData.get("mustVote") === "on", closesAt });
+  await openPoll({ id: admin.id, role: "ADMIN" }, { question, options: made.options, multiple: formData.get("multiple") === "on", mustVote: formData.get("mustVote") === "on", tag: formData.get("tag") === "on", closesAt });
   pollsChanged();
   redirect(pollBack("opened"));
 }

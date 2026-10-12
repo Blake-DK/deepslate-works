@@ -339,7 +339,7 @@ const SW: Switches = { deaths: true, joins: true, challenges: true, advancements
 const FEED = "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz0123456789ABCD";
 const UPDATES = "https://discord.com/api/webhooks/323456789012345678/ubcdefghijklmnopqrstuvwxyz0123456789ABCD";
 
-function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; adminChannel?: string; botRefuses?: string; botState?: { inGuild: boolean; connecting: boolean }; remind?: boolean; loaded?: string[] } = {}) {
+function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; adminChannel?: string; botRefuses?: string; botState?: { inGuild: boolean; connecting: boolean }; remind?: boolean; loaded?: string[]; role?: string | null } = {}) {
   const clock = Date.parse("2026-10-02T19:00:00Z");
   const calls: Array<{ method: string; url: string; body: Record<string, unknown> }> = [];
   let ids = 5000;
@@ -397,7 +397,7 @@ function routed(opts: { bot?: boolean; deleted?: boolean; chatRelay?: boolean; a
   const feedHook = hook(FEED);
   const updatesHook = hook(UPDATES);
   state = { cursor: "0", hash: `${feedHook.hash}::${updatesHook.hash}`, refused: {}, log: [] };
-  const a = new Announcer({ store, feed: feedHook, admin: null, updates: updatesHook, bot: opts.bot ? bot : null, chatRelay: opts.chatRelay ?? true, portal: "https://deepslate.dsw.test", log: () => {}, now: () => new Date(clock) });
+  const a = new Announcer({ store, feed: feedHook, admin: null, updates: updatesHook, bot: opts.bot ? bot : null, chatRelay: opts.chatRelay ?? true, portal: "https://deepslate.dsw.test", log: () => {}, now: () => new Date(clock), playerRole: () => opts.role ?? null });
   let next = 100n;
   const add = (e: Partial<FeedEvent>, base?: FeedEvent) => events.push({ ...(base ?? { kind: "ADMIN_ACTION", actor: null, message: "", meta: {} }), ...e, id: ++next, at: new Date(clock) } as FeedEvent);
   const where = (c: { url: string }) => (c.url.includes("323456789012345678") ? "updates" : "feed");
@@ -679,5 +679,112 @@ describe("the admin channel picked on the card (Alex, 2026-10-02)", () => {
     expect(await t.a.test("admin")).toEqual({ ok: true });
     expect(t.botCalls.at(-1)!.what).toBe("sendTo");
     expect(t.botCalls.at(-1)!.args[0]).toBe("900");
+  });
+});
+
+// ---- docs/53 D1: new posts in season-updates tag the Minecraft role ----------------------------------------------------
+
+const ROLE = "223456789012345678";
+const TAGS = { parse: [], roles: [ROLE] };
+const NONE = { parse: [] };
+
+describe("new posts in season-updates tag @Minecraft (docs/53 D1)", () => {
+  it("news: the mention is the post's text and the only thing that can ping; the box unticked tags nobody", async () => {
+    const t = routed({ role: ROLE });
+    t.add({ meta: { action: "announcement.create", params: { announcementId: "n1", tag: true }, result: "OK" } });
+    t.add({ meta: { action: "announcement.create", params: { announcementId: "n2", tag: false }, result: "OK" } });
+    t.add({ meta: { action: "announcement.create", params: { announcementId: "n3" }, result: "OK" } }); // from before the box: tagged
+    await t.a.round();
+    expect(t.calls.map((c) => [c.body.thread_name, c.body.content ?? null, c.body.allowed_mentions])).toEqual([
+      ["Map cache cleared.", `<@&${ROLE}>`, TAGS],
+      ["Map cache cleared.", null, NONE],
+      ["Map cache cleared.", `<@&${ROLE}>`, TAGS],
+    ]);
+    expect((t.calls[0]!.body.embeds as Array<{ description: string }>)[0]!.description).toContain("The map shows the new world now.");
+  });
+
+  it("a poll opened by the webhook is tagged; its edits, its result and its result line are not", async () => {
+    const t = routed({ role: ROLE });
+    t.add({ meta: { action: "poll.open", params: { pollId: "p1", tag: true }, result: "OK" } });
+    await t.a.round();
+    expect([t.calls[0]!.body.thread_name, t.calls[0]!.body.content, t.calls[0]!.body.allowed_mentions]).toEqual(["Next boss", `<@&${ROLE}>`, TAGS]);
+    t.votes["poll:p1"] = { ...t.poll, mustVote: true };
+    t.add({ meta: { action: "poll.mustVote", params: { pollId: "p1", on: true }, result: "OK" } });
+    await t.a.round();
+    t.votes["poll:p1"] = { ...t.poll, status: "CLOSED", voters: 2, result: [{ text: "A", votes: 2 }, { text: "B", votes: 0 }, { text: "I don't mind", votes: 0 }], winners: ["A"] };
+    t.add({ meta: { action: "poll.close", params: { pollId: "p1" }, result: "OK" } });
+    await t.a.round();
+    const after = t.calls.slice(1);
+    expect(after.map((c) => c.method)).toEqual(["PATCH", "PATCH", "POST"]);
+    for (const c of after) {
+      expect(c.body.allowed_mentions).toEqual(NONE);
+      expect(String(c.body.content ?? "")).not.toContain("<@&");
+    }
+  });
+
+  it("a poll with the box unticked is not tagged", async () => {
+    const t = routed({ role: ROLE });
+    t.add({ meta: { action: "poll.open", params: { pollId: "p1", tag: false }, result: "OK" } });
+    await t.a.round();
+    expect([t.calls[0]!.body.content ?? null, t.calls[0]!.body.allowed_mentions]).toEqual([null, NONE]);
+  });
+
+  it("a poll the bot posts carries the mention in its own text, with the buttons", async () => {
+    const t = routed({ bot: true, role: ROLE });
+    t.add({ meta: { action: "poll.open", params: { pollId: "p1", tag: true }, result: "OK" } });
+    await t.a.round();
+    const message = t.botCalls[0]!.args[2] as { content?: string; components: unknown[]; allowed_mentions: unknown };
+    expect([message.content, message.allowed_mentions, message.components.length]).toEqual([`<@&${ROLE}>`, TAGS, 1]);
+    t.votes["poll:p1"] = { ...t.poll, voters: 1 };
+    t.add({ meta: { action: "poll.edit", params: { pollId: "p1" }, result: "OK" } });
+    await t.a.round();
+    const edit = t.botCalls.find((c) => c.what === "edit")!.args[2] as { content?: string; allowed_mentions: unknown };
+    expect([edit.content, edit.allowed_mentions]).toEqual([undefined, NONE]);
+  });
+
+  it("the season's mod vote opening is tagged (it has no box)", async () => {
+    const t = routed({ role: ROLE });
+    t.votes["ballot:b1"] = { kind: "ballot", id: "b1", title: "Season 2 mods", options: [], closesAt: null, mustVote: false, voters: 0, members: 6, status: "OPEN" };
+    t.add({ meta: { action: "vote.open", params: { voteId: "b1" }, result: "OK" } });
+    await t.a.round();
+    expect([t.calls[0]!.body.thread_name, t.calls[0]!.body.content, t.calls[0]!.body.allowed_mentions]).toEqual(["Season 2 mods", `<@&${ROLE}>`, TAGS]);
+  });
+
+  it("We're live is tagged, the mention in front of its line", async () => {
+    const t = routed({ role: ROLE });
+    t.add({ meta: { action: "site.settings", params: { live: true, was: false }, result: "OK" } });
+    await t.a.round();
+    expect([t.calls[0]!.body.thread_name, t.calls[0]!.body.content, t.calls[0]!.body.allowed_mentions]).toEqual(["We're live", `<@&${ROLE}>\n**Deepslate Works is open.** Press Play at deepslate.dsw.test`, TAGS]);
+  });
+
+  it("the forum test post, its reply and its edit tag nobody", async () => {
+    const t = routed({ role: ROLE });
+    expect(await t.a.test("updates")).toEqual({ ok: true });
+    expect(t.calls).toHaveLength(3);
+    for (const c of t.calls) {
+      expect(c.body.allowed_mentions).toEqual(NONE);
+      expect(String(c.body.content)).not.toContain("<@&");
+    }
+  });
+
+  it("deaths and game chat in #game-chat tag nobody", async () => {
+    const t = routed({ role: ROLE });
+    t.add({ kind: "DEATH" }, REAL.death);
+    t.add({ kind: "CHAT", actor: REAL.join.actor, message: "<bramble09> hi", meta: { name: "bramble09" } });
+    await t.a.round();
+    expect(t.calls.length).toBeGreaterThan(0);
+    for (const c of t.calls) expect([t.where(c), c.body.allowed_mentions]).toEqual(["feed", NONE]);
+  });
+
+  it("no role (not set, or Discord does not know it): the post goes out as before, with no mention and no error", async () => {
+    const t = routed({ role: null });
+    t.add({ meta: { action: "announcement.create", params: { announcementId: "n1", tag: true }, result: "OK" } });
+    t.add({ meta: { action: "poll.open", params: { pollId: "p1", tag: true }, result: "OK" } });
+    await t.a.round();
+    expect(t.calls.map((c) => [c.body.thread_name, c.body.content ?? null, c.body.allowed_mentions])).toEqual([
+      ["Map cache cleared.", null, NONE],
+      ["Next boss", null, NONE],
+    ]);
+    expect(t.state()?.log.every((l) => l.ok)).toBe(true);
   });
 });

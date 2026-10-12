@@ -150,13 +150,15 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   // docs/42a: the only webhooks there are; an instance not marked DISCORD_TALKS=1 gets a private channel's or none
   const outlets = discordOutlets(env);
   if (!outlets.talks) log({ private: Boolean(outlets.feed || outlets.admin || outlets.updates) }, "discord: this instance does not talk to the players' Discord (DISCORD_TALKS is not 1)");
+  // planner 2026-10-09: the Minecraft role on everyone who plays; only with the bot and DISCORD_PLAYER_ROLE_ID (role.ts)
+  const roles = makeRoleSync(env, log);
   const feed = new Announcer({
     store: prismaFeedStore(portal, env.REPO_DIR), feed: hook(outlets.feed), admin: hook(outlets.admin), updates: hook(outlets.updates),
     // docs/42 §3: the test server posts no change log
     bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: testMode ? [] : liveChanges(CHANGES), portal, log: (o, m) => app.log.info(o, m),
+    // docs/53 D1: new posts in season-updates tag that role, while it is on and Discord knows it
+    playerRole: () => roles?.mention() ?? null,
   });
-  // planner 2026-10-09: the Minecraft role on everyone who plays; only with the bot and DISCORD_PLAYER_ROLE_ID (role.ts)
-  const roles = makeRoleSync(env, log);
   discordRoutes(app, feed, bot, env, roles);
   installRoutes(app);
   poller.stateName = (live) => (wake.waking && live.stateCode !== 20 ? "Waking" : live.state);

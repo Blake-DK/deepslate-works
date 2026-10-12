@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { Announcer, type FeedState, type FeedStore, type PostRow } from "../src/discord/announcer.js";
 import type { Switches } from "../src/discord/lines.js";
@@ -14,7 +15,7 @@ type Call = { method: string; url: string; body: Record<string, unknown> };
 const ONE: Change = { id: "a", date: "2026-10-04", lines: ["First thing.", "Second thing."] };
 const TWO: Change = { id: "b", date: "2026-11-01", lines: ["Later thing."] };
 
-function setup(changes: Change[], opts: { updates?: boolean; answer?: (c: Call) => Response | null } = {}) {
+function setup(changes: Change[], opts: { updates?: boolean; answer?: (c: Call) => Response | null; role?: string | null } = {}) {
   const calls: Call[] = [];
   let ids = 1000;
   const f = (async (url: string, init: RequestInit = {}) => {
@@ -50,7 +51,7 @@ function setup(changes: Change[], opts: { updates?: boolean; answer?: (c: Call) 
     brand: async () => ({ name: "Deepslate Works", avatar: null }),
   };
   const logs: string[] = [];
-  const make = (list: Change[]) => new Announcer({ store, feed, admin: null, updates, changes: list, portal: "https://deepslate.dsw.test", log: (_o, m) => void logs.push(m), now: () => new Date(clock) });
+  const make = (list: Change[]) => new Announcer({ store, feed, admin: null, updates, changes: list, portal: "https://deepslate.dsw.test", log: (_o, m) => void logs.push(m), now: () => new Date(clock), playerRole: () => opts.role ?? null });
   const sent = () => calls.filter((c) => c.method === "POST");
   return { a: make(changes), make, posts, store, sent, logs, later: (ms: number) => void (clock += ms) };
 }
@@ -169,9 +170,10 @@ describe("the entries in the repo", () => {
       expect(c.id).toMatch(/^[a-z0-9-]{3,60}$/);
       expect(c.date).toMatch(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/);
       expect(c.lines.length).toBeGreaterThan(0);
-      // whole, in one message: Discord takes 2000 characters, and a longer entry would be posted cut short
+      // whole, in one message: Discord takes 2000 characters, and a longer entry would be posted cut short; 25 of
+      // them are kept for the role's mention in front (docs/53 D1)
       expect(changeText(c).length).toBeLessThanOrEqual(2000);
-      expect(changeText(c)).not.toContain(CHANGE_CUT);
+      expect(changeText(c, 2000 - 25)).not.toContain(CHANGE_CUT);
     }
   });
 });
@@ -188,5 +190,111 @@ describe("an entry posts only once it is live (planner, 2026-10-09)", () => {
   });
   it("keeps the entry posted on 2026-10-09 marked live", () => {
     expect(CHANGES.find((c) => c.id === "2026-10-08-entrance-room")?.live).toBe(true);
+  });
+});
+
+// ---- docs/53 D1 and D2: every entry tags @Minecraft; a big update is a post of its own -----------------------------------
+
+const ROLE = "223456789012345678";
+const BIG: Change = { id: "big", date: "2026-10-12", title: "Power and gear update incoming", lines: ["The quarry will need real power."] };
+
+describe("the change log tags @Minecraft, and a big update is a post of its own (docs/53)", () => {
+  it("an entry without a title is a reply in Change log, tagged; the Change log post's own opening is not", async () => {
+    const t = setup([ONE], { role: ROLE });
+    await t.a.round();
+    const [opener, reply] = t.sent();
+    expect([opener!.body.thread_name, opener!.body.allowed_mentions]).toEqual(["Change log", { parse: [] }]);
+    expect(String(opener!.body.content)).not.toContain("<@&");
+    expect(reply!.url).toContain(`thread_id=${t.posts.get("changelog")?.threadId}`);
+    expect([reply!.body.content, reply!.body.allowed_mentions]).toEqual([`<@&${ROLE}>\n**4 October 2026**\n• First thing.\n• Second thing.`, { parse: [], roles: [ROLE] }]);
+  });
+
+  it("an entry with a title is a new post with that title and the News tag, tagged, and does not open Change log", async () => {
+    const t = setup([BIG], { role: ROLE });
+    await t.a.round();
+    const s = t.sent();
+    expect(s).toHaveLength(1);
+    expect(s[0]!.url).not.toContain("thread_id=");
+    expect([s[0]!.body.thread_name, s[0]!.body.content, s[0]!.body.allowed_mentions]).toEqual([
+      "Power and gear update incoming", `<@&${ROLE}>\n**12 October 2026**\n• The quarry will need real power.`, { parse: [], roles: [ROLE] },
+    ]);
+    expect(t.posts.get("changelog")).toBeUndefined();
+    expect(t.posts.get("changelog:big")?.threadId).toMatch(/^9\d+$/); // the new post's own thread
+    // and it is not posted again
+    t.later(61_000);
+    await t.make([BIG]).round();
+    expect(t.sent()).toHaveLength(1);
+  });
+
+  it("titled and plain entries side by side: each the way it should be, oldest first", async () => {
+    const t = setup([ONE, BIG, TWO], { role: ROLE });
+    await t.a.round();
+    expect(t.sent().map((c) => c.body.thread_name ?? `reply ${/thread_id=(\d+)/.exec(c.url)?.[1]}`)).toEqual([
+      "Change log", `reply ${t.posts.get("changelog")?.threadId}`, "Power and gear update incoming", `reply ${t.posts.get("changelog")?.threadId}`,
+    ]);
+  });
+
+  it("no role: no mention, nothing held back", async () => {
+    const t = setup([BIG, ONE]);
+    await t.a.round();
+    for (const c of t.sent()) {
+      expect(c.body.allowed_mentions).toEqual({ parse: [] });
+      expect(String(c.body.content)).not.toContain("<@&");
+    }
+    expect(t.sent()).toHaveLength(3);
+  });
+
+  it("an entry cut to fit leaves room for the mention", async () => {
+    const long: Change = { id: "long", date: "2026-10-05", lines: Array.from({ length: 40 }, (_, i) => `Line ${i + 1} ${"x".repeat(80)}`) };
+    const t = setup([long], { role: ROLE });
+    await t.a.round();
+    const content = String(t.sent()[1]!.body.content);
+    expect(content.length).toBeLessThanOrEqual(2000);
+    expect(content.startsWith(`<@&${ROLE}>\n**5 October 2026**`)).toBe(true);
+    expect(content.endsWith(CHANGE_CUT)).toBe(true);
+  });
+});
+
+/** The names players must not read before a season opens: every season mod's name and slug, and its bosses (docs/53 D2). */
+function seasonNames(): string[] {
+  const root = new URL("../../../modpack/", import.meta.url);
+  const mods = (JSON.parse(readFileSync(new URL("mods.json", root), "utf8")) as { mods: Array<{ name: string; slug: string; season?: string }> }).mods;
+  const names = mods.filter((m) => m.season).flatMap((m) => [m.name, m.slug]);
+  for (const f of readdirSync(new URL("seasons/", root)).filter((f) => /^s\d+\.json$/.test(f))) {
+    const s = JSON.parse(readFileSync(new URL(`seasons/${f}`, root), "utf8")) as { bosses?: Array<{ title: string; entity: string }> };
+    // the game's own bosses (the Warden, the Wither, …) are not a season mod's
+    for (const b of s.bosses ?? []) if (!b.entity.startsWith("minecraft:")) names.push(b.title.replace(/^The /, ""));
+  }
+  return names;
+}
+
+/** docs/53 D2's lint over one entry: what is wrong with it, or nothing. */
+function lint(c: Change, names: string[]): string[] {
+  const out: string[] = [];
+  if (c.title !== undefined && (c.title.trim().length < 1 || c.title.length > 90)) out.push("title not 1 to 90 characters");
+  const text = [c.title ?? "", ...c.lines].join("\n").toLowerCase();
+  for (const n of names) if (text.includes(n.toLowerCase())) out.push(`names ${n}`);
+  return out;
+}
+
+describe("the entries in the repo, docs/53 D2", () => {
+  const names = seasonNames();
+
+  it("knows the season mods' names to look for, and not the game's own bosses", () => {
+    expect(names).toEqual(expect.arrayContaining(["Mowzie's Mobs", "Frostmaw"]));
+    expect(names).not.toContain("Warden");
+  });
+
+  it("refuses an over-long or empty title and a season mod's or its boss's name", () => {
+    expect(lint({ ...BIG, title: "x".repeat(90) }, names)).toEqual([]);
+    expect(lint({ ...BIG, title: "x".repeat(91) }, names)).toEqual(["title not 1 to 90 characters"]);
+    expect(lint({ ...BIG, title: " " }, names)).toEqual(["title not 1 to 90 characters"]);
+    expect(lint({ ...ONE, lines: ["Mowzie's mobs are in."] }, names)).toEqual(["names Mowzie's Mobs"]);
+    expect(lint({ ...BIG, title: "Frostmaw is awake" }, names)).toEqual(["names Frostmaw"]);
+  });
+
+  it("every entry passes", () => {
+    for (const c of CHANGES) expect(lint(c, names), c.id).toEqual([]);
+    expect(CHANGES.filter((c) => c.title).map((c) => c.id)).toEqual(expect.arrayContaining(["2026-10-12-power-and-gear-coming", "2026-10-12-power-and-gear-landed"]));
   });
 });

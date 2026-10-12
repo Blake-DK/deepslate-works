@@ -85,6 +85,19 @@ function embedMsg(brand: Brand, embed: NonNullable<Message["embeds"]>[number], c
   return { ...(content ? { content } : {}), embeds: [embed], username: serverName(brand), ...(brand.avatar ? { avatar_url: brand.avatar } : {}), allowed_mentions: NO_MENTIONS };
 }
 
+/**
+ * docs/53 D1: a new post in season-updates starts with the player role's mention (the "Minecraft" role, role.ts), and
+ * that role is the only thing in it that can ping. No role (not set, or Discord does not know it): the message as it was.
+ */
+export function tagged(msg: Message, role: string | null): Message {
+  if (!role) return msg;
+  return { ...msg, content: `${tagPrefix(role)}${msg.content ?? ""}`.trimEnd(), allowed_mentions: { parse: [], roles: [role] } };
+}
+/** What `tagged` puts in front of a message's text: room a text cut to Discord's limit must leave for it. */
+export function tagPrefix(role: string | null): string {
+  return role ? `<@&${role}>\n` : "";
+}
+
 /** Every embed's edge is the site's Copper (docs/23 §3), whatever the branding row once held as an accent. */
 export const COPPER = 0xe8833a;
 

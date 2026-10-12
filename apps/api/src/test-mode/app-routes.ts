@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
@@ -21,8 +22,25 @@ import type { Testers } from "./testers.js";
 //   POST /test/app/wake        start the test server when it is asleep; who asked is said in the body
 //   GET  /test/app/wake        how that wake is going (3.6.1: the app watches it)
 //   POST /test/app/tester      docs/57: one Tester switch change { uuid, name, on }, or the whole list { testers }
+//   GET  /test/app/mod?file=   docs/58: a private jar the test lock names, from the test checkout's data/private-jars/
 
-export const TEST_APP_PATHS = ["/test/app/pack", "/test/app/config.zip", "/test/app/state", "/test/app/wake", "/test/app/tester"] as const;
+export const TEST_APP_PATHS = ["/test/app/pack", "/test/app/config.zip", "/test/app/state", "/test/app/wake", "/test/app/tester", "/test/app/mod"] as const;
+
+// docs/58: the same rule as packages/modpack mod-url.ts (PRIVATE_JAR, privateUrl), which api does not import
+const PRIVATE_JAR = /^[A-Za-z0-9][A-Za-z0-9._+-]{0,150}\.jar$/;
+const privateUrl = (name: string) => `/downloads/mods/${name}`;
+const sums = new Map<string, { key: string; sha512: string }>();
+
+async function sha512Of(file: string, size: number, mtimeMs: number): Promise<string> {
+  const key = `${size}:${mtimeMs}`;
+  const hit = sums.get(file);
+  if (hit?.key === key) return hit.sha512;
+  const hash = createHash("sha512");
+  for await (const chunk of createReadStream(file)) hash.update(chunk as Buffer);
+  const sha512 = hash.digest("hex");
+  sums.set(file, { key, sha512 });
+  return sha512;
+}
 
 export type TestAppDeps = {
   repoDir: string;
@@ -36,6 +54,8 @@ export type TestAppDeps = {
   memberByDiscord: (discordId: string) => Promise<{ id: string; displayName: string } | null>;
   /** docs/57: the testers the live site has sent. */
   testers: Pick<Testers, "one" | "all" | "hash">;
+  /** docs/58: where the private jars are; the checkout's data/private-jars/ unless said. */
+  privateJarsDir?: string;
 };
 
 // `as` (docs/57): whether the live site let them in as an admin or as a tester; older live sites leave it out
@@ -60,6 +80,27 @@ export function testAppRoutes(app: FastifyInstance, d: TestAppDeps) {
     const s = await stat(file).catch(() => null);
     if (!s?.isFile()) return reply.code(404).send({ error: { code: "no_config", message: "Build the test pack first" } });
     return reply.header("content-type", "application/zip").header("content-length", String(s.size)).header("cache-control", "no-store").send(createReadStream(file));
+  });
+
+  // docs/58: only a jar the test server's own pack names as private, and only the very file it names
+  app.get("/test/app/mod", async (req, reply) => {
+    const name = (req.query as { file?: unknown } | undefined)?.file;
+    const missing = () => reply.code(404).send({ error: { code: "not_found", message: "No such private jar in the test pack" } });
+    if (typeof name !== "string" || !PRIVATE_JAR.test(name)) return missing();
+    const lock = await readShippedLock(d.repoDir).catch(() => null);
+    const entry = lock?.files.find((f) => f.filename === name && f.url === privateUrl(name));
+    if (!entry) return missing();
+    const file = path.join(d.privateJarsDir ?? path.join(d.repoDir, "data", "private-jars"), name);
+    const s = await stat(file).catch(() => null);
+    if (!s?.isFile()) {
+      req.log.warn({ file: name }, "docs/58: a private jar the test lock names is not in data/private-jars/");
+      return missing();
+    }
+    if ((await sha512Of(file, s.size, s.mtimeMs)) !== entry.sha512) {
+      req.log.warn({ file: name }, "docs/58: the private jar in data/private-jars/ is not the one the test lock names");
+      return missing();
+    }
+    return reply.header("content-type", "application/java-archive").header("content-length", String(s.size)).header("cache-control", "no-store").send(createReadStream(file));
   });
 
   app.get("/test/app/state", async () => {

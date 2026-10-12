@@ -97,6 +97,7 @@ services:
       - ${DEEPSLATE_DIR:-..}/.git:/repo/.git
       - ${DEEPSLATE_DIR:-..}/dist:/repo/dist:ro         # built packs, served under /downloads (api builds them)
       - ${DEEPSLATE_DIR:-..}/data:/repo/data            # uploaded pictures (Admin → Branding); not in git
+      - ${DEEPSLATE_DIR:-..}/data/private-jars:/repo/data/private-jars:ro   # docs/58: served at /downloads/mods/, never written here
     depends_on:
       postgres:
         condition: service_healthy
@@ -189,6 +190,7 @@ services:
       - ${DEEPSLATE_DIR:-..}/installer:/repo/installer:ro
       - ${DEEPSLATE_DIR:-..}/data/news:/repo/data/news:ro   # docs/21: news pictures go to Discord as attachments
       - ${DEEPSLATE_DIR:-..}/data/builds:/repo/data/builds:ro # docs/34 §10: builds an admin uploaded; `modpack build` makes their datapack
+      - ${DEEPSLATE_DIR:-..}/data/private-jars:/repo/data/private-jars:ro # docs/58: private jars; `modpack build` copies them for the server
       # country lookup for the analytics page: MaxMind's GeoLite2-Country, kept current by the web-proxy stack
       - ${GEOIP_DIR:-/root/docker/web-proxy/geoip}:/geoip:ro
     depends_on:
@@ -316,6 +318,7 @@ services:
       - ${TEST_DIR:-/nonexistent}/modpack:/repo/modpack:ro
       - ${TEST_DIR:-/nonexistent}/dist:/repo/dist:ro
       - ${TEST_DIR:-/nonexistent}/data:/repo/data
+      - ${TEST_DIR:-/nonexistent}/data/private-jars:/repo/data/private-jars:ro
       # docs/42 T4: the pack the live site hands out, to warn when the test server's differs from what PCs have
       - ${DEEPSLATE_DIR:-..}/modpack:/live-modpack:ro
     depends_on:
@@ -376,6 +379,7 @@ services:
       - ${TEST_DIR:-/nonexistent}/installer:/repo/installer:ro
       - ${TEST_DIR:-/nonexistent}/data/news:/repo/data/news:ro
       - ${TEST_DIR:-/nonexistent}/data/builds:/repo/data/builds:ro
+      - ${TEST_DIR:-/nonexistent}/data/private-jars:/repo/data/private-jars:ro   # docs/58: Build, and /test/app/mod for the Test tab
       # the checkout's commit, for the footer and the live card (test-mode/checkout.ts reads HEAD; nothing runs git)
       - ${TEST_DIR:-/nonexistent}/.git:/repo/.git:ro
       - ${GEOIP_DIR:-/root/docker/web-proxy/geoip}:/geoip:ro

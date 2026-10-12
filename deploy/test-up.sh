@@ -40,7 +40,7 @@ if [ "$(stat -c %u "$TEST_DIR/dist" 2>/dev/null || echo none)" != 1000 ]; then
   mkdir -p "$TEST_DIR/dist" && chown -R 1000:1000 "$TEST_DIR/dist"
   echo "$TEST_DIR/dist now belongs to uid 1000"
 fi
-for d in data data/branding data/news data/builds; do
+for d in data data/branding data/news data/builds data/private-jars; do
   [ -d "$TEST_DIR/$d" ] || { mkdir -p "$TEST_DIR/$d"; chown "$owner": "$TEST_DIR/$d"; echo "made $TEST_DIR/$d"; }
 done
 # the test deploy key is read by api-test as uid 1000, as the live one is

@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -143,7 +144,7 @@ describe("who the testers are (docs/57): POST /test/app/tester", () => {
   const KANE = { uuid: "0f2a7c3e9d1b4c6a8e5f7a9b1c3d5e7f", name: "KaneFinch" };
   it("is the token's fifth path, and only its", async () => {
     const { app } = await setup();
-    expect(TEST_APP_PATHS).toHaveLength(5);
+    expect(TEST_APP_PATHS).toHaveLength(6);
     expect(TEST_APP_PATHS).toContain("/test/app/tester");
     expect((await app.inject({ method: "POST", url: "/test/app/tester", headers: bearer(SERVICE), payload: { ...KANE, on: true } })).statusCode).toBe(401);
     expect((await app.inject({ method: "POST", url: "/test/app/tester", payload: { ...KANE, on: true } })).statusCode).toBe(401);
@@ -164,5 +165,48 @@ describe("who the testers are (docs/57): POST /test/app/tester", () => {
     const r = await app.inject({ method: "POST", url: "/test/app/tester", headers: bearer(APP), payload: { testers: [KANE] } });
     expect((r.json() as { testers: string }).testers).toBe(testersHash([KANE]));
     expect(await state()).toBe(testersHash([KANE]));
+  });
+});
+
+describe("a private jar of the test pack (docs/58): GET /test/app/mod?file=", () => {
+  const NAME = "bossmod-1.21.1-1.8.2-dsw.1.jar";
+  const JAR = Buffer.from("PK a patched jar");
+  const sha512 = (b: Buffer) => createHash("sha512").update(b).digest("hex");
+  async function repoWith(files: unknown[], jar: Buffer | null, ship: string[] = []) {
+    const repo = await mkdtemp(path.join(tmpdir(), "test-app-mod-"));
+    await mkdir(path.join(repo, "modpack", "seasons"), { recursive: true });
+    await mkdir(path.join(repo, "data", "private-jars"), { recursive: true });
+    await writeFile(path.join(repo, "modpack", "mods.lock.json"), JSON.stringify({ neoforge: "21.1.252", hash: "0".repeat(64), configs: [], files }));
+    await writeFile(path.join(repo, "modpack", "seasons", "index.json"), JSON.stringify({ current: "s1", ship }));
+    if (jar) await writeFile(path.join(repo, "data", "private-jars", NAME), jar);
+    const app = Fastify();
+    app.addHook("onRequest", serviceAuth(SERVICE, Object.fromEntries(TEST_APP_PATHS.map((p) => [p, APP]))));
+    testAppRoutes(app, { repoDir: repo, server: () => ({ state: "asleep", players: [] }), address: null, pack: async () => ({ site: null, server: null }), wake: { start: async () => {}, view: () => ({ phase: "idle" }) as never }, memberByDiscord: async () => null, testers: noTesters() });
+    return app;
+  }
+  const entry = (extra: Record<string, unknown> = {}) => ({ slug: "boss-mod", versionId: "private-x", filename: NAME, url: `/downloads/mods/${NAME}`, sha512: sha512(JAR), ...extra });
+  const get = (app: Awaited<ReturnType<typeof repoWith>>, file: string, token = APP) => app.inject({ url: `/test/app/mod?file=${encodeURIComponent(file)}`, headers: bearer(token) });
+
+  it("is the token's sixth path, and only its", async () => {
+    const app = await repoWith([entry()], JAR);
+    expect(TEST_APP_PATHS).toContain("/test/app/mod");
+    expect((await get(app, NAME, SERVICE)).statusCode).toBe(401);
+    expect((await app.inject({ url: `/test/app/mod?file=${NAME}` })).statusCode).toBe(401);
+  });
+  it("hands out the jar the test lock names, as it is", async () => {
+    const app = await repoWith([entry()], JAR);
+    const r = await get(app, NAME);
+    expect(r.statusCode).toBe(200);
+    expect(r.headers["content-type"]).toBe("application/java-archive");
+    expect(r.rawPayload.equals(JAR)).toBe(true);
+  });
+  it("anything else is a 404: a name not in the lock, a Modrinth file, another season's, a path, a jar that is not the lock's or not there", async () => {
+    expect((await get(await repoWith([entry()], JAR), "other.jar")).statusCode).toBe(404);
+    expect((await get(await repoWith([entry({ url: `https://cdn.modrinth.com/data/x/versions/y/${NAME}` })], JAR), NAME)).statusCode).toBe(404);
+    expect((await get(await repoWith([entry({ season: "s1" })], JAR, []), NAME)).statusCode).toBe(404);
+    expect((await get(await repoWith([entry({ season: "s1" })], JAR, ["s1"]), NAME)).statusCode).toBe(200);
+    expect((await get(await repoWith([entry()], JAR), `../${NAME}`)).statusCode).toBe(404);
+    expect((await get(await repoWith([entry()], Buffer.from("something else")), NAME)).statusCode).toBe(404);
+    expect((await get(await repoWith([entry()], null), NAME)).statusCode).toBe(404);
   });
 });

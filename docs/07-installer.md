@@ -43,6 +43,18 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.4: where a mod file may come from (docs/58, 2026-10-12)
+
+- Until now the app downloaded a mod file from whatever address the mod list gave and trusted the checksum beside it.
+  From 3.6.4 it checks the address first (`Engine.ModUrlProblem`, the site's rule in `packages/modpack` `mod-url.ts`):
+  Modrinth's CDN (`https://cdn.modrinth.com`), or the site the app was built for, and there only
+  `/downloads/mods/<file>` (a private jar the site hands out behind its gate, docs/58) and `/downloads/mods/test/<file>`
+  (the test pack's, passed on by the live site). Anything else stops the run before the file is fetched. The site is
+  the app's own `PortalUrl`, never an address from the mod list; the launcher token goes there and nowhere else, as before.
+- Checked on every mod download: a run, the check of every mod before the game starts, and Update while the game is
+  running (`PrefetchWaiting`). Extras are not changed.
+- An app older than 3.6.4 downloads a private jar too (it checks nothing); 3.6.4 is the hardening, not a need.
+
 ## 3.6.3: the Test tab for testers too (docs/57, 2026-10-12)
 
 - The Test tab is made when the live home says `test` for this sign-in (`/api/app/home`'s `test`: an admin, or a member

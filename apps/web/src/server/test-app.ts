@@ -4,6 +4,7 @@ import type { LockFile, Manifest } from "modpack";
 import { distancesFor, serverViewDistance } from "modpack/schema";
 import { env } from "@/env";
 import { bearer, userFromLauncherToken } from "@/server/launcher";
+import { testFileUrl } from "@/lib/private-jar-urls";
 
 // The launcher's Test section (planner and Alex, 2026-10-09; docs/45): admins, and since docs/57 testers, a member an
 // admin has turned the Tester switch on for.
@@ -56,6 +57,8 @@ export type TestManifestInputs = {
   tier: string | null;
   /** Where the app fetches the test settings bundle: the live site's own route, never the test stack. */
   configUrl: string;
+  /** docs/58: the live site's own address, on which a private jar of the test pack is fetched (/downloads/mods/test/). */
+  site: string;
 };
 
 /**
@@ -81,7 +84,7 @@ export function testManifest(i: TestManifestInputs) {
     server_view_distance: serverViewDistance(i.mods.server_properties),
     tier: i.tier ?? null,
     config_url: i.lock.configs.length ? i.configUrl : null,
-    files: i.lock.files.map((f) => ({ slug: f.slug, name: f.name, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size, side: f.side })),
+    files: i.lock.files.map((f) => ({ slug: f.slug, name: f.name, filename: f.filename, url: testFileUrl(f.url, i.site), sha512: f.sha512, size: f.size, side: f.side })),
     configs: i.lock.configs,
     installer: i.installer,
     branding: i.branding,

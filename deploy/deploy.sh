@@ -216,6 +216,11 @@ if [ ! -d data/builds ]; then
   mkdir -p data/builds
   [ "$(id -u)" = 0 ] && chown "$owner": data/builds
 fi
+# docs/58: private jars (a patched mod, never published), put here by hand. web and api read it, neither writes it.
+if [ ! -d data/private-jars ]; then
+  mkdir -p data/private-jars
+  [ "$(id -u)" = 0 ] && chown "$owner": data/private-jars
+fi
 
 step "up"
 "${COMPOSE[@]}" up -d --remove-orphans

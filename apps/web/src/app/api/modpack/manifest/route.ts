@@ -9,6 +9,7 @@ import { bearer, userFromLauncherToken } from "@/server/launcher";
 import { logDownload } from "@/server/download-log";
 import { viaOf } from "@/lib/download-log";
 import { getBranding, readLogoBase64 } from "@/server/branding";
+import { fileUrl } from "@/lib/private-jar-urls";
 
 // Gated: a launcher token or a session that may download (admin, or player while live and the server is online),
 // or the admin-only MANIFEST_KEY. Not cached beyond the client.
@@ -56,7 +57,8 @@ export async function GET(req: Request) {
     server_view_distance: serverViewDistance(m.server_properties),
     tier: tier ?? null,
     config_url: lock.configs.length ? `${env.AUTH_URL}/downloads/config.zip${k}` : null,
-    files: lock.files.map((f) => ({ slug: f.slug, name: f.name, filename: f.filename, url: f.url, sha512: f.sha512, size: f.size, side: f.side })),
+    // docs/58: a private jar's address is made on this site's own address; the lock holds only its path
+    files: lock.files.map((f) => ({ slug: f.slug, name: f.name, filename: f.filename, url: fileUrl(f.url, env.AUTH_URL), sha512: f.sha512, size: f.size, side: f.side })),
     configs: lock.configs,
     // docs/07 "The installer updates itself": which installer is current, and the checksum of its zip. No address:
     // the installer fetches it from /downloads on the site it was built for, and from nowhere else. The old launcher

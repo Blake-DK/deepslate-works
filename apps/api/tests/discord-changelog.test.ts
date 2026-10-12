@@ -193,13 +193,14 @@ describe("an entry posts only once it is live (planner, 2026-10-09)", () => {
   });
 });
 
-// ---- docs/53 D1 and D2: every entry tags @Minecraft; a big update is a post of its own -----------------------------------
+// ---- docs/53 D1 and D2, as Alex settled them on 2026-10-12: every entry is a reply in Change log; a big game update
+// (an entry with a title) leads with its title and tags @Minecraft ------------------------------------------------------
 
 const ROLE = "223456789012345678";
 const BIG: Change = { id: "big", date: "2026-10-12", title: "Power and gear update incoming", lines: ["The quarry will need real power."] };
 
-describe("the change log tags @Minecraft, and a big update is a post of its own (docs/53)", () => {
-  it("an entry without a title (site changes, fixes) is a reply in Change log that pings nobody, nor does the post's opening (Alex, 2026-10-12)", async () => {
+describe("the change log tags @Minecraft for big game updates only (docs/53, Alex 2026-10-12)", () => {
+  it("an entry without a title (site changes, fixes) is a reply in Change log that pings nobody, nor does the post's opening", async () => {
     const t = setup([ONE], { role: ROLE });
     await t.a.round();
     const [opener, reply] = t.sent();
@@ -209,30 +210,35 @@ describe("the change log tags @Minecraft, and a big update is a post of its own 
     expect([reply!.body.content, reply!.body.allowed_mentions]).toEqual(["**4 October 2026**\n• First thing.\n• Second thing.", { parse: [] }]);
   });
 
-  it("an entry with a title is a new post with that title and the News tag, tagged, and does not open Change log", async () => {
+  it("an entry with a title is a reply in Change log too, its title after the date, and it tags the role", async () => {
     const t = setup([BIG], { role: ROLE });
     await t.a.round();
-    const s = t.sent();
-    expect(s).toHaveLength(1);
-    expect(s[0]!.url).not.toContain("thread_id=");
-    expect([s[0]!.body.thread_name, s[0]!.body.content, s[0]!.body.allowed_mentions]).toEqual([
-      "Power and gear update incoming", `<@&${ROLE}>\n**12 October 2026**\n• The quarry will need real power.`, { parse: [], roles: [ROLE] },
+    const [opener, reply] = t.sent();
+    expect(opener!.body.thread_name).toBe("Change log");
+    expect(reply!.body.thread_name).toBeUndefined();
+    expect(reply!.url).toContain(`thread_id=${t.posts.get("changelog")?.threadId}`);
+    expect([reply!.body.content, reply!.body.allowed_mentions]).toEqual([
+      `<@&${ROLE}>\n**12 October 2026: Power and gear update incoming**\n• The quarry will need real power.`, { parse: [], roles: [ROLE] },
     ]);
-    expect(t.posts.get("changelog")).toBeUndefined();
-    expect(t.posts.get("changelog:big")?.threadId).toMatch(/^9\d+$/); // the new post's own thread
+    expect(t.posts.get("changelog:big")?.threadId).toBe(t.posts.get("changelog")?.threadId);
     // and it is not posted again
     t.later(61_000);
     await t.make([BIG]).round();
-    expect(t.sent()).toHaveLength(1);
+    expect(t.sent()).toHaveLength(2);
   });
 
-  it("titled and plain entries side by side: each the way it should be, oldest first", async () => {
+  it("an entry marked noPing (it pinged everyone once already) goes in without the tag", async () => {
+    const t = setup([{ ...BIG, noPing: true }], { role: ROLE });
+    await t.a.round();
+    const reply = t.sent()[1]!;
+    expect([reply.body.content, reply.body.allowed_mentions]).toEqual(["**12 October 2026: Power and gear update incoming**\n• The quarry will need real power.", { parse: [] }]);
+  });
+
+  it("titled and plain entries side by side: all replies in the one post, oldest first, only the big update pings", async () => {
     const t = setup([ONE, BIG, TWO], { role: ROLE });
     await t.a.round();
-    expect(t.sent().map((c) => c.body.thread_name ?? `reply ${/thread_id=(\d+)/.exec(c.url)?.[1]}`)).toEqual([
-      "Change log", `reply ${t.posts.get("changelog")?.threadId}`, "Power and gear update incoming", `reply ${t.posts.get("changelog")?.threadId}`,
-    ]);
-    // only the big update pings
+    const thread = t.posts.get("changelog")?.threadId;
+    expect(t.sent().map((c) => c.body.thread_name ?? `reply ${/thread_id=(\d+)/.exec(c.url)?.[1]}`)).toEqual(["Change log", `reply ${thread}`, `reply ${thread}`, `reply ${thread}`]);
     expect(t.sent().map((c) => (c.body.allowed_mentions as { roles?: string[] }).roles ?? [])).toEqual([[], [], [ROLE], []]);
   });
 
@@ -250,9 +256,9 @@ describe("the change log tags @Minecraft, and a big update is a post of its own 
     const long: Change = { id: "long", date: "2026-10-05", title: "A long one", lines: Array.from({ length: 40 }, (_, i) => `Line ${i + 1} ${"x".repeat(80)}`) };
     const t = setup([long], { role: ROLE });
     await t.a.round();
-    const content = String(t.sent()[0]!.body.content);
+    const content = String(t.sent()[1]!.body.content);
     expect(content.length).toBeLessThanOrEqual(2000);
-    expect(content.startsWith(`<@&${ROLE}>\n**5 October 2026**`)).toBe(true);
+    expect(content.startsWith(`<@&${ROLE}>\n**5 October 2026: A long one**`)).toBe(true);
     expect(content.endsWith(CHANGE_CUT)).toBe(true);
   });
 });
@@ -303,8 +309,13 @@ describe("the entries in the repo, docs/53 D2", () => {
     expect(lint({ ...BIG, title: "Frostmaw is awake" }, names)).toEqual(["names Frostmaw"]);
   });
 
+  it("docs/53 post 1 goes in Change log under a new id, without a second ping; its first id is never used again", () => {
+    expect(CHANGES.find((c) => c.id === "2026-10-12-power-and-gear-coming")).toBeUndefined();
+    expect(CHANGES.find((c) => c.id === "2026-10-12-power-and-gear-coming-in-log")).toMatchObject({ live: true, noPing: true });
+  });
+
   it("every entry passes", () => {
     for (const c of CHANGES) expect(lint(c, names), c.id).toEqual([]);
-    expect(CHANGES.filter((c) => c.title).map((c) => c.id)).toEqual(expect.arrayContaining(["2026-10-12-power-and-gear-coming", "2026-10-12-power-and-gear-landed"]));
+    expect(CHANGES.filter((c) => c.title).map((c) => c.id)).toEqual(expect.arrayContaining(["2026-10-12-power-and-gear-coming-in-log", "2026-10-12-power-and-gear-landed"]));
   });
 });

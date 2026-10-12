@@ -9,13 +9,13 @@
 // by the server and its live check passed; not at merge. So a new entry goes in without `live`, and a later commit
 // sets `live: true` once the live check has passed; the deploy after that posts it. Without it the bot never sees it.
 //
-// docs/53 D2: an entry with a `title` (1 to 90 characters) is a big update: it is posted as a forum post of its own,
-// with that title and the News tag, instead of a reply in "Change log", and it tags @Minecraft (D1). Alex, 2026-10-12:
-// only large features that change the game tag anyone, so give a title only to those; site and look changes and bug
-// fixes stay replies without one, and ping nobody. No entry names a season's mods or bosses (the test reads them
+// docs/53 D2, as Alex settled it on 2026-10-12: every entry is a reply in "Change log". An entry with a `title` (1 to 90
+// characters) is a big update that changes the game: the title leads its reply in bold and it tags @Minecraft (D1).
+// Give a title only to those; site and look changes and bug fixes go without one and ping nobody. `noPing`: an entry
+// that has pinged everyone once already, posted again without the tag. No entry names a season's mods or bosses (the test reads them
 // from mods.json and the season files).
 
-export type Change = { id: string; date: string; title?: string; lines: string[]; live?: true };
+export type Change = { id: string; date: string; title?: string; lines: string[]; live?: true; noPing?: true };
 
 /** What the bot may post: only entries marked live (liveChanges(CHANGES) in server.ts). */
 export function liveChanges(all: Change[]): Change[] {
@@ -182,12 +182,14 @@ export const CHANGES: Change[] = [
     ],
   },
   {
-    // docs/53 D3 post 1, its own post. Set `live: true` once docs/53 D1 and D2's live check has passed (the rule above):
-    // passed on live 2026-10-12 (Alex).
-    id: "2026-10-12-power-and-gear-coming",
+    // docs/53 D3 post 1. First posted 2026-10-12 09:50 UTC as "2026-10-12-power-and-gear-coming", a forum post of its
+    // own, with the ping. Alex: it belongs in Change log; the post was deleted by hand and the entry goes in again under
+    // a new id (so the bot posts it once more), without a second ping.
+    id: "2026-10-12-power-and-gear-coming-in-log",
     date: "2026-10-12",
     title: "Power and gear update incoming",
     live: true,
+    noPing: true,
     lines: [
       "You told us there's no reason to build past a starter generator and nothing beats diamond. Fair. Here's what's coming.",
       "The quarry will need real power. A small generator will still run it, just slowly. Full speed means building a proper power setup.",
@@ -197,7 +199,7 @@ export const CHANGES: Change[] = [
     ],
   },
   {
-    // docs/53 D3 post 2, its own post. Set `live: true` only after docs/53 A and B's live check (the rule above).
+    // docs/53 D3 post 2. Set `live: true` only after docs/53 A and B's live check (the rule above).
     id: "2026-10-12-power-and-gear-landed",
     date: "2026-10-12",
     title: "Power and gear update is live",
@@ -219,11 +221,14 @@ export const DISCORD_MAX = 2000;
 /** The last line of an entry that did not fit. The test over CHANGES fails on it, so a real entry never ends this way. */
 export const CHANGE_CUT = "… and more: this update was too long for one message.";
 
-/** One entry as a Discord message: the date in bold, a bullet per line. Too long for one message: cut at a line break. */
+/**
+ * One entry as a Discord message: the date in bold (with a big update's title after it), a bullet per line. Too long
+ * for one message: cut at a line break.
+ */
 /** `max`: less than Discord's limit when something goes in front of it (the role's mention, docs/53 D1). */
 export function changeText(c: Change, max = DISCORD_MAX): string {
   const [y, m, d] = c.date.split("-").map(Number);
-  const lines = [`**${d} ${MONTHS[(m ?? 1) - 1]} ${y}**`, ...c.lines.map((l) => `• ${l}`)];
+  const lines = [`**${d} ${MONTHS[(m ?? 1) - 1]} ${y}${c.title ? `: ${c.title}` : ""}**`, ...c.lines.map((l) => `• ${l}`)];
   const whole = lines.join("\n");
   if (whole.length <= max) return whole;
   const kept: string[] = [];

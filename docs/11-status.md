@@ -67,6 +67,11 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Alex, 2026-10-12, after the check:** in the change log only large features that change the game tag @Minecraft,
   not site changes or bug fixes. So the tag follows `title`: an entry with one (its own post) tags, a reply in
   "Change log" does not. docs/53 D1 said every entry; this replaces it.
+- **Alex, the same day, after post 1 went out (09:50 UTC, PR #39) as a forum post of its own:** it belongs in Change log.
+  So every entry is a reply in "Change log" again; a titled one leads with "**date: title**" and tags the role.
+  docs/53 D2's own post is gone. Alex deleted the stray post by hand; post 1 goes in again under the id
+  `2026-10-12-power-and-gear-coming-in-log` with `noPing` (everyone was pinged once already). The first id stays
+  out of `CHANGES` for good (its row in DiscordPost is what keeps it from going out again).
 - **Was the live check (Alex):** a ticked news post pings the role on a phone, an unticked one does not, a vote
   count edit pings nobody. The webhook posts most of these; a poll the bot posts (vote buttons on) pings only if the
   bot may mention the role (the role's "Allow anyone to @mention this role", or the bot's Mention All Roles).

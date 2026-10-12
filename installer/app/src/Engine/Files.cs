@@ -17,6 +17,36 @@ namespace DeepslateWorks
                 return BitConverter.ToString(sha.ComputeHash(s)).Replace("-", "").ToLowerInvariant();
         }
 
+        // ---- where a mod file may come from (docs/58) ----------------------------------------------------------------
+        // The same rule as the site's (packages/modpack mod-url.ts): Modrinth's CDN, and one more place, the site itself,
+        // for a jar it hands out behind its gate (a patched mod that is never published): <site>/downloads/mods/<file>,
+        // and the test pack's through the live site, <site>/downloads/mods/test/<file>. The site is the one this app was
+        // built for, never an address from the mod list. Anything else is refused before it is fetched.
+        public const string ModHost = "cdn.modrinth.com";
+        static readonly Regex PrivateJar = new Regex(@"^[A-Za-z0-9][A-Za-z0-9._+-]{0,150}\.jar$");
+
+        /// <summary>Why this mod file's address may not be fetched, or null when it may.</summary>
+        public static string ModUrlProblem(string url, string site)
+        {
+            Uri u;
+            if (string.IsNullOrEmpty(url) || !Uri.TryCreate(url, UriKind.Absolute, out u)) return "not an address: " + url;
+            if (u.Scheme == Uri.UriSchemeHttps && string.Equals(u.Host, ModHost, StringComparison.OrdinalIgnoreCase)) return null;
+            Uri s;
+            if (!string.IsNullOrEmpty(site) && Uri.TryCreate(site, UriKind.Absolute, out s) && u.Scheme == s.Scheme && string.Equals(u.Host, s.Host, StringComparison.OrdinalIgnoreCase) && u.Port == s.Port
+                && u.UserInfo.Length == 0 && u.Query.Length == 0 && u.Fragment.Length == 0)
+            {
+                const string mods = "/downloads/mods/";
+                var p = u.AbsolutePath;
+                if (p.StartsWith(mods, StringComparison.Ordinal))
+                {
+                    var name = p.Substring(mods.Length);
+                    if (name.StartsWith("test/", StringComparison.Ordinal)) name = name.Substring(5);
+                    if (PrivateJar.IsMatch(name) && !name.Contains("..")) return null;
+                }
+            }
+            return "not on https://" + ModHost + " or this site's /downloads/mods/: " + url;
+        }
+
         // ---- downloads land in a folder of their own first (docs/07 "Downloads") -------------------------------
         // A mod is downloaded into .downloading\ next to mods\, checked, and only then moved into mods\ in one step. A run
         // that is killed half-way leaves a part file in .downloading\ (emptied at the start of the next run), never a
@@ -25,6 +55,8 @@ namespace DeepslateWorks
         /// put in place). A download that fails throws, and leaves only the part file.</summary>
         public static string SaveModFile(string url, string dest, string sha512, string staging, Action<string, string> fetch)
         {
+            var bad = ModUrlProblem(url, Env.PortalUrl);
+            if (bad != null) throw new IOException(Path.GetFileName(dest) + ": " + bad);
             Directory.CreateDirectory(staging);
             var part = Path.Combine(staging, Path.GetFileName(dest) + ".part");
             Log.RemoveTemp(part);
@@ -55,6 +87,8 @@ namespace DeepslateWorks
                 if (File.Exists(dest) && string.Equals(Sha512Hex(dest), sha, StringComparison.OrdinalIgnoreCase)) continue;
                 var ready = Path.Combine(waitingDir, name);
                 if (File.Exists(ready) && string.Equals(Sha512Hex(ready), sha, StringComparison.OrdinalIgnoreCase)) { n++; continue; }
+                var bad = ModUrlProblem(J.Str(f, "url"), Env.PortalUrl);
+                if (bad != null) throw new IOException(name + ": " + bad);
                 var part = ready + ".part";
                 Log.RemoveTemp(part);
                 fetch(J.Str(f, "url"), part);

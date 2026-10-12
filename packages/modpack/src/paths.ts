@@ -19,6 +19,7 @@ export function modpackPaths(modpackDir = process.env.MODPACK_DIR ?? path.join(p
     seasons: path.join(root, "seasons"), // docs/20: one file per season; `build seasons` makes their datapacks
     testOverlay: path.join(root, "test-overlay"), // docs/42 T6: copied over dist/server/ by a build on the test server only
     dist: process.env.DIST_DIR ?? path.join(repo, "dist"),
+    privateJars: process.env.PRIVATE_JARS_DIR ?? path.join(repo, "data", "private-jars"), // docs/58: never in git, put there by hand
     installer: path.join(repo, "installer"),
   };
 }

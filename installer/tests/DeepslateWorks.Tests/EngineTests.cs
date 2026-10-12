@@ -225,6 +225,28 @@ namespace DeepslateWorks.Tests
             }
         }
 
+        [Fact] public void A_mod_file_comes_from_Modrinth_or_the_site_itself_and_nowhere_else()
+        {
+            const string site = "https://deepslate.dsw.test";
+            Assert.Null(Engine.ModUrlProblem("https://cdn.modrinth.com/data/AANobbMI/versions/OihdIimA/sodium.jar", site));
+            // docs/58: a private jar the site hands out, and the test pack's through the live site
+            Assert.Null(Engine.ModUrlProblem(site + "/downloads/mods/mowziesmobs-1.21.1-1.8.2-dsw.1.jar", site));
+            Assert.Null(Engine.ModUrlProblem(site + "/downloads/mods/test/mowziesmobs-1.21.1-1.8.2-dsw.1.jar", site));
+            foreach (var bad in new[] {
+                "http://cdn.modrinth.com/x.jar", "https://cdn.modrinth.com.evil.example/x.jar", "https://example.com/x.jar",
+                "https://deepslate.dsw.test.evil.example/downloads/mods/x.jar", "http://deepslate.dsw.test/downloads/mods/x.jar",
+                "https://deepslate.dsw.test:8443/downloads/mods/x.jar", site + "/downloads/x.jar", site + "/downloads/mods/a/b.jar",
+                site + "/downloads/mods/x.jar?y=1", site + "/downloads/mods/x.zip", site + "/downloads/mods/", "/downloads/mods/x.jar", "not a url", null })
+                Assert.NotNull(Engine.ModUrlProblem(bad, site));
+            using (var s = new Scratch())
+            {
+                var fetched = false;
+                var ex = Assert.ThrowsAny<IOException>(() => Engine.SaveModFile("https://example.com/x.jar", Path.Combine(s.P("mods"), "x.jar"), "00", s.P(".downloading"), (u, o) => fetched = true));
+                Assert.Contains("not on https://cdn.modrinth.com", ex.Message);
+                Assert.False(fetched);   // refused before anything is fetched
+            }
+        }
+
         [Fact] public void Downloads_go_through_Http_Download()
         {
             using (var s = new Scratch())

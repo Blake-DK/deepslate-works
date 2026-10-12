@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "deepslate:moon_plains",
+    "deepslate:moon_highlands",
+    "deepslate:moon_craters"
+  ]
+}

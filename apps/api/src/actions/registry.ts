@@ -10,8 +10,8 @@ import { COMPONENTS_RE, ITEM_RE, SLOT_RE } from "../shared/slots.js";
 // "system" actions are run by the api itself (join hook, timers); the rest need an ADMIN caller.
 
 export const MC_NAME = z.string().regex(/^[A-Za-z0-9_]{3,16}$/);
-/** The worlds that can be pre-generated: the game's three and a season's Frontier. Never the entrance room. */
-export const PREGEN_WORLD = z.string().regex(/^(minecraft:(overworld|the_nether|the_end)|deepslate:frontier_[a-z0-9_]{1,32})$/);
+/** The worlds that can be pre-generated: the game's three, the Moon (docs/55 M5) and a season's Frontier. Never the entrance room. */
+export const PREGEN_WORLD = z.string().regex(/^(minecraft:(overworld|the_nether|the_end)|deepslate:moon|deepslate:frontier_[a-z0-9_]{1,32})$/);
 
 // ---- builds (docs/34 §10)
 /** A structure file holds 48 blocks a side at most; a larger build is a grid of pieces. */

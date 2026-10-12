@@ -41,7 +41,7 @@ jobs:
         timeout-minutes: 8
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-smoke.ps1 -Out shots
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: installer-2-windows
@@ -105,7 +105,7 @@ jobs:
         timeout-minutes: 10
         shell: pwsh
         run: dotnet test installer/tests/DeepslateWorks.Tests/DeepslateWorks.Tests.csproj -c Release --logger "trx;LogFileName=tests.trx" --logger "console;verbosity=normal" --results-directory shots/tests
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: deepslate-works-${{ steps.v.outputs.version }}
@@ -137,7 +137,7 @@ jobs:
           got=$(sha256sum old/DeepslateWorks.exe | cut -d' ' -f1)
           echo "image $img: sha256 $got"
           [ "$got" = "$WANT" ] || { echo "not the exe the site hands out (want $WANT)"; exit 1; }
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: old-exe-3.5.5
           path: old/DeepslateWorks.exe
@@ -148,7 +148,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: old-exe-3.5.5
           path: old
@@ -159,7 +159,7 @@ jobs:
         timeout-minutes: 15
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File installer/tests/windows-update.ps1 -Old old/DeepslateWorks.exe -New new/DeepslateWorks.exe -Out shots -SiteExe
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: update-from-3.5.5
@@ -176,7 +176,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: deepslate-works-*
           merge-multiple: true

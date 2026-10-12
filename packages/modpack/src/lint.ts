@@ -1,6 +1,6 @@
 import { isPlayerFacing, manifestSchema, type Manifest } from "./schema";
 import type { LockFile } from "./lock";
-import { modUrlProblem } from "./mod-url";
+import { modUrlProblem, privateJarOf } from "./mod-url";
 
 export type LintIssue = { level: "error" | "warn"; message: string };
 
@@ -19,6 +19,7 @@ export function lintManifest(raw: unknown): { manifest: Manifest | null; issues:
   const votableCats = new Set(m.categories.filter((c) => c.votable).map((c) => c.id));
   const slugs = new Set<string>();
   const enabledByGroup = new Map<string, string[]>();
+  const jarNames = new Set<string>();
   for (const mod of m.mods) {
     if (slugs.has(mod.slug)) err(`duplicate slug ${mod.slug}`);
     slugs.add(mod.slug);
@@ -38,6 +39,10 @@ export function lintManifest(raw: unknown): { manifest: Manifest | null; issues:
     if (mod.guide !== "behind" && mod.side === "server") warn(`${mod.slug}: server-only but in the guide's "${mod.guide}" part`);
     if (mod.adminOnly && votableCats.has(mod.category)) err(`${mod.slug}: admin-only, but in a votable category: a mod up for vote is seen by everyone`);
     if (mod.side === "server" && mod.exclusiveGroup) warn(`${mod.slug}: server-only mods should not be in an exclusive group`);
+    // docs/58: a private jar is that file and no Modrinth version; going back to Modrinth drops "source" and pins one
+    if (mod.source && mod.version !== "latest") err(`${mod.slug}: has a private "source" and a Modrinth "version" (${mod.version}): take "version" out while the jar is private (docs/58)`);
+    if (mod.source && jarNames.has(mod.source.private)) err(`${mod.slug}: private jar ${mod.source.private} is named by another mod too`);
+    if (mod.source) jarNames.add(mod.source.private);
   }
   const bySlug = new Map(m.mods.map((x) => [x.slug, x]));
   for (const mod of m.mods) {
@@ -50,12 +55,14 @@ export function lintManifest(raw: unknown): { manifest: Manifest | null; issues:
   return { manifest: m, issues };
 }
 
-/** Every file in the lock must come from Modrinth's CDN (mod-url.ts). */
+/** Every file in the lock must come from Modrinth's CDN, or be a private jar on the site's own /downloads/mods/ (mod-url.ts, docs/58). */
 export function lintLock(lock: Pick<LockFile, "files">): LintIssue[] {
   const issues: LintIssue[] = [];
   for (const f of lock.files ?? []) {
     const bad = modUrlProblem(f.url);
     if (bad) issues.push({ level: "error", message: `lock: ${f.slug}: ${bad}` });
+    const own = privateJarOf(f.url);
+    if (own && own !== f.filename) issues.push({ level: "error", message: `lock: ${f.slug}: its address names ${own}, but its file is ${f.filename}` });
   }
   return issues;
 }

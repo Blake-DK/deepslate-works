@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PRIVATE_JAR } from "./mod-url";
 
 // modpack/mods.json is the single source of truth (docs/06). This schema is shared by the CLI and the web app.
 
@@ -23,6 +24,15 @@ export type KeyBind = z.infer<typeof keySchema>;
 /** A short "how to use it", in the portal's small Markdown (bold, lists, links). */
 export const howToSchema = z.string().min(1).max(700);
 
+// docs/58: a mod whose jar is not Modrinth's but one kept on the VPS (data/private-jars/), e.g. a patched build of a
+// mod. Never published: the site hands it out behind its gate. `sha512` is the build's own (its CI log); Lock and
+// Build refuse a file that is not that one.
+export const privateSourceSchema = z.object({
+  private: z.string().regex(PRIVATE_JAR, "a jar's file name, no folders"),
+  sha512: z.string().regex(/^[0-9a-f]{128}$/, "sha512: 128 lower-case hex digits"),
+  note: z.string().max(160).optional(),
+});
+
 export const modSchema = z.object({
   slug: z.string().regex(/^[a-z0-9][a-z0-9._-]*$/, "Modrinth slug"),
   name: z.string().min(1),
@@ -43,6 +53,7 @@ export const modSchema = z.object({
   // the day YouTube was searched and nothing genuine about this mod turned up: lint stops asking for videos
   noVideosFound: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "a date, YYYY-MM-DD").optional(),
   version: z.string().default("latest"), // "latest" or a Modrinth version id
+  source: privateSourceSchema.optional(), // docs/58: the jar comes from data/private-jars/, not Modrinth
   requires: z.array(z.string()).default([]),
   guide: z.enum(GUIDE_SECTIONS).optional(),
   topic: z.enum(GUIDE_TOPICS).optional(),

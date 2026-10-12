@@ -90,9 +90,10 @@ export async function testServerSummary<T>(timeoutMs = 4000): Promise<T | null> 
  * Its own token (TEST_APP_TOKEN), which api-test takes for /test/app/* and nothing else. The answer is passed back as it
  * is (a stream for config.zip). Null while the test server is off or the token is not set; never on the test site.
  */
-export async function testAppCall(pathname: "/test/app/pack" | "/test/app/config.zip" | "/test/app/state" | "/test/app/wake" | "/test/app/tester", init: { method?: "GET" | "POST"; body?: unknown; timeoutMs?: number } = {}): Promise<Response | null> {
+export async function testAppCall(pathname: "/test/app/pack" | "/test/app/config.zip" | "/test/app/state" | "/test/app/wake" | "/test/app/tester" | "/test/app/mod", init: { method?: "GET" | "POST"; body?: unknown; timeoutMs?: number; query?: Record<string, string> } = {}): Promise<Response | null> {
   if (env.TEST_MODE || !env.TEST_STACK || !env.TEST_APP_TOKEN || env.TEST_APP_TOKEN.length < 32) return null;
-  return fetch(`${env.TEST_API_URL}${pathname}`, {
+  const q = init.query ? `?${new URLSearchParams(init.query).toString()}` : "";
+  return fetch(`${env.TEST_API_URL}${pathname}${q}`, {
     method: init.method ?? "GET",
     headers: { authorization: `Bearer ${env.TEST_APP_TOKEN}`, accept: "application/json", ...(init.body === undefined ? {} : { "content-type": "application/json" }) },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),

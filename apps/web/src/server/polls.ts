@@ -110,14 +110,15 @@ export async function answerPoll(who: Viewer & { displayName?: string }, pollId:
   return { ok: true, poll: (await getPoll(pollId, who))!, changed: r.changed };
 }
 
-export type NewPoll = { question: string; options: PollOption[]; multiple: boolean; mustVote: boolean; closesAt: Date | null };
+/** `tag`: its post in season-updates tags @Minecraft (docs/53 D1; absent counts as yes). */
+export type NewPoll = { question: string; options: PollOption[]; multiple: boolean; mustVote: boolean; closesAt: Date | null; tag?: boolean };
 
 /** Admin → News & polls → Polls → New poll: opened at once, with its news item, a chat line for whoever is playing, and the event. */
 export async function openPoll(admin: Viewer, p: NewPoll): Promise<string> {
   const now = new Date();
   const poll = await db.poll.create({ data: { question: p.question, options: p.options as unknown as Prisma.InputJsonValue, multiple: p.multiple, mustVote: p.mustVote, closesAt: p.closesAt, createdBy: admin.id, status: "OPEN", openedAt: now } });
   await db.announcement.create({ data: { body: openedNews(p.question, p.closesAt ? ukShort(p.closesAt) : null, p.mustVote), authorId: SYSTEM_AUTHOR } });
-  await audit({ userId: admin.id, action: "poll.open", params: { pollId: poll.id, question: p.question, mustVote: p.mustVote, options: p.options.filter((o) => o.id !== DONT_MIND.id).map((o) => o.text), multiple: p.multiple, closesAt: p.closesAt?.toISOString() ?? null }, result: "OK" });
+  await audit({ userId: admin.id, action: "poll.open", params: { pollId: poll.id, question: p.question, mustVote: p.mustVote, options: p.options.filter((o) => o.id !== DONT_MIND.id).map((o) => o.text), multiple: p.multiple, closesAt: p.closesAt?.toISOString() ?? null, tag: p.tag !== false }, result: "OK" });
   // Somebody already playing is never held or kicked for it: a chat line, and it applies from their next join.
   await apiFetch("/polls/opened", { method: "POST", body: { question: p.question }, caller: { id: admin.id, role: "ADMIN" }, timeoutMs: 10_000 }).catch(() => undefined);
   return poll.id;

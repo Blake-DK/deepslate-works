@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  advancementText, asPlayer, asServer, deathRun, deathText, escapeText, headUrl, isStale, joinText, leaveText, liveText, packText,
-  reminderMessage, restartText, ukWhen, voteClosedText, voteMessage, welcomeText, type FeedEvent, type PollView,
+  advancementText, asPlayer, asServer, deathRun, deathText, escapeText, headUrl, isStale, joinText, leaveText, liveText, newsMessage, packText,
+  reminderMessage, restartText, tagged, ukWhen, voteClosedText, voteMessage, welcomeText, type FeedEvent, type PollView,
 } from "../src/discord/lines.js";
 
 import { REAL } from "./fixtures/discord-events.js";
@@ -121,5 +121,16 @@ describe("Discord votes (docs/21 §5)", () => {
     const quiet = reminderMessage(brand, open, { discordIds: ["111111111111111111", "222222222222222222"], others: 0 }, false, now);
     expect(quiet.content).toBe("The vote **Next boss** closes tomorrow at 20:00. 2 people still to vote.");
     expect(quiet.allowed_mentions).toEqual({ parse: [] });
+  });
+});
+
+describe("the @Minecraft tag (docs/53 D1)", () => {
+  const ROLE = "223456789012345678";
+  it("puts the mention in front and lets only that role ping; no role leaves the message as it was", () => {
+    const line = asServer({ name: "Deepslate Works", avatar: null }, "Hello @everyone");
+    expect(tagged(line, ROLE)).toMatchObject({ content: `<@&${ROLE}>\nHello @everyone`, allowed_mentions: { parse: [], roles: [ROLE] } });
+    expect(tagged(line, null)).toBe(line);
+    const embedOnly = newsMessage({ name: "Deepslate Works", avatar: null }, "News", null);
+    expect(tagged(embedOnly, ROLE)).toMatchObject({ content: `<@&${ROLE}>`, embeds: embedOnly.embeds });
   });
 });

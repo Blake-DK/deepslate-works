@@ -145,9 +145,10 @@ export default async function VotesSection({ searchParams, part }: { searchParam
                 </div>
               </details>
             </fieldset>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="multiple" /> Multiple choice</label>
               <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="mustVote" defaultChecked /> Must vote before playing</label>
+              <label className="flex items-center gap-2 text-sm"><Check type="checkbox" name="tag" defaultChecked /> Tag @Minecraft</label>
               <div><Label htmlFor="pollCloses">Closes (UK time, optional)</Label><Input id="pollCloses" name="closesAt" type="datetime-local" /></div>
             </div>
             <p className="text-xs text-muted-foreground">Must vote: members are asked in the app and on the site before Play, and the entrance room holds anyone who joins without voting. Somebody already playing is never kicked or held; it applies from their next join. Admins are asked too but never held.</p>

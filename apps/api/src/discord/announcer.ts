@@ -3,14 +3,14 @@
 // never slows the recorder, the door or a page.
 // docs/22 §13: with the forum season-updates (its webhook, or the bot), votes, news and We're live are forum posts there
 // (replies in the same post), and #game-chat (the feed webhook) also carries the game's chat.
-import { CHANGELOG_OPENER, CHANGELOG_TITLE, changeText, type Change } from "../changelog.js";
+import { CHANGELOG_OPENER, CHANGELOG_TITLE, changeText, DISCORD_MAX, type Change } from "../changelog.js";
 import { aboutModsNoLongerLoaded, isKnownHarmless } from "../events/parse.js";
 import type { Attachment, Message, Sent, Webhook, Where } from "./webhook.js";
 import type { BotMessage, Component } from "./rest.js";
 import {
   actionOf, advancementText, asPlayer, asServer, backText, chatText, crashAdminText, crashFeedText, deathRun, deathText, escapeText, isStale,
   joinText, leaveText, LIVE_TITLE, liveText, metaOf, newsMessage, packText, paramsOf, postTitle, problemText, refusedText, reminderMessage,
-  restartText, resultOf, seasonPost, seasonReply, stopText, TEST_TEXT, voteClosedText, voteMessage, welcomeText,
+  restartText, resultOf, seasonPost, seasonReply, stopText, tagged, tagPrefix, TEST_TEXT, voteClosedText, voteMessage, welcomeText,
   type Brand, type Channel, type FeedEvent, type PollView, type SeasonInfo, type Switches,
 } from "./lines.js";
 
@@ -78,6 +78,8 @@ type Deps = {
   bot?: VotePoster | null; // docs/22: set when DISCORD_BOT_TOKEN is
   changes?: Change[]; // the change log's entries (changelog.ts); absent: no change log post
   chatRelay?: boolean; // docs/22 §5: game chat to #game-chat needs the bot (the chat channel is picked through it)
+  /** docs/53 D1: the player role's id while new posts in season-updates may tag it (role.ts); null or absent: no tag. */
+  playerRole?: () => string | null;
   portal: string; // https://deepslate.dsw.test
   log: (o: unknown, m: string) => void;
   now?: () => Date;
@@ -559,16 +561,18 @@ export class Announcer {
         if (!item) return true;
         const pic = item.image ? await this.d.store.picture(item.image) : null;
         const ch = this.twoChannels ? "updates" : "feed";
-        return ok(await this.send(e, 0, ch, "news", newsMessage(brand, item.body, pic?.name ?? null), pic ?? undefined, ch === "updates" ? { threadName: postTitle(item.body), tags: this.tags(sw, "News") } : {}));
+        const msg = tagged(newsMessage(brand, item.body, pic?.name ?? null), this.role(ch, p.tag !== false)); // the admin's "Tag @Minecraft" box
+        return ok(await this.send(e, 0, ch, "news", msg, pic ?? undefined, ch === "updates" ? { threadName: postTitle(item.body), tags: this.tags(sw, "News") } : {}));
       }
       case "site.settings": {
         if (!sw.live || p.live !== true || p.was !== false) return true;
         const ch = this.twoChannels ? "updates" : "feed";
-        return ok(await this.send(e, 0, ch, "live", asServer(brand, liveText(brand.name, new URL(this.d.portal).host)), undefined, ch === "updates" ? { threadName: LIVE_TITLE, tags: this.tags(sw, "News") } : {}));
+        return ok(await this.send(e, 0, ch, "live", tagged(asServer(brand, liveText(brand.name, new URL(this.d.portal).host)), this.role(ch)), undefined, ch === "updates" ? { threadName: LIVE_TITLE, tags: this.tags(sw, "News") } : {}));
       }
       case "poll.open":
       case "vote.open":
-        return this.voteOpened(e, action === "poll.open" ? "poll" : "ballot", String(p.pollId ?? p.voteId ?? ""), sw, brand, now);
+        // a poll carries the admin's "Tag @Minecraft" box; the mod ballot has none and always tags
+        return this.voteOpened(e, action === "poll.open" ? "poll" : "ballot", String(p.pollId ?? p.voteId ?? ""), sw, brand, now, p.tag !== false);
       case "poll.vote":
       case "ballot.save": {
         const id = String(p.pollId ?? p.voteId ?? "");
@@ -606,6 +610,14 @@ export class Announcer {
 
   // ---- §5: votes (docs/22 §4, §13: a forum post each, the bot's own with buttons when it can) -------------------------
 
+  /**
+   * docs/53 D1: the role to tag in a new post, or null. Only posts in the forum season-updates are tagged, and only
+   * when the role is set and Discord knows it (role.ts); otherwise the post goes out without it, never held back.
+   */
+  private role(ch: Channel, want = true): string | null {
+    return want && ch === "updates" ? (this.d.playerRole?.() ?? null) : null;
+  }
+
   private tags(sw: Switches, name: string): string[] {
     return this.d.bot && sw.updatesForum ? this.d.bot.tagFor(sw.updatesForum, name) : [];
   }
@@ -636,14 +648,18 @@ export class Announcer {
     return { ok: r.ok, retry: !r.ok && r.retry };
   }
 
-  /** Open a vote's post: the bot's (buttons) or the webhook's (a link to the site). */
-  private async openVote(e: FeedEvent | null, kind: PollView["kind"], v: PollView, sw: Switches, brand: Brand, now: Date): Promise<Outcome & { row?: PostRow }> {
+  /**
+   * Open a vote's post: the bot's (buttons) or the webhook's (a link to the site). `tag`: when it opens (docs/53 D1);
+   * a post made again because it was missing or deleted by hand is not tagged a second time.
+   */
+  private async openVote(e: FeedEvent | null, kind: PollView["kind"], v: PollView, sw: Switches, brand: Brand, now: Date, tag = false): Promise<Outcome & { row?: PostRow }> {
     const key = `${kind}:${v.id}`;
-    const msg = voteMessage(brand, v, this.d.portal, this.botPosts(sw, kind));
+    const ch: Channel = this.twoChannels ? "updates" : "feed";
+    const msg = tagged(voteMessage(brand, v, this.d.portal, this.botPosts(sw, kind)), this.role(ch, tag));
     // the bot is still connecting: wait for it, or the vote is the webhook's post without buttons for good
     if (this.botSoon() && this.botWould(sw, kind)) return { ok: false, retry: true };
     if (this.botPosts(sw, kind)) {
-      const r = await this.d.bot!.createPost(sw.updatesForum, v.title, { embeds: msg.embeds, components: await this.components(kind, v.id, false), allowed_mentions: msg.allowed_mentions }, "Vote");
+      const r = await this.d.bot!.createPost(sw.updatesForum, v.title, { ...(msg.content ? { content: msg.content } : {}), embeds: msg.embeds, components: await this.components(kind, v.id, false), allowed_mentions: msg.allowed_mentions }, "Vote");
       this.record({ channel: "updates", what: `${kind} opened`, ok: r.ok, ...(r.ok ? {} : { error: r.error }) });
       if (r.ok) {
         const row: PostRow = { key, channel: "updates", messageId: r.messageId, postedAt: now, editedAt: null, via: "bot", threadId: r.threadId };
@@ -652,7 +668,6 @@ export class Announcer {
       }
       // the bot could not post: the webhook's post, without buttons
     }
-    const ch: Channel = this.twoChannels ? "updates" : "feed";
     const r = await this.send(e, 0, ch, `${kind} opened`, msg, undefined, ch === "updates" ? { threadName: v.title, tags: this.tags(sw, "Vote") } : {});
     if (!r.ok) return r;
     const row: PostRow = { key, channel: ch, messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId: ch === "updates" ? r.channelId || null : null };
@@ -685,12 +700,12 @@ export class Announcer {
     return this.send(e, n, ch, what, msg, undefined, { threadId: again.row.threadId });
   }
 
-  private async voteOpened(e: FeedEvent, kind: PollView["kind"], id: string, sw: Switches, brand: Brand, now: Date): Promise<boolean> {
+  private async voteOpened(e: FeedEvent, kind: PollView["kind"], id: string, sw: Switches, brand: Brand, now: Date, tag: boolean): Promise<boolean> {
     if (!sw.votes || !id) return true;
     if (await this.postOf(`${kind}:${id}`)) return true;
     const v = await this.d.store.vote(kind, id);
     if (!v || v.status !== "OPEN") return true; // closed or deleted since: nothing
-    const r = await this.openVote(e, kind, v, sw, brand, now);
+    const r = await this.openVote(e, kind, v, sw, brand, now, tag);
     return r.ok || !r.retry;
   }
 
@@ -768,7 +783,7 @@ export class Announcer {
     return second.ok || !second.retry;
   }
 
-  // ---- the change log (Alex, 2026-10-04): one forum post, a reply per deploy ----------------------------------------------
+  // ---- the change log (Alex, 2026-10-04): one forum post, a reply per deploy; a big update a post of its own (docs/53) --
 
   private changeLogAt = 0;
   private changeLogDone = false;
@@ -778,6 +793,8 @@ export class Announcer {
    * season-updates, oldest first. The post is made the first time; one deleted by hand is made again. Looked at once
    * a minute until everything is posted, so in practice once after each deploy. Without the forum's webhook: nothing.
    * An entry Discord refuses for good is marked as posted and skipped, so it cannot hold up the ones after it.
+   * docs/53 D2: an entry with a `title` is a new post of its own with that title and the News tag, not a reply. Every
+   * entry is tagged (D1); the "Change log" post's own opening message is not.
    */
   private async changeLog(sw: Switches, brand: Brand, now: Date): Promise<void> {
     const changes = this.d.changes ?? [];
@@ -794,14 +811,24 @@ export class Announcer {
     for (const c of changes) {
       const key = `changelog:${c.id}`;
       if (await this.postOf(key)) continue;
-      threadId ??= await open();
-      if (!threadId) return; // not taken, or not a forum: looked at again in a minute
-      let r = await this.send(null, 0, "updates", "change log", asServer(brand, changeText(c)), undefined, { threadId });
-      if (!r.ok && r.gone) {
-        // the post was deleted by hand in Discord: made again, and the entry goes into the new one
-        threadId = await open();
-        if (!threadId) return;
-        r = await this.send(null, 0, "updates", "change log", asServer(brand, changeText(c)), undefined, { threadId });
+      const role = this.role("updates");
+      const msg = tagged(asServer(brand, changeText(c, DISCORD_MAX - tagPrefix(role).length)), role);
+      let r: Outcome;
+      let thread: string | null;
+      if (c.title) {
+        r = await this.send(null, 0, "updates", "change log post", msg, undefined, { threadName: c.title, tags: this.tags(sw, "News") });
+        thread = r.ok ? r.channelId || null : null;
+      } else {
+        threadId ??= await open();
+        if (!threadId) return; // not taken, or not a forum: looked at again in a minute
+        r = await this.send(null, 0, "updates", "change log", msg, undefined, { threadId });
+        if (!r.ok && r.gone) {
+          // the post was deleted by hand in Discord: made again, and the entry goes into the new one
+          threadId = await open();
+          if (!threadId) return;
+          r = await this.send(null, 0, "updates", "change log", msg, undefined, { threadId });
+        }
+        thread = threadId;
       }
       if (!r.ok) {
         // Discord is away, the post has gone again, or the webhook itself was refused: looked at again in a minute
@@ -809,7 +836,7 @@ export class Announcer {
         // Discord will never take this entry as it is (400): marked, said once, and the later entries are not held up
         this.d.log({ id: c.id, error: this.st?.log[0]?.error }, "discord change log: Discord refused this entry; it is skipped");
       }
-      await this.keep({ key, channel: "updates", messageId: r.ok ? r.id : "", postedAt: now, editedAt: null, via: "webhook", threadId });
+      await this.keep({ key, channel: "updates", messageId: r.ok ? r.id : "", postedAt: now, editedAt: null, via: "webhook", threadId: thread });
     }
     this.changeLogDone = true;
   }

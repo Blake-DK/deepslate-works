@@ -1,0 +1,16 @@
+# docs/54: what CodeQL leaves out (.github/workflows/codeql.yml). Only code this repository writes is scanned:
+# dependencies, build output, the modpack's downloaded jars and the docs are not.
+name: deepslate-works
+
+paths-ignore:
+  - "**/node_modules/**"
+  # the web app's build (next build)
+  - "**/.next/**"
+  # any package's build output, and the repository's own dist/: the modpack build writes the server's files and the
+  # jars it downloads there (dist/server/mods), the app's CI copy goes to dist/ci
+  - "**/dist/**"
+  - "**/coverage/**"
+  # the Windows app's build output (installer/app and its tests)
+  - "installer/**/bin/**"
+  - "installer/**/obj/**"
+  - "docs/**"

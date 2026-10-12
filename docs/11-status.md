@@ -26,6 +26,20 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## GitHub security: docs/54 (2026-10-12, PR to `dev`; Dependabot unproven until `main`)
+
+- **Alex, in Settings:** private vulnerability reporting, secret scanning and push protection, Dependabot alerts on.
+  Dependabot security updates off (they target `main` and would skip `dev`); code scanning default setup not enabled
+  and must stay so (the advanced setup's uploads are refused while it is on).
+- **This PR:** `.github/workflows/codeql.yml` (advanced setup, `security-extended`, JavaScript/TypeScript, C#,
+  Python and Actions, none built; pushes and pull requests to `main` and `dev`, Mondays 03:17 UTC, by hand) with
+  `.github/codeql/codeql-config.yml`; `.github/dependabot.yml` (version updates only, all to `dev`, weekly, majors
+  ignored, minor and patch grouped; NuGet bumps wait for Alex's own PC); `SECURITY.md`; docs/54; docs/38 §8.
+- **Not proven yet:** Dependabot reads its file from `main`, so it starts, and GitHub shows any error in the file,
+  only after the next `dev` → `main` merge. Its pull requests then land on `dev`.
+- **Snyk** still watches `main`; a finding both raise is triaged once in docs/38. Open findings from either stay in
+  the private register.
+
 ## Power and gear progression: docs/53 (2026-10-12, planned, nothing built)
 
 - **Why:** a player's note: one Pitiful Generator runs the quarry, and nothing beats diamond armour, so there is no

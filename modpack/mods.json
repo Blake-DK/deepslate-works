@@ -2378,12 +2378,18 @@
           "url": "https://www.youtube.com/watch?v=NmhCMBxHdSw"
         }
       ],
-      "version": "xgAXTl17",
-      "requires": [],
+      "requires": [
+        "geckolib"
+      ],
       "guide": "game",
       "topic": "bosses",
       "howTo": "You'll meet these while exploring: a frost beast in snowy plains, a sun chief in savanna villages, an armoured knight in a hidden hall underground. Each fight has a pattern: watch it once before you swing. Their drops are unusual tools and weapons.",
-      "season": "s1"
+      "season": "s1",
+      "source": {
+        "private": "mowziesmobs-1.21.1-1.8.2-dsw.1.jar",
+        "sha512": "b66b6eb2736352945a1e18e8059be684a9039752ff0a04a91b8b840f89c3cddc54423e561a1ae453227a74a6753639b0e97d3444b6852d33b53ac51bc109ab4d",
+        "note": "docs/58: Sculptor crash fix"
+      }
     },
     {
       "slug": "gateways-to-eternity",

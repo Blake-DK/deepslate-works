@@ -606,10 +606,12 @@ export const actions = {
   }),
   // Planner ruling 2026-09-30 (docs/13): admins get the Minecraft console as it is. One line, sent as typed, with a
   // leading "/" dropped; no list of allowed commands. Only through POST /console/send, which is rate-limited.
+  // One leading slash comes off, as the game's own console does, so "/tp …" is "tp …" and WorldEdit's "//count …" reaches
+  // the server as its command "/count …".
   "console.send": define({
     name: "console.send",
     role: "ADMIN",
-    input: z.object({ command: z.string().max(1000).regex(/^[^\r\n]*$/).transform((c) => c.trim().replace(/^\/+/, "")).pipe(z.string().min(1)) }),
+    input: z.object({ command: z.string().max(1000).regex(/^[^\r\n]*$/).transform((c) => c.trim().replace(/^\//, "")).pipe(z.string().min(1)) }),
     build: (_ctx, { command }) => [command],
   }),
   // docs/22 §5: the one place where a person's free text goes to the console. One tellraw to verified players, its text

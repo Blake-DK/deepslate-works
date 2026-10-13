@@ -26,6 +26,62 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The Moon's datapack: docs/55 M1 to M4 (2026-10-12/13, PR #52 merged into `dev` as `1682dad1`; seen on test; not on `main`)
+
+- **Built (PR #52, CI passed, merged into `dev` 2026-10-12):** M1 `modpack/server/config/Mekanism/world.toml` holds
+  Mekanism's defaults (`enableRegeneration = false`, `userWorldGenVersion = 0`); the file stays in the pack because
+  Sync never deletes (the test server read `true`, `1` before the Sync, `false`, `0` after). M2 to M4
+  `modpack/datapacks/deepslate-moon/` (dimension type, noise settings and five noises of its own, three biomes, the
+  overworld tags, `#mekanism:spawn_ores` replaced, the gravity tick, the portal tags). M5's first line: Pre-generation
+  accepts `deepslate:moon` (api and web; on test from the `dev` images redeployed 2026-10-13 about 12:02 UTC).
+  `packages/modpack/tests/moon.test.ts` holds the spec. Not in the pack's hash: no re-pin, PCs see nothing.
+- **First start on test (2026-10-12 18:22 UTC, after Build server, Sync and a restart):** no FATAL; the one ERROR the
+  usual Curios line; "Found new data pack file/deepslate-moon"; 13 datapacks enabled, `deepslate-moon` among them;
+  `locate biome` finds all three (plains at 0 0, craters 96 blocks away, highlands 770). Ground y 65 to 79 where
+  probed, its top andesite, tuff or smooth basalt.
+- **Ores, 16 fresh chunks each at x 15,200 to 15,263, z -15,000 to -14,937, y -64 to 319**, counted with `fill …
+  minecraft:bedrock replace <tag>` (the command limit raised to 2,000,000 for the count and put back to 32768; the ores
+  in those boxes are now bedrock). Main world / Moon: osmium **0 / 823**, tin **0 / 1,558**, fluorite **0 / 818**,
+  lead 187 / 900 and uranium 140 / 806 (the main world's are Immersive Engineering's), salt 0 / 0, zinc 1,101 /
+  1,296, nickel 194 / 248, silver 236 / 240, bauxite 31 / 86, coal 789 / 1,716, iron 1,151 / 1,351, copper 996 /
+  1,499, gold 427 / 475, redstone 590 / 623, lapis 390 / 410, diamond 429 / 424, emerald 0 / 49, amethyst 562 / 529,
+  water 22,472 / 0, lava 108 / 0. Create's striated stone: ochrum 0 / 60, the others 0. A first count at x 15,000
+  gave the same picture (osmium 0 / 822).
+- **WorldEdit cannot be reached from the site's console:** `console.send` strips every leading `/` (`///world` arrives
+  as `world`), and `execute run /world …`, `/pos1`, `/size`, `/count` answer nothing, in the console or the log.
+  Letting `//` through would be a small change of its own; not made.
+- **What else reaches the Moon through the overworld tags** (`locate structure` in `deepslate:moon`): strongholds
+  (nearest 1,851 blocks; vanilla's `#minecraft:has_structure/stronghold` is `#minecraft:is_overworld`) and AE2
+  meteorites (458 blocks). Not found: Mowzie's frostmaw, Umvuthana grove and monastery, villages, mineshafts, ruined
+  portals, ancient cities, trial chambers. Mowzie's wrought chamber: the search on the Moon never answered (twice).
+  From the jars: Create's zinc and striated ores, Immersive Engineering's six ores, Mekanism's six features and AE2's
+  meteorites hang on the overworld tags; mobs added by code (Mowzie's spawn config and the like) are not seen yet, as
+  mobs only spawn near a player.
+- **The portal, without a player** (an eye of ender cannot be used from the console): a smooth basalt frame built by
+  command in the main world at 8500 70 8500 (portal x 8501 to 8502, y 71 to 73, axis x), its inside filled with
+  `nether_portal` by command; a pig summoned in it was on the Moon at 8502.5 72 8500.5 (same x and z). The mod built on
+  the Moon a **full smooth basalt frame, corners included**, around a 2 × 3 portal at x 8502 to 8503, y 72 to 74, z 8500,
+  with a smooth basalt block under it at y 70. A pig sent back through the Moon's portal came out at 8501.5 71 8500.5,
+  in the first frame: the mod linked the existing portal and built nothing new. So a portal lands at the same x and z
+  on the other side, and a new frame appears there when none is near: it can land inside a base on either side.
+  **Not seen:** that an eye of ender lights the frame.
+- **Gravity, measured on armour stands** (the players' function needs a player): one with exactly the players'
+  modifiers fell 50 blocks on the Moon in about 6.1 s (it landed between 107 and 123 ticks after the summon), one
+  without in about 2 s; every reading within half a block of the sum (drag 0.98, gravity 0.0133). **Not seen:** the
+  tick function on a player, the jump (about 5 blocks by the sum), fall damage.
+- **Generation:** Chunky, the same 1,089-chunk square on fresh ground: Moon 17 s (2026-10-12, a player online) and 15 s
+  (2026-10-13, nobody online, about 80 a second); main world beyond ±10,176 52 s. On the 13th: no "Can't keep up",
+  TPS 20 throughout, ticks median 1.3 ms, worst 245 ms in the minute. A 7.2 s stall followed the first Moon run on the
+  12th and did not come back; the other stalls that day came on my own commands (`forceload add` of 32 and 40 chunks
+  makes them at once on the main thread, and 2-million-block fills).
+- **Left on test:** the basalt frame and its portal in the main world at x 8500 to 8503, y 70 to 74, z 8500 (on a basalt platform), and the Moon's at x 8501 to 8504, y 71 to 75,
+  a pig in the main-world frame, two armour stands on the Moon at 107 and 109, 70, 87; the 1,089-chunk squares at
+  4000 4000 and -4000 -4000 on the Moon and 16000 16000 in the main world; no force-loads.
+- **For the planner:** beds on the Moon explode, as in the Nether (`bed_works: false`); strongholds and meteorites
+  arrived; the portal lands at the same x and z. Next on test: a player lights the frame with an eye of ender, goes
+  through, jumps and falls, and looks at the mobs; then M5's pre-generation and map; the gas and masks PR (M7, M8);
+  M6's words (Mekanism's `howTo` and D3 post 2 still say "old ground").
+
 ## App 3.6.5: a download from the site is cut off behind the window's polls (2026-10-12, PR #50 merged into `dev`; not on `main`)
 
 - **Seen (Alex's log bundle, 16:53 to 16:54 UTC):** 3.6.2 updated itself to 3.6.4 from the deployed `main`; Play on the
@@ -389,7 +445,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Snyk** still watches `main`; a finding both raise is triaged once in docs/38. Open findings from either stay in
   the private register.
 
-## The Moon: docs/55 (2026-10-12, planned, nothing built)
+## The Moon: docs/55 (2026-10-12, planned; M1 to M4 built and on test, see "The Moon's datapack" above)
 
 - **Alex, 2026-10-12:** no retrogen of the main world for Mekanism's ores. They go to a world of their own, the Moon
   (`deepslate:moon`), reached by a portal players build themselves (Server Sided Portals; proposed: a smooth basalt

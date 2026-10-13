@@ -16,17 +16,16 @@ const ctx = { limbo: { dimension: "minecraft:overworld", x: 0, y: 0, z: 0 }, spa
 
 describe("console.send", () => {
   const input = actions["console.send"].input;
-  it("sends the line as typed, less one leading slash, so WorldEdit's // commands get through", () => {
+  it("sends the line as typed, slashes and all: the game's console drops one, so WorldEdit's // commands get through", () => {
     const build = (c: string) => actions["console.send"].build(ctx, input.parse({ command: c }));
     expect(build("say hi there")).toEqual(["say hi there"]);
-    expect(build("/tp bramble09 0 100 0")).toEqual(["tp bramble09 0 100 0"]);
-    expect(build("  /gamerule keepInventory true ")).toEqual(["gamerule keepInventory true"]);
-    expect(build("//count minecraft:stone")).toEqual(["/count minecraft:stone"]); // WorldEdit's command is "/count"
-    expect(build("//world minecraft:overworld")).toEqual(["/world minecraft:overworld"]);
+    expect(build("/tp bramble09 0 100 0")).toEqual(["/tp bramble09 0 100 0"]);
+    expect(build("  /gamerule keepInventory true ")).toEqual(["/gamerule keepInventory true"]);
+    expect(build("//count minecraft:stone")).toEqual(["//count minecraft:stone"]); // the game runs WorldEdit's "/count"
     expect(build("op someone")).toEqual(["op someone"]); // no list of allowed commands
   });
   it("takes one line with something on it", () => {
-    for (const c of ["", "   ", "/", "say a\nop b", "x".repeat(1001)]) expect(input.safeParse({ command: c }).success).toBe(false);
+    for (const c of ["", "   ", "/", "//", "say a\nop b", "x".repeat(1001)]) expect(input.safeParse({ command: c }).success).toBe(false);
   });
   it("is an admin action with a route of its own", () => {
     expect(ADMIN_ACTIONS).toContain("console.send");
@@ -82,7 +81,7 @@ describe("POST /console/send", () => {
     const { f, sent, as } = app(20);
     const r = await f.inject({ method: "POST", url: "/console/send", headers: as("ADMIN"), payload: { command: "/weather clear" } });
     expect(r.statusCode).toBe(200);
-    expect(sent).toEqual(["weather clear"]);
+    expect(sent).toEqual(["/weather clear"]);
   });
   it("needs a running server", async () => {
     const { f, sent, as } = app(0);

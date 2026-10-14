@@ -26,6 +26,17 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Macaw's Holidays in; the Moon's gas from y 30 (2026-10-14, on `dev`, not on `main`)
+
+- **Macaw's Holidays** (Alex): on, not suggested, Building and decoration, 1.1.2 (`2mO9Xhpt`), no dependencies, all
+  vanilla crafting recipes. Lock spliced (the new entry only; a full Lock also moved Kotlin for Forge, Placebo,
+  Titanium and the extras, left as they were). Live's pack becomes `0.1.0+68650608`, 78 files; s1 84. Change log entry
+  `2026-10-14-macaws-holidays`, not live. **Not yet seen on test:** a Build and Sync via api-test, the server starting
+  with it, a PC updating.
+- **The gas** (Alex): below y 30 on the Moon, not y 0 (`gas/second` checks y -64 to 30, `dy=94`). The mask's lore,
+  the Moon's howTo, the power-and-gear change log line and docs/06 say y 30; docs/55 M7 still says y 0 (planner doc,
+  left as written). Server-only, no pack hash change; takes effect on test after a sync and `/reload`.
+
 ## Snyk's ignores in the repository (2026-10-14, PR to `dev`)
 
 Snyk counted this repository as private, so it ran out of tests (200/200 in the period to 2026-10-07). Alex switched

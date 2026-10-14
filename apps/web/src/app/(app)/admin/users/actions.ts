@@ -13,15 +13,16 @@ import { onDemoted, removeAdminLogin } from "@/server/auth/admin-login";
 import { block, unblock } from "@/server/auth/blocked";
 import { CHAT_RELAYS } from "@/shared/chat-relay";
 import { setTester, testerGone } from "@/server/testers";
+import { roleChangeData } from "@/lib/role-change";
 
 export async function setRoleAction(formData: FormData) {
   const admin = await requireAdmin();
   const parsed = z.object({ id: z.string().min(1), role: z.enum(["ADMIN", "PLAYER"]) }).safeParse(Object.fromEntries(formData));
   if (!parsed.success || parsed.data.id === admin.id) return;
-  const before = await db.user.findUnique({ where: { id: parsed.data.id }, select: { builderTools: true } });
-  // docs/37: Builder tools are for admins only; made a player, they go, and Builder mode with them. So does the tick
-  // "Can join during maintenance" (docs/48 B1).
-  await db.user.update({ where: { id: parsed.data.id }, data: { role: parsed.data.role, ...(parsed.data.role === "PLAYER" ? { builderTools: false, maintenanceJoin: false } : {}) } });
+  const before = await db.user.findUnique({ where: { id: parsed.data.id }, select: { builderTools: true, role: true } });
+  // docs/37: Builder tools are for admins only; made a player, they go, and Builder mode with them. The tick "Can join
+  // during maintenance" (docs/48 B1) goes with them, and comes with being made an admin (lib/role-change.ts).
+  await db.user.update({ where: { id: parsed.data.id }, data: { role: parsed.data.role, ...roleChangeData(before?.role, parsed.data.role) } });
   if (parsed.data.role === "PLAYER" && before?.builderTools) await builderOff(admin.id, parsed.data.id);
   // Made a player (planner, 2026-10-01): password sign-in off and every session they have ended, at once.
   if (parsed.data.role === "PLAYER") await onDemoted(parsed.data.id);

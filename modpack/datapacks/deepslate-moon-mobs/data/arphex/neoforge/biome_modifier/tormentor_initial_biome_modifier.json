@@ -10,7 +10,11 @@
     "deepslate:moon_plains",
     "deepslate:moon_highlands",
     "deepslate:moon_craters",
-    "#arphex:crawling_biomes"
+    "arphex:crawling_canopy",
+    "arphex:cryptic_complex",
+    "arphex:decadent_desert",
+    "arphex:tormented_tunnels",
+    "arphex:webbed_wasteland"
   ],
   "spawners": {
     "type": "arphex:tormentor_initial",

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-14T07:33:43.620Z",
+  "generatedAt": "2026-10-14T10:55:50.235Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "b894dfa358dcd35c51c33f050a4bb46f617cb82ad888861025891dab27dfbad1",
+  "hash": "422efd9da612b1245faa5529e57215ed77a3be7a316c6c5bb04203a5084ae942",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -1642,5 +1642,5 @@
       "sha256": "11b62242f5accc0b1dfc2541c58d393f52b9d69232b9036ec442849d66acbf5e"
     }
   ],
-  "resourcepack": "8b4c3958fcad0e440ca90091fff07596db0247a287b620025e93a7d14836e4bc"
+  "resourcepack": "135f337a578b2bfab50f70670a4021241759565d339eca87e5c5e13ea0b62c09"
 }

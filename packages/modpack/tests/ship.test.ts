@@ -68,12 +68,12 @@ describe("the repo's pack (docs/44, 'Done when')", () => {
     const { seasons } = await loadSeasons(path.join(MODPACK, "seasons"));
     for (const x of m.mods.filter((y) => y.season)) expect(seasons.map((s) => s.id)).toContain(x.season);
   });
-  it("live, shipping nothing, keeps the pack it has (0.1.0+2ae3aea0, 77 files since the flower mods, docs/53, docs/56 and docs/59); a server shipping s1 gets all 83", async () => {
+  it("live, shipping nothing, keeps the pack it has (0.1.0+55ab70d7, 77 files since the flower mods, docs/53, docs/56 and docs/59; the gas mask's icon in the resource pack, docs/55 M8); a server shipping s1 gets all 83", async () => {
     const lock = await realLock();
     expect(lock.hash).toBe(packHash(lock.neoforge, lock.files, lock.configs, lock.resourcepack)); // the lock's own hash is over everything
     const live = shippedLock(lock, []);
     expect(live.files).toHaveLength(77);
-    expect(live.hash.slice(0, 8)).toBe("2ae3aea0");
+    expect(live.hash.slice(0, 8)).toBe("55ab70d7");
     const test = shippedLock(lock, ["s1"]);
     expect(test.files).toHaveLength(83);
     expect(test.hash).toBe(lock.hash);

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "deepslate:item/gas_mask",
+    "layer1": "deepslate:item/gas_mask_overlay"
+  }
+}

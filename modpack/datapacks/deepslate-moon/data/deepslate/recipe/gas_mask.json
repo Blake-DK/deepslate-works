@@ -1,0 +1,42 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "minecraft:leather"
+    },
+    {
+      "item": "minecraft:string"
+    },
+    {
+      "item": "minecraft:string"
+    },
+    {
+      "item": "minecraft:charcoal"
+    },
+    {
+      "item": "minecraft:glass_pane"
+    }
+  ],
+  "result": {
+    "id": "minecraft:leather_helmet",
+    "count": 1,
+    "components": {
+      "minecraft:custom_name": "{\"text\": \"Gas mask\", \"italic\": false}",
+      "minecraft:lore": [
+        "{\"text\": \"Lets you breathe below y 0 on the Moon\", \"italic\": false, \"color\": \"gray\"}",
+        "{\"text\": \"for 30 seconds, then it is used up.\", \"italic\": false, \"color\": \"gray\"}"
+      ],
+      "minecraft:custom_data": {
+        "deepslate_mask": "basic"
+      },
+      "minecraft:dyed_color": {
+        "rgb": 4210752,
+        "show_in_tooltip": false
+      },
+      "minecraft:max_damage": 30,
+      "minecraft:custom_model_data": 5501,
+      "minecraft:repair_cost": 100
+    }
+  }
+}

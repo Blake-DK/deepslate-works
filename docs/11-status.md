@@ -127,6 +127,15 @@ and the counts Met, Private and Refused.
   deletes. After the deploy, on live: `datapack disable "file/deepslate-frontier-sample"` in Admin → Console and a
   restart; delete `config/bluemap/maps/frontier_sample.conf` in AMP's file manager. Not checked on live (nothing
   touched it).
+  - **Done on test (Alex, 2026-10-14, then a restart at 12:45 UTC): the dimension stays.** `datapack list` shows 12
+    packs, `deepslate-frontier-sample` not among them, and `frontier_sample.conf` is gone; but after the restart the
+    server still loads and saves `deepslate:frontier_sample` (a world keeps every dimension it has loaded in
+    `level.dat`'s `WorldGenSettings`), and warns that `deepslate:frontier_sample_portal_igniter` is missing (the
+    portal mod asks for the tags of every dimension). Harmless: no portal leads there without the tags, it costs
+    0.004 ms a tick, no map. To remove it for good, with the server stopped and after a backup: delete
+    `deepslate:frontier_sample` from `level.dat` (`Data` → `WorldGenSettings` → `dimensions`) with an NBT editor,
+    and `world/dimensions/deepslate/frontier_sample/`. Not done on test; for live, Alex's choice at the deploy's
+    backup.
 - **Season 1 stays a commit (Alex, 2026-10-14):** asked whether "is Season 1 on this server" should move from
   `index.json`'s `ship` to a switch on the Seasons page, Alex kept it in the repo. Season 1's mods (`season: "s1"`) and
   files go to `main` with `"ship": []`, so live ships none of them; turning it on is a one-line commit and a PR.

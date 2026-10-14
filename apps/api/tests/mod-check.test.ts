@@ -38,6 +38,18 @@ describe("what the server loaded", () => {
       { filename: "secret-server-mod.jar", nested: false },
     ]);
   });
+  it("reads a library in the mods folder as loaded, and one inside another jar as nested (lines the test server printed)", () => {
+    const libs = [
+      '[14Oct2026 07:56:10.101] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found library file "KotlinLangForge-2.14.1-k2.4.20-3.0+neoforge.jar" [locator: {mods folder locator at /AMP/Minecraft/mods}, reader: mod manifest]',
+      '[14Oct2026 07:56:10.213] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found library file "ScalableCatsForce-NeoForge-3.7.1-build-11-with-library.jar" [locator: {mods folder locator at /AMP/Minecraft/mods}, reader: mod manifest]',
+      '[14Oct2026 07:56:10.748] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found library file "kotlin-stdlib-2.4.20.jar" [parent: KotlinLangForge-2.14.1-k2.4.20-3.0+neoforge.jar, locator: jarinjar]',
+    ].join("\n");
+    expect(parseLoadedMods(libs)).toEqual([
+      { filename: "KotlinLangForge-2.14.1-k2.4.20-3.0+neoforge.jar", nested: false },
+      { filename: "ScalableCatsForce-NeoForge-3.7.1-build-11-with-library.jar", nested: false },
+      { filename: "kotlin-stdlib-2.4.20.jar", nested: true },
+    ]);
+  });
   it("flags a loaded jar no PC gets, and TaCZ if it were server-only", () => {
     expect(compareLoaded(parseLoadedMods(log), lock).map((p) => p.filename)).toEqual(["secret-server-mod.jar"]);
     const bad = { files: lock.files.map((f) => (f.slug === "tacz-1.21.1" ? { ...f, side: "server" } : f)) };

@@ -20,10 +20,14 @@ export type Loaded = { filename: string; nested: boolean };
 export type LockLike = { files: Array<{ slug: string; name: string; filename: string; side: string; channels?: string | null; modrinth?: { client?: string; server?: string } | null }> };
 export type Problem = { filename: string; slug: string | null; why: string };
 
-/** `Found mod file "tacz-….jar" of type MOD with provider …`: every file NeoForge found, nested (jar-in-jar) ones marked. */
+/**
+ * `Found mod file "tacz-….jar" of type MOD with provider …`: every file NeoForge found, nested (jar-in-jar) ones marked.
+ * A library in the mods folder is a "library file" (Kotlin for Forge, Scalable Cats Force; 2026-10-14, the first
+ * check after a Sync called both missing), and some nested ones "gamelibrary file".
+ */
 export function parseLoadedMods(log: string): Loaded[] {
   const out = new Map<string, Loaded>();
-  for (const m of log.matchAll(/Found mod file "([^"\r\n]{1,200})"([^\r\n]*)/g)) {
+  for (const m of log.matchAll(/Found (?:mod|library|gamelibrary) file "([^"\r\n]{1,200})"([^\r\n]*)/g)) {
     const filename = m[1]!.split(/[\\/]/).pop()!;
     if (!/\.jar$/i.test(filename)) continue;
     const nested = /JarInJar|jij|nested/i.test(m[2] ?? "");

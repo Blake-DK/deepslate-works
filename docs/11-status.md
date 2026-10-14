@@ -37,9 +37,9 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - Settings, datapacks and the icon are rsynced by content (`--checksum`): before, every Sync said "14 file(s)
   updated" and "179 file(s) updated … restart" because Build writes them anew.
 - `POST /modpack/verify {since?}` (docs/08). Tests: `apps/api/tests/sync-verify.test.ts`.
-- **Not fixed, Alex's call:** Admin → Modpack on the test site says "Out of date" after every Build and Sync. web-test
+- **Fixed by PR #55 to `main` (one compose line, Alex chose "fix it now"; open, CI passed):** Admin → Modpack on the test site says "Out of date" after every Build and Sync. web-test
   has no `SEASONS_SHIP` (api-test has `s1`): `sudo deploy/test-up.sh` uses **live's** `deploy/docker-compose.yml`
-  (`main`), and only `dev`'s passes it to web-test (docs/44, `395f7332`, held on `dev`). So the page reckons the pack
+  (`main`), and only `dev`'s passed it to web-test (docs/44, `395f7332`, held on `dev`). After the merge: deploy, then `sudo deploy/test-up.sh`. So the page reckons the pack
   without Season 1 (`2ae3aea0`), api-test builds it with it (`b894dfa3`). Older than the flowers (`c0b230b4` against
   `8b610bea` before).
 

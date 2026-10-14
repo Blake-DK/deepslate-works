@@ -129,6 +129,18 @@ and the counts Met, Private and Refused.
 - **Live:** waits for Alex's go (docs/59 "Live"). `dev` also carries held work (seasons, the Moon, Mekanism), so a
   whole `dev` → `main` PR is a question for Alex first.
 
+## Maintenance: admins have the tick by default, and the game chat is told (2026-10-14, PRs #67 and #68 on `dev`; not on `main`)
+
+- **Seen on live (Alex):** the Maintenance switch could not be pressed: no admin had "Can join during maintenance".
+  Alex: admins should have it by default, and switching it on should say so in the game chat.
+- **#67** (`884a7854`): made an admin → the tick comes with it (`lib/role-change.ts`; an admin saved as admin again
+  keeps theirs); the first member and the configured Discord admin start with it; `scripts/admin.mjs` too. Migration
+  **`0035_admins_join_maintenance`** ticks every admin there is (data only). `deploy.sh` dumps the database first.
+- **#68** (`c1cb0c4c`): `maintenance.announce` (system): one gold line to everyone on the server before the kicks
+  when it starts, and after the release when it ends; in the event log; the card says so. Not seen on a server yet.
+- GitHub answered both merges with a 502; #67 merged, #68 was closed by the branch's deletion, then restored, reopened
+  and merged after its `check` passed again.
+
 ## Deploy of the Moon: `main` `556679b9` (PR #65), then `faa81318` (PR #66: Macaw's Holidays, the gas from y 30), 2026-10-14; the Moon's square copied to live; deploy not yet run
 
 - **PR #65 (`dev` → `main`) merged by Alex as `556679b9`**: docs/53 A, B (no retrogen), E1, docs/55 M1 to M8,

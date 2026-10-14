@@ -255,17 +255,25 @@ describe("the horror trial on Ashmoon only (Alex, 2026-10-14): modpack/datapacks
       expect(values.filter((v) => v.startsWith("minecraft:"))).toHaveLength(53);
     }
   });
-  it("ArPhEx: each of its spawn rules is replaced by one for Ashmoon's three biomes, counted only where ArPhEx is installed", async () => {
+  it("ArPhEx: each spawn rule for the main world now points at Ashmoon's three biomes (keeping any of its own biomes), counted only where ArPhEx is installed; the one for its own dimension alone is ArPhEx's own again", async () => {
     const dir = path.join(MOBS, "data/arphex/neoforge/biome_modifier");
     const files = await readdir(dir);
     expect(files.length).toBe(59);
-    for (const f of files) {
+    // the Crawling's own rule (weight 1000) is shipped as ArPhEx wrote it: Sync never deletes, so the copy #71 pointed at
+    // Ashmoon has to be overwritten on a server that has it, not left behind
+    const own = await mjson("data/arphex/neoforge/biome_modifier/crawling_random_biome_modifier.json");
+    expect((own.biomes as string[]).every((b) => b.startsWith("arphex:"))).toBe(true);
+    for (const f of files.filter((x) => x !== "crawling_random_biome_modifier.json")) {
       const j = await mjson(`data/arphex/neoforge/biome_modifier/${f}`);
+      const biomes = j.biomes as string[];
       expect(j.type).toBe("neoforge:add_spawns");
-      expect(j.biomes).toEqual(BIOMES);
+      expect(biomes.slice(0, 3)).toEqual(BIOMES);
+      expect(biomes.slice(3).filter((b) => !b.startsWith("arphex:") && b !== "#arphex:crawling_biomes")).toEqual([]);
       expect(j["neoforge:conditions"]).toEqual([{ type: "neoforge:mod_loaded", modid: "arphex" }]);
       expect(j.spawners).toBeTruthy();
     }
+    // what spawned in every biome there is: Ashmoon's and ArPhEx's own dimension
+    for (const f of ["any_dimension_spawner_biome_modifier.json", "tormentor_initial_biome_modifier.json"]) expect((await mjson(`data/arphex/neoforge/biome_modifier/${f}`)).biomes).toEqual([...BIOMES, "#arphex:crawling_biomes"]);
   });
   it("both mods ship only with Season 1 (the test server), never to live, until Alex decides", async () => {
     const m = JSON.parse(await readFile(path.join(MODPACK, "mods.json"), "utf8")) as { mods: Array<{ slug: string; season?: string; adminOnly?: boolean }> };

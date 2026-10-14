@@ -7,9 +7,11 @@
   ],
   "type": "neoforge:add_spawns",
   "biomes": [
-    "deepslate:moon_plains",
-    "deepslate:moon_highlands",
-    "deepslate:moon_craters"
+    "arphex:webbed_wasteland",
+    "arphex:crawling_canopy",
+    "arphex:cryptic_complex",
+    "arphex:decadent_desert",
+    "arphex:tormented_tunnels"
   ],
   "spawners": {
     "type": "arphex:crawling_random",

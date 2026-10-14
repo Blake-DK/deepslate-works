@@ -9,7 +9,8 @@
   "biomes": [
     "deepslate:moon_plains",
     "deepslate:moon_highlands",
-    "deepslate:moon_craters"
+    "deepslate:moon_craters",
+    "arphex:crawling_canopy"
   ],
   "spawners": {
     "type": "arphex:spider_chaser_hallucination_2",

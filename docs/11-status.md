@@ -26,6 +26,21 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Public artifacts: main's app run keeps no pictures, the fork's jar is encrypted (2026-10-14, PR to `dev`)
+
+- **Done by Alex on 2026-10-14:** every `deepslate-works-*` artifact and `old-exe-3.5.5` deleted (65), and the fork's
+  `mowziesmobs-jar`. The patched jar is kept on the VPS (the test checkout's `data/private-jars/`, and a backup), its
+  sha512 equal to the lock's.
+- **`installer.yml`:** only main's push builds the real site's address into the exe; a pull request or a run by hand
+  builds the csproj's placeholder. main's run keeps the exe and the text files in its artifact, never a picture (the
+  window draws the address); every other run keeps its pictures as before. `old-exe-3.5.5` is kept for one day. Takes
+  effect on `main` with the next `dev` → `main` pull request; until then a push to `main` that changes the installer
+  keeps pictures again.
+- **The fork's `dsw-build`** (outside this repository): the jar is encrypted to a certificate before upload; the artifact
+  is `mowziesmobs-jar-encrypted` (the encrypted jar and its sha512), kept 14 days. The private key is on the VPS only,
+  in ladm's config folder, never in a repository. To fetch a new build: download the artifact, decrypt it with
+  `openssl cms -decrypt`, check the sha512, then copy the jar into `data/private-jars/` as docs/58 says.
+
 ## Sync says it restarts, then checks the server's mods (2026-10-14, `558f8671` on `dev`, images built; on test after `sudo deploy/test-up.sh`)
 
 - **Alex:** "the sync server needs to say restarting server in its log screen and then verify everything is there".

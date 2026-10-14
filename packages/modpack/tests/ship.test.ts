@@ -105,10 +105,12 @@ describe("Admin → Modpack's out-of-date box", () => {
   it("holds the last Build to the pack this server ships, and Lock to the whole lock", () => {
     const lock = lockOf([entry("create"), entry("cataclysm", "s1")]);
     const shipped = `0.1.0+${shippedLock(lock, []).hash.slice(0, 8)}`;
+    // one moment for both: two `new Date()` a millisecond apart read as "built again after the last sync"
+    const now = new Date();
     const facts = (ship: string[], builtPack: string): PendingFacts => ({
       manifest: { version: "0.1.0", neoforge: "21.1.253", mods: [{ slug: "create", name: "create", enabled: true, version: "latest" }, { slug: "cataclysm", name: "cataclysm", enabled: true, version: "latest", season: "s1" }] } as unknown as Manifest,
       lock, ship, configs: lock.configs, resourcepack: undefined, builtPack, changedSinceBuild: [], settingsChanged: false,
-      ciApp: null, builtApp: null, repoScript: null, builtScript: null, brandingPicked: false, synced: { version: builtPack, at: new Date() }, serverBuiltAt: new Date(),
+      ciApp: null, builtApp: null, repoScript: null, builtScript: null, brandingPicked: false, synced: { version: builtPack, at: now }, serverBuiltAt: now,
     });
     expect(pendingSteps(facts([], shipped)).steps).toEqual([]);
     expect(pendingSteps(facts(["s1"], shipped)).steps).toEqual(["build", "sync"]); // the test server now ships s1: build again

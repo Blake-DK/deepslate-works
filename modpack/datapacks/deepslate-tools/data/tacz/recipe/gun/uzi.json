@@ -1,0 +1,21 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "c:ingots/iron"
+      },
+      "count": 16
+    },
+    {
+      "item": {
+        "tag": "c:ingots/steel"
+      },
+      "count": 16
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "tacz:uzi"
+  },
+  "type": "tacz:gun_smith_table_crafting"
+}

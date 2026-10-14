@@ -1,0 +1,33 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "c:ingots/iron"
+      },
+      "count": 10
+    },
+    {
+      "item": {
+        "tag": "c:ingots/steel"
+      },
+      "count": 11
+    },
+    {
+      "item": {
+        "tag": "minecraft:logs"
+      },
+      "count": 5
+    },
+    {
+      "item": {
+        "tag": "c:gems/lapis"
+      },
+      "count": 2
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "tacz:b93r"
+  },
+  "type": "tacz:gun_smith_table_crafting"
+}

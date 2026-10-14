@@ -209,6 +209,50 @@ namespace DeepslateWorks
             return "Chat links switched on (they were off in the game's settings)";
         }
 
+        // The backpack key (Alex, 2026-10-14; 3.6.6): Sophisticated Backpacks opens the worn backpack with B, the key Xaero's
+        // Minimap uses for a new waypoint. The pack's key for it is ` (the key left of 1; no mod in the pack uses it, VeinMiner
+        // has no key at all). Set once per PC, remembered as installed.json's backpackKey: a missing line is added, the mod's
+        // own B is changed, any other key (the player's choice) is kept, and after that the line is never touched again.
+        // Name and default read from sophisticatedbackpacks 3.26.7 (KeybindHandler: translKeybind("open_backpack"), GLFW 66).
+        public const string BackpackKeyOption = "key_key.sophisticatedbackpacks.open_backpack";
+        public const string BackpackKey = "key.keyboard.grave.accent";
+
+        /// <summary>null when nothing was changed (already set once, no options.txt, or a key the player chose).</summary>
+        public static string SetBackpackKey(string path, bool doneBefore)
+        {
+            if (doneBefore || !File.Exists(path)) return null;
+            var text = File.ReadAllText(path);
+            var line = new Regex(@"(?m)^" + Regex.Escape(BackpackKeyOption) + @":([^\r\n]*)(?=\r?$)");
+            var m = line.Match(text);
+            string nw;
+            if (!m.Success)
+            {
+                var nl = text.Contains("\r\n") ? "\r\n" : "\n";
+                nw = text;
+                if (nw.Length > 0 && !nw.EndsWith("\n")) nw += nl;
+                nw += BackpackKeyOption + ":" + BackpackKey + nl;
+            }
+            else if (m.Groups[1].Value == "key.keyboard.b") nw = line.Replace(text, BackpackKeyOption + ":" + BackpackKey, 1);
+            else return null;
+            var tmp = path + ".new";
+            WriteText(tmp, nw);
+            MoveOver(tmp, path);
+            return "Backpack key set to ` (the key left of 1)";
+        }
+
+        /// <summary>The engine's step: SetBackpackKey, ticked. True (installed.json's backpackKey) once options.txt was there
+        /// to look at; a run that could not look tries again next time.</summary>
+        static bool BackpackKeyStep(Run run, string options, bool doneBefore)
+        {
+            try
+            {
+                var said = SetBackpackKey(options, doneBefore);
+                if (said != null) run.Tick(said);
+                return doneBefore || File.Exists(options);
+            }
+            catch (Exception e) { run.Note("The backpack key was left as it is: " + e.Message); return doneBefore; }
+        }
+
         // ---- the server list (servers.dat: uncompressed NBT, one entry) ---------------------------------------------
         public static byte[] ServersDat(string name, string ip)
         {

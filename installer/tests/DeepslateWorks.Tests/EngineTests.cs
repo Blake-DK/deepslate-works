@@ -167,6 +167,39 @@ namespace DeepslateWorks.Tests
             }
         }
 
+        [Fact] public void Backpack_key_is_set_once()
+        {
+            using (var s = new Scratch())
+            {
+                var of = s.P("options.txt");
+                Assert.Null(Engine.SetBackpackKey(of, false));   // no options.txt: nothing to do
+                Assert.False(File.Exists(of));
+
+                File.WriteAllText(of, Game);                     // missing: added at the end, the file's line endings kept
+                Assert.StartsWith("Backpack key set to `", Engine.SetBackpackKey(of, false));
+                Assert.Equal(Game + "key_key.sophisticatedbackpacks.open_backpack:key.keyboard.grave.accent\r\n", File.ReadAllText(of));
+                Assert.Null(Engine.SetBackpackKey(of, false));   // already `: nothing
+
+                var withB = Game.Replace("lang:en_gb", "key_key.sophisticatedbackpacks.open_backpack:key.keyboard.b\r\nlang:en_gb");
+                File.WriteAllText(of, withB);                    // the mod's own B: changed in place, nothing else
+                Assert.NotNull(Engine.SetBackpackKey(of, false));
+                Assert.Equal(withB.Replace("open_backpack:key.keyboard.b", "open_backpack:key.keyboard.grave.accent"), File.ReadAllText(of));
+
+                File.WriteAllText(of, withB);                    // set once already: B is now the player's choice
+                Assert.Null(Engine.SetBackpackKey(of, true));
+                Assert.Equal(withB, File.ReadAllText(of));
+
+                var chosen = Game + "key_key.sophisticatedbackpacks.open_backpack:key.keyboard.g:ALT\n";
+                File.WriteAllText(of, chosen);                   // a key the player chose: kept
+                Assert.Null(Engine.SetBackpackKey(of, false));
+                Assert.Equal(chosen, File.ReadAllText(of));
+
+                File.WriteAllText(of, "renderDistance:8");       // no line ending at the end, \n file
+                Engine.SetBackpackKey(of, false);
+                Assert.Equal("renderDistance:8\nkey_key.sophisticatedbackpacks.open_backpack:key.keyboard.grave.accent\n", File.ReadAllText(of));
+            }
+        }
+
         [Fact] public void Servers_dat_is_the_same_bytes_as_2_0()
         {
             var b = Engine.ServersDat("Deepslate Works", "mc.dsw.test");

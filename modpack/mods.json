@@ -1329,10 +1329,10 @@
       ],
       "guide": "game",
       "topic": "storage",
-      "howTo": "Craft a **backpack** (leather and a chest) as soon as you can. Wear it in the chest slot and press **B** to open it, or hold it and right-click. Upgrade it later (iron, gold, diamond, netherite) and put upgrades in its side slots: **Pickup** collects items for you, **Magnet** pulls them in, **Crafting** gives a crafting grid inside.",
+      "howTo": "Craft a **backpack** (leather and a chest) as soon as you can. Wear it in the chest slot and press **`** (the key left of 1) to open it, or hold it and right-click. Upgrade it later (iron, gold, diamond, netherite) and put upgrades in its side slots: **Pickup** collects items for you, **Magnet** pulls them in, **Crafting** gives a crafting grid inside.",
       "keys": [
         {
-          "key": "B",
+          "key": "`",
           "does": "Open the backpack you wear"
         },
         {

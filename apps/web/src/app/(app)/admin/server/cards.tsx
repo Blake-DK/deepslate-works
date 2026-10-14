@@ -336,7 +336,7 @@ export function PregenCard({ pregen, frontiers = [] }: { pregen: Pregen | null; 
                 <option value="minecraft:overworld">Main world (around spawn)</option>
                 <option value="minecraft:the_nether">The Nether (around 0, 0)</option>
                 <option value="minecraft:the_end">The End (around 0, 0)</option>
-                <option value="deepslate:moon">The Moon (around 0, 0)</option>
+                <option value="deepslate:moon">Ashmoon (around 0, 0)</option>
                 {frontiers.map((f) => <option key={f.dimension} value={f.dimension}>Frontier · {f.name} (around 0, 0)</option>)}
               </select>
               <p className="mt-1 text-xs text-muted-foreground">One world at a time. A Frontier is in the list once its datapack is shipped; it exists on the server from the start after the Sync.</p>

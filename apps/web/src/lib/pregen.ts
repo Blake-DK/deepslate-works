@@ -2,12 +2,12 @@
 
 export type Area = { x: number; z: number; radius: number; world?: string };
 
-/** A world in plain words: "the main world", "the Nether", "the End", "the Moon", "the Frontier (sample)". */
+/** A world in plain words: "the main world", "the Nether", "the End", "Ashmoon", "the Frontier (sample)". */
 export function worldName(world?: string | null): string {
   if (!world || world === "minecraft:overworld") return "the main world";
   if (world === "minecraft:the_nether") return "the Nether";
   if (world === "minecraft:the_end") return "the End";
-  if (world === "deepslate:moon") return "the Moon";
+  if (world === "deepslate:moon") return "Ashmoon";
   return `the Frontier (${world.replace(/^deepslate:frontier_/, "")})`;
 }
 /** Generate (chunky), render the map (BlueMap), or the one after the other. A plan without it generates. */

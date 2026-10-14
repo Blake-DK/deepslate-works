@@ -34,5 +34,5 @@ export function itemHue(id: string): number {
 const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 export const enchantLabel = (id: string, level: number) => `${itemName(id)}${level > 1 || level === 0 ? ` ${ROMAN[level] ?? level}` : ""}`;
 
-export const DIMENSION: Record<string, string> = { "minecraft:overworld": "Overworld", "minecraft:the_nether": "The Nether", "minecraft:the_end": "The End", "deepslate:limbo": "Entrance room", "deepslate:moon": "The Moon" };
+export const DIMENSION: Record<string, string> = { "minecraft:overworld": "Overworld", "minecraft:the_nether": "The Nether", "minecraft:the_end": "The End", "deepslate:limbo": "Entrance room", "deepslate:moon": "Ashmoon" };
 export const GAME_MODE = ["Survival", "Creative", "Adventure", "Spectator"];

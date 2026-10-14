@@ -1133,7 +1133,7 @@
       "requires": [],
       "guide": "game",
       "topic": "factories",
-      "howTo": "Start with an **Enrichment Chamber** (2 dust per ore) powered by a generator from Mekanism Generators. Upgrade machines with **speed** and **energy** upgrades. Cables carry power, **logistical transporters** carry items. JEI shows every recipe. Its ores (osmium first) are found only on the **Moon**: see the portal under Getting around."
+      "howTo": "Start with an **Enrichment Chamber** (2 dust per ore) powered by a generator from Mekanism Generators. Upgrade machines with **speed** and **energy** upgrades. Cables carry power, **logistical transporters** carry items. JEI shows every recipe. Its ores (osmium first) are found only on **Ashmoon**: see the portal under Getting around."
     },
     {
       "slug": "mekanism-generators",
@@ -2650,7 +2650,7 @@
       "hidden": false,
       "adminOnly": false,
       "exclusiveGroup": null,
-      "description": "Walk-through portals to the Moon, a world of its own for mining. Nothing to install: it runs on the server.",
+      "description": "Walk-through portals to Ashmoon, a moon of its own for mining. Nothing to install: it runs on the server.",
       "wiki": "https://github.com/Crystal-Nest/server-sided-portals/wiki",
       "videos": [],
       "noVideosFound": "2026-10-05",
@@ -2660,7 +2660,7 @@
       ],
       "guide": "game",
       "topic": "travel",
-      "howTo": "Build a frame of **smooth basalt** shaped like a nether portal (smelt basalt to get it) and right-click inside it with an **eye of ender**. Step in to reach the **Moon**: everything can be mined there, and osmium and the other Mekanism ores are found only there. Gravity is low, so you jump high and fall slowly; the night never ends, monsters are about, and beds explode. Below y 30 the air is poisonous: wear a **gas mask** (leather, 2 string, charcoal and a glass pane; it lasts 30 seconds in the gas) or Mekanism's hazmat mask. A portal comes out at the same spot on the other side; walk back through it to come home."
+      "howTo": "Build a frame of **smooth basalt** shaped like a nether portal (smelt basalt to get it) and right-click inside it with an **eye of ender**. Step in to reach **Ashmoon**: everything can be mined there, and osmium and the other Mekanism ores are found only there. Gravity is low, so you jump high and fall slowly; the night never ends, monsters are about, and beds explode. Below y 30 the air is poisonous: wear a **gas mask** (leather, 2 string, charcoal and a glass pane; it lasts 30 seconds in the gas) or Mekanism's hazmat mask (only the mask counts, not the rest of the suit). A portal comes out at the same spot on the other side; walk back through it to come home."
     },
     {
       "slug": "worldedit",

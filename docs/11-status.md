@@ -26,6 +26,15 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Snyk's ignores in the repository (2026-10-14, PR to `dev`)
+
+Snyk counted this repository as private, so it ran out of tests (200/200 in the period to 2026-10-07). Alex switched
+Snyk Code off (CodeQL does that job, docs/54) and IaC off, then deleted the Snyk project and imported it again so it is
+counted as public. Deleting the project dropped its ignores, so they now live in `.snyk` files beside the manifests:
+`apps/web/.snyk` (SR-02 `next`, expires 2027-01-12; SR-04 `deepmerge-ts`) and `apps/api/.snyk` (SR-04). The reasons
+are docs/38 §5.1's. Snyk reads them from `main`, so they take effect with the next `dev` → `main` pull request. SR-08
+was Snyk Code's and needs nothing now.
+
 ## Public artifacts: main's app run keeps no pictures, the fork's jar is encrypted (2026-10-14, PR to `dev`)
 
 - **Done by Alex on 2026-10-14:** every `deepslate-works-*` artifact and `old-exe-3.5.5` deleted (65), and the fork's

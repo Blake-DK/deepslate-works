@@ -1,0 +1,11 @@
+# Snyk policy for the api's dependencies. The reason is the security register's (docs/38 §5.1), where the finding is
+# closed as Not applicable; kept here so a new import of the project keeps it.
+version: v1.25.1
+ignore:
+  SNYK-JS-DEEPMERGETS-18912249:
+    - '*':
+        reason: >-
+          SR-04, docs/38: reached only through the Prisma CLI, which merges our own prisma.config when it runs; no
+          outside input reaches it. Cleared by Prisma 7.
+        created: 2026-10-14T12:30:00.000Z
+patch: {}

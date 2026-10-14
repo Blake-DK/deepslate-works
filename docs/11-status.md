@@ -53,7 +53,9 @@ and the counts Met, Private and Refused.
   first counted Met was corrected the same day). Every call was a `GET` with the session's token as it was; the
   review changed nothing on GitHub. The Private rows and the refused reads are in the private repository, branch
   `security`, for the security planner's triage (Part C).
-- **Next:** Alex reads Part B (the steps the API could not reach are in the session's report to him); then Part C.
+- **Part B, 2026-10-14:** read by Alex, the account's pages and the organisation's, and Snyk; the steps the token
+  could read by API were read too. His notes are in the private repository with Part A's.
+- **Next:** Part C, the security planner's triage of the Private rows.
 
 ## Sync says it restarts, then checks the server's mods (2026-10-14, `558f8671` on `dev`, images built; on test after `sudo deploy/test-up.sh`)
 

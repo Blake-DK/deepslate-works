@@ -241,3 +241,34 @@ describe("the Moon's map (docs/55 M5)", () => {
     for (const k of Object.keys(keys)) expect(["world", "dimension", "name", "sorting", "sky-color", "void-color", "sky-light", "ambient-light", "remove-caves-below-y", "cave-detection-ocean-floor", "storage"]).toContain(k);
   });
 });
+
+describe("the horror trial on Ashmoon only (Alex, 2026-10-14): modpack/datapacks/deepslate-moon-mobs", () => {
+  const MOBS = path.join(MODPACK, "datapacks/deepslate-moon-mobs");
+  const mjson = async (f: string) => JSON.parse(await readFile(path.join(MOBS, f), "utf8")) as Record<string, unknown>;
+  it("Mutant Monsters: every main-world, Nether and End biome is in its four 'without' tags; Ashmoon's are not", async () => {
+    for (const mob of ["creeper", "enderman", "skeleton", "zombie"]) {
+      const t = await mjson(`data/mutantmonsters/tags/worldgen/biome/without_mutant_${mob}_spawns.json`);
+      const values = t.values as string[];
+      expect(t.replace).toBe(false);
+      expect(values).toEqual(expect.arrayContaining(["minecraft:plains", "minecraft:deep_dark", "#minecraft:is_nether", "#minecraft:is_end"]));
+      expect(values.filter((v) => v.startsWith("deepslate:") || v === "#minecraft:is_overworld" || v === "#c:is_overworld")).toEqual([]);
+      expect(values.filter((v) => v.startsWith("minecraft:"))).toHaveLength(53);
+    }
+  });
+  it("ArPhEx: each of its spawn rules is replaced by one for Ashmoon's three biomes, counted only where ArPhEx is installed", async () => {
+    const dir = path.join(MOBS, "data/arphex/neoforge/biome_modifier");
+    const files = await readdir(dir);
+    expect(files.length).toBe(59);
+    for (const f of files) {
+      const j = await mjson(`data/arphex/neoforge/biome_modifier/${f}`);
+      expect(j.type).toBe("neoforge:add_spawns");
+      expect(j.biomes).toEqual(BIOMES);
+      expect(j["neoforge:conditions"]).toEqual([{ type: "neoforge:mod_loaded", modid: "arphex" }]);
+      expect(j.spawners).toBeTruthy();
+    }
+  });
+  it("both mods ship only with Season 1 (the test server), never to live, until Alex decides", async () => {
+    const m = JSON.parse(await readFile(path.join(MODPACK, "mods.json"), "utf8")) as { mods: Array<{ slug: string; season?: string; adminOnly?: boolean }> };
+    for (const slug of ["arphex", "mutant-monsters", "puzzles-lib"]) expect(m.mods.find((x) => x.slug === slug)?.season).toBe("s1");
+  });
+});

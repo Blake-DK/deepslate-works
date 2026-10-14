@@ -84,3 +84,6 @@ export const NOT_OPEN_TEXT = "Not open yet. You'll be let in when the server goe
 
 /** docs/48 B2: the same words on screen, in chat, in the reminder, the idle kick and the kick when it is switched on. */
 export const MAINTENANCE_TEXT = "Down for maintenance. You'll be let in when it's done.";
+/** Alex, 2026-10-14: the line in the game's chat for everyone on the server when Maintenance starts, and when it ends. */
+export const MAINTENANCE_START_CHAT = "The server is going into maintenance. Only admins stay on until it's done.";
+export const MAINTENANCE_END_CHAT = "Maintenance is over. Everyone can join again.";

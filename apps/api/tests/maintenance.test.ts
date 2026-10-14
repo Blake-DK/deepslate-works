@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { memoryHeldStore } from "../src/players/held-store.js";
 import { doorReason, Limbo, waitFor, type Back } from "../src/players/limbo.js";
 import { maintenanceTellraw, screenCommands, screenText, actions } from "../src/actions/registry.js";
-import { MAINTENANCE_TEXT, type Member } from "../src/shared/access.js";
+import { MAINTENANCE_END_CHAT, MAINTENANCE_START_CHAT, MAINTENANCE_TEXT, type Member } from "../src/shared/access.js";
 import type { BlockReason } from "../src/shared/join-gate.js";
 
 // docs/48 Part B: the site's Maintenance (not AMP's state of that name). On, the door lets in admins with the tick
@@ -112,6 +112,10 @@ describe("switched off: whoever is held for it goes on through the door, back to
     await t.room.maintenanceSwitched(false, "a2");
     expect(ran("limbo.releaseBack")).toEqual([{ name: "limbo.releaseBack", input: { name: "Bramble09", back: BASE }, caller: null }]);
     expect(t.room.held.size).toBe(0);
+    // then the game chat says it is over, after the door has let them back in
+    const names = state.ran.map((x) => x.name);
+    expect(names.indexOf("maintenance.announce")).toBeGreaterThan(names.indexOf("limbo.releaseBack"));
+    expect(ran("maintenance.announce")).toEqual([{ name: "maintenance.announce", input: { on: false }, caller: "a2" }]);
     expect(state.audits.find((a) => a.action === "join.ready")?.params).toMatchObject({ name: "Bramble09", back: true, was: "maintenance" });
   });
 
@@ -140,11 +144,23 @@ describe("switched on: everybody without the tick is kicked at once", () => {
     expect(ran("limbo.holdMaintenance")).toHaveLength(0); // not moved into the room
   });
 
-  it("kicks nobody while the server is not running", async () => {
+  it("says so in the game chat first, before anybody is kicked (Alex, 2026-10-14)", async () => {
+    const t = setup();
+    await t.join("Bramble09", UUID_P);
+    state.ran.length = 0;
+    await t.room.maintenanceSwitched(true, "a2");
+    expect(state.ran.map((x) => x.name)).toEqual(["maintenance.announce", "maintenance.kick"]);
+    expect(ran("maintenance.announce")).toEqual([{ name: "maintenance.announce", input: { on: true }, caller: "a2" }]);
+  });
+
+  it("kicks nobody and says nothing while the server is not running", async () => {
     const t = setup();
     t.tail.online.add("Bramble09");
     t.tail.state = 0;
+    state.ran.length = 0;
     expect(await t.room.maintenanceSwitched(true, "a2")).toEqual({ kicked: [], failed: [] });
+    await t.room.maintenanceSwitched(false, "a2");
+    expect(ran("maintenance.announce")).toHaveLength(0);
   });
 });
 
@@ -161,8 +177,15 @@ describe("the words (docs/48 B2): the same on screen, in chat, in the reminder a
     expect(actions["limbo.remindMaintenance"].build(ctx, { name: "Bramble09" })).toEqual([...screenCommands("Bramble09", "maintenance", "https://deepslate.dsw.test"), maintenanceTellraw("Bramble09")]);
   });
 
-  it("the kick is not one an admin can send by hand through /actions: only the switch sends it", () => {
+  it("the kick and the chat line are not ones an admin can send by hand through /actions: only the switch sends them", () => {
     expect(actions["maintenance.kick"].role).toBe("system");
+    expect(actions["maintenance.announce"].role).toBe("system");
+  });
+
+  it("the chat line: one gold line to everyone on the server, as it starts and as it ends", () => {
+    const ctx = { limbo: { dimension: "deepslate:limbo", x: 0.5, y: 65, z: 0.5 }, spawn: null, portalUrl: "https://deepslate.dsw.test" } as never;
+    expect(actions["maintenance.announce"].build(ctx, { on: true })).toEqual([`tellraw @a ${JSON.stringify(["", { text: MAINTENANCE_START_CHAT, color: "gold" }])}`]);
+    expect(actions["maintenance.announce"].build(ctx, { on: false })).toEqual([`tellraw @a ${JSON.stringify(["", { text: MAINTENANCE_END_CHAT, color: "gold" }])}`]);
   });
 
   it("a hold for maintenance is its own wait", () => {

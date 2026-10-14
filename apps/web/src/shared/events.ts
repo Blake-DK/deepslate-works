@@ -163,6 +163,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   // docs/48: the site's Maintenance (not AMP's state of that name), and the tick of the admins who may join during it
   "site.maintenance": (p) => (p.on ? `started maintenance: only admins with the tick can join${Array.isArray(p.kicked) && p.kicked.length ? `; kicked ${p.kicked.join(", ")}` : ""}` : "ended maintenance: the door is as before"),
   "maintenance.kick": (p) => `kicked ${s(p.name)}: the server is down for maintenance`,
+  "maintenance.announce": (p) => (p.on ? "told the game chat that maintenance starts" : "told the game chat that maintenance is over"),
   // docs/57: the Tester switch; `why` when one of the existing paths turned it off (removed, unlinked, left Discord)
   "user.tester": (p) => (p.on ? `made ${s(p.displayName, "a member")} a tester` : `took tester away from ${s(p.displayName, "a member")}${p.why ? ` (${s(p.why)})` : ""}`),
   "user.maintenanceJoin": (p) => (p.on ? `let ${s(p.displayName, "an admin")} join during maintenance` : `took "can join during maintenance" away from ${s(p.displayName, "an admin")}`),

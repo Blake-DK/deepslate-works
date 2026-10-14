@@ -129,6 +129,15 @@ and the counts Met, Private and Refused.
 - **Live:** waits for Alex's go (docs/59 "Live"). `dev` also carries held work (seasons, the Moon, Mekanism), so a
   whole `dev` → `main` PR is a question for Alex first.
 
+## The first portal on live (Alex, 2026-10-14)
+
+- Built by Alex near spawn at -444 74 587: a smooth basalt frame **lit with an eye of ender**, through to the Moon and
+  back. The first time the igniter was seen working (docs/55 M4); on test the frame had been filled by command. Post 2
+  now gives its place and how to build one.
+- Live's log since the 14:48 start: the Moon at 20 TPS, about 0.01 ms a tick; the only ERRORs are two "Tried to load
+  unrecognized recipe: quarryplus:adv_quarry removed now." at a join (a recipe book that still had the removed Adv.
+  Quarry recipe; harmless). The log does not show portal use.
+
 ## Maintenance: admins have the tick by default, and the game chat is told (2026-10-14, PRs #67 and #68 on `dev`; not on `main`)
 
 - **Seen on live (Alex):** the Maintenance switch could not be pressed: no admin had "Can join during maintenance".

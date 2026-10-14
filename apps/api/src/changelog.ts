@@ -209,7 +209,7 @@ export const CHANGES: Change[] = [
       "The quarry now needs real power: one small generator only crawls. When its storage is full it stops, and starts again by itself when there's room.",
       "Mekanism is in: generators, reactors and the MekaSuit power armour. Press Play to update.",
       "Its ores aren't in the old ground after all: the main world was left as it was. They're on the Moon, a new world of its own where everything can be mined, and osmium is found only there.",
-      "To get there, build a smooth basalt frame like a nether portal and light it with an eye of ender. There's one at spawn to start with.",
+      "To get there, use the portal near spawn at -444, 587. To build your own: a frame of smooth basalt shaped like a nether portal, 4 wide and 5 tall (mine it from the shell of an amethyst geode, or smelt Nether basalt), then right-click inside it with an eye of ender. Walk back through to come home.",
       "Gravity is low, the night never ends and monsters are about. Below y 30 the air is poisonous: craft a gas mask first (leather, 2 string, charcoal and a glass pane).",
     ],
   },

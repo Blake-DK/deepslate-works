@@ -2520,6 +2520,26 @@
       "howTo": "Mutant versions of the night's monsters roam **Ashmoon**: bigger, tougher and with new attacks. Keep your distance and fight them in the open."
     },
     {
+      "slug": "nyfs-spiders",
+      "name": "Nyf's Spiders",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "adminOnly": true,
+      "exclusiveGroup": null,
+      "description": "Spiders climb walls and ceilings like real ones. On trial on the test server with ArPhEx, which recommends it.",
+      "wiki": "https://modrinth.com/mod/nyfs-spiders",
+      "version": "B2RgTf4a",
+      "requires": [],
+      "guide": "game",
+      "topic": "combat",
+      "season": "s1",
+      "howTo": "Spiders now climb walls and ceilings and drop on you from above. A roof over your head no longer keeps them off; light and a closed door still do."
+    },
+    {
       "slug": "puzzles-lib",
       "name": "Puzzles Lib",
       "category": "adventure",

@@ -2484,9 +2484,9 @@
       "load": "H",
       "recommended": false,
       "hidden": false,
-      "adminOnly": true,
+      "adminOnly": false,
       "exclusiveGroup": null,
-      "description": "Horror insects, giant spiders and their bosses. On trial on the test server, for Ashmoon only.",
+      "description": "Horror insects, giant spiders and their bosses, on Ashmoon only.",
       "wiki": "https://modrinth.com/mod/arphex",
       "version": "jawvD7YZ",
       "requires": [
@@ -2494,7 +2494,6 @@
       ],
       "guide": "game",
       "topic": "combat",
-      "season": "s1",
       "howTo": "Giant insects and spiders hunt on **Ashmoon**. Bring light, armour and a good weapon, and don't fight them in the dark."
     },
     {
@@ -2506,9 +2505,9 @@
       "load": "M",
       "recommended": false,
       "hidden": false,
-      "adminOnly": true,
+      "adminOnly": false,
       "exclusiveGroup": null,
-      "description": "Huge mutant zombies, skeletons, creepers and endermen. On trial on the test server, for Ashmoon only.",
+      "description": "Huge mutant zombies, skeletons, creepers and endermen, on Ashmoon only.",
       "wiki": "https://modrinth.com/mod/mutant-monsters",
       "version": "dauEcrnZ",
       "requires": [
@@ -2516,7 +2515,6 @@
       ],
       "guide": "game",
       "topic": "combat",
-      "season": "s1",
       "howTo": "Mutant versions of the night's monsters roam **Ashmoon**: bigger, tougher and with new attacks. Keep your distance and fight them in the open."
     },
     {
@@ -2528,15 +2526,14 @@
       "load": "L",
       "recommended": false,
       "hidden": false,
-      "adminOnly": true,
+      "adminOnly": false,
       "exclusiveGroup": null,
-      "description": "Spiders climb walls and ceilings like real ones. On trial on the test server with ArPhEx, which recommends it.",
+      "description": "Spiders climb walls and ceilings like real ones.",
       "wiki": "https://modrinth.com/mod/nyfs-spiders",
       "version": "B2RgTf4a",
       "requires": [],
       "guide": "game",
       "topic": "combat",
-      "season": "s1",
       "howTo": "Spiders now climb walls and ceilings and drop on you from above. A roof over your head no longer keeps them off; light and a closed door still do."
     },
     {
@@ -2552,8 +2549,7 @@
       "description": "Library needed by Mutant Monsters.",
       "wiki": "https://modrinth.com/mod/puzzles-lib",
       "version": "1TmfTuyw",
-      "requires": [],
-      "season": "s1"
+      "requires": []
     },
     {
       "slug": "gateways-to-eternity",
@@ -2672,12 +2668,11 @@
       "recommended": false,
       "hidden": true,
       "exclusiveGroup": null,
-      "description": "Library needed by Mowzie's Mobs.",
+      "description": "Library needed by ArPhEx and Mowzie's Mobs.",
       "wiki": "https://modrinth.com/mod/geckolib",
       "videos": [],
       "version": "Grwn5rUB",
-      "requires": [],
-      "season": "s1"
+      "requires": []
     },
     {
       "slug": "apothic-attributes",

@@ -1962,6 +1962,34 @@
       "howTo": "More stairs, railings and balconies in every wood. Craft at a crafting table; JEI lists them all."
     },
     {
+      "slug": "macaws-holidays",
+      "name": "Macaw's Holidays",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Christmas and Halloween decorations: Christmas trees, string lights, garlands, presents, stockings, candy canes, carved pumpkins and cobwebs.",
+      "wiki": "https://modrinth.com/mod/macaws-holidays",
+      "videos": [
+        {
+          "title": "MishMash 014 Macaw's Holidays Mod Tutorial Christmas Edition",
+          "url": "https://www.youtube.com/watch?v=mQ8RYYuCSuk"
+        },
+        {
+          "title": "Minecraft Mod Reviews 2.0 (Revived) #144 - Macaws Holidays (Autumn)",
+          "url": "https://www.youtube.com/watch?v=gQIdSdXqXgA"
+        }
+      ],
+      "version": "2mO9Xhpt",
+      "requires": [],
+      "guide": "game",
+      "topic": "building",
+      "howTo": "Christmas and Halloween decorations, all made at a crafting table from everyday things (candy canes from sugar, a Christmas tree from spruce logs and leaves, carved pumpkins from pumpkins and a wooden hoe). Build a tree from its base, bottom, middle and top pieces stacked up. JEI lists them all (search `@mcwholidays`)."
+    },
+    {
       "slug": "another-furniture",
       "name": "Another Furniture",
       "category": "building",

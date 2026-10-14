@@ -129,7 +129,7 @@ and the counts Met, Private and Refused.
 - **Live:** waits for Alex's go (docs/59 "Live"). `dev` also carries held work (seasons, the Moon, Mekanism), so a
   whole `dev` → `main` PR is a question for Alex first.
 
-## Deploy of the Moon: `main` `556679b9` (PR #65, 2026-10-14), the Moon's square copied to live; deploy not yet run
+## Deploy of the Moon: `main` `556679b9` (PR #65), then `faa81318` (PR #66: Macaw's Holidays, the gas from y 30), 2026-10-14; the Moon's square copied to live; deploy not yet run
 
 - **PR #65 (`dev` → `main`) merged by Alex as `556679b9`**: docs/53 A, B (no retrogen), E1, docs/55 M1 to M8,
   docs/56, docs/59's flowers, the console sending lines as typed, #60's sample Frontier out; Season 1 rides along

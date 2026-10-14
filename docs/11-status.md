@@ -153,6 +153,29 @@ and the counts Met, Private and Refused.
 - **Live:** waits for Alex's go (docs/59 "Live"). `dev` also carries held work (seasons, the Moon, Mekanism), so a
   whole `dev` → `main` PR is a question for Alex first.
 
+## Horror mobs on Ashmoon only, on trial on the test server (2026-10-14, PRs #71, #72 on `dev`; not on `main`)
+
+- **The Moon is called Ashmoon** (Alex, 2026-10-14) in everything players read: the guide, post 2 (already posted with
+  "the Moon"; the bot never edits a posted entry), the gas mask, the map, the site's labels. The id stays
+  `deepslate:moon`. On `dev`, `af114ee8`; live gets it with the next `dev` → `main` PR.
+- **Alex: "some mobs that are horror like for the moon only; try them both out".** Read on Modrinth and in the jars:
+  Zombie Nightmare Expansions and Luminous Monsters are dropped (their files tagged NeoForge 1.21.1 are builds for
+  1.20.1: `mods.toml`, `minecraft [1.20.1]`); the stalker mods follow a player anywhere. Tried: **Mutant Monsters**
+  21.1.1 (`dauEcrnZ`, with **Puzzles Lib** 21.1.62 `1TmfTuyw`) and **ArPhEx** 5.0.2 (`jawvD7YZ`, with GeckoLib).
+- **Test server only:** all three are `season: "s1"` (the switch that ships to the test server, `SEASONS_SHIP=s1`,
+  not to live, `"ship": []`). Live's pack stays `0.1.0+68650608`, 78 files; the test pack has 87. Lock entries spliced
+  from a full Lock run. When Alex keeps one, it leaves Season 1 (and GeckoLib with ArPhEx).
+- **Ashmoon only, `modpack/datapacks/deepslate-moon-mobs`:** Mutant Monsters adds each mutant where its ordinary mob
+  spawns (its code) except in its four `without_mutant_*_spawns` tags, which hold vanilla's 53 overworld biomes and
+  every Nether and End biome; 5 % of the creeper's weight each by its config. ArPhEx's 59 spawn rules and five of its
+  structures (#72) are replaced by ones for Ashmoon's biomes, with a `mod_loaded` condition. ArPhEx's config on test
+  only (`modpack/test-overlay`): vanilla replacement off (it turned 1 in 10 ordinary mobs anywhere into its own),
+  the full-moon sky scare off. Its random spawn system only uses non-vanilla overworld biomes, Ashmoon's here. Its own
+  dimensions (`arphex:the_crawling`, `the_webrooms`) load; its structures appear beyond Ashmoon's pre-generated square.
+- **Seen on test (#71, start at 17:48 UTC):** no FATAL, the usual Curios ERROR only; both mods and Puzzles Lib
+  loaded; `deepslate-moon-mobs` and Mutant Monsters' own `biome_modifications` pack loaded; 13,565 recipes.
+  **Not seen yet, needs a player on Ashmoon:** the mobs themselves, and that none come in the main world.
+
 ## The first portal on live (Alex, 2026-10-14)
 
 - Built by Alex near spawn at -444 74 587: a smooth basalt frame **lit with an eye of ender**, through to the Moon and

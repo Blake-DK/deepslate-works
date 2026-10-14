@@ -272,3 +272,22 @@ describe("the horror trial on Ashmoon only (Alex, 2026-10-14): modpack/datapacks
     for (const slug of ["arphex", "mutant-monsters", "puzzles-lib"]) expect(m.mods.find((x) => x.slug === slug)?.season).toBe("s1");
   });
 });
+
+describe("the horror trial kept on Ashmoon: ArPhEx's structures and its test-only settings", () => {
+  const MOBS = path.join(MODPACK, "datapacks/deepslate-moon-mobs");
+  it("its five structures that would go into the main world generate on Ashmoon's biomes instead, only where ArPhEx is installed", async () => {
+    const dir = path.join(MOBS, "data/arphex/worldgen/structure");
+    const files = (await readdir(dir)).sort();
+    expect(files).toEqual(["altar_spawn.json", "ant_hill.json", "crawling_castle.json", "spider_cave.json", "termite_hill.json"]);
+    for (const f of files) {
+      const j = JSON.parse(await readFile(path.join(dir, f), "utf8")) as Record<string, unknown>;
+      expect(j.biomes).toEqual(BIOMES);
+      expect(j["neoforge:conditions"]).toEqual([{ type: "neoforge:mod_loaded", modid: "arphex" }]);
+    }
+  });
+  it("on the test server only: no vanilla mob anywhere is replaced by an ArPhEx one, and no scare in the main world's sky", async () => {
+    const toml = await readFile(path.join(MODPACK, "test-overlay/config/ArPhEx Configurations.toml"), "utf8");
+    expect(toml).toContain('"Vanilla Replacement Mode" = 0.0');
+    expect(toml).toContain('"Enable Tormentor Sky Hallucination" = false');
+  });
+});

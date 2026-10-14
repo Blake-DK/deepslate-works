@@ -255,12 +255,15 @@ describe("the horror trial on Ashmoon only (Alex, 2026-10-14): modpack/datapacks
       expect(values.filter((v) => v.startsWith("minecraft:"))).toHaveLength(53);
     }
   });
-  it("ArPhEx: each spawn rule for the main world now points at Ashmoon's three biomes (keeping any of its own biomes), counted only where ArPhEx is installed; the one for its own dimension alone is left to it", async () => {
+  it("ArPhEx: each spawn rule for the main world now points at Ashmoon's three biomes (keeping any of its own biomes), counted only where ArPhEx is installed; the one for its own dimension alone is ArPhEx's own again", async () => {
     const dir = path.join(MOBS, "data/arphex/neoforge/biome_modifier");
     const files = await readdir(dir);
-    expect(files.length).toBe(58);
-    expect(files).not.toContain("crawling_random_biome_modifier.json"); // the Crawling's own, weight 1000: stays there
-    for (const f of files) {
+    expect(files.length).toBe(59);
+    // the Crawling's own rule (weight 1000) is shipped as ArPhEx wrote it: Sync never deletes, so the copy #71 pointed at
+    // Ashmoon has to be overwritten on a server that has it, not left behind
+    const own = await mjson("data/arphex/neoforge/biome_modifier/crawling_random_biome_modifier.json");
+    expect((own.biomes as string[]).every((b) => b.startsWith("arphex:"))).toBe(true);
+    for (const f of files.filter((x) => x !== "crawling_random_biome_modifier.json")) {
       const j = await mjson(`data/arphex/neoforge/biome_modifier/${f}`);
       const biomes = j.biomes as string[];
       expect(j.type).toBe("neoforge:add_spawns");

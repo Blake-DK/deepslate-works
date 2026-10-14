@@ -1,4 +1,4 @@
-# 59 · GitHub security review
+# 60 · GitHub security review
 
 Planned 2026-10-12, nothing checked yet. docs/54 switched GitHub's security features on. This is the review of the
 GitHub side as a whole: the account, the repository's settings, the workflows, the packages, what the public can read

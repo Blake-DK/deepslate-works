@@ -65,7 +65,7 @@ jobs:
           "version=$v" >> $env:GITHUB_OUTPUT
       # The site's address is the secret PORTAL_URL, so it is in neither the repository nor the logs. Only main's
       # push builds it in, for the exe players download; every other run (a pull request, a run by hand) builds the
-      # csproj's placeholder, so the pictures that run keeps cannot show the real site (docs/59 A3.2).
+      # csproj's placeholder, so the pictures that run keeps cannot show the real site (docs/60 A3.2).
       - name: Build DeepslateWorks.exe
         shell: pwsh
         env:

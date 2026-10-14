@@ -1,0 +1,20 @@
+{
+  "values": [
+    {
+      "id": "mekanism:hazmat_mask",
+      "required": false
+    },
+    {
+      "id": "mekanism:hazmat_gown",
+      "required": false
+    },
+    {
+      "id": "mekanism:hazmat_pants",
+      "required": false
+    },
+    {
+      "id": "mekanism:hazmat_boots",
+      "required": false
+    }
+  ]
+}

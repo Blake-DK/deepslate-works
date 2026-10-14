@@ -24,8 +24,9 @@
     "components": {
       "minecraft:custom_name": "{\"text\": \"Gas mask\", \"italic\": false}",
       "minecraft:lore": [
-        "{\"text\": \"Lets you breathe below y 30 on Ashmoon\", \"italic\": false, \"color\": \"gray\"}",
-        "{\"text\": \"for 30 seconds, then it is used up.\", \"italic\": false, \"color\": \"gray\"}"
+        "{\"text\": \"Keeps out the radiation below y 30 on Ashmoon\", \"italic\": false, \"color\": \"gray\"}",
+        "{\"text\": \"for 30 seconds (less the deeper you go),\", \"italic\": false, \"color\": \"gray\"}",
+        "{\"text\": \"then it is used up. Not enough below y -25.\", \"italic\": false, \"color\": \"gray\"}"
       ],
       "minecraft:custom_data": {
         "deepslate_mask": "basic"

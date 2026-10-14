@@ -2711,7 +2711,7 @@
       ],
       "guide": "game",
       "topic": "travel",
-      "howTo": "Build a frame of **smooth basalt** shaped like a nether portal (smelt basalt to get it) and right-click inside it with an **eye of ender**. Step in to reach **Ashmoon**: everything can be mined there, and osmium and the other Mekanism ores are found only there. Gravity is low, so you jump high and fall slowly; the night never ends, monsters are about, and beds explode. Below y 30 the air is poisonous: wear a **gas mask** (leather, 2 string, charcoal and a glass pane; it lasts 30 seconds in the gas) or Mekanism's hazmat mask (only the mask counts, not the rest of the suit). A portal comes out at the same spot on the other side; walk back through it to come home."
+      "howTo": "Build a frame of **smooth basalt** shaped like a nether portal (smelt basalt to get it) and right-click inside it with an **eye of ender**. Step in to reach **Ashmoon**: everything can be mined there, and osmium and the other Mekanism ores are found only there. Gravity is low, so you jump high and fall slowly; the night never ends, monsters are about, and beds explode. Below y 30 there is **radiation**, worse the deeper you go: wear a **gas mask** (leather, 2 string, charcoal, glass pane) or a hazmat mask. Below y -25 it kills: wear a **full hazmat suit**. A portal comes out at the same spot on the other side; walk back through it to come home."
     },
     {
       "slug": "worldedit",

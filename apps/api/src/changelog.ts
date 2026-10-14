@@ -279,6 +279,18 @@ export const CHANGES: Change[] = [
       "R only reloads your gun now, not the shaders too. G, H, C and Z are only for guns (fire mode, inspect, crawl, attachments), and V is only voice chat. Gun melee and scope zoom have no key; set one in Options, Controls if you want them.",
     ],
   },
+  {
+    // Ashmoon's air is radiation now, stronger the deeper you go (Alex, 2026-10-14). Set `live: true` only after the
+    // live check (the rule above).
+    id: "2026-10-14-ashmoon-radiation",
+    date: "2026-10-14",
+    title: "Ashmoon is radioactive",
+    lines: [
+      "The bad air below y 30 on Ashmoon is radiation now, and it gets stronger the deeper you go.",
+      "Masks wear out faster deeper down: the gas mask lasts 30 seconds near y 30 and only a few seconds below y -25. Mekanism's hazmat mask now wears out too: about 30 minutes, less deeper down.",
+      "Below y -25 the radiation kills. Only a full hazmat suit (mask, gown, pants and boots) or a full MekaSuit keeps you alive there, and the hazmat suit wears out quickly that deep.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

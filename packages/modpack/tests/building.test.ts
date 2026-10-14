@@ -20,10 +20,11 @@ describe("Building and decoration", () => {
     expect(c.title).toBe("Building and decoration");
     expect(c.votable).toBe(true);
   });
-  it("suggests six light mods; the rest are votable", async () => {
+  it("suggests eight light mods; the rest are votable", async () => {
     const m = await load();
     const b = m.mods.filter((x) => x.category === "building");
-    const suggested = ["create-deco", "copycats", "macaws-roofs", "macaws-windows", "macaws-doors", "handcrafted"];
+    // docs/59 (Alex, 2026-10-14): the two flower mods go straight in, no vote
+    const suggested = ["create-deco", "copycats", "macaws-roofs", "macaws-windows", "macaws-doors", "handcrafted", "serene-shrubbery", "wilder-flowers"];
     expect(b.filter((x) => x.recommended).map((x) => x.slug)).toEqual(suggested);
     for (const x of b) {
       expect([x.slug, x.side]).toEqual([x.slug, "both"]);

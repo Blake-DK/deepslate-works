@@ -1986,6 +1986,62 @@
       "howTo": "Chairs, tables, benches, shelves, curtains and lamps. Right-click to sit or use; JEI lists every piece."
     },
     {
+      "slug": "serene-shrubbery",
+      "name": "Serene Shrubbery",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Garden flowers in lots of colours. Put two or three next to each other and new colours appear over time. Also adds the Bloom Basket planter.",
+      "wiki": "https://modrinth.com/mod/serene-shrubbery",
+      "videos": [
+        {
+          "title": "10 Spring Mods That Make Minecraft Absolutely Stunning",
+          "url": "https://www.youtube.com/watch?v=8ejAZtc8FyE&t=113s"
+        },
+        {
+          "title": "COZIEST Minecraft 1.21.11 Mods! | Updated & NEW!",
+          "url": "https://www.youtube.com/watch?v=fOU0pmI5s6s&t=462s"
+        }
+      ],
+      "version": "rRJVLCOH",
+      "requires": [],
+      "guide": "game",
+      "topic": "building",
+      "howTo": "Pick flowers you find in the wild. Plant two or three of the **same kind** side by side and wait: a new colour can sprout next to them. Craft a **Bloom Basket** from 3 planks, 1 dirt and 3 sticks to plant Pansies in."
+    },
+    {
+      "slug": "wilder-flowers",
+      "name": "Wilder Flowers",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Wildflowers, clover patches and flower garlands you can wear or hang up. The wildflowers grow in newly explored land.",
+      "wiki": "https://modrinth.com/mod/wilder-flowers",
+      "videos": [
+        {
+          "title": "8 MORE MORE MORE Minecraft mods that make me JOYOUS!! (1.20.1 - 1.21.1) FORGE/NEOFORGE",
+          "url": "https://www.youtube.com/watch?v=uLp6FgGeEfc&t=594s"
+        },
+        {
+          "title": "18 Small, Subtle Minecraft Mods - Small Mod Discoveries | Volume 8",
+          "url": "https://www.youtube.com/watch?v=NmlESpmaTGA&t=586s"
+        }
+      ],
+      "version": "yWhjRH1D",
+      "requires": [],
+      "guide": "game",
+      "topic": "building",
+      "howTo": "Wildflowers and clover only grow in **new land**, so look further out than you have been. Craft **garlands** from flowers to wear on your head or hang as decoration."
+    },
+    {
       "slug": "supplementaries",
       "name": "Supplementaries",
       "category": "building",

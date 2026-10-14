@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-12T16:45:29.734Z",
+  "generatedAt": "2026-10-14T07:33:43.620Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "8b610bea6f463933412fb9a1bd2492ac8ea3f47b67775fbc4751f77e827f75d9",
+  "hash": "b894dfa358dcd35c51c33f050a4bb46f617cb82ad888861025891dab27dfbad1",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -1314,6 +1314,26 @@
       }
     },
     {
+      "slug": "serene-shrubbery",
+      "name": "Serene Shrubbery",
+      "projectId": "8nNCA6Vy",
+      "versionId": "rRJVLCOH",
+      "versionNumber": "2.4.0",
+      "versionType": "release",
+      "filename": "SereneShrubbery-NeoForge-1.21.1-v2.4.0.jar",
+      "url": "https://cdn.modrinth.com/data/8nNCA6Vy/versions/rRJVLCOH/SereneShrubbery-NeoForge-1.21.1-v2.4.0.jar",
+      "sha512": "9ff006baa17b346b914279b6eb5ad691b00907fc8b03c20dab72366dd064fa6184a19e8c65441e3fb55ff863828bdfc5d9d518305f05f1062f811c2eff8978dc",
+      "sha1": "298d456b9520a9b883af0f9fb4fbf71806594f60",
+      "size": 841114,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
+    },
+    {
       "slug": "server-sided-portals",
       "name": "Server Sided Portals",
       "projectId": "OT9TPpqs",
@@ -1525,6 +1545,26 @@
         "client": "required",
         "server": "required"
       }
+    },
+    {
+      "slug": "wilder-flowers",
+      "name": "Wilder Flowers",
+      "projectId": "8lUQapTY",
+      "versionId": "yWhjRH1D",
+      "versionNumber": "1.1.0+1.21.1-neoforge",
+      "versionType": "release",
+      "filename": "wilderflowers-1.1.0+1.21.1-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/8lUQapTY/versions/yWhjRH1D/wilderflowers-1.1.0%2B1.21.1-neoforge.jar",
+      "sha512": "3314036eef66769d5dc842abf8a1e5478755f91f6a49839b9a77ee5eecbb7721859c1ac739feeebce6f942d26de06575583d6f2618ba1908651255c3101b9d71",
+      "sha1": "1dc2a64f6f96a9ab8a7e8bbb0eac0c450eaed83a",
+      "size": 3379007,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "worldedit",

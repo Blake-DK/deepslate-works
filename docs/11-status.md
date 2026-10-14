@@ -26,6 +26,41 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Flowers: docs/59, Serene Shrubbery and Wilder Flowers (2026-10-14, on `dev` and test; not on `main`, live untouched)
+
+- **On `dev`:** `fdfe753a` (the two mods) and `320ad409` (a recipe fix, the howTos), CI passed on both. Serene
+  Shrubbery 2.4.0 (`rRJVLCOH`) and Wilder Flowers 1.1.0+1.21.1-neoforge (`yWhjRH1D`), both the newest **release**
+  for NeoForge 1.21.1, no beta. On, suggested, Building and decoration, guide "game". Neither needs another mod;
+  Wilder Flowers carries kaleido-config 0.3.3 inside its jar.
+- **Lock:** only the two entries, hash `8b610bea` → `b894dfa3` (83 files). A full `modpack lock` would also have moved
+  three unpinned libraries (Kotlin for Forge, Placebo, Titanium), Particle Rain in the extras, and written `channels`
+  into every entry, so the two entries were taken from that run and put into the old lock, as for the private jars.
+  The pack shipping no season goes `0.1.0+c0b230b4` (75 files) → **`0.1.0+2ae3aea0`** (77); `mods.json`'s "0.1.0"
+  stays, as for every mod added since phase 1. Lint 0/0, verify-links 317/0, check.sh all green.
+- **Fixed in `deepslate-tools`:** Wilder Flowers' `wilderflowers:milling/pink_dye_from_hopeful_wildflowers` names its
+  results `{"item": …}`, which Create 6 cannot read (an ERROR at every start); the datapack carries it with `{"id": …}`.
+  Server only, not in the pack's hash.
+- **The mods do not do what docs/59 said in two places** (from the jars' code): Serene Shrubbery breeds two
+  **different** colours of one flower (red + white Pansies → pink; 17 such pairs), never two of the same, and only
+  on grass, dirt, moss, mud or farmland with air beside it; by the code about one new colour per two to three
+  hours of a player nearby at the normal tick speed (copies of the parents come as often); bone meal on most of its flowers drops a copy, not on the four wild Pansies. **Its wild flowers come from
+  biome modifiers like Wilder Flowers', so they too exist only in land made after the mod is in**: someone has to go
+  to new land for the first ones. The howTos say so now; the descriptions are docs/59's.
+- **Test, 2026-10-14 07:40 to 08:05 UTC:** test checkout at `320ad40`, Build server and Sync through api-test (2 jars
+  added, nothing else moved). Start: both mods listed, Done in 1.1 s, no FATAL, the one ERROR the usual Curios line,
+  no mixin line naming either mod. Spark with nobody online, before / after: TPS 20 / 20, ticks med 0.5 / 0.5 ms,
+  95th percentile 1.0 to 1.2 / 1.0 to 1.1 ms, worst in 10 s 1.3 to 2.2 / 1.3 to 1.9 ms. Chunky made 635 chunks
+  around 23760 23980 (the sleep watcher paused it at 58%, its save a 4.5 s stall); WorldEdit counts in
+  23570..23950, 23790..24170, y 55 to 130: cheery wildflowers 1,843, moody 5, hopeful 31, clovers 6,970; Pansies red
+  43, white 86, yellow 71, purple 63; fireweed 268, twinflower 12, purple foxglove 2. Old land at spawn (±190): 0 of
+  each but 2 clovers (not traced). The Mods guide, from `mods.json`: both under Building and decoration with their
+  howTos.
+- **Not seen yet, needs a player on the test profile:** join without a mismatch, JEI, a garland worn and placed,
+  breeding (random ticks need a player within 128 blocks in 1.21.1, so the console cannot run it).
+- **Left on test:** the 635 chunks at 23760 23980; Chunky's task stopped; no force-loads; gamerules unchanged.
+- **Live:** waits for Alex's go (docs/59 "Live"). `dev` also carries held work (seasons, the Moon, Mekanism), so a
+  whole `dev` → `main` PR is a question for Alex first.
+
 ## The Moon's datapack: docs/55 M1 to M4 (2026-10-12/13, PR #52 merged into `dev` as `1682dad1`; seen on test; not on `main`)
 
 - **Built (PR #52, CI passed, merged into `dev` 2026-10-12):** M1 `modpack/server/config/Mekanism/world.toml` holds

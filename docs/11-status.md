@@ -26,6 +26,14 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Gun balance: docs/61 (2026-10-14, planned, nothing built)
+
+Players told Alex the guns are too strong. The review (docs/61 §1): TaCZ bullets skip the hit cooldown, so the AK-47
+does 90 a second against a netherite sword's 13, every gun is iron-cheap, and `tacz-server.toml` is at its defaults.
+Alex's decisions: `DamageBaseMultiplier = 0.35`; gun tiers (tier 2 needs steel, tier 3 netherite and refined
+obsidian too); ammo crafts halved; Create Big Cannons' `entity_damage` halved for every projectile. Test first, Alex
+tries it, then live after his yes. docs/61 replaces docs/53's line that TaCZ guns need no change.
+
 ## Macaw's Holidays in; the Moon's gas from y 30 (2026-10-14, on `dev`, not on `main`)
 
 - **Macaw's Holidays** (Alex): on, not suggested, Building and decoration, 1.1.2 (`2mO9Xhpt`), no dependencies, all

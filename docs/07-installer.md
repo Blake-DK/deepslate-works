@@ -79,6 +79,16 @@ Signing would then be one CI step (`azure/artifact-signing-action`, with a servi
   `news`). The app shows each one in the Vote tab (titled News when only news waits) with **Seen it**
   (`SiteHome.Seen`, `POST /api/app/news/<id>/seen`); Play says "Read the news first" and starts once all are seen, the
   same gate as a must-vote poll. A 404 (hidden or no longer must-read) counts as seen. docs/05 has the site's half.
+- **The first-time guide** (Alex, 2026-10-14: "a first time guide [that] should also guide you through the other tabs
+  and what you can do in them", with the keys as part of the app rather than a news post). `Tour.cs` (pages, pure) and
+  `AppUiTour.cs` (the window): a card over the window, the tab it explains selected behind it: welcome, Play, Votes,
+  Extras, Settings, Log, Test (only with the Test tab), then **New keys**, confirmed with **Got it**. "Skip the tour"
+  goes to the keys page, which has no Skip. It starts on a home refresh once nothing else has the window (no guided
+  setup, no question card, not reviewing), so a new player gets it after the first-run questions and everyone else on
+  the first open of 3.6.6. While it is open Play waits (`VotesBlock`) and says "Have a look round first"; after it the
+  votes come, or Play opens and a waiting run carries on (`FinishVotes`). Remembered in settings.json as
+  `tourSeen: "3.6.6"`; raising `Tour.Version` shows it to everyone again. Closing the window mid-tour shows it again
+  next time. Pictures 33 to 34 in the CI run.
 
 ## 3.6.5: a download from the site no longer fails behind the window's polls (2026-10-12)
 

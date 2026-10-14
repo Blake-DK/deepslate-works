@@ -26,6 +26,19 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## App 3.6.6: the pack's keys, must-read news, the first-time guide (2026-10-14, on `dev`, not on `main`)
+
+- **Keys:** every mod's default key was read from the jars; where two shared one, the app now sets the pack's key once
+  per PC on Play (`Engine.KeyDefaults`, installed.json `keysSet`): backpack on `, mute on N, and no key for Iris reload
+  shaders and shader menu, TaCZ melee and zoom, voice groups and hide icons, Curios, backpack upgrades, Xaero's
+  waypoint list and bigger minimap. A key the player changed is kept. The full table is in docs/07 "3.6.6".
+- **Must-read news:** Admin → News "Players must confirm they've seen it"; the app asks for "Seen it" before Play
+  (migration 0036, `AnnouncementSeen`). docs/05.
+- **First-time guide:** a tour of the app's tabs, ending on the new keys ("Got it"), once per PC (settings.json
+  `tourSeen`), Play waiting for it. docs/07.
+- Checked: typecheck, lint, tests; the installer workflow on `dev` (Windows tests) passed for the keys and the news.
+  Not yet seen on a real PC or in game. The change log entry `2026-10-14-pack-keys` waits for `live`.
+
 ## Vanishmod in, admins only (2026-10-14, on `dev`, not on `main`)
 
 - **Vanishmod** (Alex): `vanishmod` 1.1.21 (`G52aWgtY`), server only (Modrinth: client unsupported; the jar registers

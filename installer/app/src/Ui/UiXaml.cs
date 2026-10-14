@@ -374,6 +374,23 @@ namespace DeepslateWorks
     </TabItem>
   </TabControl>
   </DockPanel>
+  <!-- 3.6.6 (Alex, 2026-10-14): the first-time guide, a card over the window with the tab it explains behind it -->
+  <Grid x:Name=""TourLayer"" Visibility=""Collapsed"">
+    <Rectangle Fill=""Black"" Opacity=""0.4""/>
+    <Border x:Name=""TourCard"" Background=""{DynamicResource Card}"" BorderBrush=""{DynamicResource Copper}"" BorderThickness=""2"" CornerRadius=""4"" Padding=""18,14""
+            Width=""580"" HorizontalAlignment=""Center"" VerticalAlignment=""Bottom"" Margin=""0,0,0,52"">
+      <StackPanel>
+        <TextBlock x:Name=""TourStep"" Foreground=""{DynamicResource Blue}"" FontWeight=""SemiBold"" FontSize=""12"" Margin=""0,0,0,2""/>
+        <TextBlock x:Name=""TourTitle"" FontSize=""20"" FontWeight=""SemiBold"" TextWrapping=""Wrap""/>
+        <StackPanel x:Name=""TourBody"" Margin=""0,6,0,0""/>
+        <DockPanel Margin=""0,14,0,0"">
+          <Button x:Name=""TourNext"" DockPanel.Dock=""Right"" Style=""{StaticResource Primary}"" MinWidth=""120"" Content=""Next""/>
+          <Button x:Name=""TourBack"" DockPanel.Dock=""Right"" Style=""{StaticResource Plain}"" Content=""Back""/>
+          <Button x:Name=""TourSkip"" DockPanel.Dock=""Left"" Style=""{StaticResource Plain}"" Content=""Skip the tour"" HorizontalAlignment=""Left""/>
+        </DockPanel>
+      </StackPanel>
+    </Border>
+  </Grid>
   </Grid>
 </Window>";
 
@@ -517,6 +534,8 @@ namespace DeepslateWorks
             "VillagerCard", "VillagerPreview", "VillagerTitle", "VillagerSwitch", "VillagerNote", "VillagerMissing",
             "WebsiteCard", "WebsiteTitle", "WebsiteQuestion", "WebsiteChoices", "WebsiteNote",
             "GraphicsCard", "GraphicsTitle", "GraphicsEmpty", "GraphicsBody",
+            // 3.6.6: the first-time guide
+            "TourLayer", "TourCard", "TourStep", "TourTitle", "TourBody", "TourNext", "TourBack", "TourSkip",
         };
 
         /// <summary>3.6.1: every name a Play view (PlayPane) looks up in PlayViewXaml, the same in each copy.</summary>

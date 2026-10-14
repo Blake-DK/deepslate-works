@@ -245,6 +245,7 @@ export const CHANGES: Change[] = [
     id: "2026-10-14-pack-keys",
     date: "2026-10-14",
     lines: [
+      "Deepslate Works now shows a quick guide the first time you open it after this update: what each tab does, and the new keys.",
       "Some keys did two things at once. Now each does one. Press Play to get the new keys. Any key you had already changed yourself stays as you set it.",
       "The backpack you wear opens with ` (top left, under Esc, next to 1). B is only for map waypoints now.",
       "Mute your microphone with N. M only opens the map now.",

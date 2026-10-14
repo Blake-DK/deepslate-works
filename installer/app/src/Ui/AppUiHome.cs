@@ -63,8 +63,9 @@ namespace DeepslateWorks
 
         /// <summary>Votes still to answer: the site lists them until they are answered (a ballot on the site, a poll here).</summary>
         List<VoteItem> PendingVotes => SiteNow != null && SiteNow.SignedIn ? SiteNow.Votes.Where(v => !answered.Contains(v.Id)).ToList() : new List<VoteItem>();
-        /// <summary>3.6.1: the live server's votes hold the Play tab only; the test server's door has its own rules.</summary>
-        public bool VotesBlock => P.IsLive && PendingVotes.Count > 0;
+        /// <summary>3.6.1: the live server's votes hold the Play tab only; the test server's door has its own rules. 3.6.6: so
+        /// does the first-time guide while it is open.</summary>
+        public bool VotesBlock => P.IsLive && (PendingVotes.Count > 0 || TourOpen);
 
         void WireHome()
         {
@@ -169,6 +170,8 @@ namespace DeepslateWorks
             if (!homeSim && !wokeAtOpen && h.SignedIn && h.Server.Asleep) { wokeAtOpen = true; WakeNow("opened"); }
             if (first) Log.Line(string.Format("window: the server is {0}{1}", h.Server.State, h.SignedIn ? string.Format(", {0} vote(s) to answer", h.Votes.Count) : ", not signed in yet"));
             if (Guided > 0) return;   // the guided setup first; the votes come after it
+            MaybeStartTour();   // 3.6.6: the first-time guide, before the votes
+            if (TourOpen) { GatePlay(); UpdateVoteBadge(); return; }
             var pending = PendingVotes;
             if (pending.Count > 0)
             {
@@ -274,8 +277,9 @@ namespace DeepslateWorks
             if (!VotesBlock) return;
             if (Count != null && Count.Running) { CancelCountdown("a vote to answer"); HideCountdown(); }
             var news = SiteHome.OnlyNews(PendingVotes);   // 3.6.6: only news to confirm: the button and hint say so
-            var label = news ? UiText.ReadFirstButton : SiteNow?.VoteFirstButton ?? SiteHome.VoteFirstButton;
-            var hint = news ? UiText.ReadFirstHint : UiText.VoteFirstHint;
+            var tour = TourOpen;                          // 3.6.6: the first-time guide first
+            var label = tour ? UiText.TourFirstButton : news ? UiText.ReadFirstButton : SiteNow?.VoteFirstButton ?? SiteHome.VoteFirstButton;
+            var hint = tour ? UiText.TourFirstHint : news ? UiText.ReadFirstHint : UiText.VoteFirstHint;
             // 3.5.4 (Alex, 2026-10-06): the button stays pressable: it takes them to the vote, and the game starts after it
             if (!PlayButton.IsEnabled || !Equals(PlayButton.Content, label)) { PlayButton.Content = label; PlayButton.IsEnabled = true; }
             if (PlayHint.Text != hint) PlayHint.Text = hint;
@@ -285,6 +289,7 @@ namespace DeepslateWorks
         /// <summary>Back to the Vote tab (Play pressed, the website's Play, a relaunch asked for while a vote waits).</summary>
         void ShowVoteTab()
         {
+            if (TourOpen) return;   // 3.6.6: the guide has the window; the votes come after it
             var p = PendingVotes;
             if (p.Count == 0) return;
             if (VoteShown == null || !p.Any(v => v.Id == VoteShown.Id)) ShowVote(p[0], true);

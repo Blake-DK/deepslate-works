@@ -251,6 +251,23 @@ namespace DeepslateWorks
                     ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "32-settings-game-open.png")));
                 }
                 finally { ui.SimSettingsOff(); try { Directory.Delete(sample, true); } catch { } }
+
+                // 3.6.6 (Alex, 2026-10-14): the first-time guide over its tabs, the keys page, then must-read news before Play
+                ui.SimHome(up, "ready");
+                ui.StartTour();
+                ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "33-tour-welcome.png")));
+                ui.TourClickNext();
+                ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "33b-tour-play.png")));
+                ui.TourClickNext(); ui.TourClickNext();
+                ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "33c-tour-extras.png")));
+                ui.TourClickNext();
+                ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "33d-tour-settings.png")));
+                ui.TourClickSkip();
+                ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "33e-tour-keys.png")));
+                ui.SimTourEnd();
+                ui.SimHome(SiteHome.Parse(Json.Parse(HomeSamples.NewsFirst)), "ready");
+                ui.Pump(); w.UpdateLayout(); files.Add(SavePng(w.Content as FrameworkElement, Path.Combine(dir, "34-news-to-confirm.png")));
+                ui.SimDone();
             }
             finally { w.Close(); }
             return files;

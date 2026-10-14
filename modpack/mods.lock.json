@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-14T14:14:00.823Z",
+  "generatedAt": "2026-10-14T17:39:09.235Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "751de495eff60e09eac1b033193fb1e766000c86134f30d4b9e7156af3d84787",
+  "hash": "8b9ce77961a89a70b1dd653712ff50e867d8977eceeee72e18e737f36584513c",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -100,6 +100,27 @@
         "client": "optional",
         "server": "optional"
       }
+    },
+    {
+      "slug": "arphex",
+      "name": "ArPhEx (Arthropod Phobia Expansions)",
+      "projectId": "k0RPP4IO",
+      "versionId": "jawvD7YZ",
+      "versionNumber": "5.0.2",
+      "versionType": "release",
+      "filename": "ArPhEx-5.0.2-neoforge-1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/k0RPP4IO/versions/jawvD7YZ/ArPhEx-5.0.2-neoforge-1.21.1.jar",
+      "sha512": "09a7e63a75ba0173ef6f60a71154a21cf6b5d07a2190d274fc9b75db23f4044ca829385b8931c698c3ed0ef48b06871c545537b2d31e1496b967e38d82922527",
+      "sha1": "876e23454070ccb10852393fff046a57aa20f65d",
+      "size": 13685315,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "season": "s1",
+      "channels": "required"
     },
     {
       "slug": "async-locator-refined",
@@ -622,7 +643,8 @@
       "size": 634531,
       "side": "both",
       "requiredBy": [
-        "mowzies-mobs"
+        "mowzies-mobs",
+        "arphex"
       ],
       "modrinth": {
         "client": "required",
@@ -1176,6 +1198,27 @@
       "channels": "required"
     },
     {
+      "slug": "mutant-monsters",
+      "name": "Mutant Monsters",
+      "projectId": "derP0ten",
+      "versionId": "dauEcrnZ",
+      "versionNumber": "v21.1.1-1.21.1-NeoForge",
+      "versionType": "release",
+      "filename": "MutantMonsters-v21.1.1-1.21.1-NeoForge.jar",
+      "url": "https://cdn.modrinth.com/data/derP0ten/versions/dauEcrnZ/MutantMonsters-v21.1.1-1.21.1-NeoForge.jar",
+      "sha512": "4d969c457a01e49a242ebc03112031bd338be08fc4ab36540b222b0a64e72a778a6534ad2be7c5cf72a5a74e1ce58e66e2999957f68c189c868dbc48bef44708",
+      "sha1": "c9981cf323d5e0fd49387ad20dafec1f58b2c88d",
+      "size": 1346730,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "season": "s1",
+      "channels": "none"
+    },
+    {
       "slug": "noisium",
       "name": "Noisium",
       "projectId": "KuNKN7d2",
@@ -1253,6 +1296,29 @@
         "client": "optional",
         "server": "optional"
       }
+    },
+    {
+      "slug": "puzzles-lib",
+      "name": "Puzzles Lib",
+      "projectId": "QAGBst4M",
+      "versionId": "1TmfTuyw",
+      "versionNumber": "21.1.62",
+      "versionType": "release",
+      "filename": "puzzleslib-v21.1.62-mc1.21.1+neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/QAGBst4M/versions/1TmfTuyw/puzzleslib-v21.1.62-mc1.21.1%2Bneoforge.jar",
+      "sha512": "241ff7229990305fe5f85521b9c11cd8e2e8d01cb94bbca987aae4d3d9ecbd9115a4b66f618a62d73ef1b569ff8c72434bc1354bbfaf2f69c0e997db034c4883",
+      "sha1": "0d1675576fe17acc1f350a5505177ae08c17299b",
+      "size": 1450242,
+      "side": "both",
+      "requiredBy": [
+        "mutant-monsters"
+      ],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "season": "s1",
+      "channels": "required"
     },
     {
       "slug": "quarry-pause",

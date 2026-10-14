@@ -2500,6 +2500,66 @@
       }
     },
     {
+      "slug": "arphex",
+      "name": "ArPhEx (Arthropod Phobia Expansions)",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "H",
+      "recommended": false,
+      "hidden": false,
+      "adminOnly": true,
+      "exclusiveGroup": null,
+      "description": "Horror insects, giant spiders and their bosses. On trial on the test server, for Ashmoon only.",
+      "wiki": "https://modrinth.com/mod/arphex",
+      "version": "jawvD7YZ",
+      "requires": [
+        "geckolib"
+      ],
+      "guide": "game",
+      "topic": "combat",
+      "season": "s1",
+      "howTo": "Giant insects and spiders hunt on **Ashmoon**. Bring light, armour and a good weapon, and don't fight them in the dark."
+    },
+    {
+      "slug": "mutant-monsters",
+      "name": "Mutant Monsters",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "adminOnly": true,
+      "exclusiveGroup": null,
+      "description": "Huge mutant zombies, skeletons, creepers and endermen. On trial on the test server, for Ashmoon only.",
+      "wiki": "https://modrinth.com/mod/mutant-monsters",
+      "version": "dauEcrnZ",
+      "requires": [
+        "puzzles-lib"
+      ],
+      "guide": "game",
+      "topic": "combat",
+      "season": "s1",
+      "howTo": "Mutant versions of the night's monsters roam **Ashmoon**: bigger, tougher and with new attacks. Keep your distance and fight them in the open."
+    },
+    {
+      "slug": "puzzles-lib",
+      "name": "Puzzles Lib",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Mutant Monsters.",
+      "wiki": "https://modrinth.com/mod/puzzles-lib",
+      "version": "1TmfTuyw",
+      "requires": [],
+      "season": "s1"
+    },
+    {
       "slug": "gateways-to-eternity",
       "name": "Gateways to Eternity",
       "category": "adventure",

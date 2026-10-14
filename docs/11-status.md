@@ -26,6 +26,13 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## GitHub security review: docs/59 (2026-10-12, planned, nothing checked)
+
+docs/59 is the read-only review of the GitHub side: the account, the repository's settings, the workflows, the
+packages, what the public can read and the scanners. Part A is the VPS session's, by API; Part B is Alex's, in
+GitHub's settings; Part C is the security planner's triage. Findings stay private (docs/38); this section gets only
+the date, the rows checked and the counts Met, Private and Refused.
+
 ## Sync says it restarts, then checks the server's mods (2026-10-14, `558f8671` on `dev`, images built; on test after `sudo deploy/test-up.sh`)
 
 - **Alex:** "the sync server needs to say restarting server in its log screen and then verify everything is there".

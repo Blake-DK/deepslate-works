@@ -60,7 +60,7 @@ export function MaintenanceCard({ v }: { v: MaintenanceView }) {
           </CardDescription>
         ) : (
           <CardDescription>
-            The server keeps running, but only admins with the tick &quot;Can join during maintenance&quot; get in. Everybody else on the server is kicked at once, and whoever joins waits at the door until it ends. Nothing is posted to Discord.
+            The server keeps running, but only admins with the tick &quot;Can join during maintenance&quot; get in. Everybody else on the server is kicked at once, and whoever joins waits at the door until it ends. The game chat says so when it starts and when it ends; nothing is posted to Discord.
           </CardDescription>
         )}
       </CardHeader>

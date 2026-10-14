@@ -536,9 +536,12 @@ export class Limbo {
     const kicked: string[] = [], failed: string[] = [];
     if (!on) {
       await this.tick();
+      if (this.tail.state === 20) await runAction(this.amp, this.ctx, "maintenance.announce", { on: false }, adminId);
       return { kicked, failed };
     }
     if (this.tail.state !== 20) return { kicked, failed };
+    // the line in the game's chat first, so whoever stays reads why the others went
+    await runAction(this.amp, this.ctx, "maintenance.announce", { on: true }, adminId);
     for (const name of [...this.tail.online]) {
       const uuid = this.tail.uuidByName.get(name);
       const user = await db.user.findFirst({ where: uuid ? { mcUuid: uuid } : { mcUsername: name }, select: { role: true, maintenanceJoin: true } }).catch(() => null);

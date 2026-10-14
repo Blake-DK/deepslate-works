@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MAINTENANCE_TEXT, NOT_OPEN_TEXT } from "../shared/access.js";
+import { MAINTENANCE_END_CHAT, MAINTENANCE_START_CHAT, MAINTENANCE_TEXT, NOT_OPEN_TEXT } from "../shared/access.js";
 import { MISSING_MODS_TEXT } from "../shared/join-gate.js";
 import { VOTE_FIRST_TEXT } from "../shared/polls.js";
 import { TESTER_OFF_TEXT } from "../shared/testers.js";
@@ -486,6 +486,13 @@ export const actions = {
   // Switched on by an admin: whoever is on the server without the tick goes, at once. A plain kick: the game keeps
   // where they stood, and the door holds them if they come back before it ends.
   "maintenance.kick": define({ name: "maintenance.kick", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`kick ${name} ${MAINTENANCE_TEXT}`] }),
+  // Alex, 2026-10-14: one line in the game's chat for everyone when it starts (before the kicks) and when it ends.
+  "maintenance.announce": define({
+    name: "maintenance.announce",
+    role: "system",
+    input: z.object({ on: z.boolean() }),
+    build: (_ctx, { on }) => [`tellraw @a ${JSON.stringify(["", { text: on ? MAINTENANCE_START_CHAT : MAINTENANCE_END_CHAT, color: "gold" }])}`],
+  }),
   // docs/57: testers on the test server's whitelist, sent only by the test server's api (test-mode/testers.ts) when the
   // live site's Tester switch changes, and at every start of the test instance. Never `op`: a tester plays as a player.
   "tester.add": define({ name: "tester.add", role: "system", input: z.object({ name: MC_NAME }), build: (_ctx, { name }) => [`whitelist add ${name}`] }),

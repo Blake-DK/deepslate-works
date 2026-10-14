@@ -47,6 +47,8 @@ import { prismaRecorderStore } from "./events/store.js";
 import { countryOf } from "./events/geo.js";
 import { runRetentionIfDue } from "./events/retention.js";
 import { requireAdmin } from "./auth.js";
+import { z } from "zod";
+import { verifyServer } from "./modpack/verify.js";
 import { ServerMods, SERVER_MODS_KEY } from "./modpack/server-mods.js";
 import { getSection } from "./settings.js";
 import { Announcer } from "./discord/announcer.js";
@@ -107,6 +109,14 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     if (!(await requireAdmin(req, reply))) return;
     if ((req.query as { fresh?: string }).fresh === "1") await serverMods.capture();
     return (await db.setting.findUnique({ where: { key: SERVER_MODS_KEY } }))?.value ?? null;
+  });
+  // Alex, 2026-10-14: after Sync, whether the server came back with every mod the pack gives it (modpack/verify.ts).
+  // `since` (Sync's restartedAt): waits for a start after it; without, checks the server's last start.
+  app.post("/modpack/verify", async (req, reply) => {
+    if (!(await requireAdmin(req, reply))) return;
+    const body = z.object({ since: z.string().datetime().optional() }).safeParse(req.body ?? {});
+    if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "since: an ISO time" } });
+    return verifyServer({ capture: () => serverMods.capture(), latest: () => serverMods.last }, body.data.since ? new Date(body.data.since) : undefined);
   });
   const pings = new PingWatch(ampClient, tail, () => limbo.actionCtx, log, undefined, () => poller.fresh() !== null);
   const pregenWatch = new PregenWatch(tail);

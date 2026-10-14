@@ -81,9 +81,14 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
         return;
       }
       yield dryRun ? "asking api what a sync would change (dry run)…" : "asking api to rsync dist/server to the AMP host…";
-      const res = await apiFetch<{ ok: boolean; lines: string[]; restarted: boolean }>("/modpack/sync", { method: "POST", body: { packVersion: lock.hash.slice(0, 8), dryRun }, caller: { id: admin.id, role: admin.role }, timeoutMs: 900_000 });
+      const res = await apiFetch<{ ok: boolean; lines: string[]; restarted: boolean; modsChanged?: boolean; restartedAt?: string }>("/modpack/sync", { method: "POST", body: { packVersion: lock.hash.slice(0, 8), dryRun }, caller: { id: admin.id, role: admin.role }, timeoutMs: 900_000 });
       for (const l of res.lines) yield l;
-      if (!dryRun) yield res.restarted ? "server restart requested" : "mods unchanged: no restart";
+      // Alex, 2026-10-14: then whether the server has every mod. After a restart, once it is back up; with the mods
+      // unchanged, its last start. New mods on a server that was not running are checked at its next start instead.
+      if (dryRun || !res.ok || (res.modsChanged && !res.restartedAt)) return;
+      if (res.restartedAt) yield "waiting for the server to come back up…";
+      const check = await apiFetch<{ ok: boolean; lines: string[] }>("/modpack/verify", { method: "POST", body: res.restartedAt ? { since: res.restartedAt } : {}, caller: { id: admin.id, role: admin.role }, timeoutMs: 420_000 });
+      for (const l of check.lines) yield l;
     }
   } catch (e) {
     yield `ERROR ${e instanceof Error ? e.message : String(e)}`;

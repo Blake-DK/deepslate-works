@@ -54,7 +54,8 @@ Every call carries `Authorization: Bearer <API_SERVICE_TOKEN>` and who is asking
 | POST | `/pregen/on` | `{mode: "empty"|"now", what: "generate"|"render"|"both" (default "generate"), purge: boolean (delete the maps first; only with a `what` that renders), area: {x, z, radius}, window: {from, to}|null, capHours|null}`. 409 `sleep_permission` while AMP does not allow the portal to switch sleep off |
 | POST | `/pregen/off`, `/pregen/cancel` | stop and keep where it got to; stop and forget the area |
 | POST | `/modpack/build` | runs the build as a child process under `api`'s memory cap; answers newline-delimited JSON, `{"line"}` … `{"done","ok","code"}` |
-| POST | `/modpack/sync` | `{dryRun?}`: rsync `dist/server/` to the instance; `Core.Restart` if the mods changed; writes the Setting `_packSynced`. One build or sync at a time (409 `busy`) |
+| POST | `/modpack/sync` | `{dryRun?}`: rsync `dist/server/` to the instance (settings and datapacks compared by content); `Core.Restart` if the mods changed and the server is running, answering `modsChanged` and `restartedAt`; writes the Setting `_packSynced`. One build or sync at a time (409 `busy`) |
+| POST | `/modpack/verify` | `{since?}`: whether the server loaded every mod the pack gives it (the shipped lock's files not for PCs only, against its log's "Found mod file" lines). With `since` (Sync's `restartedAt`) it waits up to 6 minutes for a start after it; without, it reads the last start. `{ok, lines}`; Admin → Modpack → Sync server runs it after every Sync |
 | GET | `/files/list?dir=`, `/files/read?path=`, `/files/download?path=` | the server's files, read only; the world's data and anything outside the instance refused |
 
 ## Errors

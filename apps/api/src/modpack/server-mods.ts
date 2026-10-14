@@ -5,6 +5,7 @@ import { db } from "../db.js";
 import { audit } from "../audit.js";
 import { chunks, stat } from "../files/browse.js";
 import { readShippedLock } from "./ship.js";
+import { missingOnServer, type Capture } from "./verify.js";
 
 // 2.1.0 (kanefinch's TaCZ kick, 2026-10-01): which mod files the server really loaded at its last start, against the
 // set PCs are given. A mod the server loads that registers network channels has to be on every PC as well, or NeoForge
@@ -68,12 +69,15 @@ export function compareLoaded(loaded: Loaded[], lock: LockLike): Problem[] {
 }
 
 export class ServerMods {
+  /** The capture made at the server's last start this process saw (null until one). The check after a Sync waits on it. */
+  last: Capture | null = null;
+
   constructor(private readonly amp: Amp, private readonly repoDir: string, private readonly log: (o: unknown, m: string) => void) {}
 
   start(tail: ConsoleTail) {
     tail.on((e, info) => {
       if (e.type !== "started" || info.replay) return;
-      setTimeout(() => void this.capture().catch((err) => this.log({ err: String(err) }, "server mods: capture failed")), 3000);
+      setTimeout(() => void this.capture().then((c) => { if (c) this.last = c; }).catch((err) => this.log({ err: String(err) }, "server mods: capture failed")), 3000);
     });
   }
 
@@ -88,7 +92,7 @@ export class ServerMods {
     }
   }
 
-  async capture(): Promise<{ files: Loaded[]; problems: Problem[]; source: string; modIds: string[] } | null> {
+  async capture(): Promise<(Capture & { source: string; modIds: string[] }) | null> {
     let source = "logs/latest.log";
     let text = (await this.read(source)) ?? "";
     let loaded = parseLoadedMods(text);
@@ -97,11 +101,13 @@ export class ServerMods {
     // docs/44: the server is held to the files of the seasons it ships, not to the whole lock
     const lock = (await readShippedLock(this.repoDir)) as unknown as LockLike;
     const problems = compareLoaded(loaded, lock);
+    const { expected, missing } = missingOnServer(loaded, lock);
     const modIds = parseModIds(text);
-    const value = { at: new Date().toISOString(), source, files: loaded, problems, modIds } as unknown as Prisma.InputJsonValue;
+    const at = new Date();
+    const value = { at: at.toISOString(), source, files: loaded, problems, missing, modIds } as unknown as Prisma.InputJsonValue;
     await db.setting.upsert({ where: { key: SERVER_MODS_KEY }, create: { key: SERVER_MODS_KEY, value }, update: { value } });
-    this.log({ files: loaded.length, problems: problems.length, modIds: modIds.length, source }, "server mods: captured");
-    if (problems.length) await audit({ action: "modpack.serverMods", params: { files: loaded.length, problems: problems.map((p) => `${p.filename}: ${p.why}`).slice(0, 20) }, result: "FAILED" });
-    return { files: loaded, problems, source, modIds };
+    this.log({ files: loaded.length, problems: problems.length, missing: missing.length, modIds: modIds.length, source }, "server mods: captured");
+    if (problems.length || missing.length) await audit({ action: "modpack.serverMods", params: { files: loaded.length, problems: problems.map((p) => `${p.filename}: ${p.why}`).slice(0, 20), missing: missing.map((m) => m.filename).slice(0, 20) }, result: "FAILED" });
+    return { at, files: loaded, problems, expected, missing, source, modIds };
   }
 }

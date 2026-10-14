@@ -1,0 +1,33 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "c:ingots/gold"
+      },
+      "count": 5
+    },
+    {
+      "item": {
+        "tag": "c:ingots/iron"
+      },
+      "count": 31
+    },
+    {
+      "item": {
+        "tag": "c:ingots/steel"
+      },
+      "count": 31
+    },
+    {
+      "item": {
+        "tag": "c:gems/quartz"
+      },
+      "count": 3
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "tacz:ump45"
+  },
+  "type": "tacz:gun_smith_table_crafting"
+}

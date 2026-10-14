@@ -1,0 +1,51 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "c:ingots/iron"
+      },
+      "count": 30
+    },
+    {
+      "item": {
+        "tag": "c:ingots/steel"
+      },
+      "count": 30
+    },
+    {
+      "item": {
+        "tag": "c:gems/lapis"
+      },
+      "count": 8
+    },
+    {
+      "item": {
+        "tag": "c:ingots/gold"
+      },
+      "count": 12
+    },
+    {
+      "item": {
+        "tag": "c:gems/diamond"
+      },
+      "count": 10
+    },
+    {
+      "item": {
+        "tag": "c:ingots/netherite"
+      },
+      "count": 2
+    },
+    {
+      "item": {
+        "tag": "c:ingots/refined_obsidian"
+      },
+      "count": 4
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "tacz:vector45"
+  },
+  "type": "tacz:gun_smith_table_crafting"
+}

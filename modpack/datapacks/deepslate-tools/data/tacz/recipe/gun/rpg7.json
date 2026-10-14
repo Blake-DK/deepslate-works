@@ -1,0 +1,51 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "c:ingots/gold"
+      },
+      "count": 8
+    },
+    {
+      "item": {
+        "tag": "c:ingots/iron"
+      },
+      "count": 35
+    },
+    {
+      "item": {
+        "tag": "c:ingots/steel"
+      },
+      "count": 35
+    },
+    {
+      "item": {
+        "tag": "c:gems/lapis"
+      },
+      "count": 4
+    },
+    {
+      "item": {
+        "tag": "minecraft:logs"
+      },
+      "count": 10
+    },
+    {
+      "item": {
+        "tag": "c:ingots/netherite"
+      },
+      "count": 2
+    },
+    {
+      "item": {
+        "tag": "c:ingots/refined_obsidian"
+      },
+      "count": 4
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "tacz:rpg7"
+  },
+  "type": "tacz:gun_smith_table_crafting"
+}

@@ -26,12 +26,18 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## GitHub security review: docs/59 (2026-10-12, planned, nothing checked)
+## GitHub security review: docs/59 (2026-10-12 planned; Part A checked 2026-10-14)
 
 docs/59 is the read-only review of the GitHub side: the account, the repository's settings, the workflows, the
 packages, what the public can read and the scanners. Part A is the VPS session's, by API; Part B is Alex's, in
 GitHub's settings; Part C is the security planner's triage. Findings stay private (docs/38); this section gets only
 the date, the rows checked and the counts Met, Private and Refused.
+
+- **Part A, 2026-10-14:** rows checked A1.1 to A1.10, A2.1 to A2.8 (and the trigger, pin and permission check on
+  `main`), A3.1 to A3.6, A4.1 to A4.3, A5.1 to A5.5 and A6: 33 rows. **Met 17, Private 13, Refused 3.** Every call
+  was a `GET` with the session's token as it was; nothing on GitHub was changed. The Private rows and the refused
+  reads are in the private repository, branch `security`, for the security planner's triage (Part C).
+- **Next:** Alex reads Part B (the steps the API could not reach are in the session's report to him); then Part C.
 
 ## Sync says it restarts, then checks the server's mods (2026-10-14, `558f8671` on `dev`, images built; on test after `sudo deploy/test-up.sh`)
 

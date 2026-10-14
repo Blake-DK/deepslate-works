@@ -26,6 +26,22 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Vanishmod in, admins only (2026-10-14, on `dev`, not on `main`)
+
+- **Vanishmod** (Alex): `vanishmod` 1.1.21 (`G52aWgtY`), server only (Modrinth: client unsupported; the jar registers
+  no network channels), `adminOnly`, category `server`, no dependencies. Lock spliced (the new entry only). Pack
+  `0.1.0+43f7470a`, 79 files on live, 88 with s1; nothing new on a PC. Settings at the mod's defaults (no file in the
+  repo): `/vanish` or `/v` needs operator level 2, fake "left the game" / "joined the game" to the other players,
+  hidden from the tab list, `/list`, the server-list ping and the world, and seen as invisible on the server, so
+  BlueMap (`hide-invisible`, default true) leaves the marker off. Nobody gets op through the app (`ops.json` by hand).
+- **What still shows a vanished admin** (read from the sources, not tried on a server yet): the console prints no
+  "left the game" on `/vanish`, so api's online list, the site and the Discord bot keep the admin online until the
+  next `list` (api asks it only when AMP's list and the console's differ, or on a resync); a real join or leave while
+  vanished is in the console as usual, so the bot posts it and the site counts it; chat is still in the console and
+  goes to the Discord feed; Simple Voice Chat on NeoForge sees everyone (`canSee` is always true), so the admin stays
+  in its player lists and proximity voice is heard. Xaero's (on PCs only) shows only players the server sends, so
+  nothing there.
+
 ## Gun balance: docs/61 (2026-10-14, planned, nothing built)
 
 Players told Alex the guns are too strong. The review (docs/61 §1): TaCZ bullets skip the hit cooldown, so the AK-47

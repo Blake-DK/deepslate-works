@@ -604,8 +604,9 @@ export const actions = {
     input: z.object({ name: MC_NAME, reason: z.string().max(120).regex(/^[\w .,'!?-]*$/).default("Your Discord isn't in the group's server any more.") }),
     build: (_ctx, { name, reason }) => [`tag ${name} remove verified`, `whitelist remove ${name}`, `kick ${name} ${reason}`],
   }),
-  // Planner ruling 2026-09-30 (docs/13): admins get the Minecraft console as it is. One line, sent as typed, with a
-  // leading "/" dropped; no list of allowed commands. Only through POST /console/send, which is rate-limited.
+  // Planner ruling 2026-09-30 (docs/13): admins get the Minecraft console as it is. One line, sent as typed (the game's
+  // console drops one leading "/" itself); no list of allowed commands. Only through POST /console/send, which is
+  // rate-limited.
   // Sent as typed: the game's own console drops one leading slash, so "/tp …" runs tp and WorldEdit's "//count …" runs
   // its command "/count …" (seen on the test server 2026-10-13). Dropping one here as well made "//count" arrive as "count".
   "console.send": define({

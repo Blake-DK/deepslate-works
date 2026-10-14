@@ -49,6 +49,7 @@ import { runRetentionIfDue } from "./events/retention.js";
 import { requireAdmin } from "./auth.js";
 import { z } from "zod";
 import { verifyServer } from "./modpack/verify.js";
+import { RateLimit } from "./console/limit.js";
 import { ServerMods, SERVER_MODS_KEY } from "./modpack/server-mods.js";
 import { getSection } from "./settings.js";
 import { Announcer } from "./discord/announcer.js";
@@ -112,8 +113,12 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   });
   // Alex, 2026-10-14: after Sync, whether the server came back with every mod the pack gives it (modpack/verify.ts).
   // `since` (Sync's restartedAt): waits for a start after it; without, checks the server's last start.
+  // Sync calls it once a run and that one call waits up to 7 minutes, so 3 a minute for one admin never gets in the way;
+  // each call reads the server's mod files over the tunnel, so it is not left open to a stuck page or a loop.
+  const verifyLimit = new RateLimit(3, 60_000);
   app.post("/modpack/verify", async (req, reply) => {
     if (!(await requireAdmin(req, reply))) return;
+    if (!verifyLimit.take(req.caller.userId ?? "service")) return reply.code(429).send({ error: { code: "rate_limited", message: "The server's mods were just checked. Wait a minute." } });
     const body = z.object({ since: z.string().datetime().optional() }).safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: { code: "validation", message: "since: an ISO time" } });
     return verifyServer({ capture: () => serverMods.capture(), latest: () => serverMods.last }, body.data.since ? new Date(body.data.since) : undefined);

@@ -47,9 +47,16 @@ say live is stopped, held or to be trimmed in place, this section wins.
   1,499, gold 427 / 475, redstone 590 / 623, lapis 390 / 410, diamond 429 / 424, emerald 0 / 49, amethyst 562 / 529,
   water 22,472 / 0, lava 108 / 0. Create's striated stone: ochrum 0 / 60, the others 0. A first count at x 15,000
   gave the same picture (osmium 0 / 822).
-- **WorldEdit cannot be reached from the site's console:** `console.send` strips every leading `/` (`///world` arrives
-  as `world`), and `execute run /world …`, `/pos1`, `/size`, `/count` answer nothing, in the console or the log.
-  Letting `//` through would be a small change of its own; not made.
+- **WorldEdit from the site's console (2026-10-13/14, PR #53 then the fix PR #54, both merged into `dev`, `d82bcf89`;
+  on test after `sudo deploy/test-up.sh`; not on `main`):** `console.send` used to strip every leading `/`, so
+  `//count` arrived as `count`. #53 stripped one; on test `//world` still arrived as `world`, because the game's own
+  console drops one leading slash itself. #54 sends the line exactly as typed: `/tp …` runs `tp`, `//count …` runs
+  WorldEdit's `/count`; a line of slashes alone is refused. Seen on test with #54: `//world`, `//pos1`, `//pos2`,
+  `//count` answer in the console. WorldEdit names the worlds `world_minecraft:overworld` and `world_deepslate:moon`
+  (`//world` alone goes back to the default); a tag mask is `##c:ores/osmium`, not `#c:…`.
+- **WorldEdit count (2026-10-14), the Chunky squares made after the tag change, 16 chunks each, y -64 to 319:**
+  `//count mekanism:osmium_ore,mekanism:deepslate_osmium_ore` Moon 4000..4063 × 4000..4063 **867**, main world
+  16000..16063 × 16000..16063 **0** (diamond ore there 392, so the chunks are real).
 - **What else reaches the Moon through the overworld tags** (`locate structure` in `deepslate:moon`): strongholds
   (nearest 1,851 blocks; vanilla's `#minecraft:has_structure/stronghold` is `#minecraft:is_overworld`) and AE2
   meteorites (458 blocks). Not found: Mowzie's frostmaw, Umvuthana grove and monastery, villages, mineshafts, ruined

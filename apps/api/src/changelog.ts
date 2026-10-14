@@ -241,11 +241,14 @@ export const CHANGES: Change[] = [
     ],
   },
   {
-    // The backpack key (Alex, 2026-10-14; app 3.6.6). Set `live: true` once 3.6.6 is out and a Play has set the key.
-    id: "2026-10-14-backpack-key",
+    // The pack's keys (Alex, 2026-10-14; app 3.6.6). Set `live: true` once 3.6.6 is out and a Play has set the keys.
+    id: "2026-10-14-pack-keys",
     date: "2026-10-14",
     lines: [
-      "The backpack you wear now opens with the ` key (top left, under Esc, next to 1). B used to do two things at once: open the backpack and drop a map waypoint. Now B is only for waypoints. Press Play to get it. If you had already changed the key yourself, yours is kept.",
+      "Some keys did two things at once. Now each does one. Press Play to get the new keys. Any key you had already changed yourself stays as you set it.",
+      "The backpack you wear opens with ` (top left, under Esc, next to 1). B is only for map waypoints now.",
+      "Mute your microphone with N. M only opens the map now.",
+      "R only reloads your gun now, not the shaders too. G, H, C and Z are only for guns (fire mode, inspect, crawl, attachments), and V is only voice chat. Gun melee and scope zoom have no key; set one in Options, Controls if you want them.",
     ],
   },
 ];

@@ -43,19 +43,37 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
-## 3.6.6: the backpack key is ` (Alex, 2026-10-14)
+## 3.6.6: the pack's keys, one job per key (Alex, 2026-10-14)
 
-- Sophisticated Backpacks opens the backpack you wear with **B**, the key Xaero's Minimap uses for a new waypoint, so
-  one key did two things. The pack's key for the backpack is now **`** (the key left of 1). No mod in the pack uses it:
-  VeinMiner, which would on other packs, has no key at all in this version.
-- The key's name and default were read from the jar (sophisticatedbackpacks 3.26.7, `KeybindHandler`):
-  `key.sophisticatedbackpacks.open_backpack`, GLFW 66 (B). The line in options.txt is
-  `key_key.sophisticatedbackpacks.open_backpack:key.keyboard.grave.accent`.
-- Every Play (live and test), after the render distance and chat links, `Engine.SetBackpackKey`: once per PC. A
-  missing line is added at the end, the mod's own B is changed in place, any other key is the player's choice and is
-  kept. installed.json's `backpackKey: true` remembers it was done, so a player who sets B again keeps B. A run with no
-  options.txt yet does not count; the next one tries again.
-- The Mods guide (`mods.json` keys and howTo) says ` for the backpack.
+- Several mods ship the same default key, so one press did two things: R reloaded a gun and the shaders, M opened the
+  world map and muted the microphone, C crawled and ran the backpack's restock and deposit upgrades, and so on.
+- Every mod's default key was read from its jar's bytecode (all 75 client and both-side mods of the lock plus the 8
+  extras' mods, 2026-10-14, `javap` over the classes that build a `KeyMapping`). The clashes, and what the pack does:
+
+  | Key | Shared by | The pack's change |
+  |---|---|---|
+  | B | Xaero's new waypoint, backpack, Mekanism feet mode | backpack on **`** (`key.sophisticatedbackpacks.open_backpack`) |
+  | C | TaCZ crawl, backpack inventory upgrades, Cataclysm helmet, Big Cannons pitch mode | backpack upgrades unbound |
+  | R | TaCZ reload, Iris reload shaders | Iris reload unbound (`iris.keybind.reload`) |
+  | O | TaCZ interact, Iris shader pack menu | Iris menu unbound (`iris.keybind.shaderPackSelection`) |
+  | V | voice chat menu, TaCZ melee and zoom, two Cataclysm abilities, Mekanism head mode | TaCZ melee and zoom unbound |
+  | M | Xaero's world map, voice mute | mute on **N** (`key.mute_microphone`) |
+  | N | voice chat off, Mekanism hand mode | voice chat off unbound |
+  | G | TaCZ fire mode, voice groups, Curios, Mekanism chest mode | voice groups and Curios unbound |
+  | H | TaCZ inspect, voice hide icons, Mekanism HUD | hide icons unbound |
+  | U | Corpse death history, Xaero's waypoint list | waypoint list unbound |
+  | Z | TaCZ attachments, Xaero's bigger minimap | bigger minimap unbound |
+
+- Left as they are: the Mekanism mode keys and the Cataclysm abilities (they only act with that gear on), Y (Xaero's
+  minimap settings, Cataclysm chestplate), S (Immersive Engineering's magnet, only with a magnet shield), and the
+  shared-on-purpose ones (Left Alt for Create and Copycats, Shift and Ctrl, the mouse buttons for guns).
+  Mute on N still meets Mekanism's hand mode, only while holding a Mekanism tool.
+- `Engine.KeyDefaults` is the list; `Engine.SetKeyDefaults` runs on every Play (live and test) after the render
+  distance and chat links. Each key once per PC, remembered in installed.json's `keysSet`: the mod's own default is
+  changed in place, any other key is the player's choice (or ours) and is kept, and a key in `keysSet` is never touched
+  again. A missing line is added but not counted, because the game drops lines for keys no mod registers (Iris while
+  its extra is off); the key counts once a later Play finds its line. The tick line names only keys that changed.
+- The Mods guide (`mods.json`, `extras.json` keys and howTo) says the new keys.
 
 ## 3.6.5: a download from the site no longer fails behind the window's polls (2026-10-12)
 

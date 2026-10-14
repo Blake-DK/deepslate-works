@@ -434,19 +434,11 @@
       "requires": [],
       "guide": "game",
       "topic": "travel",
-      "howTo": "The minimap sits in the corner and shows waypoints, party members and where you last died. Press **B** to drop a waypoint where you stand (mark your base!) and **U** for the list of waypoints.",
+      "howTo": "The minimap sits in the corner and shows waypoints, party members and where you last died. Press **B** to drop a waypoint where you stand (mark your base!). The big map (**M**) shows all your waypoints.",
       "keys": [
         {
           "key": "B",
           "does": "New waypoint where you stand"
-        },
-        {
-          "key": "U",
-          "does": "Waypoint list"
-        },
-        {
-          "key": "Z",
-          "does": "Bigger minimap"
         },
         {
           "key": "Y",
@@ -674,23 +666,15 @@
       "requires": [],
       "guide": "game",
       "topic": "friends",
-      "howTo": "Press **V** the first time: it asks whether you want **push to talk** or **voice activation** and lets you pick and test your microphone. People near you hear you, quieter with distance. Push to talk has no key until you set one in Options \u2192 Controls \u2192 Simple Voice Chat. **Groups** (G) let you talk to friends anywhere on the map.",
+      "howTo": "Press **V** the first time: it asks whether you want **push to talk** or **voice activation** and lets you pick and test your microphone. People near you hear you, quieter with distance. Push to talk has no key until you set one in Options \u2192 Controls \u2192 Simple Voice Chat. **Groups** (in the V menu) let you talk to friends anywhere on the map. **N** mutes your microphone.",
       "keys": [
         {
           "key": "V",
           "does": "Voice chat menu"
         },
         {
-          "key": "M",
-          "does": "Mute your microphone"
-        },
-        {
           "key": "N",
-          "does": "Switch voice chat off"
-        },
-        {
-          "key": "G",
-          "does": "Groups"
+          "does": "Mute your microphone"
         },
         {
           "key": "(unbound)",
@@ -1336,10 +1320,6 @@
           "does": "Open the backpack you wear"
         },
         {
-          "key": "C",
-          "does": "Use the backpack's inventory upgrades"
-        },
-        {
           "key": "Alt+Z",
           "does": "First upgrade on or off"
         },
@@ -1438,7 +1418,7 @@
       "requires": [],
       "guide": "game",
       "topic": "combat",
-      "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Pistols, revolvers, double barrels and bolt rifles take iron; most rifles, SMGs and shotguns also take **steel**; the biggest guns need **netherite** and **refined obsidian** too. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Watch out: several of TaCZ's keys are also used by other mods (V, G, H, C, Z); change them in Options \u2192 Controls if something clashes.",
+      "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Pistols, revolvers, double barrels and bolt rifles take iron; most rifles, SMGs and shotguns also take **steel**; the biggest guns need **netherite** and **refined obsidian** too. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Melee and scope zoom have no key in this pack (V is voice chat); set them in Options \u2192 Controls \u2192 TaCZ if you want them.",
       "keys": [
         {
           "key": "Left click",
@@ -1463,10 +1443,6 @@
         {
           "key": "H",
           "does": "Inspect"
-        },
-        {
-          "key": "V",
-          "does": "Melee"
         },
         {
           "key": "C",

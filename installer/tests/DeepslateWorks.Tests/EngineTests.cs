@@ -167,37 +167,56 @@ namespace DeepslateWorks.Tests
             }
         }
 
-        [Fact] public void Backpack_key_is_set_once()
+        [Fact] public void Pack_keys_are_set_once()
         {
             using (var s = new Scratch())
             {
                 var of = s.P("options.txt");
-                Assert.Null(Engine.SetBackpackKey(of, false));   // no options.txt: nothing to do
-                Assert.False(File.Exists(of));
+                var r = Engine.SetKeyDefaults(of, null);   // no options.txt: nothing to do, nothing done
+                Assert.Empty(r.Done); Assert.False(File.Exists(of));
 
-                File.WriteAllText(of, Game);                     // missing: added at the end, the file's line endings kept
-                Assert.StartsWith("Backpack key set to `", Engine.SetBackpackKey(of, false));
-                Assert.Equal(Game + "key_key.sophisticatedbackpacks.open_backpack:key.keyboard.grave.accent\r\n", File.ReadAllText(of));
-                Assert.Null(Engine.SetBackpackKey(of, false));   // already `: nothing
+                // the mod's own key: changed in place, nothing else; a missing line: added at the end, not done yet
+                var game = Game.Replace("lang:en_gb", "key_key.sophisticatedbackpacks.open_backpack:key.keyboard.b\r\nkey_iris.keybind.reload:key.keyboard.r\r\nlang:en_gb");
+                File.WriteAllText(of, game);
+                r = Engine.SetKeyDefaults(of, null);
+                Assert.Equal(new[] { "backpack on `", "no reload shaders key" }, r.Changed);
+                Assert.Equal(new[] { "key.sophisticatedbackpacks.open_backpack", "iris.keybind.reload" }, r.Done);
+                Assert.Equal(Engine.KeyDefaults.Length - 2, r.Added.Count);
+                var text = File.ReadAllText(of);
+                Assert.StartsWith(game.Replace("open_backpack:key.keyboard.b", "open_backpack:key.keyboard.grave.accent").Replace("reload:key.keyboard.r", "reload:key.keyboard.unknown"), text);
+                Assert.Contains("\r\nkey_key.mute_microphone:key.keyboard.n\r\n", text);
+                Assert.Contains("\r\nkey_gui.xaero_waypoints_key:key.keyboard.unknown\r\n", text);
+                Assert.DoesNotContain("\n\n", text.Replace("\r", ""));
 
-                var withB = Game.Replace("lang:en_gb", "key_key.sophisticatedbackpacks.open_backpack:key.keyboard.b\r\nlang:en_gb");
-                File.WriteAllText(of, withB);                    // the mod's own B: changed in place, nothing else
-                Assert.NotNull(Engine.SetBackpackKey(of, false));
-                Assert.Equal(withB.Replace("open_backpack:key.keyboard.b", "open_backpack:key.keyboard.grave.accent"), File.ReadAllText(of));
+                // the next Play: the added lines are there now, ours, so everything is done and nothing changes
+                r = Engine.SetKeyDefaults(of, r.Done);
+                Assert.Empty(r.Changed); Assert.Empty(r.Added);
+                Assert.Equal(Engine.KeyDefaults.Length, r.Done.Count);
+                Assert.Equal(text, File.ReadAllText(of));
 
-                File.WriteAllText(of, withB);                    // set once already: B is now the player's choice
-                Assert.Null(Engine.SetBackpackKey(of, true));
-                Assert.Equal(withB, File.ReadAllText(of));
+                // done before: the mod's B is now the player's choice and stays
+                File.WriteAllText(of, game);
+                r = Engine.SetKeyDefaults(of, Engine.KeyDefaults.Select(k => k.Name));
+                Assert.Empty(r.Changed); Assert.Equal(game, File.ReadAllText(of));
 
-                var chosen = Game + "key_key.sophisticatedbackpacks.open_backpack:key.keyboard.g:ALT\n";
-                File.WriteAllText(of, chosen);                   // a key the player chose: kept
-                Assert.Null(Engine.SetBackpackKey(of, false));
+                // a key the player chose (with a modifier): kept, and done
+                var chosen = "renderDistance:8\nkey_key.mute_microphone:key.keyboard.g:ALT";
+                File.WriteAllText(of, chosen);
+                r = Engine.SetKeyDefaults(of, Engine.KeyDefaults.Select(k => k.Name).Where(n => n != "key.mute_microphone"));
+                Assert.Empty(r.Changed); Assert.Contains("key.mute_microphone", r.Done);
                 Assert.Equal(chosen, File.ReadAllText(of));
 
-                File.WriteAllText(of, "renderDistance:8");       // no line ending at the end, \n file
-                Engine.SetBackpackKey(of, false);
+                // no line ending at the end, a \n file: the line goes on a line of its own, with \n
+                File.WriteAllText(of, "renderDistance:8");
+                Engine.SetKeyDefaults(of, Engine.KeyDefaults.Select(k => k.Name).Where(n => n != "key.sophisticatedbackpacks.open_backpack"));
                 Assert.Equal("renderDistance:8\nkey_key.sophisticatedbackpacks.open_backpack:key.keyboard.grave.accent\n", File.ReadAllText(of));
             }
+        }
+
+        [Fact] public void Pack_keys_are_each_named_once()
+        {
+            Assert.Equal(Engine.KeyDefaults.Length, Engine.KeyDefaults.Select(k => k.Name).Distinct().Count());
+            Assert.All(Engine.KeyDefaults, k => Assert.NotEqual(k.Mod, k.Ours));
         }
 
         [Fact] public void Servers_dat_is_the_same_bytes_as_2_0()

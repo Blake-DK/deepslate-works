@@ -208,6 +208,26 @@ describe("the createdeco:placard fix, in deepslate-tools", () => {
   });
 });
 
+describe("the wilderflowers:milling/pink_dye_from_hopeful_wildflowers fix, in deepslate-tools", () => {
+  // Wilder Flowers 1.1.0 (docs/59) names this millstone recipe's results {"item": ...}, which Create 6 cannot read
+  // ("Parsing error loading recipe wilderflowers:milling/pink_dye_from_hopeful_wildflowers", on every start); its
+  // other three milling recipes use {"id": ...}. The world's datapack replaces it.
+  const RECIPE = path.join(__dirname, "../../../modpack/datapacks/deepslate-tools/data/wilderflowers/recipe/milling/pink_dye_from_hopeful_wildflowers.json");
+  type Recipe = { "neoforge:conditions": unknown; type: string; ingredients: unknown; results: Array<Record<string, unknown>> };
+  const recipe = async () => JSON.parse(await readFile(RECIPE, "utf8")) as Recipe;
+
+  it("names every result by id, as Create 6 reads it", async () => {
+    const r = await recipe();
+    expect(r.type).toBe("create:milling");
+    expect(r.results).toEqual([{ count: 2, id: "minecraft:pink_dye" }, { chance: 0.1, id: "minecraft:light_blue_dye" }]);
+  });
+  it("still mills hopeful wildflowers, and only while Wilder Flowers and Create are in the pack", async () => {
+    const r = await recipe();
+    expect(r.ingredients).toEqual([{ item: "wilderflowers:hopeful_wildflowers" }]);
+    expect(r["neoforge:conditions"]).toEqual([{ type: "neoforge:mod_loaded", modid: "wilderflowers" }, { type: "neoforge:mod_loaded", modid: "create" }]);
+  });
+});
+
 describe("the Adv. Quarry's recipe, removed in deepslate-tools", () => {
   // Alex, 2026-10-12 (docs/56): the Adv. Quarry is switched off on the server (quarryplus.toml), and the mod's recipe
   // for it has no condition, so it would still be craftable. This file replaces the jar's and never loads.

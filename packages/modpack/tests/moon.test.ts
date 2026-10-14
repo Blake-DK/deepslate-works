@@ -245,6 +245,7 @@ describe("the Moon's map (docs/55 M5)", () => {
 describe("the horror trial on Ashmoon only (Alex, 2026-10-14): modpack/datapacks/deepslate-moon-mobs", () => {
   const MOBS = path.join(MODPACK, "datapacks/deepslate-moon-mobs");
   const mjson = async (f: string) => JSON.parse(await readFile(path.join(MOBS, f), "utf8")) as Record<string, unknown>;
+  const CRAWLING = ["arphex:crawling_canopy", "arphex:cryptic_complex", "arphex:decadent_desert", "arphex:tormented_tunnels", "arphex:webbed_wasteland"];
   it("Mutant Monsters: every main-world, Nether and End biome is in its four 'without' tags; Ashmoon's are not", async () => {
     for (const mob of ["creeper", "enderman", "skeleton", "zombie"]) {
       const t = await mjson(`data/mutantmonsters/tags/worldgen/biome/without_mutant_${mob}_spawns.json`);
@@ -268,12 +269,13 @@ describe("the horror trial on Ashmoon only (Alex, 2026-10-14): modpack/datapacks
       const biomes = j.biomes as string[];
       expect(j.type).toBe("neoforge:add_spawns");
       expect(biomes.slice(0, 3)).toEqual(BIOMES);
-      expect(biomes.slice(3).filter((b) => !b.startsWith("arphex:") && b !== "#arphex:crawling_biomes")).toEqual([]);
+      expect(biomes.slice(3).filter((b) => !b.startsWith("arphex:"))).toEqual([]);
       expect(j["neoforge:conditions"]).toEqual([{ type: "neoforge:mod_loaded", modid: "arphex" }]);
       expect(j.spawners).toBeTruthy();
     }
-    // what spawned in every biome there is: Ashmoon's and ArPhEx's own dimension
-    for (const f of ["any_dimension_spawner_biome_modifier.json", "tormentor_initial_biome_modifier.json"]) expect((await mjson(`data/arphex/neoforge/biome_modifier/${f}`)).biomes).toEqual([...BIOMES, "#arphex:crawling_biomes"]);
+    // what spawned in every biome there is: Ashmoon's and ArPhEx's own dimension, its five biomes written out (ArPhEx 5.0.2's
+    // tag arphex:crawling_biomes) because a biome list cannot also hold a tag
+    for (const f of ["any_dimension_spawner_biome_modifier.json", "tormentor_initial_biome_modifier.json"]) expect((await mjson(`data/arphex/neoforge/biome_modifier/${f}`)).biomes).toEqual([...BIOMES, ...CRAWLING]);
   });
   it("kept (Alex, 2026-10-14): in every pack, live's too, and listed for everyone", async () => {
     const m = JSON.parse(await readFile(path.join(MODPACK, "mods.json"), "utf8")) as { mods: Array<{ slug: string; season?: string; adminOnly?: boolean }> };
@@ -310,5 +312,33 @@ describe("the horror trial kept on Ashmoon: ArPhEx's structures and its test-onl
       const spawners = (await json(`data/deepslate/worldgen/biome/${id.split(":")[1]}.json`)).spawners as { monster: Array<{ type: string; minCount: number; maxCount: number }> };
       for (const m of spawners.monster.filter((x) => x.type !== "minecraft:enderman")) expect([m.minCount, m.maxCount]).toEqual([4, 6]);
     }
+  });
+});
+
+describe("every datapack we ship loads (2026-10-14: the test server refused to start)", () => {
+  // A list of biomes (or of anything else from a registry) outside a tag file is either ids or one "#tag" string,
+  // never both: ["deepslate:moon_plains", "#arphex:crawling_biomes"] stops the server with "Not a JSON object".
+  // Only tag files (data/*/tags/...) may mix ids and "#tags" in their values.
+  function lists(v: unknown, at: string, out: Array<{ at: string; list: unknown[] }>) {
+    if (Array.isArray(v)) {
+      out.push({ at, list: v });
+      v.forEach((x, i) => lists(x, `${at}[${i}]`, out));
+    } else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) lists(x, `${at}.${k}`, out);
+    return out;
+  }
+  it("no list outside a tag file holds a '#tag'", async () => {
+    const bad: string[] = [];
+    for (const e of await readdir(path.join(MODPACK, "datapacks"), { withFileTypes: true })) {
+      if (!e.isDirectory()) continue;
+      const pack = e.name;
+      const dir = path.join(MODPACK, "datapacks", pack);
+      for (const f of (await filesUnder(dir)).filter((x) => x.endsWith(".json") && !/^data\/[^/]+\/tags\//.test(x))) {
+        for (const { at, list } of lists(JSON.parse(await readFile(path.join(dir, f), "utf8")), "", [])) {
+          // a tag reference, not a crafting pattern row such as "###"
+          if (list.some((x) => typeof x === "string" && /^#[a-z0-9_.-]+:[a-z0-9_./-]+$/.test(x))) bad.push(`${pack}/${f}${at}`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
   });
 });

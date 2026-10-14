@@ -200,6 +200,11 @@ and the counts Met, Private and Refused.
 - **Seen on test (#71, start at 17:48 UTC):** no FATAL, the usual Curios ERROR only; both mods and Puzzles Lib
   loaded; `deepslate-moon-mobs` and Mutant Monsters' own `biome_modifications` pack loaded; 13,565 recipes.
   **Not seen yet, needs a player on Ashmoon:** the mobs themselves, and that none come in the main world.
+- **Test server would not start (seen 19:30):** `Not a JSON object: "#arphex:crawling_biomes"`, then "Failed to load
+  datapacks". #75 had added that tag to the biome lists of `any_dimension_spawner` and `tormentor_initial`, but a
+  biome list outside a tag file is either ids or one `#tag`, never both. Both now list the tag's five biomes as ArPhEx
+  5.0.2 ships them; a test checks every datapack for a `#tag` inside a list. The broken files are on `main` (#78) and
+  in live's `dist/server`: live would not start after its next Sync until this fix is on `main`.
 
 ## The first portal on live (Alex, 2026-10-14)
 

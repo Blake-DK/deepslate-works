@@ -203,6 +203,7 @@ export const CHANGES: Change[] = [
     // `live: true` only after the live check of docs/53 A, B and E1 and docs/55 (the rule above).
     id: "2026-10-12-power-and-gear-landed",
     date: "2026-10-12",
+    live: true,
     title: "Power and gear update is live",
     lines: [
       "The quarry now needs real power: one small generator only crawls. When its storage is full it stops, and starts again by itself when there's room.",
@@ -216,6 +217,7 @@ export const CHANGES: Change[] = [
     // docs/59: two flower mods, straight into the pack. Set `live: true` only after the live check (the rule above).
     id: "2026-10-14-flowers",
     date: "2026-10-14",
+    live: true,
     lines: [
       "Two new mods for gardens: Serene Shrubbery (flowers in lots of colours; plant two or three side by side and new colours appear over time) and Wilder Flowers (wildflowers, clover patches and flower garlands you can wear or hang up). The wildflowers grow in land nobody has explored yet. Press Play to update.",
     ],
@@ -225,6 +227,7 @@ export const CHANGES: Change[] = [
     // check passed (the rule above).
     id: "2026-10-12-app-3-6-2-render-distance",
     date: "2026-10-12",
+    live: true,
     lines: ["In the app's Settings tab, render distance now goes up to 32 chunks. It stopped at 16 before, below the 20 the server shows, so you could never see as far as the server lets you."],
   },
   {
@@ -232,6 +235,7 @@ export const CHANGES: Change[] = [
     // rule above).
     id: "2026-10-14-macaws-holidays",
     date: "2026-10-14",
+    live: true,
     lines: [
       "New mod for decorating: Macaw's Holidays. Christmas trees, string lights, garlands, presents, stockings and candy canes, plus carved pumpkins and cobwebs for Halloween. All made at a crafting table from everyday things. Press Play to update.",
     ],

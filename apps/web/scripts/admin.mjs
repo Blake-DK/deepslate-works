@@ -15,7 +15,7 @@ const passwordHash = await bcrypt.hash(password, 12);
 const db = new PrismaClient();
 const user = await db.user.upsert({
   where: { email: email.toLowerCase() },
-  create: { email: email.toLowerCase(), displayName, passwordHash, role: "ADMIN" },
+  create: { email: email.toLowerCase(), displayName, passwordHash, role: "ADMIN", maintenanceJoin: true },
   update: { passwordHash, role: "ADMIN" },
 });
 await db.event.create({ data: { kind: "ADMIN_ACTION", actor: user.id, message: `${user.displayName} had their password reset from the command line`, meta: { action: "auth.adminReset", params: { email, via: "cli" }, result: "OK", detail: null } } });

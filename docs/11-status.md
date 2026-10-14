@@ -129,6 +129,41 @@ and the counts Met, Private and Refused.
 - **Live:** waits for Alex's go (docs/59 "Live"). `dev` also carries held work (seasons, the Moon, Mekanism), so a
   whole `dev` → `main` PR is a question for Alex first.
 
+## Maintenance: admins have the tick by default, and the game chat is told (2026-10-14, PRs #67 and #68 on `dev`; not on `main`)
+
+- **Seen on live (Alex):** the Maintenance switch could not be pressed: no admin had "Can join during maintenance".
+  Alex: admins should have it by default, and switching it on should say so in the game chat.
+- **#67** (`884a7854`): made an admin → the tick comes with it (`lib/role-change.ts`; an admin saved as admin again
+  keeps theirs); the first member and the configured Discord admin start with it; `scripts/admin.mjs` too. Migration
+  **`0035_admins_join_maintenance`** ticks every admin there is (data only). `deploy.sh` dumps the database first.
+- **#68** (`c1cb0c4c`): `maintenance.announce` (system): one gold line to everyone on the server before the kicks
+  when it starts, and after the release when it ends; in the event log; the card says so. Not seen on a server yet.
+- GitHub answered both merges with a 502; #67 merged, #68 was closed by the branch's deletion, then restored, reopened
+  and merged after its `check` passed again.
+
+## Deploy of the Moon: `main` `556679b9` (PR #65), then `faa81318` (PR #66: Macaw's Holidays, the gas from y 30), 2026-10-14; the Moon's square copied to live; deploy not yet run
+
+- **PR #65 (`dev` → `main`) merged by Alex as `556679b9`**: docs/53 A, B (no retrogen), E1, docs/55 M1 to M8,
+  docs/56, docs/59's flowers, the console sending lines as typed, #60's sample Frontier out; Season 1 rides along
+  with `"ship": []`. Change log: post 2 rewritten and `2026-10-14-flowers`, both without `live`. CodeQL flagged
+  `POST /modpack/verify` (js/missing-rate-limiting, high) twice: the route is now limited by `@fastify/rate-limit`
+  (`routes/verify.ts`, 3 a minute for one admin; new dependency, its reason in the PR), since code scanning does not
+  recognise `console/limit.ts`. `main`'s CI, CodeQL and the Moon boot test passed. `dev` fast-forwarded to `main`.
+- **Live's seed checked by Alex: the same as the test server's.**
+- **The Moon's square copied to live (2026-10-14, Alex ran it as ladm on the VPS):** a script (kept out of the repo)
+  pulled `world/dimensions/deepslate/moon/{region,entities,poi}/r.X.Z.mca`, X and Z from -6 to 5, from the test
+  instance through api-test's rsync link (144 region files, 1.2 GB; 88 entity files; 144 poi files), and wrote them to
+  live through live api's link with `--ignore-existing`. The dry run first: 376 new files, the only other line
+  "created directory world/dimensions/deepslate/moon" (live had no Moon folder). After the copy, a checksum dry run
+  (`rsync -rlcn`): the same on both sides. Live was running; nothing reads that folder until live's pack has the
+  Moon's datapack. The session itself was not allowed to read the live api container (the assistant's safety check),
+  so Alex ran the live half. Temporary copies removed on the VPS and in api-test.
+- **Next, Alex:** the world backup and a database dump; with live stopped, delete `world/datapacks/deepslate-frontier-sample/`
+  and `config/bluemap/maps/frontier_sample.conf` (optionally the sample dimension in `level.dat` and its folder);
+  `sudo deploy/deploy.sh`; Admin → Modpack → Build, Sync; start; the checks (no FATAL, the Moon there, the portal at
+  spawn, a quarry, osmium on the Moon, the Moon's map from Pre-generation); then `live: true` on post 2 and the flowers
+  entry. Alex's PC on the test pack (docs/55 §4 step 4) is still to be done.
+
 ## The Moon finished on `dev`: docs/55 M5, M6 and the sample Frontier (2026-10-14; PRs #60, #61, #62 merged into `dev`, `7ade5933`; not on `main`)
 
 - **#60, the sample Frontier no longer ships** (Alex: nothing of a test season goes to live): `index.json`'s

@@ -32,6 +32,8 @@ export async function createUser(input: NewUser) {
         email: input.email?.toLowerCase(),
         passwordHash: input.passwordHash,
         role,
+        // Alex, 2026-10-14: an admin can join during the site's Maintenance from the start (docs/48 B1's tick)
+        maintenanceJoin: role === "ADMIN",
         invitedById: input.invitedById ?? null,
         outsideAuth: input.outsideAuth ?? false,
         guildMember: input.guildMember,

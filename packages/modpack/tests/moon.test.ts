@@ -146,7 +146,7 @@ describe("no retrogen (docs/55 M1)", () => {
   });
 });
 
-describe("the gas below y 0 (docs/55 M7)", () => {
+describe("the gas below y 30 (docs/55 M7; Alex moved it up from y 0 on 2026-10-14)", () => {
   const fn = (f: string) => text(`data/deepslate/function/gas/${f}.mcfunction`);
   const lines = async (f: string) => (await fn(f)).split("\n").filter((l) => l && !l.startsWith("#"));
   it("runs once a second, never every tick: started from #minecraft:load, it schedules itself again", async () => {
@@ -155,8 +155,8 @@ describe("the gas below y 0 (docs/55 M7)", () => {
     expect((await lines("second")).at(-1)).toBe("schedule function deepslate:gas/second 20t replace");
     expect(JSON.stringify(await json("data/minecraft/tags/function/tick.json"))).not.toContain("gas");
   });
-  it("reaches players not in creative or spectator, on the Moon, with their feet below y 0 (the planner's line)", async () => {
-    expect(await lines("second")).toContain("execute as @a[gamemode=!creative,gamemode=!spectator] at @s if dimension deepslate:moon if entity @s[y=-64,dy=64] run function deepslate:gas/check");
+  it("reaches players not in creative or spectator, on the Moon, with their feet below y 30 (Alex, 2026-10-14; the planner had y 0)", async () => {
+    expect(await lines("second")).toContain("execute as @a[gamemode=!creative,gamemode=!spectator] at @s if dimension deepslate:moon if entity @s[y=-64,dy=94] run function deepslate:gas/check");
   });
   it("+1 a second in the gas without a mask, -2 a second otherwise, never below 0", async () => {
     expect(await lines("breathe")).toContain("scoreboard players add @s deepslate.gas 1");

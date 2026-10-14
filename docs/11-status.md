@@ -172,6 +172,18 @@ and the counts Met, Private and Refused.
   only (`modpack/test-overlay`): vanilla replacement off (it turned 1 in 10 ordinary mobs anywhere into its own),
   the full-moon sky scare off. Its random spawn system only uses non-vanilla overworld biomes, Ashmoon's here. Its own
   dimensions (`arphex:the_crawling`, `the_webrooms`) load; its structures appear beyond Ashmoon's pre-generated square.
+- **#72 (structures):** five ArPhEx structures that would generate in the main world (spider cave, ant hill, termite
+  hill, the boss altar, the crawling castle) now generate on Ashmoon only; its test config has vanilla replacement and
+  the full-moon sky scare off. Seen after the 17:59 start: `locate structure` finds none of the five in the main world
+  and each on Ashmoon, 3,300 to 4,600 blocks out (beyond the square pre-generated without ArPhEx).
+- **#73:** Nyf's Spiders 3.0.2 (`B2RgTf4a`, s1, recommended by ArPhEx's join message; every spider climbs walls and
+  ceilings, main world included) and ArPhEx's welcome message off. **#74 (Alex: more mobs on the moon):** Ashmoon's
+  night monsters in groups of 4 to 6 (its datapack, so live too with the next deploy); on test, ArPhEx's two spawn
+  rates at 2 (5 default) and the mutants at 0.25 of the creeper's weight (0.05). The mob cap (ServerCore, 70 monsters)
+  is the same for every world and stays. Seen after the 18:40 start: no FATAL, Nyf's Spiders loaded, the files on the
+  server read back with those values.
+- The `.git/config` gained another session's worktree upstream at 17:57 (reported to Alex); it was gone again by
+  18:20, the hooks and the credential helper unchanged throughout.
 - **Seen on test (#71, start at 17:48 UTC):** no FATAL, the usual Curios ERROR only; both mods and Puzzles Lib
   loaded; `deepslate-moon-mobs` and Mutant Monsters' own `biome_modifications` pack loaded; 13,565 recipes.
   **Not seen yet, needs a player on Ashmoon:** the mobs themselves, and that none come in the main world.

@@ -43,6 +43,20 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.6: the backpack key is ` (Alex, 2026-10-14)
+
+- Sophisticated Backpacks opens the backpack you wear with **B**, the key Xaero's Minimap uses for a new waypoint, so
+  one key did two things. The pack's key for the backpack is now **`** (the key left of 1). No mod in the pack uses it:
+  VeinMiner, which would on other packs, has no key at all in this version.
+- The key's name and default were read from the jar (sophisticatedbackpacks 3.26.7, `KeybindHandler`):
+  `key.sophisticatedbackpacks.open_backpack`, GLFW 66 (B). The line in options.txt is
+  `key_key.sophisticatedbackpacks.open_backpack:key.keyboard.grave.accent`.
+- Every Play (live and test), after the render distance and chat links, `Engine.SetBackpackKey`: once per PC. A
+  missing line is added at the end, the mod's own B is changed in place, any other key is the player's choice and is
+  kept. installed.json's `backpackKey: true` remembers it was done, so a player who sets B again keeps B. A run with no
+  options.txt yet does not count; the next one tries again.
+- The Mods guide (`mods.json` keys and howTo) says ` for the backpack.
+
 ## 3.6.5: a download from the site no longer fails behind the window's polls (2026-10-12)
 
 - Seen on Alex's PC the day 3.6.4 went live: the first run of the Test tab with a private jar in the test pack (docs/58)

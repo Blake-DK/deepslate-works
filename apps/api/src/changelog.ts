@@ -240,6 +240,14 @@ export const CHANGES: Change[] = [
       "New mod for decorating: Macaw's Holidays. Christmas trees, string lights, garlands, presents, stockings and candy canes, plus carved pumpkins and cobwebs for Halloween. All made at a crafting table from everyday things. Press Play to update.",
     ],
   },
+  {
+    // The backpack key (Alex, 2026-10-14; app 3.6.6). Set `live: true` once 3.6.6 is out and a Play has set the key.
+    id: "2026-10-14-backpack-key",
+    date: "2026-10-14",
+    lines: [
+      "The backpack you wear now opens with the ` key (top left, under Esc, next to 1). B used to do two things at once: open the backpack and drop a map waypoint. Now B is only for waypoints. Press Play to get it. If you had already changed the key yourself, yours is kept.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

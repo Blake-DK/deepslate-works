@@ -223,6 +223,18 @@ export const CHANGES: Change[] = [
     ],
   },
   {
+    // docs/61 §7's update post, in its words (Alex, 2026-10-14: everything on dev goes live).
+    id: "2026-10-14-gun-balance",
+    date: "2026-10-14",
+    live: true,
+    title: "Guns rebalanced",
+    lines: [
+      "Guns have been rebalanced: all gun damage is lower, and the stronger guns now need steel, the biggest ones netherite and refined obsidian.",
+      "Ammo crafts give half as many rounds. Cannon shells do half the damage to mobs.",
+      "Guns you already own keep working, at the new damage.",
+    ],
+  },
+  {
     // Alex, 2026-10-14: the horror mobs on Ashmoon, kept after the trial on the test server.
     id: "2026-10-14-ashmoon-monsters",
     date: "2026-10-14",
@@ -258,6 +270,7 @@ export const CHANGES: Change[] = [
     // The pack's keys (Alex, 2026-10-14; app 3.6.6). Set `live: true` once 3.6.6 is out and a Play has set the keys.
     id: "2026-10-14-pack-keys",
     date: "2026-10-14",
+    live: true,
     lines: [
       "Deepslate Works now shows a quick guide the first time you open it after this update: what each tab does, and the new keys.",
       "Some keys did two things at once. Now each does one. Press Play to get the new keys. Any key you had already changed yourself stays as you set it.",

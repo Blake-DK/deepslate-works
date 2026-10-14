@@ -26,6 +26,23 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Sync says it restarts, then checks the server's mods (2026-10-14, `558f8671` on `dev`, images built; on test after `sudo deploy/test-up.sh`)
+
+- **Alex:** "the sync server needs to say restarting server in its log screen and then verify everything is there".
+  Sync's log now says "restarting the server to load the new mods…", then "waiting for the server to come back
+  up…", then "the server is back up (N s after the restart)" and "checked its start: all N mods the pack gives the
+  server are loaded", or an ERROR line and a line per missing file. With the mods unchanged: "mods unchanged: the
+  server keeps running, no restart" and a check of its last start. New mods on a server that is not running are
+  checked at its next start. Every start is checked (ServerMods), a missing mod goes into the event log.
+- Settings, datapacks and the icon are rsynced by content (`--checksum`): before, every Sync said "14 file(s)
+  updated" and "179 file(s) updated … restart" because Build writes them anew.
+- `POST /modpack/verify {since?}` (docs/08). Tests: `apps/api/tests/sync-verify.test.ts`.
+- **Not fixed, Alex's call:** Admin → Modpack on the test site says "Out of date" after every Build and Sync. web-test
+  has no `SEASONS_SHIP` (api-test has `s1`): `sudo deploy/test-up.sh` uses **live's** `deploy/docker-compose.yml`
+  (`main`), and only `dev`'s passes it to web-test (docs/44, `395f7332`, held on `dev`). So the page reckons the pack
+  without Season 1 (`2ae3aea0`), api-test builds it with it (`b894dfa3`). Older than the flowers (`c0b230b4` against
+  `8b610bea` before).
+
 ## Flowers: docs/59, Serene Shrubbery and Wilder Flowers (2026-10-14, on `dev` and test; not on `main`, live untouched)
 
 - **On `dev`:** `fdfe753a` (the two mods) and `320ad409` (a recipe fix, the howTos), CI passed on both. Serene

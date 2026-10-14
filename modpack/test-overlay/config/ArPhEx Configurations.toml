@@ -8,9 +8,9 @@
 	#This controls whether the stalker bosses (spider moth, scorpioid bloodluster, draconic voidlasher, tormentor) are included in general. Set to false if you only want the other mobs, and the bosses will become unable to be spawned in any way.
 	"Boss inclusion" = true
 	#Controls the vanilla biome-specific spawnrates of ALL non-boss mobs in this mod, including minibosses and all regular arthropods. Default multiplier value is 5. You could more than double the ArPhEx spawnrates by setting it to 2 or 1. Lower values = more spawns (minimum value is 1). No maximum rarity. Avoid decimal and negative numbers.
-	"Non-boss global spawnrates (biome-specific)" = 5.0
+	"Non-boss global spawnrates (biome-specific)" = 2.0
 	#ArPhEx has an additional spawning system that gives a 1 in (10) chance to spawn a random ArPhEx mob each time the natural spawn triggers. This system allows ArPhEx mobs to spawn in any non-vanilla overworld biomes, while still accounting for mob rarity. Default number is 5, meaning it has a 1 in 5 chance to spawn each time. Setting it to 0 disables the additional spawning system entirely. Avoid decimal and negative numbers.
-	"Random-system spawnrates (not biome-specific)" = 5.0
+	"Random-system spawnrates (not biome-specific)" = 2.0
 	#This value controls whether ArPhEx entities are included in general. Setting to false makes it impossible to spawn ArPhEx mobs, while keeping the items as usual. 
 	"All entities enabled/disabled" = true
 	#Maximum colony tamed ants per player (furthest ants despawn, 20 default)

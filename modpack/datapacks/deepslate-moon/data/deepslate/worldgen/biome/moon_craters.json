@@ -20,25 +20,25 @@
         "type": "minecraft:zombie",
         "weight": 100,
         "minCount": 4,
-        "maxCount": 4
+        "maxCount": 6
       },
       {
         "type": "minecraft:skeleton",
         "weight": 100,
         "minCount": 4,
-        "maxCount": 4
+        "maxCount": 6
       },
       {
         "type": "minecraft:spider",
         "weight": 100,
         "minCount": 4,
-        "maxCount": 4
+        "maxCount": 6
       },
       {
         "type": "minecraft:creeper",
         "weight": 100,
         "minCount": 4,
-        "maxCount": 4
+        "maxCount": 6
       },
       {
         "type": "minecraft:enderman",

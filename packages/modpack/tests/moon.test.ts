@@ -291,4 +291,15 @@ describe("the horror trial kept on Ashmoon: ArPhEx's structures and its test-onl
     expect(toml).toContain('"Enable Tormentor Sky Hallucination" = false');
     expect(toml).toContain('"Welcome message" = false'); // Alex, 2026-10-14: no wall of text in chat at every join
   });
+  it("more mobs on Ashmoon (Alex, 2026-10-14): ArPhEx's two spawn rates at 2 (5 by default, lower = more), mutants at 25 % of the creeper's weight, Ashmoon's own night monsters in groups of 4 to 6", async () => {
+    const toml = await readFile(path.join(MODPACK, "test-overlay/config/ArPhEx Configurations.toml"), "utf8");
+    expect(toml).toContain('"Non-boss global spawnrates (biome-specific)" = 2.0');
+    expect(toml).toContain('"Random-system spawnrates (not biome-specific)" = 2.0');
+    const mutants = await readFile(path.join(MODPACK, "test-overlay/config/mutantmonsters-common.toml"), "utf8");
+    expect(mutants.match(/_spawn_weight = 0\.25$/gm)).toHaveLength(4);
+    for (const id of BIOMES) {
+      const spawners = (await json(`data/deepslate/worldgen/biome/${id.split(":")[1]}.json`)).spawners as { monster: Array<{ type: string; minCount: number; maxCount: number }> };
+      for (const m of spawners.monster.filter((x) => x.type !== "minecraft:enderman")) expect([m.minCount, m.maxCount]).toEqual([4, 6]);
+    }
+  });
 });

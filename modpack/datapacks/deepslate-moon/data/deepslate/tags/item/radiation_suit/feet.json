@@ -1,0 +1,12 @@
+{
+  "values": [
+    {
+      "id": "mekanism:hazmat_boots",
+      "required": false
+    },
+    {
+      "id": "mekanism:mekasuit_boots",
+      "required": false
+    }
+  ]
+}

@@ -26,6 +26,27 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Ashmoon's gas is radiation, stronger the deeper you go (2026-10-14, a PR to `dev`; not tried on test yet)
+
+- **Alex's call:** radiation, not gas; it gets stronger with depth, wears masks and the hazmat suit faster, and below
+  y -25 it can kill. Below y -25 only a whole suit protects: hazmat or MekaSuit in all four armour slots, in any mix.
+  Mekanism's hazmat gear gets durability. docs/55 M7 and M8 (planner doc) still describe the gas; the code says what
+  changed.
+- **Built** (`deepslate:gas/*`, ids kept): `deepslate.band` 1 below y 30, 2 below y 0 (`dy=64`), 3 below y -25
+  (`dy=39`). Exposure +1/+2/+3 a second by band (+1 with a mask below y -25). Stages as before; in band 3 from 11 on
+  `damage @s 2 mekanism:radiation` every second ("was killed by radiation poisoning", which parse.ts's death pattern
+  already matches). Gas mask wears 1/2/4 points a second. Hazmat pieces get `max_damage` 1800 and `damage` 0 by
+  `set_components` the first second they are worn in the radiation (Mekanism 10.7.19.85 gives them none), then wear
+  1/2/4 a second through `wear_hazmat` (-0.0008, one point a step over all 1800 in float maths, tested); a whole suit
+  below y -25 wears every hazmat piece. Macro function `gas/hazmat/wear {slot}`. Tags `#deepslate:hazmat_suit`,
+  `#deepslate:radiation_suit/{head,chest,legs,feet}`. Mask lore, the Ashmoon howTo (under 700 characters) and a new
+  change log entry `2026-10-14-ashmoon-radiation` (title, not live).
+- **Not tried in game:** the test server would not start on 2026-10-14 ~19:30 (`Not a JSON object:
+  "#arphex:crawling_biomes"` in `deepslate-moon-mobs`: a biome list cannot mix ids and a tag; the same files are on
+  `main` since PR #78). To check on test once it starts: hazmat mask takes the durability and shows a bar; wear
+  rates per band; a whole suit below y -25 holds; a mask alone there slows but kills; the death message reaches
+  Discord; the macro function loads (`function deepslate:gas/hazmat/wear` in the log has no parse error).
+
 ## App 3.6.6: the pack's keys, must-read news, the first-time guide (2026-10-14, on `dev`, not on `main`)
 
 - **Keys:** every mod's default key was read from the jars; where two shared one, the app now sets the pack's key once

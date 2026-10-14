@@ -146,45 +146,84 @@ describe("no retrogen (docs/55 M1)", () => {
   });
 });
 
-describe("the gas below y 30 (docs/55 M7; Alex moved it up from y 0 on 2026-10-14)", () => {
+/** One `set_damage` with `add` as 1.21.1 does it, all in floats: remaining fraction + damage, clamped, then floor((1 - that) * max). */
+function setDamage(d: number, max: number, damage: number): number {
+  const f = Math.fround;
+  const left = f(1 - f(d / max));
+  const g = f(1 - Math.min(1, Math.max(0, f(left + f(damage)))));
+  return Math.floor(f(g * max));
+}
+
+describe("the radiation below y 30 (docs/55 M7; Alex, 2026-10-14: radiation, not gas, stronger the deeper you go, and it kills below y -25)", () => {
   const fn = (f: string) => text(`data/deepslate/function/gas/${f}.mcfunction`);
   const lines = async (f: string) => (await fn(f)).split("\n").filter((l) => l && !l.startsWith("#"));
   it("runs once a second, never every tick: started from #minecraft:load, it schedules itself again", async () => {
     expect(await json("data/minecraft/tags/function/load.json")).toEqual({ values: ["deepslate:gas/load"] });
-    expect(await lines("load")).toEqual(["scoreboard objectives add deepslate.gas dummy", "schedule function deepslate:gas/second 20t replace"]);
+    expect(await lines("load")).toEqual(["scoreboard objectives add deepslate.gas dummy", "scoreboard objectives add deepslate.band dummy", "schedule function deepslate:gas/second 20t replace"]);
     expect((await lines("second")).at(-1)).toBe("schedule function deepslate:gas/second 20t replace");
     expect(JSON.stringify(await json("data/minecraft/tags/function/tick.json"))).not.toContain("gas");
   });
   it("reaches players not in creative or spectator, on the Moon, with their feet below y 30 (Alex, 2026-10-14; the planner had y 0)", async () => {
     expect(await lines("second")).toContain("execute as @a[gamemode=!creative,gamemode=!spectator] at @s if dimension deepslate:moon if entity @s[y=-64,dy=94] run function deepslate:gas/check");
   });
-  it("+1 a second in the gas without a mask, -2 a second otherwise, never below 0", async () => {
-    expect(await lines("breathe")).toContain("scoreboard players add @s deepslate.gas 1");
+  it("three depths: band 1 below y 30, 2 below y 0, 3 below y -25 (the same reading of dy as the line above)", async () => {
+    expect((await lines("check")).slice(0, 3)).toEqual([
+      "scoreboard players set @s deepslate.band 1",
+      "execute if entity @s[y=-64,dy=64] run scoreboard players set @s deepslate.band 2",
+      "execute if entity @s[y=-64,dy=39] run scoreboard players set @s deepslate.band 3",
+    ]);
+  });
+  it("exposure climbs 1, 2 or 3 a second with depth (1 with a mask below y -25), falls 2 a second otherwise, never below 0", async () => {
+    expect((await lines("breathe")).slice(0, 4)).toEqual([
+      "scoreboard players add @s deepslate.gas 1",
+      "execute unless entity @s[tag=deepslate.masked] if score @s deepslate.band matches 2.. run scoreboard players add @s deepslate.gas 1",
+      "execute unless entity @s[tag=deepslate.masked] if score @s deepslate.band matches 3 run scoreboard players add @s deepslate.gas 1",
+      "execute if score @s deepslate.gas matches 41.. run scoreboard players set @s deepslate.gas 40",
+    ]);
     expect(await lines("recover")).toEqual(["scoreboard players remove @s deepslate.gas 2", "execute if score @s deepslate.gas matches ..-1 run scoreboard players set @s deepslate.gas 0"]);
     expect(await lines("second")).toContain("execute as @a[tag=!deepslate.in_gas,scores={deepslate.gas=1..}] run function deepslate:gas/recover");
   });
-  it("three stages: a warning to 10 s, Poison I and Slowness I to 30 s, then Poison II, Slowness II and Mining Fatigue I; nothing that kills", async () => {
+  it("three stages: a warning to 10, Poison I and Slowness I to 30, then Poison II, Slowness II and Mining Fatigue I", async () => {
     const b = (await lines("breathe")).join("\n");
     expect(b).toContain("matches ..10 run title @s actionbar");
     for (const e of ["poison 2 0", "slowness 2 0"]) expect(b).toContain(`matches 11..30 run effect give @s minecraft:${e} true`);
     for (const e of ["poison 2 1", "slowness 2 1", "mining_fatigue 2 0"]) expect(b).toContain(`matches 31.. run effect give @s minecraft:${e} true`);
-    expect(b).not.toMatch(/wither|instant_damage|damage @s|kill/);
+  });
+  it("kills only below y -25: from 11 on, Mekanism's radiation damage, a heart a second; nothing else in it does damage", async () => {
+    const b = await lines("breathe");
+    const hurts = b.filter((l) => /wither|instant_damage|damage @s|kill/.test(l));
+    expect(hurts).toEqual(["execute if score @s deepslate.band matches 3 if score @s deepslate.gas matches 11.. run damage @s 2 mekanism:radiation"]);
+    expect(b.filter((l) => l.includes("actionbar") && l.includes("band matches 3"))).toHaveLength(1);
   });
 });
 
-describe("the masks (docs/55 M8)", () => {
-  it("are looked for in order: our gas mask, Mekanism's hazmat mask, the MekaSuit helmet; anything else breathes the gas", async () => {
+describe("the masks and the hazmat suit (docs/55 M8; Alex, 2026-10-14)", () => {
+  const basic = 'minecraft:leather_helmet[minecraft:custom_data~{deepslate_mask:"basic"}]';
+  it("below y -25 a whole suit protects (all four slots, hazmat or MekaSuit); otherwise a mask protects above y -25 and only slows it below", async () => {
     const check = (await text("data/deepslate/function/gas/check.mcfunction")).split("\n").filter((l) => l && !l.startsWith("#"));
-    expect(check).toEqual([
-      'execute if items entity @s armor.head minecraft:leather_helmet[minecraft:custom_data~{deepslate_mask:"basic"}] run return run function deepslate:gas/mask/basic',
-      "execute if items entity @s armor.head #deepslate:gas_mask_hazmat run return run function deepslate:gas/mask/hazmat",
-      "execute if items entity @s armor.head #deepslate:gas_mask_sealed run return 1",
+    expect(check.slice(3)).toEqual([
+      "execute if score @s deepslate.band matches 3 if items entity @s armor.head #deepslate:radiation_suit/head if items entity @s armor.chest #deepslate:radiation_suit/chest if items entity @s armor.legs #deepslate:radiation_suit/legs if items entity @s armor.feet #deepslate:radiation_suit/feet run return run function deepslate:gas/suit",
+      "tag @s remove deepslate.masked",
+      `execute if items entity @s armor.head ${basic} run tag @s add deepslate.masked`,
+      "execute if items entity @s armor.head #deepslate:gas_mask_hazmat run tag @s add deepslate.masked",
+      "execute if items entity @s armor.head #deepslate:gas_mask_sealed run tag @s add deepslate.masked",
+      `execute if items entity @s armor.head ${basic} run function deepslate:gas/mask/basic`,
+      'execute if items entity @s armor.head #deepslate:gas_mask_hazmat run function deepslate:gas/hazmat/wear {slot:"armor.head"}',
+      "execute if score @s deepslate.band matches ..2 if entity @s[tag=deepslate.masked] run return 1",
       "function deepslate:gas/breathe",
     ]);
+    const suit = (await text("data/deepslate/function/gas/suit.mcfunction")).split("\n").filter((l) => l && !l.startsWith("#"));
+    expect(suit).toEqual(["head", "chest", "legs", "feet"].map((s) => `execute if items entity @s armor.${s} #deepslate:hazmat_suit run function deepslate:gas/hazmat/wear {slot:"armor.${s}"}`));
   });
-  it("Mekanism's items are named by tags with optional entries, so the functions load without Mekanism", async () => {
-    expect(await json("data/deepslate/tags/item/gas_mask_hazmat.json")).toEqual({ values: [{ id: "mekanism:hazmat_mask", required: false }] });
-    expect(await json("data/deepslate/tags/item/gas_mask_sealed.json")).toEqual({ values: [{ id: "mekanism:mekasuit_helmet", required: false }] });
+  it("Mekanism's items are named by tags with optional entries (ids from the 10.7.19.85 jar), so the functions load without Mekanism", async () => {
+    const opt = (...ids: string[]) => ({ values: ids.map((id) => ({ id, required: false })) });
+    expect(await json("data/deepslate/tags/item/gas_mask_hazmat.json")).toEqual(opt("mekanism:hazmat_mask"));
+    expect(await json("data/deepslate/tags/item/gas_mask_sealed.json")).toEqual(opt("mekanism:mekasuit_helmet"));
+    expect(await json("data/deepslate/tags/item/hazmat_suit.json")).toEqual(opt("mekanism:hazmat_mask", "mekanism:hazmat_gown", "mekanism:hazmat_pants", "mekanism:hazmat_boots"));
+    expect(await json("data/deepslate/tags/item/radiation_suit/head.json")).toEqual({ values: ["#deepslate:gas_mask_hazmat", "#deepslate:gas_mask_sealed"] });
+    expect(await json("data/deepslate/tags/item/radiation_suit/chest.json")).toEqual(opt("mekanism:hazmat_gown", "mekanism:mekasuit_bodyarmor"));
+    expect(await json("data/deepslate/tags/item/radiation_suit/legs.json")).toEqual(opt("mekanism:hazmat_pants", "mekanism:mekasuit_pants"));
+    expect(await json("data/deepslate/tags/item/radiation_suit/feet.json")).toEqual(opt("mekanism:hazmat_boots", "mekanism:mekasuit_boots"));
   });
   it("our gas mask: a cheap shapeless recipe for a dark leather helmet with 30 points, its own icon, and no anvil", async () => {
     const r = await json("data/deepslate/recipe/gas_mask.json");
@@ -197,18 +236,35 @@ describe("the masks (docs/55 M8)", () => {
     expect(result.components["minecraft:repair_cost"]).toBeGreaterThanOrEqual(40); // an anvil refuses 40 and up
     expect((await json("data/deepslate/advancement/recipes/gas_mask.json")).rewards).toEqual({ recipes: ["deepslate:gas_mask"] });
   });
-  it("wears exactly one point a second, so it lasts 30 s, and is taken off with a sound and a message at its last point", async () => {
+  it("our gas mask wears one point a second below y 30 (30 s), two below y 0, four below y -25, and is taken off with a sound and a message at its last point", async () => {
     const m = await json("data/deepslate/item_modifier/gas/wear_basic.json");
     expect(m).toMatchObject({ function: "minecraft:set_damage", add: true });
-    // set_damage as in 1.21.1: remaining fraction + damage, clamped, then floor((1 - that) * max)
-    const max = 30;
-    const step = (d: number) => Math.floor((1 - Math.min(1, Math.max(0, Math.fround(1 - d / max) + (m.damage as number)))) * max);
-    for (let d = 0; d < max; d++) expect(step(d)).toBe(d + 1);
-    const basic = await text("data/deepslate/function/gas/mask/basic.mcfunction");
-    expect(basic).toContain("item modify entity @s armor.head deepslate:gas/wear_basic");
-    expect(basic).toContain("[minecraft:damage~{durability:{max:0}}] run function deepslate:gas/mask/broke");
+    for (let d = 0; d < 30; d++) expect(setDamage(d, 30, m.damage as number)).toBe(d + 1);
+    const basic = (await text("data/deepslate/function/gas/mask/basic.mcfunction")).split("\n").filter((l) => l && !l.startsWith("#"));
+    const wear = "item modify entity @s armor.head deepslate:gas/wear_basic";
+    expect(basic.slice(0, 4)).toEqual([wear, `execute if score @s deepslate.band matches 2.. run ${wear}`, `execute if score @s deepslate.band matches 3 run ${wear}`, `execute if score @s deepslate.band matches 3 run ${wear}`]);
+    expect(basic[4]).toContain("[minecraft:damage~{durability:{max:0}}] run function deepslate:gas/mask/broke");
     const broke = await text("data/deepslate/function/gas/mask/broke.mcfunction");
     for (const l of ["item replace entity @s armor.head with minecraft:air", "playsound minecraft:entity.item.break", "Your mask has given out.", "scoreboard players set @s deepslate.gas 0"]) expect(broke).toContain(l);
+  });
+  it("hazmat gear gets 1800 points the first time it is worn in the radiation (Mekanism gives it none), then wears one a second (30 min), two below y 0, four below y -25", async () => {
+    expect(await json("data/deepslate/item_modifier/gas/hazmat_durability.json")).toEqual({ function: "minecraft:set_components", components: { "minecraft:max_damage": 1800, "minecraft:damage": 0 } });
+    const m = await json("data/deepslate/item_modifier/gas/wear_hazmat.json");
+    expect(m).toMatchObject({ function: "minecraft:set_damage", add: true });
+    for (let d = 0; d < 1800; d++) expect(setDamage(d, 1800, m.damage as number)).toBe(d + 1);
+    const wear = (await text("data/deepslate/function/gas/hazmat/wear.mcfunction")).split("\n").filter((l) => l && !l.startsWith("#"));
+    const one = "item modify entity @s $(slot) deepslate:gas/wear_hazmat";
+    expect(wear).toEqual([
+      "$execute if items entity @s $(slot) #deepslate:hazmat_suit[!minecraft:max_damage] run item modify entity @s $(slot) deepslate:gas/hazmat_durability",
+      `$${one}`,
+      `$execute if score @s deepslate.band matches 2.. run ${one}`,
+      `$execute if score @s deepslate.band matches 3 run ${one}`,
+      `$execute if score @s deepslate.band matches 3 run ${one}`,
+      '$execute if items entity @s $(slot) #deepslate:hazmat_suit[minecraft:damage~{durability:{max:0}}] run function deepslate:gas/hazmat/broke {slot:"$(slot)"}',
+    ]);
+    const broke = await text("data/deepslate/function/gas/hazmat/broke.mcfunction");
+    for (const l of ["$item replace entity @s $(slot) with minecraft:air", "playsound minecraft:entity.item.break", "worn out"]) expect(broke).toContain(l);
+    await expect(text("data/deepslate/function/gas/mask/hazmat.mcfunction")).rejects.toThrow();
   });
 });
 

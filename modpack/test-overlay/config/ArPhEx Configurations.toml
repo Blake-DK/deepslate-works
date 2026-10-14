@@ -56,7 +56,7 @@
 
 [Other]
 	#When you join a world for the first time with ArPhEx installed, it shows a welcome message, informing you about the wiki and showing that the mod is active. Set to false to disable.
-	"Welcome message" = true
+	"Welcome message" = false
 	#Allow structure generations? Without them you will need to cheat to access the lower Crawling dimension layers or get ant colonies and termite-related items. Some tiny elements may still generate.
 	"Structure generation toggle" = true
 	#Keep enabled if you want to use the bonus rendering system for the Tormentor, featuring modified fog distance and a giant portal over the top of the entity

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-14T17:39:09.235Z",
+  "generatedAt": "2026-10-14T18:28:14.027Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "917253180d4fe64ec2c2faacedde5fe9d74f1e5e1a345f38ddfe24db8e06b8a3",
+  "hash": "e58f715701eac9dc6773a216f141dad0cc6d13dc64152074ce90dcc35de0c925",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -1236,6 +1236,27 @@
         "client": "unsupported",
         "server": "required"
       }
+    },
+    {
+      "slug": "nyfs-spiders",
+      "name": "Nyf's Spiders",
+      "projectId": "dOGM7ccu",
+      "versionId": "B2RgTf4a",
+      "versionNumber": "3.0.2",
+      "versionType": "release",
+      "filename": "nyfsspiders-neoforge-1.21.1-3.0.2.jar",
+      "url": "https://cdn.modrinth.com/data/dOGM7ccu/versions/B2RgTf4a/nyfsspiders-neoforge-1.21.1-3.0.2.jar",
+      "sha512": "3c64724baa476b5880c0e68399f599a2c3906fcf86c7fad086f27e37f09d3f73a6ac01d618ebb1d953a37016f3e375cdd9a82a4030fe0306bc194545ddfbc773",
+      "sha1": "61990355ca856be2b7179fc4abbd8ff8c963e7f9",
+      "size": 192954,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "season": "s1",
+      "channels": "none"
     },
     {
       "slug": "open-parties-and-claims",

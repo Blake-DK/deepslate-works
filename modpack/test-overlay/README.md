@@ -9,6 +9,7 @@ file of the same path that the build made from `modpack/config/` and `modpack/se
 - `config/voicechat/voicechat-server.properties`: Simple Voice Chat on UDP 24464, which nothing forwards.
 - `config/ArPhEx Configurations.toml`: ArPhEx, on trial for Ashmoon only (Season 1's switch, so the test server only):
   the file the mod wrote, with `"Vanilla Replacement Mode" = 0.0` (it turned 1 in 10 ordinary mobs anywhere into ArPhEx
-  mobs) and `"Enable Tormentor Sky Hallucination" = false` (a scare in the main world's sky at full moon).
+  mobs) `"Enable Tormentor Sky Hallucination" = false` (a scare in the main world's sky at full moon) and `"Welcome message" =
+  false` (a wall of text in chat at every join; Alex, 2026-10-14).
 
 This README is not copied (Markdown files are left out).

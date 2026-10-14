@@ -231,3 +231,13 @@ describe("the gas mask's icon, in the resource pack (docs/55 M8)", () => {
     }
   });
 });
+
+describe("the Moon's map (docs/55 M5)", () => {
+  it("is shipped as config/bluemap/maps/moon.conf: id moon, the dimension deepslate:moon in the world folder", async () => {
+    const conf = await readFile(path.join(MODPACK, "server/config/bluemap/maps/moon.conf"), "utf8");
+    const keys = Object.fromEntries(conf.split("\n").filter((l) => l && !l.startsWith("#")).map((l) => [l.split(":")[0]!.trim(), l.slice(l.indexOf(":") + 1).trim()]));
+    expect(keys).toMatchObject({ world: '"world"', dimension: '"deepslate:moon"', name: '"The Moon"', storage: '"file"' });
+    // BlueMap 5.7's own template (maps/map.conf in its jar) has every one of these keys
+    for (const k of Object.keys(keys)) expect(["world", "dimension", "name", "sorting", "sky-color", "void-color", "sky-light", "ambient-light", "remove-caves-below-y", "cave-detection-ocean-floor", "storage"]).toContain(k);
+  });
+});

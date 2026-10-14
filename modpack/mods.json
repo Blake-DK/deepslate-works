@@ -1438,7 +1438,7 @@
       "requires": [],
       "guide": "game",
       "topic": "combat",
-      "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Watch out: several of TaCZ's keys are also used by other mods (V, G, H, C, Z); change them in Options \u2192 Controls if something clashes.",
+      "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Pistols, revolvers, double barrels and bolt rifles take iron; most rifles, SMGs and shotguns also take **steel**; the biggest guns need **netherite** and **refined obsidian** too. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Watch out: several of TaCZ's keys are also used by other mods (V, G, H, C, Z); change them in Options \u2192 Controls if something clashes.",
       "keys": [
         {
           "key": "Left click",

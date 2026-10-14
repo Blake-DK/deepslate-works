@@ -24,7 +24,7 @@ namespace DeepslateWorks
     sealed partial class AppUi
     {
         public TabItem VoteTab;
-        TextBlock VoteStep, VoteTitle, VoteNote, VoteError;
+        TextBlock VoteStep, VoteTitle, VoteNote, VoteError, VoteTabText;
         Button VoteButton;
         StackPanel VoteBody;
         // the card of the pane (3.6.1): the live server's on the Play tab, the test server's on the Test tab
@@ -71,6 +71,7 @@ namespace DeepslateWorks
             var w = Window;
             T F<T>(string n) where T : class => w.FindName(n) as T ?? throw new InvalidOperationException("the window has no " + n);
             VoteTab = F<TabItem>("VoteTab"); VoteButton = F<Button>("VoteButton"); VoteBody = F<StackPanel>("VoteBody");
+            VoteTabText = w.FindName("VoteTabText") as TextBlock;
             VoteStep = F<TextBlock>("VoteStep"); VoteTitle = F<TextBlock>("VoteTitle"); VoteNote = F<TextBlock>("VoteNote"); VoteError = F<TextBlock>("VoteError");
             SiteLink.Click += (s, e) => OpenSite(SiteNow?.Site ?? Env.PortalUrl);
             // 3.5.3: the whole news card opens it on the site (the Votes page for news about a vote)
@@ -272,10 +273,12 @@ namespace DeepslateWorks
             if (Guided > 0 || !(Mode == "idle" || Mode == "ready")) return;
             if (!VotesBlock) return;
             if (Count != null && Count.Running) { CancelCountdown("a vote to answer"); HideCountdown(); }
-            var label = SiteNow?.VoteFirstButton ?? SiteHome.VoteFirstButton;
+            var news = SiteHome.OnlyNews(PendingVotes);   // 3.6.6: only news to confirm: the button and hint say so
+            var label = news ? UiText.ReadFirstButton : SiteNow?.VoteFirstButton ?? SiteHome.VoteFirstButton;
+            var hint = news ? UiText.ReadFirstHint : UiText.VoteFirstHint;
             // 3.5.4 (Alex, 2026-10-06): the button stays pressable: it takes them to the vote, and the game starts after it
             if (!PlayButton.IsEnabled || !Equals(PlayButton.Content, label)) { PlayButton.Content = label; PlayButton.IsEnabled = true; }
-            if (PlayHint.Text != UiText.VoteFirstHint) PlayHint.Text = UiText.VoteFirstHint;
+            if (PlayHint.Text != hint) PlayHint.Text = hint;
             PlayHint.Visibility = Visibility.Visible;
         }
 
@@ -312,6 +315,24 @@ namespace DeepslateWorks
                 VoteButton.Content = UiText.VoteButton;
                 VoteButton.IsEnabled = VotePicked.Count > 0;
             }
+            else if (item.Read != null)
+            {
+                // 3.6.6: a must-read news item, whole, and "Seen it"
+                var r = item.Read;
+                VoteStep.Text = (left > 1 ? SiteHome.StepLine(answeredThisRound, answeredThisRound + left) : "Before you play").ToUpperInvariant();
+                VoteTitle.Text = UiText.ReadTitle;
+                VoteNote.Text = UiText.ReadNote;
+                var card = NewCard();
+                var texts = new StackPanel();
+                var body = NewText(SiteHome.NewsShort(r.Body), 14, "Normal", "Fg"); body.TextWrapping = TextWrapping.Wrap;
+                texts.Children.Add(body);
+                var meta = string.Join(" · ", new[] { r.Author, r.At }.Where(x => !string.IsNullOrEmpty(x)));
+                if (meta.Length > 0) { var m = NewText(meta, 12, "Normal", "Muted"); m.Margin = new Thickness(0, 6, 0, 0); texts.Children.Add(m); }
+                card.Child = texts;
+                VoteBody.Children.Add(card);
+                VoteButton.Content = UiText.ReadButton;
+                VoteButton.IsEnabled = true;
+            }
             else
             {
                 var b = item.Ballot;
@@ -320,7 +341,7 @@ namespace DeepslateWorks
                 VoteButton.Content = UiText.BallotOpen;
                 VoteButton.IsEnabled = true;
             }
-            Log.Line("window: a vote to answer before playing: " + (item.Poll?.Question ?? item.Ballot?.Title));
+            Log.Line(item.Read != null ? "window: news to confirm before playing: " + item.Read.Id : "window: a vote to answer before playing: " + (item.Poll?.Question ?? item.Ballot?.Title));
             if (select && Mode != "asking") Tabs.SelectedItem = VoteTab;
         }
 
@@ -442,6 +463,7 @@ namespace DeepslateWorks
         {
             var item = VoteShown; if (item == null) return;
             if (voteResults) { NextVote(); return; }
+            if (item.Read != null) { OnSeen(item); return; }
             if (item.Ballot != null)
             {
                 if (!ballotOpened) { OpenSite(item.Ballot.Url ?? (Env.PortalUrl + "/pack?tab=vote")); ballotOpened = true; VoteButton.Content = UiText.BallotDone; return; }
@@ -471,6 +493,37 @@ namespace DeepslateWorks
                 }
                 catch { }
             }) { IsBackground = true, Name = "vote" }.Start();
+        }
+
+        /// <summary>3.6.6: "Seen it": kept by the site, then the next thing to answer, or Play. An item the site no longer asks
+        /// about (hidden, or no longer must-read) counts as seen.</summary>
+        void OnSeen(VoteItem item)
+        {
+            if (voteBusy) return;
+            voteBusy = true;
+            VoteButton.IsEnabled = false; VoteButton.Content = UiText.VoteSaving;
+            var id = item.Read.Id;
+            var d = Window.Dispatcher;
+            new Thread(() =>
+            {
+                string err = null;
+                try { SiteHome.Seen(id); }
+                catch (HttpError e) when (e.Status == 404) { }
+                catch (Exception e) { err = SiteHome.Why(e); }
+                try
+                {
+                    d.BeginInvoke(new Action(() =>
+                    {
+                        voteBusy = false;
+                        if (err != null) { VoteError.Text = err; VoteButton.Content = UiText.ReadButton; VoteButton.IsEnabled = true; return; }
+                        Log.Line("window: news " + id + " seen");
+                        answered.Add(id); answeredThisRound++;
+                        UpdateVoteBadge();
+                        NextVote();
+                    }));
+                }
+                catch { }
+            }) { IsBackground = true, Name = "news seen" }.Start();
         }
 
         /// <summary>After voting: how it stands, then on to the next vote or to the Play tab.</summary>

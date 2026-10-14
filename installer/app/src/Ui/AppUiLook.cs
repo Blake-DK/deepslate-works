@@ -79,6 +79,8 @@ namespace DeepslateWorks
         void UpdateVoteBadge()
         {
             var n = PendingVotes.Count;
+            var tab = SiteHome.OnlyNews(PendingVotes) ? UiText.ReadTab : "Vote";   // 3.6.6: news to confirm only
+            if (VoteTabText != null && VoteTabText.Text != tab) VoteTabText.Text = tab;
             var text = n.ToString();
             if (VoteBadgeText.Text != text) VoteBadgeText.Text = text;
             var v = n > 0 ? Visibility.Visible : Visibility.Collapsed;

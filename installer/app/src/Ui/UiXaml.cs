@@ -253,7 +253,7 @@ namespace DeepslateWorks
     <TabItem x:Name=""VoteTab"" Visibility=""Collapsed"">
       <TabItem.Header>
         <StackPanel Orientation=""Horizontal"">
-          <TextBlock Text=""Vote"" Foreground=""{Binding Path=(TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}""/>
+          <TextBlock x:Name=""VoteTabText"" Text=""Vote"" Foreground=""{Binding Path=(TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}""/>
           <Border x:Name=""VoteBadge"" Background=""{DynamicResource Copper}"" CornerRadius=""3"" Padding=""5,0"" Margin=""6,0,0,0"" VerticalAlignment=""Center"" Visibility=""Collapsed"">
             <TextBlock x:Name=""VoteBadgeText"" FontFamily=""Segoe UI"" FontSize=""12"" FontWeight=""SemiBold"" Foreground=""{DynamicResource OnCopper}""/>
           </Border>

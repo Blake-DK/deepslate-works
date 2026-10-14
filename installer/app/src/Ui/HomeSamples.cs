@@ -42,6 +42,14 @@ namespace DeepslateWorks
         ""options"": [ { ""id"": ""o1"", ""text"": ""Farmer's Delight"", ""mod"": null }, { ""id"": ""o2"", ""text"": ""Waystones"", ""mod"": null }, { ""id"": ""dont-mind"", ""text"": ""I don't mind"", ""mod"": null } ] } ],
     ""ballot"": null, ""order"": [ { ""kind"": ""poll"", ""id"": ""p1"" }, { ""kind"": ""poll"", ""id"": ""p2"" } ], ""button"": ""Vote first, it takes ten seconds"" } }";
 
+        /// <summary>3.6.6: a must-read news item before a poll (the site puts news first); an unknown kind is skipped.</summary>
+        public const string NewsFirst = @"{ ""signedIn"": true, ""site"": ""https://deepslate.dsw.test"", ""name"": ""KaneFinch"", ""admin"": false,
+  ""server"": { ""state"": ""online"", ""line"": ""Online"", ""label"": ""Online"", ""tone"": ""good"", ""hint"": """", ""wake"": { ""phase"": ""idle"", ""leftS"": null, ""line"": null }, ""canStart"": false },
+  ""online"": [], ""news"": null,
+  ""votes"": { ""polls"": [ " + Poll1 + @" ],
+    ""news"": [ { ""id"": ""n1"", ""body"": ""New keys: the backpack opens with ` now.\nMute is N."", ""at"": ""14 Oct, 19:00"", ""author"": ""Rowan"" } ],
+    ""ballot"": null, ""order"": [ { ""kind"": ""news"", ""id"": ""n1"" }, { ""kind"": ""something-new"", ""id"": ""x"" }, { ""kind"": ""poll"", ""id"": ""p1"" } ], ""button"": ""Vote first, it takes ten seconds"" } }";
+
         public const string Voted = @"{ ""id"": ""p1"", ""question"": ""What's the next boss?"", ""multiple"": false, ""mustVote"": true, ""open"": true, ""mine"": [""o2""],
   ""options"": [ { ""id"": ""o1"", ""text"": ""The Warden"" }, { ""id"": ""o2"", ""text"": ""A Lava Golem"" }, { ""id"": ""o3"", ""text"": ""Create: a contraption race"" }, { ""id"": ""dont-mind"", ""text"": ""I don't mind"" } ],
   ""results"": { ""voters"": 5, ""winners"": [""A Lava Golem""], ""counts"": [

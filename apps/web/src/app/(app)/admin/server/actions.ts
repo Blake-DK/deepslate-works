@@ -189,14 +189,14 @@ export async function backupAction(formData: FormData) {
   redirect(to("backup"));
 }
 
-const announcement = z.object({ body: z.string().trim().min(1).max(600), pinned: z.boolean(), say: z.boolean(), tag: z.boolean() });
+const announcement = z.object({ body: z.string().trim().min(1).max(600), pinned: z.boolean(), say: z.boolean(), tag: z.boolean(), mustRead: z.boolean() });
 
 export async function announceAction(formData: FormData) {
   const to = place(formData, "news");
   const admin = await requireAdmin();
-  const parsed = announcement.safeParse({ body: formData.get("body"), pinned: formData.get("pinned") === "on", say: formData.get("say") === "on", tag: formData.get("tag") === "on" });
+  const parsed = announcement.safeParse({ body: formData.get("body"), pinned: formData.get("pinned") === "on", say: formData.get("say") === "on", tag: formData.get("tag") === "on", mustRead: formData.get("mustRead") === "on" });
   if (!parsed.success) redirect(to("error", "Write something first (600 characters at most)."));
-  const { body, say, tag } = parsed.data;
+  const { body, say, tag, mustRead } = parsed.data;
   const dates = parseNewsDates(String(formData.get("pinnedUntil") ?? ""), String(formData.get("expiresAt") ?? ""), new Date());
   if (!dates.ok) redirect(to("error", dates.reason));
   const pinned = parsed.data.pinned || dates.pinnedUntil !== null; // a "pinned until" date pins it
@@ -207,9 +207,9 @@ export async function announceAction(formData: FormData) {
     if (!stored.ok) redirect(to("error", stored.reason));
     image = stored.file;
   }
-  const item = await db.announcement.create({ data: { body, pinned, pinnedUntil: dates.pinnedUntil, expiresAt: dates.expiresAt, authorId: admin.id, image } });
+  const item = await db.announcement.create({ data: { body, pinned, pinnedUntil: dates.pinnedUntil, expiresAt: dates.expiresAt, mustRead, authorId: admin.id, image } });
   // announcementId: the Discord feed reads the item itself (docs/21 §4 News); tag: its post tags @Minecraft (docs/53 D1)
-  await audit({ userId: admin.id, action: "announcement.create", params: { announcementId: item.id, pinned, say, tag, length: body.length, image: Boolean(image) }, result: "OK" });
+  await audit({ userId: admin.id, action: "announcement.create", params: { announcementId: item.id, pinned, say, tag, mustRead, length: body.length, image: Boolean(image) }, result: "OK" });
   for (const p of ["/", "/admin/news"]) revalidatePath(p);
   let said = "";
   if (say) {

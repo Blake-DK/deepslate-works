@@ -145,6 +145,12 @@ namespace DeepslateWorks
         public const string BallotNote = "The season's mod vote: tick the mods you want. It has a few questions, so it's on the site; it takes two minutes. Come back here when you've voted.";
         public const string BallotOpen = "Open the vote on the site", BallotDone = "I've voted";
         public const string BallotChecking = "Checking with the site...";
+        // 3.6.6 (Alex, 2026-10-14): a must-read news item, confirmed before Play like a must-vote poll
+        public const string ReadFirstHint = "There's news to read first. Press the button: the game starts once you've seen it.";
+        public const string ReadFirstButton = "Read the news first";
+        public const string ReadTitle = "Read this before you play";
+        public const string ReadNote = "Press Seen it once you've read it.";
+        public const string ReadButton = "Seen it", ReadTab = "News";
 
         // ---- the Update button (3.3.0, planner 2026-10-02) ---------------------------------------------------------
         public const string UpdatingTitle = "Updating";

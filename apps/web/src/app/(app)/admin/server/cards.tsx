@@ -483,16 +483,22 @@ export function AnnounceCard({ running }: { running: boolean }) {
             <label className="flex items-center gap-2">Hide from <Input name="expiresAt" type="datetime-local" className="h-8 w-auto text-sm" /></label>
             <label className="flex items-center gap-2"><Check type="checkbox" name="say" disabled={!running} /> Also say it in game</label>
             <label className="flex items-center gap-2"><Check type="checkbox" name="tag" defaultChecked /> Tag @Minecraft</label>
+            <label className="flex items-center gap-2"><Check type="checkbox" name="mustRead" /> Players must confirm they&apos;ve seen it</label>
             <Button type="submit" size="sm">Post</Button>
           </div>
-          <HowThisWorks>A picture may be PNG, JPEG or WebP, 3 MB at most. &quot;Also say it in game&quot; says the first line (200 characters) in chat. &quot;Tag @Minecraft&quot; pings everyone with the Minecraft role when it is posted in season-updates on Discord. Dates are UK time and optional: &quot;Pinned until&quot; pins it until then, &quot;Hide from&quot; takes it off the home page from then.</HowThisWorks>
+          <HowThisWorks>A picture may be PNG, JPEG or WebP, 3 MB at most. &quot;Also say it in game&quot; says the first line (200 characters) in chat. &quot;Tag @Minecraft&quot; pings everyone with the Minecraft role when it is posted in season-updates on Discord. Dates are UK time and optional: &quot;Pinned until&quot; pins it until then, &quot;Hide from&quot; takes it off the home page from then. &quot;Players must confirm&quot;: Deepslate Works shows it to every member before Play, and the game starts once they press &quot;Seen it&quot; (app 3.6.6 and later). It stops being asked once it is hidden; the list below says who has confirmed it.</HowThisWorks>
         </form>
       </CardContent>
     </Card>
   );
 }
 
-export function AnnouncementsCard({ news }: { news: News }) {
+/** A must-read item's line on Admin → News: who has pressed "Seen it" in the app. */
+export function seenLine(names: string[]): string {
+  return names.length === 0 ? "Nobody has confirmed it yet." : `Seen by ${names.length}: ${names.join(", ")}`;
+}
+
+export function AnnouncementsCard({ news, seen }: { news: News; seen?: Map<string, string[]> }) {
   return (
     <Card>
       <CardHeader><CardTitle>Announcements</CardTitle><CardDescription>{news.length ? "The home page shows the pinned ones and the newest three." : "Nothing posted yet."}</CardDescription></CardHeader>
@@ -506,7 +512,9 @@ export function AnnouncementsCard({ news }: { news: News }) {
                 <p className="min-w-0 flex-1 whitespace-pre-line">
                   {n.pinned && <Badge tone="warn" className="mr-2">{n.pinnedUntil ? `Pinned until ${ukShort(n.pinnedUntil)}` : "Pinned"}</Badge>}
                   {n.expired ? <Badge className="mr-2">Hidden since {ukShort(n.expiresAt!)}</Badge> : n.expiresAt && <Badge className="mr-2">Hidden from {ukShort(n.expiresAt)}</Badge>}
+                  {n.mustRead && <Badge tone="warn" className="mr-2">Must confirm</Badge>}
                   {n.body}<span className="block text-xs text-muted-foreground">{n.author} · {timeAgo(n.createdAt)}</span>
+                  {n.mustRead && <span className="block text-xs text-muted-foreground" data-testid="news-seen">{seenLine(seen?.get(n.id) ?? [])}</span>}
                 </p>
                 <form action={announcementChangeAction.bind(null, "picture")} className="flex items-center gap-1">
                   <input type="hidden" name="id" value={n.id} />

@@ -74,6 +74,11 @@ Signing would then be one CI step (`azure/artifact-signing-action`, with a servi
   again. A missing line is added but not counted, because the game drops lines for keys no mod registers (Iris while
   its extra is off); the key counts once a later Play finds its line. The tick line names only keys that changed.
 - The Mods guide (`mods.json`, `extras.json` keys and howTo) says the new keys.
+- **Must-read news** (Alex, 2026-10-14), so players are told about the keys and say they have seen it: the home's
+  `votes.news` lists the must-read items this member has not confirmed and `votes.order` puts them first (kind
+  `news`). The app shows each one in the Vote tab (titled News when only news waits) with **Seen it**
+  (`SiteHome.Seen`, `POST /api/app/news/<id>/seen`); Play says "Read the news first" and starts once all are seen, the
+  same gate as a must-vote poll. A 404 (hidden or no longer must-read) counts as seen. docs/05 has the site's half.
 
 ## 3.6.5: a download from the site no longer fails behind the window's polls (2026-10-12)
 

@@ -269,7 +269,7 @@ describe("the horror trial on Ashmoon only (Alex, 2026-10-14): modpack/datapacks
   });
   it("both mods ship only with Season 1 (the test server), never to live, until Alex decides", async () => {
     const m = JSON.parse(await readFile(path.join(MODPACK, "mods.json"), "utf8")) as { mods: Array<{ slug: string; season?: string; adminOnly?: boolean }> };
-    for (const slug of ["arphex", "mutant-monsters", "puzzles-lib"]) expect(m.mods.find((x) => x.slug === slug)?.season).toBe("s1");
+    for (const slug of ["arphex", "mutant-monsters", "puzzles-lib", "nyfs-spiders"]) expect(m.mods.find((x) => x.slug === slug)?.season).toBe("s1");
   });
 });
 
@@ -289,5 +289,6 @@ describe("the horror trial kept on Ashmoon: ArPhEx's structures and its test-onl
     const toml = await readFile(path.join(MODPACK, "test-overlay/config/ArPhEx Configurations.toml"), "utf8");
     expect(toml).toContain('"Vanilla Replacement Mode" = 0.0');
     expect(toml).toContain('"Enable Tormentor Sky Hallucination" = false');
+    expect(toml).toContain('"Welcome message" = false'); // Alex, 2026-10-14: no wall of text in chat at every join
   });
 });

@@ -205,11 +205,19 @@ export const CHANGES: Change[] = [
     date: "2026-10-12",
     title: "Power and gear update is live",
     lines: [
-      "The quarry now needs real power: one small generator only crawls.",
+      "The quarry now needs real power: one small generator only crawls. When its storage is full it stops, and starts again by itself when there's room.",
       "Mekanism is in: generators, reactors and the MekaSuit power armour. Press Play to update.",
       "Its ores aren't in the old ground after all: the main world was left as it was. They're on the Moon, a new world of its own where everything can be mined, and osmium is found only there.",
       "To get there, build a smooth basalt frame like a nether portal and light it with an eye of ender. There's one at spawn to start with.",
       "Gravity is low, the night never ends and monsters are about. Below y 0 the air is poisonous: craft a gas mask first (leather, 2 string, charcoal and a glass pane).",
+    ],
+  },
+  {
+    // docs/59: two flower mods, straight into the pack. Set `live: true` only after the live check (the rule above).
+    id: "2026-10-14-flowers",
+    date: "2026-10-14",
+    lines: [
+      "Two new mods for gardens: Serene Shrubbery (flowers in lots of colours; plant two or three side by side and new colours appear over time) and Wilder Flowers (wildflowers, clover patches and flower garlands you can wear or hang up). The wildflowers grow in land nobody has explored yet. Press Play to update.",
     ],
   },
   {

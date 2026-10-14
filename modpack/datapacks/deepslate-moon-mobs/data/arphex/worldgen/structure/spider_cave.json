@@ -1,0 +1,25 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "arphex"
+    }
+  ],
+  "type": "minecraft:jigsaw",
+  "start_pool": "arphex:spider_cave",
+  "size": 1,
+  "max_distance_from_center": 64,
+  "spawn_overrides": {},
+  "step": "strongholds",
+  "terrain_adaptation": "none",
+  "start_height": {
+    "absolute": 0
+  },
+  "project_start_to_heightmap": "MOTION_BLOCKING",
+  "biomes": [
+    "deepslate:moon_plains",
+    "deepslate:moon_highlands",
+    "deepslate:moon_craters"
+  ],
+  "use_expansion_hack": false
+}

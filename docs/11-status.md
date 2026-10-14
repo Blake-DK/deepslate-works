@@ -107,6 +107,38 @@ and the counts Met, Private and Refused.
 - **Live:** waits for Alex's go (docs/59 "Live"). `dev` also carries held work (seasons, the Moon, Mekanism), so a
   whole `dev` → `main` PR is a question for Alex first.
 
+## The Moon finished on `dev`: docs/55 M5, M6 and the sample Frontier (2026-10-14; PRs #60, #61, #62 merged into `dev`, `7ade5933`; not on `main`)
+
+- **#60, the sample Frontier no longer ships** (Alex: nothing of a test season goes to live): `index.json`'s
+  `frontiers` is empty (it was `["sample"]`, on `main` too). Build drops `deepslate-frontier-sample` and its map from
+  `dist/`. **Live's own `dist/server/` has both today** (`datapacks/deepslate-frontier-sample`,
+  `config/bluemap/maps/frontier_sample.conf`), so live's world most likely has the sample Frontier, and Sync never
+  deletes. After the deploy, on live: `datapack disable "file/deepslate-frontier-sample"` in Admin → Console and a
+  restart; delete `config/bluemap/maps/frontier_sample.conf` in AMP's file manager. Not checked on live (nothing
+  touched it).
+- **Season 1 stays a commit (Alex, 2026-10-14):** asked whether "is Season 1 on this server" should move from
+  `index.json`'s `ship` to a switch on the Seasons page, Alex kept it in the repo. Season 1's mods (`season: "s1"`) and
+  files go to `main` with `"ship": []`, so live ships none of them; turning it on is a one-line commit and a PR.
+- **#61, M5's map:** `modpack/server/config/bluemap/maps/moon.conf` (id `moon`, `world`, `deepslate:moon`, "The
+  Moon"), every key checked against BlueMap 5.7's own template in its jar (`config/maps/map.conf`). BlueMap does not
+  run on the test server (`accept-download: false`), so the map is first seen on live.
+- **#62, M6:** Server Sided Portals is the Moon's card under Getting around, for everyone (how to build and light the
+  portal, low gravity, endless night, beds explode, the gas and the gas mask's recipe); Mekanism's `howTo` says its
+  ores are only on the Moon; docs/53 D3 post 2 rewritten for the Moon, still without `live`. Lint warns once
+  (server-only mod in the guide's game part), on purpose.
+- **M5's pre-generation, on test (2026-10-14 11:47 to 12:17 UTC):** Build server and Sync first (the test server on
+  `7ade5933`'s pack), the two leftover armour stands inside the square killed, then Admin → Server → Pre-generation's
+  route: `deepslate:moon`, centre 0 0, radius 3000, generate only. Chunky: **142,129 chunks in 28 min 35 s**, about 85
+  a second; TPS 20 in all 31 minute readings, the Moon's level at up to 45 ms a tick while it generated; **one stall,
+  5.1 s at 12:12:18** (87 %); no ERROR or FATAL; sleep back on afterwards.
+- **For the copy to live (Alex, AMP host, live stopped, after the backup):** compare `seed` on test and live first
+  (docs/51 §6 says they are the same world's). Copy from the test instance's `world/dimensions/deepslate/moon/` only
+  the region files of the square, `r.X.Z.mca` with X and Z from -6 to 5 (144 each), in `region/`, `entities/` and
+  `poi/`. **Not the whole folder:** outside the square it holds test leftovers: the ore boxes filled with bedrock at x
+  15,000 to 15,263 and 15,200 to 15,263 (z -15,000), Chunky squares at 4000 4000 and -4000 -4000, and the portal at
+  x 8501 to 8504 z 8500. Inside the square: a shaft at 106 to 108, 87 if anyone ran the commands given in chat on
+  2026-10-13 (look before copying).
+
 ## Gas and masks: docs/55 M7, M8 (2026-10-14, PR #59 merged into `dev` as `08487c08`; on test; not on `main`)
 
 - **Built:** the gas (`deepslate:gas/*` in `deepslate-moon`, once a second from `#minecraft:load`; +1 exposure a

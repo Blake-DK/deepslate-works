@@ -268,7 +268,9 @@ namespace DeepslateWorks.Tests
             // 3.4.1: the landscape window at its own size and at its smallest (docs/21 §11)
             "28-window.png", "29-min-size-900x560.png",
             // 3.5.0: the Settings tab at its own size, at its smallest, and with the game open (docs/30 §8)
-            "30-settings.png", "31-settings-min-900x560.png", "32-settings-game-open.png" };
+            "30-settings.png", "31-settings-min-900x560.png", "32-settings-game-open.png",
+            // 3.6.6: the first-time guide over its tabs and the keys page, then must-read news before Play
+            "33-tour-welcome.png", "33b-tour-play.png", "33c-tour-extras.png", "33d-tour-settings.png", "33e-tour-keys.png", "34-news-to-confirm.png" };
 
         [WindowsFact] public void With_the_extras_list_it_draws_the_Extras_tab_too()
         {

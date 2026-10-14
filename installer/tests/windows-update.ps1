@@ -42,7 +42,7 @@ if ($SiteExe) { $homes += Join-Path $roaming "LocalAppData\DeepslateWorks" }   #
 foreach ($h in $homes) {
   [void][IO.Directory]::CreateDirectory($h)
   [IO.File]::WriteAllText((Join-Path $h "consent.json"), (ConvertTo-Json -InputObject ([ordered]@{ version = 1; steps = $steps }) -Depth 4))
-  [IO.File]::WriteAllText((Join-Path $h "settings.json"), '{"version":2,"websitePlay":"wait"}')
+  [IO.File]::WriteAllText((Join-Path $h "settings.json"), '{"version":2,"websitePlay":"wait","tourSeen":"3.6.6"}')
 }
 Write-Host ("old exe sha256 " + (Get-FileHash $Old -Algorithm SHA256).Hash.ToLower())
 $homeExe = Join-Path $appHome "DeepslateWorks.exe"

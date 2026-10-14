@@ -25,7 +25,7 @@ function appRequest(p: string, authorization: string | null, method = "GET") {
 }
 const passes = (res: Response) => res.headers.get("x-middleware-next") === "1";
 
-/** Every route under src/app/api/app, as a path an app would ask for ([file] filled in with a head's file name). */
+/** Every route under src/app/api/app, as a path an app would ask for ([file] filled in with a head's file name, [id] with a news id). */
 function appRoutes(): string[] {
   const root = fileURLToPath(new URL("../src/app/api/app", import.meta.url));
   const out: string[] = [];
@@ -36,7 +36,7 @@ function appRoutes(): string[] {
     }
   };
   walk(root);
-  return out.map((p) => p.replace(/\/$/, "").replace("[file]", "0123456789abcdef0123456789abcdef.png")).sort();
+  return out.map((p) => p.replace(/\/$/, "").replace("[file]", "0123456789abcdef0123456789abcdef.png").replace("[id]", "cmnews0000000000000000000")).sort();
 }
 
 describe("middleware: the launcher's routes", () => {
@@ -46,7 +46,7 @@ describe("middleware: the launcher's routes", () => {
 
   it("lets an app's request with its token through to every route under /api/app", () => {
     for (const p of appRoutes()) {
-      const res = run(appRequest(p, TOKEN, p.endsWith("/wake") || p.endsWith("/start") ? "POST" : "GET"));
+      const res = run(appRequest(p, TOKEN, p.endsWith("/wake") || p.endsWith("/start") || p.endsWith("/seen") ? "POST" : "GET"));
       expect({ path: p, passes: passes(res), status: res.status }).toEqual({ path: p, passes: true, status: 200 });
     }
   });

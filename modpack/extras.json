@@ -21,12 +21,8 @@
           "does": "Shaders on or off"
         },
         {
-          "key": "O",
-          "does": "Pick a shader pack"
-        },
-        {
-          "key": "R",
-          "does": "Reload shaders"
+          "key": "(unbound)",
+          "does": "Pick a shader pack, reload shaders: R and O are for guns in this pack"
         }
       ]
     },

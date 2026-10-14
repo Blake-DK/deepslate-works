@@ -46,6 +46,12 @@ namespace DeepslateWorks
             Change(path, j => j["websitePlay"] = value);
         }
 
+        // ---- 3.6.6: the first-time guide (Tour.cs) -----------------------------------------------------------------------
+        /// <summary>The version of the tour this PC has finished; null when never.</summary>
+        public static string TourSeen(string path = null) => J.Str(Read(path), "tourSeen");
+
+        public static void SetTourSeen(string version, string path = null) => Change(path, j => j["tourSeen"] = version);
+
         // ---- 3.5.0: memory -----------------------------------------------------------------------------------------------
         /// <summary>The memory chosen on the Settings tab in whole GB; null for automatic (absent, null, or not a whole
         /// number from 1 to 64).</summary>

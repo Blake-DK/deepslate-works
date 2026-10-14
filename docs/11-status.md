@@ -26,6 +26,43 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## App 3.6.6: the pack's keys, must-read news, the first-time guide (2026-10-14, on `dev`, not on `main`)
+
+- **Keys:** every mod's default key was read from the jars; where two shared one, the app now sets the pack's key once
+  per PC on Play (`Engine.KeyDefaults`, installed.json `keysSet`): backpack on `, mute on N, and no key for Iris reload
+  shaders and shader menu, TaCZ melee and zoom, voice groups and hide icons, Curios, backpack upgrades, Xaero's
+  waypoint list and bigger minimap. A key the player changed is kept. The full table is in docs/07 "3.6.6".
+- **Must-read news:** Admin → News "Players must confirm they've seen it"; the app asks for "Seen it" before Play
+  (migration 0036, `AnnouncementSeen`). docs/05.
+- **First-time guide:** a tour of the app's tabs, ending on the new keys ("Got it"), once per PC (settings.json
+  `tourSeen`), Play waiting for it. docs/07.
+- Checked: typecheck, lint, tests; the installer workflow on `dev` (Windows tests) passed for the keys and the news.
+  Not yet seen on a real PC or in game. The change log entry `2026-10-14-pack-keys` waits for `live`.
+
+## Vanishmod in, admins only (2026-10-14, on `dev`, not on `main`)
+
+- **Vanishmod** (Alex): `vanishmod` 1.1.21 (`G52aWgtY`), server only (Modrinth: client unsupported; the jar registers
+  no network channels), `adminOnly`, category `server`, no dependencies. Lock spliced (the new entry only). Pack
+  `0.1.0+43f7470a`, 79 files on live, 88 with s1; nothing new on a PC. Settings at the mod's defaults (no file in the
+  repo): `/vanish` or `/v` needs operator level 2, fake "left the game" / "joined the game" to the other players,
+  hidden from the tab list, `/list`, the server-list ping and the world, and seen as invisible on the server, so
+  BlueMap (`hide-invisible`, default true) leaves the marker off. Nobody gets op through the app (`ops.json` by hand).
+- **What still shows a vanished admin** (read from the sources, not tried on a server yet): the console prints no
+  "left the game" on `/vanish`, so api's online list, the site and the Discord bot keep the admin online until the
+  next `list` (api asks it only when AMP's list and the console's differ, or on a resync); a real join or leave while
+  vanished is in the console as usual, so the bot posts it and the site counts it; chat is still in the console and
+  goes to the Discord feed; Simple Voice Chat on NeoForge sees everyone (`canSee` is always true), so the admin stays
+  in its player lists and proximity voice is heard. Xaero's (on PCs only) shows only players the server sends, so
+  nothing there.
+
+## Gun balance: docs/61 (2026-10-14, planned, nothing built)
+
+Players told Alex the guns are too strong. The review (docs/61 §1): TaCZ bullets skip the hit cooldown, so the AK-47
+does 90 a second against a netherite sword's 13, every gun is iron-cheap, and `tacz-server.toml` is at its defaults.
+Alex's decisions: `DamageBaseMultiplier = 0.35`; gun tiers (tier 2 needs steel, tier 3 netherite and refined
+obsidian too); ammo crafts halved; Create Big Cannons' `entity_damage` halved for every projectile. Test first, Alex
+tries it, then live after his yes. docs/61 replaces docs/53's line that TaCZ guns need no change.
+
 ## Macaw's Holidays in; the Moon's gas from y 30 (2026-10-14, on `dev`, not on `main`)
 
 - **Macaw's Holidays** (Alex): on, not suggested, Building and decoration, 1.1.2 (`2mO9Xhpt`), no dependencies, all
@@ -128,6 +165,50 @@ and the counts Met, Private and Refused.
 - **Left on test:** the 635 chunks at 23760 23980; Chunky's task stopped; no force-loads; gamerules unchanged.
 - **Live:** waits for Alex's go (docs/59 "Live"). `dev` also carries held work (seasons, the Moon, Mekanism), so a
   whole `dev` → `main` PR is a question for Alex first.
+
+## Horror mobs on Ashmoon only, on trial on the test server (2026-10-14, PRs #71, #72 on `dev`; not on `main`)
+
+- **The Moon is called Ashmoon** (Alex, 2026-10-14) in everything players read: the guide, post 2 (already posted with
+  "the Moon"; the bot never edits a posted entry), the gas mask, the map, the site's labels. The id stays
+  `deepslate:moon`. On `dev`, `af114ee8`; live gets it with the next `dev` → `main` PR.
+- **Alex: "some mobs that are horror like for the moon only; try them both out".** Read on Modrinth and in the jars:
+  Zombie Nightmare Expansions and Luminous Monsters are dropped (their files tagged NeoForge 1.21.1 are builds for
+  1.20.1: `mods.toml`, `minecraft [1.20.1]`); the stalker mods follow a player anywhere. Tried: **Mutant Monsters**
+  21.1.1 (`dauEcrnZ`, with **Puzzles Lib** 21.1.62 `1TmfTuyw`) and **ArPhEx** 5.0.2 (`jawvD7YZ`, with GeckoLib).
+- **Test server only:** all three are `season: "s1"` (the switch that ships to the test server, `SEASONS_SHIP=s1`,
+  not to live, `"ship": []`). Live's pack stays `0.1.0+68650608`, 78 files; the test pack has 87. Lock entries spliced
+  from a full Lock run. When Alex keeps one, it leaves Season 1 (and GeckoLib with ArPhEx).
+- **Ashmoon only, `modpack/datapacks/deepslate-moon-mobs`:** Mutant Monsters adds each mutant where its ordinary mob
+  spawns (its code) except in its four `without_mutant_*_spawns` tags, which hold vanilla's 53 overworld biomes and
+  every Nether and End biome; 5 % of the creeper's weight each by its config. ArPhEx's 59 spawn rules and five of its
+  structures (#72) are replaced by ones for Ashmoon's biomes, with a `mod_loaded` condition. ArPhEx's config on test
+  only (`modpack/test-overlay`): vanilla replacement off (it turned 1 in 10 ordinary mobs anywhere into its own),
+  the full-moon sky scare off. Its random spawn system only uses non-vanilla overworld biomes, Ashmoon's here. Its own
+  dimensions (`arphex:the_crawling`, `the_webrooms`) load; its structures appear beyond Ashmoon's pre-generated square.
+- **#72 (structures):** five ArPhEx structures that would generate in the main world (spider cave, ant hill, termite
+  hill, the boss altar, the crawling castle) now generate on Ashmoon only; its test config has vanilla replacement and
+  the full-moon sky scare off. Seen after the 17:59 start: `locate structure` finds none of the five in the main world
+  and each on Ashmoon, 3,300 to 4,600 blocks out (beyond the square pre-generated without ArPhEx).
+- **#73:** Nyf's Spiders 3.0.2 (`B2RgTf4a`, s1, recommended by ArPhEx's join message; every spider climbs walls and
+  ceilings, main world included) and ArPhEx's welcome message off. **#74 (Alex: more mobs on the moon):** Ashmoon's
+  night monsters in groups of 4 to 6 (its datapack, so live too with the next deploy); on test, ArPhEx's two spawn
+  rates at 2 (5 default) and the mutants at 0.25 of the creeper's weight (0.05). The mob cap (ServerCore, 70 monsters)
+  is the same for every world and stays. Seen after the 18:40 start: no FATAL, Nyf's Spiders loaded, the files on the
+  server read back with those values.
+- The `.git/config` gained another session's worktree upstream at 17:57 (reported to Alex); it was gone again by
+  18:20, the hooks and the credential helper unchanged throughout.
+- **Seen on test (#71, start at 17:48 UTC):** no FATAL, the usual Curios ERROR only; both mods and Puzzles Lib
+  loaded; `deepslate-moon-mobs` and Mutant Monsters' own `biome_modifications` pack loaded; 13,565 recipes.
+  **Not seen yet, needs a player on Ashmoon:** the mobs themselves, and that none come in the main world.
+
+## The first portal on live (Alex, 2026-10-14)
+
+- Built by Alex near spawn at -444 74 587: a smooth basalt frame **lit with an eye of ender**, through to the Moon and
+  back. The first time the igniter was seen working (docs/55 M4); on test the frame had been filled by command. Post 2
+  now gives its place and how to build one.
+- Live's log since the 14:48 start: the Moon at 20 TPS, about 0.01 ms a tick; the only ERRORs are two "Tried to load
+  unrecognized recipe: quarryplus:adv_quarry removed now." at a join (a recipe book that still had the removed Adv.
+  Quarry recipe; harmless). The log does not show portal use.
 
 ## Maintenance: admins have the tick by default, and the game chat is told (2026-10-14, PRs #67 and #68 on `dev`; not on `main`)
 

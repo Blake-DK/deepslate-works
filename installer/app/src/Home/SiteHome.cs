@@ -31,10 +31,13 @@ namespace DeepslateWorks
     }
     public sealed class BallotInfo { public string Id, Title, Url; }
     public sealed class NewsInfo { public string Body, At, Author, Url; }
+    /// <summary>3.6.6 (Alex, 2026-10-14): a news item every member confirms before Play ("Seen it").</summary>
+    public sealed class ReadInfo { public string Id, Body, At, Author; }
     /// <summary>3.4.0 (docs/21 §7): a player in the world, with the UUID whose head the site serves (null: not known).</summary>
     public sealed class OnlinePlayer { public string Name, Uuid; }
-    /// <summary>One thing to answer before Play, in the order the site gives (oldest first): a poll, or the mod ballot.</summary>
-    public sealed class VoteItem { public PollInfo Poll; public BallotInfo Ballot; public string Id => Poll?.Id ?? Ballot?.Id; }
+    /// <summary>One thing to answer before Play, in the order the site gives (oldest first): a poll, or the mod ballot; 3.6.6:
+    /// or a must-read news item, which the site puts first.</summary>
+    public sealed class VoteItem { public PollInfo Poll; public BallotInfo Ballot; public ReadInfo Read; public string Id => Poll?.Id ?? Ballot?.Id ?? Read?.Id; }
 
     /// <summary>What the Play tab shows (planner 2026-10-02): GET /api/app/home, every 10 s while the window is open.</summary>
     public sealed class HomeInfo
@@ -63,6 +66,7 @@ namespace DeepslateWorks
         public const string HomePath = "/api/app/home", StartPath = "/api/app/start";
         public static string HomeUrl => Env.PortalUrl + HomePath;
         public static string VoteUrl(string pollId) => Env.PortalUrl + "/api/polls/" + Uri.EscapeDataString(pollId ?? "") + "/vote";
+        public static string SeenUrl(string newsId) => Env.PortalUrl + "/api/app/news/" + Uri.EscapeDataString(newsId ?? "") + "/seen";
 
         public static HomeInfo Parse(object j)
         {
@@ -87,10 +91,17 @@ namespace DeepslateWorks
                 var polls = J.Arr(v, "polls").Select(ParsePoll).Where(p => p != null).ToDictionary(p => p.Id);
                 var b = J.Obj(v, "ballot");
                 var ballot = b == null ? null : new BallotInfo { Id = J.Str(b, "id"), Title = J.Str(b, "title"), Url = J.Str(b, "url") };
+                var reads = new Dictionary<string, ReadInfo>();
+                foreach (var r in J.Arr(v, "news"))
+                {
+                    var rid = J.Str(r, "id");
+                    if (!string.IsNullOrEmpty(rid) && !string.IsNullOrWhiteSpace(J.Str(r, "body"))) reads[rid] = new ReadInfo { Id = rid, Body = J.Str(r, "body"), At = J.Str(r, "at"), Author = J.Str(r, "author") };
+                }
                 foreach (var o in J.Arr(v, "order"))
                 {
                     var id = J.Str(o, "id");
-                    if (J.Str(o, "kind") == "ballot" && ballot != null && ballot.Id == id) h.Votes.Add(new VoteItem { Ballot = ballot });
+                    if (J.Str(o, "kind") == "news") { if (id != null && reads.TryGetValue(id, out var r)) h.Votes.Add(new VoteItem { Read = r }); }
+                    else if (J.Str(o, "kind") == "ballot" && ballot != null && ballot.Id == id) h.Votes.Add(new VoteItem { Ballot = ballot });
                     else if (id != null && polls.TryGetValue(id, out var p)) h.Votes.Add(new VoteItem { Poll = p });
                 }
             }
@@ -225,6 +236,8 @@ namespace DeepslateWorks
 
         public static string PickNote(PollInfo p) => (p.Multiple ? "Pick as many as you like." : "Pick one.") + (string.IsNullOrEmpty(p.Closes) ? "" : " Open until " + p.Closes + ".") + " You can change your vote on the site until it closes.";
         public static string StepLine(int index, int count) => count > 1 ? string.Format("Vote {0} of {1}", index + 1, count) : "Before you play";
+        /// <summary>3.6.6: only news to confirm before Play, no vote: the Play button and its hint say so.</summary>
+        public static bool OnlyNews(IEnumerable<VoteItem> pending) => pending.Any() && pending.All(v => v.Read != null);
 
         // ---- the calls ----------------------------------------------------------------------------------------------
 
@@ -303,6 +316,13 @@ namespace DeepslateWorks
                 case "unreachable": return new ServerInfo();
                 default: return new ServerInfo { State = state, Line = state, Label = state, Tone = "neutral" };
             }
+        }
+
+        /// <summary>3.6.6: "Seen it" on a must-read news item. A refusal throws HttpError (its body says why).</summary>
+        public static void Seen(string newsId)
+        {
+            EnsureToken();
+            Http.PostJson(SeenUrl(newsId), J.O(), 20);
         }
 
         /// <summary>The vote; the poll comes back with the results. A refusal throws HttpError (its body says why).</summary>

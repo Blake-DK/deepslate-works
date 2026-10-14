@@ -209,6 +209,102 @@ namespace DeepslateWorks
             return "Chat links switched on (they were off in the game's settings)";
         }
 
+        // ---- the pack's keys (Alex, 2026-10-14; 3.6.6) ------------------------------------------------------------------
+        // Several mods ship the same default key, so one press did two things (R reloaded a gun and the shaders, M opened
+        // the map and muted the microphone, C crawled and ran the backpack's upgrades). The pack moves the backpack to `
+        // (the key left of 1; no mod uses it) and takes the key away from the less used half of each clash. Names and mod
+        // defaults read from the jars' bytecode (docs/07 "3.6.6"); the line in options.txt is key_<name>:<key>, NeoForge
+        // adding ":<MODIFIER>" only for a key with one.
+        // Each key is set once per PC, remembered in installed.json's keysSet: the mod's own default is changed, any other
+        // key (the player's choice, or ours) is kept and counts as done, and after that the line is never touched again.
+        // A missing line is added but not counted: the game drops lines for keys no mod registers (Iris while its extra is
+        // off), so the key is only done once a later Play finds the line there.
+        public sealed class KeyDefault
+        {
+            public string Name, Mod, Ours, Words;   // Words: what the run's tick line says
+        }
+
+        public const string NoKey = "key.keyboard.unknown";
+
+        static KeyDefault Key(string name, string mod, string ours, string words)
+            => new KeyDefault { Name = name, Mod = "key.keyboard." + mod, Ours = ours == null ? NoKey : "key.keyboard." + ours, Words = words };
+
+        public static readonly KeyDefault[] KeyDefaults =
+        {
+            Key("key.sophisticatedbackpacks.open_backpack", "b", "grave.accent", "backpack on `"),   // B: Xaero's new waypoint
+            Key("key.sophisticatedbackpacks.inventory_interaction", "c", null, "no backpack upgrades key"),   // C: TaCZ crawl
+            Key("iris.keybind.reload", "r", null, "no reload shaders key"),                             // R: TaCZ reload
+            Key("iris.keybind.shaderPackSelection", "o", null, "no shader pack key"),                   // O: TaCZ interact
+            Key("key.tacz.melee.desc", "v", null, "no gun melee key"),                                  // V: voice chat menu
+            Key("key.tacz.zoom.desc", "v", null, "no scope zoom key"),
+            Key("key.mute_microphone", "m", "n", "mute on N"),                                          // M: Xaero's world map
+            Key("key.disable_voice_chat", "n", null, "no voice chat off key"),                          // N: mute, above
+            Key("key.voice_chat_group", "g", null, "no voice groups key"),                              // G: TaCZ fire mode
+            Key("key.hide_icons", "h", null, "no hide voice icons key"),                                // H: TaCZ inspect
+            Key("key.curios.open.desc", "g", null, "no Curios key"),                                    // G: TaCZ fire mode
+            Key("gui.xaero_waypoints_key", "u", null, "no waypoint list key"),                          // U: Corpse's death history
+            Key("gui.xaero_enlarge_map", "z", null, "no bigger minimap key"),                           // Z: TaCZ attachments
+        };
+
+        public sealed class KeysResult
+        {
+            public List<string> Done = new List<string>();     // installed.json's keysSet
+            public List<string> Changed = new List<string>();  // the Words of the keys changed this time
+            public List<string> Added = new List<string>();    // names of the lines added
+        }
+
+        public static KeysResult SetKeyDefaults(string path, IEnumerable<string> doneBefore)
+        {
+            var r = new KeysResult();
+            var done = new HashSet<string>(doneBefore ?? new string[0], StringComparer.Ordinal);
+            r.Done.AddRange(done);
+            if (!File.Exists(path)) return r;
+            var text = File.ReadAllText(path);
+            var nw = text;
+            var nl = text.Contains("\r\n") ? "\r\n" : "\n";
+            foreach (var k in KeyDefaults)
+            {
+                if (done.Contains(k.Name)) continue;
+                var line = new Regex(@"(?m)^key_" + Regex.Escape(k.Name) + @":([^\r\n]*)(?=\r?$)");
+                var m = line.Match(nw);
+                if (!m.Success)
+                {
+                    if (nw.Length > 0 && !nw.EndsWith("\n")) nw += nl;
+                    nw += "key_" + k.Name + ":" + k.Ours + nl;
+                    r.Added.Add(k.Name);
+                    continue;
+                }
+                if (m.Groups[1].Value == k.Mod)
+                {
+                    nw = line.Replace(nw, "key_" + k.Name + ":" + k.Ours, 1);
+                    r.Changed.Add(k.Words);
+                }
+                done.Add(k.Name);
+                r.Done.Add(k.Name);
+            }
+            if (nw != text)
+            {
+                var tmp = path + ".new";
+                WriteText(tmp, nw);
+                MoveOver(tmp, path);
+            }
+            return r;
+        }
+
+        /// <summary>The engine's step: SetKeyDefaults, ticked when a key the player used changed. Returns installed.json's
+        /// keysSet (what it was on a failure, so the next Play tries again).</summary>
+        static List<string> KeyDefaultsStep(Run run, string options, List<string> doneBefore)
+        {
+            try
+            {
+                var r = SetKeyDefaults(options, doneBefore);
+                if (r.Added.Count > 0) Log.Line("keys: added to options.txt: " + string.Join(", ", r.Added));
+                if (r.Changed.Count > 0) run.Tick("Keys set for the pack: " + string.Join(", ", r.Changed));
+                return r.Done;
+            }
+            catch (Exception e) { run.Note("The pack's keys were left as they are: " + e.Message); return doneBefore; }
+        }
+
         // ---- the server list (servers.dat: uncompressed NBT, one entry) ---------------------------------------------
         public static byte[] ServersDat(string name, string ip)
         {

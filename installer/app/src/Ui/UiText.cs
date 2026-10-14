@@ -145,6 +145,59 @@ namespace DeepslateWorks
         public const string BallotNote = "The season's mod vote: tick the mods you want. It has a few questions, so it's on the site; it takes two minutes. Come back here when you've voted.";
         public const string BallotOpen = "Open the vote on the site", BallotDone = "I've voted";
         public const string BallotChecking = "Checking with the site...";
+        // 3.6.6 (Alex, 2026-10-14): a must-read news item, confirmed before Play like a must-vote poll
+        public const string ReadFirstHint = "There's news to read first. Press the button: the game starts once you've seen it.";
+        public const string ReadFirstButton = "Read the news first";
+        public const string ReadTitle = "Read this before you play";
+        public const string ReadNote = "Press Seen it once you've read it.";
+        public const string ReadButton = "Seen it", ReadTab = "News";
+
+        // ---- 3.6.6 (Alex, 2026-10-14): the first-time guide (Tour.cs) ---------------------------------------------
+        public const string TourWelcomeTitle = "Welcome to Deepslate Works";
+        public static readonly string[] TourWelcome = { "This window is where you play. Here's a quick look round: it takes about a minute." };
+        public static readonly string[] TourPlay =
+        {
+            "Press Play: the app gets any new mods, wakes the server if it's asleep and starts Minecraft for you.",
+            "On the left: whether the server is up, who's playing and the latest news. Click the news to read it on the site.",
+            "Update gets new mods without starting the game.",
+        };
+        public static readonly string[] TourVotes =
+        {
+            "When there's something to vote on, a Vote tab appears next to Play with a number on it.",
+            "Some votes have to be answered before you can play. It takes ten seconds, and the game starts straight after.",
+        };
+        public static readonly string[] TourExtras =
+        {
+            "Extras are just for your PC: shaders, nicer animations, falling leaves, better sound. Nobody else needs them.",
+            "Switch one on and press Apply. Shaders need a good graphics card: on a laptop, try Light shaders first.",
+        };
+        public static readonly string[] TourSettings =
+        {
+            "Memory: leave it on automatic unless Alex tells you otherwise.",
+            "Also here: the prisoner villagers, what the Play button on the website does, and graphics and sound. Press Save when you're done.",
+        };
+        public static readonly string[] TourLog =
+        {
+            "If something goes wrong, press Send to Alex. It sends what happened so it can be fixed. Your username, file paths and chat are taken out first.",
+        };
+        public static readonly string[] TourTest =
+        {
+            "The test server, for trying new things before they go live. Playing here never touches your live game.",
+        };
+        public const string TourKeysTitle = "New keys";
+        public static readonly string[] TourKeys =
+        {
+            "Some keys did two things at once. Now each does one:",
+            "` (top left, under Esc): open your backpack",
+            "N: mute your microphone. M is just the map now.",
+            "R reloads your gun, not the shaders too.",
+            "G, H, C and Z are for guns, and V is voice chat.",
+            "Gun melee and scope zoom have no key. Set one in Options \u2192 Controls if you want them.",
+            "If you'd already changed a key yourself, yours stays.",
+        };
+        public const string TourKeysButton = "Got it", TourBack = "Back", TourSkip = "Skip the tour";
+        public const string TourFirstButton = "Have a look round first";
+        public const string TourFirstHint = "A quick look round first: the game starts once you've finished it.";
 
         // ---- the Update button (3.3.0, planner 2026-10-02) ---------------------------------------------------------
         public const string UpdatingTitle = "Updating";

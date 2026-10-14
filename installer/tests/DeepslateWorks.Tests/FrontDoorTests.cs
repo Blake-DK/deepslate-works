@@ -86,6 +86,23 @@ namespace DeepslateWorks.Tests
             Assert.Equal("Pick one. Open until 4 Oct, 19:00. You can change your vote on the site until it closes.", SiteHome.PickNote(p));
         }
 
+        [Fact] public void Must_read_news_comes_first_and_keeps_Play_shut_until_seen()
+        {
+            var h = H(HomeSamples.NewsFirst);
+            Assert.Equal(new[] { "n1", "p1" }, h.Votes.Select(v => v.Id).ToArray());
+            Assert.True(SiteHome.BlocksPlay(h));
+            var r = h.Votes[0].Read;
+            Assert.Equal("Rowan", r.Author); Assert.Equal("14 Oct, 19:00", r.At);
+            Assert.Equal("New keys: the backpack opens with ` now.\nMute is N.", r.Body);
+            Assert.Null(h.Votes[0].Poll); Assert.Null(h.Votes[1].Read);
+            Assert.False(SiteHome.OnlyNews(h.Votes));
+            Assert.True(SiteHome.OnlyNews(h.Votes.Take(1)));
+            Assert.False(SiteHome.OnlyNews(new List<VoteItem>()));
+            Assert.EndsWith("/api/app/news/n1/seen", SiteHome.SeenUrl("n1"));
+            // an order entry without its news item is skipped, not shown empty
+            Assert.Equal(new[] { "p1" }, H(HomeSamples.NewsFirst.Replace("\"id\": \"n1\", \"body\"", "\"id\": \"n2\", \"body\"")).Votes.Select(v => v.Id).ToArray());
+        }
+
         [Fact] public void The_countdown_waits_for_the_vote_whatever_else_says_go()
         {
             Assert.Equal("wait", PlayStart.Decide(true, false, AppSettings.Countdown, false, false, false, false, false, votesPending: true).Do);

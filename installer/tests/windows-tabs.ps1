@@ -250,7 +250,7 @@ function New-Pc([string]$name, [string]$token) {
   $steps = [ordered]@{}; foreach ($s in @("signin", "launcher", "java", "neoforge", "mods", "profile", "shortcuts", "reports", "extras")) { $steps[$s] = [ordered]@{ answer = "allow"; level = 2; at = "2026-10-09T12:00:00" } }
   [IO.File]::WriteAllText((Join-Path $homeDir "consent.json"), (ConvertTo-Json -InputObject ([ordered]@{ version = 1; steps = $steps }) -Depth 4))
   [IO.File]::WriteAllText((Join-Path $homeDir "extras.json"), '{"version":2,"choices":{"leaves":true},"shader":"none","applied":{"mods":["leaves-1.0.jar"],"resourcepacks":[],"shaderpacks":[]},"seen":["leaves"],"downloaded":true,"queued":null,"lastApply":null,"installedAt":"2026-10-09T12:00:00"}')
-  [IO.File]::WriteAllText((Join-Path $homeDir "settings.json"), '{"version":2,"websitePlay":"countdown"}')
+  [IO.File]::WriteAllText((Join-Path $homeDir "settings.json"), '{"version":2,"websitePlay":"countdown","tourSeen":"3.6.6"}')
   return [pscustomobject]@{ Root = $root; Home = $homeDir; Live = $live; Test = (Join-Path $root ".minecraft-deepslate-works-test") }
 }
 function Open-App($pc, [switch]$AsLink) {
@@ -305,7 +305,7 @@ try {
   $live0 = Snap $pc.Live; Save-Snap $live0 "1-desktop-before-test-run-live.txt"
   $prof0 = Live-Profile $pc.Root
   # A change made in the Settings tab while the live run waits: render distance 14, not yet in either game
-  [IO.File]::WriteAllText((Join-Path $pc.Home "settings.json"), '{"version":2,"websitePlay":"countdown","pending":{"options":{"renderDistance":"14"},"villagers":false}}')
+  [IO.File]::WriteAllText((Join-Path $pc.Home "settings.json"), '{"version":2,"websitePlay":"countdown","tourSeen":"3.6.6","pending":{"options":{"renderDistance":"14"},"villagers":false}}')
   $test = Tab (Ui-Root) "TestTab"
   $pressed = Press (Play-Button $test)
   Check "Play test pressed" $pressed

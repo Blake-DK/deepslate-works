@@ -1,7 +1,7 @@
 import { bearer, userFromLauncherToken } from "@/server/launcher";
 import { getStatus } from "@/server/status";
 import { statusText } from "@/lib/server-status";
-import { getAnnouncements } from "@/server/announcements";
+import { getAnnouncements, unseenNews } from "@/server/announcements";
 import { newsLink } from "@/lib/news";
 import { forClient, pendingFor } from "@/server/polls";
 import { env } from "@/env";
@@ -18,6 +18,8 @@ export const dynamic = "force-dynamic";
 // Planner 2026-10-02, "the app as the front door": what Deepslate Works shows on its Play tab, asked every 10 s while
 // its window is open. The server in the site's words (anyone); with the app's sign-in also who's online, the latest
 // pinned news item, the must-vote polls this member has not answered (oldest first), and whether they may Start it.
+// App 3.6.6: must-read news items this member has not confirmed come first in `votes.order` (kind "news"); apps before
+// 3.6.6 skip an order entry they do not know, so they are not held by it.
 // Nothing else from the site is repeated in the app.
 export async function GET(req: Request) {
   const token = bearer(req);
@@ -34,7 +36,7 @@ export async function GET(req: Request) {
   if (!user) return Response.json({ signedIn: false, site, server }, { headers: { "cache-control": "no-store" } });
   // docs/57: at most once a minute, the test server's tester list against this site's (nothing waits for it)
   void checkTesters();
-  const [news, pending, season] = await Promise.all([getAnnouncements(0), pendingFor({ id: user.id, role: user.role }), getSeasonCurrent().then(lineFor).catch(() => null)]);
+  const [news, pending, season, unseen] = await Promise.all([getAnnouncements(0), pendingFor({ id: user.id, role: user.role }), getSeasonCurrent().then(lineFor).catch(() => null), unseenNews(user.id)]);
   const pinned = news.find((n) => n.pinned) ?? null;
   return Response.json(
     {
@@ -57,7 +59,8 @@ export async function GET(req: Request) {
       votes: {
         polls: pending.polls.map(forClient).map((p) => ({ ...p, options: p.options.map((o) => ({ ...o, imageUrl: o.imageUrl ? `${site}${o.imageUrl}` : null })) })),
         ballot: pending.ballot ? { ...pending.ballot, url: `${site}/pack?tab=vote` } : null,
-        order: pending.list.map((p) => ({ kind: p.kind, id: p.id })),
+        news: unseen.map((n) => ({ id: n.id, body: n.body, at: ukShort(n.createdAt), author: n.author })),
+        order: [...unseen.map((n) => ({ kind: "news", id: n.id })), ...pending.list.map((p) => ({ kind: p.kind, id: p.id }))],
         button: VOTE_FIRST_BUTTON,
       },
     },

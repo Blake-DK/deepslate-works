@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/session";
 import { getStatus } from "@/server/status";
-import { getAnnouncements } from "@/server/announcements";
+import { getAnnouncements, seenBy } from "@/server/announcements";
 import { db } from "@/server/db";
 import { asSectionQuery, pickTab, TabbedPage, type PageQuery } from "@/components/tabs";
 import { AnnounceCard, AnnouncementsCard, Flash } from "../server/cards";
@@ -22,13 +22,14 @@ export default async function NewsAdminPage({ searchParams }: { searchParams: Pa
   let body: React.ReactNode;
   if (tab === "news") {
     const [status, news] = await Promise.all([getStatus(), getAnnouncements(10, true)]);
+    const seen = await seenBy(news.filter((n) => n.mustRead).map((n) => n.id));
     body = (
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">News</h2>
         <Flash msg={typeof q.msg === "string" ? q.msg : undefined} detail={typeof q.detail === "string" ? q.detail : undefined} />
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <AnnounceCard running={status.server === "online"} />
-          <AnnouncementsCard news={news} />
+          <AnnouncementsCard news={news} seen={seen} />
         </div>
       </div>
     );

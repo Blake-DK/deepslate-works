@@ -89,6 +89,7 @@ model User {
   adminLogin   AdminLogin?
   oneTimeLogins OneTimeLogin[]
   pollAnswers  PollAnswer[]
+  newsSeen     AnnouncementSeen[]
 }
 
 /// Admin password sign-in (planner, 2026-10-01): username + password (argon2id) + authenticator code. Admins only.
@@ -291,8 +292,22 @@ model Announcement {
   pinned      Boolean   @default(false)
   pinnedUntil DateTime? // pinned only until then; null = until unpinned (docs/05)
   expiresAt   DateTime? // not shown to members from then on; null = always (docs/05)
+  mustRead    Boolean   @default(false) // the app asks every member to confirm it before Play (app 3.6.6, docs/05)
   createdAt DateTime @default(now())
   authorId  String
+  seen      AnnouncementSeen[]
+}
+
+// Who confirmed a must-read news item in the app ("Seen it"), and when (app 3.6.6, docs/05).
+model AnnouncementSeen {
+  announcementId String
+  userId         String
+  seenAt         DateTime     @default(now())
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, userId])
+  @@index([userId])
 }
 
 // One row per player session on the Minecraft server (docs/16 §1).

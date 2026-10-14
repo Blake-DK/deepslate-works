@@ -1,0 +1,21 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "arphex"
+    }
+  ],
+  "type": "neoforge:add_spawns",
+  "biomes": [
+    "deepslate:moon_plains",
+    "deepslate:moon_highlands",
+    "deepslate:moon_craters",
+    "#arphex:crawling_biomes"
+  ],
+  "spawners": {
+    "type": "arphex:any_dimension_spawner",
+    "weight": 4,
+    "minCount": 1,
+    "maxCount": 1
+  }
+}

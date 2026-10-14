@@ -236,8 +236,79 @@ describe("the Moon's map (docs/55 M5)", () => {
   it("is shipped as config/bluemap/maps/moon.conf: id moon, the dimension deepslate:moon in the world folder", async () => {
     const conf = await readFile(path.join(MODPACK, "server/config/bluemap/maps/moon.conf"), "utf8");
     const keys = Object.fromEntries(conf.split("\n").filter((l) => l && !l.startsWith("#")).map((l) => [l.split(":")[0]!.trim(), l.slice(l.indexOf(":") + 1).trim()]));
-    expect(keys).toMatchObject({ world: '"world"', dimension: '"deepslate:moon"', name: '"The Moon"', storage: '"file"' });
+    expect(keys).toMatchObject({ world: '"world"', dimension: '"deepslate:moon"', name: '"Ashmoon"', storage: '"file"' });
     // BlueMap 5.7's own template (maps/map.conf in its jar) has every one of these keys
     for (const k of Object.keys(keys)) expect(["world", "dimension", "name", "sorting", "sky-color", "void-color", "sky-light", "ambient-light", "remove-caves-below-y", "cave-detection-ocean-floor", "storage"]).toContain(k);
+  });
+});
+
+describe("the horror trial on Ashmoon only (Alex, 2026-10-14): modpack/datapacks/deepslate-moon-mobs", () => {
+  const MOBS = path.join(MODPACK, "datapacks/deepslate-moon-mobs");
+  const mjson = async (f: string) => JSON.parse(await readFile(path.join(MOBS, f), "utf8")) as Record<string, unknown>;
+  it("Mutant Monsters: every main-world, Nether and End biome is in its four 'without' tags; Ashmoon's are not", async () => {
+    for (const mob of ["creeper", "enderman", "skeleton", "zombie"]) {
+      const t = await mjson(`data/mutantmonsters/tags/worldgen/biome/without_mutant_${mob}_spawns.json`);
+      const values = t.values as string[];
+      expect(t.replace).toBe(false);
+      expect(values).toEqual(expect.arrayContaining(["minecraft:plains", "minecraft:deep_dark", "#minecraft:is_nether", "#minecraft:is_end"]));
+      expect(values.filter((v) => v.startsWith("deepslate:") || v === "#minecraft:is_overworld" || v === "#c:is_overworld")).toEqual([]);
+      expect(values.filter((v) => v.startsWith("minecraft:"))).toHaveLength(53);
+    }
+  });
+  it("ArPhEx: each spawn rule for the main world now points at Ashmoon's three biomes (keeping any of its own biomes), counted only where ArPhEx is installed; the one for its own dimension alone is ArPhEx's own again", async () => {
+    const dir = path.join(MOBS, "data/arphex/neoforge/biome_modifier");
+    const files = await readdir(dir);
+    expect(files.length).toBe(59);
+    // the Crawling's own rule (weight 1000) is shipped as ArPhEx wrote it: Sync never deletes, so the copy #71 pointed at
+    // Ashmoon has to be overwritten on a server that has it, not left behind
+    const own = await mjson("data/arphex/neoforge/biome_modifier/crawling_random_biome_modifier.json");
+    expect((own.biomes as string[]).every((b) => b.startsWith("arphex:"))).toBe(true);
+    for (const f of files.filter((x) => x !== "crawling_random_biome_modifier.json")) {
+      const j = await mjson(`data/arphex/neoforge/biome_modifier/${f}`);
+      const biomes = j.biomes as string[];
+      expect(j.type).toBe("neoforge:add_spawns");
+      expect(biomes.slice(0, 3)).toEqual(BIOMES);
+      expect(biomes.slice(3).filter((b) => !b.startsWith("arphex:") && b !== "#arphex:crawling_biomes")).toEqual([]);
+      expect(j["neoforge:conditions"]).toEqual([{ type: "neoforge:mod_loaded", modid: "arphex" }]);
+      expect(j.spawners).toBeTruthy();
+    }
+    // what spawned in every biome there is: Ashmoon's and ArPhEx's own dimension
+    for (const f of ["any_dimension_spawner_biome_modifier.json", "tormentor_initial_biome_modifier.json"]) expect((await mjson(`data/arphex/neoforge/biome_modifier/${f}`)).biomes).toEqual([...BIOMES, "#arphex:crawling_biomes"]);
+  });
+  it("kept (Alex, 2026-10-14): in every pack, live's too, and listed for everyone", async () => {
+    const m = JSON.parse(await readFile(path.join(MODPACK, "mods.json"), "utf8")) as { mods: Array<{ slug: string; season?: string; adminOnly?: boolean }> };
+    for (const slug of ["arphex", "mutant-monsters", "puzzles-lib", "nyfs-spiders", "geckolib"]) expect(m.mods.find((x) => x.slug === slug)?.season).toBeUndefined();
+    for (const slug of ["arphex", "mutant-monsters", "nyfs-spiders"]) expect(m.mods.find((x) => x.slug === slug)?.adminOnly).toBe(false);
+  });
+});
+
+describe("the horror trial kept on Ashmoon: ArPhEx's structures and its test-only settings", () => {
+  const MOBS = path.join(MODPACK, "datapacks/deepslate-moon-mobs");
+  it("its five structures that would go into the main world generate on Ashmoon's biomes instead, only where ArPhEx is installed", async () => {
+    const dir = path.join(MOBS, "data/arphex/worldgen/structure");
+    const files = (await readdir(dir)).sort();
+    expect(files).toEqual(["altar_spawn.json", "ant_hill.json", "crawling_castle.json", "spider_cave.json", "termite_hill.json"]);
+    for (const f of files) {
+      const j = JSON.parse(await readFile(path.join(dir, f), "utf8")) as Record<string, unknown>;
+      expect(j.biomes).toEqual(BIOMES);
+      expect(j["neoforge:conditions"]).toEqual([{ type: "neoforge:mod_loaded", modid: "arphex" }]);
+    }
+  });
+  it("on every server: no vanilla mob anywhere is replaced by an ArPhEx one, and no scare in the main world's sky", async () => {
+    const toml = await readFile(path.join(MODPACK, "server/config/ArPhEx Configurations.toml"), "utf8");
+    expect(toml).toContain('"Vanilla Replacement Mode" = 0.0');
+    expect(toml).toContain('"Enable Tormentor Sky Hallucination" = false');
+    expect(toml).toContain('"Welcome message" = false'); // Alex, 2026-10-14: no wall of text in chat at every join
+  });
+  it("more mobs on Ashmoon (Alex, 2026-10-14): ArPhEx's two spawn rates at 2 (5 by default, lower = more), mutants at 25 % of the creeper's weight, Ashmoon's own night monsters in groups of 4 to 6", async () => {
+    const toml = await readFile(path.join(MODPACK, "server/config/ArPhEx Configurations.toml"), "utf8");
+    expect(toml).toContain('"Non-boss global spawnrates (biome-specific)" = 2.0');
+    expect(toml).toContain('"Random-system spawnrates (not biome-specific)" = 2.0');
+    const mutants = await readFile(path.join(MODPACK, "server/config/mutantmonsters-common.toml"), "utf8");
+    expect(mutants.match(/_spawn_weight = 0\.25$/gm)).toHaveLength(4);
+    for (const id of BIOMES) {
+      const spawners = (await json(`data/deepslate/worldgen/biome/${id.split(":")[1]}.json`)).spawners as { monster: Array<{ type: string; minCount: number; maxCount: number }> };
+      for (const m of spawners.monster.filter((x) => x.type !== "minecraft:enderman")) expect([m.minCount, m.maxCount]).toEqual([4, 6]);
+    }
   });
 });

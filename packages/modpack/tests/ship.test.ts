@@ -57,9 +57,9 @@ describe("a season's libraries", () => {
 });
 
 describe("the repo's pack (docs/44, 'Done when')", () => {
-  it("Season 1's six mods carry season s1 in mods.json and in the lock, and nothing else does", async () => {
+  it("Season 1's five mods carry season s1 in mods.json and in the lock, and nothing else does (GeckoLib left it with ArPhEx, Alex 2026-10-14)", async () => {
     const m = JSON.parse(await readFile(path.join(MODPACK, "mods.json"), "utf8")) as Manifest;
-    const six = ["curios", "edf-remastered", "geckolib", "l_enders-cataclysm", "lionfish-api", "mowzies-mobs"];
+    const six = ["curios", "edf-remastered", "l_enders-cataclysm", "lionfish-api", "mowzies-mobs"];
     expect(m.mods.filter((x) => x.season).map((x) => [x.slug, x.season, x.enabled]).sort()).toEqual(six.map((s) => [s, "s1", true]));
     expect((await realLock()).files.filter((f) => f.season).map((f) => [f.slug, f.season]).sort()).toEqual(six.map((s) => [s, "s1"]));
   });
@@ -68,14 +68,14 @@ describe("the repo's pack (docs/44, 'Done when')", () => {
     const { seasons } = await loadSeasons(path.join(MODPACK, "seasons"));
     for (const x of m.mods.filter((y) => y.season)) expect(seasons.map((s) => s.id)).toContain(x.season);
   });
-  it("live, shipping nothing, keeps the pack it has (0.1.0+68650608, 78 files since Macaw's Holidays; the flower mods, docs/59; the gas mask's icon in the resource pack, docs/55 M8); a server shipping s1 gets all 84", async () => {
+  it("live, shipping nothing, keeps the pack it has (0.1.0+b0691da0, 84 files since the horror mobs on Ashmoon (ArPhEx, Mutant Monsters, Nyf's Spiders, with GeckoLib and Puzzles Lib) since Vanishmod, server only; Macaw's Holidays; the flower mods, docs/59; the gas mask's icon in the resource pack, docs/55 M8); a server shipping s1 gets all 89 (with the horror trial on Ashmoon)", async () => {
     const lock = await realLock();
     expect(lock.hash).toBe(packHash(lock.neoforge, lock.files, lock.configs, lock.resourcepack)); // the lock's own hash is over everything
     const live = shippedLock(lock, []);
-    expect(live.files).toHaveLength(78);
-    expect(live.hash.slice(0, 8)).toBe("68650608");
+    expect(live.files).toHaveLength(84);
+    expect(live.hash.slice(0, 8)).toBe("b0691da0");
     const test = shippedLock(lock, ["s1"]);
-    expect(test.files).toHaveLength(84);
+    expect(test.files).toHaveLength(89);
     expect(test.hash).toBe(lock.hash);
   });
   it("index.json ships nothing before Season 1 opens, so no reader hands its mods out on live", async () => {

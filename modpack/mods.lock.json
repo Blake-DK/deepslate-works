@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-14T14:14:00.823Z",
+  "generatedAt": "2026-10-14T19:03:00.347Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "751de495eff60e09eac1b033193fb1e766000c86134f30d4b9e7156af3d84787",
+  "hash": "e58f715701eac9dc6773a216f141dad0cc6d13dc64152074ce90dcc35de0c925",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -100,6 +100,26 @@
         "client": "optional",
         "server": "optional"
       }
+    },
+    {
+      "slug": "arphex",
+      "name": "ArPhEx (Arthropod Phobia Expansions)",
+      "projectId": "k0RPP4IO",
+      "versionId": "jawvD7YZ",
+      "versionNumber": "5.0.2",
+      "versionType": "release",
+      "filename": "ArPhEx-5.0.2-neoforge-1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/k0RPP4IO/versions/jawvD7YZ/ArPhEx-5.0.2-neoforge-1.21.1.jar",
+      "sha512": "09a7e63a75ba0173ef6f60a71154a21cf6b5d07a2190d274fc9b75db23f4044ca829385b8931c698c3ed0ef48b06871c545537b2d31e1496b967e38d82922527",
+      "sha1": "876e23454070ccb10852393fff046a57aa20f65d",
+      "size": 13685315,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "async-locator-refined",
@@ -622,13 +642,13 @@
       "size": 634531,
       "side": "both",
       "requiredBy": [
-        "mowzies-mobs"
+        "mowzies-mobs",
+        "arphex"
       ],
       "modrinth": {
         "client": "required",
         "server": "optional"
-      },
-      "season": "s1"
+      }
     },
     {
       "slug": "get-it-together-drops",
@@ -1176,6 +1196,26 @@
       "channels": "required"
     },
     {
+      "slug": "mutant-monsters",
+      "name": "Mutant Monsters",
+      "projectId": "derP0ten",
+      "versionId": "dauEcrnZ",
+      "versionNumber": "v21.1.1-1.21.1-NeoForge",
+      "versionType": "release",
+      "filename": "MutantMonsters-v21.1.1-1.21.1-NeoForge.jar",
+      "url": "https://cdn.modrinth.com/data/derP0ten/versions/dauEcrnZ/MutantMonsters-v21.1.1-1.21.1-NeoForge.jar",
+      "sha512": "4d969c457a01e49a242ebc03112031bd338be08fc4ab36540b222b0a64e72a778a6534ad2be7c5cf72a5a74e1ce58e66e2999957f68c189c868dbc48bef44708",
+      "sha1": "c9981cf323d5e0fd49387ad20dafec1f58b2c88d",
+      "size": 1346730,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "noisium",
       "name": "Noisium",
       "projectId": "KuNKN7d2",
@@ -1193,6 +1233,26 @@
         "client": "unsupported",
         "server": "required"
       }
+    },
+    {
+      "slug": "nyfs-spiders",
+      "name": "Nyf's Spiders",
+      "projectId": "dOGM7ccu",
+      "versionId": "B2RgTf4a",
+      "versionNumber": "3.0.2",
+      "versionType": "release",
+      "filename": "nyfsspiders-neoforge-1.21.1-3.0.2.jar",
+      "url": "https://cdn.modrinth.com/data/dOGM7ccu/versions/B2RgTf4a/nyfsspiders-neoforge-1.21.1-3.0.2.jar",
+      "sha512": "3c64724baa476b5880c0e68399f599a2c3906fcf86c7fad086f27e37f09d3f73a6ac01d618ebb1d953a37016f3e375cdd9a82a4030fe0306bc194545ddfbc773",
+      "sha1": "61990355ca856be2b7179fc4abbd8ff8c963e7f9",
+      "size": 192954,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "open-parties-and-claims",
@@ -1253,6 +1313,28 @@
         "client": "optional",
         "server": "optional"
       }
+    },
+    {
+      "slug": "puzzles-lib",
+      "name": "Puzzles Lib",
+      "projectId": "QAGBst4M",
+      "versionId": "1TmfTuyw",
+      "versionNumber": "21.1.62",
+      "versionType": "release",
+      "filename": "puzzleslib-v21.1.62-mc1.21.1+neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/QAGBst4M/versions/1TmfTuyw/puzzleslib-v21.1.62-mc1.21.1%2Bneoforge.jar",
+      "sha512": "241ff7229990305fe5f85521b9c11cd8e2e8d01cb94bbca987aae4d3d9ecbd9115a4b66f618a62d73ef1b569ff8c72434bc1354bbfaf2f69c0e997db034c4883",
+      "sha1": "0d1675576fe17acc1f350a5505177ae08c17299b",
+      "size": 1450242,
+      "side": "both",
+      "requiredBy": [
+        "mutant-monsters"
+      ],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "required"
     },
     {
       "slug": "quarry-pause",
@@ -1527,6 +1609,26 @@
         "client": "required",
         "server": "required"
       }
+    },
+    {
+      "slug": "vanishmod",
+      "name": "Vanishmod",
+      "projectId": "MihN2cw5",
+      "versionId": "G52aWgtY",
+      "versionNumber": "1.1.21",
+      "versionType": "release",
+      "filename": "Vanishmod-1.21.1-1.1.21.jar",
+      "url": "https://cdn.modrinth.com/data/MihN2cw5/versions/G52aWgtY/Vanishmod-1.21.1-1.1.21.jar",
+      "sha512": "0b60484fe1777a5f75352f68d973351c77a50a32a19b6642526285209ba7b0bfbaafe99df89fb77162b13688503a1b6432b4282be2811de770707f22df834ca6",
+      "sha1": "6397006062d4d87e4573721183b70b746b593b8d",
+      "size": 75408,
+      "side": "server",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "veinminer",

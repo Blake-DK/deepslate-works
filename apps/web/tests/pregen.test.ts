@@ -117,7 +117,7 @@ describe("the map render", () => {
 });
 
 describe("worldName", () => {
-  it("names each world that can be pre-generated in plain words, the Moon among them (docs/55 M5)", () => {
-    expect([worldName(), worldName("minecraft:the_nether"), worldName("minecraft:the_end"), worldName("deepslate:moon"), worldName("deepslate:frontier_s1")]).toEqual(["the main world", "the Nether", "the End", "the Moon", "the Frontier (s1)"]);
+  it("names each world that can be pre-generated in plain words, Ashmoon among them (docs/55 M5; the Moon, named by Alex on 2026-10-14)", () => {
+    expect([worldName(), worldName("minecraft:the_nether"), worldName("minecraft:the_end"), worldName("deepslate:moon"), worldName("deepslate:frontier_s1")]).toEqual(["the main world", "the Nether", "the End", "Ashmoon", "the Frontier (s1)"]);
   });
 });

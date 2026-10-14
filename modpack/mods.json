@@ -434,19 +434,11 @@
       "requires": [],
       "guide": "game",
       "topic": "travel",
-      "howTo": "The minimap sits in the corner and shows waypoints, party members and where you last died. Press **B** to drop a waypoint where you stand (mark your base!) and **U** for the list of waypoints.",
+      "howTo": "The minimap sits in the corner and shows waypoints, party members and where you last died. Press **B** to drop a waypoint where you stand (mark your base!). The big map (**M**) shows all your waypoints.",
       "keys": [
         {
           "key": "B",
           "does": "New waypoint where you stand"
-        },
-        {
-          "key": "U",
-          "does": "Waypoint list"
-        },
-        {
-          "key": "Z",
-          "does": "Bigger minimap"
         },
         {
           "key": "Y",
@@ -674,23 +666,15 @@
       "requires": [],
       "guide": "game",
       "topic": "friends",
-      "howTo": "Press **V** the first time: it asks whether you want **push to talk** or **voice activation** and lets you pick and test your microphone. People near you hear you, quieter with distance. Push to talk has no key until you set one in Options \u2192 Controls \u2192 Simple Voice Chat. **Groups** (G) let you talk to friends anywhere on the map.",
+      "howTo": "Press **V** the first time: it asks whether you want **push to talk** or **voice activation** and lets you pick and test your microphone. People near you hear you, quieter with distance. Push to talk has no key until you set one in Options \u2192 Controls \u2192 Simple Voice Chat. **Groups** (in the V menu) let you talk to friends anywhere on the map. **N** mutes your microphone.",
       "keys": [
         {
           "key": "V",
           "does": "Voice chat menu"
         },
         {
-          "key": "M",
-          "does": "Mute your microphone"
-        },
-        {
           "key": "N",
-          "does": "Switch voice chat off"
-        },
-        {
-          "key": "G",
-          "does": "Groups"
+          "does": "Mute your microphone"
         },
         {
           "key": "(unbound)",
@@ -1133,7 +1117,7 @@
       "requires": [],
       "guide": "game",
       "topic": "factories",
-      "howTo": "Start with an **Enrichment Chamber** (2 dust per ore) powered by a generator from Mekanism Generators. Upgrade machines with **speed** and **energy** upgrades. Cables carry power, **logistical transporters** carry items. JEI shows every recipe. Its ores (osmium first) are found only on the **Moon**: see the portal under Getting around."
+      "howTo": "Start with an **Enrichment Chamber** (2 dust per ore) powered by a generator from Mekanism Generators. Upgrade machines with **speed** and **energy** upgrades. Cables carry power, **logistical transporters** carry items. JEI shows every recipe. Its ores (osmium first) are found only on **Ashmoon**: see the portal under Getting around."
     },
     {
       "slug": "mekanism-generators",
@@ -1329,15 +1313,11 @@
       ],
       "guide": "game",
       "topic": "storage",
-      "howTo": "Craft a **backpack** (leather and a chest) as soon as you can. Wear it in the chest slot and press **B** to open it, or hold it and right-click. Upgrade it later (iron, gold, diamond, netherite) and put upgrades in its side slots: **Pickup** collects items for you, **Magnet** pulls them in, **Crafting** gives a crafting grid inside.",
+      "howTo": "Craft a **backpack** (leather and a chest) as soon as you can. Wear it in the chest slot and press **`** (the key left of 1) to open it, or hold it and right-click. Upgrade it later (iron, gold, diamond, netherite) and put upgrades in its side slots: **Pickup** collects items for you, **Magnet** pulls them in, **Crafting** gives a crafting grid inside.",
       "keys": [
         {
-          "key": "B",
+          "key": "`",
           "does": "Open the backpack you wear"
-        },
-        {
-          "key": "C",
-          "does": "Use the backpack's inventory upgrades"
         },
         {
           "key": "Alt+Z",
@@ -1438,7 +1418,7 @@
       "requires": [],
       "guide": "game",
       "topic": "combat",
-      "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Watch out: several of TaCZ's keys are also used by other mods (V, G, H, C, Z); change them in Options \u2192 Controls if something clashes.",
+      "howTo": "Guns, ammo and attachments are crafted at the **gun smith table**. Pistols, revolvers, double barrels and bolt rifles take iron; most rifles, SMGs and shotguns also take **steel**; the biggest guns need **netherite** and **refined obsidian** too. Hold right-click to aim, left-click to shoot, **R** to reload, **Z** for attachments (scopes, grips, silencers). Melee and scope zoom have no key in this pack (V is voice chat); set them in Options \u2192 Controls \u2192 TaCZ if you want them.",
       "keys": [
         {
           "key": "Left click",
@@ -1463,10 +1443,6 @@
         {
           "key": "H",
           "does": "Inspect"
-        },
-        {
-          "key": "V",
-          "does": "Melee"
         },
         {
           "key": "C",
@@ -2500,6 +2476,82 @@
       }
     },
     {
+      "slug": "arphex",
+      "name": "ArPhEx (Arthropod Phobia Expansions)",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "H",
+      "recommended": false,
+      "hidden": false,
+      "adminOnly": false,
+      "exclusiveGroup": null,
+      "description": "Horror insects, giant spiders and their bosses, on Ashmoon only.",
+      "wiki": "https://modrinth.com/mod/arphex",
+      "version": "jawvD7YZ",
+      "requires": [
+        "geckolib"
+      ],
+      "guide": "game",
+      "topic": "combat",
+      "howTo": "Giant insects and spiders hunt on **Ashmoon**. Bring light, armour and a good weapon, and don't fight them in the dark."
+    },
+    {
+      "slug": "mutant-monsters",
+      "name": "Mutant Monsters",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "adminOnly": false,
+      "exclusiveGroup": null,
+      "description": "Huge mutant zombies, skeletons, creepers and endermen, on Ashmoon only.",
+      "wiki": "https://modrinth.com/mod/mutant-monsters",
+      "version": "dauEcrnZ",
+      "requires": [
+        "puzzles-lib"
+      ],
+      "guide": "game",
+      "topic": "combat",
+      "howTo": "Mutant versions of the night's monsters roam **Ashmoon**: bigger, tougher and with new attacks. Keep your distance and fight them in the open."
+    },
+    {
+      "slug": "nyfs-spiders",
+      "name": "Nyf's Spiders",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "adminOnly": false,
+      "exclusiveGroup": null,
+      "description": "Spiders climb walls and ceilings like real ones.",
+      "wiki": "https://modrinth.com/mod/nyfs-spiders",
+      "version": "B2RgTf4a",
+      "requires": [],
+      "guide": "game",
+      "topic": "combat",
+      "howTo": "Spiders now climb walls and ceilings and drop on you from above. A roof over your head no longer keeps them off; light and a closed door still do."
+    },
+    {
+      "slug": "puzzles-lib",
+      "name": "Puzzles Lib",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Mutant Monsters.",
+      "wiki": "https://modrinth.com/mod/puzzles-lib",
+      "version": "1TmfTuyw",
+      "requires": []
+    },
+    {
       "slug": "gateways-to-eternity",
       "name": "Gateways to Eternity",
       "category": "adventure",
@@ -2616,12 +2668,11 @@
       "recommended": false,
       "hidden": true,
       "exclusiveGroup": null,
-      "description": "Library needed by Mowzie's Mobs.",
+      "description": "Library needed by ArPhEx and Mowzie's Mobs.",
       "wiki": "https://modrinth.com/mod/geckolib",
       "videos": [],
       "version": "Grwn5rUB",
-      "requires": [],
-      "season": "s1"
+      "requires": []
     },
     {
       "slug": "apothic-attributes",
@@ -2650,7 +2701,7 @@
       "hidden": false,
       "adminOnly": false,
       "exclusiveGroup": null,
-      "description": "Walk-through portals to the Moon, a world of its own for mining. Nothing to install: it runs on the server.",
+      "description": "Walk-through portals to Ashmoon, a moon of its own for mining. Nothing to install: it runs on the server.",
       "wiki": "https://github.com/Crystal-Nest/server-sided-portals/wiki",
       "videos": [],
       "noVideosFound": "2026-10-05",
@@ -2660,7 +2711,7 @@
       ],
       "guide": "game",
       "topic": "travel",
-      "howTo": "Build a frame of **smooth basalt** shaped like a nether portal (smelt basalt to get it) and right-click inside it with an **eye of ender**. Step in to reach the **Moon**: everything can be mined there, and osmium and the other Mekanism ores are found only there. Gravity is low, so you jump high and fall slowly; the night never ends, monsters are about, and beds explode. Below y 30 the air is poisonous: wear a **gas mask** (leather, 2 string, charcoal and a glass pane; it lasts 30 seconds in the gas) or Mekanism's hazmat mask. A portal comes out at the same spot on the other side; walk back through it to come home."
+      "howTo": "Build a frame of **smooth basalt** shaped like a nether portal (smelt basalt to get it) and right-click inside it with an **eye of ender**. Step in to reach **Ashmoon**: everything can be mined there, and osmium and the other Mekanism ores are found only there. Gravity is low, so you jump high and fall slowly; the night never ends, monsters are about, and beds explode. Below y 30 the air is poisonous: wear a **gas mask** (leather, 2 string, charcoal and a glass pane; it lasts 30 seconds in the gas) or Mekanism's hazmat mask (only the mask counts, not the rest of the suit). A portal comes out at the same spot on the other side; walk back through it to come home."
     },
     {
       "slug": "worldedit",
@@ -2686,6 +2737,25 @@
         }
       ],
       "version": "WTAFvuRx",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
+      "slug": "vanishmod",
+      "name": "Vanishmod",
+      "category": "server",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "adminOnly": true,
+      "exclusiveGroup": null,
+      "description": "Lets an operator vanish with /vanish (or /v): gone from the tab list and the world, with a fake \"left the game\" for everyone else. /vanish again to come back. Nothing to install: it runs on the server.",
+      "wiki": "https://github.com/RedstoneDubstep/Vanishmod",
+      "videos": [],
+      "noVideosFound": "2026-10-14",
+      "version": "G52aWgtY",
       "requires": [],
       "guide": "behind"
     },

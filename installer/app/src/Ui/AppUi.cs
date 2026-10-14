@@ -205,6 +205,7 @@ namespace DeepslateWorks
             Timer = new DispatcherTimer(DispatcherPriority.Normal, w.Dispatcher) { Interval = TimeSpan.FromMilliseconds(250) };
             Timer.Tick += (s, e) => OnTick();
             WireHome();   // 3.2.0: the server on the Play tab, and the Vote tab
+            WireTour();   // 3.6.6: the first-time guide
             WireTest();   // docs/45: the Test section, admins and (docs/57) testers only
             WireUpdate(); // 3.3.0: the Update button
             WireLook();   // 3.4.0: the ground, the banner, the badge (docs/21)

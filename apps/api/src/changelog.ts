@@ -208,8 +208,8 @@ export const CHANGES: Change[] = [
     lines: [
       "The quarry now needs real power: one small generator only crawls. When its storage is full it stops, and starts again by itself when there's room.",
       "Mekanism is in: generators, reactors and the MekaSuit power armour. Press Play to update.",
-      "Its ores aren't in the old ground after all: the main world was left as it was. They're on the Moon, a new world of its own where everything can be mined, and osmium is found only there.",
-      "To get there, build a smooth basalt frame like a nether portal and light it with an eye of ender. There's one at spawn to start with.",
+      "Its ores aren't in the old ground after all: the main world was left as it was. They're on Ashmoon, a new moon of its own where everything can be mined, and osmium is found only there.",
+      "To get there, use the portal near spawn at -444, 587. To build your own: a frame of smooth basalt shaped like a nether portal, 4 wide and 5 tall (mine it from the shell of an amethyst geode, or smelt Nether basalt), then right-click inside it with an eye of ender. Walk back through to come home.",
       "Gravity is low, the night never ends and monsters are about. Below y 30 the air is poisonous: craft a gas mask first (leather, 2 string, charcoal and a glass pane).",
     ],
   },
@@ -220,6 +220,32 @@ export const CHANGES: Change[] = [
     live: true,
     lines: [
       "Two new mods for gardens: Serene Shrubbery (flowers in lots of colours; plant two or three side by side and new colours appear over time) and Wilder Flowers (wildflowers, clover patches and flower garlands you can wear or hang up). The wildflowers grow in land nobody has explored yet. Press Play to update.",
+    ],
+  },
+  {
+    // docs/61 §7's update post, in its words (Alex, 2026-10-14: everything on dev goes live).
+    id: "2026-10-14-gun-balance",
+    date: "2026-10-14",
+    live: true,
+    title: "Guns rebalanced",
+    lines: [
+      "Guns have been rebalanced: all gun damage is lower, and the stronger guns now need steel, the biggest ones netherite and refined obsidian.",
+      "Ammo crafts give half as many rounds. Cannon shells do half the damage to mobs.",
+      "Guns you already own keep working, at the new damage.",
+    ],
+  },
+  {
+    // Alex, 2026-10-14: the horror mobs on Ashmoon, kept after the trial on the test server.
+    id: "2026-10-14-ashmoon-monsters",
+    date: "2026-10-14",
+    live: true,
+    title: "New monsters on Ashmoon",
+    lines: [
+      "The Moon now has a name: Ashmoon. And it's a lot less friendly.",
+      "Giant insects and spiders hunt there now, with bosses that come with thunder. Mutant zombies, skeletons, creepers and endermen roam too: bigger, tougher and with new attacks. They only live on Ashmoon, never in the main world.",
+      "There are more monsters on Ashmoon than before, so bring light, armour and a good weapon.",
+      "Spiders everywhere now climb walls and ceilings like real ones: a roof won't keep them off, but light and a closed door still do.",
+      "Press Play to update. It's a bigger download than usual.",
     ],
   },
   {
@@ -238,6 +264,19 @@ export const CHANGES: Change[] = [
     live: true,
     lines: [
       "New mod for decorating: Macaw's Holidays. Christmas trees, string lights, garlands, presents, stockings and candy canes, plus carved pumpkins and cobwebs for Halloween. All made at a crafting table from everyday things. Press Play to update.",
+    ],
+  },
+  {
+    // The pack's keys (Alex, 2026-10-14; app 3.6.6). Set `live: true` once 3.6.6 is out and a Play has set the keys.
+    id: "2026-10-14-pack-keys",
+    date: "2026-10-14",
+    live: true,
+    lines: [
+      "Deepslate Works now shows a quick guide the first time you open it after this update: what each tab does, and the new keys.",
+      "Some keys did two things at once. Now each does one. Press Play to get the new keys. Any key you had already changed yourself stays as you set it.",
+      "The backpack you wear opens with ` (top left, under Esc, next to 1). B is only for map waypoints now.",
+      "Mute your microphone with N. M only opens the map now.",
+      "R only reloads your gun now, not the shaders too. G, H, C and Z are only for guns (fire mode, inspect, crawl, attachments), and V is only voice chat. Gun melee and scope zoom have no key; set one in Options, Controls if you want them.",
     ],
   },
 ];

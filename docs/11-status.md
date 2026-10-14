@@ -107,6 +107,34 @@ and the counts Met, Private and Refused.
 - **Live:** waits for Alex's go (docs/59 "Live"). `dev` also carries held work (seasons, the Moon, Mekanism), so a
   whole `dev` → `main` PR is a question for Alex first.
 
+## Gas and masks: docs/55 M7, M8 (2026-10-14, PR #59 merged into `dev` as `08487c08`; on test; not on `main`)
+
+- **Built:** the gas (`deepslate:gas/*` in `deepslate-moon`, once a second from `#minecraft:load`; +1 exposure a
+  second in the gas without a mask, -2 otherwise, at most 40; 1 to 10 s a warning, 11 to 30 Poison I and Slowness I,
+  31 and up Poison II, Slowness II, Mining Fatigue I; ash particles in the gas). The gas mask: recipe
+  `deepslate:gas_mask` (shapeless: leather, 2 string, charcoal, glass pane; unlocked by having leather), a dark
+  leather helmet, `max_damage` 30, `repair_cost` 100, `custom_model_data` 5501; one point a second in the gas, then
+  taken off with the break sound and "Your mask has given out.". Mekanism's masks by tags with optional entries
+  (`#deepslate:gas_mask_hazmat`, `#deepslate:gas_mask_sealed`). The icon in `modpack/resourcepack/` (vanilla 1.21.1's
+  `leather_helmet.json` from the client jar, its ten trim overrides kept, one override added). The resource pack is in
+  the pack's hash: the lock's `resourcepack` and `hash` recomputed with Lock's own functions; live's pack would be
+  0.1.0+55ab70d7 (77 files), s1 83; both pins moved.
+- **Read from Mekanism 10.7.19.85 for M8:** `mekanism:hazmat_mask` (shaped: 5 lead ingots, 1 orange dye; Immersive
+  Engineering's lead is in the main world, so it comes early), `mekanism:mekasuit_helmet` (netherite helmet, 4 HDPE
+  sheets, an ultimate circuit, a basic induction cell, 2 polonium pellets). **The hazmat mask has no durability**: no
+  `minecraft:max_damage` on the test server (an item predicate, against a leather helmet that passes the same test);
+  its class sets only `stacksTo(1)`. **For the planner (docs/55 M8: "the planner decides"):** until then it protects
+  and does not wear (`gas/mask/hazmat.mcfunction`, one file).
+- **Seen on test (Build server, Sync: 14 datapack files; the start at 11:07 UTC):** no FATAL, the usual Curios ERROR
+  only, no parse error for the functions, the recipe or the advancement; `deepslate.gas` made by the load function;
+  `gas/second` and `gas/check` run. On an armour stand on the Moon wearing a leather helmet with the mask's
+  components, `gas/check` once a second: damage 1 after 1 s, 15 after 15, 28 after 28, 29 after 29, and after the
+  30th the helmet was gone from its head. Exposure: iron helmet 3 s gave 3; then hazmat mask 2 s and MekaSuit helmet
+  2 s, still 3. Stand and force-load removed.
+- **Not seen, needs a player:** the warning, poison stopping at half a heart, the three stages' timings, exposure
+  falling above y 0, creative feeling nothing, crafting the mask from the recipe book, an anvil refusing it, the icon
+  on a PC (Alex's PC through the Test tab: the pack changes, so the Test run updates it).
+
 ## The Moon's datapack: docs/55 M1 to M4 (2026-10-12/13, PR #52 merged into `dev` as `1682dad1`; seen on test; not on `main`)
 
 - **Built (PR #52, CI passed, merged into `dev` 2026-10-12):** M1 `modpack/server/config/Mekanism/world.toml` holds

@@ -199,14 +199,17 @@ export const CHANGES: Change[] = [
     ],
   },
   {
-    // docs/53 D3 post 2. Set `live: true` only after docs/53 A and B's live check (the rule above).
+    // docs/53 D3 post 2, rewritten for the Moon (docs/55 M6): post 1 said the ores would appear in old ground. Set
+    // `live: true` only after the live check of docs/53 A, B and E1 and docs/55 (the rule above).
     id: "2026-10-12-power-and-gear-landed",
     date: "2026-10-12",
     title: "Power and gear update is live",
     lines: [
       "The quarry now needs real power: one small generator only crawls.",
       "Mekanism is in: generators, reactors and the MekaSuit power armour. Press Play to update.",
-      "Its ores (osmium first) appear in old ground the first time anyone goes there.",
+      "Its ores aren't in the old ground after all: the main world was left as it was. They're on the Moon, a new world of its own where everything can be mined, and osmium is found only there.",
+      "To get there, build a smooth basalt frame like a nether portal and light it with an eye of ender. There's one at spawn to start with.",
+      "Gravity is low, the night never ends and monsters are about. Below y 0 the air is poisonous: craft a gas mask first (leather, 2 string, charcoal and a glass pane).",
     ],
   },
   {

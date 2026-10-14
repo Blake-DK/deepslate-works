@@ -68,9 +68,11 @@ describe("/downloads/mods/<file> (check 2)", () => {
     expect(s.logged).toEqual([expect.objectContaining({ file: `mods/${NAME}`, refused: "server_offline" })]);
   });
 
-  it("404 for a name not in the lock, a Modrinth file of the lock, a path, or a jar that is not the lock's", async () => {
+  it("404 for a name not in the lock, a Modrinth file of the lock, a season this server does not ship, a path, or a jar that is not the lock's", async () => {
     expect((await get("other.jar")).status).toBe(404);
     s.lock = { files: [entry({ url: `https://cdn.modrinth.com/data/x/versions/y/${NAME}` })] };
+    expect((await get(NAME)).status).toBe(404);
+    s.lock = { files: [] }; // getLock is the shipped lock: another season's jar is not in it
     expect((await get(NAME)).status).toBe(404);
     s.lock = { files: [entry()] };
     expect((await get("..%2Fconfig.zip")).status).toBe(404);

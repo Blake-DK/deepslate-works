@@ -1,0 +1,22 @@
+# Quarry (Additional Enchanted Miner 21.1.164), settings shipped with the pack (docs/53 Part A, numbers from docs/56).
+# Sync puts this file into the server's config/ folder; the mod reads it at start and adds every key not written here
+# with its default.
+#
+# The quarry's energy costs are the mod's defaults times k = 32 (breakBlockBase 25, moveHeadBase 1, makeFrame 15), so one
+# Pitiful Generator (30 FE a tick) digs about 30 stone a minute and full speed needs a real power setup. k was set by
+# measuring on the test server (docs/56 §2): 238 stone a minute at k = 4. moveHeadBase is the head's speed, not a cost
+# (every block the head moves costs 1 FE), so k makes the head faster. Energy is worked out on the server only, so no
+# PC needs this file.
+#
+# The Adv. Quarry is switched off (Alex, 2026-10-12): its costs were never raised, so it would dig at the old price. A
+# placed one does no work. The mod's recipe for it has no condition, so it is removed by the server datapack:
+# modpack/datapacks/deepslate-tools/data/quarryplus/recipe/adv_quarry.json.
+# Every other key stays at the default.
+
+[powerMap.quarry]
+	breakBlockBase = 800.0
+	moveHeadBase = 32.0
+	makeFrame = 480.0
+
+[enableMap]
+	adv_quarry = false

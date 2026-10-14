@@ -200,9 +200,11 @@ describe("a private jar of the test pack (docs/58): GET /test/app/mod?file=", ()
     expect(r.headers["content-type"]).toBe("application/java-archive");
     expect(r.rawPayload.equals(JAR)).toBe(true);
   });
-  it("anything else is a 404: a name not in the lock, a Modrinth file, a path, a jar that is not the lock's or not there", async () => {
+  it("anything else is a 404: a name not in the lock, a Modrinth file, another season's, a path, a jar that is not the lock's or not there", async () => {
     expect((await get(await repoWith([entry()], JAR), "other.jar")).statusCode).toBe(404);
     expect((await get(await repoWith([entry({ url: `https://cdn.modrinth.com/data/x/versions/y/${NAME}` })], JAR), NAME)).statusCode).toBe(404);
+    expect((await get(await repoWith([entry({ season: "s1" })], JAR, []), NAME)).statusCode).toBe(404);
+    expect((await get(await repoWith([entry({ season: "s1" })], JAR, ["s1"]), NAME)).statusCode).toBe(200);
     expect((await get(await repoWith([entry()], JAR), `../${NAME}`)).statusCode).toBe(404);
     expect((await get(await repoWith([entry()], Buffer.from("something else")), NAME)).statusCode).toBe(404);
     expect((await get(await repoWith([entry()], null), NAME)).statusCode).toBe(404);

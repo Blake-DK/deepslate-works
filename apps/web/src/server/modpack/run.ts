@@ -2,7 +2,7 @@ import "server-only";
 import { rename, writeFile } from "node:fs/promises";
 import { buildLock, diffLocks, lintManifest, lockExtras, type LockFile } from "modpack";
 import { getManifest, commitManifest } from "./manifest";
-import { getLock, P } from "./lock";
+import { getFullLock, getLock, P } from "./lock";
 import { apiFetch, apiStream } from "@/server/api-client";
 import { testRefusal } from "@/server/test-mode";
 
@@ -27,7 +27,7 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
     }
     if (cmd === "lock") {
       const m = await getManifest();
-      const prev = await getLock();
+      const prev = await getFullLock();
       const lines: string[] = [];
       const { lock, warnings } = await buildLock(m, { configDir: P.config, resourcepackDir: P.resourcepack, onProgress: (s) => lines.push(s), previousNeoForge: prev?.neoforge, privateDir: P.privateJars, previous: prev });
       for (const l of lines) yield l;
@@ -57,7 +57,7 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
       const commit = await commitManifest(`chore(modpack): lock ${lock.hash.slice(0, 8)} (${changed} change${changed === 1 ? "" : "s"})`, { name: admin.displayName }, ["modpack/mods.lock.json", ...(ex.written ? ["modpack/extras.lock.json"] : [])]);
       yield commit.ok ? `committed (${commit.output || "ok"})` : `git commit failed: ${commit.output}`;
     } else if (cmd === "build") {
-      const lock = await getLock();
+      const lock = await getFullLock();
       if (!lock) {
         yield "no mods.lock.json yet: run Lock first";
         return;
@@ -75,15 +75,20 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
       if (!finished) yield "ERROR the build stream ended early: check `docker logs deepslate-api`";
     } else if (cmd === "sync" || cmd === "sync-dry") {
       const dryRun = cmd === "sync-dry";
-      const lock = await getLock();
+      const lock = await getLock(); // the pack this server ships (docs/44)
       if (!lock) {
         yield "no mods.lock.json yet: run Lock, then Build";
         return;
       }
       yield dryRun ? "asking api what a sync would change (dry run)…" : "asking api to rsync dist/server to the AMP host…";
-      const res = await apiFetch<{ ok: boolean; lines: string[]; restarted: boolean }>("/modpack/sync", { method: "POST", body: { packVersion: lock.hash.slice(0, 8), dryRun }, caller: { id: admin.id, role: admin.role }, timeoutMs: 900_000 });
+      const res = await apiFetch<{ ok: boolean; lines: string[]; restarted: boolean; modsChanged?: boolean; restartedAt?: string }>("/modpack/sync", { method: "POST", body: { packVersion: lock.hash.slice(0, 8), dryRun }, caller: { id: admin.id, role: admin.role }, timeoutMs: 900_000 });
       for (const l of res.lines) yield l;
-      if (!dryRun) yield res.restarted ? "server restart requested" : "mods unchanged: no restart";
+      // Alex, 2026-10-14: then whether the server has every mod. After a restart, once it is back up; with the mods
+      // unchanged, its last start. New mods on a server that was not running are checked at its next start instead.
+      if (dryRun || !res.ok || (res.modsChanged && !res.restartedAt)) return;
+      if (res.restartedAt) yield "waiting for the server to come back up…";
+      const check = await apiFetch<{ ok: boolean; lines: string[] }>("/modpack/verify", { method: "POST", body: res.restartedAt ? { since: res.restartedAt } : {}, caller: { id: admin.id, role: admin.role }, timeoutMs: 420_000 });
+      for (const l of check.lines) yield l;
     }
   } catch (e) {
     yield `ERROR ${e instanceof Error ? e.message : String(e)}`;
@@ -95,7 +100,7 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
 /** Lock status for the admin table: per mod, resolved version and any problem. */
 export async function modpackStatus() {
   const m = await getManifest();
-  const lock = await getLock();
+  const lock = await getFullLock();
   const bySlug = new Map((lock?.files ?? []).map((f) => [f.slug, f]));
   const { issues } = lintManifest(m);
   return {

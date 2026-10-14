@@ -4,6 +4,7 @@ import type { Amp } from "../amp/client.js";
 import { newestDump } from "../backup/dump-push.js";
 import { readBackups } from "../routes/server.js";
 import { SignInWatch, type SignInMethod } from "./signin-watch.js";
+import { readShippedLock } from "../modpack/ship.js";
 
 // docs/32 §7 item 3 (planner, 2026-10-04): the things that fail without anybody being told. On 2026-10-04 the
 // site handed out a pack the server refused for hours (docs/31 B-01), no database dump had ever left the VPS
@@ -219,13 +220,12 @@ export function datedBackups(raw: unknown[]): Inputs["backups"] {
   return rows.length > 0 && dated.length === 0 ? undefined : dated;
 }
 
-/** The pack the site hands out: mods.json's version and the first eight of the lock's hash, as web builds it. */
+/** The pack the site hands out: mods.json's version and the first eight of the shipped lock's hash, as web builds it (docs/44). */
 export async function sitePack(repoDir: string): Promise<string | null> {
   try {
-    const dir = path.join(repoDir, "modpack");
-    const [m, lock] = await Promise.all([readFile(path.join(dir, "mods.json"), "utf8"), readFile(path.join(dir, "mods.lock.json"), "utf8")]);
+    const [m, lock] = await Promise.all([readFile(path.join(repoDir, "modpack", "mods.json"), "utf8"), readShippedLock(repoDir)]);
     const version = (JSON.parse(m) as { version?: unknown }).version;
-    const hash = (JSON.parse(lock) as { hash?: unknown }).hash;
+    const hash = lock.hash as unknown;
     return typeof version === "string" && typeof hash === "string" && hash.length >= 8 ? `${version}+${hash.slice(0, 8)}` : null;
   } catch {
     return null;

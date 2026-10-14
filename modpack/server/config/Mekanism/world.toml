@@ -1,0 +1,11 @@
+# Mekanism 10.7.19, settings shipped with the pack. Sync puts this file into the server's config/Mekanism/ folder (a
+# SERVER config: NeoForge 21.1 keeps those in config/); Mekanism reads it at start and adds every key not written here
+# with its default.
+#
+# docs/55 M1: no retrogen. The main world is never changed to add Mekanism's ores; they are on the Moon alone
+# (modpack/datapacks/deepslate-moon replaces #mekanism:spawn_ores with the Moon's biomes). These are Mekanism's own
+# defaults. The file stays in the pack because Sync merges settings and never deletes: taking it out would leave the
+# retrogen values docs/53 Part B shipped (true, 1) on any server that had them. Do not switch regeneration on.
+
+enableRegeneration = false
+userWorldGenVersion = 0

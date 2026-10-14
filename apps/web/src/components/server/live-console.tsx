@@ -54,7 +54,7 @@ export function LiveConsole({ initial, input = true, height = "max-h-96", compac
     at.current = -1;
     setCommand("");
     setFollow(true);
-    note(`> ${typed.replace(/^\/+/, "")}`, "sent");
+    note(`> ${typed}`, "sent");
     try {
       const r = await fetch("/api/admin/console/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ command: typed }) });
       if (!r.ok) {

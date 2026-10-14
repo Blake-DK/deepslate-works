@@ -1,11 +1,11 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import type { Prisma } from "@prisma/client";
 import type { Amp } from "../amp/client.js";
 import type { ConsoleTail } from "../amp/console.js";
 import { db } from "../db.js";
 import { audit } from "../audit.js";
 import { chunks, stat } from "../files/browse.js";
+import { readShippedLock } from "./ship.js";
+import { missingOnServer, type Capture } from "./verify.js";
 
 // 2.1.0 (kanefinch's TaCZ kick, 2026-10-01): which mod files the server really loaded at its last start, against the
 // set PCs are given. A mod the server loads that registers network channels has to be on every PC as well, or NeoForge
@@ -20,10 +20,14 @@ export type Loaded = { filename: string; nested: boolean };
 export type LockLike = { files: Array<{ slug: string; name: string; filename: string; side: string; channels?: string | null; modrinth?: { client?: string; server?: string } | null }> };
 export type Problem = { filename: string; slug: string | null; why: string };
 
-/** `Found mod file "tacz-….jar" of type MOD with provider …`: every file NeoForge found, nested (jar-in-jar) ones marked. */
+/**
+ * `Found mod file "tacz-….jar" of type MOD with provider …`: every file NeoForge found, nested (jar-in-jar) ones marked.
+ * A library in the mods folder is a "library file" (Kotlin for Forge, Scalable Cats Force; 2026-10-14, the first
+ * check after a Sync called both missing), and some nested ones "gamelibrary file".
+ */
 export function parseLoadedMods(log: string): Loaded[] {
   const out = new Map<string, Loaded>();
-  for (const m of log.matchAll(/Found mod file "([^"\r\n]{1,200})"([^\r\n]*)/g)) {
+  for (const m of log.matchAll(/Found (?:mod|library|gamelibrary) file "([^"\r\n]{1,200})"([^\r\n]*)/g)) {
     const filename = m[1]!.split(/[\\/]/).pop()!;
     if (!/\.jar$/i.test(filename)) continue;
     const nested = /JarInJar|jij|nested/i.test(m[2] ?? "");
@@ -69,12 +73,15 @@ export function compareLoaded(loaded: Loaded[], lock: LockLike): Problem[] {
 }
 
 export class ServerMods {
+  /** The capture made at the server's last start this process saw (null until one). The check after a Sync waits on it. */
+  last: Capture | null = null;
+
   constructor(private readonly amp: Amp, private readonly repoDir: string, private readonly log: (o: unknown, m: string) => void) {}
 
   start(tail: ConsoleTail) {
     tail.on((e, info) => {
       if (e.type !== "started" || info.replay) return;
-      setTimeout(() => void this.capture().catch((err) => this.log({ err: String(err) }, "server mods: capture failed")), 3000);
+      setTimeout(() => void this.capture().then((c) => { if (c) this.last = c; }).catch((err) => this.log({ err: String(err) }, "server mods: capture failed")), 3000);
     });
   }
 
@@ -89,19 +96,22 @@ export class ServerMods {
     }
   }
 
-  async capture(): Promise<{ files: Loaded[]; problems: Problem[]; source: string; modIds: string[] } | null> {
+  async capture(): Promise<(Capture & { source: string; modIds: string[] }) | null> {
     let source = "logs/latest.log";
     let text = (await this.read(source)) ?? "";
     let loaded = parseLoadedMods(text);
     if (loaded.length === 0) { source = "logs/debug.log"; text = (await this.read(source)) ?? ""; loaded = parseLoadedMods(text); }
     if (loaded.length === 0) { this.log({}, "server mods: no 'Found mod file' lines in latest.log or debug.log"); return null; }
-    const lock = JSON.parse(await readFile(path.join(this.repoDir, "modpack", "mods.lock.json"), "utf8")) as LockLike;
+    // docs/44: the server is held to the files of the seasons it ships, not to the whole lock
+    const lock = (await readShippedLock(this.repoDir)) as unknown as LockLike;
     const problems = compareLoaded(loaded, lock);
+    const { expected, missing } = missingOnServer(loaded, lock);
     const modIds = parseModIds(text);
-    const value = { at: new Date().toISOString(), source, files: loaded, problems, modIds } as unknown as Prisma.InputJsonValue;
+    const at = new Date();
+    const value = { at: at.toISOString(), source, files: loaded, problems, missing, modIds } as unknown as Prisma.InputJsonValue;
     await db.setting.upsert({ where: { key: SERVER_MODS_KEY }, create: { key: SERVER_MODS_KEY, value }, update: { value } });
-    this.log({ files: loaded.length, problems: problems.length, modIds: modIds.length, source }, "server mods: captured");
-    if (problems.length) await audit({ action: "modpack.serverMods", params: { files: loaded.length, problems: problems.map((p) => `${p.filename}: ${p.why}`).slice(0, 20) }, result: "FAILED" });
-    return { files: loaded, problems, source, modIds };
+    this.log({ files: loaded.length, problems: problems.length, missing: missing.length, modIds: modIds.length, source }, "server mods: captured");
+    if (problems.length || missing.length) await audit({ action: "modpack.serverMods", params: { files: loaded.length, problems: problems.map((p) => `${p.filename}: ${p.why}`).slice(0, 20), missing: missing.map((m) => m.filename).slice(0, 20) }, result: "FAILED" });
+    return { at, files: loaded, problems, expected, missing, source, modIds };
   }
 }

@@ -106,17 +106,17 @@ describe("Lock and Build with a private jar", () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  const mod = (extra: Partial<Mod> = {}) => ({ slug: "boss-mod", name: "Boss Mod", side: "both", enabled: true, requires: ["geckolib"], version: "latest", source: { private: NAME, sha512: sha(jar) }, ...extra }) as Mod;
-  const gecko = { slug: "geckolib", name: "GeckoLib", side: "both", enabled: true, requires: [], version: "Grwn5rUB" } as unknown as Mod;
+  const mod = (extra: Partial<Mod> = {}) => ({ slug: "boss-mod", name: "Boss Mod", side: "both", enabled: true, season: "s1", requires: ["geckolib"], version: "latest", source: { private: NAME, sha512: sha(jar) }, ...extra }) as Mod;
+  const gecko = { slug: "geckolib", name: "GeckoLib", side: "both", enabled: true, season: "s1", requires: [], version: "Grwn5rUB" } as unknown as Mod;
   const manifest = (m: Mod) => ({ minecraft: "1.21.1", loader: "neoforge", neoforge: "21.1.252", version: "0.1.0", mods: [m, gecko] }) as unknown as Manifest;
   const lockWith = (m: Mod, extra: Partial<Parameters<typeof buildLock>[1]> = {}) => buildLock(manifest(m), { configDir: path.join(dir, "none"), privateDir: path.join(dir, "private"), ...extra });
 
   it("Lock writes the entry from the file on disk, on the site's own path, and asks Modrinth nothing about it", async () => {
     const { lock } = await lockWith(mod());
     const e = lock.files.find((f) => f.slug === "boss-mod")!;
-    expect(e).toMatchObject({ filename: NAME, url: `/downloads/mods/${NAME}`, sha512: sha(jar), sha1: sha(jar, "sha1"), size: jar.length, versionNumber: "1.8.2-dsw.1", versionId: `private-${sha(jar).slice(0, 16)}`, side: "both", channels: "none", projectId: "" });
-    // what it needs is what mods.json says it requires
-    expect(lock.files.find((f) => f.slug === "geckolib")).toMatchObject({ requiredBy: ["boss-mod"] });
+    expect(e).toMatchObject({ filename: NAME, url: `/downloads/mods/${NAME}`, sha512: sha(jar), sha1: sha(jar, "sha1"), size: jar.length, versionNumber: "1.8.2-dsw.1", versionId: `private-${sha(jar).slice(0, 16)}`, side: "both", season: "s1", channels: "none", projectId: "" });
+    // what it needs is what mods.json says it requires: the library stays its season's, required by it
+    expect(lock.files.find((f) => f.slug === "geckolib")).toMatchObject({ requiredBy: ["boss-mod"], season: "s1" });
     expect(fetched.filter((u) => /boss|private/i.test(u))).toEqual([]);
     expect(lintLock(lock)).toEqual([]);
   });

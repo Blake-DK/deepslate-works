@@ -7,7 +7,7 @@ import { getProject, getVersion, getVersions, NotFound, type ModrinthVersion } f
 import { fetchJar, sha512File } from "./download";
 import { modUrlProblem, privateUrl } from "./mod-url";
 import { jarChannels, sideFor, widenForDependents } from "./sides";
-import { openZipFile, type Zip } from "./zip";
+import { openZipFile, openZipOnDisk, type Zip } from "./zip";
 import { hashConfigs, hashResourcePack } from "./hashes";
 
 export { hashConfigs, hashResourcePack };
@@ -43,6 +43,8 @@ export type LockEntry = {
   modrinth?: { client: string; server: string };
   /** 2.1.0: NeoForge network channels the jar registers (sides.ts `jarChannels`); null when the jar was not looked at. */
   channels?: "required" | "optional" | "none" | null;
+  /** docs/44: the season this file belongs to (mods.json `season`, or the season of every mod that needs it). */
+  season?: string;
 };
 
 export type LockWarning = string;
@@ -126,6 +128,7 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
       slug: project.slug, name: mod?.name ?? project.title, projectId: project.id, versionId: version.id, versionNumber: version.version_number,
       versionType: version.version_type, filename: file.filename, url: file.url, sha512: file.hashes.sha512, sha1: file.hashes.sha1, size: file.size,
       side, requiredBy: item.requiredBy ? [item.requiredBy] : [], modrinth: { client: project.client_side, server: project.server_side },
+      ...(mod?.season ? { season: mod.season } : {}),
     });
     log(`${project.slug} ${version.version_number} (${(file.size / 1048576).toFixed(1)} MB)${item.requiredBy ? ` <- ${item.requiredBy}` : ""}`);
     for (const dep of version.dependencies) {
@@ -139,6 +142,7 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
 
   const files = [...entries.values()].sort((a, b) => a.slug.localeCompare(b.slug));
   widenForDependents(files, warn);
+  seasonDependencies(files);
   if (opts.jarCache) {
     await mkdir(opts.jarCache, { recursive: true });
     for (const f of files) {
@@ -171,19 +175,27 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
 export async function privateEntry(mod: Mod, dir: string | undefined, previous: Pick<LockFile, "files"> | null, warn: (w: string) => void): Promise<LockEntry> {
   const src = mod.source!;
   const name = src.private;
-  const fields = { slug: mod.slug, name: mod.name, side: mod.side };
+  const fields = { slug: mod.slug, name: mod.name, side: mod.side, ...(mod.season ? { season: mod.season } : {}) };
   const file = dir ? path.join(dir, name) : null;
   const sum = file ? await sha512File(file) : null;
   if (sum === null) {
     const kept = previous?.files.find((f) => f.slug === mod.slug && f.filename === name && f.sha512 === src.sha512 && f.url === privateUrl(name));
     if (!kept) throw new Error(`${mod.slug}: its private jar ${name} is not in ${dir ?? "the private jars folder"}. It is put there by hand, from the build's artifact (docs/58)`);
     warn(`${mod.slug}: ${name} is not in ${dir ?? "the private jars folder"} here; its entry is kept from the lock as it was`);
-    return { ...kept, ...fields, requiredBy: [] };
+    const out: LockEntry = { ...kept, ...fields, requiredBy: [] };
+    if (!mod.season) delete out.season;
+    return out;
   }
   if (sum !== src.sha512) throw new Error(`${mod.slug}: ${name} in ${dir} is not the jar mods.json names: its sha512 is ${sum.slice(0, 16)}…, mods.json says ${src.sha512.slice(0, 16)}…`);
-  const zip = await openZipFile(file!);
-  const version = jarVersion(zip);
-  const channels = jarChannels(zip);
+  const zip = openZipOnDisk(file!);
+  let version: string | null;
+  let channels: LockEntry["channels"];
+  try {
+    version = jarVersion(zip);
+    channels = jarChannels(zip);
+  } finally {
+    zip.close?.();
+  }
   if (mod.side === "server" && channels === "required") throw new Error(`${mod.slug}: server-only, but its jar registers network channels every PC must have. Anything both sides need is never server-only: make it "both" in mods.json.`);
   const sha1 = createHash("sha1");
   for await (const chunk of createReadStream(file!)) sha1.update(chunk as Buffer);
@@ -200,6 +212,46 @@ export function jarVersion(zip: Zip): string | null {
   if (v && !v.includes("${")) return v;
   const manifest = zip.read("META-INF/MANIFEST.MF")?.toString("utf8");
   return manifest?.match(/^Implementation-Version:\s*(\S+)/m)?.[1] ?? null;
+}
+
+/**
+ * docs/44: a library pulled in only by one season's mods belongs to that season too, so it ships with them and not
+ * without them. A season's file that something outside that season needs would leave the other without it: refused.
+ */
+export function seasonDependencies(files: LockEntry[]): void {
+  const bySlug = new Map(files.map((f) => [f.slug, f]));
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const f of files) {
+      if (f.season || f.requiredBy.length === 0) continue;
+      const seasons = new Set(f.requiredBy.map((r) => bySlug.get(r)?.season ?? null));
+      const [only] = [...seasons];
+      if (seasons.size === 1 && only) {
+        f.season = only;
+        changed = true;
+      }
+    }
+  }
+  for (const f of files) {
+    if (!f.season) continue;
+    const others = f.requiredBy.filter((r) => bySlug.get(r)?.season !== f.season);
+    if (others.length) throw new Error(`${f.slug} is a Season ${f.season} mod, but ${others.join(", ")} needs it outside that season: take "season" off ${f.slug} in mods.json`);
+  }
+}
+
+/** docs/44: the lock's files that go to a server whose ship list is `ship`: every file without a season, and the files of the seasons in it. */
+export function shippedFiles(lock: Pick<LockFile, "files">, ship: readonly string[]): LockEntry[] {
+  return lock.files.filter((f) => !f.season || ship.includes(f.season));
+}
+
+/**
+ * docs/44: the lock as one server and its PCs see it: only its shipped files, and the hash (so the pack's version)
+ * over those. With nothing left out it is the lock itself, hash and all.
+ */
+export function shippedLock(lock: LockFile, ship: readonly string[]): LockFile {
+  const files = shippedFiles(lock, ship);
+  if (files.length === lock.files.length) return lock;
+  return { ...lock, files, hash: packHash(lock.neoforge, files, lock.configs, lock.resourcepack) };
 }
 
 /**

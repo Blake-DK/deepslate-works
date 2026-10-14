@@ -7,7 +7,8 @@ import { sshCommand } from "./ssh.js";
 import { jarChangeLines, jarChanges } from "./jar-changes.js";
 
 // docs/06 + docs/13 §4: rsync dist/server/ into the AMP instance's Minecraft/ dir over the tunnel
-// (rrsync-restricted deploy key), then Core.Restart through the ADS proxy if the mod set changed.
+// (rrsync-restricted deploy key), then Core.Restart through the ADS proxy if the mod set changed. Whether the server
+// came back with every mod is checked after it (modpack/verify.ts, POST /modpack/verify).
 
 const DIST_SERVER = process.env.DIST_SERVER_DIR ?? "/repo/dist/server";
 const LEVEL_NAME = /^[A-Za-z0-9_-]{1,40}$/.test(process.env.LEVEL_NAME ?? "") ? (process.env.LEVEL_NAME as string) : "world";
@@ -27,7 +28,9 @@ export function restartAfterSync(stateCode: number | null | undefined): boolean 
   return stateCode === 20;
 }
 
-export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; beforeRestart?: () => Promise<unknown> } = {}): Promise<{ ok: boolean; lines: string[]; restarted: boolean; dryRun: boolean }> {
+export type SyncResult = { ok: boolean; lines: string[]; restarted: boolean; dryRun: boolean; modsChanged?: boolean; /** When Core.Restart was sent: the check waits for a start after it. */ restartedAt?: string };
+
+export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; beforeRestart?: () => Promise<unknown> } = {}): Promise<SyncResult> {
   const dryRun = Boolean(opts.dryRun);
   const lines: string[] = [];
   try {
@@ -52,14 +55,15 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; b
   }
   const real = await run("rsync", ["-rlt", "--delete", "--itemize-changes", "-e", ssh, `${DIST_SERVER}/mods/`, `${target}mods/`], 900_000);
   if (real.code !== 0) return { ok: false, lines: [...lines, `rsync mods failed (${real.code}):`, ...real.out.trim().split("\n").slice(-8)], restarted: false, dryRun };
-  // 2. configs and server-only files: merged, never deleted
+  // 2. configs and server-only files: merged, never deleted. --checksum: Build writes every file anew, so by size and
+  //    time all of them looked changed at every Sync ("179 file(s) updated" with nothing new); now only content counts.
   for (const dir of ["config", "bluemap", "defaultconfigs"]) {
     try {
       await readdir(path.join(DIST_SERVER, dir));
     } catch {
       continue;
     }
-    const r = await run("rsync", ["-rlt", "--itemize-changes", "-e", ssh, `${DIST_SERVER}/${dir}/`, `${target}${dir}/`], 300_000);
+    const r = await run("rsync", ["-rlt", "--checksum", "--itemize-changes", "-e", ssh, `${DIST_SERVER}/${dir}/`, `${target}${dir}/`], 300_000);
     if (r.code !== 0) return { ok: false, lines: [...lines, `rsync ${dir} failed (${r.code}):`, ...r.out.trim().split("\n").slice(-5)], restarted: false, dryRun };
     const n = r.out.split("\n").filter((l) => /^[<>ch*]/.test(l)).length;
     lines.push(`${dir}: ${n} file(s) updated`);
@@ -67,9 +71,9 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; b
   // 2a. the server-list icon (the chosen logo, 64×64) in the server's own folder; read at start
   try {
     await stat(path.join(DIST_SERVER, "server-icon.png"));
-    const r = await run("rsync", ["-t", "--itemize-changes", "-e", ssh, `${DIST_SERVER}/server-icon.png`, `${target}server-icon.png`], 120_000);
+    const r = await run("rsync", ["-t", "--checksum", "--itemize-changes", "-e", ssh, `${DIST_SERVER}/server-icon.png`, `${target}server-icon.png`], 120_000);
     if (r.code !== 0) return { ok: false, lines: [...lines, `rsync server-icon.png failed (${r.code}):`, ...r.out.trim().split("\n").slice(-5)], restarted: false, dryRun };
-    lines.push(r.out.trim() ? "server-icon.png: updated; the server list shows it after the next start" : "server-icon.png: up to date");
+    lines.push(r.out.split("\n").some((l) => /^[<>ch*]/.test(l)) ? "server-icon.png: updated; the server list shows it after the next start" : "server-icon.png: up to date");
   } catch {
     /* no logo chosen */
   }
@@ -77,7 +81,7 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; b
   //     it is for an admin to choose the moment.
   try {
     await readdir(path.join(DIST_SERVER, "datapacks"));
-    const r = await run("rsync", ["-rlt", "--itemize-changes", "-e", ssh, `${DIST_SERVER}/datapacks/`, `${target}${LEVEL_NAME}/datapacks/`], 300_000);
+    const r = await run("rsync", ["-rlt", "--checksum", "--itemize-changes", "-e", ssh, `${DIST_SERVER}/datapacks/`, `${target}${LEVEL_NAME}/datapacks/`], 300_000);
     if (r.code !== 0) return { ok: false, lines: [...lines, `rsync datapacks failed (${r.code}):`, ...r.out.trim().split("\n").slice(-5)], restarted: false, dryRun };
     const n = r.out.split("\n").filter((l) => /^[<>ch*]/.test(l) && !/^cd/.test(l)).length;
     lines.push(n ? `datapacks: ${n} file(s) updated in ${LEVEL_NAME}/datapacks; restart the server for them to count` : "datapacks: up to date");
@@ -86,20 +90,22 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; b
   }
   // 3. restart if mods changed, and only a server that is running (2026-10-09: AMP's Restart starts a stopped server,
   //    and a Sync while live is stopped on purpose must never start it; a sleeping one loads the mods when it wakes)
-  let restarted = false;
-  if (modsChanged) {
-    const code = env.AMP_MOCK === "1" ? 20 : await amp.getStatus().then((s) => s.stateCode ?? null).catch(() => null);
-    if (!restartAfterSync(code)) {
-      lines.push(`the server is not running (AMP state ${code ?? "unknown"}): not restarted; it loads the new mods at its next start`);
-      return { ok: true, lines, restarted: false, dryRun };
-    }
-    if (env.AMP_MOCK === "1") lines.push("AMP_MOCK=1: would call Core.Restart");
-    else {
-      await opts.beforeRestart?.().catch(() => undefined); // a running pre-generation is paused and saved first
-      await amp.call("Core", "Restart");
-      lines.push("Core.Restart sent");
-    }
-    restarted = true;
+  if (!modsChanged) {
+    lines.push("mods unchanged: the server keeps running, no restart");
+    return { ok: true, lines, restarted: false, dryRun, modsChanged };
   }
-  return { ok: true, lines, restarted, dryRun };
+  const code = env.AMP_MOCK === "1" ? 20 : await amp.getStatus().then((s) => s.stateCode ?? null).catch(() => null);
+  if (!restartAfterSync(code)) {
+    lines.push(`the server is not running (AMP state ${code ?? "unknown"}): not restarted; it loads the new mods at its next start, and every start is checked for missing mods`);
+    return { ok: true, lines, restarted: false, dryRun, modsChanged };
+  }
+  if (env.AMP_MOCK === "1") {
+    lines.push("AMP_MOCK=1: would restart the server");
+    return { ok: true, lines, restarted: true, dryRun, modsChanged };
+  }
+  await opts.beforeRestart?.().catch(() => undefined); // a running pre-generation is paused and saved first
+  const restartedAt = new Date().toISOString();
+  await amp.call("Core", "Restart");
+  lines.push("restarting the server to load the new mods…");
+  return { ok: true, lines, restarted: true, dryRun, modsChanged, restartedAt };
 }

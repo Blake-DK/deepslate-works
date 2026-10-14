@@ -1033,7 +1033,7 @@
       ],
       "guide": "game",
       "topic": "factories",
-      "howTo": "Turns Create's rotation into electricity. Put an **alternator** on a spinning shaft, run **copper wire** (spools) from its connector to a machine's connector, and it has power. **Electric motors** turn power back into rotation; **accumulators** store it."
+      "howTo": "Turns Create's rotation into electricity. Put an **alternator** on a spinning shaft, run **copper wire** (spools) from its connector to a machine's connector, and it has power. **Electric motors** turn power back into rotation; **accumulators** store it. One water wheel can't turn an alternator on its own: put several on the same shaft."
     },
     {
       "slug": "create-big-cannons",
@@ -1108,7 +1108,7 @@
       "name": "Mekanism",
       "category": "factories",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "H",
       "recommended": false,
       "hidden": false,
@@ -1129,18 +1129,18 @@
           "url": "https://www.youtube.com/watch?v=sw2OxxtRft0"
         }
       ],
-      "version": "latest",
+      "version": "5KzzycBT",
       "requires": [],
       "guide": "game",
       "topic": "factories",
-      "howTo": "Start with an **Enrichment Chamber** (2 dust per ore) powered by a generator from Mekanism Generators. Upgrade machines with **speed** and **energy** upgrades. Cables carry power, **logistical transporters** carry items. JEI shows every recipe."
+      "howTo": "Start with an **Enrichment Chamber** (2 dust per ore) powered by a generator from Mekanism Generators. Upgrade machines with **speed** and **energy** upgrades. Cables carry power, **logistical transporters** carry items. JEI shows every recipe. Its ores (osmium first) are found only on the **Moon**: see the portal under Getting around."
     },
     {
       "slug": "mekanism-generators",
       "name": "Mekanism Generators",
       "category": "factories",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "H",
       "recommended": false,
       "hidden": false,
@@ -1162,20 +1162,20 @@
           "url": "https://www.youtube.com/watch?v=-SZ3FjQ1WVY"
         }
       ],
-      "version": "latest",
+      "version": "a6gl7srE",
       "requires": [
         "mekanism"
       ],
       "guide": "game",
       "topic": "factories",
-      "howTo": "Power for Mekanism: start with a **Heat Generator** (burns fuel or sits next to lava), then **solar** or **wind generators**. Connect them to machines with universal cables."
+      "howTo": "Power for Mekanism: start with a **Heat Generator** (burns lava or other fuel; lava around it adds a little), then **solar** or **wind generators** (the higher a wind generator stands, the more it makes). Connect them to machines with universal cables."
     },
     {
       "slug": "mekanism-tools",
       "name": "Mekanism Tools",
       "category": "factories",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -1193,7 +1193,7 @@
           "url": "https://www.youtube.com/watch?v=iL4_OP5Bm-Y"
         }
       ],
-      "version": "latest",
+      "version": "v5zlSE9s",
       "requires": [
         "mekanism"
       ],
@@ -1381,7 +1381,31 @@
       ],
       "guide": "game",
       "topic": "mining",
-      "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock."
+      "howTo": "Place **markers** at the corners of the area to dig and right-click one to link them. Put the **quarry** next to the marked area, give it power (Crafts & Additions wires work) and a chest or pipe next to it for the output. It digs everything inside down to bedrock. It needs real power to dig fast: one small generator only crawls. **Wind generators** built high up are the easiest real power. **Unbreaking** makes it cheaper to run; **Efficiency** makes it hungrier, not faster. It stops when its storage is full and starts again when there is room."
+    },
+    {
+      "slug": "quarry-pause",
+      "name": "Quarry pause",
+      "category": "mining",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Our own small addition to the quarry, on the server only: a quarry stops digging while its chest is full and starts again by itself when there is room.",
+      "wiki": "https://github.com/Blake-DK/deepslate-works/tree/dev/mods/quarry-pause",
+      "videos": [],
+      "noVideosFound": "2026-10-12",
+      "requires": [
+        "additional-enchanted-miner"
+      ],
+      "guide": "behind",
+      "source": {
+        "private": "dsw-quarry-pause-1.0.0.jar",
+        "sha512": "1ccad65bc346a47c386ddc6be6347f8a84cef676d74a4481f606fbb090263c99e188e56b2631d89620fe43db97a8dc7c1dd18f981dee18525dd738a689dd3ce7",
+        "note": "docs/56 §3: built by mods/quarry-pause/build.sh"
+      }
     },
     {
       "slug": "tacz-1.21.1",
@@ -1962,6 +1986,62 @@
       "howTo": "Chairs, tables, benches, shelves, curtains and lamps. Right-click to sit or use; JEI lists every piece."
     },
     {
+      "slug": "serene-shrubbery",
+      "name": "Serene Shrubbery",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Garden flowers in lots of colours. Put two or three next to each other and new colours appear over time. Also adds the Bloom Basket planter.",
+      "wiki": "https://modrinth.com/mod/serene-shrubbery",
+      "videos": [
+        {
+          "title": "10 Spring Mods That Make Minecraft Absolutely Stunning",
+          "url": "https://www.youtube.com/watch?v=8ejAZtc8FyE&t=113s"
+        },
+        {
+          "title": "COZIEST Minecraft 1.21.11 Mods! | Updated & NEW!",
+          "url": "https://www.youtube.com/watch?v=fOU0pmI5s6s&t=462s"
+        }
+      ],
+      "version": "rRJVLCOH",
+      "requires": [],
+      "guide": "game",
+      "topic": "building",
+      "howTo": "Pick flowers you find in the wild; they grow in **new land**. Plant two **different colours** of the same flower side by side on grass or dirt, for example red and white Pansies, and wait: a new colour can sprout next to them. Bone meal on most of them drops a copy. Craft a **Bloom Basket** from 3 planks, 1 dirt and 3 sticks to plant Pansies in."
+    },
+    {
+      "slug": "wilder-flowers",
+      "name": "Wilder Flowers",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": true,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Wildflowers, clover patches and flower garlands you can wear or hang up. The wildflowers grow in newly explored land.",
+      "wiki": "https://modrinth.com/mod/wilder-flowers",
+      "videos": [
+        {
+          "title": "8 MORE MORE MORE Minecraft mods that make me JOYOUS!! (1.20.1 - 1.21.1) FORGE/NEOFORGE",
+          "url": "https://www.youtube.com/watch?v=uLp6FgGeEfc&t=594s"
+        },
+        {
+          "title": "18 Small, Subtle Minecraft Mods - Small Mod Discoveries | Volume 8",
+          "url": "https://www.youtube.com/watch?v=NmlESpmaTGA&t=586s"
+        }
+      ],
+      "version": "yWhjRH1D",
+      "requires": [],
+      "guide": "game",
+      "topic": "building",
+      "howTo": "Wildflowers and clover only grow in **new land**, so look further out than you have been. Craft **garlands** from three wildflowers of one kind, to wear on your head or hang as decoration."
+    },
+    {
       "slug": "supplementaries",
       "name": "Supplementaries",
       "category": "building",
@@ -2322,8 +2402,7 @@
       "name": "L_Ender's Cataclysm",
       "category": "adventure",
       "side": "both",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "M",
       "recommended": false,
       "hidden": false,
@@ -2349,15 +2428,15 @@
       "requires": [],
       "guide": "game",
       "topic": "bosses",
-      "howTo": "Big dungeons generate in the world: a ruined citadel, a sunken city, a burning arena and more, each guarded by a boss. Most are fights for a **group**: go together and bring food, armour and a bed nearby. What they drop is gear you can't get any other way."
+      "howTo": "Big dungeons generate in the world: a ruined citadel, a sunken city, a burning arena and more, each guarded by a boss. Most are fights for a **group**: go together and bring food, armour and a bed nearby. What they drop is gear you can't get any other way.",
+      "season": "s1"
     },
     {
       "slug": "mowzies-mobs",
       "name": "Mowzie's Mobs",
       "category": "adventure",
       "side": "both",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "M",
       "recommended": false,
       "hidden": false,
@@ -2379,11 +2458,18 @@
           "url": "https://www.youtube.com/watch?v=NmhCMBxHdSw"
         }
       ],
-      "version": "xgAXTl17",
-      "requires": [],
+      "requires": [
+        "geckolib"
+      ],
       "guide": "game",
       "topic": "bosses",
-      "howTo": "You'll meet these while exploring: a frost beast in snowy plains, a sun chief in savanna villages, an armoured knight in a hidden hall underground. Each fight has a pattern: watch it once before you swing. Their drops are unusual tools and weapons."
+      "howTo": "You'll meet these while exploring: a frost beast in snowy plains, a sun chief in savanna villages, an armoured knight in a hidden hall underground. Each fight has a pattern: watch it once before you swing. Their drops are unusual tools and weapons.",
+      "season": "s1",
+      "source": {
+        "private": "mowziesmobs-1.21.1-1.8.2-dsw.1.jar",
+        "sha512": "b66b6eb2736352945a1e18e8059be684a9039752ff0a04a91b8b840f89c3cddc54423e561a1ae453227a74a6753639b0e97d3444b6852d33b53ac51bc109ab4d",
+        "note": "docs/58: Sculptor crash fix"
+      }
     },
     {
       "slug": "gateways-to-eternity",
@@ -2420,8 +2506,7 @@
       "name": "Ender Dragon Fight Remastered",
       "category": "adventure",
       "side": "server",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": false,
@@ -2437,7 +2522,8 @@
       ],
       "version": "5OYoqItD",
       "requires": [],
-      "guide": "behind"
+      "guide": "behind",
+      "season": "s1"
     },
     {
       "slug": "multiplayerbosses",
@@ -2463,8 +2549,7 @@
       "name": "Lionfish API",
       "category": "adventure",
       "side": "both",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": true,
@@ -2473,15 +2558,15 @@
       "wiki": "https://modrinth.com/mod/lionfish-api",
       "videos": [],
       "version": "fTRMVgyZ",
-      "requires": []
+      "requires": [],
+      "season": "s1"
     },
     {
       "slug": "curios",
       "name": "Curios API",
       "category": "adventure",
       "side": "both",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": true,
@@ -2490,15 +2575,15 @@
       "wiki": "https://modrinth.com/mod/curios",
       "videos": [],
       "version": "yohfFbgD",
-      "requires": []
+      "requires": [],
+      "season": "s1"
     },
     {
       "slug": "geckolib",
       "name": "GeckoLib",
       "category": "adventure",
       "side": "both",
-      "enabled": false,
-      "note": "Season 1: off the live server and PCs until the season opens (Alex, 2026-10-09). Version stays pinned; switch back on to return the same file.",
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": true,
@@ -2507,7 +2592,8 @@
       "wiki": "https://modrinth.com/mod/geckolib",
       "videos": [],
       "version": "Grwn5rUB",
-      "requires": []
+      "requires": [],
+      "season": "s1"
     },
     {
       "slug": "apothic-attributes",
@@ -2534,9 +2620,9 @@
       "load": "L",
       "recommended": false,
       "hidden": false,
-      "adminOnly": true,
+      "adminOnly": false,
       "exclusiveGroup": null,
-      "description": "Real walk-through portals to the season's own world, the Frontier. Nothing to install: it runs on the server.",
+      "description": "Walk-through portals to the Moon, a world of its own for mining. Nothing to install: it runs on the server.",
       "wiki": "https://github.com/Crystal-Nest/server-sided-portals/wiki",
       "videos": [],
       "noVideosFound": "2026-10-05",
@@ -2544,7 +2630,9 @@
       "requires": [
         "cobweb"
       ],
-      "guide": "behind"
+      "guide": "game",
+      "topic": "travel",
+      "howTo": "Build a frame of **smooth basalt** shaped like a nether portal (smelt basalt to get it) and right-click inside it with an **eye of ender**. Step in to reach the **Moon**: everything can be mined there, and osmium and the other Mekanism ores are found only there. Gravity is low, so you jump high and fall slowly; the night never ends, monsters are about, and beds explode. Below y 0 the air is poisonous: wear a **gas mask** (leather, 2 string, charcoal and a glass pane; it lasts 30 seconds in the gas) or Mekanism's hazmat mask. A portal comes out at the same spot on the other side; walk back through it to come home."
     },
     {
       "slug": "worldedit",

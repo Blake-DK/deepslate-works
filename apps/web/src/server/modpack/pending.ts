@@ -6,7 +6,7 @@ import { pendingSteps, uploadsSinceBuild, type Pending } from "modpack/pending";
 import { installerVersion } from "modpack/script-version";
 import { db } from "@/server/db";
 import { getManifest } from "@/server/modpack/manifest";
-import { getLock, P } from "@/server/modpack/lock";
+import { getFullLock, getShip, P } from "@/server/modpack/lock";
 import { git } from "@/server/modpack/drift";
 import { listBuilds } from "@/server/builds";
 
@@ -42,7 +42,7 @@ export async function getPending(): Promise<Pending> {
   const dist = P.dist;
   const [manifest, lock, configs, resourcepack, packText, serverBuiltAt, installerJson, ciVersion, ciSum, repoPs1, sourceAt, logoAt, syncedRow, manifestRaw] = await Promise.all([
     getManifest(),
-    getLock(),
+    getFullLock(),
     hashConfigs(P.config),
     hashResourcePack(P.resourcepack),
     text(path.join(dist, "server", "PACK_VERSION")),
@@ -56,7 +56,7 @@ export async function getPending(): Promise<Pending> {
     db.setting.findUnique({ where: { key: "_packSynced" } }).catch(() => null),
     text(P.manifest),
   ]);
-  const [buildsJson, buildsAt, uploads] = await Promise.all([text(path.join(dist, "builds.json")), mtime(path.join(dist, "builds.json")), listBuilds()]);
+  const [buildsJson, buildsAt, uploads, ship] = await Promise.all([text(path.join(dist, "builds.json")), mtime(path.join(dist, "builds.json")), listBuilds(), getShip()]);
   let builtNames: string[] | null = null;
   try {
     const b = JSON.parse(buildsJson ?? "") as { builds?: Array<{ name?: unknown }>; problems?: Array<{ file?: unknown }> };
@@ -83,6 +83,7 @@ export async function getPending(): Promise<Pending> {
   return pendingSteps({
     manifest,
     lock,
+    ship,
     configs,
     resourcepack,
     builtPack: packText?.trim() || null,

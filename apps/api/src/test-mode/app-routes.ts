@@ -6,6 +6,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { wakeDecision, type ServerState } from "../shared/server-state.js";
 import type { Wake } from "../status/wake.js";
+import { readShippedLock } from "../modpack/ship.js";
 import { TESTER_BODY } from "../shared/testers.js";
 import type { Testers } from "./testers.js";
 
@@ -65,7 +66,8 @@ export function testAppRoutes(app: FastifyInstance, d: TestAppDeps) {
     try {
       const [mods, lock] = await Promise.all([
         readFile(path.join(d.repoDir, "modpack", "mods.json"), "utf8").then((t) => JSON.parse(t) as unknown),
-        readFile(path.join(d.repoDir, "modpack", "mods.lock.json"), "utf8").then((t) => JSON.parse(t) as unknown),
+        // docs/44: the test server's pack, the seasons it ships and no others, so the app installs what it runs
+        readShippedLock(d.repoDir),
       ]);
       return reply.header("cache-control", "no-store").send({ mods, lock });
     } catch {
@@ -85,8 +87,8 @@ export function testAppRoutes(app: FastifyInstance, d: TestAppDeps) {
     const name = (req.query as { file?: unknown } | undefined)?.file;
     const missing = () => reply.code(404).send({ error: { code: "not_found", message: "No such private jar in the test pack" } });
     if (typeof name !== "string" || !PRIVATE_JAR.test(name)) return missing();
-    const lock = await readFile(path.join(d.repoDir, "modpack", "mods.lock.json"), "utf8").then((t) => JSON.parse(t) as { files?: Array<Record<string, unknown>> }).catch(() => null);
-    const entry = lock?.files?.find((f) => f.filename === name && f.url === privateUrl(name));
+    const lock = await readShippedLock(d.repoDir).catch(() => null);
+    const entry = lock?.files.find((f) => f.filename === name && f.url === privateUrl(name));
     if (!entry) return missing();
     // the path is the lock's own file name, and stays inside the folder of private jars whatever that name is
     const dir = path.resolve(d.privateJarsDir ?? path.join(d.repoDir, "data", "private-jars"));

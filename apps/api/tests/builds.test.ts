@@ -131,7 +131,8 @@ describe("pre-generating another world (Alex, 2026-10-05)", () => {
     const a = actions["world.pregen"];
     expect(a.build(ctx, a.input.parse({ x: 0, z: 0, radius: 500, world: "deepslate:frontier_sample" }))[1]).toBe("chunky world deepslate:frontier_sample");
     expect(a.build(ctx, a.input.parse({ x: 0, z: 0, radius: 500 }))[1]).toBe("chunky world minecraft:overworld");
-    for (const world of ["deepslate:limbo", "minecraft:overworld start", "ae2:spatial_storage"]) expect(a.input.safeParse({ x: 0, z: 0, radius: 500, world }).success).toBe(false);
+    expect(a.build(ctx, a.input.parse({ x: 0, z: 0, radius: 500, world: "deepslate:moon" }))[1]).toBe("chunky world deepslate:moon"); // docs/55 M5
+    for (const world of ["deepslate:limbo", "deepslate:moon_plains", "minecraft:overworld start", "ae2:spatial_storage"]) expect(a.input.safeParse({ x: 0, z: 0, radius: 500, world }).success).toBe(false);
     expect([mapOf(), mapOf("minecraft:overworld"), mapOf("minecraft:the_nether"), mapOf("minecraft:the_end"), mapOf("deepslate:frontier_s1")]).toEqual(["world", "world", "world_the_nether", "world_the_end", "frontier_s1"]);
     // the same square in another world is another area: chunky's old task is called off first
     expect(sameArea({ x: 0, z: 0, radius: 500 }, { x: 0, z: 0, radius: 500, world: "minecraft:overworld" })).toBe(true);

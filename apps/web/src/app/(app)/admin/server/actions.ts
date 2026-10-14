@@ -58,7 +58,7 @@ export async function runActionAction(formData: FormData) {
 const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const blank = (v: FormDataEntryValue | null) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null);
 const pregenOn = z.object({
-  world: z.string().regex(/^(minecraft:(overworld|the_nether|the_end)|deepslate:frontier_[a-z0-9_]{1,32})$/).default("minecraft:overworld"),
+  world: z.string().regex(/^(minecraft:(overworld|the_nether|the_end)|deepslate:moon|deepslate:frontier_[a-z0-9_]{1,32})$/).default("minecraft:overworld"),
   mode: z.enum(["empty", "now"]),
   what: z.enum(["generate", "render", "both"]),
   purge: z.boolean(),

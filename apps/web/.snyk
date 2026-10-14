@@ -1,0 +1,18 @@
+# Snyk policy for the web app's dependencies. The reasons are the security register's (docs/38 §5.1), where both
+# findings are closed as Not applicable; kept here so a new import of the project keeps them.
+version: v1.25.1
+ignore:
+  SNYK-JS-NEXT-15105315:
+    - '*':
+        reason: >-
+          SR-02, docs/38: partial prerendering only, and next.config.ts does not enable it. Cleared by the Next 16.3.x
+          move (docs/10 item 18).
+        expires: 2027-01-12T00:00:00.000Z
+        created: 2026-10-14T12:30:00.000Z
+  SNYK-JS-DEEPMERGETS-18912249:
+    - '*':
+        reason: >-
+          SR-04, docs/38: reached only through the Prisma CLI, which merges our own prisma.config at start and in CI; no
+          outside input reaches it. Cleared by Prisma 7.
+        created: 2026-10-14T12:30:00.000Z
+patch: {}

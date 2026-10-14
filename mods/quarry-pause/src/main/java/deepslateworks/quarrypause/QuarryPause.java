@@ -1,0 +1,31 @@
+package deepslateworks.quarrypause;
+
+import com.yogpc.qp.machine.MachineStorage;
+import net.neoforged.fml.common.Mod;
+
+/**
+ * docs/56 §3: a quarry (Additional Enchanted Miner) whose output can go nowhere stops digging, and starts again by
+ * itself when there is room. The quarry keeps what it digs in an internal storage and pushes it into the blocks next to
+ * it after every dig; whatever is still in that storage at the start of its next turn had nowhere to go. While anything
+ * is left there, the mixins skip the quarry's dig step, so it breaks nothing and uses no power. The push still runs
+ * every tick, so the quarry carries on by itself once a chest is emptied or a pipe frees up.
+ *
+ * Only items count. Fluids (water or lava picked up with a pump module) stay in the storage and the quarry carries on
+ * digging, as before: a quarry with a pump module and no tank beside it would otherwise stop at the first water.
+ *
+ * In a quarry at most the drops of the last block wait in the storage. An Adv. Quarry breaks more per turn and the push
+ * moves about six item types a tick, so it can hold more for a few ticks. What waits is not dropped when the machine is
+ * broken: a mod that moves blocks (a Create contraption) removes the block after copying its data, and dropping then
+ * would duplicate it.
+ *
+ * Server only: nothing here is sent to players, and their game does not need this mod.
+ */
+@Mod(QuarryPause.ID)
+public final class QuarryPause {
+    public static final String ID = "dsw_quarry_pause";
+
+    /** True when the storage still holds items that could not be passed on. */
+    public static boolean blocked(MachineStorage storage) {
+        return storage != null && !storage.itemKeyCounts().isEmpty();
+    }
+}

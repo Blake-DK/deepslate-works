@@ -4,13 +4,13 @@ import { checkSides, clientSet, type ServerLoaded } from "./sides";
 import { lintLock, lintManifest } from "./lint";
 import { verifyLinks } from "./verify-links";
 import { buildBranding } from "./branding";
-import { buildLock, diffLocks, type LockFile } from "./lock";
+import { buildLock, diffLocks, shippedLock, type LockFile } from "./lock";
 import { applyTestOverlay, buildConfigZip, buildInstaller, buildServer, removeClientPack } from "./build";
 import { modpackPaths } from "./paths";
 import { buildItems } from "./items";
 import { lockExtras, prepareExtrasLock } from "./extras";
 import type { Manifest } from "./schema";
-import { buildSeasons, loadSeasons, shipNotice } from "./seasons";
+import { buildSeasons, loadSeasons, readShip, shipNotice } from "./seasons";
 import { buildBuilds } from "./builds";
 import { designFile, designPrompt } from "./design-cli";
 
@@ -127,7 +127,11 @@ async function main() {
       const loaded = await loadManifest();
       // PACK_NAME: the server's name from Admin → Branding, when the build runs inside api
       const manifest = process.env.PACK_NAME?.trim() ? { ...loaded, name: process.env.PACK_NAME.trim().slice(0, 40) } : loaded;
-      const lock = await requireLock();
+      // docs/44: the server and its PCs get the files of the seasons this server ships, and the pack's version is theirs
+      const full = await requireLock();
+      const lock = shippedLock(full, await readShip(P.seasons));
+      const out = full.files.filter((f) => !lock.files.includes(f));
+      if (out.length) log(`season mods left out (their season is not shipped here): ${out.map((f) => `${f.slug} (${f.season})`).join(", ")}`);
       await mkdir(P.dist, { recursive: true });
       const portalUrl = process.env.AUTH_URL ?? process.env.PORTAL_URL ?? "https://deepslate.dsw.test";
       await removeClientPack(P, log);

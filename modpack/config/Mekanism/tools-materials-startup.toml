@@ -1,0 +1,18 @@
+# Mekanism Tools 10.7.19, settings shipped with the pack (docs/53 E1). A STARTUP config: read at start on the server
+# (which works out the protection) and on every PC (which shows it on the item), so it ships to both and is part of the
+# pack. Mekanism Tools adds every key not written here with its default.
+#
+# No Mekanism Tools armour beats netherite (3, 8, 6, 3 protection, toughness 3, knockback resistance 0.1), so Season 1
+# stays a fight. Only the two sets above it change: Refined Obsidian (was 6, 12, 8, 5, toughness 5, knockback 0.2) and
+# the Osmium helmet (was 4). Tools and weapons are left as they are.
+
+[materials.osmium]
+	osmiumHelmetArmor = 3
+
+[materials.refined_obsidian]
+	refined_obsidianHelmetArmor = 3
+	refined_obsidianChestplateArmor = 8
+	refined_obsidianLeggingArmor = 6
+	refined_obsidianBootArmor = 3
+	refined_obsidianToughness = 3.0
+	refined_obsidianKnockbackResistance = 0.1

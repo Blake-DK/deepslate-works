@@ -10,8 +10,8 @@ import { COMPONENTS_RE, ITEM_RE, SLOT_RE } from "../shared/slots.js";
 // "system" actions are run by the api itself (join hook, timers); the rest need an ADMIN caller.
 
 export const MC_NAME = z.string().regex(/^[A-Za-z0-9_]{3,16}$/);
-/** The worlds that can be pre-generated: the game's three and a season's Frontier. Never the entrance room. */
-export const PREGEN_WORLD = z.string().regex(/^(minecraft:(overworld|the_nether|the_end)|deepslate:frontier_[a-z0-9_]{1,32})$/);
+/** The worlds that can be pre-generated: the game's three, the Moon (docs/55 M5) and a season's Frontier. Never the entrance room. */
+export const PREGEN_WORLD = z.string().regex(/^(minecraft:(overworld|the_nether|the_end)|deepslate:moon|deepslate:frontier_[a-z0-9_]{1,32})$/);
 
 // ---- builds (docs/34 §10)
 /** A structure file holds 48 blocks a side at most; a larger build is a grid of pieces. */
@@ -604,12 +604,15 @@ export const actions = {
     input: z.object({ name: MC_NAME, reason: z.string().max(120).regex(/^[\w .,'!?-]*$/).default("Your Discord isn't in the group's server any more.") }),
     build: (_ctx, { name, reason }) => [`tag ${name} remove verified`, `whitelist remove ${name}`, `kick ${name} ${reason}`],
   }),
-  // Planner ruling 2026-09-30 (docs/13): admins get the Minecraft console as it is. One line, sent as typed, with a
-  // leading "/" dropped; no list of allowed commands. Only through POST /console/send, which is rate-limited.
+  // Planner ruling 2026-09-30 (docs/13): admins get the Minecraft console as it is. One line, sent as typed (the game's
+  // console drops one leading "/" itself); no list of allowed commands. Only through POST /console/send, which is
+  // rate-limited.
+  // Sent as typed: the game's own console drops one leading slash, so "/tp …" runs tp and WorldEdit's "//count …" runs
+  // its command "/count …" (seen on the test server 2026-10-13). Dropping one here as well made "//count" arrive as "count".
   "console.send": define({
     name: "console.send",
     role: "ADMIN",
-    input: z.object({ command: z.string().max(1000).regex(/^[^\r\n]*$/).transform((c) => c.trim().replace(/^\/+/, "")).pipe(z.string().min(1)) }),
+    input: z.object({ command: z.string().max(1000).regex(/^[^\r\n]*$/).transform((c) => c.trim()).pipe(z.string().regex(/[^/]/)) }),
     build: (_ctx, { command }) => [command],
   }),
   // docs/22 §5: the one place where a person's free text goes to the console. One tellraw to verified players, its text

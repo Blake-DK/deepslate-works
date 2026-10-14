@@ -22,3 +22,12 @@ files you want back; Minecraft then uses its own.
 
 Any other vanilla texture can be overridden the same way: put it at its vanilla path
 under `assets/minecraft/textures/`.
+
+## The gas mask's icon (docs/55 M8)
+
+`assets/minecraft/models/item/leather_helmet.json` is vanilla 1.21.1's own file (from the client jar, its ten
+armour-trim overrides kept) with one override added last: `custom_model_data` 5501 shows
+`assets/deepslate/models/item/gas_mask.json`. The gas mask is a leather helmet with that number, made by the recipe
+`deepslate:gas_mask` in `modpack/datapacks/deepslate-moon/`. `textures/item/gas_mask.png` is tinted by the helmet's
+colour (keep it light grey); `gas_mask_overlay.png` (glasses, filter) is drawn as it is. On the head it is a dark
+leather cap: 1.21.1 has no worn model of its own without a mod.

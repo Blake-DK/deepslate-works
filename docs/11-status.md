@@ -26,6 +26,269 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Snyk's ignores in the repository (2026-10-14, PR to `dev`)
+
+Snyk counted this repository as private, so it ran out of tests (200/200 in the period to 2026-10-07). Alex switched
+Snyk Code off (CodeQL does that job, docs/54) and IaC off, then deleted the Snyk project and imported it again so it is
+counted as public. Deleting the project dropped its ignores, so they now live in `.snyk` files beside the manifests:
+`apps/web/.snyk` (SR-02 `next`, expires 2027-01-12; SR-04 `deepmerge-ts`) and `apps/api/.snyk` (SR-04). The reasons
+are docs/38 §5.1's. Snyk reads them from `main`, so they take effect with the next `dev` → `main` pull request. SR-08
+was Snyk Code's and needs nothing now.
+
+## Public artifacts: main's app run keeps no pictures, the fork's jar is encrypted (2026-10-14, PR to `dev`)
+
+- **Done by Alex on 2026-10-14:** every `deepslate-works-*` artifact and `old-exe-3.5.5` deleted (65), and the fork's
+  `mowziesmobs-jar`. The patched jar is kept on the VPS (the test checkout's `data/private-jars/`, and a backup), its
+  sha512 equal to the lock's.
+- **`installer.yml`:** only main's push builds the real site's address into the exe; a pull request or a run by hand
+  builds the csproj's placeholder. main's run keeps the exe and the text files in its artifact, never a picture (the
+  window draws the address); every other run keeps its pictures as before. `old-exe-3.5.5` is kept for one day. Takes
+  effect on `main` with the next `dev` → `main` pull request; until then a push to `main` that changes the installer
+  keeps pictures again.
+- **The fork's `dsw-build`** (outside this repository): the jar is encrypted to a certificate before upload; the artifact
+  is `mowziesmobs-jar-encrypted` (the encrypted jar and its sha512), kept 14 days. The private key is on the VPS only,
+  in ladm's config folder, never in a repository. To fetch a new build: download the artifact, decrypt it with
+  `openssl cms -decrypt`, check the sha512, then copy the jar into `data/private-jars/` as docs/58 says.
+## GitHub security review: docs/60 (2026-10-12 planned; Part A checked 2026-10-14)
+
+docs/60 is the read-only review of the GitHub side: the account, the repository's settings, the workflows, the
+packages, what the public can read and the scanners. It was planned as docs/59 and renumbered on 2026-10-14, as the
+flowers plan had taken 59 first. Part A is the VPS session's, by API; Part B is Alex's, in GitHub's settings; Part C
+is the security planner's triage. Findings stay private (docs/38); this section gets only the date, the rows checked
+and the counts Met, Private and Refused.
+
+- **Part A, 2026-10-14:** rows checked A1.1 to A1.10, A2.1 to A2.8 (and the trigger, pin and permission check on
+  `main`), A3.1 to A3.6, A4.1 to A4.3, A5.1 to A5.5 and A6: 33 rows. **Met 16, Private 14, Refused 3** (one row
+  first counted Met was corrected the same day). Every call was a `GET` with the session's token as it was; the
+  review changed nothing on GitHub. The Private rows and the refused reads are in the private repository, branch
+  `security`, for the security planner's triage (Part C).
+- **Part B, 2026-10-14:** read by Alex, the account's pages and the organisation's, and Snyk; the steps the token
+  could read by API were read too. His notes are in the private repository with Part A's.
+- **Next:** Part C, the security planner's triage of the Private rows.
+
+## Sync says it restarts, then checks the server's mods (2026-10-14, `558f8671` on `dev`, images built; on test after `sudo deploy/test-up.sh`)
+
+- **Alex:** "the sync server needs to say restarting server in its log screen and then verify everything is there".
+  Sync's log now says "restarting the server to load the new mods…", then "waiting for the server to come back
+  up…", then "the server is back up (N s after the restart)" and "checked its start: all N mods the pack gives the
+  server are loaded", or an ERROR line and a line per missing file. With the mods unchanged: "mods unchanged: the
+  server keeps running, no restart" and a check of its last start. New mods on a server that is not running are
+  checked at its next start. Every start is checked (ServerMods), a missing mod goes into the event log.
+- Settings, datapacks and the icon are rsynced by content (`--checksum`): before, every Sync said "14 file(s)
+  updated" and "179 file(s) updated … restart" because Build writes them anew.
+- `POST /modpack/verify {since?}` (docs/08). Tests: `apps/api/tests/sync-verify.test.ts`.
+- **Fixed by PR #55 to `main` (one compose line, Alex chose "fix it now"; open, CI passed):** Admin → Modpack on the test site says "Out of date" after every Build and Sync. web-test
+  has no `SEASONS_SHIP` (api-test has `s1`): `sudo deploy/test-up.sh` uses **live's** `deploy/docker-compose.yml`
+  (`main`), and only `dev`'s passed it to web-test (docs/44, `395f7332`, held on `dev`). After the merge: deploy, then `sudo deploy/test-up.sh`. So the page reckons the pack
+  without Season 1 (`2ae3aea0`), api-test builds it with it (`b894dfa3`). Older than the flowers (`c0b230b4` against
+  `8b610bea` before).
+
+## Flowers: docs/59, Serene Shrubbery and Wilder Flowers (2026-10-14, on `dev` and test; not on `main`, live untouched)
+
+- **On `dev`:** `fdfe753a` (the two mods) and `320ad409` (a recipe fix, the howTos), CI passed on both. Serene
+  Shrubbery 2.4.0 (`rRJVLCOH`) and Wilder Flowers 1.1.0+1.21.1-neoforge (`yWhjRH1D`), both the newest **release**
+  for NeoForge 1.21.1, no beta. On, suggested, Building and decoration, guide "game". Neither needs another mod;
+  Wilder Flowers carries kaleido-config 0.3.3 inside its jar.
+- **Lock:** only the two entries, hash `8b610bea` → `b894dfa3` (83 files). A full `modpack lock` would also have moved
+  three unpinned libraries (Kotlin for Forge, Placebo, Titanium), Particle Rain in the extras, and written `channels`
+  into every entry, so the two entries were taken from that run and put into the old lock, as for the private jars.
+  The pack shipping no season goes `0.1.0+c0b230b4` (75 files) → **`0.1.0+2ae3aea0`** (77); `mods.json`'s "0.1.0"
+  stays, as for every mod added since phase 1. Lint 0/0, verify-links 317/0, check.sh all green.
+- **Fixed in `deepslate-tools`:** Wilder Flowers' `wilderflowers:milling/pink_dye_from_hopeful_wildflowers` names its
+  results `{"item": …}`, which Create 6 cannot read (an ERROR at every start); the datapack carries it with `{"id": …}`.
+  Server only, not in the pack's hash.
+- **The mods do not do what docs/59 said in two places** (from the jars' code): Serene Shrubbery breeds two
+  **different** colours of one flower (red + white Pansies → pink; 17 such pairs), never two of the same, and only
+  on grass, dirt, moss, mud or farmland with air beside it; by the code about one new colour per two to three
+  hours of a player nearby at the normal tick speed (copies of the parents come as often); bone meal on most of its flowers drops a copy, not on the four wild Pansies. **Its wild flowers come from
+  biome modifiers like Wilder Flowers', so they too exist only in land made after the mod is in**: someone has to go
+  to new land for the first ones. The howTos say so now; the descriptions are docs/59's.
+- **Test, 2026-10-14 07:40 to 08:05 UTC:** test checkout at `320ad40`, Build server and Sync through api-test (2 jars
+  added, nothing else moved). Start: both mods listed, Done in 1.1 s, no FATAL, the one ERROR the usual Curios line,
+  no mixin line naming either mod. Spark with nobody online, before / after: TPS 20 / 20, ticks med 0.5 / 0.5 ms,
+  95th percentile 1.0 to 1.2 / 1.0 to 1.1 ms, worst in 10 s 1.3 to 2.2 / 1.3 to 1.9 ms. Chunky made 635 chunks
+  around 23760 23980 (the sleep watcher paused it at 58%, its save a 4.5 s stall); WorldEdit counts in
+  23570..23950, 23790..24170, y 55 to 130: cheery wildflowers 1,843, moody 5, hopeful 31, clovers 6,970; Pansies red
+  43, white 86, yellow 71, purple 63; fireweed 268, twinflower 12, purple foxglove 2. Old land at spawn (±190): 0 of
+  each but 2 clovers (not traced). The Mods guide, from `mods.json`: both under Building and decoration with their
+  howTos.
+- **Not seen yet, needs a player on the test profile:** join without a mismatch, JEI, a garland worn and placed,
+  breeding (random ticks need a player within 128 blocks in 1.21.1, so the console cannot run it).
+- **Left on test:** the 635 chunks at 23760 23980; Chunky's task stopped; no force-loads; gamerules unchanged.
+- **Live:** waits for Alex's go (docs/59 "Live"). `dev` also carries held work (seasons, the Moon, Mekanism), so a
+  whole `dev` → `main` PR is a question for Alex first.
+
+## The Moon finished on `dev`: docs/55 M5, M6 and the sample Frontier (2026-10-14; PRs #60, #61, #62 merged into `dev`, `7ade5933`; not on `main`)
+
+- **#60, the sample Frontier no longer ships** (Alex: nothing of a test season goes to live): `index.json`'s
+  `frontiers` is empty (it was `["sample"]`, on `main` too). Build drops `deepslate-frontier-sample` and its map from
+  `dist/`. **Live's own `dist/server/` has both today** (`datapacks/deepslate-frontier-sample`,
+  `config/bluemap/maps/frontier_sample.conf`), so live's world most likely has the sample Frontier, and Sync never
+  deletes. After the deploy, on live: `datapack disable "file/deepslate-frontier-sample"` in Admin → Console and a
+  restart; delete `config/bluemap/maps/frontier_sample.conf` in AMP's file manager. Not checked on live (nothing
+  touched it).
+  - **Done on test (Alex, 2026-10-14, then a restart at 12:45 UTC): the dimension stays.** `datapack list` shows 12
+    packs, `deepslate-frontier-sample` not among them, and `frontier_sample.conf` is gone; but after the restart the
+    server still loads and saves `deepslate:frontier_sample` (a world keeps every dimension it has loaded in
+    `level.dat`'s `WorldGenSettings`), and warns that `deepslate:frontier_sample_portal_igniter` is missing (the
+    portal mod asks for the tags of every dimension). Harmless: no portal leads there without the tags, it costs
+    0.004 ms a tick, no map. To remove it for good, with the server stopped and after a backup: delete
+    `deepslate:frontier_sample` from `level.dat` (`Data` → `WorldGenSettings` → `dimensions`) with an NBT editor,
+    and `world/dimensions/deepslate/frontier_sample/`. Not done on test; for live, Alex's choice at the deploy's
+    backup.
+- **Season 1 stays a commit (Alex, 2026-10-14):** asked whether "is Season 1 on this server" should move from
+  `index.json`'s `ship` to a switch on the Seasons page, Alex kept it in the repo. Season 1's mods (`season: "s1"`) and
+  files go to `main` with `"ship": []`, so live ships none of them; turning it on is a one-line commit and a PR.
+- **#61, M5's map:** `modpack/server/config/bluemap/maps/moon.conf` (id `moon`, `world`, `deepslate:moon`, "The
+  Moon"), every key checked against BlueMap 5.7's own template in its jar (`config/maps/map.conf`). BlueMap does not
+  run on the test server (`accept-download: false`), so the map is first seen on live.
+- **#62, M6:** Server Sided Portals is the Moon's card under Getting around, for everyone (how to build and light the
+  portal, low gravity, endless night, beds explode, the gas and the gas mask's recipe); Mekanism's `howTo` says its
+  ores are only on the Moon; docs/53 D3 post 2 rewritten for the Moon, still without `live`. Lint warns once
+  (server-only mod in the guide's game part), on purpose.
+- **M5's pre-generation, on test (2026-10-14 11:47 to 12:17 UTC):** Build server and Sync first (the test server on
+  `7ade5933`'s pack), the two leftover armour stands inside the square killed, then Admin → Server → Pre-generation's
+  route: `deepslate:moon`, centre 0 0, radius 3000, generate only. Chunky: **142,129 chunks in 28 min 35 s**, about 85
+  a second; TPS 20 in all 31 minute readings, the Moon's level at up to 45 ms a tick while it generated; **one stall,
+  5.1 s at 12:12:18** (87 %); no ERROR or FATAL; sleep back on afterwards.
+- **For the copy to live (Alex, AMP host, live stopped, after the backup):** compare `seed` on test and live first
+  (docs/51 §6 says they are the same world's). Copy from the test instance's `world/dimensions/deepslate/moon/` only
+  the region files of the square, `r.X.Z.mca` with X and Z from -6 to 5 (144 each), in `region/`, `entities/` and
+  `poi/`. **Not the whole folder:** outside the square it holds test leftovers: the ore boxes filled with bedrock at x
+  15,000 to 15,263 and 15,200 to 15,263 (z -15,000), Chunky squares at 4000 4000 and -4000 -4000, and the portal at
+  x 8501 to 8504 z 8500. Inside the square: a shaft at 106 to 108, 87 if anyone ran the commands given in chat on
+  2026-10-13 (look before copying).
+
+## Gas and masks: docs/55 M7, M8 (2026-10-14, PR #59 merged into `dev` as `08487c08`; on test; not on `main`)
+
+- **Built:** the gas (`deepslate:gas/*` in `deepslate-moon`, once a second from `#minecraft:load`; +1 exposure a
+  second in the gas without a mask, -2 otherwise, at most 40; 1 to 10 s a warning, 11 to 30 Poison I and Slowness I,
+  31 and up Poison II, Slowness II, Mining Fatigue I; ash particles in the gas). The gas mask: recipe
+  `deepslate:gas_mask` (shapeless: leather, 2 string, charcoal, glass pane; unlocked by having leather), a dark
+  leather helmet, `max_damage` 30, `repair_cost` 100, `custom_model_data` 5501; one point a second in the gas, then
+  taken off with the break sound and "Your mask has given out.". Mekanism's masks by tags with optional entries
+  (`#deepslate:gas_mask_hazmat`, `#deepslate:gas_mask_sealed`). The icon in `modpack/resourcepack/` (vanilla 1.21.1's
+  `leather_helmet.json` from the client jar, its ten trim overrides kept, one override added). The resource pack is in
+  the pack's hash: the lock's `resourcepack` and `hash` recomputed with Lock's own functions; live's pack would be
+  0.1.0+55ab70d7 (77 files), s1 83; both pins moved.
+- **Read from Mekanism 10.7.19.85 for M8:** `mekanism:hazmat_mask` (shaped: 5 lead ingots, 1 orange dye; Immersive
+  Engineering's lead is in the main world, so it comes early), `mekanism:mekasuit_helmet` (netherite helmet, 4 HDPE
+  sheets, an ultimate circuit, a basic induction cell, 2 polonium pellets). **The hazmat mask has no durability**: no
+  `minecraft:max_damage` on the test server (an item predicate, against a leather helmet that passes the same test);
+  its class sets only `stacksTo(1)`. **For the planner (docs/55 M8: "the planner decides"):** until then it protects
+  and does not wear (`gas/mask/hazmat.mcfunction`, one file).
+- **Seen on test (Build server, Sync: 14 datapack files; the start at 11:07 UTC):** no FATAL, the usual Curios ERROR
+  only, no parse error for the functions, the recipe or the advancement; `deepslate.gas` made by the load function;
+  `gas/second` and `gas/check` run. On an armour stand on the Moon wearing a leather helmet with the mask's
+  components, `gas/check` once a second: damage 1 after 1 s, 15 after 15, 28 after 28, 29 after 29, and after the
+  30th the helmet was gone from its head. Exposure: iron helmet 3 s gave 3; then hazmat mask 2 s and MekaSuit helmet
+  2 s, still 3. Stand and force-load removed.
+- **Not seen, needs a player:** the warning, poison stopping at half a heart, the three stages' timings, exposure
+  falling above y 0, creative feeling nothing, crafting the mask from the recipe book, an anvil refusing it, the icon
+  on a PC (Alex's PC through the Test tab: the pack changes, so the Test run updates it).
+
+## The Moon's datapack: docs/55 M1 to M4 (2026-10-12/13, PR #52 merged into `dev` as `1682dad1`; seen on test; not on `main`)
+
+- **Built (PR #52, CI passed, merged into `dev` 2026-10-12):** M1 `modpack/server/config/Mekanism/world.toml` holds
+  Mekanism's defaults (`enableRegeneration = false`, `userWorldGenVersion = 0`); the file stays in the pack because
+  Sync never deletes (the test server read `true`, `1` before the Sync, `false`, `0` after). M2 to M4
+  `modpack/datapacks/deepslate-moon/` (dimension type, noise settings and five noises of its own, three biomes, the
+  overworld tags, `#mekanism:spawn_ores` replaced, the gravity tick, the portal tags). M5's first line: Pre-generation
+  accepts `deepslate:moon` (api and web; on test from the `dev` images redeployed 2026-10-13 about 12:02 UTC).
+  `packages/modpack/tests/moon.test.ts` holds the spec. Not in the pack's hash: no re-pin, PCs see nothing.
+- **First start on test (2026-10-12 18:22 UTC, after Build server, Sync and a restart):** no FATAL; the one ERROR the
+  usual Curios line; "Found new data pack file/deepslate-moon"; 13 datapacks enabled, `deepslate-moon` among them;
+  `locate biome` finds all three (plains at 0 0, craters 96 blocks away, highlands 770). Ground y 65 to 79 where
+  probed, its top andesite, tuff or smooth basalt.
+- **Ores, 16 fresh chunks each at x 15,200 to 15,263, z -15,000 to -14,937, y -64 to 319**, counted with `fill …
+  minecraft:bedrock replace <tag>` (the command limit raised to 2,000,000 for the count and put back to 32768; the ores
+  in those boxes are now bedrock). Main world / Moon: osmium **0 / 823**, tin **0 / 1,558**, fluorite **0 / 818**,
+  lead 187 / 900 and uranium 140 / 806 (the main world's are Immersive Engineering's), salt 0 / 0, zinc 1,101 /
+  1,296, nickel 194 / 248, silver 236 / 240, bauxite 31 / 86, coal 789 / 1,716, iron 1,151 / 1,351, copper 996 /
+  1,499, gold 427 / 475, redstone 590 / 623, lapis 390 / 410, diamond 429 / 424, emerald 0 / 49, amethyst 562 / 529,
+  water 22,472 / 0, lava 108 / 0. Create's striated stone: ochrum 0 / 60, the others 0. A first count at x 15,000
+  gave the same picture (osmium 0 / 822).
+- **WorldEdit from the site's console (2026-10-13/14, PR #53 then the fix PR #54, both merged into `dev`, `d82bcf89`;
+  on test after `sudo deploy/test-up.sh`; not on `main`):** `console.send` used to strip every leading `/`, so
+  `//count` arrived as `count`. #53 stripped one; on test `//world` still arrived as `world`, because the game's own
+  console drops one leading slash itself. #54 sends the line exactly as typed: `/tp …` runs `tp`, `//count …` runs
+  WorldEdit's `/count`; a line of slashes alone is refused. Seen on test with #54: `//world`, `//pos1`, `//pos2`,
+  `//count` answer in the console. WorldEdit names the worlds `world_minecraft:overworld` and `world_deepslate:moon`
+  (`//world` alone goes back to the default); a tag mask is `##c:ores/osmium`, not `#c:…`.
+- **WorldEdit count (2026-10-14), the Chunky squares made after the tag change, 16 chunks each, y -64 to 319:**
+  `//count mekanism:osmium_ore,mekanism:deepslate_osmium_ore` Moon 4000..4063 × 4000..4063 **867**, main world
+  16000..16063 × 16000..16063 **0** (diamond ore there 392, so the chunks are real).
+- **What else reaches the Moon through the overworld tags** (`locate structure` in `deepslate:moon`): strongholds
+  (nearest 1,851 blocks; vanilla's `#minecraft:has_structure/stronghold` is `#minecraft:is_overworld`) and AE2
+  meteorites (458 blocks). Not found: Mowzie's frostmaw, Umvuthana grove and monastery, villages, mineshafts, ruined
+  portals, ancient cities, trial chambers. Mowzie's wrought chamber: the search on the Moon never answered (twice).
+  From the jars: Create's zinc and striated ores, Immersive Engineering's six ores, Mekanism's six features and AE2's
+  meteorites hang on the overworld tags; mobs added by code (Mowzie's spawn config and the like) are not seen yet, as
+  mobs only spawn near a player.
+- **The portal, without a player** (an eye of ender cannot be used from the console): a smooth basalt frame built by
+  command in the main world at 8500 70 8500 (portal x 8501 to 8502, y 71 to 73, axis x), its inside filled with
+  `nether_portal` by command; a pig summoned in it was on the Moon at 8502.5 72 8500.5 (same x and z). The mod built on
+  the Moon a **full smooth basalt frame, corners included**, around a 2 × 3 portal at x 8502 to 8503, y 72 to 74, z 8500,
+  with a smooth basalt block under it at y 70. A pig sent back through the Moon's portal came out at 8501.5 71 8500.5,
+  in the first frame: the mod linked the existing portal and built nothing new. So a portal lands at the same x and z
+  on the other side, and a new frame appears there when none is near: it can land inside a base on either side.
+  **Not seen:** that an eye of ender lights the frame.
+- **Gravity, measured on armour stands** (the players' function needs a player): one with exactly the players'
+  modifiers fell 50 blocks on the Moon in about 6.1 s (it landed between 107 and 123 ticks after the summon), one
+  without in about 2 s; every reading within half a block of the sum (drag 0.98, gravity 0.0133). **Not seen:** the
+  tick function on a player, the jump (about 5 blocks by the sum), fall damage.
+- **Generation:** Chunky, the same 1,089-chunk square on fresh ground: Moon 17 s (2026-10-12, a player online) and 15 s
+  (2026-10-13, nobody online, about 80 a second); main world beyond ±10,176 52 s. On the 13th: no "Can't keep up",
+  TPS 20 throughout, ticks median 1.3 ms, worst 245 ms in the minute. A 7.2 s stall followed the first Moon run on the
+  12th and did not come back; the other stalls that day came on my own commands (`forceload add` of 32 and 40 chunks
+  makes them at once on the main thread, and 2-million-block fills).
+- **Left on test:** the basalt frame and its portal in the main world at x 8500 to 8503, y 70 to 74, z 8500 (on a basalt platform), and the Moon's at x 8501 to 8504, y 71 to 75,
+  a pig in the main-world frame, two armour stands on the Moon at 107 and 109, 70, 87; the 1,089-chunk squares at
+  4000 4000 and -4000 -4000 on the Moon and 16000 16000 in the main world; no force-loads.
+- **For the planner:** beds on the Moon explode, as in the Nether (`bed_works: false`); strongholds and meteorites
+  arrived; the portal lands at the same x and z. Next on test: a player lights the frame with an eye of ender, goes
+  through, jumps and falls, and looks at the mobs; then M5's pre-generation and map; the gas and masks PR (M7, M8);
+  M6's words (Mekanism's `howTo` and D3 post 2 still say "old ground").
+
+## App 3.6.5: a download from the site is cut off behind the window's polls (2026-10-12, PR #50 merged into `dev`; not on `main`)
+
+- **Seen (Alex's log bundle, 16:53 to 16:54 UTC):** 3.6.2 updated itself to 3.6.4 from the deployed `main`; Play on the
+  Test tab; "Pack 0.1.0+04e0992e → 0.1.0+8b610bea; 69 mods; this run: update"; "Setting up the mods"; 9 s later "the
+  Test section could not be asked: The operation has timed out", and the run failed in `Http.Download` with "Unable to
+  read data from the transport connection: A blocking operation was interrupted by a call to WSACancelBlockingCall".
+  The proxy logged "aborting with incomplete response … write: broken pipe" on
+  `/downloads/mods/test/mowziesmobs-1.21.1-1.8.2-dsw.1.jar` at 16:54:07 (the app closed the connection); api-test
+  logged "stream closed prematurely" on `/test/app/mod?file=…` 8.6 s after the request came in. Nothing was wrong on
+  the site: the live web, api and api-test logs show no error, and api-test answered every `/test/app/state` poll.
+- **Cause (read in the code; it fits every timing):** .NET Framework allows 2 connections per host and queues a third.
+  The private jar is the first mod ever downloaded from the site's own host (Modrinth is another host). The window
+  polls that host for the Play tab and the Test section on one timer (`HomeTimer` → `RefreshHome` and
+  `RefreshTestSection`, the latter `GetJson(TestSectionUrl, 8)`). The download and one poll held both connections, the
+  other poll queued, timed out after its 8 s, and the framework closed the download's connection when it aborted the
+  queued request. Not proven on a PC; the fix is the standard one.
+- **The fix, PR #50 (`app-connection-limit` → `dev`):** `ServicePointManager.DefaultConnectionLimit = 16` in `Http`'s
+  static constructor (`Http.ConnectionsPerHost`), a test in `CoreTests`, `installer/VERSION` 3.6.5,
+  `versions.test.ts`, docs/07's 3.6.5 section. The exe is built by the installer workflow on the PR; PCs get it only
+  from `main` (a `dev` → `main` PR and a deploy, Alex's call). **Until then the Test tab fails this way on any PC whose
+  test pack holds a private jar;** Play again may get through when no poll is queued at that moment.
+- **Not tried:** the 3.6.5 exe on a PC, a Test run that downloads the private jar while the window polls. That is the
+  check, on Alex's PC.
+- **On `main` and live, seen working (2026-10-12).** PR #51 (`app-3-6-5-main`, the one commit cherry-picked, no pack
+  change) merged as `bb2c7a35`; `deploy.sh` ran about 17:49 UTC (web and api on the `bb2c7a35` images, the exe in
+  `dist/ci`); Build (installer) on live published 3.6.5 at 17:54:30 (`dist/installer.json` exe 3.6.5, sha256
+  `4074da02…`, CI's). The site's event log: two more Test runs failed the same way at 17:53 on 3.6.4 (before the
+  publish); at 17:55:37 the app downloaded 3.6.5; at 17:55:52 the Test run fetched the private jar through the live
+  site; 17:56:13 "installed 0.1.0+8b610bea: all good"; 17:57:05 the test game started with every mod of the test pack.
+  That is the case that failed before, with the window polling: the fix holds. A Test run updates the app like a live
+  run (the test manifest carries live's `installer`); it only had nothing to offer before 17:54:30. `main` merged into
+  `dev` after it (this commit). Alex also ran Sync on live (pack `d44eb2ba`, unchanged) and restarted the live server at
+  17:55.
+- **Merged into `dev` (Alex, 2026-10-12, after CI passed).** The PR's `check` failed twice on the shipped-pack pins
+  (`ship.test.ts`, then `pack-ship.test.ts`: 75 files, `c0b230b4`), never on the app change; the installer workflow
+  built the 3.6.5 exe and passed its tests on the first commit. `dev`'s pack now differs from `main`'s (the pause mod,
+  docs/53's Mekanism and quarry changes), so 3.6.5 reaches PCs either with the big docs/53 and 55 PR or by a
+  cherry-pick of the app commits onto `main`, Alex's call.
+
 ## A patched mod jar in the pack: docs/58 (2026-10-12, planned)
 
 - **Why:** opening the Sculptor's trade screen on the test server crashed Alex's game (Mowzie's Mobs 1.8.2, the
@@ -81,12 +344,210 @@ say live is stopped, held or to be trimmed in place, this section wins.
     the blockers above. Not done.
   - The same Lock run today also moved two unpinned mods (`kotlin-lang-forge` 2.14.1 → 2.15.0, `titanium`
     1.21-4.0.50 → 4.0.51), so that lock was not kept. The pack commit, when it goes, is Lock on the day.
+- **2026-10-12, later (Alex: "use my custom version"):** PR #48 (Testers and #47, adapted to `main` without seasons)
+  merged to `main` (`0160985c`), **not yet deployed**. The fork's `main` now holds the fix (`c9981ca`, fast-forward).
+  `dev` `f9a9331a`: Mowzie's from the private jar 1.8.2-dsw.1 (`source`, `requires: ["geckolib"]`, no pinned version;
+  still `s1`, still admin-only). Only Mowzie's lock entry and the hash changed: a full Lock would also move
+  kotlin-lang-forge and titanium, and titanium's move fails check-sides against the server's last start. Until live
+  runs #48 (`sudo deploy/deploy.sh`) and the test pair is on new images with the mount (`sudo deploy/test-up.sh`),
+  the Test tab cannot fetch the jar and a test Build cannot copy it. PR #49 (another session, the same code with
+  docs/44) duplicates #48.
+
+## The quarry, second pass: docs/56 (2026-10-12, §2 measured on test, k = 32; the pausing mod passes §3 step 2 on test)
+
+- **Measured on the test server, 2026-10-12, 14:13 to 14:40 UTC** (pack of docs/53 A, B, E1; nobody online). Rigs built
+  by console in the sky at x 8000 to 8310, z 8000, each a plain 9 × 9 column of `minecraft:stone` (or `deepslate`)
+  under an 11 × 11 frame, one Pitiful Generator fed coal blocks by a hopper, a chest beside the quarry. Read by
+  `data get block` on the quarry (`energy`, `storage`, `state`) and the chests; rates in game ticks, so the test
+  server's sleep after 5 empty minutes and its restarts do not count. The quarry's area, state and enchantments were
+  set with `data merge block` (its `area`, `state`, `components`, `maxEnergy`), as placing it by hand would.
+  - Step 1: `config/industrialforegoing/machine-generator.toml`, `[MachineGeneratorConfig.PitifulGeneratorConfig]`
+    `powerPerTick = 30` (also `maxStoredPower = 100000`, `extractionRate = 1000`). §1's sums stand.
+  - Step 2, k = 4: 1,499 stone in 7,549 ticks, **238 a minute** (the mod's formula: 1.5 × 100 = 150 FE a stone).
+  - Step 3: k = 4 × 238 / 30 = 31.8, **k = 32**: `breakBlockBase` 800, `moveHeadBase` 32, `makeFrame` 480, on `dev`
+    as `1429ec09` (test checkout pulled, Build server, Sync; the file on test read back with those values).
+  - Step 4, k = 32, over 5.9 minutes each: stone **30.0 a minute**, deepslate **15.0**.
+  - Step 5, k = 32: Unbreaking III **119.6 a minute** (above 60: **stopped here**, for the planner), Efficiency V
+    **6.0 a minute**. Steps 6 and 7 ran after Alex's answer (below).
+  - From the jar's source (21.1.164), not measured: a stone costs `breakBlockBase` × hardness × 1.38^Efficiency ÷
+    (1 + Unbreaking). Unbreaking's divisor has no config key. Efficiency makes a block dearer (×5 at V); it gives a
+    bigger buffer (×6) and a faster head. `moveHeadBase` is the head's speed in blocks a tick (each block moved costs
+    1 FE whatever it says), so ×k makes the head faster, not dearer. One block a tick at most (1,200 a minute).
+- **§3 step 1, seen on test:** no config key touches output or storage. The quarry keeps an unbounded internal
+  storage (one count per item type, kept in the block's data). A small chest filled up and the quarry went on for
+  5 minutes more at the same rate, storage growing (20 to 1,318 cobblestone), power used as before, nothing on the
+  ground. Emptying the chest: the whole storage moved into it at once. Breaking the quarry (31 in storage): it
+  dropped only itself (`quarryplus:quarry`, no components); the 31 were lost. §3 step 3 applies: options reported,
+  nothing built.
+- **Alex, 2026-10-12, after the report:** Unbreaking stays as the mod has it (a plain quarry 30 a minute on one
+  Pitiful Generator, Unbreaking III 120: enchanting is the upgrade). For a full quarry, **our own small server-side
+  mod** that pauses it (docs/56 §3 option 2); docs/56 §3 step 3 also needs the planner's word, so nothing is built
+  yet. The `howTo` of docs/56 §4 waits with it (its second sentence is only true once that exists).
+- **Step 6, measured (k = 32), unlimited power from a quarry store of 10^9 FE read before and after:** plain
+  **1,200 a minute** (one block a tick) drawing **1,200 FE a tick**; Efficiency V the same 1,200 a minute drawing
+  **6,000 FE a tick**. So one FE a tick is about one stone a minute, up to 1,200.
+- **Step 7, measured on test** (generators placed by console, their stored energy read over time; Mekanism's J ÷ 2.5
+  = FE; stone a minute from the line above, except the gas row, which ran a quarry):
+
+  | Setup | FE a tick | Stone a minute |
+  |---|---|---|
+  | Heat Generator on one lava block, no fuel | 2 | 2 |
+  | Heat Generator with lava on all six sides | 39 | 39 |
+  | Heat Generator burning lava from its tank, one lava block under it | 55, still rising when its store filled | 55 or more |
+  | Wind Generator at y 100 / 200 / 310 | 69 / 126 / 188 | 69 / 126 / 188 |
+  | Gas-Burning Generator on ethylene, beside the quarry | what the quarry takes: full speed | **1,200**, burning 0.10 mB a tick (120 mB a minute; a full 18,000 mB tank lasts about 2.5 hours) |
+  | One water wheel, straight into a Crafts & Additions alternator | 0 (256 SU against the alternator's 512 at 8 RPM: overstressed) | 0 |
+  | Four water wheels on one shaft into the alternator | 11 | 11 |
+
+  Not measured: one wheel geared down to 4 RPM (about 5 FE a tick by the alternator's formula) and four wheels geared
+  up to 16 RPM (about 22).
+- **Mods guide (Alex, 2026-10-12, "build that"):** the quarry's `howTo` now says it needs real power, that wind
+  generators built high up are the easiest real power, that Unbreaking makes it cheaper and Efficiency hungrier, and
+  what really happens when its chest is full (it keeps what it digs inside until there is room, lost if broken). That
+  last sentence becomes docs/56 §4's "it stops" once the pausing mod exists. Crafts & Additions: one water wheel can't
+  turn an alternator; Mekanism Generators: a Heat Generator burns lava or other fuel (lava around it adds a little), a
+  wind generator makes more the higher it stands. All from the step 7 measurements.
+- **Against docs/56 §1:** `moveHeadBase` is the head's speed in blocks a tick, not a cost (each block the head moves
+  costs 1 FE whatever it says), so k = 32 made the head faster, not dearer. §1's "everything counted" is the break
+  (`breakBlockBase` × hardness) plus 1 FE a block of travel and the frame spread over the dig.
+- **The pausing mod (Alex, 2026-10-12, built on his word; the planner approved it for the test server the same day,
+  not for live until §3 step 2 passes on test).** `mods/quarry-pause/`: mod id `dsw_quarry_pause` 1.0.0, MIT, server
+  only (`IGNORE_SERVER_VERSION`, no network channels). Two mixins cancel `QuarryEntity.serverTick` and
+  `AdvQuarryEntity.serverTick` (the dig step) while the machine's `storage` holds items; the push into the blocks next
+  to it is a separate ticker after it in the same tick and is untouched, so a quarry with room never waits and one
+  without carries on by itself when room appears, using no power while it waits. Only items count: fluids stay
+  inside and the quarry digs on (a pump module with no tank would otherwise stop it at the first water). A quarry
+  holds at most the last block's drops; an Adv. Quarry can hold more for a few ticks (the push moves about six item
+  types a tick). Nothing is dropped when the machine is broken (a block-moving mod would duplicate it). Requires
+  quarryplus `[21.1.164,21.1.165)`. The quarry mod is LGPL-3.0; none of its code is copied.
+  - `build.sh` (planner's fixes, `ed970542`): javac in `eclipse-temurin:21.0.4_7-jdk-alpine` pinned by digest
+    (`sha256:37abc85b…a52d6`), capped, no network; the quarry jar by the lock's sha512; FML loader **4.0.44** (what
+    the test server runs: NeoForge 21.1.252 in its `libraries/`, although Build reports 21.1.253) and sponge-mixin
+    0.15.2+mixin.0.8.7, both sha512 written in the script, each read from the test server's own copy and matching the
+    maven's value. Same source, same jar (two clean builds): `dsw-quarry-pause-1.0.0.jar`, sha512
+    `1ccad65bc346a47c386ddc6be6347f8a84cef676d74a4481f606fbb090263c99e188e56b2631d89620fe43db97a8dc7c1dd18f981dee18525dd738a689dd3ce7`.
+  - **Not yet run on any server.** docs/58's route is merged into `dev` as #47, but blocker 1 stands: api-test takes
+    its mounts from the live checkout's compose file, so the test Build cannot see `data/private-jars/` until that is
+    on `main`. Then the planner's checks a to f on test, and only after b the `howTo` becomes §4's sentence.
+  - **Blocker 2 does not apply to this jar** (read in the code): the Test tab's manifest lists every lock file
+    (`testManifest`, with the test URL), but the app drops every `side: server` file before it downloads or checks a
+    URL (`Engine.cs` builds `files` without them; `PrefetchWaiting`, the download loop and the final mods check all
+    take that list). So a server-only private jar is never fetched by a PC.
+- **The smallest PR to `main` that carries #47 (report for Alex, nothing done):** #47 does not apply to `main` alone.
+  It needs the testers work (`47e81ccf`, docs/57, app 3.6.3), which needs docs/44 A2 (`395f7332`, the season ship).
+  Cherry-picked in that order onto `origin/main` in a throwaway checkout: `395f7332` (two `mods.json` conflicts, the
+  guide's `topic` beside the new `"season": "s1"`), `47e81ccf` (docs/11 only), `5b85c81f` and `c2b86295` clean;
+  83 files. None of docs/53 or docs/56's pack changes, no Mekanism. **On live it changes:** migration `0034_tester`;
+  the Tester switch on People (only where a test server is set up); the app goes to **3.6.4** (the PR builds the exe; once
+  it is published, every PC is offered it; new: the app refuses a mod URL that is not Modrinth or the site's own
+  `/downloads/mods/`); `/downloads/mods/` routes (only files the lock names; live's lock names none);
+  `data/private-jars/` made by `deploy.sh` and mounted read-only; `mods.json` and the lock gain the six Season 1 mods
+  marked `s1`, which live does not ship, so live's pack stays as it is (docs/11 recorded 71 files and `d44eb2ba` for
+  that state; Build on the PR shows it). **A player would notice:** the app update to 3.6.4 and nothing else; no
+  change log entry, as 3.6.3 and 3.6.4 change nothing a player sees. Alex decides.
+- **The Adv. Quarry is switched off (Alex, via the planner, 2026-10-12; `ed970542`):** `[enableMap] adv_quarry =
+  false` in `modpack/server/config/quarryplus.toml`, the key read from the file the mod wrote on test. Seen on test
+  after Build and Sync: the file on the server reads `adv_quarry = false`; an Adv. Quarry placed by command, given an
+  area, `WAITING` and a creative generator, stayed `WAITING` for 653 ticks: no frame, the stone untouched, its 50,000
+  FE store full and unused. **It can still be crafted:** its recipe (`data/quarryplus/recipe/adv_quarry.json` in the
+  jar) has no condition, and the switch only makes a placed one idle and its item's tooltip say it is disabled.
+  Recipes come from the server, so the client's own setting does not change what JEI or the recipe book show; it
+  only decides whether a PC's tooltip says "disabled" (it would need the file in `modpack/config/`, in the pack's
+  hash). Not checked in game with a player. To remove the recipe too: one datapack file overriding it with a false
+  condition, for the planner and Alex. The Mods guide never mentioned it.
+- **Planner's second answer (2026-10-12):** items 2, 3, 4 (report) and 7 accepted, loader 4.0.44 right. Alex: remove
+  the Adv. Quarry's recipe; yes to the small PR to `main`.
+  - **The recipe is gone (`76ef58f8`):** `modpack/datapacks/deepslate-tools/data/quarryplus/recipe/adv_quarry.json`
+    is only `{"neoforge:conditions": [{"type": "neoforge:false"}]}`, replacing the jar's; a test beside the placard
+    fix. Seen on test after Build, Sync (153 datapack files, one more) and a start at 16:01: `deepslate-tools` enabled,
+    **"Loaded 13012 recipes"** against 13013 in the three starts before it (14:56, 15:02, 15:50), advancements 7158
+    as before, no recipe or advancement error (the start's only ERROR is Curios' "example is not a registered slot
+    type!", as before). The jar's unlock advancement (`data/quarryplus/advancement/recipes/misc/adv_quarry.json`)
+    logs nothing, so it is left as it is. **Not seen yet, needs a player:** `/recipe give @s quarryplus:adv_quarry`
+    answering "Unknown recipe", and JEI on a PC showing no way to craft it. Nobody has looked.
+  - **NeoForge (report only):** live's server and the test server both run **21.1.252** (their `libraries/`), the
+    NeoForge AMP installed when the instances were made; nothing in the repo installs or updates it on a server.
+    `mods.json` and the lock pin **21.1.253** (`e9ce755d`, 2026-10-04): Build only prints the lock's value, and the
+    app installs exactly that one on every PC. So PCs run 253 against servers on 252, and they connect. To make them
+    the same: update NeoForge to 21.1.253 in each AMP instance (test first, after a backup; no PC changes, the pack's
+    hash stays), or pin 21.1.252 in `mods.json` (the pack's hash changes and every PC installs NeoForge again on its
+    next Play). Nothing changed.
+  - **The small PR to `main`: #49, closed unmerged (2026-10-12).** Another session's #48 (`testers-private-jars`)
+    was merged into `main` at 16:18 with the same two features, testers and private jars, adapted without docs/44;
+    #49 then conflicted with it and added nothing, so it was closed and its branch deleted. What #49 found still holds
+    for `dev`'s code: #47 needs `8360fbed` (`openZipOnDisk`). **`main` at `0160985c` is not deployed** (live runs
+    `810c4423`, PR #42). The planner's conditions now apply to deploying it: the 3.6.4 exe from `main`'s installer run
+    `38276477610` to Alex only, his word, a backup of the live database (migration `0034_tester`), deploy, `sudo
+    deploy/test-up.sh` (api-test's mount of `data/private-jars/`), the after-deploy checks, then `main` merged into
+    `dev` (#48 says: take `dev`'s side in `packages/modpack/src/lock.ts` and `apps/api/src/test-mode/app-routes.ts`).
+  - **For the rehearsal (planner, item 1d):** on the fresh copy of live, before the live PR, list every placed Adv.
+    Quarry (`quarryplus:adv_quarry` blocks) and every `quarryplus:adv_quarry` item in chests and players'
+    inventories, by location and owner.
+- Cleanup: every quarry removed and every force-load taken off; the stone columns, frames, generators and water
+  wheels stay in the sky over x 8000 to 8640 in the test world (the rehearsal starts from a fresh copy of live).
+- **§3 step 2 passes on the test server (2026-10-12, 16:46 to 17:10 UTC; `main` #48 deployed first, see docs/58
+  above).** The pausing mod reached the test server as a private jar: `quarry-pause` in `mods.json` (`side: server`,
+  `hidden: true`, `guide: behind`, `requires: additional-enchanted-miner`, `source.private` `dsw-quarry-pause-1.0.0.jar`),
+  its lock entry made with Lock's own `privateEntry` and the hash recomputed, as Mowzie's was (`6db3002b`; a full Lock
+  would move the unpinned mods); the jar in the test stack's `data/private-jars/` (sha512 `1ccad65b…3ce7`, the build's).
+  Build server on test: "copied dsw-quarry-pause-1.0.0.jar from the private jars"; Sync: "mods: 1 updated, 1 added,
+  added dsw-quarry-pause-1.0.0.jar" (the server was asleep, so no restart); the next start at 16:46: "Found mod file
+  dsw-quarry-pause-1.0.0.jar", "Deepslate Works: quarry pause 1.0.0 (dsw_quarry_pause)", 37.8 s to load, no FATAL,
+  the one ERROR the usual Curios line, no mixin line about this mod (none expected).
+  - The rig, by console with nobody online, at the §2 site x 8100 to 8110 z 8000 to 8010 in the sky: the 9 × 9 stone
+    column refilled, one Pitiful Generator fed coal blocks by a hopper, one single chest with 26 of its 27 slots
+    already full of cobblestone, a plain quarry set up with `data merge` as before. Read every 25 to 30 s with
+    `data get block` (the quarry's `storage`, `state`, `energy`, `targetPos`; the chest's `Items`; the generator's
+    `energyStorage`) and `execute if entity @e[type=item,…]` over the rig; game ticks, so the server's 5-minute sleeps
+    between windows do not count.
+  - Filling the last slot: 1,694 → 1,726 cobblestone in 1,258 ticks (31 a minute, as at k = 32); full by tick
+    5,007,086 at the latest.
+  - **Full, 7,676 ticks (6.4 minutes) seen:** the chest at 1,728 throughout; the quarry's storage held exactly one
+    cobblestone (the last block's drops) the whole time; `state` stayed `MOVE_HEAD` and `targetPos` stayed at
+    8102 185 8003 (the head never moved); the quarry's own store stayed at its 10,000 FE maximum (nothing drawn); the
+    generator's store rose from 8,757 to its 100,000 maximum and stayed there (it had nowhere to send power); the item
+    check answered "Test failed" (nothing on the ground) at every reading.
+  - **Emptied** (`data merge block … {Items:[]}`, tick 5,014,762): 1.5 s later the chest already held 6 cobblestone;
+    473 ticks later 104 (a burst from the two full stores), the head at 8109 183 8001, storage empty, `BREAK_BLOCK`;
+    then 18 blocks per 714 ticks (30 a minute) over the next 2,142 ticks with the stores drawn down (generator 0,
+    quarry 806 → 410 FE). Nothing on the ground at any reading.
+  - Cleanup: the quarry removed, the force-load removed ("No force loaded chunks were found in Overworld"); the column,
+    generator, hopper and chest stay at x 8100 in the sky.
+  - **The `howTo` is docs/56 §4's from this commit:** "It stops when its storage is full and starts again when there is
+    room." replaces the "keeps what it digs inside" sentence. `quarry-pause` stays hidden on the site; whether it gets a
+    line under "behind the scenes" is the planner's call. `packages/modpack/tests/ship.test.ts` pins the shipped
+    hashes again: live (shipping nothing) `c0b230b4`, 75 files; a server shipping s1 `8b610bea`, 81 (the `dev` push
+    `6db3002b` and PR #50's `check` failed on the old numbers until this).
+  - Live gets it only with the rest of docs/53 and docs/55 (docs/56 §5 item 4): a server-only jar, nothing for PCs
+    to download, but the pack's hash changes, so every PC runs one quick "update" with nothing to fetch.
+
+
+- **Alex, 2026-10-12, after docs/53 Part A was built:** "the generator is still too powerful". At k = 4 one Pitiful
+  Generator still mines about 4 stone a second. His answers: about **30 stone blocks a minute** from one Pitiful
+  Generator; the quarry costs more, the generator and every other machine stay as they are; a quarry whose storage
+  is full **stops** and starts again by itself when there is room.
+- **Replaces docs/53 Part A's numbers**, same file (`modpack/server/config/quarryplus.toml`). k ≈ 32 on paper (about
+  1,200 FE a stone block at 30 FE a tick); the real k is set by measuring on test (docs/56 §2 steps 1 to 7: the
+  Pitiful Generator's real output, k = 4 measured, the new k, stone and deepslate, Unbreaking III and Efficiency V,
+  full speed with a creative source, and what players' own setups give). The tables and the chosen k are reported
+  before the file changes.
+- **Stop when full (§3):** first read what the quarry does today when its output is full (a small chest, 5 minutes
+  past full). A config key if there is one, its own small feature PR; if none, the options are reported and nothing
+  is built without the planner's and Alex's word.
+- **Players read** the quarry's new `howTo` (docs/56 §4), replacing Part A's sentence.
+- **Ships** with docs/53 A, B and E1 and docs/55, in the same rehearsal and the same live PR.
 - **#47 merged into `dev` (`f0a82ab2`). To live (Alex, 2026-10-12, option 2):** a PR to `main` with only Testers (#46)
   and #47, cherry-picked onto `main`, so the live web has `/downloads/mods/test/` and the live checkout's compose has
   the mounts before the pack change goes on `dev`. `main` has no seasons (docs/44 is held on `dev`), so on `main` the
   private jar's lock entry carries no `season`, and api-test's `/test/app/pack` and `/test/app/mod` read the lock as
   it is. On `dev` they keep docs/44's shipped lock; api-test runs `dev`'s images anyway. When `main` is next merged
   into `dev`, take `dev`'s side in `packages/modpack/src/lock.ts` and `apps/api/src/test-mode/app-routes.ts`.
+- **`main` `0160985c` deployed (Alex, 2026-10-12, about 16:35 UTC: the database dump before migration `0034_tester`,
+  `deploy/deploy.sh`, `deploy/test-up.sh`).** Seen: `deepslate-web` and `deepslate-api` on the `0160985c` images,
+  healthy; `deepslate-api-test` mounts `/home/ladm/Minecraft-site-test/data/private-jars` read-only. `main` merged
+  into `dev` as `c6a3844f` (dev's side in the two files, as above; every other line of `main` was already on `dev`, the
+  merge added six lines of this file). On Alex's PC the app updated itself 3.6.2 → 3.6.4 at 16:53 UTC; its first Test
+  run with the private jar failed: "App 3.6.5" above.
 
 ## Testers: docs/57 (2026-10-12, planned)
 
@@ -152,6 +613,25 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Snyk** still watches `main`; a finding both raise is triaged once in docs/38. Open findings from either stay in
   the private register.
 
+## The Moon: docs/55 (2026-10-12, planned; M1 to M4 built and on test, see "The Moon's datapack" above)
+
+- **Alex, 2026-10-12:** no retrogen of the main world for Mekanism's ores. They go to a world of their own, the Moon
+  (`deepslate:moon`), reached by a portal players build themselves (Server Sided Portals; proposed: a smooth basalt
+  frame lit with an eye of ender). Everything can be mined there (Mekanism's, vanilla and other mods' ores), gravity
+  is low, hostile mobs spawn. The Frontier stays Season 1's and closed until then.
+- **Found:** the main world has no border (±10,176 is only its pre-generation), so Mekanism would put ores in every
+  new chunk past it; the plan replaces `#mekanism:spawn_ores` with the Moon's three biomes so its ores appear nowhere
+  else. The test world already had Mekanism's retrogen at its 10:57 UTC start; it is replaced by a fresh copy of
+  live for the rehearsal anyway.
+- **Order:** docs/55 §4. Mekanism, the quarry and the armour cap go live only together with the Moon. docs/53 D3
+  post 2 is rewritten before it goes out (post 1 said "ores in old ground").
+- **Gas and masks, folded in the same day (M7, M8):** below y 0 on the Moon the air poisons (a function every
+  second, no mod; three stages; it never kills, poison stops at half a heart). Masks: our own gas mask (a leather
+  helmet with components from a datapack recipe, its icon in the resource pack, 30 s in gas), Mekanism's hazmat mask
+  (about 30 min) and the MekaSuit helmet (never wears); masks wear only in gas. Their own feature PR to `dev` after
+  the Moon's datapack PR. Before M8 is built: the hazmat mask and MekaSuit helmet ids, the hazmat mask's durability
+  and recipe, read from the 10.7.19.85 jars on test; if the hazmat mask has no durability, the planner decides.
+
 ## Power and gear progression: docs/53 (2026-10-12, planned, nothing built)
 
 - **Why:** a player's note: one Pitiful Generator runs the quarry, and nothing beats diamond armour, so there is no
@@ -187,8 +667,26 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Was the live check (Alex):** a ticked news post pings the role on a phone, an unticked one does not, a vote
   count edit pings nobody. The webhook posts most of these; a poll the bot posts (vote buttons on) pings only if the
   bot may mention the role (the role's "Allow anyone to @mention this role", or the bot's Mention All Roles).
+- **Parts A, B and E1 built for the test server (2026-10-12, PR to `dev`; not for `main` before Alex's go):**
+  - A: `modpack/server/config/quarryplus.toml`, `[powerMap.quarry]` `breakBlockBase` 100, `moveHeadBase` 4,
+    `makeFrame` 60 (k = 4; keys and defaults 25, 1, 15 read from the file the mod wrote on test). **docs/56 replaces
+    these numbers** (k from measuring, about 30 stone a minute from one Pitiful Generator). Server only, not
+    in the pack's hash, so Play first is not asked by it.
+  - B: `mekanism`, `mekanism-generators`, `mekanism-tools` on, pinned to 10.7.19.85 (`5KzzycBT`, `a6gl7srE`,
+    `v5zlSE9s`), added to the lock by hand from a capped `pnpm modpack lock` run (that run also moved titanium and
+    kotlin-lang-forge, unpinned libraries; those were left as they were). `modpack/server/config/Mekanism/world.toml`:
+    `enableRegeneration = true`, `userWorldGenVersion = 1` (a SERVER config, `Mekanism/world.toml` in
+    MekanismConfigHelper at tag `v1.21.1-10.7.19.85`). docs/06 says it stays at 1.
+  - E1: `modpack/config/Mekanism/tools-materials-startup.toml` (a STARTUP config, read on server and PC, so it goes to
+    both and is in the hash): Refined Obsidian 3/8/6/3, toughness 3, knockback 0.1 (was 6/12/8/5, 5, 0.2); Osmium
+    helmet 3 (was 4). Bronze, Lapis, Refined Glowstone and Steel are at or under netherite already.
+  - The pack: lock 80 files, hash `04e0992e`; what live would ship 74 files, `0.1.0+836f84d8` (was 71,
+    `d44eb2ba`). The howTo sentences for the quarry and Mekanism are in.
+  - **Not done yet, all on the test server:** Build and Sync there, the first start (no FATAL, the files the mods
+    write against the shipped keys), the quarry tables, the retrogen rehearsal on a fresh copy of live, the bases, the
+    spark numbers, Alex's own PC. None of it before this is on `dev`.
 
-## The Mods guide sectioned by type: docs/52 (2026-10-11, a PR to `main` with this work only)
+## The Mods guide sectioned by type: docs/52 (2026-10-11, merged: PR #35, `main` `d4c68f23`; deploy pending)
 
 - **Built:** `topic` on a mod in `mods.json` (`GUIDE_TOPICS`: travel, friends, mining, storage, building, factories,
   farming, combat, bosses), set on all 43 `guide: "game"` mods as docs/52 §2 lists them. Lint: a listed `game` mod
@@ -210,6 +708,30 @@ say live is stopped, held or to be trimmed in place, this section wins.
   71 files, as before.
 - **After the deploy, in a browser:** docs/52 §6 as a player and as an admin, at 1280 and 390 px; then `live: true`
   on the change log entry.
+
+## Season calendar and season mods: docs/51 A1 and A2 (2026-10-11, on `dev`, for the test site; not on `main`)
+
+- **A1, `79b4a989`:** lint holds a numbered season to 19:00 UK on the 1st, two months, the finale on the last Sunday
+  before the end at 18:00 UK, things opening at 19:00 UK (by UK time, summer and winter). `s1.json`: 1 Dec to 1 Feb,
+  finale Sun 31 Jan `18:00Z`, Christmas Dinner (five Farmer's Delight meals, ids from the pack's catalogue) on 23 Dec,
+  the boss mods' bosses "in the Frontier"; the guide says the season's bosses live there. README and ROADMAP.
+- **A2, `395f7332`:** docs/44 built. `season` on a mod and its lock entry (a library only that season needs inherits
+  it; Lock refuses a season's mod something else needs); `shippedLock(lock, ship)`; the ship list is `index.json`'s,
+  or `SEASONS_SHIP` with `TEST_MODE`. Readers: Build (server, installer, `PACK_VERSION`), the mod list, the app's
+  update check, the site's pack lines, Sync, the out-of-date box (Lock against the whole lock, Build against what
+  ships), main's pack in the drift check, the test site's pack line; in api the synced mods, the server's jar check,
+  the health watch's pack, the app's Test pack (`apps/api/src/modpack/ship.ts`, held to the package's answer by
+  `tests/pack-ship.test.ts`). `web-test` now gets `SEASONS_SHIP` as `api-test` does.
+- **The data:** the six Season 1 mods back in `mods.json` (enabled, `"season": "s1"`) and the lock, their entries
+  taken unchanged from `9a451555`'s lock; the lock's own hash is `f652ffca` (all 77). Shipping nothing gives 71 files
+  and `d44eb2ba`, live's pack today, so a deploy of this changes nothing for live or any PC.
+- **Checks:** modpack 229, api 758, web 638, typecheck, lint (`deploy/check.sh`); CI on both pushes.
+- **For the test site (Alex's steps):** the test checkout is held at `86bdcc5` (`.git/deepslate-hold`, "lift only on
+  the planner's word"); `TEST_SEASONS_SHIP` in `deploy/.env` is empty. To try Season 1's mods on test: lift the hold,
+  set `TEST_SEASONS_SHIP=s1`, `sudo deploy/test-pull.sh`, `sudo deploy/test-up.sh`, then Build and Sync on the test
+  site. Not done by this session.
+- **New from Alex the same day: the season mods only in their own dimension** (docs/51 §8): what each mod's jar
+  says, and the plan (Frontier biome copies, the mods' tags pointed at them). Item A5, not built.
 
 ## Seasons 1 and 2 planned again: docs/51 (2026-10-11, docs only)
 

@@ -226,6 +226,11 @@ and the counts Met, Private and Refused.
   biome list outside a tag file is either ids or one `#tag`, never both. Both now list the tag's five biomes as ArPhEx
   5.0.2 ships them; a test checks every datapack for a `#tag` inside a list. The broken files are on `main` (#78) and
   in live's `dist/server`: live would not start after its next Sync until this fix is on `main`.
+  **Fixed (#80 on `dev`):** on test, after `test-pull` (to `ce4f438`), Build (server) and Sync, the server sat in
+  "Starting" from the failed start, stopped on Stop and on Start loaded its datapacks: `Done (1.100s)!`.
+- **On `main` with #81 (`320c3082`):** #80, and with it #79 (radiation, below), merged into `dev` two minutes before.
+  Alex's call: deploy `main` as it is, radiation included, though it has not run on any server yet. Radiation's
+  change log entry (`2026-10-14-ashmoon-radiation`) goes with it. After the deploy, Build (server) then Sync on live.
 
 ## The first portal on live (Alex, 2026-10-14)
 

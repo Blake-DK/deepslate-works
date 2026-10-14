@@ -275,9 +275,10 @@ describe("the horror trial on Ashmoon only (Alex, 2026-10-14): modpack/datapacks
     // what spawned in every biome there is: Ashmoon's and ArPhEx's own dimension
     for (const f of ["any_dimension_spawner_biome_modifier.json", "tormentor_initial_biome_modifier.json"]) expect((await mjson(`data/arphex/neoforge/biome_modifier/${f}`)).biomes).toEqual([...BIOMES, "#arphex:crawling_biomes"]);
   });
-  it("both mods ship only with Season 1 (the test server), never to live, until Alex decides", async () => {
+  it("kept (Alex, 2026-10-14): in every pack, live's too, and listed for everyone", async () => {
     const m = JSON.parse(await readFile(path.join(MODPACK, "mods.json"), "utf8")) as { mods: Array<{ slug: string; season?: string; adminOnly?: boolean }> };
-    for (const slug of ["arphex", "mutant-monsters", "puzzles-lib", "nyfs-spiders"]) expect(m.mods.find((x) => x.slug === slug)?.season).toBe("s1");
+    for (const slug of ["arphex", "mutant-monsters", "puzzles-lib", "nyfs-spiders", "geckolib"]) expect(m.mods.find((x) => x.slug === slug)?.season).toBeUndefined();
+    for (const slug of ["arphex", "mutant-monsters", "nyfs-spiders"]) expect(m.mods.find((x) => x.slug === slug)?.adminOnly).toBe(false);
   });
 });
 
@@ -293,17 +294,17 @@ describe("the horror trial kept on Ashmoon: ArPhEx's structures and its test-onl
       expect(j["neoforge:conditions"]).toEqual([{ type: "neoforge:mod_loaded", modid: "arphex" }]);
     }
   });
-  it("on the test server only: no vanilla mob anywhere is replaced by an ArPhEx one, and no scare in the main world's sky", async () => {
-    const toml = await readFile(path.join(MODPACK, "test-overlay/config/ArPhEx Configurations.toml"), "utf8");
+  it("on every server: no vanilla mob anywhere is replaced by an ArPhEx one, and no scare in the main world's sky", async () => {
+    const toml = await readFile(path.join(MODPACK, "server/config/ArPhEx Configurations.toml"), "utf8");
     expect(toml).toContain('"Vanilla Replacement Mode" = 0.0');
     expect(toml).toContain('"Enable Tormentor Sky Hallucination" = false');
     expect(toml).toContain('"Welcome message" = false'); // Alex, 2026-10-14: no wall of text in chat at every join
   });
   it("more mobs on Ashmoon (Alex, 2026-10-14): ArPhEx's two spawn rates at 2 (5 by default, lower = more), mutants at 25 % of the creeper's weight, Ashmoon's own night monsters in groups of 4 to 6", async () => {
-    const toml = await readFile(path.join(MODPACK, "test-overlay/config/ArPhEx Configurations.toml"), "utf8");
+    const toml = await readFile(path.join(MODPACK, "server/config/ArPhEx Configurations.toml"), "utf8");
     expect(toml).toContain('"Non-boss global spawnrates (biome-specific)" = 2.0');
     expect(toml).toContain('"Random-system spawnrates (not biome-specific)" = 2.0');
-    const mutants = await readFile(path.join(MODPACK, "test-overlay/config/mutantmonsters-common.toml"), "utf8");
+    const mutants = await readFile(path.join(MODPACK, "server/config/mutantmonsters-common.toml"), "utf8");
     expect(mutants.match(/_spawn_weight = 0\.25$/gm)).toHaveLength(4);
     for (const id of BIOMES) {
       const spawners = (await json(`data/deepslate/worldgen/biome/${id.split(":")[1]}.json`)).spawners as { monster: Array<{ type: string; minCount: number; maxCount: number }> };

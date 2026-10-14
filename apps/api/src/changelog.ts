@@ -223,6 +223,20 @@ export const CHANGES: Change[] = [
     ],
   },
   {
+    // Alex, 2026-10-14: the horror mobs on Ashmoon, kept after the trial on the test server.
+    id: "2026-10-14-ashmoon-monsters",
+    date: "2026-10-14",
+    live: true,
+    title: "New monsters on Ashmoon",
+    lines: [
+      "The Moon now has a name: Ashmoon. And it's a lot less friendly.",
+      "Giant insects and spiders hunt there now, with bosses that come with thunder. Mutant zombies, skeletons, creepers and endermen roam too: bigger, tougher and with new attacks. They only live on Ashmoon, never in the main world.",
+      "There are more monsters on Ashmoon than before, so bring light, armour and a good weapon.",
+      "Spiders everywhere now climb walls and ceilings like real ones: a roof won't keep them off, but light and a closed door still do.",
+      "Press Play to update. It's a bigger download than usual.",
+    ],
+  },
+  {
     // app 3.6.2: render distance up to 32. Set `live: true` only once 3.6.2 is what the site hands out and its live
     // check passed (the rule above).
     id: "2026-10-12-app-3-6-2-render-distance",

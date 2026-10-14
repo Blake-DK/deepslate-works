@@ -209,7 +209,7 @@ export const CHANGES: Change[] = [
       "Mekanism is in: generators, reactors and the MekaSuit power armour. Press Play to update.",
       "Its ores aren't in the old ground after all: the main world was left as it was. They're on the Moon, a new world of its own where everything can be mined, and osmium is found only there.",
       "To get there, build a smooth basalt frame like a nether portal and light it with an eye of ender. There's one at spawn to start with.",
-      "Gravity is low, the night never ends and monsters are about. Below y 0 the air is poisonous: craft a gas mask first (leather, 2 string, charcoal and a glass pane).",
+      "Gravity is low, the night never ends and monsters are about. Below y 30 the air is poisonous: craft a gas mask first (leather, 2 string, charcoal and a glass pane).",
     ],
   },
   {
@@ -226,6 +226,15 @@ export const CHANGES: Change[] = [
     id: "2026-10-12-app-3-6-2-render-distance",
     date: "2026-10-12",
     lines: ["In the app's Settings tab, render distance now goes up to 32 chunks. It stopped at 16 before, below the 20 the server shows, so you could never see as far as the server lets you."],
+  },
+  {
+    // Macaw's Holidays, straight into the pack (Alex, 2026-10-14). Set `live: true` only after the live check (the
+    // rule above).
+    id: "2026-10-14-macaws-holidays",
+    date: "2026-10-14",
+    lines: [
+      "New mod for decorating: Macaw's Holidays. Christmas trees, string lights, garlands, presents, stockings and candy canes, plus carved pumpkins and cobwebs for Halloween. All made at a crafting table from everyday things. Press Play to update.",
+    ],
   },
 ];
 

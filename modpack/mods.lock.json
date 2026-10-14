@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-14T10:55:50.235Z",
+  "generatedAt": "2026-10-14T14:14:00.823Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "422efd9da612b1245faa5529e57215ed77a3be7a316c6c5bb04203a5084ae942",
+  "hash": "751de495eff60e09eac1b033193fb1e766000c86134f30d4b9e7156af3d84787",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -941,6 +941,26 @@
         "client": "required",
         "server": "required"
       }
+    },
+    {
+      "slug": "macaws-holidays",
+      "name": "Macaw's Holidays",
+      "projectId": "rH20L2Lp",
+      "versionId": "2mO9Xhpt",
+      "versionNumber": "1.1.2",
+      "versionType": "release",
+      "filename": "mcw-holidays-1.1.2-mc1.21.1neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/rH20L2Lp/versions/2mO9Xhpt/mcw-holidays-1.1.2-mc1.21.1neoforge.jar",
+      "sha512": "439c93fe0a8ca363898b3d3d85e0413d7988927ae0a2716e2c4deed9a4097607087abc09a7dc60ac726d7cab9491d444e296ee57e5f0708ddb8951df2ac911a2",
+      "sha1": "fbe2d2239fdab916120357ca3c45f582ca34f71d",
+      "size": 1012915,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "macaws-lights-and-lamps",

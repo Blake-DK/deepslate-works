@@ -1962,6 +1962,34 @@
       "howTo": "More stairs, railings and balconies in every wood. Craft at a crafting table; JEI lists them all."
     },
     {
+      "slug": "macaws-holidays",
+      "name": "Macaw's Holidays",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Christmas and Halloween decorations: Christmas trees, string lights, garlands, presents, stockings, candy canes, carved pumpkins and cobwebs.",
+      "wiki": "https://modrinth.com/mod/macaws-holidays",
+      "videos": [
+        {
+          "title": "MishMash 014 Macaw's Holidays Mod Tutorial Christmas Edition",
+          "url": "https://www.youtube.com/watch?v=mQ8RYYuCSuk"
+        },
+        {
+          "title": "Minecraft Mod Reviews 2.0 (Revived) #144 - Macaws Holidays (Autumn)",
+          "url": "https://www.youtube.com/watch?v=gQIdSdXqXgA"
+        }
+      ],
+      "version": "2mO9Xhpt",
+      "requires": [],
+      "guide": "game",
+      "topic": "building",
+      "howTo": "Christmas and Halloween decorations, all made at a crafting table from everyday things (candy canes from sugar, a Christmas tree from spruce logs and leaves, carved pumpkins from pumpkins and a wooden hoe). Build a tree from its base, bottom, middle and top pieces stacked up. JEI lists them all (search `@mcwholidays`)."
+    },
+    {
       "slug": "another-furniture",
       "name": "Another Furniture",
       "category": "building",
@@ -2632,7 +2660,7 @@
       ],
       "guide": "game",
       "topic": "travel",
-      "howTo": "Build a frame of **smooth basalt** shaped like a nether portal (smelt basalt to get it) and right-click inside it with an **eye of ender**. Step in to reach the **Moon**: everything can be mined there, and osmium and the other Mekanism ores are found only there. Gravity is low, so you jump high and fall slowly; the night never ends, monsters are about, and beds explode. Below y 0 the air is poisonous: wear a **gas mask** (leather, 2 string, charcoal and a glass pane; it lasts 30 seconds in the gas) or Mekanism's hazmat mask. A portal comes out at the same spot on the other side; walk back through it to come home."
+      "howTo": "Build a frame of **smooth basalt** shaped like a nether portal (smelt basalt to get it) and right-click inside it with an **eye of ender**. Step in to reach the **Moon**: everything can be mined there, and osmium and the other Mekanism ores are found only there. Gravity is low, so you jump high and fall slowly; the night never ends, monsters are about, and beds explode. Below y 30 the air is poisonous: wear a **gas mask** (leather, 2 string, charcoal and a glass pane; it lasts 30 seconds in the gas) or Mekanism's hazmat mask. A portal comes out at the same spot on the other side; walk back through it to come home."
     },
     {
       "slug": "worldedit",

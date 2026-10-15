@@ -319,6 +319,12 @@ echo "$health"
 echo
 docker ps --filter name=deepslate- --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
 if ! printf '%s' "$health" | grep -q '"api":{"ok":true'; then
+  # 2026-10-15: live's AMP instance was not running and ADS answered its login with "Instance Unavailable"; health
+  # said auth_failed until then, and everyone went looking at passwords. The two are told apart now.
+  case "$health" in
+    *'"amp":"instance_down"'*) echo "amp: instance_down: ADS answers, but the AMP instance is not running. Start it in AMP; the password is not the problem." ;;
+    *'"amp":"auth_failed"'*) echo "amp: auth_failed: the AMP instance answers and refuses the login: check AMP_USERNAME and AMP_PASSWORD in deploy/.env against the instance's user." ;;
+  esac
   [ "${ALLOW_API_DOWN:-0}" = 1 ] || die "the new containers are up, but api does not reach the AMP host (see \"api\" above: tunnel, amp, rsync). If the homelab is down on purpose, this deploy is in place and fine; otherwise: docker logs --tail 50 deepslate-api"
   echo "api does not reach the AMP host; accepted (ALLOW_API_DOWN=1)"
 fi

@@ -4,7 +4,7 @@ import type { Amp } from "./amp/client.js";
 import type { Env } from "./env.js";
 import { sshCommand } from "./modpack/ssh.js";
 
-export type Health = { ok: boolean; tunnel: "ok" | "down"; amp: "ok" | "mock" | "unconfigured" | "unreachable" | "auth_failed"; rsync: "ok" | "wrong_root" | "no_key" | "down" };
+export type Health = { ok: boolean; tunnel: "ok" | "down"; amp: "ok" | "mock" | "unconfigured" | "unreachable" | "auth_failed" | "instance_down"; rsync: "ok" | "wrong_root" | "no_key" | "down" };
 
 /** TCP connect to sshd on the AMP host: up means the tunnel carries traffic. */
 export function tcpReachable(host: string, port: number, timeoutMs = 2000): Promise<boolean> {
@@ -37,6 +37,17 @@ function rsyncCheck(env: Env): Promise<Health["rsync"]> {
   });
 }
 
+/**
+ * What a failed ping says about AMP. instance_down: ADS answers, but the instance is not running (2026-10-15: start
+ * it in ADS; the password is fine). auth_failed: the instance answers and refuses the login.
+ */
+export function ampStateFor(e: unknown): Health["amp"] {
+  const said = String(e);
+  if (/instance unavailable/i.test(said)) return "instance_down";
+  if (/login failed/i.test(said)) return "auth_failed";
+  return "unreachable";
+}
+
 let cache: { at: number; value: Health } | null = null;
 
 export async function health(env: Env, amp: Amp): Promise<Health> {
@@ -47,7 +58,7 @@ export async function health(env: Env, amp: Amp): Promise<Health> {
   else if (!env.AMP_INSTANCE_ID || !env.AMP_PASSWORD) ampState = "unconfigured";
   else if (!tunnelUp) ampState = "unreachable";
   else {
-    try { await amp.ping(); ampState = "ok"; } catch (e) { ampState = /login failed/i.test(String(e)) ? "auth_failed" : "unreachable"; }
+    try { await amp.ping(); ampState = "ok"; } catch (e) { ampState = ampStateFor(e); }
   }
   const rsync = tunnelUp ? await rsyncCheck(env) : "down";
   const value: Health = { ok: tunnelUp && (ampState === "ok" || ampState === "mock") && rsync === "ok", tunnel: tunnelUp ? "ok" : "down", amp: ampState, rsync };

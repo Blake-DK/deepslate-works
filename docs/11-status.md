@@ -26,6 +26,19 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## AMP "Instance Unavailable" is not a refused login (2026-10-15, on `dev`, not on `main`)
+
+- **What happened:** after the deploy of #82, `deploy.sh` reported `amp: auth_failed`. The password was fine: the
+  homelab's tunnel had dropped 08:01 to 08:09 UTC and live's AMP instance was not running. ADS answered the proxied
+  `Core/Login` with HTTP 200 and `{"Title":"Instance Unavailable","Message":"The requested instance is not available
+  at this time."}`, which `logInOnce()` read as "AMP login failed: unknown". The test instance logged in fine.
+- **Now on `dev`:** `apps/api/src/amp/client.ts` recognises that body, on the login and on any call made under a
+  session, and throws "AMP instance unavailable: Instance Unavailable: …". A login refused without a `resultReason`
+  quotes Title and Message instead of "unknown". `/health` says `amp: "instance_down"` for it (`auth_failed` only for a
+  real refusal), `/status` gives the reason "instance not running", and `deploy.sh` says which of the two it is before
+  it stops. Still one login at a time. Tests in `apps/api/tests/replay.test.ts` with the exact body.
+- **If health says `instance_down`:** start live's instance in AMP; nothing in `deploy/.env` needs changing.
+
 ## Containers off root; live's Sync after #81 confirmed (2026-10-15, on `dev`, not on `main`)
 
 - **Live after #81:** the event log shows Build and Sync at 20:10 on 2026-10-14, the server online at 20:13 with

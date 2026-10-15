@@ -149,7 +149,7 @@ done
 if [ "$migrations_before" != "$migrations_after" ] && docker inspect deepslate-db >/dev/null 2>&1; then
   step "dump before the new migration"
   [ "$migrations_before" != unknown ] || echo "the commit of the running web is not known (${running_web:-no deepslate-web container}); dumping to be safe"
-  [ "$(id -u)" = 0 ] || die "a new migration is in this deploy (or the running web's commit is not known) and the dump before it needs root (the dumps' folder is root's)"
+  [ "$(id -u)" = 0 ] || die "a new migration is in this deploy (or the running web's commit is not known) and the dump before it needs root (the dumps' folder is under /root)"
   pre="${DUMP_DIR:-/root/docker/deepslate/backups}/pre-${head_sha:0:7}-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
   docker exec deepslate-db pg_dump -U deepslate deepslate | gzip > "$pre.part" || { rm -f "$pre.part"; die "the dump before the migration failed; nothing was changed"; }
   [ -s "$pre.part" ] || { rm -f "$pre.part"; die "the dump before the migration is empty; nothing was changed"; }
@@ -220,6 +220,15 @@ fi
 if [ ! -d data/private-jars ]; then
   mkdir -p data/private-jars
   [ "$(id -u)" = 0 ] && chown "$owner": data/private-jars
+fi
+
+# `backups` runs as the image's postgres user (70:70), not root, so the nightly dumps' folder is that user's. The
+# folder only, not what is in it: older dumps stay root's and the loop can still remove them. 755, as api reads the
+# dumps as uid 1000.
+dumps=${DUMP_DIR:-/root/docker/deepslate/backups}
+if [ "$(id -u)" = 0 ] && [ "$(stat -c %u:%g:%a "$dumps" 2>/dev/null)" != 70:70:755 ]; then
+  mkdir -p "$dumps" && chown 70:70 "$dumps" && chmod 755 "$dumps"
+  echo "$dumps now belongs to 70:70 (backups' postgres user)"
 fi
 
 step "up"

@@ -144,6 +144,7 @@ services:
     container_name: deepslate-api
     restart: unless-stopped
     logging: *logging
+    init: true                          # a small init as PID 1 reaps the ssh children node leaves behind
     cap_drop: [ALL]                     # runs as an unprivileged user and needs no Linux capabilities
     mem_limit: 512m                     # also the cap for `modpack build`, which runs as a child of api
     network_mode: "service:wireguard"   # reachable as deepslate-wg:4000 on `internal` only
@@ -215,6 +216,7 @@ services:
     container_name: deepslate-map-relay-inner
     restart: unless-stopped
     logging: *logging
+    user: "65534:65534"                # nobody: port 8100 needs no root
     cap_drop: [ALL]
     mem_limit: 32m
     network_mode: "service:wireguard"
@@ -226,6 +228,7 @@ services:
     container_name: deepslate-map-relay-outer
     restart: unless-stopped
     logging: *logging
+    user: "65534:65534"                # nobody: port 8100 needs no root
     cap_drop: [ALL]
     mem_limit: 32m
     networks: [web, internal]
@@ -340,6 +343,7 @@ services:
     container_name: deepslate-api-test
     restart: unless-stopped
     logging: *logging
+    init: true                          # as api
     cap_drop: [ALL]
     mem_limit: 384m                     # also the cap for a test Build, which runs as a child of api
     network_mode: "service:wireguard"   # the same tunnel; deepslate-wg:4001 on `internal`
@@ -404,6 +408,9 @@ services:
     container_name: deepslate-backups
     restart: unless-stopped
     logging: *logging
+    # the image's postgres user, not root: deploy/deploy.sh gives the dumps' folder to 70:70 (api reads the dumps as
+    # uid 1000, so the folder stays 755 and the dumps 644)
+    user: "70:70"
     cap_drop: [ALL]
     mem_limit: 64m
     networks: [internal]

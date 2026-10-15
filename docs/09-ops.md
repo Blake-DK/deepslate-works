@@ -61,6 +61,7 @@ on the VPS  ──► sudo /home/ladm/Minecraft-site/deploy/deploy.sh
 - **The nightly dump** (B-20) is `deploy/backup-loop.sh`: 00:00 UTC, the newest 14 kept, a failed dump tried again after ten minutes. api copies the newest dump into `_backup/db/` in the instance over the pack's rsync link, where AMP's 01:00 UTC backup picks it up (docs/28 §4.7; B-07). Admin → Files refuses that folder.
 - **The AMP host's ssh key is pinned** once `deploy/keys/known_hosts` exists (B-23); `deploy.sh` prints the one command that makes it. Until then api trusts the key afresh at each start, as before.
 - **The WireGuard and socat images are pinned by digest** (B-22), to the ones running on 2026-10-04. Updating them is a deliberate edit of the compose file.
+- **Only `wireguard` runs as root** (2026-10-15): it needs root and `NET_ADMIN` to make the tunnel. The two map relays run as `nobody` (65534), `backups` as the image's postgres user (70:70), so `deploy.sh` gives `/root/docker/deepslate/backups` (the folder, 755) to 70:70 before `up`; dumps from before stay root's and the loop still removes them. web runs as the checkout's owner, api and api-test as uid 1000, db as 70, designer as its own user. api and api-test have `init: true`: node as PID 1 did not reap the `ssh` children it starts, which stayed as zombies.
 - **Not done:** `dockhand-sync.py` still speaks http: Dockhand offers no https on that port, and the address is on the tailnet, which encrypts the hop (B-24).
 
 ### The health watch (docs/32 §7 item 3, 2026-10-04)

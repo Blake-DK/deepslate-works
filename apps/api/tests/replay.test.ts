@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { AmpClient, type Amp, type AmpStatus } from "../src/amp/client.js";
+import { AmpClient, AmpInstanceUnavailable, type Amp, type AmpStatus } from "../src/amp/client.js";
+import { ampStateFor } from "../src/health.js";
+import { reasonFor } from "../src/status/view.js";
 import { ConsoleTail, type ConsoleEvent } from "../src/amp/console.js";
 
 // 2026-09-29, the first real join: every health check logged in to AMP afresh, every new AMP session was sent the
@@ -252,6 +254,83 @@ describe("a permission the portal's AMP user does not have", () => {
       expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(true); // asked again on the new session
       expect(await amp.hasPermission("Settings.MinecraftModule.Limits.SleepMode")).toBe(true); // a yes costs nothing
       expect(logins).toBe(2);
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});
+
+describe("an AMP instance that is not running", () => {
+  // 2026-10-15, live: after the homelab's tunnel dropped the instance was stopped, and ADS answered the proxied login
+  // with HTTP 200 and this body. It was read as a refused password ("AMP login failed: unknown", health auth_failed).
+  const UNAVAILABLE = { Title: "Instance Unavailable", Message: "The requested instance is not available at this time." };
+  const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200, headers: { "content-type": "application/json" } });
+
+  it("is told apart from a refused login, and health says instance_down", async () => {
+    const calls: string[] = [];
+    const real = globalThis.fetch;
+    let release!: () => void;
+    const held = new Promise<void>((r) => { release = r; });
+    globalThis.fetch = (async (url: string | URL) => {
+      const u = String(url).replace(/^.*\/API\//, "");
+      calls.push(u);
+      if (u.endsWith("Core/Login")) await held;
+      return json(UNAVAILABLE);
+    }) as typeof fetch;
+    try {
+      const amp = new AmpClient({ url: "http://amp.invalid", username: "webapp", password: "x", instanceId: "0a1b2c3d-test" });
+      // two callers at once still make one login between them (B-41)
+      const both = Promise.allSettled([amp.ping(), amp.call("Core", "GetStatus")]);
+      release();
+      const [a, b] = await both;
+      expect(calls.filter((c) => c.endsWith("Core/Login")).length).toBe(1);
+      for (const r of [a, b]) {
+        expect(r.status).toBe("rejected");
+        const e = (r as PromiseRejectedResult).reason;
+        expect(e).toBeInstanceOf(AmpInstanceUnavailable);
+        expect(String(e)).toContain("AMP instance unavailable: Instance Unavailable: The requested instance is not available at this time.");
+        expect(String(e)).not.toMatch(/login failed/i);
+        expect(ampStateFor(e)).toBe("instance_down");
+        expect(reasonFor((e as Error).message, true)).toBe("instance not running");
+      }
+      expect(amp.sessions).toBe(0);
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+
+  it("is an error on a call too, when the instance stops under a session", async () => {
+    const real = globalThis.fetch;
+    let stopped = false;
+    let logins = 0;
+    globalThis.fetch = (async (url: string | URL) => {
+      const u = String(url);
+      if (stopped) return json(UNAVAILABLE);
+      if (u.endsWith("Core/Login")) { logins++; return json({ success: true, sessionID: "s1" }); }
+      return json({ State: 20 });
+    }) as typeof fetch;
+    try {
+      const amp = new AmpClient({ url: "http://amp.invalid", username: "webapp", password: "x", instanceId: "0a1b2c3d-test" });
+      await amp.ping();
+      stopped = true;
+      const e = await amp.ping().catch((x: unknown) => x);
+      expect(e).toBeInstanceOf(AmpInstanceUnavailable);
+      expect(ampStateFor(e)).toBe("instance_down");
+      expect(logins).toBe(1); // not a session problem: no new login for it
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+
+  it("still calls a refused login auth_failed", async () => {
+    const real = globalThis.fetch;
+    globalThis.fetch = (async () => json({ success: false, resultReason: "Invalid username or password" })) as typeof fetch;
+    try {
+      const amp = new AmpClient({ url: "http://amp.invalid", username: "webapp", password: "x", instanceId: "0a1b2c3d-test" });
+      const e = await amp.ping().catch((x: unknown) => x);
+      expect(String(e)).toContain("AMP login failed: Invalid username or password");
+      expect(ampStateFor(e)).toBe("auth_failed");
+      expect(ampStateFor(new Error("fetch failed"))).toBe("unreachable");
     } finally {
       globalThis.fetch = real;
     }

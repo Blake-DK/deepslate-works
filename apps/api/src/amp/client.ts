@@ -68,6 +68,31 @@ export function sessionGone(body: unknown): boolean {
   return /requires the Session\.Exists permission/i.test(said);
 }
 
+/**
+ * What ADS answers, with HTTP 200, to a call proxied to an instance that is not running, Core/Login included (live,
+ * 2026-10-15, after the homelab's tunnel had dropped): {"Title":"Instance Unavailable","Message":"The requested
+ * instance is not available at this time."}. Until then the login read it as a refused password ("AMP login failed:
+ * unknown") and health said auth_failed.
+ */
+export function instanceUnavailable(body: unknown): boolean {
+  if (!body || typeof body !== "object") return false;
+  const b = body as { Title?: unknown; Message?: unknown };
+  return (typeof b.Title === "string" && /instance unavailable/i.test(b.Title)) || (typeof b.Message === "string" && /instance is not available/i.test(b.Message));
+}
+
+/** ADS's own words for an instance that is not running; health reads "AMP instance unavailable" as instance_down. */
+export class AmpInstanceUnavailable extends Error {
+  constructor(body: { Title?: unknown; Message?: unknown }) {
+    super(`AMP instance unavailable: ${said(body) || "no reason given"}`);
+    this.name = "AmpInstanceUnavailable";
+  }
+}
+
+/** Title and Message of an answer that has no resultReason, as one line. */
+function said(b: { Title?: unknown; Message?: unknown }): string {
+  return [b.Title, b.Message].filter((v): v is string => typeof v === "string" && v.trim() !== "").join(": ");
+}
+
 export class AmpClient implements Amp {
   private sessionId: string | null = null;
   sessions = 0;
@@ -105,12 +130,23 @@ export class AmpClient implements Amp {
   }
 
   private async logInOnce(): Promise<void> {
-    const r = await this.post<{ success?: boolean; sessionID?: string; resultReason?: string }>(instancePath(this.o.instanceId, "Core", "Login"), {
+    const r = await this.post<{ success?: boolean; sessionID?: string; resultReason?: string; Title?: unknown; Message?: unknown }>(instancePath(this.o.instanceId, "Core", "Login"), {
       username: this.o.username, password: this.o.password, token: "", rememberMe: false,
     });
-    if (!r.success || !r.sessionID) throw new Error(`AMP login failed: ${r.resultReason ?? "unknown"}`);
-    this.sessionId = r.sessionID;
-    this.sessions++;
+    if (r.success && r.sessionID) {
+      this.sessionId = r.sessionID;
+      this.sessions++;
+      return;
+    }
+    if (!r.resultReason && instanceUnavailable(r)) throw new AmpInstanceUnavailable(r);
+    throw new Error(`AMP login failed: ${r.resultReason || said(r) || "unknown"}`);
+  }
+
+  /** An answer from ADS that the instance is not running is an error, not an answer: health says instance_down. */
+  private async postChecked<T>(path: string, params: Record<string, unknown>, sessionId: string | null): Promise<T> {
+    const answer = await this.post<T>(path, params, sessionId);
+    if (instanceUnavailable(answer)) throw new AmpInstanceUnavailable(answer as { Title?: unknown; Message?: unknown });
+    return answer;
   }
 
   async call<T = unknown>(module: string, method: string, params: Record<string, unknown> = {}): Promise<T> {
@@ -124,16 +160,16 @@ export class AmpClient implements Amp {
     let session = this.sessions;
     let answer: T;
     try {
-      answer = await this.post<T>(path, params, used);
+      answer = await this.postChecked<T>(path, params, used);
       if (!sessionGone(answer)) return { answer, session };
     } catch (e) {
-      if (!(e instanceof Error) || !UNAUTHORIZED.test(e.message)) throw e;
+      if (e instanceof AmpInstanceUnavailable || !(e instanceof Error) || !UNAUTHORIZED.test(e.message)) throw e;
     }
     // expired, or AMP has forgotten it; one retry. If another caller has logged in again meanwhile, that session is used.
     if (this.sessionId === used) this.sessionId = null;
     if (!this.sessionId) await this.login();
     session = this.sessions;
-    answer = await this.post<T>(path, params, this.sessionId);
+    answer = await this.postChecked<T>(path, params, this.sessionId);
     if (sessionGone(answer)) throw new Error("AMP does not accept the session it has just given out");
     return { answer, session };
   }

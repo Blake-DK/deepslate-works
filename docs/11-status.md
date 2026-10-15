@@ -26,6 +26,25 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Containers off root; live's Sync after #81 confirmed (2026-10-15, on `dev`, not on `main`)
+
+- **Live after #81:** the event log shows Build and Sync at 20:10 on 2026-10-14, the server online at 20:13 with
+  `deepslate:moon` and ArPhEx's two worlds loaded, no ERROR event and no missing mod; PCs fetched pack
+  `0.1.0+b0691da0` from 20:13 on.
+- **Who runs as root** (read on the VPS, 2026-10-15): `deepslate-map-relay-inner`, `-outer` (socat), `deepslate-backups`
+  (its `sh` loop and `pg_dump`) and `deepslate-wg`. Now on `dev`: the relays run as `nobody` (65534), `backups` as
+  the image's postgres user (70:70), and `deploy.sh` gives the dumps' folder to 70:70 (the folder only, 755) before
+  `up`. `wireguard` stays root, as the tunnel needs it. Tried on the VPS: the pinned socat image listens on 8100 as
+  `nobody`; `backup-loop.sh` (`ONCE=1`, into the container's `/tmp`) dumped the live database as uid 70, 644.
+- **`init: true` on api and api-test:** five `ssh` zombies under live's api since the deploy, one every few hours;
+  node as PID 1 never reaped them.
+- **Root-owned files in the live checkout:** 26 source files and two folders from 2026-10-07 (`apps/api/src/router`,
+  `apps/web/prisma/migrations/0014_news_dates`, the designer files). A commit that touches either folder would stop
+  `deploy.sh`'s pull as ladm halfway; Alex has the `chown` for those paths (not `-R`, nothing under `deploy/`).
+- Takes effect with the next `dev` → `main` pull request and `sudo deploy/deploy.sh` (the relays, `backups` and api
+  are recreated). After it: `docker exec deepslate-backups id` says uid 70, and the next morning's
+  `deepslate-YYYY-MM-DD.sql.gz` is postgres's.
+
 ## Ashmoon's gas is radiation, stronger the deeper you go (2026-10-14, a PR to `dev`; not tried on test yet)
 
 - **Alex's call:** radiation, not gas; it gets stronger with depth, wears masks and the hazmat suit faster, and below
@@ -226,6 +245,11 @@ and the counts Met, Private and Refused.
   biome list outside a tag file is either ids or one `#tag`, never both. Both now list the tag's five biomes as ArPhEx
   5.0.2 ships them; a test checks every datapack for a `#tag` inside a list. The broken files are on `main` (#78) and
   in live's `dist/server`: live would not start after its next Sync until this fix is on `main`.
+  **Fixed (#80 on `dev`):** on test, after `test-pull` (to `ce4f438`), Build (server) and Sync, the server sat in
+  "Starting" from the failed start, stopped on Stop and on Start loaded its datapacks: `Done (1.100s)!`.
+- **On `main` with #81 (`320c3082`):** #80, and with it #79 (radiation, below), merged into `dev` two minutes before.
+  Alex's call: deploy `main` as it is, radiation included, though it has not run on any server yet. Radiation's
+  change log entry (`2026-10-14-ashmoon-radiation`) goes with it. After the deploy, Build (server) then Sync on live.
 
 ## The first portal on live (Alex, 2026-10-14)
 

@@ -26,6 +26,20 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Privacy and terms pages for the Discord app (2026-10-16, on `dev`, not on `main`)
+
+- **Why:** Alex asked what goes in the Discord app's four General Information address boxes. docs/22a §6 has the
+  answer: Interactions Endpoint and Linked Roles stay empty (an interactions address would take slash commands and
+  vote buttons away from the gateway bot; the bot already gives the player role), Terms and Privacy point at two new
+  public pages.
+- **Built:** `/terms` and `/privacy` (`apps/web/src/app/(public)/`), open without signing in (`middleware.ts`), linked
+  from every page's footer. The Rules tab's "What the site keeps" list moved to `components/data-kept.tsx` and both
+  use it, so the retention numbers are the live settings. Checked against the code: sessions are never deleted (only
+  their address, after `ipDays`) and admin log lines are never pruned (`events/retention.ts`); the page says so. Test
+  `apps/web/tests/privacy-terms.test.ts`. Change log entry `2026-10-16-privacy-terms` (no title, not live).
+- **For Alex after the deploy:** paste the two addresses into the portal (docs/22a §6); then set the change log
+  entry's `live: true`.
+
 ## AMP "Instance Unavailable" is not a refused login; AMP waits for the NAS share (2026-10-15, deployed)
 
 - **What happened:** after the deploy of #82, `deploy.sh` reported `amp: auth_failed`. The password was fine: the

@@ -291,6 +291,12 @@ export const CHANGES: Change[] = [
       "Below y -25 the radiation kills. Only a full hazmat suit (mask, gown, pants and boots) or a full MekaSuit keeps you alive there, and the hazmat suit wears out quickly that deep.",
     ],
   },
+  {
+    // docs/22a §6: the privacy and terms pages the Discord app links to.
+    id: "2026-10-16-privacy-terms",
+    date: "2026-10-16",
+    lines: ["The site has a Privacy page and a Terms page, linked at the bottom of every page: what the site keeps about you and for how long, and how the server works. Anyone can open them, signed in or not."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

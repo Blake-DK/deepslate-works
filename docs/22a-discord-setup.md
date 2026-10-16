@@ -64,6 +64,21 @@ On the same card, in the Bot part:
 2. **Updates forum** → **season-updates**.
 3. Leave **Chat, Discord → game** off for now (see check 4 below). Press **Save**.
 
+## 6. The app's General Information page (2026-10-16)
+
+Developer Portal → **Deepslate Works** → **General Information**, the four address boxes at the bottom (the site's own address in place of `deepslate.dsw.test`):
+
+| Box | What goes in | Why |
+|---|---|---|
+| **Interactions Endpoint URL** | **leave empty** | With an address here, Discord sends every slash command and button press to it instead of to the bot's gateway connection, so `/status`, `/online` and the vote buttons stop answering. The bot gets them over the gateway (docs/22 §2.3); nothing on `web` answers interactions. |
+| **Linked Roles Verification URL** | **leave empty** | The bot already gives everyone who plays the player role by itself (`DISCORD_PLAYER_ROLE_ID`, `apps/api/src/discord/role.ts`). A linked role would ask each player to click through a Discord screen for the same role. |
+| **Terms of Service URL** | `https://deepslate.dsw.test/terms` | Public page, `apps/web/src/app/(public)/terms/page.tsx`. |
+| **Privacy Policy URL** | `https://deepslate.dsw.test/privacy` | Public page, `apps/web/src/app/(public)/privacy/page.tsx`. Its retention numbers are the live Admin → Site → Privacy & data settings, through the same list as the Rules tab (`components/data-kept.tsx`). |
+
+Press **Save Changes**. Discord then shows the two links on the bot's profile and on the sign-in screen. Both pages open without signing in (`middleware.ts`), and each is linked from the footer of every page.
+
+If a privacy setting changes, the page follows by itself. If what the site keeps changes (a new kind of data, a new outside service), the privacy page's text changes with it, in the same pull request.
+
 ## Checks afterwards
 
 1. **Send a test message** (top of the card): a line in #game-chat.

@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { getBranding } from "@/server/branding";
 import { getSection } from "@/server/site-settings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Markdown } from "@/components/markdown";
+import { DataKept } from "@/components/data-kept";
 
 export default async function RulesPage() {
   const [b, privacy, retention] = await Promise.all([getBranding(), getSection("privacy"), getSection("retention")]);
@@ -17,13 +19,8 @@ export default async function RulesPage() {
           <CardDescription>So nobody is surprised.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="list-disc space-y-1 pl-6 text-sm">
-            <li>When you join and leave the server, your deaths and your advancements. Everyone in the group can see these.</li>
-            <li>{privacy.chat ? <>What is said in the in-game chat, for {retention.chatDays} days. Only admins can read it back.</> : "In-game chat is not stored."}</li>
-            <li>The address you connect from, for {retention.ipDays} days. Only admins can see it.{privacy.geo ? " The country it belongs to is shown on the stats page." : ""}</li>
-            <li>What you do on this site (voting, linking your account), for {retention.eventDays} days.</li>
-            <li>When you run the installer: how it went, its log, and what PC it ran on (Windows version, processor, memory, graphics card, free disk space), for {retention.installDays} days. Only admins can see it; you see your own last result on your page. It never includes your Windows user name, and the installer says so before it sends.</li>
-          </ul>
+          <DataKept privacy={privacy} retention={retention} />
+          <p className="mt-3 text-sm text-muted-foreground">More on the <Link href="/privacy" className="underline">privacy page</Link>, and the <Link href="/terms" className="underline">terms</Link>.</p>
         </CardContent>
       </Card>
     </div>

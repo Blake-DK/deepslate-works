@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import "./globals.css";
 import { AppFrame } from "@/components/nav";
 import { getBranding } from "@/server/branding";
@@ -45,7 +46,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           footer={
             <footer className="space-y-1 border-t bg-panel px-5 py-3 text-center text-[12.5px] text-dim">
               <VersionFooter admin={user?.role === "ADMIN"} member={!!user?.pcTier} />
-              {(b.footer || b.discordInvite) && <p>{b.footer}{b.footer && b.discordInvite ? " · " : ""}{b.discordInvite && <a href={b.discordInvite} className="underline" target="_blank" rel="noreferrer noopener">Discord</a>}</p>}
+              <p>
+                {b.footer && <>{b.footer} · </>}
+                {b.discordInvite && <><a href={b.discordInvite} className="underline" target="_blank" rel="noreferrer noopener">Discord</a> · </>}
+                <Link href="/privacy" className="underline" data-testid="footer-privacy">Privacy</Link> · <Link href="/terms" className="underline" data-testid="footer-terms">Terms</Link>
+              </p>
             </footer>
           }
         >

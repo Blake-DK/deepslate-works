@@ -26,18 +26,45 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## AMP "Instance Unavailable" is not a refused login (2026-10-15, on `dev`, not on `main`)
+## Privacy and terms pages for the Discord app (2026-10-16, on `dev`, not on `main`)
+
+- **Why:** Alex asked what goes in the Discord app's four General Information address boxes. docs/22a §6 has the
+  answer: Interactions Endpoint and Linked Roles stay empty (an interactions address would take slash commands and
+  vote buttons away from the gateway bot; the bot already gives the player role), Terms and Privacy point at two new
+  public pages.
+- **Built:** `/terms` and `/privacy` (`apps/web/src/app/(public)/`), open without signing in (`middleware.ts`), linked
+  from every page's footer. The Rules tab's "What the site keeps" list moved to `components/data-kept.tsx` and both
+  use it, so the retention numbers are the live settings. Checked against the code: sessions are never deleted (only
+  their address, after `ipDays`) and admin log lines are never pruned (`events/retention.ts`); the page says so. Test
+  `apps/web/tests/privacy-terms.test.ts`. Change log entry `2026-10-16-privacy-terms` (no title, not live).
+- **For Alex after the deploy:** paste the two addresses into the portal (docs/22a §6); then set the change log
+  entry's `live: true`.
+
+## AMP "Instance Unavailable" is not a refused login; AMP waits for the NAS share (2026-10-15, deployed)
 
 - **What happened:** after the deploy of #82, `deploy.sh` reported `amp: auth_failed`. The password was fine: the
   homelab's tunnel had dropped 08:01 to 08:09 UTC and live's AMP instance was not running. ADS answered the proxied
   `Core/Login` with HTTP 200 and `{"Title":"Instance Unavailable","Message":"The requested instance is not available
   at this time."}`, which `logInOnce()` read as "AMP login failed: unknown". The test instance logged in fine.
-- **Now on `dev`:** `apps/api/src/amp/client.ts` recognises that body, on the login and on any call made under a
+- **The fix (PR #83):** `apps/api/src/amp/client.ts` recognises that body, on the login and on any call made under a
   session, and throws "AMP instance unavailable: Instance Unavailable: …". A login refused without a `resultReason`
   quotes Title and Message instead of "unknown". `/health` says `amp: "instance_down"` for it (`auth_failed` only for a
   real refusal), `/status` gives the reason "instance not running", and `deploy.sh` says which of the two it is before
   it stops. Still one login at a time. Tests in `apps/api/tests/replay.test.ts` with the exact body.
 - **If health says `instance_down`:** start live's instance in AMP; nothing in `deploy/.env` needs changing.
+- **Deployed:** `main` at `3e912f23` (PR #83). The deploy's health gate waited, as it should, while the instance was
+  still down.
+- **Why the instance stayed down:** ADS tried to start it again and again and Docker refused each time with
+  `error while creating mount source path '/nfs/filezilla/DeepSlate-MC': mkdir …: operation not permitted`. The NAS
+  share was not mounted on the AMP host, and its mount point is immutable on purpose (docs/28), so the instance could
+  not start. Nothing waited for the share (the drop-in on `ampinstmgr.service` was `After=` only, and the mount is
+  `nofail`) and nothing mounted it again.
+- **AMP host, set up 2026-10-15 by a session there (Alex: done):** AMP waits at boot until the share is mounted,
+  however long (`ExecStartPre=+/usr/local/sbin/wait-for-backup-share` in
+  `ampinstmgr.service.d/backup-share-order.conf`, `TimeoutStartSec=infinity`), and `backup-share-remount.timer`
+  mounts it again within a minute if it drops. Details and what to look at: docs/09 runbook, "Health says `amp:
+  instance_down`". Not recorded here: that session's finding on what happened at 08:01 to 08:09 and its check
+  output. The boot wait proves itself only at the AMP host's next reboot.
 
 ## Containers off root; live's Sync after #81 confirmed (2026-10-15, on `dev`, not on `main`)
 

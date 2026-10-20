@@ -28,32 +28,33 @@ say live is stopped, held or to be trimmed in place, this section wins.
 
 ## Animals and cosy mods (2026-10-20, on `dev`, not on `main`)
 
-- **What (Alex):** twelve mods straight into the pack, none suggested: Naturalist, Critters and Companions, Friends &
-  Foes, Cosy Critters & Creepy Crawlies (client only), Let's Do Meadow, Farm & Charm and Vinery, Comforts, Sleep Tight
-  (hammocks and night bags only), Fairy Lights, Amendments, Twigs. Libraries: YACL, Architectury API (new), Moonlight (switched on). A votable category and a
-  Mods guide topic `animals`. Slugs, pins and reasons are docs/06 "Animals and cosy mods".
-- **Duplicates dropped the same day** (Alex: "drop the duplicated mods"): Fowl Play and Untitled Duck Mod, with
-  SmartBrainLib and the `bothSides` override Fowl Play needed (Modrinth calls SmartBrainLib server-only). Crabs,
-  snails and dragonflies are still in two mods each (docs/06).
-- **Sleep Tight's settings:** `modpack/config/sleep_tight-common.toml` turns every change it makes to sleeping off
-  (bedbugs, nightmares, wake-up encounters, requirements, penalties, cooldowns, home-bed levels, benefits on waking);
-  beds sleep at once as in vanilla. Written from its decompiled CommonConfigs with all 65 keys. **Not seen in a game
-  yet**: on test, a bed should behave as vanilla, a hammock should rest to dusk, and no bedbug should appear.
-- **Lock:** the new entries only, plus `requiredBy` on GeckoLib, Resourceful Lib and Moonlight, and the new settings
-  file, spliced into the old lock as
-  before; a full run also moved Kotlin for Forge, Placebo and Titanium and the extras, left as they were. Hash
-  `e58f7157` → `93562142`, 104 files. Live, shipping no season: `0.1.0+b0691da0` (84 files) → **`0.1.0+1b7f62eb`**
-  (99). ship.test.ts, pack-ship.test.ts and building.test.ts re-pinned (Fairy Lights is load M).
-- **Checks:** `deploy/check.sh` green (modpack 302, api 817, web 679); `modpack lint` 108 mods, 0 errors, the 4 old
-  warnings; `verify-links` 382 links, 0 failed. Change log entry `2026-10-20-animals-and-cosy`, not live.
+- **What (Alex):** ten mods straight into the pack, none suggested: Naturalist, Critters and Companions, Friends &
+  Foes, Cosy Critters & Creepy Crawlies (client only), Let's Do Meadow and Vinery, Comforts, Fairy Lights, Amendments,
+  Twigs. Libraries: YACL, Architectury API (new), Moonlight (switched on). A votable category and a Mods guide topic
+  `animals`. Slugs, pins and reasons are docs/06 "Animals and cosy mods".
+- **Duplicates, two rounds the same day** (Alex: "drop the duplicated mods", then "drop those unnecessary duplicates,
+  keep the mods that have more in them"; counted from the jars): Fowl Play and Untitled Duck Mod out (with
+  SmartBrainLib and the `bothSides` override it needed); Sleep Tight out for Comforts (34 items to 21, with its
+  settings file); Let's Do Farm & Charm out for Farmer's Delight (226 items and 334 recipes to 139 and 221, 13 items
+  by the same name). One of each creature, all three mods kept: Friends & Foes' crab, Naturalist's snail and Critters
+  and Companions' dragonfly stay; Naturalist's crab and dragonfly are switched off by the server datapack
+  `deepslate-animals` (empty `naturalist:has_crab` / `has_dragonfly`), Critters and Companions' snail by
+  `modpack/server/config/crittersandcompanions-common.json5` (`snail: []`). Both read from the jars' code: those
+  tags and that list are the only way each mod spawns them.
+- **Lock:** the new entries only, plus `requiredBy` on GeckoLib, Resourceful Lib and Moonlight, spliced into the old
+  lock as before; a full run gives the same files and `requiredBy`, and also moves Kotlin for Forge, Placebo and
+  Titanium and the extras, left as they were. Hash `e58f7157` → `720a3a16`, 102 files; settings files as before.
+  Live, shipping no season: `0.1.0+b0691da0` (84 files) → **`0.1.0+5e951773`** (97). ship.test.ts, pack-ship.test.ts
+  and building.test.ts re-pinned (Fairy Lights is load M).
+- **Checks:** `deploy/check.sh` green (modpack 302, api 817, web 679); `modpack lint` 107 mods, 0 errors, the 4 old
+  warnings; `verify-links` 377 links, 0 failed. Change log entry `2026-10-20-animals-and-cosy`, not live.
 - **Not seen yet, on test:** a Build and Sync through api-test, the server starting with all of it (Create 6 recipe
-  errors from the Let's Do and Twigs recipes, mixin lines, spark before and after), a PC updating, and a look at the
-  Moon for any new mob. Nothing on live.
-- **Hammocks twice:** Comforts and Sleep Tight both have hammocks (and a bag that does not move your spawn point);
-  Alex chose Sleep Tight's after the duplicates were dropped, so both stay unless he says otherwise.
-- **Still to know:** Farm & Charm's cooking pot and cutting board sit beside Farmer's Delight's, each with its own
-  recipes. More creature kinds share the same spawn lists, and Naturalist takes farm animals out of savannas and
-  swamps and pigs out of forests (its `remove_spawns` modifiers), so vanilla cows, sheep and pigs get rarer in new land.
+  errors from the Let's Do and Twigs recipes, mixin lines, spark before and after), a PC updating, a look at the Moon
+  for any new mob, and in new land no Naturalist crab or dragonfly and no Critters and Companions snail (the
+  datapack loads from the restart after Sync). Nothing on live.
+- **Still to know:** Meadow's Cookpot sits beside Farmer's Delight's cooking pot. More creature kinds share the same
+  spawn lists, and Naturalist takes farm animals out of savannas and swamps and pigs out of forests (its
+  `remove_spawns` modifiers), so vanilla cows, sheep and pigs get rarer in new land.
 
 ## Privacy and terms pages for the Discord app (2026-10-16, on `dev`, not on `main`)
 

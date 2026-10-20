@@ -1620,40 +1620,6 @@
       "howTo": "Go up to a **meadow** biome (high grass and flowers in the mountains) for its animals, flowers and alpine salt. Make cheese with a **cheese form**; JEI shows each step (search `@meadow`). A **woodcutter** saws logs for you: place it, use an axe on it, then put logs in."
     },
     {
-      "slug": "lets-do-farm-charm",
-      "name": "Let's Do Farm & Charm",
-      "category": "world",
-      "side": "both",
-      "enabled": true,
-      "load": "M",
-      "recommended": false,
-      "hidden": false,
-      "exclusiveGroup": null,
-      "description": "Country farming: new crops (tomatoes, lettuce, onions, corn, oats, barley, strawberries), a stove, cooking pot and roaster, a mincer, chicken coops, feeding troughs, a plough and a seeder.",
-      "wiki": "https://modrinth.com/mod/lets-do-farm-charm",
-      "videos": [
-        {
-          "title": "The BEST All In One Farming Mod | Farm & Charm Full Guide",
-          "url": "https://www.youtube.com/watch?v=wNx2Jlga3BI"
-        },
-        {
-          "title": "The Ultimate Guide to Lets do Farm & Charm",
-          "url": "https://www.youtube.com/watch?v=PJK-2eleCdA"
-        },
-        {
-          "title": "Let's Do Farm & Charm (Minecraft Mod Showcase) | Cooking, Husbandry & Farms | Forge & Fabric 1.20.1",
-          "url": "https://www.youtube.com/watch?v=dwXhHlV4OiA"
-        }
-      ],
-      "version": "2eW1JdC8",
-      "requires": [
-        "architectury-api"
-      ],
-      "guide": "game",
-      "topic": "farming",
-      "howTo": "Find **wild crops** growing in fields and forests and plant what they drop. Cook on a **stove**, in a **cooking pot** or a **roaster**. Put bone meal in a **silo** to dry it into **fertiliser** for **fertilised soil**. Farmer's Delight has a cooking pot and a cutting board too: each one makes its own mod's dishes, so check JEI (search `@farm_and_charm`)."
-    },
-    {
       "slug": "lets-do-vinery",
       "name": "Let's Do Vinery",
       "category": "world",
@@ -1718,36 +1684,6 @@
       "guide": "game",
       "topic": "friends",
       "howTo": "A **sleeping bag** is three wool of one colour in a row. Crouch and use it to put it down, then sleep in it: the night passes, but if you die you still wake up at home. For a **hammock**, put up two **rope and nails** facing each other and place the hammock between them; lie in it by day to skip to the night."
-    },
-    {
-      "slug": "sleep-tight",
-      "name": "Sleep Tight",
-      "category": "world",
-      "side": "both",
-      "enabled": true,
-      "load": "L",
-      "recommended": false,
-      "hidden": false,
-      "exclusiveGroup": null,
-      "description": "Hammocks to rest in through the day, and night bags that put you to sleep on the spot. The rest of the mod (bedbugs, nightmares, sleep cooldowns, a home bed) is switched off here, so beds work as they always have.",
-      "wiki": "https://modrinth.com/mod/sleep-tight",
-      "videos": [
-        {
-          "title": "Mini Mod Reviews - Sleep Tight",
-          "url": "https://www.youtube.com/watch?v=vTw_ZBbd2ww"
-        },
-        {
-          "title": "Watch Out for Bed Bugs Now in Minecraft with this Mod!",
-          "url": "https://www.youtube.com/watch?v=J7nKi_ZSOl8"
-        }
-      ],
-      "version": "wZf65KFu",
-      "requires": [
-        "moonlight"
-      ],
-      "guide": "game",
-      "topic": "friends",
-      "howTo": "A **hammock** is three carpets of one colour over three string. Hang it between two fences with two blocks of space between them, or across a three-block gap between two blocks, and lie in it by day to rest until dusk (A and D swing it). A **night bag** (two phantom membranes over four echo shards) puts you to sleep where you stand and goes back into your inventory when you wake; it never moves your spawn point. Beds work as they always have."
     },
     {
       "slug": "create-deco",
@@ -2741,7 +2677,7 @@
       "recommended": false,
       "hidden": true,
       "exclusiveGroup": null,
-      "description": "Library needed by Amendments and Sleep Tight (and Supplementaries).",
+      "description": "Library needed by Amendments (and Supplementaries).",
       "wiki": "https://modrinth.com/mod/moonlight",
       "videos": [],
       "version": "fAIfWX6M",
@@ -3195,7 +3131,7 @@
       "recommended": false,
       "hidden": true,
       "exclusiveGroup": null,
-      "description": "Library needed by Critters and Companions and the Let's Do mods.",
+      "description": "Library needed by Critters and Companions, Let's Do Meadow and Let's Do Vinery.",
       "wiki": "https://modrinth.com/mod/architectury-api",
       "videos": [],
       "version": "1IiqEQGl",

@@ -1,0 +1,9 @@
+// Deepslate Works (Alex, 2026-10-20): no Critters and Companions snails; Naturalist's snail (shells, shellstone) is the
+// pack's snail. Every other key is the mod's default: YACL starts from the defaults and reads only what is here, then
+// writes the full file back. configVersion 2 is the mod's current one, so it runs no migration.
+{
+  "configVersion": 2,
+  "spawning": {
+    "snail": []
+  }
+}

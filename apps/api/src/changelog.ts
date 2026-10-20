@@ -305,8 +305,8 @@ export const CHANGES: Change[] = [
     title: "Animals and cosy things",
     lines: [
       "Lots of new animals: deer, bears, songbirds, ducks, otters, red pandas, the copper golem, the moobloom and many more. A few bite, so take care in swamps and by the sea. Most turn up in land nobody has been to yet.",
-      "Fairy lights to hang between fences, sleeping bags, hammocks and night bags, lanterns that hang on walls, carpet on stairs, and pebbles, twigs and new stone. Beds work just as before.",
-      "New farming: tomatoes, corn, strawberries and more, cheese from the mountain meadows, and grapes to press into wine.",
+      "Fairy lights to hang between fences, sleeping bags and hammocks, lanterns that hang on walls, carpet on stairs, and pebbles, twigs and new stone.",
+      "New farming: cheese from the mountain meadows, and grapes, apples and cherries to press into wine.",
       "Crows, moths and spiders now come and go around you on your own screen. Main menu, Mods, Cosy Critters, Config switches off any of them.",
       "The Mods page has an Animals section that says where to find them. Press Play to update.",
     ],

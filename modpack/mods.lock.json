@@ -2,7 +2,7 @@
   "generatedAt": "2026-10-20T11:28:06.910Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "93562142c4ba1452e3cf3244bff4d3c027b14d374300e0f769431c5c3aaa2373",
+  "hash": "720a3a16ec16f24adfa7e80c959a7a452b8002c87b55e925ca05aba8bba86be9",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -136,7 +136,6 @@
       "side": "both",
       "requiredBy": [
         "lets-do-meadow",
-        "lets-do-farm-charm",
         "lets-do-vinery",
         "critters-and-companions"
       ],
@@ -992,26 +991,6 @@
       "season": "s1"
     },
     {
-      "slug": "lets-do-farm-charm",
-      "name": "Let's Do Farm & Charm",
-      "projectId": "HJetCzWo",
-      "versionId": "2eW1JdC8",
-      "versionNumber": "1.1.29",
-      "versionType": "release",
-      "filename": "letsdo-farm_and_charm-neoforge-1.1.29.jar",
-      "url": "https://cdn.modrinth.com/data/HJetCzWo/versions/2eW1JdC8/letsdo-farm_and_charm-neoforge-1.1.29.jar",
-      "sha512": "b9ac57d7fd0056310603f926dcdf5dfe5821d6bd0a573ab7f626d57b32e273e5a24d30a789f028afe90674cee18107d7a99097871484f4d98f50bb54aa0e595c",
-      "sha1": "60b4e599fafc84fb6854d5ef771ee6ae8981a920",
-      "size": 3414667,
-      "side": "both",
-      "requiredBy": [],
-      "modrinth": {
-        "client": "required",
-        "server": "required"
-      },
-      "channels": "none"
-    },
-    {
       "slug": "lets-do-meadow",
       "name": "Let's Do Meadow",
       "projectId": "ra7o6Sl7",
@@ -1379,7 +1358,6 @@
       "size": 2299162,
       "side": "both",
       "requiredBy": [
-        "sleep-tight",
         "amendments"
       ],
       "modrinth": {
@@ -1743,26 +1721,6 @@
       }
     },
     {
-      "slug": "sleep-tight",
-      "name": "Sleep Tight",
-      "projectId": "tNai0h2Y",
-      "versionId": "wZf65KFu",
-      "versionNumber": "1.21-1.6.3",
-      "versionType": "release",
-      "filename": "sleep_tight-1.21-1.6.3-neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/tNai0h2Y/versions/wZf65KFu/sleep_tight-1.21-1.6.3-neoforge.jar",
-      "sha512": "3da009bba2281a733d0cfb4d718496a1cec448eedb9b6d6fb1da7db413865a83c56d2ae57450edd702a79debaaa6e51c91d4985eaaacee62d342bf85e28f003b",
-      "sha1": "d665bc2c3e744e50290d9672469fb3dfeb7166a6",
-      "size": 761169,
-      "side": "both",
-      "requiredBy": [],
-      "modrinth": {
-        "client": "required",
-        "server": "required"
-      },
-      "channels": "none"
-    },
-    {
       "slug": "sodium",
       "name": "Sodium",
       "projectId": "AANobbMI",
@@ -2070,10 +2028,6 @@
     {
       "path": "config/fallingtree.json",
       "sha256": "8398591767375d5dcc635f1a9d487c81f3f8ffa9f15b382749f2d965aca93120"
-    },
-    {
-      "path": "config/sleep_tight-common.toml",
-      "sha256": "eca56616b8f47cb36fe0ebb51dde18e841f7be9496ba73d963e7fb3cf7eb5ec8"
     },
     {
       "path": "config/tacz-common.toml",

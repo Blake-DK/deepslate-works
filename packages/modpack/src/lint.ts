@@ -38,6 +38,7 @@ export function lintManifest(raw: unknown): { manifest: Manifest | null; issues:
     if (isPlayerFacing(mod) && !mod.howTo) err(`${mod.slug}: switched on and player-facing, but has no "howTo" for the Mods guide`);
     if (mod.guide !== "behind" && mod.side === "server") warn(`${mod.slug}: server-only but in the guide's "${mod.guide}" part`);
     if (mod.adminOnly && votableCats.has(mod.category)) err(`${mod.slug}: admin-only, but in a votable category: a mod up for vote is seen by everyone`);
+    if (mod.bothSides && mod.side !== "both") err(`${mod.slug}: gives a reason for both sides ("bothSides") but its side is ${mod.side}`);
     if (mod.side === "server" && mod.exclusiveGroup) warn(`${mod.slug}: server-only mods should not be in an exclusive group`);
     // docs/58: a private jar is that file and no Modrinth version; going back to Modrinth drops "source" and pins one
     if (mod.source && mod.version !== "latest") err(`${mod.slug}: has a private "source" and a Modrinth "version" (${mod.version}): take "version" out while the jar is private (docs/58)`);

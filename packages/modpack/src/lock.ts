@@ -123,7 +123,7 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
     const bad = modUrlProblem(file.url);
     if (bad) throw new Error(`${project.slug}: ${bad}`);
     // 2.1.0: mods.json may narrow a mod to one side, never away from a side Modrinth says requires it (sides.ts)
-    const side = sideFor(project.slug, project, mod?.side);
+    const side = sideFor(project.slug, project, mod?.side, Boolean(mod?.bothSides));
     entries.set(project.id, {
       slug: project.slug, name: mod?.name ?? project.title, projectId: project.id, versionId: version.id, versionNumber: version.version_number,
       versionType: version.version_type, filename: file.filename, url: file.url, sha512: file.hashes.sha512, sha1: file.hashes.sha1, size: file.size,

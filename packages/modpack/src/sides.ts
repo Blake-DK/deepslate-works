@@ -19,9 +19,15 @@ export function sideFromProject(p: Pick<ModrinthProject, "client_side" | "server
 
 /**
  * The side in the lock. mods.json may narrow a mod to one side (chunky and spark are server-only although Modrinth
- * calls the client "optional"), but never to a side that leaves out one Modrinth says requires it.
+ * calls the client "optional"), but never to a side that leaves out one Modrinth says requires it. It may widen one
+ * to both only with a reason (`bothSides`): Modrinth calls SmartBrainLib server-only, and Fowl Play's birds need it
+ * on PCs.
  */
-export function sideFor(slug: string, p: Pick<ModrinthProject, "client_side" | "server_side">, override: Side | undefined): Side {
+export function sideFor(slug: string, p: Pick<ModrinthProject, "client_side" | "server_side">, override: Side | undefined, bothSides = false): Side {
+  if (bothSides) {
+    if (override !== "both") throw new Error(`${slug}: mods.json gives a reason for both sides ("bothSides") but says "${override ?? "nothing"}": make it "both"`);
+    return "both";
+  }
   const base = sideFromProject(p);
   if (!override || override === "both") return base;
   if (override === "server" && p.client_side === "required") throw new Error(`${slug}: mods.json says server-only, but Modrinth says the client requires it (client_side: required). Anything both sides need is never server-only.`);

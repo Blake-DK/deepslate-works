@@ -17,7 +17,7 @@ export const GUIDE_SECTIONS = ["game", "helper", "behind"] as const;
 export type GuideSection = (typeof GUIDE_SECTIONS)[number];
 // topic (docs/52): the section of the guide a "game" mod is in, in this order. The guide's own grouping; `category` is
 // the vote's. Titles and blurbs are in apps/web/src/lib/mods-guide.ts.
-export const GUIDE_TOPICS = ["travel", "friends", "mining", "storage", "building", "factories", "farming", "combat", "bosses"] as const;
+export const GUIDE_TOPICS = ["travel", "friends", "mining", "storage", "building", "factories", "farming", "animals", "combat", "bosses"] as const;
 export type GuideTopic = (typeof GUIDE_TOPICS)[number];
 export const keySchema = z.object({ key: z.string().min(1).max(40), does: z.string().min(1).max(120) });
 export type KeyBind = z.infer<typeof keySchema>;
@@ -38,6 +38,9 @@ export const modSchema = z.object({
   name: z.string().min(1),
   category: z.string().min(1),
   side: z.enum(SIDES),
+  // Modrinth calls this mod one side only, but a mod on both sides is built on it (SmartBrainLib under Fowl Play: its
+  // birds' classes use it, so PCs load it too). Why, as read from the jars; with it the lock puts the mod on both sides.
+  bothSides: z.string().min(20).max(240).optional(),
   enabled: z.boolean(),
   load: z.enum(LOADS),
   recommended: z.boolean().default(false),

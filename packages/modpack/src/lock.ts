@@ -8,6 +8,7 @@ import { fetchJar, sha512File } from "./download";
 import { modUrlProblem, privateUrl } from "./mod-url";
 import { jarChannels, sideFor, widenForDependents } from "./sides";
 import { openZipFile, openZipOnDisk, type Zip } from "./zip";
+import { checkPackDependencies, jarMods, jarModsOnDisk, type JarMods } from "./deps";
 import { hashConfigs, hashResourcePack } from "./hashes";
 
 export { hashConfigs, hashResourcePack };
@@ -143,15 +144,26 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
   const files = [...entries.values()].sort((a, b) => a.slug.localeCompare(b.slug));
   widenForDependents(files, warn);
   seasonDependencies(files);
-  if (opts.jarCache) {
+  // deps.ts: what each jar declares it needs, read while the jars are at hand; null for one not on this machine
+  const jars = opts.jarCache ? new Map<string, JarMods | null>() : null;
+  if (opts.jarCache && jars) {
     await mkdir(opts.jarCache, { recursive: true });
     for (const f of files) {
-      if (f.channels !== undefined) continue; // a private jar: looked into where it lies
+      if (f.channels !== undefined) {
+        // a private jar: its channels were looked into where it lies (privateEntry), and so is what it needs
+        const own = opts.privateDir ? path.join(opts.privateDir, f.filename) : null;
+        jars.set(f.filename, own && (await sha512File(own)) === f.sha512 ? jarModsOnDisk(own) : null);
+        continue;
+      }
       const at = path.join(opts.jarCache, f.filename);
       await fetchJar(f, at);
-      f.channels = jarChannels(await openZipFile(at));
+      const zip = await openZipFile(at);
+      f.channels = jarChannels(zip);
+      jars.set(f.filename, jarMods(zip));
       if (f.side === "server" && f.channels === "required") throw new Error(`${f.slug}: server-only, but its jar registers network channels every PC must have. Anything both sides need is never server-only: make it "both" in mods.json.`);
     }
+  } else {
+    warn("no jar cache here: the jars' network channels and the versions their mods need of each other were not checked");
   }
   // The NeoForged maven's CDN answered 404 to every request for a while on 2026-10-01: the mods are not held up
   // for it, NeoForge stays where it was and the lock says so.
@@ -160,6 +172,15 @@ export async function buildLock(m: Manifest, opts: { configDir: string; onProgre
     warn(`NeoForge kept at ${opts.previousNeoForge}: ${e instanceof Error ? e.message : String(e)}`);
     return opts.previousNeoForge;
   });
+  // 2026-10-05 (Xaero's maps wanting a newer Open Parties and Claims) and 2026-10-20 (Create Aeronautics wanting a
+  // newer Flywheel than Vanillin's): a pack whose mods do not accept each other's versions is refused here, not when
+  // every PC fails to start
+  if (jars) {
+    const found = checkPackDependencies({ files, minecraft: m.minecraft, neoforge }, jars);
+    for (const p of found) if (p.level === "warn") warn(p.message);
+    const errors = found.filter((p) => p.level === "error");
+    if (errors.length) throw new Error(`the mods do not accept each other's versions (from each jar's neoforge.mods.toml), so nothing was written:\n${errors.map((p) => `  ${p.message}`).join("\n")}`);
+  }
   const configs = await hashConfigs(opts.configDir);
   const resourcepack = await hashResourcePack(opts.resourcepackDir);
   const lock: LockFile = { generatedAt: new Date().toISOString(), minecraft: m.minecraft, neoforge, hash: packHash(neoforge, files, configs, resourcepack), files, configs, ...(resourcepack ? { resourcepack } : {}) };

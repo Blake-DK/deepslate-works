@@ -26,6 +26,26 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Lock checks what the mods need of each other (2026-10-20, on `dev`, not on `main`)
+
+- **What:** `packages/modpack/src/deps.ts`. Lock reads every jar's `neoforge.mods.toml` and its jar-in-jar libraries,
+  works out what loads on PCs and on the server (and with each season shipped), and stops, writing nothing, when a
+  mod's declared dependency is not met: required missing or out of range, optional present out of range,
+  incompatible in range, or one mod id in two versions under two jar-in-jar identifiers. `modpack lint` reports the
+  same when the lock's jars are on the machine; the new `modpack check-deps` fetches them first. Rules and choices:
+  docs/06 "What the mods need of each other". Tests: `packages/modpack/tests/deps.test.ts`, both cases below
+  among them, with each jar's real dependency entries.
+- **Both earlier failures are refused:** Xaero's Minimap 26.6.0 and World Map 1.47.0 beside Open Parties and Claims
+  0.31.6 (2026-10-05; checked on the real jars too), and the Flywheel case below.
+- **Run on `dev`'s lock as it is (pack `4d76e87e`, 106 jars, every one read): three errors, all on PCs, all
+  Flywheel.** Flywheel 1.0.6 (in Create, as `dev.engine-room.flywheel:flywheel-neoforge-1.21.1`) and 1.0.4 (in
+  Vanillin, `flw-vanillin`, as `dev.engine-room.flywheel:neoforge`); Create Aeronautics' nested Simulated 1.3.2
+  requires `flywheel [1.0.6,)`; Sable 2.0.6 works with `[1.0.6,)` only. Nothing on the server, and nothing else. So
+  **`modpack lock` refuses this pack until the Flywheel clash is fixed**, and `modpack lint` with the jars at hand
+  exits 1. It is not fixed here: that is a pack decision.
+- **Not covered:** Admin → Modpack → Lock passes no jar cache, so it checks neither channels nor dependencies; its
+  log now says so. A mod's version filled in at build time and not in its manifest is not held to ranges.
+
 ## Create: Connected, The Factory Must Grow, Create Aeronautics, Distant Horizons as an Extra (2026-10-20, on `dev`, not on `main`)
 
 - **What (Alex):** Create: Connected, Create: The Factory Must Grow and Create Aeronautics (with Sable) straight into
@@ -2049,7 +2069,7 @@ Last updated 2026-10-10, latest: the test site's stripe stays at the top, on `de
 - **The fix:** both map mods pinned in `mods.json` to what ran until this morning: Minimap 26.5.0 (`Q1tuMQBB`), World Map 1.46.0 (`9Ckiihkz`). They are client-only, so no jar on the server changes. Chosen over raising Open Parties and Claims to 0.32.7: that one is on the server too, holds the claims, and came out the same morning (06:35 UTC).
 - **The lock was made by hand, not by Lock** (no Node on this machine, and Lock would have needed a deploy before it): the two entries are the ones of the lock before `84c84393`, taken from git, and the hash is `packHash`'s recipe run in Python, checked first by reproducing `84c84393` from the lock as it was. New pack: `0.1.0+350c292a`.
 - **After the deploy:** Admin → Modpack → Build, then Sync (no server mod changes, so no restart), so the server's recorded pack is `350c292a` and Play first lets people in.
-- **For later:** the pins hold the map mods back until Open Parties and Claims is moved to 0.32.x on purpose (server and PCs together, after a backup). And a Lock that takes a client mod needing a newer version of a pinned mod is not caught by anything: the lock tooling could read each jar's `neoforge.mods.toml` dependencies and refuse.
+- **For later:** the pins hold the map mods back until Open Parties and Claims is moved to 0.32.x on purpose (server and PCs together, after a backup). And a Lock that takes a client mod needing a newer version of a pinned mod is not caught by anything: the lock tooling could read each jar's `neoforge.mods.toml` dependencies and refuse. *(Built 2026-10-20: "Lock checks what the mods need of each other".)*
 
 ## Code review, and the control panel reorganised (2026-10-05; the review is docs only, the layout is on `dev`)
 

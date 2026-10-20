@@ -13,10 +13,13 @@ import type { Manifest } from "./schema";
 import { buildSeasons, loadSeasons, readShip, shipNotice } from "./seasons";
 import { buildBuilds } from "./builds";
 import { designFile, designPrompt } from "./design-cli";
+import { checkPackDependencies, readLockJars } from "./deps";
+import { fetchJar } from "./download";
 
 const [cmd = "help", ...rest] = process.argv.slice(2);
 const P = modpackPaths();
 const log = (s: string) => console.log(s);
+const lockJars = path.join(P.dist, "cache", "lock-jars"); // Lock keeps every jar here to look into it
 
 async function loadManifest(): Promise<Manifest> {
   const { manifest, issues } = lintManifest(JSON.parse(await readFile(P.manifest, "utf8")));
@@ -52,6 +55,12 @@ async function main() {
       // the lock too, when there is one: every file it names is fetched by Build and by every PC
       const lock = await loadLock();
       if (lock) issues.push(...lintLock(lock));
+      // deps.ts: Lock's check of what the mods need of each other, on the lock as it is, over the jars on this machine
+      if (lock) {
+        const jars = await readLockJars(lock, { cache: lockJars, privateDir: P.privateJars });
+        if ([...jars.values()].some(Boolean)) issues.push(...checkPackDependencies(lock, jars));
+        else issues.push({ level: "warn", message: `dependencies: not checked, none of the lock's jars is in ${lockJars} (\`modpack check-deps\` fetches them)` });
+      }
       for (const i of issues) log(`${i.level.toUpperCase().padEnd(5)} ${i.message}`);
       // the season files too (docs/20 §4): a duplicate title or an unchecked entity stops CI as a bad mods.json does
       const seasons = await loadSeasons(P.seasons, P.items);
@@ -72,7 +81,7 @@ async function main() {
     case "lock": {
       const manifest = await loadManifest();
       const prev = await loadLock();
-      const { lock, warnings } = await buildLock(manifest, { configDir: P.config, resourcepackDir: P.resourcepack, onProgress: log, previousNeoForge: prev?.neoforge, jarCache: path.join(P.dist, "cache", "lock-jars"), privateDir: P.privateJars, previous: prev });
+      const { lock, warnings } = await buildLock(manifest, { configDir: P.config, resourcepackDir: P.resourcepack, onProgress: log, previousNeoForge: prev?.neoforge, jarCache: lockJars, privateDir: P.privateJars, previous: prev });
       for (const w of warnings) log(`WARN  ${w}`);
       const d = diffLocks(prev, lock);
       const changed = d.added.length + d.removed.length + d.changed.length + d.configs.length + (d.neoforge ? 1 : 0);
@@ -117,6 +126,24 @@ async function main() {
       const pcs = clientSet(lock).length;
       log(`${lock.files.length} files in the lock, ${pcs} for PCs, ${lock.files.length - pcs} server-only${loaded ? `; server loaded ${loaded.files.length} files at ${loaded.at} (${loaded.source})` : ""}: ${problems.length ? `${problems.length} problem(s)` : "sides OK"}`);
       process.exit(problems.length ? 1 : 0);
+    }
+    // falls through never
+    // deps.ts: the lock as committed, every jar fetched into Lock's cache first (Modrinth's checked by sha512, private
+    // ones copied from data/private-jars/); what the mods need of each other, as Lock checks it
+    case "check-deps": {
+      const lock = await requireLock();
+      for (const f of lock.files) {
+        try {
+          await fetchJar(f, path.join(lockJars, f.filename), log, { privateDir: P.privateJars });
+        } catch (e) {
+          log(`WARN  ${f.slug}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+      const problems = checkPackDependencies(lock, await readLockJars(lock, { cache: lockJars }));
+      for (const p of problems) log(`${p.level.toUpperCase().padEnd(5)} ${p.message}`);
+      const errors = problems.filter((p) => p.level === "error").length;
+      log(`${lock.files.length} files in the lock (NeoForge ${lock.neoforge}): ${errors ? `${errors} error(s)` : "dependencies OK"}, ${problems.length - errors} warning(s)`);
+      process.exit(errors ? 1 : 0);
     }
     // falls through never
     case "build": {
@@ -175,7 +202,7 @@ async function main() {
       process.exit(2);
     // falls through never
     default:
-      log(`usage: modpack <lint|verify-links|lock [--force]|check-sides|build [config|server|installer|items|seasons|all]|design <recipe.json> [out]|design-prompt> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
+      log(`usage: modpack <lint|verify-links|lock [--force]|check-sides|check-deps|build [config|server|installer|items|seasons|all]|design <recipe.json> [out]|design-prompt> \nmanifest: ${P.manifest}\ndist: ${P.dist}`);
       process.exit(cmd === "help" ? 0 : 1);
   }
 }

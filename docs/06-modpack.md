@@ -132,9 +132,10 @@ The first plan's list had FTB Essentials, FTB Ultimine, Advanced Mining Dimensio
 
 | Command | Does |
 |---|---|
-| `lint` | validates `mods.json` |
+| `lint` | validates `mods.json`; with the lock's jars on this machine (`dist/cache/lock-jars`, private ones also from `data/private-jars`), also what the mods need of each other (below), and says so when it could not look |
 | `verify-links` | asks for every `wiki` and `videos[].url`, reports the ones that fail |
-| `lock` | for each mod in the pack: `GET /v2/project/{slug}/version?loaders=["neoforge"]&game_versions=["1.21.1"]`, takes the pinned id or the newest `release` (a `beta` with a warning when there is none); adds required dependencies, and theirs; resolves `neoforge: latest` from the NeoForged maven (highest `21.1.*` without `-beta`); takes the checksums of the files under `modpack/config/`; writes the lock. **Fails, and writes nothing, when a mod has no build for NeoForge 1.21.1.** Says "unchanged" and writes nothing when neither a mod nor a settings file has changed; `lock --force` writes all the same |
+| `lock` | for each mod in the pack: `GET /v2/project/{slug}/version?loaders=["neoforge"]&game_versions=["1.21.1"]`, takes the pinned id or the newest `release` (a `beta` with a warning when there is none); adds required dependencies, and theirs; resolves `neoforge: latest` from the NeoForged maven (highest `21.1.*` without `-beta`); takes the checksums of the files under `modpack/config/`; writes the lock. **Fails, and writes nothing, when a mod has no build for NeoForge 1.21.1, or when the jars' own dependencies do not fit (below).** Says "unchanged" and writes nothing when neither a mod nor a settings file has changed; `lock --force` writes all the same |
+| `check-deps` | the lock as committed: fetches each jar into `dist/cache/lock-jars` (sha512-checked; a private jar copied from `data/private-jars`) and runs Lock's dependency check on it. Exits 1 on a problem |
 | `build server` | downloads the files for the server into `dist/server/mods/`, checks each against its checksum, copies `modpack/server/*`, `modpack/config/*` and `modpack/datapacks/*` |
 | `build config` | `dist/config.zip` from `modpack/config/`, for the installer; with `modpack/resourcepack/` (when it has a `pack.mcmeta`) zipped in as `resourcepacks/deepslate-textures.zip` |
 | `build installer` | zips `installer/` with the site's address and the pack's version stamped into `install.ps1`; writes `dist/installer.json` (the installer's version, the zip's SHA-256 and size) |
@@ -143,6 +144,23 @@ The first plan's list had FTB Essentials, FTB Ultimine, Advanced Mining Dimensio
 There is no `build client` (Windows only since 2026-09-29: the installer downloads a PC's files itself from the mod list, and a `client.mrpack` left over from before is removed by a build). There is no `sync-server` in the CLI: a sync needs the tunnel and the deploy key, which only `api` has (`POST /modpack/sync`, docs/08). It copies `dist/server/` to the instance by rsync (the mods folder made the same as the build's, settings and datapacks added to what is there, nothing of the server's own deleted) and restarts the server **if the mods changed**. Its log says so ("restarting the server to load the new mods…"), waits for the server to come back up and then checks that it loaded every mod the pack gives it (`POST /modpack/verify`); with the mods unchanged it checks the server's last start. Every start is checked the same way, and a missing mod goes into the event log.
 
 In production Build runs inside the `api` container, under its memory limit, and never on the VPS host (docs/09 "Memory limits"). Lock on the VPS: docs/11 "Where things are" has the command. Jars are streamed to disk and hashed in chunks.
+
+### What the mods need of each other (`packages/modpack/src/deps.ts`, 2026-10-20)
+
+Modrinth's dependency lists say which projects a mod needs, not which versions. Each jar says that itself, in `META-INF/neoforge.mods.toml`, and NeoForge refuses to start when it is not met. Twice a pack passed Lock and every PC then failed: Xaero's maps 26.6.0 / 1.47.0 work with Open Parties and Claims 0.32.4 or newer only, and it was pinned at 0.31.6 (2026-10-05, docs/11); Create Aeronautics' Simulated needs Flywheel 1.0.6 and Sable takes 1.0.6 or newer, while Vanillin carries its own Flywheel 1.0.4 (2026-10-20). Lock now reads, for every jar it fetches:
+
+- each `[[mods]]` mod id and version (`${file.jarVersion}` from the jar's manifest), and each `[[dependencies.<id>]]`: mod id, type (required, optional, incompatible, discouraged; older files' `mandatory = true/false`), `versionRange` in Maven's syntax, side (BOTH, CLIENT, SERVER);
+- the jar-in-jar libraries (`META-INF/jarjar/metadata.json`: identifier `group:artifact`, range, version, path) and their own `neoforge.mods.toml`, down to three deep.
+
+It then works out what loads, separately for PCs (everything but server-only) and for the server (everything but client-only), with no season shipped, each season on its own, and all of them. Per jar-in-jar identifier, the newest copy every carrier accepts loads; a mod in the mods folder wins over any jar-in-jar copy of it (said as a warning when the versions differ). Versions are compared as Maven compares them, as NeoForge does, and on 1.21.1 a mod that accepts Minecraft 1.21 is taken to accept 1.21.1 too, as NeoForge does (JEI and Alternate Current say `[1.21,1.21.1)`). Lock stops, writes nothing and names the mod, the dependency, the range and the version found, when:
+
+- a required dependency is missing, or one of its versions that may load is outside the range;
+- an optional one is there in a version outside the range (the Xaero case: NeoForge refuses that too);
+- an incompatible one is there in range;
+- one mod id comes in two versions under two jar-in-jar identifiers: which loads is not certain, so both sources are named (Flywheel 1.0.6 in Create as `dev.engine-room.flywheel:flywheel-neoforge-1.21.1`, 1.0.4 in Vanillin as `dev.engine-room.flywheel:neoforge`; PCs loaded 1.0.4), and every such version is held to each range;
+- two jars in the mods folder have one mod id, or no copy of a jar-in-jar library fits every carrier's range.
+
+A discouraged dependency in range is a warning. A jar that could not be read (a private jar not on this machine) is named, and a required mod missing then is a warning, not an error. Only Lock with a jar cache runs the check: the CLI's `modpack lock` does; Admin → Modpack → Lock passes none and says in its log that nothing was looked into.
 
 All commands can be run again without harm and print what they changed. Network failures are tried three times and then fail loudly; a half-written lockfile is never left behind (write to temp, rename).
 

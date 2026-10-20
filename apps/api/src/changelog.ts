@@ -297,6 +297,20 @@ export const CHANGES: Change[] = [
     date: "2026-10-16",
     lines: ["The site has a Privacy page and a Terms page, linked at the bottom of every page: what the site keeps about you and for how long, and how the server works. Anyone can open them, signed in or not."],
   },
+  {
+    // The animal and cosy mods, straight into the pack (Alex, 2026-10-20). Set `live: true` only after the live check
+    // (the rule above).
+    id: "2026-10-20-animals-and-cosy",
+    date: "2026-10-20",
+    title: "Animals and cosy things",
+    lines: [
+      "Lots of new animals: deer, bears, otters, red pandas, ducks and geese, birds that really fly, the copper golem, the moobloom and many more. A few bite, so take care in swamps and by the sea. Most turn up in land nobody has been to yet.",
+      "Fairy lights to hang between fences, sleeping bags and hammocks, lanterns that hang on walls, carpet on stairs, and pebbles, twigs and new stone.",
+      "New farming: tomatoes, corn, strawberries and more, cheese from the mountain meadows, and grapes to press into wine.",
+      "Crows, moths and spiders now come and go around you on your own screen. Main menu, Mods, Cosy Critters, Config switches off any of them.",
+      "The Mods page has an Animals section that says where to find them. Press Play to update.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

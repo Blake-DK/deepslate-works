@@ -79,6 +79,12 @@
       "votable": true
     },
     {
+      "id": "animals",
+      "title": "Animals",
+      "blurb": "New animals out in the world: birds, deer, otters, ducks, bugs and more. Each one gives your PC more creatures to draw, so on a slow PC they cost a little speed.",
+      "votable": true
+    },
+    {
       "id": "adventure",
       "title": "Bosses & trials",
       "blurb": "Not up for vote. Big fights in dungeons out in the world, and wave fights you open yourself. Bosses drop their own gear; seasons count who beat what.",
@@ -1580,6 +1586,140 @@
       "howTo": "Place a pipe against a chest or machine; one pipe each for items, fluids, energy and gas. Right-click a pipe's end with the **wrench** to choose whether it pulls out of or pushes into the block. Add filters and speed upgrades in the end's menu."
     },
     {
+      "slug": "lets-do-meadow",
+      "name": "Let's Do Meadow",
+      "category": "world",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "The mountain meadow made cosy: water buffalo and new cattle, milk and cheese-making, alpine flowers, pine wood, new wool and rustic furniture.",
+      "wiki": "https://modrinth.com/mod/lets-do-meadow",
+      "videos": [
+        {
+          "title": "Let's Do Meadow - Minecraft Mod Guide",
+          "url": "https://www.youtube.com/watch?v=3w9QYaYx8hw"
+        },
+        {
+          "title": "Let's Do Meadow (Minecraft Mod Showcase) | New Mobs, Cheeses & Farming | Forge & Fabric 1.19/1.20.1",
+          "url": "https://www.youtube.com/watch?v=7yVIgvjivE8"
+        },
+        {
+          "title": "Minecraft: LET'S DO MEADOW MOD | Minecraft Mods Showcase 1.20.1+",
+          "url": "https://www.youtube.com/watch?v=0GvW7-Bs6wk"
+        }
+      ],
+      "version": "7lmxOKYR",
+      "requires": [
+        "architectury-api"
+      ],
+      "guide": "game",
+      "topic": "farming",
+      "howTo": "Go up to a **meadow** biome (high grass and flowers in the mountains) for its animals, flowers and alpine salt. Make cheese with a **cheese form**; JEI shows each step (search `@meadow`). A **woodcutter** saws logs for you: place it, use an axe on it, then put logs in."
+    },
+    {
+      "slug": "lets-do-farm-charm",
+      "name": "Let's Do Farm & Charm",
+      "category": "world",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Country farming: new crops (tomatoes, lettuce, onions, corn, oats, barley, strawberries), a stove, cooking pot and roaster, a mincer, chicken coops, feeding troughs, a plough and a seeder.",
+      "wiki": "https://modrinth.com/mod/lets-do-farm-charm",
+      "videos": [
+        {
+          "title": "The BEST All In One Farming Mod | Farm & Charm Full Guide",
+          "url": "https://www.youtube.com/watch?v=wNx2Jlga3BI"
+        },
+        {
+          "title": "The Ultimate Guide to Lets do Farm & Charm",
+          "url": "https://www.youtube.com/watch?v=PJK-2eleCdA"
+        },
+        {
+          "title": "Let's Do Farm & Charm (Minecraft Mod Showcase) | Cooking, Husbandry & Farms | Forge & Fabric 1.20.1",
+          "url": "https://www.youtube.com/watch?v=dwXhHlV4OiA"
+        }
+      ],
+      "version": "2eW1JdC8",
+      "requires": [
+        "architectury-api"
+      ],
+      "guide": "game",
+      "topic": "farming",
+      "howTo": "Find **wild crops** growing in fields and forests and plant what they drop. Cook on a **stove**, in a **cooking pot** or a **roaster**. Put bone meal in a **silo** to dry it into **fertiliser** for **fertilised soil**. Farmer's Delight has a cooking pot and a cutting board too: each one makes its own mod's dishes, so check JEI (search `@farm_and_charm`)."
+    },
+    {
+      "slug": "lets-do-vinery",
+      "name": "Let's Do Vinery",
+      "category": "world",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Grapes, apple and cherry trees, and wine: press the fruit, ferment it in a barrel and let it age. Comes with wine racks, lattices, a dark cherry wood set and a travelling winemaker.",
+      "wiki": "https://modrinth.com/mod/lets-do-vinery",
+      "videos": [
+        {
+          "title": "The Ultimate Guide to Lets Do Vinery",
+          "url": "https://www.youtube.com/watch?v=k7B8mM6lgn8"
+        },
+        {
+          "title": "Minecraft: Let's Do Vinery Mod Showcase [1.20.1]",
+          "url": "https://www.youtube.com/watch?v=hwknlHA-3TM"
+        },
+        {
+          "title": "Let's Do Vinery (Minecraft Mod Showcase) | New Crops, Wines and Farming | Forge & Fabric 1.19/1.20.1",
+          "url": "https://www.youtube.com/watch?v=1X6r3lVDAAo"
+        }
+      ],
+      "version": "NmoLFrhq",
+      "requires": [
+        "architectury-api"
+      ],
+      "guide": "game",
+      "topic": "farming",
+      "howTo": "Find wild **grape bushes** (different kinds in plains, taiga, savanna and jungle) and plant the seeds on a **grapevine stem** or a **lattice**. Press grapes or apples in an **apple press** for juice, then put it in a **fermentation barrel** to make wine; wine gets better as it ages. JEI shows every wine (search `@vinery`)."
+    },
+    {
+      "slug": "comforts",
+      "name": "Comforts",
+      "category": "world",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Sleeping bags and hammocks in every colour. A sleeping bag gets you through the night without moving your spawn point; a hammock lets you rest through the day.",
+      "wiki": "https://github.com/TheIllusiveC4/Comforts/wiki",
+      "videos": [
+        {
+          "title": "Sleep Anywhere in Minecraft! Comforts Mod 1.21",
+          "url": "https://www.youtube.com/watch?v=48NJ1QOSHzM"
+        },
+        {
+          "title": "Comforts - Sleeping Bags and Hammocks || Minecraft Mod Spotlight",
+          "url": "https://www.youtube.com/watch?v=zwIGHJP5pME"
+        },
+        {
+          "title": "Comforts - Minecraft Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=W0u9q5Q0L5c"
+        }
+      ],
+      "version": "3kpPjcTc",
+      "requires": [],
+      "guide": "game",
+      "topic": "friends",
+      "howTo": "A **sleeping bag** is three wool of one colour in a row. Crouch and use it to put it down, then sleep in it: the night passes, but if you die you still wake up at home. For a **hammock**, put up two **rope and nails** facing each other and place the hammock between them; lie in it by day to skip to the night."
+    },
+    {
       "slug": "create-deco",
       "name": "Create Deco",
       "category": "building",
@@ -2136,6 +2276,291 @@
       "howTo": "Chiseled versions of Create's blocks, made in Rechiseled's **chiseling table**."
     },
     {
+      "slug": "fairy-lights-fabric",
+      "name": "Fairy Lights",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Strings of lights to hang between fences and walls: fairy lights, lanterns, bulbs, stars, hearts and more, in any colour, plus pennant bunting, tinsel and garlands.",
+      "wiki": "https://github.com/lucalabs-de/FairyLightsFabric",
+      "videos": [
+        {
+          "title": "Fairy Lights Mod Review",
+          "url": "https://www.youtube.com/watch?v=WG7S_e9Xuek"
+        },
+        {
+          "title": "minecraft mods you NEED to try out in 2025 | part 1 - fairy lights",
+          "url": "https://www.youtube.com/watch?v=imuXZia1kQg"
+        }
+      ],
+      "version": "LQ4yv2U3",
+      "requires": [],
+      "guide": "game",
+      "topic": "building",
+      "howTo": "Craft **hanging lights** from an iron ingot, string and an iron ingot in a row, with up to eight lights in the other slots (each light is crafted too: JEI shows them, search `@fairylights`). Glowstone dust on a light makes it twinkle. Hold the hanging lights, right-click a fence or wall, then right-click another one to hang the string. Right-click the string to switch it on or off; string makes it hang lower, a stick tighter."
+    },
+    {
+      "slug": "amendments",
+      "name": "Amendments",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Small upgrades to vanilla blocks: lanterns that hang on walls and swing, carpet on stairs and slabs, stacked cakes, skull piles and candle skulls, cauldrons that mix potions and dyes, and jukeboxes that show their disc.",
+      "wiki": "https://modrinth.com/mod/amendments",
+      "videos": [
+        {
+          "title": "Amendments Mod Showcase - Minecraft Mod for 1.20.1",
+          "url": "https://www.youtube.com/watch?v=y6H6Twd8pW0"
+        },
+        {
+          "title": "Those Cool TWEAKS NEED To Be In Minecraft 1.22! Amendments Mod Showcase!",
+          "url": "https://www.youtube.com/watch?v=nInMeze48M0"
+        },
+        {
+          "title": "Minecraft Quality of Life Mod Pack - Amendments!",
+          "url": "https://www.youtube.com/watch?v=Ry8lPMssLAM"
+        }
+      ],
+      "version": "83ntBcVk",
+      "requires": [
+        "moonlight"
+      ],
+      "guide": "game",
+      "topic": "building",
+      "howTo": "Mostly it just works. Place any lantern against a wall to hang it there. Put carpet on stairs or slabs. Place a cake on a cake. A cauldron holds any liquid: mix dyes or potions in it, and use an item on it to dye or tip it. Hanging signs can hold an item on each side."
+    },
+    {
+      "slug": "twigs",
+      "name": "Twigs",
+      "category": "building",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Little natural details and new stone: pebbles, twigs and seashells, paper lanterns, lamps, wooden tables, bamboo thatch, and new rocks (rhyolite, schist, bloodstone) with bricks, slabs and stairs.",
+      "wiki": "https://modrinth.com/mod/twigs",
+      "videos": [
+        {
+          "title": "This Mod Adds TONS Of New Blocks | Twigs Mod Review",
+          "url": "https://www.youtube.com/watch?v=ECtyDdk91AY"
+        },
+        {
+          "title": "Showcasing the Twigs mod!",
+          "url": "https://www.youtube.com/watch?v=Gr2Gu8fvp90"
+        },
+        {
+          "title": "Minecraft Mod Reviews 2.0 (Revived) #183 - Twigs",
+          "url": "https://www.youtube.com/watch?v=_Zc5MKGnP1I"
+        }
+      ],
+      "version": "r1egimV5",
+      "requires": [],
+      "guide": "game",
+      "topic": "building",
+      "howTo": "Pebbles, twigs and seashells lie about on the ground in new land: pick them up and place them as decoration. Craft **tables**, **paper lanterns** and **lamps** at a crafting table, and cut the new stones into bricks, slabs and stairs at a stonecutter. JEI lists everything (search `@twigs`)."
+    },
+    {
+      "slug": "naturalist",
+      "name": "Naturalist",
+      "category": "animals",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Lots of wildlife, each in the biomes it belongs in: deer, bears, birds, butterflies, snails, ducks, hedgehogs, giraffes, hippos, lions and more. Some bite: snakes, alligators, scorpions, sharks and the big cats.",
+      "wiki": "https://modrinth.com/mod/naturalist",
+      "videos": [
+        {
+          "title": "Naturalist 1.0.2 Review - 24 New Animals & So Much More (1.21.1 NeoForge) ",
+          "url": "https://www.youtube.com/watch?v=zpny1v1Ou78"
+        },
+        {
+          "title": "Naturalist 1.20.1 (Minecraft Mod Showcase)",
+          "url": "https://www.youtube.com/watch?v=-ABCvVTeJtk"
+        },
+        {
+          "title": "Naturalist [Minecraft Mod Showcase 1.20.1]",
+          "url": "https://www.youtube.com/watch?v=MM2P7NWC48k"
+        }
+      ],
+      "version": "ETgOvHHS",
+      "requires": [],
+      "guide": "game",
+      "topic": "animals",
+      "howTo": "Animals live where you would expect them: deer and bears in forests, snakes and alligators in swamps, lions, zebras and giraffes in savannas, fish, rays and sharks in the sea. Several can be bred or fed like vanilla animals (a bear loves honeycomb). Take care by water and in swamps: alligators, sharks and piranhas attack. Most of them turn up in land nobody has been to yet. JEI lists what they drop (search `@naturalist`)."
+    },
+    {
+      "slug": "critters-and-companions",
+      "name": "Critters and Companions",
+      "category": "animals",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Small, gentle animals: otters, ferrets, red pandas, koi, dragonflies, leaf insects, sea bunnies, dumbo octopuses, little snow birds and jumping spiders. Several can be tamed.",
+      "wiki": "https://modrinth.com/mod/critters-and-companions",
+      "videos": [
+        {
+          "title": "Critters and Companions Showcase!! (Forge, Fabric, NeoForge)",
+          "url": "https://www.youtube.com/watch?v=suyWJ-33V2s"
+        },
+        {
+          "title": "Every new bug in Critters & Companions 2.4.0",
+          "url": "https://www.youtube.com/watch?v=fYsaOfySTd8"
+        },
+        {
+          "title": "Critters and Companions trailer",
+          "url": "https://www.youtube.com/watch?v=hvmnx7L8QYg"
+        }
+      ],
+      "version": "aeDUpTJS",
+      "requires": [
+        "geckolib",
+        "yacl",
+        "architectury-api"
+      ],
+      "guide": "game",
+      "topic": "animals",
+      "howTo": "**Otters** live in rivers and open clams for pearls (fish clams up in a river). Tame a **ferret** (plains and forests) with raw rabbit, a **red panda** (jungles) with sweet berries, a **dragonfly** (over rivers) with spider eyes and a **shima enaga** (snowy places) with seeds. Pick up koi, sea bunnies and dumbo octopuses with a bucket. A group of koi brings you luck."
+    },
+    {
+      "slug": "friends-and-foes-forge",
+      "name": "Friends & Foes",
+      "category": "animals",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "The mobs that lost Mojang's mob votes: copper and tuff golems, the moobloom, the glare, crabs, penguins and the rascal. Also a few foes: the iceologer, the illusioner, the mauler, the barnacle and the wildfire.",
+      "wiki": "https://modrinth.com/mod/friends-and-foes-forge",
+      "videos": [
+        {
+          "title": "Why Friends & Foes is a MUST for Minecraft 1.21!",
+          "url": "https://www.youtube.com/watch?v=sNqxdv7Kx8I"
+        },
+        {
+          "title": "Minecraft Mod Showcase: Friends&Foes UPDATED!",
+          "url": "https://www.youtube.com/watch?v=rI20RGb8Lxs"
+        },
+        {
+          "title": "Friends & Foes | Minecraft Mod Review | Forge & Fabric 1.20.1",
+          "url": "https://www.youtube.com/watch?v=r-l1_zKgd6g"
+        }
+      ],
+      "version": "LH88lfnK",
+      "requires": [
+        "resourceful-lib"
+      ],
+      "guide": "game",
+      "topic": "animals",
+      "howTo": "A **tuff golem** is a tuff block, a wool block and a pumpkin; give it an item and it holds it up for show. A **copper golem** presses copper buttons and goes green like copper does. Find the **rascal** in a mineshaft three times and it gives you a present. **Crabs** live on beaches and in mangrove swamps, **mooblooms** in flower fields, the **glare** in lush caves. The **wildfire** guards a citadel in the Nether. JEI shows the rest (search `@friendsandfoes`)."
+    },
+    {
+      "slug": "untitled-duck-mod",
+      "name": "Untitled Duck Mod",
+      "category": "animals",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Ducks and geese by rivers and in swamps. They swim, preen, lay eggs and dance to music, and a tamed one sometimes brings you a fish.",
+      "wiki": "https://modrinth.com/mod/untitled-duck-mod",
+      "videos": [
+        {
+          "title": "Minecraft: Untitled Duck Mod | Best Duck Mod (1.21.11) | Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=-ZZiM6cPSL0"
+        },
+        {
+          "title": "Minecraft | Untitled Duck Mod | GOOSE IN MINECRAFT...",
+          "url": "https://www.youtube.com/watch?v=eGsIuAD81vQ"
+        },
+        {
+          "title": "Untitled Duck Mod | Mod Showcase [1.18.2]",
+          "url": "https://www.youtube.com/watch?v=gR8gmaxPHok"
+        }
+      ],
+      "version": "QfrVPbOi",
+      "requires": [
+        "geckolib"
+      ],
+      "guide": "game",
+      "topic": "animals",
+      "howTo": "**Ducks** live in rivers and swamps, **geese** by rivers. Breed both with seeds. Tame a duck with fish and a goose with kelp or seagrass; a tamed one now and then catches a fish or finds treasure for you. Carry a duck about in a **duck sack**."
+    },
+    {
+      "slug": "fowlplay",
+      "name": "Fowl Play",
+      "category": "animals",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Birds that really fly: robins, cardinals, blue jays, sparrows, chickadees, pigeons, crows, ravens, gulls, hawks, ducks, geese and penguins. Chickens get new looks and animations too.",
+      "wiki": "https://modrinth.com/mod/fowlplay",
+      "videos": [
+        {
+          "title": "Fowl Play (1.21.1) Minecraft Mod Review",
+          "url": "https://www.youtube.com/watch?v=a82g9W2V6zg"
+        }
+      ],
+      "version": "kZyPjCmU",
+      "requires": [
+        "smartbrainlib",
+        "yacl"
+      ],
+      "guide": "game",
+      "topic": "animals",
+      "howTo": "Look up: songbirds, crows and hawks live in forests and fields, gulls on beaches, pigeons on stony shores, penguins on snowy plains and beaches. Most fly off if you run at them. Some can be tamed; the mod's wiki says which (github.com/aqariio/Fowl-Play/wiki)."
+    },
+    {
+      "slug": "cosy-critters",
+      "name": "Cosy Critters & Creepy Crawlies",
+      "category": "animals",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Crows that land and hop about, moths round your lights and spiders on the walls, just for atmosphere, and very rarely the Hat Man. They are only on your own PC: the server and the other players never see them.",
+      "wiki": "https://modrinth.com/mod/cosy-critters",
+      "videos": [
+        {
+          "title": "what if minecraft had birds and also bugs perchance",
+          "url": "https://www.youtube.com/watch?v=YatkJsCc11s"
+        },
+        {
+          "title": "Jobless Gaming PC S1E7 Cosy Critters and Creepy Crawlies",
+          "url": "https://www.youtube.com/watch?v=diMR8PEEf3s"
+        }
+      ],
+      "version": "QnJ9WVDV",
+      "requires": [],
+      "guide": "game",
+      "topic": "animals",
+      "howTo": "Nothing to do: the crows, moths and spiders come and go around you by themselves, and you can't catch them. Don't want the Hat Man (a shadowy figure that is gone when you look)? Main menu → **Mods** → **Cosy Critters** → **Config**, and switch off **Spawn Hat Man**. The same screen sets how many birds, moths and spiders there are."
+    },
+    {
       "slug": "chunky",
       "name": "Chunky",
       "category": "server",
@@ -2342,15 +2767,15 @@
       "name": "Moonlight Lib",
       "category": "base",
       "side": "both",
-      "enabled": false,
+      "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": true,
       "exclusiveGroup": null,
-      "description": "Library needed by Supplementaries.",
+      "description": "Library needed by Amendments (and Supplementaries).",
       "wiki": "https://modrinth.com/mod/moonlight",
       "videos": [],
-      "version": "latest",
+      "version": "fAIfWX6M",
       "requires": []
     },
     {
@@ -2773,6 +3198,55 @@
       "wiki": "https://modrinth.com/mod/cobweb",
       "videos": [],
       "version": "c10AZba0",
+      "requires": []
+    },
+    {
+      "slug": "yacl",
+      "name": "YetAnotherConfigLib",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Critters and Companions and Fowl Play.",
+      "wiki": "https://modrinth.com/mod/yacl",
+      "videos": [],
+      "version": "7TVdVtxF",
+      "requires": []
+    },
+    {
+      "slug": "architectury-api",
+      "name": "Architectury API",
+      "category": "base",
+      "side": "both",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Critters and Companions and the Let's Do mods.",
+      "wiki": "https://modrinth.com/mod/architectury-api",
+      "videos": [],
+      "version": "1IiqEQGl",
+      "requires": []
+    },
+    {
+      "slug": "smartbrainlib",
+      "name": "SmartBrainLib",
+      "category": "base",
+      "side": "both",
+      "bothSides": "Modrinth calls it server-only, but Fowl Play's birds are built on it (55 of its classes use it), so every PC loads it too. Its jar runs on both sides (displayTest IGNORE_SERVER_VERSION).",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Fowl Play.",
+      "wiki": "https://modrinth.com/mod/smartbrainlib",
+      "videos": [],
+      "version": "O5EpeqI3",
       "requires": []
     }
   ]

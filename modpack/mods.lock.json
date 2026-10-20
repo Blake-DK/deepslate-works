@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-14T19:03:00.347Z",
+  "generatedAt": "2026-10-20T10:44:28.099Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "e58f715701eac9dc6773a216f141dad0cc6d13dc64152074ce90dcc35de0c925",
+  "hash": "132eb8a589eeb08d3ed899f3a99b20ee742451f9254688d5a508a391bc468f19",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -64,6 +64,26 @@
       }
     },
     {
+      "slug": "amendments",
+      "name": "Amendments",
+      "projectId": "6iTJugQR",
+      "versionId": "83ntBcVk",
+      "versionNumber": "1.21-2.1.11",
+      "versionType": "release",
+      "filename": "amendments-1.21-2.1.11-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/6iTJugQR/versions/83ntBcVk/amendments-1.21-2.1.11-neoforge.jar",
+      "sha512": "bc09b6ee63aae62faf3ad1c8f44aceb8b82b1e490e463f62608da7a210301e8fa097189ff1bed2a168e842ef2f1b2e6a967b26de709d65b4ef7ed8f8623c88a7",
+      "sha1": "3d1ba6f88621e4f7f4264d262eb20a2d98bf1f59",
+      "size": 1175215,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "another-furniture",
       "name": "Another Furniture",
       "projectId": "ulloLmqG",
@@ -100,6 +120,31 @@
         "client": "optional",
         "server": "optional"
       }
+    },
+    {
+      "slug": "architectury-api",
+      "name": "Architectury API",
+      "projectId": "lhGA9TYQ",
+      "versionId": "1IiqEQGl",
+      "versionNumber": "13.0.11+neoforge",
+      "versionType": "release",
+      "filename": "architectury-13.0.11-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/lhGA9TYQ/versions/1IiqEQGl/architectury-13.0.11-neoforge.jar",
+      "sha512": "d9f7c3bb8162577dfb461ffdf04bd6a3563c7586934a0e2a744c14421beffb8286f0d88d4c758317003f20f99fe8072a39b9d675af061e036970d36db36027f0",
+      "sha1": "008656a0702801174b8ec245ed7aad1921d6e9f1",
+      "size": 584734,
+      "side": "both",
+      "requiredBy": [
+        "lets-do-meadow",
+        "lets-do-farm-charm",
+        "lets-do-vinery",
+        "critters-and-companions"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "optional"
     },
     {
       "slug": "arphex",
@@ -278,6 +323,26 @@
       }
     },
     {
+      "slug": "comforts",
+      "name": "Comforts",
+      "projectId": "SaCpeal4",
+      "versionId": "3kpPjcTc",
+      "versionNumber": "9.0.5+1.21.1",
+      "versionType": "release",
+      "filename": "comforts-neoforge-9.0.5+1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/SaCpeal4/versions/3kpPjcTc/comforts-neoforge-9.0.5%2B1.21.1.jar",
+      "sha512": "e9de2952545e9e773a6e78fc501e8cd231ea19750c30404355b71df9928eb5bd0921a4429aeca9d0fa10e67717f77fcf7a2aae117ac953b8f7de246b0ad685e4",
+      "sha1": "21d6bee3821d62fe3356c51fb1d697871a3087ff",
+      "size": 422658,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
+    },
+    {
       "slug": "copycats",
       "name": "Create: Copycats+",
       "projectId": "UT2M39wf",
@@ -314,6 +379,26 @@
         "client": "required",
         "server": "required"
       }
+    },
+    {
+      "slug": "cosy-critters",
+      "name": "Cosy Critters & Creepy Crawlies",
+      "projectId": "61PI8Hzj",
+      "versionId": "QnJ9WVDV",
+      "versionNumber": "v0.3.3+1.21.1-neoforge",
+      "versionType": "release",
+      "filename": "cosycritters-0.3.3+1.21.1-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/61PI8Hzj/versions/QnJ9WVDV/cosycritters-0.3.3%2B1.21.1-neoforge.jar",
+      "sha512": "a55618fee7d50373306d476efa4c71db4b54817ca9600c4d159ddfbaa57e140b0df7549489bd6761b50c4d18dcb25c94b10581adc7ffbc83ffe2b5c26e1b8501",
+      "sha1": "845665cf417af0c8a10714c1691c5ba5c86f99d6",
+      "size": 99302,
+      "side": "client",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
     },
     {
       "slug": "craft-config",
@@ -416,6 +501,26 @@
       }
     },
     {
+      "slug": "critters-and-companions",
+      "name": "Critters and Companions",
+      "projectId": "Yd4wb5wZ",
+      "versionId": "aeDUpTJS",
+      "versionNumber": "2.7.0",
+      "versionType": "release",
+      "filename": "crittersandcompanions-neoforge-1.21.1-2.7.0.jar",
+      "url": "https://cdn.modrinth.com/data/Yd4wb5wZ/versions/aeDUpTJS/crittersandcompanions-neoforge-1.21.1-2.7.0.jar",
+      "sha512": "f93bb48b07122d1c93cd931169752814c46f2ed964da987ab5ce654e8f70242c57265c3853bbb357f5fd95c412e775bf7b9a2abeb2a2a0858eae95c8d8ba451d",
+      "sha1": "957286bd79fd0b735c2e9619a249dde77292ca06",
+      "size": 2098079,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "curios",
       "name": "Curios API",
       "projectId": "vvuO3ImH",
@@ -513,6 +618,26 @@
         "client": "required",
         "server": "unsupported"
       }
+    },
+    {
+      "slug": "fairy-lights-fabric",
+      "name": "Fairy Lights",
+      "projectId": "OuLVx5LM",
+      "versionId": "LQ4yv2U3",
+      "versionNumber": "1.2.3+1.21.1_neoforge",
+      "versionType": "release",
+      "filename": "fairylights-neoforge-1.21.1-1.2.3.jar",
+      "url": "https://cdn.modrinth.com/data/OuLVx5LM/versions/LQ4yv2U3/fairylights-neoforge-1.21.1-1.2.3.jar",
+      "sha512": "53d293170595cb45c0742aa6388a790799e760c88e704b55fcc3d729153d923aff0963675a35b670b22b5a2028424cce7aedbaa2531a22bda62bcae81444871e",
+      "sha1": "08ed4551de4c3228386b97ccbd1e58828eab5c38",
+      "size": 628094,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "fallingtree",
@@ -629,6 +754,46 @@
       }
     },
     {
+      "slug": "fowlplay",
+      "name": "Fowl Play",
+      "projectId": "WpXfePbg",
+      "versionId": "kZyPjCmU",
+      "versionNumber": "1.2.3+1.21.1-neoforge",
+      "versionType": "release",
+      "filename": "fowlplay-1.2.3+1.21.1-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/WpXfePbg/versions/kZyPjCmU/fowlplay-1.2.3%2B1.21.1-neoforge.jar",
+      "sha512": "69d78df0c54cf77cc8dde61a51ccd6e3b9eebda5f07fd8ed7d4d8fe72f9d7f2d51c025a1c5a7b3f7eeeddc75515ea6ba5c15cf878c111016fbde00581c30dd84",
+      "sha1": "6c2d872bb014c84d8bd0f892140928d8f278764b",
+      "size": 2614463,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
+    },
+    {
+      "slug": "friends-and-foes-forge",
+      "name": "Friends & Foes",
+      "projectId": "BOCJKD49",
+      "versionId": "LH88lfnK",
+      "versionNumber": "neoforge-5.0.3+mc1.21.1",
+      "versionType": "release",
+      "filename": "friendsandfoes-neoforge-5.0.3+mc1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/BOCJKD49/versions/LH88lfnK/friendsandfoes-neoforge-5.0.3%2Bmc1.21.1.jar",
+      "sha512": "cf8fd8dc2580ec32176d5be1182b532311468b3b5b21671c6312291a007556c28b96a2a70ee382cfbb46f8b8dd09a7ac274e8e4e5e2e1096a2aba85aeec466ec",
+      "sha1": "74b448afe8e9915d73a2993d67f56ebb0a1aeaf5",
+      "size": 5271544,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "geckolib",
       "name": "GeckoLib",
       "projectId": "8BmcQJ2H",
@@ -642,6 +807,7 @@
       "size": 634531,
       "side": "both",
       "requiredBy": [
+        "critters-and-companions",
         "mowzies-mobs",
         "arphex"
       ],
@@ -844,6 +1010,66 @@
         "server": "required"
       },
       "season": "s1"
+    },
+    {
+      "slug": "lets-do-farm-charm",
+      "name": "Let's Do Farm & Charm",
+      "projectId": "HJetCzWo",
+      "versionId": "2eW1JdC8",
+      "versionNumber": "1.1.29",
+      "versionType": "release",
+      "filename": "letsdo-farm_and_charm-neoforge-1.1.29.jar",
+      "url": "https://cdn.modrinth.com/data/HJetCzWo/versions/2eW1JdC8/letsdo-farm_and_charm-neoforge-1.1.29.jar",
+      "sha512": "b9ac57d7fd0056310603f926dcdf5dfe5821d6bd0a573ab7f626d57b32e273e5a24d30a789f028afe90674cee18107d7a99097871484f4d98f50bb54aa0e595c",
+      "sha1": "60b4e599fafc84fb6854d5ef771ee6ae8981a920",
+      "size": 3414667,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
+      "slug": "lets-do-meadow",
+      "name": "Let's Do Meadow",
+      "projectId": "ra7o6Sl7",
+      "versionId": "7lmxOKYR",
+      "versionNumber": "1.4.10",
+      "versionType": "release",
+      "filename": "letsdo-meadow-neoforge-1.4.10.jar",
+      "url": "https://cdn.modrinth.com/data/ra7o6Sl7/versions/7lmxOKYR/letsdo-meadow-neoforge-1.4.10.jar",
+      "sha512": "6f13b65eb9b1305c376af1409466946972830210a591f074d82c858d112de8c0f6fd420727f23b7c3c388b2192d90cd88c343e60e33403846f56e6309b50e40d",
+      "sha1": "dd30b394460c7994de8ab22e3ea0bf7d61fa42c6",
+      "size": 2965222,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
+      "slug": "lets-do-vinery",
+      "name": "Let's Do Vinery",
+      "projectId": "1DWmBJVA",
+      "versionId": "NmoLFrhq",
+      "versionNumber": "1.5.6",
+      "versionType": "release",
+      "filename": "letsdo-vinery-neoforge-1.5.6.jar",
+      "url": "https://cdn.modrinth.com/data/1DWmBJVA/versions/NmoLFrhq/letsdo-vinery-neoforge-1.5.6.jar",
+      "sha512": "51c31c756de0f54a91f28c4d072925e0793ae70aefde2d23ea7ca3c5b7050ce04cc1885531ea459d1ea6adefb05d7c37616e3c9102f0fea50234f04043f6b970",
+      "sha1": "2e2866ba9abdfff57509b291b76567054e1d5065",
+      "size": 2570708,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "lionfish-api",
@@ -1160,6 +1386,28 @@
       }
     },
     {
+      "slug": "moonlight",
+      "name": "Moonlight Lib",
+      "projectId": "twkfQtEc",
+      "versionId": "fAIfWX6M",
+      "versionNumber": "1.21.1-3.7.2",
+      "versionType": "release",
+      "filename": "moonlight-1.21.1-3.7.2-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/twkfQtEc/versions/fAIfWX6M/moonlight-1.21.1-3.7.2-neoforge.jar",
+      "sha512": "b4e8efba91e5f46729928335cce8952ad70af3e33b851e8cf4887a24346f7bbdfe3609f8cc482f76a715aa050bf39e7048ee97b33183e5c358f149bc3678183c",
+      "sha1": "0da45e6bc941f4b9b18dda24f8d047431ddc7226",
+      "size": 2299162,
+      "side": "both",
+      "requiredBy": [
+        "amendments"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "optional"
+    },
+    {
       "slug": "mouse-tweaks",
       "name": "Mouse Tweaks",
       "projectId": "aC3cM3Vq",
@@ -1207,6 +1455,26 @@
       "sha512": "4d969c457a01e49a242ebc03112031bd338be08fc4ab36540b222b0a64e72a778a6534ad2be7c5cf72a5a74e1ce58e66e2999957f68c189c868dbc48bef44708",
       "sha1": "c9981cf323d5e0fd49387ad20dafec1f58b2c88d",
       "size": 1346730,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
+      "slug": "naturalist",
+      "name": "Naturalist",
+      "projectId": "F8BQNPWX",
+      "versionId": "ETgOvHHS",
+      "versionNumber": "2.0.5+1.21.1-neoforge",
+      "versionType": "release",
+      "filename": "naturalist-2.0.5-neoforge-1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/F8BQNPWX/versions/ETgOvHHS/naturalist-2.0.5-neoforge-1.21.1.jar",
+      "sha512": "7c5f1ce90a097a0e097ef60049b3ae1597295286b2e485d89c960504c150d62fd711b7286a90512f3b8bf27953a4f9d816a9c6a58700b888f59d05d5a7cb03e1",
+      "sha1": "ea9ebf082eb978dcf583255e8fca1004a8114ab6",
+      "size": 11325729,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
@@ -1366,7 +1634,8 @@
       "size": 484332,
       "side": "both",
       "requiredBy": [
-        "handcrafted"
+        "handcrafted",
+        "friends-and-foes-forge"
       ],
       "modrinth": {
         "client": "required",
@@ -1493,6 +1762,28 @@
       }
     },
     {
+      "slug": "smartbrainlib",
+      "name": "SmartBrainLib",
+      "projectId": "PuyPazRT",
+      "versionId": "O5EpeqI3",
+      "versionNumber": "1.16.11",
+      "versionType": "release",
+      "filename": "SmartBrainLib-neoforge-1.21.1-1.16.11.jar",
+      "url": "https://cdn.modrinth.com/data/PuyPazRT/versions/O5EpeqI3/SmartBrainLib-neoforge-1.21.1-1.16.11.jar",
+      "sha512": "bfc76f6fd8c388d01b80601ad1b826f6b3f5ec5ea915e5725af129561e6bc4a10890975e6f6d2a0348d842c13042dcf1a9d0a1574fba76bce60119bee76e2dc2",
+      "sha1": "0310135a01eeceefbc7f1ab017498a65f3ad6836",
+      "size": 391053,
+      "side": "both",
+      "requiredBy": [
+        "fowlplay"
+      ],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "sodium",
       "name": "Sodium",
       "projectId": "AANobbMI",
@@ -1609,6 +1900,46 @@
         "client": "required",
         "server": "required"
       }
+    },
+    {
+      "slug": "twigs",
+      "name": "Twigs",
+      "projectId": "RG50cUrX",
+      "versionId": "r1egimV5",
+      "versionNumber": "1.21.1-3.1.2",
+      "versionType": "release",
+      "filename": "Twigs-1.21.1-3.1.2.jar",
+      "url": "https://cdn.modrinth.com/data/RG50cUrX/versions/r1egimV5/Twigs-1.21.1-3.1.2.jar",
+      "sha512": "8edc6ce6baa785800b72b0ffad6cffef3217573cc091600b63e616ef91f3c2ee3598bb64c17deb228b6e79d54b32769348e5f524381e4f7af4b2215c10d1ab88",
+      "sha1": "528c54b099afc36ae50c408ce9bfb78a28bdea8b",
+      "size": 2711016,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
+      "slug": "untitled-duck-mod",
+      "name": "Untitled Duck Mod",
+      "projectId": "ojFjz7JF",
+      "versionId": "QfrVPbOi",
+      "versionNumber": "1.7.0+neoforge",
+      "versionType": "release",
+      "filename": "untitledduckmod-1.7.0-neoforge-1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/ojFjz7JF/versions/QfrVPbOi/untitledduckmod-1.7.0-neoforge-1.21.1.jar",
+      "sha512": "b90e8527074388729f84fea9fcb87e0ae3b45eeadf5c23a7741db4b3885fe558eba7551c56da3cc3a5621c0db67946a9d669a351e2e4c28775f4fd8eb1fe2da8",
+      "sha1": "69e0d6383242526d75a994eaccae05f64ddefb95",
+      "size": 330692,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "vanishmod",
@@ -1744,6 +2075,29 @@
         "client": "required",
         "server": "optional"
       }
+    },
+    {
+      "slug": "yacl",
+      "name": "YetAnotherConfigLib",
+      "projectId": "1eAoo2KR",
+      "versionId": "7TVdVtxF",
+      "versionNumber": "3.8.2+1.21.1-neoforge",
+      "versionType": "release",
+      "filename": "yet_another_config_lib_v3-3.8.2+1.21.1-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/1eAoo2KR/versions/7TVdVtxF/yet_another_config_lib_v3-3.8.2%2B1.21.1-neoforge.jar",
+      "sha512": "583de19b927ce8050c2b7d5e60b75accc69e325e5aac85c27994c82a9dec2e4e078343fa1d4c3a10d4bd7e0e524e0b3b246a18cf03db01e363a1e6f865adcf48",
+      "sha1": "fe270c9f6e0a8142cf316944087f5109cef08bbb",
+      "size": 1118651,
+      "side": "both",
+      "requiredBy": [
+        "critters-and-companions",
+        "fowlplay"
+      ],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "none"
     }
   ],
   "configs": [

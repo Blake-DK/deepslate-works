@@ -14,15 +14,15 @@ describe("the pack a server ships, as api reads it", () => {
     const lock = JSON.parse(await readFile(path.join(REPO, "modpack", "mods.lock.json"), "utf8")) as ShippedLock;
     expect(packHash(lock, lock.files)).toBe(lock.hash);
   });
-  it("live ships nothing yet: 84 files, 0.1.0+b0691da0 (Mekanism and the quarry pause mod in, docs/53 and docs/56; the two flower mods, docs/59; the gas mask's icon, docs/55 M8; Macaw's Holidays; Vanishmod, server only); the test server with SEASONS_SHIP=s1 gets all 89 (with the horror trial on Ashmoon)", async () => {
+  it("live ships nothing yet: 101 files, 0.1.0+555d6dfc (Mekanism and the quarry pause mod in, docs/53 and docs/56; the two flower mods, docs/59; the gas mask's icon, docs/55 M8; Macaw's Holidays; Vanishmod, server only; the animal and cosy mods, 2026-10-20); the test server with SEASONS_SHIP=s1 gets all 106 (with the horror trial on Ashmoon)", async () => {
     const live = await readShippedLock(REPO, {});
-    expect(live.files).toHaveLength(84);
-    expect(live.hash.slice(0, 8)).toBe("b0691da0");
+    expect(live.files).toHaveLength(101);
+    expect(live.hash.slice(0, 8)).toBe("555d6dfc");
     expect(live.files.some((f) => f.season)).toBe(false);
     const test = await readShippedLock(REPO, { TEST_MODE: "1", SEASONS_SHIP: "s1" });
-    expect(test.files).toHaveLength(89);
+    expect(test.files).toHaveLength(106);
     expect(await readShippedLock(REPO, { SEASONS_SHIP: "s1" })).toEqual(live); // ignored without TEST_MODE
-    expect(await sitePack(REPO)).toMatch(/\+b0691da0$/);
+    expect(await sitePack(REPO)).toMatch(/\+555d6dfc$/);
   });
   it("SEASONS_SHIP is read as the modpack package reads it", () => {
     expect(shipFor(["s1"], {})).toEqual(["s1"]);

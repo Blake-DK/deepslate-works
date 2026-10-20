@@ -84,7 +84,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "auth.register": "joined the group",
   "auth.adminReset": "had their password reset from the command line",
   // docs/04: sign-in through Authentik
-  "auth.ssoLinked": (p) => (p.relink ? "signed in through Authentik as a new Authentik user with the same Discord ID: the account follows it" : "signed in through Authentik for the first time: the account is linked to it"),
+  "auth.ssoLinked": (p) => (p.relink ? "signed in through Authentik as another Authentik user with the same Discord ID: the account follows it" : "signed in through Authentik for the first time: the account is linked to it"),
   "auth.ssoRole": (p) => `was made ${p.role === "ADMIN" ? "an admin" : "a player"} at sign-in, by the Authentik group deepslate-admins`,
   "auth.adminPassword": (p) => `signed in with password + ${p.via === "recovery" ? `a recovery code (${s(p.recoveryLeft, "?")} left)` : "code"}${from(p)}`,
   "auth.adminPasswordFailed": (p) => `${p.locked ? "Refused admin sign-in (locked)" : "Failed admin sign-in"} for '${s(p.username, "")}'${from(p)}${p.lockedNow ? "; locked for 15 minutes" : ""}`,

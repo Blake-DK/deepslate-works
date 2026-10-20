@@ -53,7 +53,13 @@ through Authentik, Alex's identity provider, with Discord or Microsoft there. Wi
   enrollment adds a new user to `deepslate-players` and nothing else and writes no email (Authentik's Microsoft source
   links by email, so an email on a Discord-made user could pull a Microsoft login into it). Every Authentik application
   has a binding before the Discord source is on. The site's admins are Authentik users of their own, each connected to
-  their Discord and in `deepslate-admins` only; no homelab account is linked to the site.
+  their Discord and in `deepslate-admins` only.
+- **A Microsoft account that is the same person as a member** (Alex, 2026-10-20): an Authentik admin gives that
+  Authentik user the attribute `deepslate_discord_id` (the member's Discord ID, as text) and the group; the `deepslate`
+  claim names it when the user has no Discord connection, so a Microsoft sign-in lands in that member's account. The
+  Discord connection stays on the member's own Authentik user, so a Discord login never reaches the Microsoft one. The
+  account then follows whichever of the two signed in last (`authentikSub`; "another Authentik user with the same
+  Discord ID" in the event log). No account with homelab rights carries a Discord connection.
 - **The test site** uses the same provider and settings with its own address, its own database and its own accounts.
   The Discord server rule is off there (api-test has no bot, and the test site is admins only already, docs/42 §3).
 - **Break-glass** is the owner's password sign-in below.

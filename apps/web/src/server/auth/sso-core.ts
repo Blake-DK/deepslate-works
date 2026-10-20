@@ -26,8 +26,8 @@ export function parseSsoClaims(profile: unknown): SsoClaims | null {
   const p = (profile ?? {}) as Record<string, unknown>;
   const sub = typeof p.sub === "string" ? p.sub.trim() : "";
   if (!sub || sub.length > 255) return null;
-  const rawId = typeof p.discord_id === "number" ? String(p.discord_id) : p.discord_id;
-  const discordId = typeof rawId === "string" && DISCORD_ID_RE.test(rawId) ? rawId : null;
+  // A string only: a Discord ID is past 2^53, so as a JSON number it arrives rounded and would name someone else.
+  const discordId = typeof p.discord_id === "string" && DISCORD_ID_RE.test(p.discord_id) ? p.discord_id : null;
   const roles = Array.isArray(p.deepslate_roles) ? p.deepslate_roles.filter((r): r is string => typeof r === "string") : null;
   const named = [p.name, p.preferred_username].find((v): v is string => typeof v === "string" && v.trim() !== "");
   return { sub, discordId, roles, name: named ? named.trim().slice(0, 64) : null };

@@ -17,7 +17,9 @@ describe("the id token's claims", () => {
     for (const discord_id of [null, undefined, "", "abc", "12", "1".repeat(26), {}]) {
       expect(parseSsoClaims({ sub: "abc", discord_id })?.discordId).toBeNull();
     }
-    expect(parseSsoClaims({ sub: "abc", discord_id: 123456789 })?.discordId).toBe("123456789");
+    // as a JSON number a Discord ID is already rounded (past 2^53): never read as an ID
+    expect(parseSsoClaims({ sub: "abc", discord_id: Number(BRAMBLE) })?.discordId).toBeNull();
+    expect(parseSsoClaims({ sub: "abc", discord_id: 123456789 })?.discordId).toBeNull();
   });
 
   it("tells a missing roles claim (null: change nothing) from an empty one (no group)", () => {

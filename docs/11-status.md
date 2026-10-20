@@ -28,23 +28,29 @@ say live is stopped, held or to be trimmed in place, this section wins.
 
 ## Animals and cosy mods (2026-10-20, on `dev`, not on `main`)
 
-- **What (Alex):** eleven mods straight into the pack, none suggested: Naturalist, Critters and Companions, Friends &
-  Foes, Cosy Critters & Creepy Crawlies (client only), Let's Do Meadow, Farm & Charm and Vinery, Comforts, Fairy
-  Lights, Amendments, Twigs. Libraries: YACL, Architectury API (new), Moonlight (switched on). A votable category and a
+- **What (Alex):** twelve mods straight into the pack, none suggested: Naturalist, Critters and Companions, Friends &
+  Foes, Cosy Critters & Creepy Crawlies (client only), Let's Do Meadow, Farm & Charm and Vinery, Comforts, Sleep Tight
+  (hammocks and night bags only), Fairy Lights, Amendments, Twigs. Libraries: YACL, Architectury API (new), Moonlight (switched on). A votable category and a
   Mods guide topic `animals`. Slugs, pins and reasons are docs/06 "Animals and cosy mods".
 - **Duplicates dropped the same day** (Alex: "drop the duplicated mods"): Fowl Play and Untitled Duck Mod, with
   SmartBrainLib and the `bothSides` override Fowl Play needed (Modrinth calls SmartBrainLib server-only). Crabs,
   snails and dragonflies are still in two mods each (docs/06).
-- **Lock:** the new entries only, plus `requiredBy` on GeckoLib and Resourceful Lib, spliced into the old lock as
+- **Sleep Tight's settings:** `modpack/config/sleep_tight-common.toml` turns every change it makes to sleeping off
+  (bedbugs, nightmares, wake-up encounters, requirements, penalties, cooldowns, home-bed levels, benefits on waking);
+  beds sleep at once as in vanilla. Written from its decompiled CommonConfigs with all 65 keys. **Not seen in a game
+  yet**: on test, a bed should behave as vanilla, a hammock should rest to dusk, and no bedbug should appear.
+- **Lock:** the new entries only, plus `requiredBy` on GeckoLib, Resourceful Lib and Moonlight, and the new settings
+  file, spliced into the old lock as
   before; a full run also moved Kotlin for Forge, Placebo and Titanium and the extras, left as they were. Hash
-  `e58f7157` → `5680160e`, 103 files. Live, shipping no season: `0.1.0+b0691da0` (84 files) → **`0.1.0+65146540`**
-  (98). ship.test.ts, pack-ship.test.ts and building.test.ts re-pinned (Fairy Lights is load M).
+  `e58f7157` → `93562142`, 104 files. Live, shipping no season: `0.1.0+b0691da0` (84 files) → **`0.1.0+1b7f62eb`**
+  (99). ship.test.ts, pack-ship.test.ts and building.test.ts re-pinned (Fairy Lights is load M).
 - **Checks:** `deploy/check.sh` green (modpack 302, api 817, web 679); `modpack lint` 108 mods, 0 errors, the 4 old
   warnings; `verify-links` 382 links, 0 failed. Change log entry `2026-10-20-animals-and-cosy`, not live.
 - **Not seen yet, on test:** a Build and Sync through api-test, the server starting with all of it (Create 6 recipe
   errors from the Let's Do and Twigs recipes, mixin lines, spark before and after), a PC updating, and a look at the
   Moon for any new mob. Nothing on live.
-- **Held for Alex:** Sleep Tight. It was offered as hammocks; it is a sleep overhaul (nightmares, bedbugs, a home bed).
+- **Hammocks twice:** Comforts and Sleep Tight both have hammocks (and a bag that does not move your spawn point);
+  Alex chose Sleep Tight's after the duplicates were dropped, so both stay unless he says otherwise.
 - **Still to know:** Farm & Charm's cooking pot and cutting board sit beside Farmer's Delight's, each with its own
   recipes. More creature kinds share the same spawn lists, and Naturalist takes farm animals out of savannas and
   swamps and pigs out of forests (its `remove_spawns` modifiers), so vanilla cows, sheep and pigs get rarer in new land.

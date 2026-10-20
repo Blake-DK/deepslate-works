@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-20T10:44:28.099Z",
+  "generatedAt": "2026-10-20T11:28:06.910Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "5680160ec3a6485d2587dbf97bb4f9ae7908beaa64f7bf57126c3b4af3394138",
+  "hash": "93562142c4ba1452e3cf3244bff4d3c027b14d374300e0f769431c5c3aaa2373",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -1379,6 +1379,7 @@
       "size": 2299162,
       "side": "both",
       "requiredBy": [
+        "sleep-tight",
         "amendments"
       ],
       "modrinth": {
@@ -1742,6 +1743,26 @@
       }
     },
     {
+      "slug": "sleep-tight",
+      "name": "Sleep Tight",
+      "projectId": "tNai0h2Y",
+      "versionId": "wZf65KFu",
+      "versionNumber": "1.21-1.6.3",
+      "versionType": "release",
+      "filename": "sleep_tight-1.21-1.6.3-neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/tNai0h2Y/versions/wZf65KFu/sleep_tight-1.21-1.6.3-neoforge.jar",
+      "sha512": "3da009bba2281a733d0cfb4d718496a1cec448eedb9b6d6fb1da7db413865a83c56d2ae57450edd702a79debaaa6e51c91d4985eaaacee62d342bf85e28f003b",
+      "sha1": "d665bc2c3e744e50290d9672469fb3dfeb7166a6",
+      "size": 761169,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "sodium",
       "name": "Sodium",
       "projectId": "AANobbMI",
@@ -2049,6 +2070,10 @@
     {
       "path": "config/fallingtree.json",
       "sha256": "8398591767375d5dcc635f1a9d487c81f3f8ffa9f15b382749f2d965aca93120"
+    },
+    {
+      "path": "config/sleep_tight-common.toml",
+      "sha256": "eca56616b8f47cb36fe0ebb51dde18e841f7be9496ba73d963e7fb3cf7eb5ec8"
     },
     {
       "path": "config/tacz-common.toml",

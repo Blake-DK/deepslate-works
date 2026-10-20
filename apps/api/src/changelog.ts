@@ -311,6 +311,19 @@ export const CHANGES: Change[] = [
       "The Mods page has an Animals section that says where to find them. Press Play to update.",
     ],
   },
+  {
+    // Create: Connected, Create Aeronautics and the Distant Horizons extra (Alex, 2026-10-20). Set `live: true` only
+    // after the live check (the rule above).
+    id: "2026-10-20-create-addons",
+    date: "2026-10-20",
+    title: "Airships and more for Create",
+    lines: [
+      "Create Aeronautics: build airships, planes and cars from Create parts. Glue a build together, assemble it, lift it with hot-air balloons, push it with propellers and steer it with a wheel. Keep them small: big ones slow the game down for everyone.",
+      "Create: Connected: more parts for Create machines, like a battery that stores rotation, item silos, more gearboxes and clutches, and catalysts that give fans new jobs.",
+      "New in the app's Extras: Distant Horizons shows land far past your render distance. Only for strong PCs; switch it on in Extras if yours is one.",
+      "Press Play to update.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

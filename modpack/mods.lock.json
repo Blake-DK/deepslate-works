@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-20T11:28:06.910Z",
+  "generatedAt": "2026-10-20T11:56:49.219Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "720a3a16ec16f24adfa7e80c959a7a452b8002c87b55e925ca05aba8bba86be9",
+  "hash": "e0a098342c6caf40918020253b23bfcf04e861d84074a7a164941f1894f56f9f",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -435,12 +435,34 @@
       "side": "both",
       "requiredBy": [
         "create-big-cannons",
-        "copycats"
+        "copycats",
+        "create-connected",
+        "create-aeronautics"
       ],
       "modrinth": {
         "client": "optional",
         "server": "required"
       }
+    },
+    {
+      "slug": "create-aeronautics",
+      "name": "Create Aeronautics",
+      "projectId": "oWaK0Q19",
+      "versionId": "44pLdPGg",
+      "versionNumber": "1.3.2+mc1.21.1",
+      "versionType": "release",
+      "filename": "create-aeronautics-bundled-1.21.1-1.3.2.jar",
+      "url": "https://cdn.modrinth.com/data/oWaK0Q19/versions/44pLdPGg/create-aeronautics-bundled-1.21.1-1.3.2.jar",
+      "sha512": "dc7e8e1148fa442243889ba29412207137e1bb86206e6c92bc0a589f1374a466e93de22bdbf14f753984d86c29308fbbdc0f14a4b9618b14c0ac1666a36b46f5",
+      "sha1": "ddbe9cbc25e8f663218aa1e9fdfc4b99f0e11e4b",
+      "size": 33123131,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "create-big-cannons",
@@ -460,6 +482,26 @@
         "client": "required",
         "server": "required"
       }
+    },
+    {
+      "slug": "create-connected",
+      "name": "Create: Connected",
+      "projectId": "Vg5TIO6d",
+      "versionId": "Xe7EqzfQ",
+      "versionNumber": "1.3.3-mc1.21.1",
+      "versionType": "release",
+      "filename": "create_connected-1.3.3-mc1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/Vg5TIO6d/versions/Xe7EqzfQ/create_connected-1.3.3-mc1.21.1.jar",
+      "sha512": "485675693980a266611669857fa9cd348e2a29140b87bf0a8ab3e13c3591422cceaa36b7a2eb90084d35ec1868c8eec9f924383bb4dada2dddcb72e9f09361b0",
+      "sha1": "96ae45fa44cd7028a31b9613cb672009e811b145",
+      "size": 6786783,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "create-deco",
@@ -1621,6 +1663,28 @@
         "client": "required",
         "server": "required"
       }
+    },
+    {
+      "slug": "sable",
+      "name": "Sable",
+      "projectId": "T9PomCSv",
+      "versionId": "fg9dTRz9",
+      "versionNumber": "2.0.6+mc1.21.1",
+      "versionType": "release",
+      "filename": "sable-neoforge-1.21.1-2.0.6.jar",
+      "url": "https://cdn.modrinth.com/data/T9PomCSv/versions/fg9dTRz9/sable-neoforge-1.21.1-2.0.6.jar",
+      "sha512": "76d293ce751a01cb9c095a3659b0a41e03e005480bc9d76dfdc73ec7c2eabf7923740c7b077921d42616673c496cd5143569f2085ddcebe174fd91d81e2a04b8",
+      "sha1": "cf46f7e8c1511f170abcdbee739944f0540549bf",
+      "size": 12986135,
+      "side": "both",
+      "requiredBy": [
+        "create-aeronautics"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "optional"
     },
     {
       "slug": "scalable-cats-force",

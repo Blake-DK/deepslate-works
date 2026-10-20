@@ -26,6 +26,20 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Create: Connected, Create Aeronautics, Distant Horizons as an Extra (2026-10-20, on `dev`, not on `main`)
+
+- **What (Alex):** Create: Connected and Create Aeronautics (with Sable) straight into the pack, Distant Horizons
+  3.3.3 as the tenth Extra. Pollution of the Realms and Fullbright not taken; Power Grid not taken (Crafts &
+  Additions stays); The Factory Must Grow held for Alex (its overlap with Immersive Engineering, and its ores on the
+  Moon). docs/06 "Create add-ons and Distant Horizons".
+- **Lock:** the three entries and Create's `requiredBy` spliced in; the extras lock is the old one plus Distant
+  Horizons (a full run also moved Kotlin for Forge, Placebo, Titanium and Particle Rain, left as they were). Pack hash
+  `e0a09834`, 105 files; live, shipping no season, **`0.1.0+befdb793`** (100); s1 105. Extras hash `2cd3234f` →
+  `85675a7b`, 10 extras, 37.0 MB. ship, pack-ship and extras tests re-pinned. Change log entry
+  `2026-10-20-create-addons`, not live.
+- **Not seen yet, on test:** the server starting with Aeronautics and Sable, TPS with a craft flying, claims against a
+  borehead or a ship, a PC updating (about 50 MB more), and Distant Horizons switched on from the app's Extras.
+
 ## Animals and cosy mods (2026-10-20, on `dev`, not on `main`)
 
 - **What (Alex):** ten mods straight into the pack, none suggested: Naturalist, Critters and Companions, Friends &

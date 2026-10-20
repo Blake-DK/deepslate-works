@@ -251,6 +251,19 @@ Straight into the pack, no vote, none suggested. Each is the newest **release** 
   - **Let's Do Farm & Charm dropped** for Farmer's Delight (already in the pack, voted in): Farmer's Delight has 226 items and 334 recipes, Farm & Charm 139 and 221, and 13 of them by the same name (cooking pot, stove, cutting board, tomato, onion …), each pot making only its own mod's dishes. Meadow stays: its Cookpot is the only overlap in 183 items.
   - **One of each animal, all three mods kept:** where two mods have the same creature, the one that does less is switched off. Friends & Foes' **crab** stays (its claw brews the potion of reaching), Naturalist's goes (crab meat only). Naturalist's **snail** stays (snail shells in 16 colours, shellstone), Critters and Companions' goes (a slime bottle). Critters and Companions' **dragonfly** stays (tamed with spider eyes, wears armour, its wings tame jumping spiders), Naturalist's goes. How: Naturalist adds a creature only in the biomes of its `naturalist:has_<mob>` tag (AddAnimalsBiomeModifier, read from the jar), so the datapack `deepslate-animals` empties `has_crab` and `has_dragonfly`; every Critters and Companions spawn, the lush caves' included, comes from the lists in its config (CACEntities.registerSpawns), so `crittersandcompanions-common.json5` on the server has `snail: []`. Both are server only and change spawns in new land; a creature already somewhere stays.
 
+## Create add-ons and Distant Horizons (Alex, 2026-10-20)
+
+Asked for together with Create Power Grid, The Factory Must Grow, Pollution of the Realms and Fullbright; Create and JEI were already in. Each is the newest release for NeoForge 1.21.1, pinned; jars read for their Create range, libraries and worldgen.
+
+| Slug | Category, topic | Load | Needs | |
+|---|---|---|---|---|
+| `create-connected` | factories, factories | L | Create (6.0.10 or newer, the pack's) | its copycat recipes switch themselves off where Copycats+ has the same block (`feature_enabled_in_copycats`), so no copycat is there twice |
+| `create-aeronautics` | factories, travel | H | Create, `sable` (2.x, hidden `base` entry) | one jar carrying Aeronautics, Offroad and Simulated; Sable wants Sodium 0.8.12 or newer (the pack has 0.8.13). Not yet seen: TPS with a craft flying, claims (Open Parties and Claims) against a borehead or a ship, BlueMap (draws no moving craft) |
+| `distanthorizons` | an Extra (`modpack/extras.json`), High | | | client only; the server runs no Distant Horizons |
+
+- **Not taken:** Pollution of the Realms (Alex: no pollution), Fullbright (Alex: skip; it takes the dark out of caves, nights and Ashmoon). Create Power Grid: not added, Alex asked what a swap for Crafts & Additions would lose (live builds and items with it, the quarry's power plan and the guide's Electricity part rest on it); Crafts & Additions stays.
+- **Held for Alex:** The Factory Must Grow (446 items): besides steel and diesel it brings lead, nickel and aluminium ores (Immersive Engineering has all three), its own electricity, grenades and napalm, and its ores and oil go to every `#minecraft:is_overworld` biome, the Moon's three included.
+
 ## Render distance by PC tier (planner, 2026-09-30)
 
 `mods.json` `render_by_tier`, next to `server_properties`: HIGH 12 / 8, MID 10 / 8, LOW 8 / 6 (render / simulation, in chunks). The mod list (`/api/modpack/manifest`) sends `render_distance` and `simulation_distance` for the caller's measured PC tier (`User.pcTier`; none known: LOW), as plain numbers every installer reads, plus `tier`. The server's own `view-distance` is 12 and `simulation-distance` stays 8 (the expected values in `server_properties`; AMP writes the file, see docs/15).

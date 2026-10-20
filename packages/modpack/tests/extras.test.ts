@@ -14,11 +14,11 @@ describe("modpack/extras.json", () => {
   it("lints clean", () => expect(errors).toEqual([]));
   it("has the planner's extras, the two shader packs under Iris, Fresh Animations with EMF and ETF behind one switch", () => {
     const ids = extras!.extras.map((x) => x.id);
-    expect(ids).toEqual(["iris", "shader-light", "shader-full", "not-enough-animations", "skin-layers", "falling-leaves", "particle-rain", "sound-physics", "fresh-animations"]);
+    expect(ids).toEqual(["iris", "shader-light", "shader-full", "not-enough-animations", "skin-layers", "falling-leaves", "particle-rain", "sound-physics", "fresh-animations", "distant-horizons"]); // Distant Horizons, Alex 2026-10-20
     expect(extras!.extras.filter((x) => x.shader).map((x) => [x.shader, x.requires])).toEqual([["light", ["iris"]], ["full", ["iris"]]]);
     expect(extras!.extras.find((x) => x.id === "fresh-animations")!.projects.map((p) => p.slug)).toEqual(["fresh-animations", "entity-model-features", "entitytexturefeatures"]);
     // 2.0.1: the mod ids the app looks for in the game's latest.log
-    expect(Object.fromEntries(extras!.extras.map((x) => [x.id, x.modIds]))).toEqual({ iris: ["iris"], "shader-light": [], "shader-full": [], "not-enough-animations": ["notenoughanimations"], "skin-layers": ["skinlayers3d"], "falling-leaves": ["fallingleaves"], "particle-rain": ["particlerain"], "sound-physics": ["sound_physics_remastered"], "fresh-animations": ["entity_model_features", "entity_texture_features"] });
+    expect(Object.fromEntries(extras!.extras.map((x) => [x.id, x.modIds]))).toEqual({ iris: ["iris"], "shader-light": [], "shader-full": [], "not-enough-animations": ["notenoughanimations"], "skin-layers": ["skinlayers3d"], "falling-leaves": ["fallingleaves"], "particle-rain": ["particlerain"], "sound-physics": ["sound_physics_remastered"], "fresh-animations": ["entity_model_features", "entity_texture_features"], "distant-horizons": ["distanthorizons"] });
   });
   it("catches a duplicate, an unknown requirement and two shaders for one choice", () => {
     const x = { id: "aa", name: "A", description: "a", fps: "Low", howTo: "On in the app.", projects: [{ slug: "aa" }] };
@@ -45,7 +45,7 @@ describe("extras are not part of the pack", () => {
 describe("extrasForApp", () => {
   it("gives the app ids, words, FPS cost, sizes, pictures and files with checksums", () => {
     const body = extrasForApp(read("extras.lock.json") as ExtrasLock);
-    expect(body.extras).toHaveLength(9);
+    expect(body.extras).toHaveLength(10); // Distant Horizons, 2026-10-20
     expect(body.size).toBe(body.extras.reduce((n, x) => n + x.size, 0));
     for (const x of body.extras) {
       expect(["Low", "Medium", "High"]).toContain(x.fps);

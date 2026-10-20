@@ -51,6 +51,15 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Not covered:** Admin → Modpack → Lock passes no jar cache, so it checks neither channels nor dependencies; its
   log now says so. A mod's version filled in at build time and not in its manifest is not held to ranges.
 
+## Lint's four old warnings gone (2026-10-20, on `dev`, not on `main`)
+
+- **Videos:** ArPhEx, Mutant Monsters and Nyf's Spiders have three YouTube videos each (titles as YouTube's oEmbed
+  gives them; ArPhEx's third is its author's guide to 5.0, the version the pack runs; two of Nyf's are Shorts).
+- **"server-only but in the guide's game part"** no longer warns: Server Sided Portals is in the game part on purpose
+  (players build the portal; the guide says "On the server only"). A server-only mod in the "helper" part still warns.
+  A test for both.
+- `modpack lint`: 0 errors; left are the known double-Flywheel note and, on this machine only, jars not in its cache.
+
 ## Live on the new pack (2026-10-20, PR #87 deployed)
 
 - **Deployed:** PR #87 merged 15:45 UTC (`71e0bff1`), both containers on its images. Admin built the modpack at 16:08;

@@ -2888,6 +2888,20 @@
       "exclusiveGroup": null,
       "description": "Horror insects, giant spiders and their bosses, on Ashmoon only.",
       "wiki": "https://modrinth.com/mod/arphex",
+      "videos": [
+        {
+          "title": "The Minecraft Mod That Adds Arachnophobia...",
+          "url": "https://www.youtube.com/watch?v=Q-mmVT7lSfM"
+        },
+        {
+          "title": "Minecraft Mod Reviews 2.0 (Revived) #248 - Arthropod Phobia Expansions",
+          "url": "https://www.youtube.com/watch?v=Z_0J1_qAnN0"
+        },
+        {
+          "title": "Tutorial on defeating the brutal new Diabolos Decimator boss in Arthropod Phobia Expansions 5.0!",
+          "url": "https://www.youtube.com/watch?v=xFgL33GHlsw"
+        }
+      ],
       "version": "jawvD7YZ",
       "requires": [
         "geckolib"
@@ -2909,6 +2923,20 @@
       "exclusiveGroup": null,
       "description": "Huge mutant zombies, skeletons, creepers and endermen, on Ashmoon only.",
       "wiki": "https://modrinth.com/mod/mutant-monsters",
+      "videos": [
+        {
+          "title": "*NEW* Mutant Monsters Mod Update - Minecraft 1.21.1 (Mod Showcase)",
+          "url": "https://www.youtube.com/watch?v=FxjJyZhVQ_o"
+        },
+        {
+          "title": "Mutant Monsters | Minecraft Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=Dzc-4tEkJWo"
+        },
+        {
+          "title": "These MUTANT Monsters Should NOT Exist… (Minecraft Mod Showcase)",
+          "url": "https://www.youtube.com/watch?v=PkK0Ok7Jwa8"
+        }
+      ],
       "version": "dauEcrnZ",
       "requires": [
         "puzzles-lib"
@@ -2930,6 +2958,20 @@
       "exclusiveGroup": null,
       "description": "Spiders climb walls and ceilings like real ones.",
       "wiki": "https://modrinth.com/mod/nyfs-spiders",
+      "videos": [
+        {
+          "title": "Nyf’s Spiders should replace Minecraft vanilla spiders... feat. Nyf’s Spiders + Fresh Animations",
+          "url": "https://www.youtube.com/watch?v=TMBtEEQ_b0o"
+        },
+        {
+          "title": "Mini Mod Reviews - Nyf's Spiders",
+          "url": "https://www.youtube.com/watch?v=zGK6TMdFKNE"
+        },
+        {
+          "title": "This mod gives spiders the mobility they deserve!",
+          "url": "https://www.youtube.com/watch?v=wtCgQ9JIYdw"
+        }
+      ],
       "version": "B2RgTf4a",
       "requires": [],
       "guide": "game",

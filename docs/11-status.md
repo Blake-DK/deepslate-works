@@ -60,8 +60,8 @@ say live is stopped, held or to be trimmed in place, this section wins.
   items that exist only with the Dye Depot mod (not in the pack); its recipes and advancements for them have
   `mod_loaded` conditions, the loot tables do not. `deepslate-tools` now carries the 16 as empty loot tables
   (`pools: []`, condition `not mod_loaded dye_depot`). Server only; counts after the next start (or `/reload`).
-- **Change log:** `2026-10-20-animals-and-cosy` and `2026-10-20-create-addons` still without `live`: set it once a
-  PC has joined live on the new pack, then deploy; the bot posts them.
+- **Change log:** Alex joined live on the new pack at 16:11:43 UTC ("im in"), so `2026-10-20-animals-and-cosy` and
+  `2026-10-20-create-addons` are `live: true`; the deploy after this posts them.
 
 ## Tried on test; `server-loaded.json` from the test server (2026-10-20, on `dev`, not on `main`)
 

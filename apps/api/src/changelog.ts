@@ -312,13 +312,13 @@ export const CHANGES: Change[] = [
     ],
   },
   {
-    // Create: Connected, The Factory Must Grow, Create Aeronautics and the Distant Horizons extra (Alex, 2026-10-20). Set `live: true` only
+    // Create: Connected, The Factory Must Grow and the Distant Horizons extra (Alex, 2026-10-20; Create Aeronautics taken
+    // out again the same day, it would not load beside Vanillin). Set `live: true` only
     // after the live check (the rule above).
     id: "2026-10-20-create-addons",
     date: "2026-10-20",
-    title: "Airships and more for Create",
+    title: "More for Create",
     lines: [
-      "Create Aeronautics: build airships, planes and cars from Create parts. Glue a build together, assemble it, lift it with hot-air balloons, push it with propellers and steer it with a wheel. Keep them small: big ones slow the game down for everyone.",
       "Create: Connected: more parts for Create machines, like a battery that stores rotation, item silos, more gearboxes and clutches, and catalysts that give fans new jobs.",
       "Create: The Factory Must Grow: heavy industry. Make steel in a blast furnace, pump oil and refine it into fuel for big engines, and make concrete, aluminium and plastic. Lead, nickel and steel from any mod work in its recipes.",
       "New in the app's Extras: Distant Horizons shows land far past your render distance. Only for strong PCs; switch it on in Extras if yours is one.",

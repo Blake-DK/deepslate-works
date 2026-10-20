@@ -1816,42 +1816,6 @@
       "howTo": "**Steel:** a **coke oven** turns coal into coal coke and creosote (slowly, so build a row). A **blast stove** burns the creosote into hot air for a **blast furnace**: a ring of fireproof bricks round a blast furnace output, with a hatch and reinforcements. Drop raw or crushed iron and **limesand** in the top and cast the molten steel into ingots in a **casting basin**. **Oil:** run industrial pipes down to a deposit, put a **pumpjack** on top and refine it in a **distillation tower**. **Engines** of up to five blocks burn the fuel for rotation. Lead, nickel and steel from any mod work in its recipes. Hover over a machine and hold **W** for its how-to scene."
     },
     {
-      "slug": "create-aeronautics",
-      "name": "Create Aeronautics",
-      "category": "factories",
-      "side": "both",
-      "enabled": true,
-      "load": "H",
-      "recommended": false,
-      "hidden": false,
-      "exclusiveGroup": null,
-      "description": "Airships, planes and cars built from Create parts: glue a build together, assemble it into a craft that moves, lift it with hot-air balloons or levitite, push it with propellers, roll it on tyres.",
-      "note": "Needs Create",
-      "wiki": "https://modrinth.com/mod/create-aeronautics",
-      "videos": [
-        {
-          "title": "Create Aeronautics Mod Release Trailer",
-          "url": "https://www.youtube.com/watch?v=SO8tpWfZjGk"
-        },
-        {
-          "title": "Getting Started in Create Aeronautics",
-          "url": "https://www.youtube.com/watch?v=Wljg1fC6UBk"
-        },
-        {
-          "title": "Ultimate Guide to Create Aeronautics",
-          "url": "https://www.youtube.com/watch?v=mJDw9ROFa1o"
-        }
-      ],
-      "version": "44pLdPGg",
-      "requires": [
-        "create",
-        "sable"
-      ],
-      "guide": "game",
-      "topic": "travel",
-      "howTo": "Build the craft, mark it with **super glue** or **honey glue**, then hold right-click on a **physics assembler** and pull its lever: the build becomes a craft that moves (any assembler takes it apart again). **Hot air burners** fill the **balloon** above them when given redstone; **levitite** keeps a craft afloat; **propellers** on a propeller bearing, spun by Create rotation, push it; a **steering wheel** and **throttle lever** steer. Hover over a part and hold **W** for its how-to scenes. Big crafts are heavy work for the server and every PC: keep them small."
-    },
-    {
       "slug": "macaws-roofs",
       "name": "Macaw's Roofs",
       "category": "building",
@@ -3241,22 +3205,6 @@
       "wiki": "https://modrinth.com/mod/architectury-api",
       "videos": [],
       "version": "1IiqEQGl",
-      "requires": []
-    },
-    {
-      "slug": "sable",
-      "name": "Sable",
-      "category": "base",
-      "side": "both",
-      "enabled": true,
-      "load": "L",
-      "recommended": false,
-      "hidden": true,
-      "exclusiveGroup": null,
-      "description": "Library needed by Create Aeronautics (its physics).",
-      "wiki": "https://modrinth.com/mod/sable",
-      "videos": [],
-      "version": "fg9dTRz9",
       "requires": []
     }
   ]

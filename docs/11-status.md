@@ -46,20 +46,22 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Not covered:** Admin → Modpack → Lock passes no jar cache, so it checks neither channels nor dependencies; its
   log now says so. A mod's version filled in at build time and not in its manifest is not held to ranges.
 
-## Create: Connected, The Factory Must Grow, Create Aeronautics, Distant Horizons as an Extra (2026-10-20, on `dev`, not on `main`)
+## Create: Connected, The Factory Must Grow, Distant Horizons as an Extra (2026-10-20, on `dev`, not on `main`)
 
-- **What (Alex):** Create: Connected, Create: The Factory Must Grow and Create Aeronautics (with Sable) straight into
+- **Create Aeronautics and Sable taken out again** (Alex): on the test PC the game refused to start, Simulated and
+  Sable wanting Flywheel 1.0.6 while PCs load Vanillin's 1.0.4 (docs/06). A weekly check watches Modrinth for a
+  Vanillin, Aeronautics or Sable that ends the clash.
+- **What (Alex):** Create: Connected and Create: The Factory Must Grow straight into
   the pack, Distant Horizons 3.3.3 as the tenth Extra. Pollution of the Realms and Fullbright not taken; Power Grid
   not taken (Crafts & Additions stays). TFMG's lead, nickel, aluminium and steel share `c:` tags with Immersive
   Engineering's and Mekanism's, and their recipes take the tags; `deepslate-tools` makes TFMG's three steel cogwheel
   and flywheel recipes take any steel. docs/06 "Create add-ons and Distant Horizons".
-- **Lock:** the four entries and Create's `requiredBy` spliced in; the extras lock is the old one plus Distant
+- **Lock:** the entries and Create's `requiredBy` spliced in (Aeronautics and Sable since taken out); the extras lock is the old one plus Distant
   Horizons (a full run also moved Kotlin for Forge, Placebo, Titanium and Particle Rain, left as they were). Pack hash
-  `4d76e87e`, 106 files; live, shipping no season, **`0.1.0+c16f4bd0`** (101); s1 106. Extras hash `2cd3234f` →
+  `18f2629f`, 104 files; live, shipping no season, **`0.1.0+222c2b4b`** (99); s1 104. Extras hash `2cd3234f` →
   `85675a7b`, 10 extras, 37.0 MB. ship, pack-ship and extras tests re-pinned. Change log entry
   `2026-10-20-create-addons`, not live.
-- **Not seen yet, on test:** the server starting with Aeronautics and Sable, TPS with a craft flying, claims against a
-  borehead, a ship, a grenade or napalm, TFMG's three steel recipes taking another mod's steel, a PC updating (about 50 MB more), and Distant Horizons switched on from the app's Extras.
+- **Not seen yet, on test:** the server and a PC starting with this pack, claims against a grenade or napalm, TFMG's three steel recipes taking another mod's steel, a PC updating (about 50 MB more), and Distant Horizons switched on from the app's Extras.
 
 ## Animals and cosy mods (2026-10-20, on `dev`, not on `main`)
 

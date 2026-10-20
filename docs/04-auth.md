@@ -7,6 +7,57 @@
 - One person without Discord can still get in.
 - The live map (a separate service) is covered by the same login.
 
+## Sign-in through Authentik (Alex, 2026-10-20)
+
+With `AUTHENTIK_ISSUER`, `AUTHENTIK_CLIENT_ID` and `AUTHENTIK_CLIENT_SECRET` set in `deploy/.env`, members sign in
+through Authentik, Alex's identity provider, with Discord or Microsoft there. Without them the site is as described under
+"Flow" below. The site has no passkeys.
+
+- **The way in.** `/login` and an invite link's page have one button, "Sign in with Discord or Microsoft". It opens
+  Authentik's sign-in page for this site only (a flow of its own: a Discord button and a Microsoft button, no username
+  box). OpenID Connect, authorization code with PKCE (S256), state and nonce. The id token comes straight from
+  Authentik's token endpoint over TLS, with the client secret and the PKCE verifier; its issuer, audience and nonce are
+  checked (its signature is not: OpenID Connect allows TLS in its place for a token from the token endpoint). Provider id `authentik`, so the redirect URIs Authentik
+  holds are `<AUTH_URL>/api/auth/callback/authentik` and `<TEST_AUTH_URL>/api/auth/callback/authentik`, matched
+  strictly. Scopes: `openid`; `profile`, a name only (Authentik's mapping for this provider leaves the groups out);
+  `deepslate`, with `discord_id` (the Authentik user's Discord connection, whichever button they pressed) and
+  `deepslate_roles` (their Authentik groups whose names start with `deepslate-`). No email is asked for.
+- **Which account.** By Discord ID only, never by email (`src/server/auth/sso-core.ts`): the account whose Discord ID
+  is the claim's; else the account already linked to this Authentik user (`User.authentikSub`, its `sub`, migration
+  `0037_authentik_sub`); else a new account. A Microsoft sign-in without a Discord connection therefore never lands in
+  an account made before. One sign-in that names two accounts, or a linked account whose Discord ID is another one, is
+  refused (`/login?error=account-mismatch`) and left to an admin, never merged. A Discord ID that turns up on a new
+  Authentik user takes the account with it (in the event log).
+- **An account without a Discord ID** (the old email sign-in's) is given one before its first sign-in: Admin → People →
+  the member's menu → **Set Discord ID…**. Only while it has none and has never signed in through Authentik, never one
+  another member has or a blocked one; audited as `user.discordId`.
+- **The door** is the one below: in the Discord server, or an invite link. Authentik hands the site no Discord token,
+  so the site asks api, whose bot looks (`GET /discord/member/:id`, docs/08); no answer is "Discord didn't answer",
+  never "left the server". Someone without a Discord connection needs an invite link (`invite-needed`) and gets a new
+  account on the outside list. The blocked list (Remove and block) applies by Discord ID as before.
+- **Roles.** Authentik's group `deepslate-admins` makes an admin, at every sign-in, both ways; everyone else is a
+  player. Three guards: a missing `deepslate_roles` claim changes nobody; the owner (`ADMIN_DISCORD_ID`) is never made a
+  player; the sign-in that first links an existing account keeps the role it had (the next one follows the group). A
+  new account in `deepslate-admins` starts as an admin. Make admin / Make player on People still act at once, until the
+  member's next sign-in. Made a player at sign-in: the same as Make player (password sign-in off, older sessions
+  ended, Builder tools gone), audited as `auth.ssoRole`. The Tester switch stays on the site, one click (docs/57).
+- **Sessions.** As below: 30 days for a player; **12 hours for an admin** who came in through Authentik, so leaving
+  `deepslate-admins` counts within the day. Signing out of the site does not sign out of Authentik.
+- **Gone with Authentik:** the members' email and password sign-in, and the invite's "No Discord?" form (someone
+  without Discord signs in with Microsoft, once Alex has given them an account there). The site's own Discord sign-in
+  is off too; `DISCORD_DIRECT_LOGIN=1` keeps it as a second, smaller button while Authentik is new. It is to be removed.
+- **Authentik's side** is made and changed on Authentik's host, not from here: groups `deepslate-admins` and
+  `deepslate-players`; the provider "Deepslate Works" (confidential client, RS256, implicit consent, grant types
+  `authorization_code` and `refresh_token`: without them every authorize fails with "request is otherwise malformed");
+  the application `deepslate`, bound to the two groups; the Discord source `discord`, matching by Discord ID only, whose
+  enrollment adds a new user to `deepslate-players` and nothing else and writes no email (Authentik's Microsoft source
+  links by email, so an email on a Discord-made user could pull a Microsoft login into it). Every Authentik application
+  has a binding before the Discord source is on. The site's admins are Authentik users of their own, each connected to
+  their Discord and in `deepslate-admins` only; no homelab account is linked to the site.
+- **The test site** uses the same provider and settings with its own address, its own database and its own accounts.
+  The Discord server rule is off there (api-test has no bot, and the test site is admins only already, docs/42 §3).
+- **Break-glass** is the owner's password sign-in below.
+
 ## Flow
 
 **The usual way in: the Discord server is the invite.**
@@ -42,6 +93,11 @@ Signing in is one thing, using the site another. Until "We're live" is switched 
 - `GET /api/auth/verify` returns 200 if the request carries a valid session, 401 otherwise. Caddy's `forward_auth` uses it for BlueMap. It lives in `src/server/auth/verify.ts`.
 
 ## Admin password sign-in (planner, 2026-10-01)
+
+**Since 2026-10-20 the owner's only** (the account whose Discord ID is `ADMIN_DISCORD_ID`): it is the one break-glass
+login beside Authentik, for the day Authentik, Discord or Microsoft is down. Another admin cannot set it up (Me →
+Sign-in says so) and the check refuses anyone else's (`not the owner` in the event log). Behind it, when it is lost
+too: the one-time link from the command line (below, and docs/09 Runbook).
 
 For admins only, for the day Discord is down or an admin's Discord account is gone. Discord stays the way in for everyone; the sign-in page has a small "Admin sign-in" link under the Discord button, not a second button.
 

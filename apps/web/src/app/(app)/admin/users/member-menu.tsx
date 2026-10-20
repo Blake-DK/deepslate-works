@@ -1,13 +1,13 @@
 import { RowMenu } from "@/components/admin/row-menu";
 import { menuItem } from "@/components/admin/menu-item";
-import { ChatRelayItem, ConfirmItem, LinkByName } from "@/components/admin/menu-actions";
+import { ChatRelayItem, ConfirmItem, LinkByName, SetDiscordId } from "@/components/admin/menu-actions";
 import { chatStaysInGame, type ChatRelay } from "@/shared/chat-relay";
 import Link from "next/link";
 import { runActionAction } from "../server/actions";
 import { KICK_REASON } from "../server/cards";
-import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setBuilderToolsAction, setChatRelayAction, setMaintenanceJoinAction, setMinecraftNameAction, setOutsideAuthAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";
+import { clearMinecraftNameAction, removeUserAction, revokeLauncherAction, setBuilderToolsAction, setChatRelayAction, setMaintenanceJoinAction, setMinecraftNameAction, setOutsideAuthAction, setDiscordIdAction, setRoleAction, turnOffPasswordSignInAction } from "./actions";
 
-type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUsername: string | null; mcUuid?: string | null; passwordSignIn?: boolean; discordId?: string | null; outsideAuth?: boolean; guildMember?: boolean; chatRelay?: ChatRelay; builderTools?: boolean; maintenanceJoin?: boolean };
+type Member = { id: string; displayName: string; role: "ADMIN" | "PLAYER"; mcUsername: string | null; mcUuid?: string | null; passwordSignIn?: boolean; discordId?: string | null; authentikSub?: string | null; outsideAuth?: boolean; guildMember?: boolean; chatRelay?: ChatRelay; builderTools?: boolean; maintenanceJoin?: boolean };
 
 /**
  * A member's admin menu: on People → Members and on their player page (docs/13 §11 layout). `row` is People's: there
@@ -55,6 +55,8 @@ export function MemberMenu({ u, meId, row }: { u: Member; meId: string; row?: { 
         <input type="hidden" name="id" value={u.id} />
         <button type="submit" role="menuitem" className={menuItem}>Sign out installer</button>
       </form>
+      {/* docs/04: a member without a Discord ID gets one before their first sign-in through Authentik */}
+      {!u.discordId && !u.authentikSub && <SetDiscordId action={setDiscordIdAction} id={u.id} who={u.displayName} />}
       <ChatRelayItem action={setChatRelayAction} id={u.id} who={u.displayName} relay={relay} now={chatStaysInGame(auto) ? "kept" : "posted"} />
       {u.discordId && (u.outsideAuth
         ? <ConfirmItem action={setOutsideAuthAction} fields={{ id: u.id, on: "0" }} question={`Apply the Discord server rule to ${u.displayName} again? If they are not in the Discord server they are signed out and wait in the entrance room until they join it.`}>Apply the Discord server rule</ConfirmItem>

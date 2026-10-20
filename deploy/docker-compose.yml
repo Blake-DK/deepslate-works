@@ -73,6 +73,11 @@ services:
       ADMIN_DISCORD_ID: ${ADMIN_DISCORD_ID:-}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
       DISCORD_GUILD_AUTO_JOIN: ${DISCORD_GUILD_AUTO_JOIN:-0}
+      # docs/04: sign-in through Authentik (Discord or Microsoft there); unset, the site's own Discord sign-in as before
+      AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER:-}
+      AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID:-}
+      AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET:-}
+      DISCORD_DIRECT_LOGIN: ${DISCORD_DIRECT_LOGIN:-}
       API_URL: ${API_URL}
       API_SERVICE_TOKEN: ${API_SERVICE_TOKEN}
       MANIFEST_KEY: ${MANIFEST_KEY:-}
@@ -306,8 +311,14 @@ services:
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
       ADMIN_DISCORD_ID: ${ADMIN_DISCORD_ID:-}
-      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      # docs/04: no DISCORD_GUILD_ID. Sign-in through Authentik asks api whether someone is in the Discord server, and
+      # api-test has no bot to ask, so the rule is off here; the test site is admins only already (docs/42 §3).
       DISCORD_GUILD_AUTO_JOIN: "0"      # anyone but the admin needs an invite made on the test site
+      # docs/04: the same Authentik provider as the live site; its redirect URIs hold both sites' callbacks
+      AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER:-}
+      AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID:-}
+      AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET:-}
+      DISCORD_DIRECT_LOGIN: ${TEST_DISCORD_DIRECT_LOGIN:-}
       API_URL: http://deepslate-wg:4001
       API_SERVICE_TOKEN: ${TEST_API_SERVICE_TOKEN:-}
       SERVER_ADDRESS: ${TEST_SERVER_ADDRESS:-lab.dsw.test}

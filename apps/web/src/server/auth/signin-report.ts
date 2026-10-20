@@ -1,10 +1,11 @@
 import "server-only";
 import { apiFetch } from "@/server/api-client";
+import { env } from "@/env";
 
 // Sign-in failures raise an alert (api's status/signin-watch.ts). Each sign-in's outcome goes to api: the method and
 // whether it worked, nothing else (no code, state, cookie, name or address). It never holds up the sign-in.
 
-export const SIGNIN_METHODS = ["discord", "credentials", "admin-password", "one-time-link"] as const;
+export const SIGNIN_METHODS = ["authentik", "discord", "credentials", "admin-password", "one-time-link"] as const;
 export type SignInMethod = (typeof SIGNIN_METHODS)[number];
 
 /**
@@ -16,14 +17,17 @@ const FAILURES = new Set(["CallbackRouteError", "InvalidCheck", "OAuthProfilePar
 
 const isMethod = (v: unknown): v is SignInMethod => typeof v === "string" && (SIGNIN_METHODS as readonly string[]).includes(v);
 
-/** The method a logged Auth.js error failed, or null when it is not a sign-in failure on the site's side. */
-export function failedMethod(error: unknown): SignInMethod | null {
+/**
+ * The method a logged Auth.js error failed, or null when it is not a sign-in failure on the site's side. `oauth`: the
+ * sign-in a check or profile error without a provider belongs to (Authentik once it is set up, docs/04).
+ */
+export function failedMethod(error: unknown, oauth: "authentik" | "discord" = "discord"): SignInMethod | null {
   const type = (error as { type?: unknown } | null)?.type;
   if (typeof type !== "string" || !FAILURES.has(type)) return null;
   const provider = (error as { cause?: { provider?: unknown } }).cause?.provider;
   if (isMethod(provider)) return provider;
-  // the checks and the profile belong to an OAuth sign-in, and Discord is the only one
-  return type === "CallbackRouteError" ? null : "discord";
+  // the checks and the profile belong to an OAuth sign-in: Authentik's when it is set up, else Discord's
+  return type === "CallbackRouteError" ? null : oauth;
 }
 
 export function reportSignIn(method: unknown, ok: boolean): void {
@@ -45,6 +49,6 @@ export function logAuthError(error: Error): void {
   } else if (error.stack) {
     console.error(error.stack.replace(/.*/, "").substring(1));
   }
-  const method = failedMethod(error);
+  const method = failedMethod(error, env.ssoEnabled ? "authentik" : "discord");
   if (method) reportSignIn(method, false);
 }

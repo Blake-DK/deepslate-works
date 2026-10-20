@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { checkAdminSignIn, GENERIC_FAILURE, LOCKED_MESSAGE, type LoginRecord, type SignInDeps } from "@/server/auth/admin-core";
+import { checkAdminSignIn, GENERIC_FAILURE, isOwner, LOCKED_MESSAGE, type LoginRecord, type SignInDeps } from "@/server/auth/admin-core";
 import { ADMIN_SIGNIN_LIMITS, newAdminLockouts } from "@/server/auth/lockout";
 import { base32Encode, totpAt, stepOf, verifyTotp, otpauthUrl } from "@/server/auth/totp";
 import { passwordProblem } from "@/server/auth/password-policy";
@@ -17,7 +17,7 @@ const hashRec = (c: string) => createHmac("sha256", "test").update(c.replace(/-/
 
 function world(over: Partial<LoginRecord> = {}) {
   const rec: LoginRecord = {
-    userId: "u1", displayName: "Alex", role: "ADMIN", enabled: true, passwordHash: "hash:correct horse battery staple",
+    userId: "u1", displayName: "Alex", role: "ADMIN", owner: true, enabled: true, passwordHash: "hash:correct horse battery staple",
     totpSecret: SECRET, lastStep: null, recovery: [{ h: hashRec("abcde-fghij"), usedAt: null }, { h: hashRec("kkkkk-mmmmm"), usedAt: null }], ...over,
   };
   let now = T0;
@@ -98,6 +98,8 @@ describe("checkAdminSignIn", () => {
   });
   it("a player (made one after setting it up) is refused even with everything right", async () => {
     expect(await go(world({ role: "PLAYER" }))).toMatchObject({ ok: false, detail: "not an admin" });
+    // docs/04 (2026-10-20): the owner's break-glass login and nobody else's, even an admin's with everything right
+    expect(await go(world({ owner: false }))).toMatchObject({ ok: false, why: "failed", detail: "not the owner" });
   });
   it("5 failures for a username lock it for 15 minutes, even for the right password and code; then it opens again", async () => {
     const w = world();
@@ -180,5 +182,15 @@ describe("the event log", () => {
     const script = readFileSync(new URL("../../api/scripts/reset-auth.mjs", import.meta.url), "utf8");
     expect(script).toContain("`One-time sign-in link made from the command line for ${user.displayName}${totpReset ? \" (authenticator switched off)\" : \"\"}, valid 15 minutes`");
     expect(describeAction("auth.adminBreakGlass", none, { displayName: "Alex", totpReset: true })).toBe("One-time sign-in link made from the command line for Alex (authenticator switched off), valid 15 minutes");
+  });
+});
+
+describe("the owner (docs/04, the one break-glass login)", () => {
+  it("is the account whose Discord ID is ADMIN_DISCORD_ID, and nobody when that is unset", () => {
+    expect(isOwner("100000000000000001", "100000000000000001")).toBe(true);
+    expect(isOwner("100000000000000002", "100000000000000001")).toBe(false);
+    expect(isOwner(null, "100000000000000001")).toBe(false);
+    expect(isOwner(null, "")).toBe(false);
+    expect(isOwner("", "")).toBe(false);
   });
 });

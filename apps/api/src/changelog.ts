@@ -334,6 +334,14 @@ export const CHANGES: Change[] = [
     date: "2026-10-20",
     lines: ["The Mods page has videos for ArPhEx, Mutant Monsters and Nyf's Spiders, the creepy-crawlies and mutants on Ashmoon."],
   },
+  {
+    id: "2026-10-20-sign-in",
+    date: "2026-10-20",
+    lines: [
+      "Signing in to the site has a new button: Sign in with Discord or Microsoft. Press it, then press Discord on the page that opens. Your account, your votes and your Minecraft link stay as they are.",
+      "If you are already signed in, nothing changes until you sign out.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

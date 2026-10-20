@@ -10,10 +10,11 @@
 export const SIGNIN_FAILS = 3;
 export const SIGNIN_WINDOW_MIN = 30;
 
-export const SIGNIN_METHODS = ["discord", "credentials", "admin-password", "one-time-link"] as const;
+export const SIGNIN_METHODS = ["authentik", "discord", "credentials", "admin-password", "one-time-link"] as const;
 export type SignInMethod = (typeof SIGNIN_METHODS)[number];
 
 const LABEL: Record<SignInMethod, string> = {
+  authentik: "Sign-in through Authentik",
   discord: "Discord sign-in",
   credentials: "Password sign-in",
   "admin-password": "Admin password sign-in",

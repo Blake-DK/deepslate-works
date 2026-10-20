@@ -83,6 +83,9 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "auth.login": "tried to sign in",
   "auth.register": "joined the group",
   "auth.adminReset": "had their password reset from the command line",
+  // docs/04: sign-in through Authentik
+  "auth.ssoLinked": (p) => (p.relink ? "signed in through Authentik as a new Authentik user with the same Discord ID: the account follows it" : "signed in through Authentik for the first time: the account is linked to it"),
+  "auth.ssoRole": (p) => `was made ${p.role === "ADMIN" ? "an admin" : "a player"} at sign-in, by the Authentik group deepslate-admins`,
   "auth.adminPassword": (p) => `signed in with password + ${p.via === "recovery" ? `a recovery code (${s(p.recoveryLeft, "?")} left)` : "code"}${from(p)}`,
   "auth.adminPasswordFailed": (p) => `${p.locked ? "Refused admin sign-in (locked)" : "Failed admin sign-in"} for '${s(p.username, "")}'${from(p)}${p.lockedNow ? "; locked for 15 minutes" : ""}`,
   "auth.adminLink": (p) => `signed in with a one-time link${from(p)}`,
@@ -118,6 +121,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   // Alex, 2026-10-11: game chat to Discord, per member
   "user.chatRelay": (p) => (p.relay === "ALWAYS" ? `set ${s(p.displayName, "a member")}'s game chat to always be posted to Discord` : p.relay === "NEVER" ? `set ${s(p.displayName, "a member")}'s game chat to stay in the game` : `set ${s(p.displayName, "a member")}'s game chat to Discord back to automatic`),
   "user.setRole": (p) => `changed a member's role to ${s(p.role).toLowerCase()}`,
+  "user.discordId": (p) => `set the Discord ID of ${s(p.displayName, "a member")} to ${s(p.discordId)}, for their first sign-in through Authentik`,
   "user.remove": (p) => `removed ${s(p.displayName, "a member")} from the group${p.blocked ? " and blocked their Discord account" : ""}`,
   "user.unblock": (p) => `unblocked the Discord account of ${s(p.displayName, "a removed member")}`,
   "user.setMinecraft": (p) => `linked a member to the Minecraft account ${s(p.mcUsername)}`,

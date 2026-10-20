@@ -31,6 +31,10 @@ const ERRORS: Record<string, string> = {
   not_found: "Mojang has no Java Edition account with that name.",
   unavailable: "Couldn't reach Mojang. Try again in a minute.",
   taken: "That Minecraft account is already linked to another member.",
+  discord_id: "A Discord ID is 17 to 20 digits. In Discord: Settings → Advanced → Developer Mode on, then right-click the person → Copy User ID.",
+  discord_set: "That member already has a Discord ID, or has signed in through Authentik already.",
+  discord_taken: "That Discord ID is already another member's.",
+  discord_blocked: "That Discord ID is blocked. Unblock it on People first.",
 };
 
 const PC = { HIGH: ["high", "good"], MID: ["mid", "neutral"], LOW: ["low", "warn"] } as const;
@@ -86,7 +90,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const parts = (u: (typeof rows)[number]) => {
     const admin = u.role === "ADMIN";
     return {
-      role: <span className="flex min-w-0 items-center gap-1"><Badge tone={admin ? "warn" : "neutral"} className="shrink-0">{u.role.toLowerCase()}</Badge>{u.passwordSignIn && <Badge tone="neutral" className="shrink-0" title="Can also sign in with username, password and an authenticator code">pw</Badge>}{u.outsideAuth && <Badge tone="neutral" className="shrink-0" title="Came in by an invite link: they don't have to be in the Discord server">invited</Badge>}{u.chatRelay !== "AUTO" && <Badge tone="neutral" className="shrink-0" title={u.chatRelay === "NEVER" ? "Game chat to Discord: never posted (an admin picked it)" : "Game chat to Discord: always posted (an admin picked it)"}>{u.chatRelay === "NEVER" ? "chat kept" : "chat posted"}</Badge>}{u.builderTools && <Badge tone="neutral" className="shrink-0" title="Builder tools: may switch Builder mode (creative, WorldEdit) on for themselves (docs/37)">builder</Badge>}{u.maintenanceJoin && <Badge tone="neutral" className="shrink-0" title="Can join during maintenance (docs/48)">maint.</Badge>}</span>,
+      role: <span className="flex min-w-0 items-center gap-1"><Badge tone={admin ? "warn" : "neutral"} className="shrink-0">{u.role.toLowerCase()}</Badge>{u.passwordSignIn && <Badge tone="neutral" className="shrink-0" title="Can also sign in with username, password and an authenticator code">pw</Badge>}{u.authentikSub && <Badge tone="neutral" className="shrink-0" title="Has signed in through Authentik (Discord or Microsoft there)">sso</Badge>}{u.outsideAuth && <Badge tone="neutral" className="shrink-0" title="Came in by an invite link: they don't have to be in the Discord server">invited</Badge>}{u.chatRelay !== "AUTO" && <Badge tone="neutral" className="shrink-0" title={u.chatRelay === "NEVER" ? "Game chat to Discord: never posted (an admin picked it)" : "Game chat to Discord: always posted (an admin picked it)"}>{u.chatRelay === "NEVER" ? "chat kept" : "chat posted"}</Badge>}{u.builderTools && <Badge tone="neutral" className="shrink-0" title="Builder tools: may switch Builder mode (creative, WorldEdit) on for themselves (docs/37)">builder</Badge>}{u.maintenanceJoin && <Badge tone="neutral" className="shrink-0" title="Can join during maintenance (docs/48)">maint.</Badge>}</span>,
       minecraft: u.mcUsername ? (
         <span className="flex min-w-0 items-center gap-2"><Clip text={u.mcUsername} mono />{u.verifiedAt && <Badge tone="good" className="shrink-0">verified</Badge>}</span>
       ) : <Badge className="shrink-0">Unlinked</Badge>,

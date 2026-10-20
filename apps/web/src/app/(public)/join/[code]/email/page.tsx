@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { loadCurrentUser } from "@/server/auth/session";
+import { env } from "@/env";
 import { findValidInvite } from "@/server/auth/invites";
 import { MIN_PASSWORD_LENGTH } from "@/server/auth/constants";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,8 @@ const ERRORS: Record<string, string> = {
 export default async function JoinEmailPage({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ error?: string }> }) {
   if (await loadCurrentUser()) redirect("/");
   const { code } = await params;
+  // docs/04: with Authentik, someone without Discord signs in there with Microsoft; this form is gone
+  if (env.ssoEnabled) redirect(`/join/${encodeURIComponent(code)}`);
   const { error } = await searchParams;
   const invite = await findValidInvite(code);
   if (!invite) redirect(`/join/${encodeURIComponent(code)}`);

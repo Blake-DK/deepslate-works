@@ -153,7 +153,18 @@ See `deploy/.env.example` (kept current; every variable commented). Notables: `A
 
 ## Runbook
 
-- **No admin can sign in** (Discord down or gone, password sign-in lost or never set up). On the VPS:
+- **Authentik is down, or the owner cannot get through it** (docs/04): the owner signs in at `/login/admin` (the small
+  "Admin sign-in" link under the button) with username, password and a code from the authenticator app. That is the one
+  break-glass login: since 2026-10-20 only the owner (`ADMIN_DISCORD_ID`) can have it (Me → Sign-in). A session from it
+  lasts 12 hours and shows on every admin's pages. Players who are signed in stay signed in (sessions are the site's,
+  30 days); nobody new gets in until Authentik is back.
+- **A sign-in says "belongs to a different account"** (`account-mismatch`, docs/04): one Authentik sign-in named two
+  accounts, or a linked account's Discord ID changed. The event log has which (`auth.login`, DENIED). Nothing was
+  changed; sort it out on People (remove the stray account) or in Authentik (the user's Discord connection).
+- **A member without a Discord ID** (the old email sign-in's) before their first sign-in through Authentik: Admin →
+  People → their menu → Set Discord ID…. Without Discord at all: an invite link, a new account, then their old one is
+  removed.
+- **No admin can sign in** (Authentik and password sign-in both lost, or never set up). On the VPS:
   `docker exec -it deepslate-api pnpm admin:reset-auth <username>`
   `<username>` is the admin's password sign-in username, or their display name if they never set one up. It switches that admin's authenticator off (password sign-in stays off until it is set up again; the password is not touched) and prints a link, `https://…/login/once/<token>`, that works **once, within 15 minutes**. Open it, press Sign in (a session of 12 hours), and `/me/sign-in` asks for everything again: username, password, authenticator, new recovery codes. Both the reset and the use of the link are in the event log ("One-time sign-in link made from the command line for …"), and the sign-in shows on every admin's pages for 24 hours. Only the token's SHA-256 is stored (`OneTimeLogin`). An admin who still gets in can do the same for another admin more simply: Admin → People → row menu → Turn password sign-in off, then they set it up again.
 

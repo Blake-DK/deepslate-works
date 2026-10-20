@@ -2,16 +2,24 @@
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
+import { SSO_PROVIDER } from "@/auth.config";
 import { env } from "@/env";
 import { safeNext } from "@/server/auth/next-url";
 
+/** docs/04: sign-in through Authentik, where the member picks Discord or Microsoft. */
+export async function ssoLogin(formData: FormData) {
+  if (!env.ssoEnabled) redirect("/login?error=sso-off");
+  await signIn(SSO_PROVIDER, { redirectTo: safeNext(formData.get("next")) });
+}
+
 export async function discordLogin(formData: FormData) {
-  if (!env.discordEnabled) redirect("/login?error=discord-off");
+  if (!env.discordLogin) redirect("/login?error=discord-off");
   await signIn("discord", { redirectTo: safeNext(formData.get("next")) });
 }
 
 export async function emailLogin(formData: FormData) {
   const next = safeNext(formData.get("next"));
+  if (env.ssoEnabled) redirect(`/login?next=${encodeURIComponent(next)}`); // gone with Authentik (docs/04)
   try {
     await signIn("credentials", { email: formData.get("email"), password: formData.get("password"), redirectTo: next });
   } catch (e) {

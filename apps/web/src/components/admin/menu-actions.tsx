@@ -43,6 +43,34 @@ export function LinkByName({ action, id, who }: { action: Action; id: string; wh
 }
 
 /**
+ * "Set Discord ID…" (docs/04): for a member without one, before their first sign-in through Authentik, which finds
+ * accounts by Discord ID only.
+ */
+export function SetDiscordId({ action, id, who }: { action: Action; id: string; who: string }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  return (
+    <>
+      <button type="button" role="menuitem" className={menuItem} onClick={() => dialog.current?.showModal()}>Set Discord ID…</button>
+      <dialog ref={dialog} className="m-auto w-[min(24rem,calc(100vw-2rem))] rounded-[4px] border bg-card p-5 text-foreground backdrop:bg-black/40" aria-label={`Set the Discord ID of ${who}`}>
+        <form action={action} className="space-y-3">
+          <input type="hidden" name="id" value={id} />
+          <h2 className="truncate text-lg font-semibold" title={who}>Discord ID for {who}</h2>
+          <p className="text-sm text-muted-foreground">Their first sign-in with Discord then lands in this account. Get it from them: in Discord, Settings → Advanced → Developer Mode on, then right-click their name → Copy User ID.</p>
+          <div>
+            <label htmlFor={`dc-${id}`} className="mb-1 block text-sm font-medium">Discord ID</label>
+            <input id={`dc-${id}`} name="discordId" autoFocus required inputMode="numeric" pattern="[0-9]{17,20}" maxLength={20} className="h-11 w-full rounded-none border-2 border-edge bg-panel px-3 font-mono text-sm focus-visible:border-primary focus-visible:outline-none" />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" className={buttonClasses("ghost", "sm")} onClick={() => dialog.current?.close()}>Cancel</button>
+            <button type="submit" className={buttonClasses("primary", "sm")}>Set</button>
+          </div>
+        </form>
+      </dialog>
+    </>
+  );
+}
+
+/**
  * "Game chat to Discord…" (Alex, 2026-10-11): Automatic, Always post or Never post for one member. `now` is what
  * Automatic does for them today, so the admin sees it before picking.
  */

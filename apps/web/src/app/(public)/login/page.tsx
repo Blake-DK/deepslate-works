@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
-import { discordLogin, emailLogin } from "./actions";
+import { discordLogin, emailLogin, ssoLogin } from "./actions";
 import { getGettingIn } from "@/server/guide";
 import { Markdown } from "@/components/markdown";
 
@@ -23,7 +23,11 @@ const ERRORS: Record<string, string> = {
   credentials: "Wrong email or password.",
   "rate-limited": "Too many attempts. Wait a minute and try again.",
   "discord-off": "Discord sign-in isn't set up yet. Use email for now.",
-  OAuthCallbackError: "Discord didn't complete the sign-in. Try again.",
+  "invite-needed": "To join without Discord you need an invite link from Alex. Open it, and sign in from there.",
+  "account-mismatch": "That sign-in belongs to a different account here than before, so nothing was changed. Ask Alex to sort it out.",
+  "sso-failed": "The sign-in didn't complete. Try again.",
+  "sso-off": "Sign-in isn't set up yet. Ask Alex.",
+  OAuthCallbackError: "The sign-in wasn't completed. Try again.",
   AccessDenied: "That Discord account isn't in the group yet. You need an invite link from Alex.",
 };
 
@@ -41,14 +45,23 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <Card>
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
-          <CardDescription>Already in the group? Continue with the account you joined with.</CardDescription>
+          <CardDescription>{env.ssoEnabled ? "Already in the group? Continue with the Discord or Microsoft account you joined with." : "Already in the group? Continue with the account you joined with."}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form action={discordLogin}>
-            <input type="hidden" name="next" value={next ?? "/"} />
-            <Button type="submit" size="lg" className="w-full text-base!" disabled={!env.discordEnabled}>Continue with Discord</Button>
-          </form>
-          <details className="text-sm">
+          {env.ssoEnabled && (
+            <form action={ssoLogin} className="space-y-2">
+              <input type="hidden" name="next" value={next ?? "/"} />
+              <Button type="submit" size="lg" className="w-full text-base!" data-testid="sso-signin">Sign in with Discord or Microsoft</Button>
+              <p className="text-center text-xs text-muted-foreground">On the next page, press Discord or Microsoft.</p>
+            </form>
+          )}
+          {(env.discordLogin || !env.ssoEnabled) && (
+            <form action={discordLogin}>
+              <input type="hidden" name="next" value={next ?? "/"} />
+              <Button type="submit" size={env.ssoEnabled ? "sm" : "lg"} variant={env.ssoEnabled ? "secondary" : undefined} className={env.ssoEnabled ? "w-full" : "w-full text-base!"} disabled={!env.discordLogin}>{env.ssoEnabled ? "Sign in with Discord directly" : "Continue with Discord"}</Button>
+            </form>
+          )}
+          {!env.ssoEnabled && <details className="text-sm">
             <summary className="cursor-pointer text-muted-foreground">Sign in with email</summary>
             <form action={emailLogin} className="mt-3 space-y-3">
               <input type="hidden" name="next" value={next ?? "/"} />
@@ -62,7 +75,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               </div>
               <Button type="submit" variant="secondary" className="w-full">Sign in</Button>
             </form>
-          </details>
+          </details>}
         </CardContent>
       </Card>
       {steps && (

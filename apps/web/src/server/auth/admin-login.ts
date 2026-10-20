@@ -3,12 +3,13 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import { hash as argonHash, verify as argonVerify } from "@node-rs/argon2";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
+import { env } from "@/env";
 import { apiFetch } from "@/server/api-client";
 import { audit } from "@/server/events";
 import { base32Encode, verifyTotp } from "./totp";
 import { adminLockouts } from "./lockout";
 import type { LoginRecord, RecoveryEntry, SignInDeps, SignInOutcome } from "./admin-core";
-import { normaliseRecovery } from "./admin-core";
+import { isOwner, normaliseRecovery } from "./admin-core";
 import { openSecret, resealed, sealSecret } from "./seal";
 
 export { openSecret, sealSecret };
@@ -46,10 +47,10 @@ export const recoveryOf = (v: Prisma.JsonValue): RecoveryEntry[] =>
 
 export const signInDeps: SignInDeps = {
   async find(username) {
-    const row = await db.adminLogin.findUnique({ where: { username }, include: { user: { select: { displayName: true, role: true } } } });
+    const row = await db.adminLogin.findUnique({ where: { username }, include: { user: { select: { displayName: true, role: true, discordId: true } } } });
     if (!row) return null;
     const rec: LoginRecord = {
-      userId: row.userId, displayName: row.user.displayName, role: row.user.role, enabled: row.enabled, passwordHash: row.passwordHash,
+      userId: row.userId, displayName: row.user.displayName, role: row.user.role, owner: isOwner(row.user.discordId, env.ADMIN_DISCORD_ID), enabled: row.enabled, passwordHash: row.passwordHash,
       totpSecret: openSecret(row.totpSecret), lastStep: row.lastStep, recovery: recoveryOf(row.recovery),
     };
     return rec;

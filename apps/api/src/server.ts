@@ -54,6 +54,7 @@ import { Announcer } from "./discord/announcer.js";
 import { prismaFeedStore } from "./discord/store.js";
 import { Webhook } from "./discord/webhook.js";
 import { discordRoutes } from "./routes/discord.js";
+import { discordMemberRoutes } from "./routes/discord-member.js";
 import { makeBot, makeRoleSync, votePoster } from "./discord/wire.js";
 import { discordOutlets } from "./discord/gate.js";
 import { runAction } from "./actions/run.js";
@@ -164,6 +165,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     playerRole: () => roles?.mention() ?? null,
   });
   discordRoutes(app, feed, bot, env, roles);
+  discordMemberRoutes(app, env);
   installRoutes(app);
   poller.stateName = (live) => (wake.waking && live.stateCode !== 20 ? "Waking" : live.state);
   statusRoutes(app, ampClient, poller, tail, () => pings.current(), view);

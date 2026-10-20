@@ -28,27 +28,26 @@ say live is stopped, held or to be trimmed in place, this section wins.
 
 ## Animals and cosy mods (2026-10-20, on `dev`, not on `main`)
 
-- **What (Alex):** thirteen mods straight into the pack, none suggested: Naturalist, Critters and Companions, Friends &
-  Foes, Untitled Duck Mod, Fowl Play, Cosy Critters & Creepy Crawlies (client only), Let's Do Meadow, Farm & Charm and
-  Vinery, Comforts, Fairy Lights, Amendments, Twigs. Libraries: YACL, Architectury API, SmartBrainLib (new), Moonlight
-  (switched on). A votable category and a Mods guide topic `animals`. Slugs, pins and reasons are docs/06 "Animals and
-  cosy mods".
-- **Tooling:** `bothSides` in `mods.json` (schema, lint, `sideFor`, a test). Modrinth calls SmartBrainLib server-only;
-  Fowl Play's birds are built on it, so without it the Lock refused.
-- **Lock:** the 17 new entries only, plus `requiredBy` on GeckoLib and Resourceful Lib, spliced into the old lock as
-  before; the full run also moved Kotlin for Forge, Placebo and Titanium and the extras, left as they were. Hash
-  `e58f7157` → `132eb8a5`, 106 files. Live, shipping no season: `0.1.0+b0691da0` (84 files) → **`0.1.0+555d6dfc`**
-  (101). ship.test.ts, pack-ship.test.ts and building.test.ts re-pinned (Fairy Lights is load M).
-- **Checks:** `deploy/check.sh` green (modpack 303, api 817, web 679); `modpack lint` 111 mods, 0 errors, the 4 old
-  warnings; `verify-links` 390 links, 0 failed. Change log entry `2026-10-20-animals-and-cosy`, not live.
+- **What (Alex):** eleven mods straight into the pack, none suggested: Naturalist, Critters and Companions, Friends &
+  Foes, Cosy Critters & Creepy Crawlies (client only), Let's Do Meadow, Farm & Charm and Vinery, Comforts, Fairy
+  Lights, Amendments, Twigs. Libraries: YACL, Architectury API (new), Moonlight (switched on). A votable category and a
+  Mods guide topic `animals`. Slugs, pins and reasons are docs/06 "Animals and cosy mods".
+- **Duplicates dropped the same day** (Alex: "drop the duplicated mods"): Fowl Play and Untitled Duck Mod, with
+  SmartBrainLib and the `bothSides` override Fowl Play needed (Modrinth calls SmartBrainLib server-only). Crabs,
+  snails and dragonflies are still in two mods each (docs/06).
+- **Lock:** the new entries only, plus `requiredBy` on GeckoLib and Resourceful Lib, spliced into the old lock as
+  before; a full run also moved Kotlin for Forge, Placebo and Titanium and the extras, left as they were. Hash
+  `e58f7157` → `5680160e`, 103 files. Live, shipping no season: `0.1.0+b0691da0` (84 files) → **`0.1.0+65146540`**
+  (98). ship.test.ts, pack-ship.test.ts and building.test.ts re-pinned (Fairy Lights is load M).
+- **Checks:** `deploy/check.sh` green (modpack 302, api 817, web 679); `modpack lint` 108 mods, 0 errors, the 4 old
+  warnings; `verify-links` 382 links, 0 failed. Change log entry `2026-10-20-animals-and-cosy`, not live.
 - **Not seen yet, on test:** a Build and Sync through api-test, the server starting with all of it (Create 6 recipe
   errors from the Let's Do and Twigs recipes, mixin lines, spark before and after), a PC updating, and a look at the
   Moon for any new mob. Nothing on live.
 - **Held for Alex:** Sleep Tight. It was offered as hammocks; it is a sleep overhaul (nightmares, bedbugs, a home bed).
-- **Known overlaps:** ducks come from three mods (Naturalist, Fowl Play, Untitled Duck Mod), geese and penguins from
-  two, crabs, snails and dragonflies from two; Farm & Charm's cooking pot and cutting board sit beside Farmer's
-  Delight's. More creature kinds share the same spawn lists, and Naturalist takes farm animals out of savannas and swamps
-  and pigs out of forests (its `remove_spawns` modifiers), so vanilla cows, sheep and pigs get rarer in new land.
+- **Still to know:** Farm & Charm's cooking pot and cutting board sit beside Farmer's Delight's, each with its own
+  recipes. More creature kinds share the same spawn lists, and Naturalist takes farm animals out of savannas and
+  swamps and pigs out of forests (its `remove_spawns` modifiers), so vanilla cows, sheep and pigs get rarer in new land.
 
 ## Privacy and terms pages for the Discord app (2026-10-16, on `dev`, not on `main`)
 

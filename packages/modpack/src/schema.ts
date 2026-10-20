@@ -38,9 +38,6 @@ export const modSchema = z.object({
   name: z.string().min(1),
   category: z.string().min(1),
   side: z.enum(SIDES),
-  // Modrinth calls this mod one side only, but a mod on both sides is built on it (SmartBrainLib under Fowl Play: its
-  // birds' classes use it, so PCs load it too). Why, as read from the jars; with it the lock puts the mod on both sides.
-  bothSides: z.string().min(20).max(240).optional(),
   enabled: z.boolean(),
   load: z.enum(LOADS),
   recommended: z.boolean().default(false),

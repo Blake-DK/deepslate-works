@@ -43,12 +43,6 @@ describe("sideFor", () => {
   it("refuses client-only for a mod the server requires", () => {
     expect(() => sideFor("create", { client_side: "optional", server_side: "required" }, "client")).toThrow(/server requires it/);
   });
-  it("puts a library on both sides when mods.json gives the reason (SmartBrainLib under Fowl Play)", () => {
-    const sbl = { client_side: "unsupported", server_side: "required" } as const;
-    expect(sideFor("smartbrainlib", sbl, "both")).toBe("server");
-    expect(sideFor("smartbrainlib", sbl, "both", true)).toBe("both");
-    expect(() => sideFor("smartbrainlib", sbl, "server", true)).toThrow(/make it "both"/);
-  });
 });
 
 describe("widenForDependents", () => {

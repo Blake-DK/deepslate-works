@@ -25,7 +25,6 @@
       "name": "Create",
       "category": "factories",
       "side": "both",                   // both | client | server
-      // "bothSides": "…",             // optional, only with "both": why a mod Modrinth calls one-side-only goes on both (SmartBrainLib under Fowl Play)
       "enabled": true,                  // false = listed for voting but not shipped
       "load": "M",                      // L | M | H, client performance cost
       "recommended": true,
@@ -49,7 +48,6 @@ Rules enforced by `modpack lint`:
 - Every `requires` slug exists in the list (dependencies are added as `category: "base"`, `hidden: true`).
 - `server` side mods never ship to clients; `client` side mods never ship to the server.
 - An `adminOnly` mod is not in a votable category.
-- `bothSides` only on a mod whose side is `both`. Lock trusts it over Modrinth's `client_side` / `server_side`; without it a library Modrinth calls server-only stops the Lock when a mod on both sides needs it.
 - A shown mod with no videos is a warning, unless `noVideosFound` holds the date YouTube was searched and had nothing genuine about it.
 
 ## The catalogue as it stands (2026-09-29, pack `0.1.0+1a48e8ff`)
@@ -236,8 +234,6 @@ Straight into the pack, no vote, none suggested. Each is the newest **release** 
 | `naturalist` | animals | M | |
 | `critters-and-companions` | animals | M | `geckolib`, `yacl`, `architectury-api` |
 | `friends-and-foes-forge` (the NeoForge project; `friends-and-foes` has no NeoForge build) | animals | M | `resourceful-lib` |
-| `untitled-duck-mod` | animals | L | `geckolib` (its jar requires it; Modrinth does not list it) |
-| `fowlplay` | animals | M | `smartbrainlib`, `yacl` |
 | `cosy-critters` | animals, client only (particles, nothing on the server) | L | |
 | `lets-do-meadow`, `lets-do-farm-charm`, `lets-do-vinery` | world, farming | M | `architectury-api`; each jar carries its own Foundation library inside |
 | `comforts` | world, friends | L | |
@@ -245,10 +241,10 @@ Straight into the pack, no vote, none suggested. Each is the newest **release** 
 | `amendments` | building | L | `moonlight` (switched on and pinned for it) |
 | `twigs` | building | L | |
 
-- **SmartBrainLib** is server-only on Modrinth, but 55 of Fowl Play's classes use it, so PCs load it too: `bothSides` on its entry (above).
 - **Ashmoon:** none of the new mobs is hooked to every overworld biome (biome modifiers and code read). Twigs adds rhyolite, a stone patch like granite, to `#minecraft:is_overworld`, so it comes to the Moon with the other stone patches; left in.
 - **New land:** like the flowers (docs/59), the animals, wild crops, grapes and pebbles come from worldgen and biome spawns, so most appear in chunks made after the mods are in.
 - **Not taken:** Sleep Tight (a sleep overhaul with bedbugs and nightmares, not only hammocks), held for Alex.
+- **Dropped the same day (Alex: "drop the duplicated mods"):** Fowl Play (9 of its 13 birds are Naturalist's songbirds and duck, Friends & Foes' penguin and Cosy Critters' crow) and Untitled Duck Mod (ducks and geese, both elsewhere), with SmartBrainLib. Fowl Play needed it on PCs although Modrinth calls it server-only, which took a `mods.json` override; that went with it. Crabs (Naturalist, Friends & Foes) and snails and dragonflies (Naturalist, Critters and Companions) are still in two mods each, in mods that are otherwise their own.
 ## Render distance by PC tier (planner, 2026-09-30)
 
 `mods.json` `render_by_tier`, next to `server_properties`: HIGH 12 / 8, MID 10 / 8, LOW 8 / 6 (render / simulation, in chunks). The mod list (`/api/modpack/manifest`) sends `render_distance` and `simulation_distance` for the caller's measured PC tier (`User.pcTier`; none known: LOW), as plain numbers every installer reads, plus `tier`. The server's own `view-distance` is 12 and `simulation-distance` stays 8 (the expected values in `server_properties`; AMP writes the file, see docs/15).

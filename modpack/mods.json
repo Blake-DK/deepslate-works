@@ -2472,67 +2472,6 @@
       "howTo": "A **tuff golem** is a tuff block, a wool block and a pumpkin; give it an item and it holds it up for show. A **copper golem** presses copper buttons and goes green like copper does. Find the **rascal** in a mineshaft three times and it gives you a present. **Crabs** live on beaches and in mangrove swamps, **mooblooms** in flower fields, the **glare** in lush caves. The **wildfire** guards a citadel in the Nether. JEI shows the rest (search `@friendsandfoes`)."
     },
     {
-      "slug": "untitled-duck-mod",
-      "name": "Untitled Duck Mod",
-      "category": "animals",
-      "side": "both",
-      "enabled": true,
-      "load": "L",
-      "recommended": false,
-      "hidden": false,
-      "exclusiveGroup": null,
-      "description": "Ducks and geese by rivers and in swamps. They swim, preen, lay eggs and dance to music, and a tamed one sometimes brings you a fish.",
-      "wiki": "https://modrinth.com/mod/untitled-duck-mod",
-      "videos": [
-        {
-          "title": "Minecraft: Untitled Duck Mod | Best Duck Mod (1.21.11) | Mod Showcase",
-          "url": "https://www.youtube.com/watch?v=-ZZiM6cPSL0"
-        },
-        {
-          "title": "Minecraft | Untitled Duck Mod | GOOSE IN MINECRAFT...",
-          "url": "https://www.youtube.com/watch?v=eGsIuAD81vQ"
-        },
-        {
-          "title": "Untitled Duck Mod | Mod Showcase [1.18.2]",
-          "url": "https://www.youtube.com/watch?v=gR8gmaxPHok"
-        }
-      ],
-      "version": "QfrVPbOi",
-      "requires": [
-        "geckolib"
-      ],
-      "guide": "game",
-      "topic": "animals",
-      "howTo": "**Ducks** live in rivers and swamps, **geese** by rivers. Breed both with seeds. Tame a duck with fish and a goose with kelp or seagrass; a tamed one now and then catches a fish or finds treasure for you. Carry a duck about in a **duck sack**."
-    },
-    {
-      "slug": "fowlplay",
-      "name": "Fowl Play",
-      "category": "animals",
-      "side": "both",
-      "enabled": true,
-      "load": "M",
-      "recommended": false,
-      "hidden": false,
-      "exclusiveGroup": null,
-      "description": "Birds that really fly: robins, cardinals, blue jays, sparrows, chickadees, pigeons, crows, ravens, gulls, hawks, ducks, geese and penguins. Chickens get new looks and animations too.",
-      "wiki": "https://modrinth.com/mod/fowlplay",
-      "videos": [
-        {
-          "title": "Fowl Play (1.21.1) Minecraft Mod Review",
-          "url": "https://www.youtube.com/watch?v=a82g9W2V6zg"
-        }
-      ],
-      "version": "kZyPjCmU",
-      "requires": [
-        "smartbrainlib",
-        "yacl"
-      ],
-      "guide": "game",
-      "topic": "animals",
-      "howTo": "Look up: songbirds, crows and hawks live in forests and fields, gulls on beaches, pigeons on stony shores, penguins on snowy plains and beaches. Most fly off if you run at them. Some can be tamed; the mod's wiki says which (github.com/aqariio/Fowl-Play/wiki)."
-    },
-    {
       "slug": "cosy-critters",
       "name": "Cosy Critters & Creepy Crawlies",
       "category": "animals",
@@ -3210,7 +3149,7 @@
       "recommended": false,
       "hidden": true,
       "exclusiveGroup": null,
-      "description": "Library needed by Critters and Companions and Fowl Play.",
+      "description": "Library needed by Critters and Companions.",
       "wiki": "https://modrinth.com/mod/yacl",
       "videos": [],
       "version": "7TVdVtxF",
@@ -3230,23 +3169,6 @@
       "wiki": "https://modrinth.com/mod/architectury-api",
       "videos": [],
       "version": "1IiqEQGl",
-      "requires": []
-    },
-    {
-      "slug": "smartbrainlib",
-      "name": "SmartBrainLib",
-      "category": "base",
-      "side": "both",
-      "bothSides": "Modrinth calls it server-only, but Fowl Play's birds are built on it (55 of its classes use it), so every PC loads it too. Its jar runs on both sides (displayTest IGNORE_SERVER_VERSION).",
-      "enabled": true,
-      "load": "L",
-      "recommended": false,
-      "hidden": true,
-      "exclusiveGroup": null,
-      "description": "Library needed by Fowl Play.",
-      "wiki": "https://modrinth.com/mod/smartbrainlib",
-      "videos": [],
-      "version": "O5EpeqI3",
       "requires": []
     }
   ]

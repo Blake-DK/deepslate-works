@@ -51,6 +51,21 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Not covered:** Admin → Modpack → Lock passes no jar cache, so it checks neither channels nor dependencies; its
   log now says so. A mod's version filled in at build time and not in its manifest is not held to ranges.
 
+## Tried on test; `server-loaded.json` from the test server (2026-10-20, on `dev`, not on `main`)
+
+- **Alex, after the test server's start of pack `75b5d684` (15:01:49 UTC) and a PC on the Test section:** "it all
+  worked on the test".
+- **`modpack/server-loaded.json`** is now that start's list (143 files, 0 problems; with Season 1 shipped, as the test
+  server ships it), read from the test database's Setting `_serverMods`. CI's `check-sides` failed on `c7b60e6d` and
+  `9aafc4c3` because the old list (live's start of 2026-10-09) named Corpse 1.1.13, JEI 19.51, ModernFix 5.27.24 and
+  Placebo 9.9.3, which the lock no longer has. Locally: "sides OK". After the live deploy and Sync, refresh it from
+  live.
+- **`deploy/server-mods.sh` answers HTTP 403 now:** it calls `/modpack/server-mods` as `x-user-id: vps-session`, and
+  `requireAdmin` checks the role of a real user since then. Not fixed here; until it is, the list can be read from the
+  database (`Setting` `_serverMods`, database `deepslate` on live).
+- **The CI failure on `4ac7c272`** was one test in `deps.test.ts` ("pinned to 26.5.0, as the fix did, Lock goes
+  through") running over its time limit (about 3 s); the next commit passed.
+
 ## Sync starts the server too (2026-10-20, on `dev`, not on `main`)
 
 - **Why:** on test, the first Sync of pack `75b5d684` copied the new jars while the server was not running, so it did

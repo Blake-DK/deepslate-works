@@ -87,8 +87,11 @@ say live is stopped, held or to be trimmed in place, this section wins.
   test` for the test server (`deepslate_test`). No `fresh` any more: every start captures the list, and so does Sync's
   check. Tried both: `test` gives the committed list byte for byte; `live` gave live's start of 15:14:49 UTC (111
   files, the pack before this one).
-- **The CI failure on `4ac7c272`** was one test in `deps.test.ts` ("pinned to 26.5.0, as the fix did, Lock goes
-  through") running over its time limit (about 3 s); the next commit passed.
+- **The CI failures on `4ac7c272` and `3fa39caf`** were one test in `deps.test.ts` ("pinned to 26.5.0, as the fix
+  did, Lock goes through"), and not a time limit: "opac-0.31.6.jar: sha512 mismatch". `modrinth.ts` keeps every answer
+  for the run, sha512s included, and the test built its fake jars (zips, which carry their build time) again for each
+  test; tests more than a moment apart served bytes other than the remembered sha512. Reproduced with a 2.1 s pause
+  (the old test fails exactly so); the jars are now built once for the describe, and that passes with the pause.
 
 ## Sync starts the server too (2026-10-20, on `dev`, not on `main`)
 

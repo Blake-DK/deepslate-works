@@ -302,6 +302,7 @@ export const CHANGES: Change[] = [
     // (the rule above).
     id: "2026-10-20-animals-and-cosy",
     date: "2026-10-20",
+    live: true,
     title: "Animals and cosy things",
     lines: [
       "Lots of new animals: deer, bears, songbirds, ducks, otters, red pandas, the copper golem, the moobloom and many more. A few bite, so take care in swamps and by the sea. Most turn up in land nobody has been to yet.",
@@ -317,6 +318,7 @@ export const CHANGES: Change[] = [
     // after the live check (the rule above).
     id: "2026-10-20-create-addons",
     date: "2026-10-20",
+    live: true,
     title: "More for Create",
     lines: [
       "Create: Connected: more parts for Create machines, like a battery that stores rotation, item silos, more gearboxes and clutches, and catalysts that give fans new jobs.",

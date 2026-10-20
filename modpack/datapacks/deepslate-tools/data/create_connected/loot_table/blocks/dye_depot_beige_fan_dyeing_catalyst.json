@@ -1,0 +1,14 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:not",
+      "value": {
+        "type": "neoforge:mod_loaded",
+        "modid": "dye_depot"
+      }
+    }
+  ],
+  "type": "minecraft:block",
+  "pools": [],
+  "random_sequence": "create_connected:blocks/dye_depot_beige_fan_dyeing_catalyst"
+}

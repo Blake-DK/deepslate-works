@@ -36,6 +36,14 @@ describe("lintManifest", () => {
     m.mods[0]!.videos = [];
     expect(lintManifest(m).issues.some((i) => i.level === "warn" && /no videos/.test(i.message))).toBe(true);
   });
+  it("a server-only mod players use in the world may be in the guide's game part; in the helper part it is a warning", () => {
+    const m = structuredClone(base);
+    m.mods.push({ slug: "portals", name: "Portals", category: "base", side: "server", enabled: true, load: "L", guide: "game", topic: "travel", howTo: "Build the frame.", description: "x", wiki: "https://modrinth.com/mod/portals", videos: [{ title: "v", url: "https://www.youtube.com/watch?v=abcdefghijk" }] });
+    expect(lintManifest(m).issues.filter((i) => /server-only/.test(i.message))).toEqual([]);
+    m.mods.at(-1)!.guide = "helper";
+    delete m.mods.at(-1)!.topic;
+    expect(lintManifest(m).issues.filter((i) => /server-only/.test(i.message)).map((i) => i.message)).toEqual(['portals: server-only but in the guide\'s "helper" part']);
+  });
   it("no video warning once YouTube was searched and had nothing (noVideosFound); both at once is an error", () => {
     const m = structuredClone(base);
     m.mods[0]!.videos = [];

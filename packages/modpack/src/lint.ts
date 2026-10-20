@@ -36,7 +36,9 @@ export function lintManifest(raw: unknown): { manifest: Manifest | null; issues:
     if (!mod.hidden && mod.guide === "game" && !mod.topic) err(`${mod.slug}: in the guide's "game" part but has no "topic" (docs/52): the Mods guide needs to know which section it goes in`);
     if (mod.topic && mod.guide !== "game") err(`${mod.slug}: has "topic" ${mod.topic}, but only a mod with "guide": "game" has one`);
     if (isPlayerFacing(mod) && !mod.howTo) err(`${mod.slug}: switched on and player-facing, but has no "howTo" for the Mods guide`);
-    if (mod.guide !== "behind" && mod.side === "server") warn(`${mod.slug}: server-only but in the guide's "${mod.guide}" part`);
+    // "helper" is what a player has on their own PC; a server-only mod can't be one. One in "game" is fine when players
+    // use it in the world (Server Sided Portals: they build the portal), and the guide says "On the server only".
+    if (mod.guide === "helper" && mod.side === "server") warn(`${mod.slug}: server-only but in the guide's "helper" part`);
     if (mod.adminOnly && votableCats.has(mod.category)) err(`${mod.slug}: admin-only, but in a votable category: a mod up for vote is seen by everyone`);
     if (mod.side === "server" && mod.exclusiveGroup) warn(`${mod.slug}: server-only mods should not be in an exclusive group`);
     // docs/58: a private jar is that file and no Modrinth version; going back to Modrinth drops "source" and pins one

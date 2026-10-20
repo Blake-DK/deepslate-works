@@ -268,12 +268,18 @@ describe("Lock refuses such a pack and writes nothing", () => {
     return { id, project_id: projectId, version_number: number, version_type: "release", date_published: `2026-10-0${number === "26.6.0" ? 5 : 1}`, loaders: ["neoforge"], game_versions: ["1.21.1"], dependencies: [], files: [{ url, filename, primary: true, size: body.length, hashes: { sha512: sha(body), sha1: sha(body, "sha1") } }] };
   };
 
+  // The jars are built once for the whole describe: modrinth.ts keeps every answer it was given (with each file's
+  // sha512) for the rest of the run, and a zip carries the time it was made, so jars built again for the next test can
+  // differ from the sha512 it remembers ("opac-0.31.6.jar: sha512 mismatch", on CI when the tests ran a second apart).
+  let bodies: { m266: Buffer; m265: Buffer; opac: Buffer } | null = null;
+
   beforeEach(async () => {
     dir = await mkdtemp(path.join(tmpdir(), "deps-lock-"));
     const minimap = (v: string, opac: string) => jar([{ id: "xaerominimap", version: v, deps: [["openpartiesandclaims", "optional", opac, "BOTH"]] }]);
+    bodies ??= { m266: await minimap("26.6.0", "[0.32.4,)"), m265: await minimap("26.5.0", "[0.31.6,)"), opac: await jar([{ id: "openpartiesandclaims", version: "0.31.6" }]) };
     const versions = {
-      "1bokaNcj": [version("1bokaNcj", "irjR7dHk", "26.6.0", "xaerominimap-26.6.0.jar", await minimap("26.6.0", "[0.32.4,)")), version("1bokaNcj", "Q1tuMQBB", "26.5.0", "xaerominimap-26.5.0.jar", await minimap("26.5.0", "[0.31.6,)"))],
-      gq2ZxDEq: [version("gq2ZxDEq", "3i48dTzz", "0.31.6", "opac-0.31.6.jar", await jar([{ id: "openpartiesandclaims", version: "0.31.6" }]))],
+      "1bokaNcj": [version("1bokaNcj", "irjR7dHk", "26.6.0", "xaerominimap-26.6.0.jar", bodies.m266), version("1bokaNcj", "Q1tuMQBB", "26.5.0", "xaerominimap-26.5.0.jar", bodies.m265)],
+      gq2ZxDEq: [version("gq2ZxDEq", "3i48dTzz", "0.31.6", "opac-0.31.6.jar", bodies.opac)],
     };
     const projects: Record<string, object> = { "xaeros-minimap": project("1bokaNcj", "xaeros-minimap", "unsupported"), "open-parties-and-claims": project("gq2ZxDEq", "open-parties-and-claims", "required") };
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {

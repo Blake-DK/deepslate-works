@@ -328,6 +328,12 @@ export const CHANGES: Change[] = [
       "Press Play to update.",
     ],
   },
+  {
+    // Videos on three mod cards (Alex, 2026-10-20). Set `live: true` once the deploy is on the site (the rule above).
+    id: "2026-10-20-mod-videos",
+    date: "2026-10-20",
+    lines: ["The Mods page has videos for ArPhEx, Mutant Monsters and Nyf's Spiders, the creepy-crawlies and mutants on Ashmoon."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

@@ -60,9 +60,12 @@ say live is stopped, held or to be trimmed in place, this section wins.
   `9aafc4c3` because the old list (live's start of 2026-10-09) named Corpse 1.1.13, JEI 19.51, ModernFix 5.27.24 and
   Placebo 9.9.3, which the lock no longer has. Locally: "sides OK". After the live deploy and Sync, refresh it from
   live.
-- **`deploy/server-mods.sh` answers HTTP 403 now:** it calls `/modpack/server-mods` as `x-user-id: vps-session`, and
-  `requireAdmin` checks the role of a real user since then. Not fixed here; until it is, the list can be read from the
-  database (`Setting` `_serverMods`, database `deepslate` on live).
+- **`deploy/server-mods.sh` fixed** (it answered HTTP 403: it asked `/modpack/server-mods` as `x-user-id:
+  vps-session`, and admin routes read the caller's role from the database since `3e508307`). It now reads Setting
+  `_serverMods` from the database, read-only: `deploy/server-mods.sh` for live (`deepslate`), `deploy/server-mods.sh
+  test` for the test server (`deepslate_test`). No `fresh` any more: every start captures the list, and so does Sync's
+  check. Tried both: `test` gives the committed list byte for byte; `live` gave live's start of 15:14:49 UTC (111
+  files, the pack before this one).
 - **The CI failure on `4ac7c272`** was one test in `deps.test.ts` ("pinned to 26.5.0, as the fix did, Lock goes
   through") running over its time limit (about 3 s); the next commit passed.
 

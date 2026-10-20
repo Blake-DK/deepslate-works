@@ -130,6 +130,8 @@ The first plan's list had FTB Essentials, FTB Ultimine, Advanced Mining Dimensio
 
 `pnpm --filter modpack cli <command>`, or from the site: Admin → Modpack has Lock, Build and Sync as buttons.
 
+**Sync and the server** (Alex, 2026-10-20: "the sync script should start the server too"; `afterSync` in `apps/api/src/modpack/sync.ts`): after copying, a running server is restarted when the mods changed; a sleeping one is woken (AMP `Core.Start`) when they changed, and on the test server always; a stopped one is started on the test server only, never on live, which is only ever stopped on purpose (2026-10-09); a starting, failed or unknown one is left alone. A start is waited for and its mods checked like a restart's. Until then a stopped or sleeping test server kept the files without loading them, and the check after Sync compared the pack with the start before.
+
 | Command | Does |
 |---|---|
 | `lint` | validates `mods.json`; with the lock's jars on this machine (`dist/cache/lock-jars`, private ones also from `data/private-jars`), also what the mods need of each other (below), and says so when it could not look |

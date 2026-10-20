@@ -51,6 +51,17 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Not covered:** Admin → Modpack → Lock passes no jar cache, so it checks neither channels nor dependencies; its
   log now says so. A mod's version filled in at build time and not in its manifest is not held to ranges.
 
+## Sync starts the server too (2026-10-20, on `dev`, not on `main`)
+
+- **Why:** on test, the first Sync of pack `75b5d684` copied the new jars while the server was not running, so it did
+  not restart it; the second Sync found nothing to copy and did not either, and its check compared the pack with the
+  server's start before the copy ("7 of the pack's 92 server mods are not loaded", Aeronautics and Sable still listed).
+- **Now** (Alex: "the sync script should start the server too"; `afterSync`): running and mods changed → restart;
+  asleep → woken when the mods changed, and on the test server always; stopped → started on the test server, never on
+  live (stopped on purpose, 2026-10-09); starting, failed or unknown → left alone. A start returns `restartedAt`, so
+  the site waits for it and checks the mods as after a restart. `sync-restart.test.ts` rewritten for it. Needs new
+  `dev` images (api) and `sudo deploy/test-up.sh` before the test site does it.
+
 ## Updates to newest releases, and the Extras (2026-10-20, on `dev`, not on `main`)
 
 - **What (Alex: "update the safe ones and the extras"):** pins moved to the newest NeoForge 1.21.1 release for Corpse

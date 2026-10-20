@@ -322,6 +322,7 @@ export const CHANGES: Change[] = [
       "Create: Connected: more parts for Create machines, like a battery that stores rotation, item silos, more gearboxes and clutches, and catalysts that give fans new jobs.",
       "Create: The Factory Must Grow: heavy industry. Make steel in a blast furnace, pump oil and refine it into fuel for big engines, and make concrete, aluminium and plastic. Lead, nickel and steel from any mod work in its recipes.",
       "New in the app's Extras: Distant Horizons shows land far past your render distance. Only for strong PCs; switch it on in Extras if yours is one.",
+      "Updated to their newest versions: JEI, Corpse and the speed-up mods, and in Extras the shaders, Fresh Animations, Particle Rain, Falling Leaves and 3D Skin Layers.",
       "Press Play to update.",
     ],
   },

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-20T12:07:43.078Z",
+  "generatedAt": "2026-10-20T13:44:32.722Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "18f2629f6fe7114f209206465b6384704889ada9460d137d395836f590f51357",
+  "hash": "75b5d684cb35216fd47213a9a9ac86e2001bc7d9a8d1c9ac07b05c249a79644b",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -364,20 +364,21 @@
       "slug": "corpse",
       "name": "Corpse",
       "projectId": "WrpuIfhw",
-      "versionId": "Zwf8nv8y",
-      "versionNumber": "neoforge-1.21.1-1.1.13",
-      "versionType": "beta",
-      "filename": "corpse-neoforge-1.21.1-1.1.13.jar",
-      "url": "https://cdn.modrinth.com/data/WrpuIfhw/versions/Zwf8nv8y/corpse-neoforge-1.21.1-1.1.13.jar",
-      "sha512": "473aafd82008c1e041e3b4a5a177507d555c8bc9dd1f121f252f1e81bc0c69c79a91cb64be0df343babcb3d4db76efbaa7aa2adaeaae29337808a368bc290ad0",
-      "sha1": "a735362c4e5ef705956f1fcbac01fb9f1aae5b8e",
-      "size": 253694,
+      "versionId": "peeqqFlX",
+      "versionNumber": "neoforge-1.21.1-1.1.21",
+      "versionType": "release",
+      "filename": "corpse-neoforge-1.21.1-1.1.21.jar",
+      "url": "https://cdn.modrinth.com/data/WrpuIfhw/versions/peeqqFlX/corpse-neoforge-1.21.1-1.1.21.jar",
+      "sha512": "33122bad21a2e1021f9bc18849d765048cd46e70c4d9fe5ba7998065d4778d047f28968c60a6d302d6e11f292dd34694710f50c9ee6d315fec92524b736903c7",
+      "sha1": "124791f94c501c2c12a132f4cc69a3a738498b9d",
+      "size": 256713,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
         "client": "required",
         "server": "required"
-      }
+      },
+      "channels": "required"
     },
     {
       "slug": "cosy-critters",
@@ -645,20 +646,21 @@
       "slug": "entityculling",
       "name": "Entity Culling",
       "projectId": "NNAgCjsB",
-      "versionId": "8w8FfUPs",
-      "versionNumber": "1.11.2",
+      "versionId": "eieYbWYb",
+      "versionNumber": "1.11.3",
       "versionType": "release",
-      "filename": "entityculling-neoforge-1.11.2-mc1.21.1.jar",
-      "url": "https://cdn.modrinth.com/data/NNAgCjsB/versions/8w8FfUPs/entityculling-neoforge-1.11.2-mc1.21.1.jar",
-      "sha512": "dbb40066796ea54bfe902251ccbe743770e3fa9da555fa762da56b3f0427d4a24d3790a8c224519955185a8d1e17fbad462cd314c3acb998b9fc2c8fec257f7a",
-      "sha1": "2f723582d44b60b41d701a797846eaa45a3fef58",
-      "size": 1510018,
+      "filename": "entityculling-neoforge-1.11.3-mc1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/NNAgCjsB/versions/eieYbWYb/entityculling-neoforge-1.11.3-mc1.21.1.jar",
+      "sha512": "93e83dd690b91d610be29451b34836c9daa7e08bd952f88ffa07c62d8774bbaac2ff0c6768d2cbf1b14f47d0b86f98cef9fd341e0d29bd37207eaf4aa2abea63",
+      "sha1": "f122f84f329793675b2625d51b77f990d7de3579",
+      "size": 1510075,
       "side": "client",
       "requiredBy": [],
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      }
+      },
+      "channels": "none"
     },
     {
       "slug": "fairy-lights-fabric",
@@ -900,20 +902,21 @@
       "slug": "immediatelyfast",
       "name": "ImmediatelyFast",
       "projectId": "5ZwdcRci",
-      "versionId": "OUpXxw4n",
-      "versionNumber": "1.6.14+1.21.1-neoforge",
+      "versionId": "EJzmEPZV",
+      "versionNumber": "1.6.15+1.21.1-neoforge",
       "versionType": "release",
-      "filename": "ImmediatelyFast-NeoForge-1.6.14+1.21.1.jar",
-      "url": "https://cdn.modrinth.com/data/5ZwdcRci/versions/OUpXxw4n/ImmediatelyFast-NeoForge-1.6.14%2B1.21.1.jar",
-      "sha512": "7d1c2e6ce306f4bb9aa155f64ba87732dc2443d57fde249467a99e0ed90fec89a706252888b97f882efbc55d6044971519db704125f27ae53cd9ae40424f9b2c",
-      "sha1": "fee59af2f39c66d09c4c09f441c799e76af70f97",
-      "size": 365195,
+      "filename": "ImmediatelyFast-NeoForge-1.6.15+1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/5ZwdcRci/versions/EJzmEPZV/ImmediatelyFast-NeoForge-1.6.15%2B1.21.1.jar",
+      "sha512": "c115cad7b060373fc597aae08c685e2d56f173b88b792a4a2c229e222f8da293b99865e9553cf716483d3c3d6a18f31c51c5dd55be22d4625ed2c962d7b94fd0",
+      "sha1": "f991166f7c82b493481c876e3c83c9fac4159671",
+      "size": 368896,
       "side": "client",
       "requiredBy": [],
       "modrinth": {
         "client": "required",
         "server": "unsupported"
-      }
+      },
+      "channels": "none"
     },
     {
       "slug": "immersiveengineering",
@@ -976,33 +979,34 @@
       "slug": "jei",
       "name": "Just Enough Items",
       "projectId": "u6dRKJwZ",
-      "versionId": "ufHUqt9b",
-      "versionNumber": "19.51.0.418",
+      "versionId": "iv3KiVkE",
+      "versionNumber": "19.64.0.455",
       "versionType": "release",
-      "filename": "jei-1.21.1-neoforge-19.51.0.418.jar",
-      "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/ufHUqt9b/jei-1.21.1-neoforge-19.51.0.418.jar",
-      "sha512": "a6ca3abc3080f6f41033a77cb955fefe9f9ebae795c33546227f555b2d31e8d4131cc705126d14a3fbabb31097fc0e876dc0bbeb05ad907a1b796f21e57527bf",
-      "sha1": "d19552586f686eae4ef5e7199f31604d1d3cfca7",
-      "size": 1804792,
+      "filename": "jei-1.21.1-neoforge-19.64.0.455.jar",
+      "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/iv3KiVkE/jei-1.21.1-neoforge-19.64.0.455.jar",
+      "sha512": "fdd02e57ce4dcf20b69860a5ace1b97d9a771486241179cf9edfe71e30c69bb4003b046d0cce8d8c4913b9689f1d8b04cf0542b0b04a6cf0b3b0465f3bb11702",
+      "sha1": "f6d6fc08d54c40752926b570a2220471e8c45c1a",
+      "size": 2375741,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      }
+      },
+      "channels": "optional"
     },
     {
       "slug": "kotlin-lang-forge",
       "name": "KotlinLangForge",
       "projectId": "1vrSzlao",
-      "versionId": "SRMod41B",
-      "versionNumber": "2.14.1-k2.4.20-3.0+neoforge",
+      "versionId": "CSuMh1dl",
+      "versionNumber": "2.16.0-k2.4.21-3.0+neoforge",
       "versionType": "release",
-      "filename": "KotlinLangForge-2.14.1-k2.4.20-3.0+neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/1vrSzlao/versions/SRMod41B/KotlinLangForge-2.14.1-k2.4.20-3.0%2Bneoforge.jar",
-      "sha512": "8d6faf1fa623529e794fb0429b96f71965843ea1876262c26cecf4fe17dd6e64334498f984cca487e3083881f0e917a26af3862b72e85a2d0d5a7225104355da",
-      "sha1": "1a68ab7829e03b2f9ef59d4d2d58ac4c5be74ffc",
-      "size": 8214901,
+      "filename": "KotlinLangForge-2.16.0-k2.4.21-3.0+neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/1vrSzlao/versions/CSuMh1dl/KotlinLangForge-2.16.0-k2.4.21-3.0%2Bneoforge.jar",
+      "sha512": "ad3d9d986c794c1859759b92aed9ee7d37c32597e581244defe0f4965deba8d84a6f48b92fd58d346c66ce76eedc7a80bf2600dea80499bafa196196c4d12419",
+      "sha1": "35526546ac29794931c10f1008c466ac65965829",
+      "size": 8250445,
       "side": "both",
       "requiredBy": [
         "veinminer"
@@ -1010,7 +1014,8 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      }
+      },
+      "channels": "none"
     },
     {
       "slug": "l_enders-cataclysm",
@@ -1368,23 +1373,46 @@
       "channels": "none"
     },
     {
+      "slug": "mezzconfig",
+      "name": "MezzConfig",
+      "projectId": "7tEfOcA7",
+      "versionId": "idpM3DKC",
+      "versionNumber": "0.6.8",
+      "versionType": "beta",
+      "filename": "mezz_config-1.21.1-neoforge-0.6.8-standalone.jar",
+      "url": "https://cdn.modrinth.com/data/7tEfOcA7/versions/idpM3DKC/mezz_config-1.21.1-neoforge-0.6.8-standalone.jar",
+      "sha512": "ed5ff5acf441ae2a9d2ba7ccc59e9394f4cf1e0f14802dd2ea01e9cd60c3cd412039d12f68297b3726eef63a8a85e6f4340bd969dbd1ab7e1ddc7aef88992e6b",
+      "sha1": "d99ed592d8ab7105c00444047be7d8346d694ba3",
+      "size": 327173,
+      "side": "both",
+      "requiredBy": [
+        "jei"
+      ],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "optional"
+    },
+    {
       "slug": "modernfix",
       "name": "ModernFix",
       "projectId": "nmDcB62a",
-      "versionId": "5HLHxQ2F",
-      "versionNumber": "5.27.24+mc1.21.1",
+      "versionId": "7Jy58lnT",
+      "versionNumber": "5.27.26+mc1.21.1",
       "versionType": "release",
-      "filename": "modernfix-neoforge-5.27.24+mc1.21.1.jar",
-      "url": "https://cdn.modrinth.com/data/nmDcB62a/versions/5HLHxQ2F/modernfix-neoforge-5.27.24%2Bmc1.21.1.jar",
-      "sha512": "da13fa15b2c96a74a7d5f8ea94ea404c96237b97d52c9a77e7e34ac918d28c40760a68cf3897691b317d5119ab9b85035142c3624108b13dda3516c340b96131",
-      "sha1": "1fe7f8b4176e86507cc8ed5460b6acdd3dac5529",
-      "size": 604333,
+      "filename": "modernfix-neoforge-5.27.26+mc1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/nmDcB62a/versions/7Jy58lnT/modernfix-neoforge-5.27.26%2Bmc1.21.1.jar",
+      "sha512": "37c76fc5bc72cfc1035260f891ffeb45b4f32651d2e490c5eb8c60f3b5686deca3145b32d4fab9036f65f5277b0ac66f4ad3855e52cd973e791b09e9c4b896d8",
+      "sha1": "69d468b70e53f6a014c778a81116a41a38fbab33",
+      "size": 611043,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      }
+      },
+      "channels": "optional"
     },
     {
       "slug": "moonlight",
@@ -1565,14 +1593,14 @@
       "slug": "placebo",
       "name": "Placebo",
       "projectId": "tCkE8p2N",
-      "versionId": "h326cnw1",
-      "versionNumber": "1.21.1-9.9.3",
+      "versionId": "B5zbSVlT",
+      "versionNumber": "1.21.1-9.9.4",
       "versionType": "release",
-      "filename": "Placebo-1.21.1-9.9.3.jar",
-      "url": "https://cdn.modrinth.com/data/tCkE8p2N/versions/h326cnw1/Placebo-1.21.1-9.9.3.jar",
-      "sha512": "bf6f770eef68c699e0f9c88be26ddc65015d067d9c99079a5312766906c6310e8cb4027007ff70b9da3bdc33aaafabf58a989b840ddd54a44f14cfd6cd572337",
-      "sha1": "37b1cf95c23a72caafc5d5c9671bbf1fa62bee14",
-      "size": 325017,
+      "filename": "Placebo-1.21.1-9.9.4.jar",
+      "url": "https://cdn.modrinth.com/data/tCkE8p2N/versions/B5zbSVlT/Placebo-1.21.1-9.9.4.jar",
+      "sha512": "4f3a9c5974132f3638c262c56b0c2886df2bc58027c961aa11d06d0ae2e608b63f24f949b2f8c240989e2a1bfe303fd237c5f2d49269453ad6c2ff1f85f2c648",
+      "sha1": "007d52a42020a331d5272495f6d676e0ad1a2c13",
+      "size": 326063,
       "side": "both",
       "requiredBy": [
         "fastfurnace",
@@ -1581,20 +1609,21 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
-      }
+      },
+      "channels": "none"
     },
     {
       "slug": "puzzles-lib",
       "name": "Puzzles Lib",
       "projectId": "QAGBst4M",
-      "versionId": "1TmfTuyw",
-      "versionNumber": "21.1.62",
+      "versionId": "lATqZwtV",
+      "versionNumber": "21.1.64",
       "versionType": "release",
-      "filename": "puzzleslib-v21.1.62-mc1.21.1+neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/QAGBst4M/versions/1TmfTuyw/puzzleslib-v21.1.62-mc1.21.1%2Bneoforge.jar",
-      "sha512": "241ff7229990305fe5f85521b9c11cd8e2e8d01cb94bbca987aae4d3d9ecbd9115a4b66f618a62d73ef1b569ff8c72434bc1354bbfaf2f69c0e997db034c4883",
-      "sha1": "0d1675576fe17acc1f350a5505177ae08c17299b",
-      "size": 1450242,
+      "filename": "puzzleslib-v21.1.64-mc1.21.1+neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/QAGBst4M/versions/lATqZwtV/puzzleslib-v21.1.64-mc1.21.1%2Bneoforge.jar",
+      "sha512": "f60ecfc9fedf9c6967891024711391abdc6ffb45c09030f221e9bf061a5a99323a612cecf19af4b0d86b7a3dd4c49f273e2a9b2d2b61bbc867f85d9f3034f5b7",
+      "sha1": "8562ac65d4f2a55365d4522934fb0e00cd3d3ec3",
+      "size": 1451067,
       "side": "both",
       "requiredBy": [
         "mutant-monsters"

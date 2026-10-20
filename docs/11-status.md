@@ -51,6 +51,24 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Not covered:** Admin → Modpack → Lock passes no jar cache, so it checks neither channels nor dependencies; its
   log now says so. A mod's version filled in at build time and not in its manifest is not held to ranges.
 
+## Updates to newest releases, and the Extras (2026-10-20, on `dev`, not on `main`)
+
+- **What (Alex: "update the safe ones and the extras"):** pins moved to the newest NeoForge 1.21.1 release for Corpse
+  1.1.21 (`peeqqFlX`), Entity Culling 1.11.3 (`eieYbWYb`), ImmediatelyFast 1.6.15 (`EJzmEPZV`), ModernFix 5.27.26
+  (`7Jy58lnT`), JEI 19.64.0.455 (`iv3KiVkE`), Puzzles Lib 21.1.64 (`lATqZwtV`); unpinned Placebo 9.9.4 and Kotlin for
+  Forge 2.16.0 taken from the Lock. **JEI 19.64 needs MezzConfig**, a new library with beta builds only (0.6.8, both
+  sides). Extras: MakeUp 9.6, 3D Skin Layers 1.11.4, Falling Leaves 2.6.0, Particle Rain 4.0.2 (was a beta), Fresh
+  Animations 1.11.1 with EMF 3.3.12 and ETF 7.2.6; Iris, Sound Physics and Distant Horizons as they were.
+- **Kept back:** the quarry (Additional Enchanted Miner) stays at 21.1.164: our quarry-pause jar requires
+  `quarryplus [21.1.164,21.1.165)`, so 21.1.165 needs a new quarry-pause build first. Titanium stays at 4.0.50 (the
+  Lock would take the 4.0.51 beta). Sophisticated Backpacks and Core, Xaero's maps and Open Parties and Claims left
+  for their own careful step (docs/31 B-10; the Xaero's/OPAC pin of 2026-10-05).
+- **Lock:** with `data/private-jars` mounted, the dependency check read 104 of 105 jars (not Mowzie's, not on this
+  machine) and found no error. Pack `75b5d684`, 105 files; live, shipping no season, **`0.1.0+004cfefb`** (100); s1
+  105. Extras lock from the same run (only the extras above changed).
+- **Not seen yet, on test:** the server starting (JEI, Corpse, ModernFix, Puzzles Lib and the libraries are server
+  jars too), a PC updating, and the prisoner villager skin checked by eye with Fresh Animations 1.11.1 (docs/30 §11).
+
 ## Create: Connected, The Factory Must Grow, Distant Horizons as an Extra (2026-10-20, on `dev`, not on `main`)
 
 - **Create Aeronautics and Sable taken out again** (Alex): on the test PC the game refused to start, Simulated and

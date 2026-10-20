@@ -130,11 +130,14 @@ The first plan's list had FTB Essentials, FTB Ultimine, Advanced Mining Dimensio
 
 `pnpm --filter modpack cli <command>`, or from the site: Admin → Modpack has Lock, Build and Sync as buttons.
 
+**Sync and the server** (Alex, 2026-10-20: "the sync script should start the server too"; `afterSync` in `apps/api/src/modpack/sync.ts`): after copying, a running server is restarted when the mods changed; a sleeping one is woken (AMP `Core.Start`) when they changed, and on the test server always; a stopped one is started on the test server only, never on live, which is only ever stopped on purpose (2026-10-09); a starting, failed or unknown one is left alone. A start is waited for and its mods checked like a restart's. Until then a stopped or sleeping test server kept the files without loading them, and the check after Sync compared the pack with the start before.
+
 | Command | Does |
 |---|---|
-| `lint` | validates `mods.json` |
+| `lint` | validates `mods.json`; with the lock's jars on this machine (`dist/cache/lock-jars`, private ones also from `data/private-jars`), also what the mods need of each other (below), and says so when it could not look |
 | `verify-links` | asks for every `wiki` and `videos[].url`, reports the ones that fail |
-| `lock` | for each mod in the pack: `GET /v2/project/{slug}/version?loaders=["neoforge"]&game_versions=["1.21.1"]`, takes the pinned id or the newest `release` (a `beta` with a warning when there is none); adds required dependencies, and theirs; resolves `neoforge: latest` from the NeoForged maven (highest `21.1.*` without `-beta`); takes the checksums of the files under `modpack/config/`; writes the lock. **Fails, and writes nothing, when a mod has no build for NeoForge 1.21.1.** Says "unchanged" and writes nothing when neither a mod nor a settings file has changed; `lock --force` writes all the same |
+| `lock` | for each mod in the pack: `GET /v2/project/{slug}/version?loaders=["neoforge"]&game_versions=["1.21.1"]`, takes the pinned id or the newest `release` (a `beta` with a warning when there is none); adds required dependencies, and theirs; resolves `neoforge: latest` from the NeoForged maven (highest `21.1.*` without `-beta`); takes the checksums of the files under `modpack/config/`; writes the lock. **Fails, and writes nothing, when a mod has no build for NeoForge 1.21.1, or when the jars' own dependencies do not fit (below).** Says "unchanged" and writes nothing when neither a mod nor a settings file has changed; `lock --force` writes all the same |
+| `check-deps` | the lock as committed: fetches each jar into `dist/cache/lock-jars` (sha512-checked; a private jar copied from `data/private-jars`) and runs Lock's dependency check on it. Exits 1 on a problem |
 | `build server` | downloads the files for the server into `dist/server/mods/`, checks each against its checksum, copies `modpack/server/*`, `modpack/config/*` and `modpack/datapacks/*` |
 | `build config` | `dist/config.zip` from `modpack/config/`, for the installer; with `modpack/resourcepack/` (when it has a `pack.mcmeta`) zipped in as `resourcepacks/deepslate-textures.zip` |
 | `build installer` | zips `installer/` with the site's address and the pack's version stamped into `install.ps1`; writes `dist/installer.json` (the installer's version, the zip's SHA-256 and size) |
@@ -143,6 +146,23 @@ The first plan's list had FTB Essentials, FTB Ultimine, Advanced Mining Dimensio
 There is no `build client` (Windows only since 2026-09-29: the installer downloads a PC's files itself from the mod list, and a `client.mrpack` left over from before is removed by a build). There is no `sync-server` in the CLI: a sync needs the tunnel and the deploy key, which only `api` has (`POST /modpack/sync`, docs/08). It copies `dist/server/` to the instance by rsync (the mods folder made the same as the build's, settings and datapacks added to what is there, nothing of the server's own deleted) and restarts the server **if the mods changed**. Its log says so ("restarting the server to load the new mods…"), waits for the server to come back up and then checks that it loaded every mod the pack gives it (`POST /modpack/verify`); with the mods unchanged it checks the server's last start. Every start is checked the same way, and a missing mod goes into the event log.
 
 In production Build runs inside the `api` container, under its memory limit, and never on the VPS host (docs/09 "Memory limits"). Lock on the VPS: docs/11 "Where things are" has the command. Jars are streamed to disk and hashed in chunks.
+
+### What the mods need of each other (`packages/modpack/src/deps.ts`, 2026-10-20)
+
+Modrinth's dependency lists say which projects a mod needs, not which versions. Each jar says that itself, in `META-INF/neoforge.mods.toml`, and NeoForge refuses to start when it is not met. Twice a pack passed Lock and every PC then failed: Xaero's maps 26.6.0 / 1.47.0 work with Open Parties and Claims 0.32.4 or newer only, and it was pinned at 0.31.6 (2026-10-05, docs/11); Create Aeronautics' Simulated needs Flywheel 1.0.6 and Sable takes 1.0.6 or newer, while Vanillin carries its own Flywheel 1.0.4 (2026-10-20). Lock now reads, for every jar it fetches:
+
+- each `[[mods]]` mod id and version (`${file.jarVersion}` from the jar's manifest), and each `[[dependencies.<id>]]`: mod id, type (required, optional, incompatible, discouraged; older files' `mandatory = true/false`), `versionRange` in Maven's syntax, side (BOTH, CLIENT, SERVER);
+- the jar-in-jar libraries (`META-INF/jarjar/metadata.json`: identifier `group:artifact`, range, version, path) and their own `neoforge.mods.toml`, down to three deep.
+
+It then works out what loads, separately for PCs (everything but server-only) and for the server (everything but client-only), with no season shipped, each season on its own, and all of them. Per jar-in-jar identifier, the newest copy every carrier accepts loads; a mod in the mods folder wins over any jar-in-jar copy of it (said as a warning when the versions differ). Versions are compared as Maven compares them, as NeoForge does, and on 1.21.1 a mod that accepts Minecraft 1.21 is taken to accept 1.21.1 too, as NeoForge does (JEI and Alternate Current say `[1.21,1.21.1)`). Lock stops, writes nothing and names the mod, the dependency, the range and the version found, when:
+
+- a required dependency is missing, or one of its versions that may load is outside the range;
+- an optional one is there in a version outside the range (the Xaero case: NeoForge refuses that too);
+- an incompatible one is there in range;
+- one mod id comes in two versions under two jar-in-jar identifiers and a range refuses one of them. Which version loads is not certain (Flywheel 1.0.6 in Create as `dev.engine-room.flywheel:flywheel-neoforge-1.21.1`, 1.0.4 in Vanillin as `dev.engine-room.flywheel:neoforge`; PCs loaded 1.0.4), so every such version is held to each range, and the error names both sources. When every range takes each version, the two versions are a warning (Create and Vanillin alone both take `flywheel [1.0.0,2.0)`; live has run on that since October);
+- two jars in the mods folder have one mod id, or no copy of a jar-in-jar library fits every carrier's range.
+
+A discouraged dependency in range is a warning. A jar that could not be read (a private jar not on this machine) is named, and a required mod missing then is a warning, not an error. Only Lock with a jar cache runs the check: the CLI's `modpack lock` does; Admin → Modpack → Lock passes none and says in its log that nothing was looked into.
 
 All commands can be run again without harm and print what they changed. Network failures are tried three times and then fail loudly; a half-written lockfile is never left behind (write to temp, rename).
 
@@ -163,6 +183,8 @@ A build makes `dist/server/config/` and `dist/server/datapacks/` afresh each tim
 | `modpack/server/config/mutantmonsters-common.toml` | each mutant at 0.25 of the creeper's spawn weight (0.05 by default): about one Ashmoon monster in five | the server; not in the pack's hash |
 | `modpack/datapacks/deepslate-moon/` | the Moon (docs/55 M2 to M4): the dimension `deepslate:moon` on noise settings of its own, its three biomes (every vanilla ore, stone patches, geodes, night monsters; no water or plants) added to `#minecraft:is_overworld` and `#c:is_overworld`; `#mekanism:spawn_ores` replaced by those three biomes, so Mekanism's ores are made there and nowhere else; low gravity for players there (a tick function); the portal's frame (smooth basalt) and igniter (eye of ender) for Server Sided Portals. M7 and M8: radiation below y 30 (Alex, 2026-10-14; docs/55 had gas below y 0), stronger below y 0 and deadly below y -25 (`deepslate:gas/*`, once a second from `#minecraft:load`; the depth in `deepslate.band`) and the protection: the gas mask's recipe (`deepslate:gas_mask`, a leather helmet with components, `custom_model_data` 5501) and its unlock, the wear modifiers, 1800 points of durability given to Mekanism's hazmat gear the first time it is worn in the radiation, `#deepslate:gas_mask_hazmat`, `#deepslate:gas_mask_sealed`, `#deepslate:hazmat_suit` and `#deepslate:radiation_suit/*` (Mekanism's, optional entries) | the server's world; a new dimension counts from the next restart, not `/reload` |
 | `modpack/resourcepack/assets/minecraft/models/item/leather_helmet.json`, `assets/deepslate/` | the gas mask's icon (docs/55 M8): vanilla 1.21.1's leather helmet model (its ten armour-trim models kept) with one more override, `custom_model_data` 5501 → `deepslate:item/gas_mask` (a hood tinted by the item's colour, the glasses and filter untinted) | every PC (in `config.zip`); in the pack's hash |
+| `modpack/datapacks/deepslate-animals/` | one of each animal (Alex, 2026-10-20): `naturalist:has_crab` and `naturalist:has_dragonfly` replaced with empty tags, so Naturalist adds no crab or dragonfly spawns; Friends & Foes' crab and Critters and Companions' dragonfly are the pack's | the server's world; from the next restart |
+| `modpack/server/config/crittersandcompanions-common.json5` | `configVersion` 2 and `spawning.snail` empty: no Critters and Companions snails (Naturalist's is the pack's). Only those keys: YACL starts from the mod's defaults, reads what is in the file and writes the whole file back | the server; not in the pack's hash |
 | `modpack/config/Mekanism/tools-materials-startup.toml` | Mekanism Tools armour no better than netherite (docs/53 E1): Refined Obsidian 3, 8, 6, 3, toughness 3, knockback 0.1 (was 6, 12, 8, 5, 5, 0.2); the Osmium helmet 3 (was 4). A STARTUP config: the server works out the protection, a PC shows it on the item | the server and every PC; in the pack's hash |
 
 Thought of in the first plan and not shipped: Xaero's (minimap on, waypoints for each server), JEI (cheat mode off), Simple Voice Chat (push to talk on `V`), Corpse (corpses never despawn, only the owner can loot for 30 min). Each mod runs on its own defaults. To ship one: start the game or the server once, take the file the mod wrote, change what is to be changed, put it under `modpack/config/`, Lock, Build, Sync.
@@ -223,6 +245,45 @@ A category of its own, `building`, after "Quality of life & world": "Extra block
 The libraries are hidden `base` entries, switched on only while the mod that needs them is (today only `resourceful-lib`). Apply results does not touch them and needs not: Lock pulls a library in whenever a mod that needs it is on (Modrinth's required dependencies), whatever the library's own entry says. Chipped is left out (last update 2024; Rechiseled covers the same ground). No Macaw's mod needs a library on NeoForge 1.21.1. Rechiseled: Create has no video of its own; it shows the Rechiseled 1.21.1 showcase. The six suggested mods add 6 points to a ballot that has not been saved: the default ballot goes from 12 (Medium) to 18 (Heavy), so a LOW-tier member who has not saved sees the Heavy warning (flagged to the planner).
 
 The player guide has a "Building" section tagged with all six suggested slugs (shown only while every one of them is on).
+
+
+## Animals and cosy mods (Alex, 2026-10-20)
+
+Straight into the pack, no vote, none suggested. Each is the newest **release** for NeoForge 1.21.1 on Modrinth, pinned; the jars were read for their dependencies, items and spawn rules before they went in. A new votable category, `animals` ("Animals"), after `building`, since `building` promises no new mobs; the Mods guide has a topic of the same name.
+
+| Slug | Category, topic | Load | Needs |
+|---|---|---|---|
+| `naturalist` | animals | M | |
+| `critters-and-companions` | animals | M | `geckolib`, `yacl`, `architectury-api` |
+| `friends-and-foes-forge` (the NeoForge project; `friends-and-foes` has no NeoForge build) | animals | M | `resourceful-lib` |
+| `cosy-critters` | animals, client only (particles, nothing on the server) | L | |
+| `lets-do-meadow`, `lets-do-vinery` | world, farming | M | `architectury-api`; each jar carries its own Foundation library inside |
+| `comforts` | world, friends | L | |
+| `fairy-lights-fabric` (the lucalabs-de port, MIT) | building | M | |
+| `amendments` | building | L | `moonlight` (switched on and pinned for it) |
+| `twigs` | building | L | |
+
+- **Ashmoon:** none of the new mobs is hooked to every overworld biome (biome modifiers and code read). Twigs adds rhyolite, a stone patch like granite, to `#minecraft:is_overworld`, so it comes to the Moon with the other stone patches; left in.
+- **New land:** like the flowers (docs/59), the animals, the wild grapes and the pebbles come from biome spawns and worldgen, so most appear in chunks made after the mods are in.
+- **Dropped the same day (Alex: "drop the duplicated mods"):** Fowl Play (9 of its 13 birds are Naturalist's songbirds and duck, Friends & Foes' penguin and Cosy Critters' crow) and Untitled Duck Mod (ducks and geese, both elsewhere), with SmartBrainLib. Fowl Play needed it on PCs although Modrinth calls it server-only, which took a `mods.json` override; that went with it.
+- **Second round, the same day (Alex: "drop those unnecessary duplicates, keep the mods that have more in them"),** counted from the jars' item lists and recipes:
+  - **Sleep Tight dropped** for Comforts: both make hammocks and a bag that does not move your spawn point; Comforts has 34 items (sleeping bags and hammocks in every colour, a bag from three wool), Sleep Tight 21 (hammocks, a night bag from echo shards, and things for features that were switched off). Its settings file went with it.
+  - **Let's Do Farm & Charm dropped** for Farmer's Delight (already in the pack, voted in): Farmer's Delight has 226 items and 334 recipes, Farm & Charm 139 and 221, and 13 of them by the same name (cooking pot, stove, cutting board, tomato, onion …), each pot making only its own mod's dishes. Meadow stays: its Cookpot is the only overlap in 183 items.
+  - **One of each animal, all three mods kept:** where two mods have the same creature, the one that does less is switched off. Friends & Foes' **crab** stays (its claw brews the potion of reaching), Naturalist's goes (crab meat only). Naturalist's **snail** stays (snail shells in 16 colours, shellstone), Critters and Companions' goes (a slime bottle). Critters and Companions' **dragonfly** stays (tamed with spider eyes, wears armour, its wings tame jumping spiders), Naturalist's goes. How: Naturalist adds a creature only in the biomes of its `naturalist:has_<mob>` tag (AddAnimalsBiomeModifier, read from the jar), so the datapack `deepslate-animals` empties `has_crab` and `has_dragonfly`; every Critters and Companions spawn, the lush caves' included, comes from the lists in its config (CACEntities.registerSpawns), so `crittersandcompanions-common.json5` on the server has `snail: []`. Both are server only and change spawns in new land; a creature already somewhere stays.
+
+## Create add-ons and Distant Horizons (Alex, 2026-10-20)
+
+Asked for together with Create Power Grid, The Factory Must Grow, Pollution of the Realms and Fullbright; Create and JEI were already in. Each is the newest release for NeoForge 1.21.1, pinned; jars read for their Create range, libraries and worldgen.
+
+| Slug | Category, topic | Load | Needs | |
+|---|---|---|---|---|
+| `create-connected` | factories, factories | L | Create (6.0.10 or newer, the pack's) | its copycat recipes switch themselves off where Copycats+ has the same block (`feature_enabled_in_copycats`), so no copycat is there twice |
+| `create-tfmg` (The Factory Must Grow 1.2.0, `uDi14nbt`) | factories, factories | M | Create (6.0.6 or newer) | added after the question below (Alex: "add it in"); its ores (lead, nickel and lithium, and its striated ore layers) and oil go to every `#minecraft:is_overworld` biome, the Moon's three included, as Immersive Engineering's do |
+| `distanthorizons` | an Extra (`modpack/extras.json`), High | | | client only; the server runs no Distant Horizons |
+
+- **Create Aeronautics and Sable: in and out the same day** (Alex: "drop Create Aeronautics but keep a checker on to see when it will work"). Every PC refused to start: Aeronautics' nested Simulated requires `flywheel [1.0.6,)` and Sable takes only 1.0.6+, but PCs load Flywheel 1.0.4, the copy Vanillin 1.1.3 carries (`dev.engine-room.flywheel:neoforge`), not Create's 1.0.6 (`…:flywheel-neoforge-1.21.1`). Both are the newest releases, and Modrinth has no Flywheel of its own for NeoForge 1.21.1. It can come back when Vanillin carries Flywheel 1.0.6 or newer (or none), or when Aeronautics and Sable accept 1.0.4; a weekly check watches for that.
+- **Not taken:** Pollution of the Realms (Alex: no pollution), Fullbright (Alex: skip; it takes the dark out of caves, nights and Ashmoon). Create Power Grid: not added, Alex asked what a swap for Crafts & Additions would lose (live builds and items with it, the quarry's power plan and the guide's Electricity part rest on it); Crafts & Additions stays.
+- **The Factory Must Grow and the metals it shares** (read from the three jars): TFMG, Immersive Engineering and Mekanism put their lead, nickel, aluminium and steel (ingots, nuggets, plates or sheets, ores, raw metal, blocks) in the same `c:` tags, and their recipes ask for the tags: TFMG 22 lead, 17 nickel, 67 aluminium and 73 steel inputs by tag; IE 46, 44, 56 and 74; Mekanism 28 lead and 36 steel. So any mod's ore is smelted, crushed and used by the others. The exceptions were TFMG's steel cogwheel, large steel cogwheel and steel flywheel, which named `tfmg:steel_ingot`: `deepslate-tools` carries the three with `c:ingots/steel` (and a `mod_loaded` condition). TFMG's steel mechanism takes TFMG's own lead and nickel sheets, which its press makes from any mod's ingots. There is more lead and nickel ore in new land than before (IE's and TFMG's). Not yet seen: grenades and napalm inside a claim.
 
 ## Render distance by PC tier (planner, 2026-09-30)
 

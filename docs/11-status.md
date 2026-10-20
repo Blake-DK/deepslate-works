@@ -26,6 +26,125 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Lock checks what the mods need of each other (2026-10-20, on `dev`, not on `main`)
+
+- **What:** `packages/modpack/src/deps.ts`. Lock reads every jar's `neoforge.mods.toml` and its jar-in-jar libraries,
+  works out what loads on PCs and on the server (and with each season shipped), and stops, writing nothing, when a
+  mod's declared dependency is not met: required missing or out of range, optional present out of range,
+  incompatible in range, or one mod id in two versions under two jar-in-jar identifiers. `modpack lint` reports the
+  same when the lock's jars are on the machine; the new `modpack check-deps` fetches them first. Rules and choices:
+  docs/06 "What the mods need of each other". Tests: `packages/modpack/tests/deps.test.ts`, both cases below
+  among them, with each jar's real dependency entries.
+- **Both earlier failures are refused:** Xaero's Minimap 26.6.0 and World Map 1.47.0 beside Open Parties and Claims
+  0.31.6 (2026-10-05; checked on the real jars too), and the Flywheel case below.
+- **Run on `dev`'s lock as it is (pack `4d76e87e`, 106 jars, every one read): three errors, all on PCs, all
+  Flywheel.** Flywheel 1.0.6 (in Create, as `dev.engine-room.flywheel:flywheel-neoforge-1.21.1`) and 1.0.4 (in
+  Vanillin, `flw-vanillin`, as `dev.engine-room.flywheel:neoforge`); Create Aeronautics' nested Simulated 1.3.2
+  requires `flywheel [1.0.6,)`; Sable 2.0.6 works with `[1.0.6,)` only. Nothing on the server, and nothing else. So
+  **`modpack lock` refuses this pack until the Flywheel clash is fixed**, and `modpack lint` with the jars at hand
+  exits 1. It is not fixed here: that is a pack decision.
+- **The same day, the two-versions rule eased:** two versions of one mod id are an error only when a range refuses
+  one of them; when every range takes each, they are a warning that still names both sources. Create and Vanillin
+  alone (live since October, both `flywheel [1.0.0,2.0)`) give that warning and no error. With Create Aeronautics and
+  Sable in, the three errors above stand. They were taken out the same day (`4ac7c272`): `dev`'s lock `18f2629f`
+  (104 jars, every one read) gives 0 errors and that one warning in `modpack lint` and `modpack check-deps`.
+- **Not covered:** Admin → Modpack → Lock passes no jar cache, so it checks neither channels nor dependencies; its
+  log now says so. A mod's version filled in at build time and not in its manifest is not held to ranges.
+
+## Tried on test; `server-loaded.json` from the test server (2026-10-20, on `dev`, not on `main`)
+
+- **Alex, after the test server's start of pack `75b5d684` (15:01:49 UTC) and a PC on the Test section:** "it all
+  worked on the test".
+- **`modpack/server-loaded.json`** is now that start's list (143 files, 0 problems; with Season 1 shipped, as the test
+  server ships it), read from the test database's Setting `_serverMods`. CI's `check-sides` failed on `c7b60e6d` and
+  `9aafc4c3` because the old list (live's start of 2026-10-09) named Corpse 1.1.13, JEI 19.51, ModernFix 5.27.24 and
+  Placebo 9.9.3, which the lock no longer has. Locally: "sides OK". After the live deploy and Sync, refresh it from
+  live.
+- **`deploy/server-mods.sh` fixed** (it answered HTTP 403: it asked `/modpack/server-mods` as `x-user-id:
+  vps-session`, and admin routes read the caller's role from the database since `3e508307`). It now reads Setting
+  `_serverMods` from the database, read-only: `deploy/server-mods.sh` for live (`deepslate`), `deploy/server-mods.sh
+  test` for the test server (`deepslate_test`). No `fresh` any more: every start captures the list, and so does Sync's
+  check. Tried both: `test` gives the committed list byte for byte; `live` gave live's start of 15:14:49 UTC (111
+  files, the pack before this one).
+- **The CI failure on `4ac7c272`** was one test in `deps.test.ts` ("pinned to 26.5.0, as the fix did, Lock goes
+  through") running over its time limit (about 3 s); the next commit passed.
+
+## Sync starts the server too (2026-10-20, on `dev`, not on `main`)
+
+- **Why:** on test, the first Sync of pack `75b5d684` copied the new jars while the server was not running, so it did
+  not restart it; the second Sync found nothing to copy and did not either, and its check compared the pack with the
+  server's start before the copy ("7 of the pack's 92 server mods are not loaded", Aeronautics and Sable still listed).
+- **Now** (Alex: "the sync script should start the server too"; `afterSync`): running and mods changed → restart;
+  asleep → woken when the mods changed, and on the test server always; stopped → started on the test server, never on
+  live (stopped on purpose, 2026-10-09); starting, failed or unknown → left alone. A start returns `restartedAt`, so
+  the site waits for it and checks the mods as after a restart. `sync-restart.test.ts` rewritten for it. Needs new
+  `dev` images (api) and `sudo deploy/test-up.sh` before the test site does it.
+
+## Updates to newest releases, and the Extras (2026-10-20, on `dev`, not on `main`)
+
+- **What (Alex: "update the safe ones and the extras"):** pins moved to the newest NeoForge 1.21.1 release for Corpse
+  1.1.21 (`peeqqFlX`), Entity Culling 1.11.3 (`eieYbWYb`), ImmediatelyFast 1.6.15 (`EJzmEPZV`), ModernFix 5.27.26
+  (`7Jy58lnT`), JEI 19.64.0.455 (`iv3KiVkE`), Puzzles Lib 21.1.64 (`lATqZwtV`); unpinned Placebo 9.9.4 and Kotlin for
+  Forge 2.16.0 taken from the Lock. **JEI 19.64 needs MezzConfig**, a new library with beta builds only (0.6.8, both
+  sides). Extras: MakeUp 9.6, 3D Skin Layers 1.11.4, Falling Leaves 2.6.0, Particle Rain 4.0.2 (was a beta), Fresh
+  Animations 1.11.1 with EMF 3.3.12 and ETF 7.2.6; Iris, Sound Physics and Distant Horizons as they were.
+- **Kept back:** the quarry (Additional Enchanted Miner) stays at 21.1.164: our quarry-pause jar requires
+  `quarryplus [21.1.164,21.1.165)`, so 21.1.165 needs a new quarry-pause build first. Titanium stays at 4.0.50 (the
+  Lock would take the 4.0.51 beta). Sophisticated Backpacks and Core, Xaero's maps and Open Parties and Claims left
+  for their own careful step (docs/31 B-10; the Xaero's/OPAC pin of 2026-10-05).
+- **Lock:** with `data/private-jars` mounted, the dependency check read 104 of 105 jars (not Mowzie's, not on this
+  machine) and found no error. Pack `75b5d684`, 105 files; live, shipping no season, **`0.1.0+004cfefb`** (100); s1
+  105. Extras lock from the same run (only the extras above changed).
+- **Not seen yet, on test:** the server starting (JEI, Corpse, ModernFix, Puzzles Lib and the libraries are server
+  jars too), a PC updating, and the prisoner villager skin checked by eye with Fresh Animations 1.11.1 (docs/30 §11).
+
+## Create: Connected, The Factory Must Grow, Distant Horizons as an Extra (2026-10-20, on `dev`, not on `main`)
+
+- **Create Aeronautics and Sable taken out again** (Alex): on the test PC the game refused to start, Simulated and
+  Sable wanting Flywheel 1.0.6 while PCs load Vanillin's 1.0.4 (docs/06). A weekly check watches Modrinth for a
+  Vanillin, Aeronautics or Sable that ends the clash.
+- **What (Alex):** Create: Connected and Create: The Factory Must Grow straight into
+  the pack, Distant Horizons 3.3.3 as the tenth Extra. Pollution of the Realms and Fullbright not taken; Power Grid
+  not taken (Crafts & Additions stays). TFMG's lead, nickel, aluminium and steel share `c:` tags with Immersive
+  Engineering's and Mekanism's, and their recipes take the tags; `deepslate-tools` makes TFMG's three steel cogwheel
+  and flywheel recipes take any steel. docs/06 "Create add-ons and Distant Horizons".
+- **Lock:** the entries and Create's `requiredBy` spliced in (Aeronautics and Sable since taken out); the extras lock is the old one plus Distant
+  Horizons (a full run also moved Kotlin for Forge, Placebo, Titanium and Particle Rain, left as they were). Pack hash
+  `18f2629f`, 104 files; live, shipping no season, **`0.1.0+222c2b4b`** (99); s1 104. Extras hash `2cd3234f` →
+  `85675a7b`, 10 extras, 37.0 MB. ship, pack-ship and extras tests re-pinned. Change log entry
+  `2026-10-20-create-addons`, not live.
+- **Not seen yet, on test:** the server and a PC starting with this pack, claims against a grenade or napalm, TFMG's three steel recipes taking another mod's steel, a PC updating (about 50 MB more), and Distant Horizons switched on from the app's Extras.
+
+## Animals and cosy mods (2026-10-20, on `dev`, not on `main`)
+
+- **What (Alex):** ten mods straight into the pack, none suggested: Naturalist, Critters and Companions, Friends &
+  Foes, Cosy Critters & Creepy Crawlies (client only), Let's Do Meadow and Vinery, Comforts, Fairy Lights, Amendments,
+  Twigs. Libraries: YACL, Architectury API (new), Moonlight (switched on). A votable category and a Mods guide topic
+  `animals`. Slugs, pins and reasons are docs/06 "Animals and cosy mods".
+- **Duplicates, two rounds the same day** (Alex: "drop the duplicated mods", then "drop those unnecessary duplicates,
+  keep the mods that have more in them"; counted from the jars): Fowl Play and Untitled Duck Mod out (with
+  SmartBrainLib and the `bothSides` override it needed); Sleep Tight out for Comforts (34 items to 21, with its
+  settings file); Let's Do Farm & Charm out for Farmer's Delight (226 items and 334 recipes to 139 and 221, 13 items
+  by the same name). One of each creature, all three mods kept: Friends & Foes' crab, Naturalist's snail and Critters
+  and Companions' dragonfly stay; Naturalist's crab and dragonfly are switched off by the server datapack
+  `deepslate-animals` (empty `naturalist:has_crab` / `has_dragonfly`), Critters and Companions' snail by
+  `modpack/server/config/crittersandcompanions-common.json5` (`snail: []`). Both read from the jars' code: those
+  tags and that list are the only way each mod spawns them.
+- **Lock:** the new entries only, plus `requiredBy` on GeckoLib, Resourceful Lib and Moonlight, spliced into the old
+  lock as before; a full run gives the same files and `requiredBy`, and also moves Kotlin for Forge, Placebo and
+  Titanium and the extras, left as they were. Hash `e58f7157` → `720a3a16`, 102 files; settings files as before.
+  Live, shipping no season: `0.1.0+b0691da0` (84 files) → **`0.1.0+5e951773`** (97). ship.test.ts, pack-ship.test.ts
+  and building.test.ts re-pinned (Fairy Lights is load M).
+- **Checks:** `deploy/check.sh` green (modpack 302, api 817, web 679); `modpack lint` 107 mods, 0 errors, the 4 old
+  warnings; `verify-links` 377 links, 0 failed. Change log entry `2026-10-20-animals-and-cosy`, not live.
+- **Not seen yet, on test:** a Build and Sync through api-test, the server starting with all of it (Create 6 recipe
+  errors from the Let's Do and Twigs recipes, mixin lines, spark before and after), a PC updating, a look at the Moon
+  for any new mob, and in new land no Naturalist crab or dragonfly and no Critters and Companions snail (the
+  datapack loads from the restart after Sync). Nothing on live.
+- **Still to know:** Meadow's Cookpot sits beside Farmer's Delight's cooking pot. More creature kinds share the same
+  spawn lists, and Naturalist takes farm animals out of savannas and swamps and pigs out of forests (its
+  `remove_spawns` modifiers), so vanilla cows, sheep and pigs get rarer in new land.
+
 ## Privacy and terms pages for the Discord app (2026-10-16, on `dev`, not on `main`)
 
 - **Why:** Alex asked what goes in the Discord app's four General Information address boxes. docs/22a §6 has the
@@ -2004,7 +2123,7 @@ Last updated 2026-10-10, latest: the test site's stripe stays at the top, on `de
 - **The fix:** both map mods pinned in `mods.json` to what ran until this morning: Minimap 26.5.0 (`Q1tuMQBB`), World Map 1.46.0 (`9Ckiihkz`). They are client-only, so no jar on the server changes. Chosen over raising Open Parties and Claims to 0.32.7: that one is on the server too, holds the claims, and came out the same morning (06:35 UTC).
 - **The lock was made by hand, not by Lock** (no Node on this machine, and Lock would have needed a deploy before it): the two entries are the ones of the lock before `84c84393`, taken from git, and the hash is `packHash`'s recipe run in Python, checked first by reproducing `84c84393` from the lock as it was. New pack: `0.1.0+350c292a`.
 - **After the deploy:** Admin → Modpack → Build, then Sync (no server mod changes, so no restart), so the server's recorded pack is `350c292a` and Play first lets people in.
-- **For later:** the pins hold the map mods back until Open Parties and Claims is moved to 0.32.x on purpose (server and PCs together, after a backup). And a Lock that takes a client mod needing a newer version of a pinned mod is not caught by anything: the lock tooling could read each jar's `neoforge.mods.toml` dependencies and refuse.
+- **For later:** the pins hold the map mods back until Open Parties and Claims is moved to 0.32.x on purpose (server and PCs together, after a backup). And a Lock that takes a client mod needing a newer version of a pinned mod is not caught by anything: the lock tooling could read each jar's `neoforge.mods.toml` dependencies and refuse. *(Built 2026-10-20: "Lock checks what the mods need of each other".)*
 
 ## Code review, and the control panel reorganised (2026-10-05; the review is docs only, the layout is on `dev`)
 

@@ -45,6 +45,7 @@ const TOPICS: Record<GuideTopic, { title: string; blurb: string }> = {
   building: { title: "Building and decoration", blurb: "Extra blocks and furniture for making a base look good." },
   factories: { title: "Factories and power", blurb: "Machines, power and automation." },
   farming: { title: "Farming and food", blurb: "Crops, cooking and meals." },
+  animals: { title: "Animals", blurb: "New animals out in the world, and a few you can tame or keep." },
   combat: { title: "Combat", blurb: "Guns and cannons." },
   bosses: { title: "Bosses and trials", blurb: "Big fights out in the world." },
 };

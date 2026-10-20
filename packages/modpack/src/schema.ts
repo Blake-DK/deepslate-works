@@ -17,7 +17,7 @@ export const GUIDE_SECTIONS = ["game", "helper", "behind"] as const;
 export type GuideSection = (typeof GUIDE_SECTIONS)[number];
 // topic (docs/52): the section of the guide a "game" mod is in, in this order. The guide's own grouping; `category` is
 // the vote's. Titles and blurbs are in apps/web/src/lib/mods-guide.ts.
-export const GUIDE_TOPICS = ["travel", "friends", "mining", "storage", "building", "factories", "farming", "combat", "bosses"] as const;
+export const GUIDE_TOPICS = ["travel", "friends", "mining", "storage", "building", "factories", "farming", "animals", "combat", "bosses"] as const;
 export type GuideTopic = (typeof GUIDE_TOPICS)[number];
 export const keySchema = z.object({ key: z.string().min(1).max(40), does: z.string().min(1).max(120) });
 export type KeyBind = z.infer<typeof keySchema>;

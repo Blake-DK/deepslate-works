@@ -297,6 +297,35 @@ export const CHANGES: Change[] = [
     date: "2026-10-16",
     lines: ["The site has a Privacy page and a Terms page, linked at the bottom of every page: what the site keeps about you and for how long, and how the server works. Anyone can open them, signed in or not."],
   },
+  {
+    // The animal and cosy mods, straight into the pack (Alex, 2026-10-20). Set `live: true` only after the live check
+    // (the rule above).
+    id: "2026-10-20-animals-and-cosy",
+    date: "2026-10-20",
+    title: "Animals and cosy things",
+    lines: [
+      "Lots of new animals: deer, bears, songbirds, ducks, otters, red pandas, the copper golem, the moobloom and many more. A few bite, so take care in swamps and by the sea. Most turn up in land nobody has been to yet.",
+      "Fairy lights to hang between fences, sleeping bags and hammocks, lanterns that hang on walls, carpet on stairs, and pebbles, twigs and new stone.",
+      "New farming: cheese from the mountain meadows, and grapes, apples and cherries to press into wine.",
+      "Crows, moths and spiders now come and go around you on your own screen. Main menu, Mods, Cosy Critters, Config switches off any of them.",
+      "The Mods page has an Animals section that says where to find them. Press Play to update.",
+    ],
+  },
+  {
+    // Create: Connected, The Factory Must Grow and the Distant Horizons extra (Alex, 2026-10-20; Create Aeronautics taken
+    // out again the same day, it would not load beside Vanillin). Set `live: true` only
+    // after the live check (the rule above).
+    id: "2026-10-20-create-addons",
+    date: "2026-10-20",
+    title: "More for Create",
+    lines: [
+      "Create: Connected: more parts for Create machines, like a battery that stores rotation, item silos, more gearboxes and clutches, and catalysts that give fans new jobs.",
+      "Create: The Factory Must Grow: heavy industry. Make steel in a blast furnace, pump oil and refine it into fuel for big engines, and make concrete, aluminium and plastic. Lead, nickel and steel from any mod work in its recipes.",
+      "New in the app's Extras: Distant Horizons shows land far past your render distance. Only for strong PCs; switch it on in Extras if yours is one.",
+      "Updated to their newest versions: JEI, Corpse and the speed-up mods, and in Extras the shaders, Fresh Animations, Particle Rain, Falling Leaves and 3D Skin Layers.",
+      "Press Play to update.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

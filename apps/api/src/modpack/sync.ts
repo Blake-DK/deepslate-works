@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import type { Env } from "../env.js";
-import type { Amp } from "../amp/client.js";
+import { AMP_STATE, type Amp } from "../amp/client.js";
 import { sshCommand } from "./ssh.js";
 import { jarChangeLines, jarChanges } from "./jar-changes.js";
 
@@ -22,10 +22,19 @@ function run(cmd: string, args: string[], timeoutMs: number): Promise<{ code: nu
   });
 }
 
-/** A Sync that changed the mods restarts the server only while it is running (AMP state 20). Stopped, asleep, starting,
- *  or not known: no Restart, which in AMP would start a stopped server. */
-export function restartAfterSync(stateCode: number | null | undefined): boolean {
-  return stateCode === 20;
+/**
+ * What a Sync does to the server once the files are there (Alex, 2026-10-20: "the sync script should start the server
+ * too"). Running (20): restarted when the mods changed. Asleep (45, 50): started, which wakes it, when the mods changed,
+ * and on the test server always. Stopped (0): started on the test server only; live is only ever stopped on purpose
+ * (the maintenance window of 2026-10-09), and a Sync then must not bring it up. Starting, stopping, failed or not known:
+ * left alone. AMP's Core.Start wakes a sleeping server as well as starting a stopped one (status/wake.ts).
+ */
+export type AfterSync = "restart" | "start" | "leave";
+export function afterSync(stateCode: number | null | undefined, modsChanged: boolean, testMode: boolean): AfterSync {
+  if (stateCode === 20) return modsChanged ? "restart" : "leave";
+  if (stateCode === 45 || stateCode === 50) return modsChanged || testMode ? "start" : "leave";
+  if (stateCode === 0) return testMode ? "start" : "leave";
+  return "leave";
 }
 
 export type SyncResult = { ok: boolean; lines: string[]; restarted: boolean; dryRun: boolean; modsChanged?: boolean; /** When Core.Restart was sent: the check waits for a start after it. */ restartedAt?: string };
@@ -88,24 +97,30 @@ export async function syncServer(env: Env, amp: Amp, opts: { dryRun?: boolean; b
   } catch {
     /* none built */
   }
-  // 3. restart if mods changed, and only a server that is running (2026-10-09: AMP's Restart starts a stopped server,
-  //    and a Sync while live is stopped on purpose must never start it; a sleeping one loads the mods when it wakes)
-  if (!modsChanged) {
-    lines.push("mods unchanged: the server keeps running, no restart");
-    return { ok: true, lines, restarted: false, dryRun, modsChanged };
-  }
+  // 3. restart, start or leave the server (afterSync above): a running one is restarted when the mods changed, a sleeping
+  //    one is woken to load them, and the test server is always left running; live, stopped on purpose, stays stopped
+  const testMode = env.TEST_MODE === "1";
   const code = env.AMP_MOCK === "1" ? 20 : await amp.getStatus().then((s) => s.stateCode ?? null).catch(() => null);
-  if (!restartAfterSync(code)) {
-    lines.push(`the server is not running (AMP state ${code ?? "unknown"}): not restarted; it loads the new mods at its next start, and every start is checked for missing mods`);
+  const next = afterSync(code, modsChanged, testMode);
+  if (next === "leave") {
+    if (code === 20) lines.push("mods unchanged: the server keeps running, no restart");
+    else if (code === 45 || code === 50) lines.push("mods unchanged and the server is asleep: it stays asleep");
+    else if (code === 0) lines.push(`the server is stopped: not started, as live is only ever stopped on purpose; ${modsChanged ? "it loads the new mods at its next start" : "the mods are up to date"} (Admin → Server → Start)`);
+    else lines.push(`the server is ${AMP_STATE[code ?? -1] ?? "in an unknown state"} (AMP state ${code ?? "unknown"}): not restarted or started; every start is checked for missing mods`);
     return { ok: true, lines, restarted: false, dryRun, modsChanged };
   }
   if (env.AMP_MOCK === "1") {
-    lines.push("AMP_MOCK=1: would restart the server");
+    lines.push(`AMP_MOCK=1: would ${next} the server`);
     return { ok: true, lines, restarted: true, dryRun, modsChanged };
   }
-  await opts.beforeRestart?.().catch(() => undefined); // a running pre-generation is paused and saved first
   const restartedAt = new Date().toISOString();
-  await amp.call("Core", "Restart");
-  lines.push("restarting the server to load the new mods…");
+  if (next === "restart") {
+    await opts.beforeRestart?.().catch(() => undefined); // a running pre-generation is paused and saved first
+    await amp.call("Core", "Restart");
+    lines.push("restarting the server to load the new mods…");
+  } else {
+    await amp.call("Core", "Start");
+    lines.push(modsChanged ? `starting the server (it was ${code === 0 ? "stopped" : "asleep"}) to load the new mods…` : `starting the test server (it was ${code === 0 ? "stopped" : "asleep"}), so it runs the pack as it is…`);
+  }
   return { ok: true, lines, restarted: true, dryRun, modsChanged, restartedAt };
 }

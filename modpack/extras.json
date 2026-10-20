@@ -162,6 +162,22 @@
         "entity_texture_features"
       ],
       "howTo": "In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch it on and press **Apply**. Nothing to set up: it brings Entity Model Features and Entity Texture Features with it."
+    },
+    {
+      "id": "distant-horizons",
+      "name": "Distant Horizons",
+      "description": "Shows land far past your render distance in lower detail. Needs a strong PC with plenty of memory.",
+      "fps": "High",
+      "projects": [
+        {
+          "slug": "distanthorizons",
+          "version": "9w34y8ai"
+        }
+      ],
+      "modIds": [
+        "distanthorizons"
+      ],
+      "howTo": "In the Deepslate Works app (the window that opens when you press Play), open **Extras**, switch it on and press **Apply**. Far land fills in around places you have been: the server doesn't send it, so new ground shows up once you've travelled near it. Main menu → **Mods** → **Distant Horizons** → **Config** sets the quality; turn it down if the game stutters."
     }
   ]
 }

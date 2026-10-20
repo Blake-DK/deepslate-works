@@ -51,6 +51,18 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Not covered:** Admin → Modpack → Lock passes no jar cache, so it checks neither channels nor dependencies; its
   log now says so. A mod's version filled in at build time and not in its manifest is not held to ranges.
 
+## Live on the new pack (2026-10-20, PR #87 deployed)
+
+- **Deployed:** PR #87 merged 15:45 UTC (`71e0bff1`), both containers on its images. Admin built the modpack at 16:08;
+  the server came up 16:09 on pack `0.1.0+004cfefb`: 138 files loaded, no mod missing. Alex's app updated to it at
+  16:10 and opened the launcher. `modpack/server-loaded.json` is now live's start (`deploy/server-mods.sh`).
+- **16 ERRORs at that start, all one kind:** Create: Connected's loot tables for its 16 Dye Depot fan catalysts name
+  items that exist only with the Dye Depot mod (not in the pack); its recipes and advancements for them have
+  `mod_loaded` conditions, the loot tables do not. `deepslate-tools` now carries the 16 as empty loot tables
+  (`pools: []`, condition `not mod_loaded dye_depot`). Server only; counts after the next start (or `/reload`).
+- **Change log:** `2026-10-20-animals-and-cosy` and `2026-10-20-create-addons` still without `live`: set it once a
+  PC has joined live on the new pack, then deploy; the bot posts them.
+
 ## Tried on test; `server-loaded.json` from the test server (2026-10-20, on `dev`, not on `main`)
 
 - **Alex, after the test server's start of pack `75b5d684` (15:01:49 UTC) and a PC on the Test section:** "it all

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-20T11:56:49.219Z",
+  "generatedAt": "2026-10-20T12:07:43.078Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "e0a098342c6caf40918020253b23bfcf04e861d84074a7a164941f1894f56f9f",
+  "hash": "4d76e87e689f4b829592a042eb41559bcd758cac811d3f4b971aafa4b1d909f4",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -437,6 +437,7 @@
         "create-big-cannons",
         "copycats",
         "create-connected",
+        "create-tfmg",
         "create-aeronautics"
       ],
       "modrinth": {
@@ -521,6 +522,26 @@
         "client": "required",
         "server": "required"
       }
+    },
+    {
+      "slug": "create-tfmg",
+      "name": "Create: The Factory Must Grow",
+      "projectId": "USgVjXsk",
+      "versionId": "uDi14nbt",
+      "versionNumber": "1.2.0",
+      "versionType": "release",
+      "filename": "tfmg-1.2.0.jar",
+      "url": "https://cdn.modrinth.com/data/USgVjXsk/versions/uDi14nbt/tfmg-1.2.0.jar",
+      "sha512": "03f2ad28c78ef565ef203c5650280acb0b846d6105dc5c84b2e31187f501be5c59733ef3adb623fbaa32c3233d113d608905259128661ffab06b26b270b1b38c",
+      "sha1": "b520f3687f60a69eb265ff5b9a16759b9e124103",
+      "size": 4924243,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "createaddition",

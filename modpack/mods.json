@@ -1781,6 +1781,41 @@
       "howTo": "Extra parts for Create, crafted like Create's own (JEI shows each one, search `@create_connected`). The **kinetic battery** stores rotation for later; the **item silo** and **fluid vessel** are a vault and a tank in other shapes; a **shear pin** or **overstress clutch** cuts a line before it overloads; an **empty fan catalyst** filled with a material gives an encased fan a new job. Hover over a part and hold **W** for Create's how-to scene where there is one."
     },
     {
+      "slug": "create-tfmg",
+      "name": "Create: The Factory Must Grow",
+      "category": "factories",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Heavy industry for Create: coke ovens and blast furnaces for steel, oil pumped up and refined into fuel, big engines, concrete, aluminium and plastic, and grenades and napalm.",
+      "note": "Needs Create",
+      "wiki": "https://modrinth.com/mod/create-tfmg",
+      "videos": [
+        {
+          "title": "Create: TFMG 1.0 Update - Comprehensive Tutorial (1.0.1b)",
+          "url": "https://www.youtube.com/watch?v=9_Hy6MyE0gA"
+        },
+        {
+          "title": "Cast Iron, Coal Coke, and Steel || Getting started with Create: The Factory Must Grow",
+          "url": "https://www.youtube.com/watch?v=Ey1bLKge-Cw"
+        },
+        {
+          "title": "Minecraft Create: The Factory Must Grow - Mod Showcase",
+          "url": "https://www.youtube.com/watch?v=TdQaRvqxMIc"
+        }
+      ],
+      "version": "uDi14nbt",
+      "requires": [
+        "create"
+      ],
+      "guide": "game",
+      "topic": "factories",
+      "howTo": "**Steel:** a **coke oven** turns coal into coal coke and creosote (slowly, so build a row). A **blast stove** burns the creosote into hot air for a **blast furnace**: a ring of fireproof bricks round a blast furnace output, with a hatch and reinforcements. Drop raw or crushed iron and **limesand** in the top and cast the molten steel into ingots in a **casting basin**. **Oil:** run industrial pipes down to a deposit, put a **pumpjack** on top and refine it in a **distillation tower**. **Engines** of up to five blocks burn the fuel for rotation. Lead, nickel and steel from any mod work in its recipes. Hover over a machine and hold **W** for its how-to scene."
+    },
+    {
       "slug": "create-aeronautics",
       "name": "Create Aeronautics",
       "category": "factories",

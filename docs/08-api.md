@@ -34,6 +34,7 @@ Every call carries `Authorization: Bearer <API_SERVICE_TOKEN>` and who is asking
 | GET | `/health` | tunnel, AMP, rsync |
 | GET | `/status` | the poller's last answer (at most 10 s old): `state`, `stateCode`, `availability` (`online`, `starting`, `sleeping`, `offline`), `players[]`, `online[{name, uuid, ping}]`, `maxPlayers`, `cpu`, `memMb`, `memMaxMb`, `tps`, `uptime`, `at`. Asks AMP itself when the poller's answer is older than 30 s |
 | GET | `/players` | who is on, who is held in the entrance room and why |
+| GET | `/discord/member/:id` | docs/04, sign-in through Authentik: `{member: true\|false\|null}`, whether that Discord ID is in the group's Discord server, asked by the bot. `null`: no bot (api-test), or Discord gave no clear answer (only Unknown Member and Unknown User are `false`). Service token only, no member needed; 30 a minute (`@fastify/rate-limit`); 400 for an id that is not digits |
 | POST | `/link/release` | somebody has linked: let them in (called by `web` when `/link/<code>` is confirmed) |
 | POST | `/player/revoke` | take somebody's way in away, and kick them if they are on |
 | GET | `/actions` | the names of the actions an admin may run |

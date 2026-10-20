@@ -7,10 +7,13 @@ import { db } from "@/server/db";
 import { audit } from "@/server/events";
 import { confirmOwnCode, hashAdminPassword, newRecoveryCodes, openSecret, removeAdminLogin, sealSecret, verifyAdminPassword } from "@/server/auth/admin-login";
 import { normaliseUsername, passwordProblem, USERNAME_RE } from "@/server/auth/password-policy";
+import { isOwner, OWNER_ONLY } from "@/server/auth/admin-core";
+import { env } from "@/env";
 import { newTotpSecret, verifyTotp } from "@/server/auth/totp";
 
 // Admin password sign-in (planner, 2026-10-01): set up and look after one's own. Nobody sets or sees another admin's
-// password; another admin can only turn it off (Admin → People).
+// password; another admin can only turn it off (Admin → People). Since 2026-10-20 (docs/04) only the owner sets it up:
+// it is the one break-glass login beside Authentik.
 
 export type FormState = { ok?: string; error?: string; codes?: string[]; done?: boolean };
 
@@ -20,6 +23,7 @@ const json = (v: unknown) => v as Prisma.InputJsonValue;
 
 export async function startSetup(_prev: FormState, fd: FormData): Promise<FormState> {
   const me = await requireAdmin();
+  if (!isOwner(me.discordId, env.ADMIN_DISCORD_ID)) return { error: OWNER_ONLY };
   const row = await db.adminLogin.findUnique({ where: { userId: me.id } });
   if (row?.enabled) return { error: "Password sign-in is already on." };
   const username = normaliseUsername(fd.get("username"));
@@ -38,6 +42,7 @@ export async function startSetup(_prev: FormState, fd: FormData): Promise<FormSt
 
 export async function confirmSetup(_prev: FormState, fd: FormData): Promise<FormState> {
   const me = await requireAdmin();
+  if (!isOwner(me.discordId, env.ADMIN_DISCORD_ID)) return { error: OWNER_ONLY };
   const row = await db.adminLogin.findUnique({ where: { userId: me.id } });
   const pending = openSecret(row?.pendingSecret ?? null);
   if (!row || row.enabled || !pending) return { error: "Start again from the top." };

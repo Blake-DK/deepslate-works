@@ -61,6 +61,7 @@ model User {
   displayName  String
   role         Role      @default(PLAYER)
   discordId    String?   @unique
+  authentikSub String?   @unique // docs/04: the Authentik user's `sub` (the provider's hashed user id), set at its first sign-in there
   email        String?   @unique // credentials fallback only
   passwordHash String?   // credentials fallback only
   mcUsername   String?   @unique // Minecraft Java username, set by the player

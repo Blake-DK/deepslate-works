@@ -10,7 +10,7 @@ import { revokeLauncherTokens } from "@/server/launcher";
 import { apiFetch } from "@/server/api-client";
 import { audit } from "@/server/events";
 import { onDemoted, removeAdminLogin } from "@/server/auth/admin-login";
-import { block, unblock } from "@/server/auth/blocked";
+import { block, isBlocked, unblock } from "@/server/auth/blocked";
 import { CHAT_RELAYS } from "@/shared/chat-relay";
 import { setTester, testerGone } from "@/server/testers";
 import { roleChangeData } from "@/lib/role-change";
@@ -194,6 +194,27 @@ export async function setMinecraftNameAction(formData: FormData) {
   await audit({ userId: admin.id, action: "user.setMinecraft", params: { id: parsed.data.id, mcUsername: lookup.name, mcUuid: lookup.uuid }, result: "OK" });
   revalidatePath("/admin/people");
   revalidatePath("/admin/joining");
+  revalidatePath("/players/[uuid]", "page");
+  redirect("/admin/people");
+}
+
+/**
+ * docs/04 (Alex, 2026-10-20): sign-in through Authentik finds an account by its Discord ID only, so a member without
+ * one (the old email sign-in's) is given it here before their first sign-in there. Only while the account has no
+ * Discord ID and has never signed in through Authentik; never one another member has or a blocked one.
+ */
+export async function setDiscordIdAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const parsed = z.object({ id: z.string().min(1), discordId: z.string().trim().regex(/^\d{17,20}$/) }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/admin/people?error=discord_id");
+  const { id, discordId } = parsed.data;
+  const u = await db.user.findUnique({ where: { id }, select: { displayName: true, discordId: true, authentikSub: true } });
+  if (!u || u.discordId || u.authentikSub) redirect("/admin/people?error=discord_set");
+  if (await db.user.findUnique({ where: { discordId }, select: { id: true } })) redirect("/admin/people?error=discord_taken");
+  if (await isBlocked(discordId)) redirect("/admin/people?error=discord_blocked");
+  await db.user.update({ where: { id }, data: { discordId } });
+  await audit({ userId: admin.id, action: "user.discordId", params: { id, displayName: u.displayName, discordId }, result: "OK" });
+  revalidatePath("/admin/people");
   revalidatePath("/players/[uuid]", "page");
   redirect("/admin/people");
 }

@@ -1,6 +1,7 @@
 // Edge-safe part of the Auth.js config: used by middleware. No database, no bcrypt.
 import type { NextAuthConfig } from "next-auth";
 import Discord from "next-auth/providers/discord";
+import type { OIDCConfig } from "next-auth/providers";
 import type { Role } from "@prisma/client";
 import type { SignInVia } from "@/next-auth";
 import { env } from "@/env";
@@ -27,18 +28,48 @@ export function sessionCookie(o: { testMode: boolean; secure: boolean; cookieDom
 }
 const cookies = sessionCookie({ testMode: env.TEST_MODE, secure, cookieDomain: env.COOKIE_DOMAIN });
 
+/** The id `authentik` is in the redirect URIs Authentik holds: <AUTH_URL>/api/auth/callback/authentik. */
+export const SSO_PROVIDER = "authentik";
+
+/**
+ * docs/04: sign-in through Authentik, where the member picks Discord or Microsoft. Authorization code with PKCE (S256),
+ * state and nonce. The id token comes straight from Authentik's token endpoint over TLS (client secret and PKCE
+ * verifier); its issuer, audience and nonce are checked. Scopes: `openid`, `profile` (a
+ * name only: Authentik's mapping for this provider leaves the groups out) and `deepslate` (`discord_id`,
+ * `deepslate_roles`, server/auth/sso-core.ts). No email.
+ */
+export function ssoProvider(e: { AUTHENTIK_ISSUER: string; AUTHENTIK_CLIENT_ID: string; AUTHENTIK_CLIENT_SECRET: string }): OIDCConfig<Record<string, unknown>> {
+  return {
+    id: SSO_PROVIDER,
+    name: "Discord or Microsoft",
+    type: "oidc",
+    issuer: e.AUTHENTIK_ISSUER,
+    clientId: e.AUTHENTIK_CLIENT_ID,
+    clientSecret: e.AUTHENTIK_CLIENT_SECRET,
+    checks: ["pkce", "state", "nonce"],
+    authorization: { params: { scope: "openid profile deepslate" } },
+    profile(p) {
+      const name = [p.name, p.preferred_username].find((v): v is string => typeof v === "string" && v.trim() !== "");
+      return { id: String(p.sub), name: name ?? null };
+    },
+  };
+}
+
 export const authConfig = {
   trustHost: true,
-  providers: env.discordEnabled
-    ? [
-        Discord({
-          clientId: env.DISCORD_CLIENT_ID,
-          clientSecret: env.DISCORD_CLIENT_SECRET,
-          issuer: "https://discord.com", // the iss Discord sends on its callback; the endpoints stay explicit, so no discovery
-          authorization: { params: { scope: env.DISCORD_GUILD_ID ? "identify guilds" : "identify" } },
-        }),
-      ]
-    : [],
+  providers: [
+    ...(env.ssoEnabled ? [ssoProvider(env)] : []),
+    ...(env.discordLogin
+      ? [
+          Discord({
+            clientId: env.DISCORD_CLIENT_ID,
+            clientSecret: env.DISCORD_CLIENT_SECRET,
+            issuer: "https://discord.com", // the iss Discord sends on its callback; the endpoints stay explicit, so no discovery
+            authorization: { params: { scope: env.DISCORD_GUILD_ID ? "identify guilds" : "identify" } },
+          }),
+        ]
+      : []),
+  ],
   pages: { signIn: "/login", error: "/login" },
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60, updateAge: 24 * 60 * 60 },
   ...(cookies ? { cookies } : {}),

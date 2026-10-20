@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { requireAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { openSecret, recoveryOf } from "@/server/auth/admin-login";
+import { isOwner } from "@/server/auth/admin-core";
 import { otpauthUrl } from "@/server/auth/totp";
 import { MIN_PASSWORD } from "@/server/auth/password-policy";
 import { env } from "@/env";
@@ -38,15 +39,24 @@ export default async function SignInSettingsPage() {
   const row = await db.adminLogin.findUnique({ where: { userId: me.id } });
   const pending = openSecret(row?.pendingSecret ?? null);
   const left = row ? recoveryOf(row.recovery).filter((r) => !r.usedAt).length : 0;
+  const owner = isOwner(me.discordId, env.ADMIN_DISCORD_ID);
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Password sign-in</h1>
         <p className="text-sm text-muted-foreground">
-          For admins, for the day Discord is down or your Discord account is gone. Username, password and a code from an authenticator app, all three every time. A session from it lasts 12 hours. Every sign-in this way shows on every admin&apos;s Home.
+          The owner&apos;s break-glass login, for the day sign-in through Discord or Microsoft is down. Username, password and a code from an authenticator app, all three every time. A session from it lasts 12 hours. Every sign-in this way shows on every admin&apos;s Home.
         </p>
       </div>
-      {!row?.enabled && !pending && (
+      {!owner && !row?.enabled && (
+        <Card data-testid="owner-only">
+          <CardHeader>
+            <CardTitle>Only the owner has one</CardTitle>
+            <CardDescription>Password sign-in is the owner&apos;s break-glass login, for the day sign-in through Discord or Microsoft is down. Every other admin signs in with Discord or Microsoft.</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+      {owner && !row?.enabled && !pending && (
         <Card>
           <CardHeader>
             <CardTitle>Set up password sign-in</CardTitle>

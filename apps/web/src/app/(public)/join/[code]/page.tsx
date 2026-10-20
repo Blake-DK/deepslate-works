@@ -8,7 +8,7 @@ import { inviteState, normaliseInviteCode } from "@/server/auth/invite-codes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { joinWithDiscord } from "./actions";
+import { joinWithDiscord, joinWithSso } from "./actions";
 import { getBranding } from "@/server/branding";
 import { CODE_RE } from "@/shared/join-code";
 
@@ -41,18 +41,28 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
         <Card>
           <CardHeader>
             <CardTitle>You&apos;re invited{invite?.note ? `, ${invite.note.replace(/^for\s+/i, "")}` : ""}</CardTitle>
-            <CardDescription>One tap and you&apos;re in. We only read your Discord name, nothing else.</CardDescription>
+            <CardDescription>{env.ssoEnabled ? "One tap and you're in. We only read your name and your Discord ID, nothing else." : "One tap and you're in. We only read your Discord name, nothing else."}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <form action={joinWithDiscord}>
-              <input type="hidden" name="code" value={code} />
-              <Button type="submit" size="lg" className="w-full" disabled={!env.discordEnabled}>Continue with Discord</Button>
-            </form>
-            {!env.discordEnabled && <p className="text-xs text-muted-foreground">Discord sign-in isn&apos;t set up yet. Use the email option below.</p>}
-            <p className="text-center text-sm">
-              <Link href={`/join/${code}/email`} className="text-muted-foreground underline">No Discord?</Link>
-            </p>
-          </CardContent>
+          {env.ssoEnabled ? (
+            <CardContent className="space-y-3">
+              <form action={joinWithSso} className="space-y-2">
+                <input type="hidden" name="code" value={code} />
+                <Button type="submit" size="lg" className="w-full" data-testid="sso-join">Continue with Discord or Microsoft</Button>
+                <p className="text-center text-xs text-muted-foreground">On the next page, press Discord. No Discord? Ask Alex for a Microsoft sign-in first.</p>
+              </form>
+            </CardContent>
+          ) : (
+            <CardContent className="space-y-3">
+              <form action={joinWithDiscord}>
+                <input type="hidden" name="code" value={code} />
+                <Button type="submit" size="lg" className="w-full" disabled={!env.discordLogin}>Continue with Discord</Button>
+              </form>
+              {!env.discordLogin && <p className="text-xs text-muted-foreground">Discord sign-in isn&apos;t set up yet. Use the email option below.</p>}
+              <p className="text-center text-sm">
+                <Link href={`/join/${code}/email`} className="text-muted-foreground underline">No Discord?</Link>
+              </p>
+            </CardContent>
+          )}
         </Card>
       )}
     </div>

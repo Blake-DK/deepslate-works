@@ -22,6 +22,13 @@ describe("sign-in outcomes", () => {
     expect(failedMethod(authError("OAuthProfileParseError"))).toBe("discord");
   });
 
+  it("docs/04: counts sign-in through Authentik as a method of its own, and a check without a provider as its once it is set up", () => {
+    expect(failedMethod(authError("CallbackRouteError", { err: new Error("discovery failed"), provider: "authentik" }))).toBe("authentik");
+    expect(failedMethod(authError("InvalidCheck"), "authentik")).toBe("authentik");
+    expect(failedMethod(authError("OAuthProfileParseError"), "authentik")).toBe("authentik");
+    expect(failedMethod(authError("AccessDenied", { provider: "authentik" }), "authentik")).toBeNull();
+  });
+
   it("does not count refusals or anything outside a sign-in", () => {
     for (const type of ["AccessDenied", "OAuthCallbackError", "CredentialsSignin", "MissingCSRF", "Verification", "JWTSessionError"]) {
       expect(failedMethod(authError(type, { provider: "discord" }))).toBeNull();
@@ -52,3 +59,14 @@ describe("sign-in outcomes", () => {
     expect(sent).toEqual([["/signin/outcome", { method: "discord", ok: true }]]);
   });
 });
+
+describe("the methods web reports and api takes", () => {
+  it("are the same list (api's body check is strict: a method it does not know is a 400, and the report is lost)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const api = readFileSync(new URL("../../api/src/status/signin-watch.ts", import.meta.url), "utf8");
+    const list = /export const SIGNIN_METHODS = \[([^\]]*)\]/.exec(api)?.[1]?.split(",").map((m) => m.trim().replace(/"/g, ""));
+    const { SIGNIN_METHODS } = await import("@/server/auth/signin-report");
+    expect(list).toEqual([...SIGNIN_METHODS]);
+  });
+});
+

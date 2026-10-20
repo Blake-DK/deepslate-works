@@ -13,6 +13,7 @@ export type LoginRecord = {
   userId: string;
   displayName: string;
   role: "ADMIN" | "PLAYER";
+  owner: boolean; // the owner's account (ADMIN_DISCORD_ID): the only one with password sign-in (docs/04, break-glass)
   enabled: boolean;
   passwordHash: string;
   totpSecret: string | null; // decrypted
@@ -40,6 +41,10 @@ export type SignInOutcome =
   | { ok: false; why: "locked" | "failed"; username: string; detail: string; lockedNow: boolean };
 
 /** What the sign-in form says for every failure but a lock: never which of the three was wrong. */
+/** docs/04 (Alex, 2026-10-20): password sign-in is the owner's break-glass login, and nobody else's. */
+export const isOwner = (discordId: string | null | undefined, ownerDiscordId: string) => Boolean(ownerDiscordId) && discordId === ownerDiscordId;
+export const OWNER_ONLY = "Password sign-in is the owner's break-glass login only. Sign in with Discord or Microsoft.";
+
 export const GENERIC_FAILURE = "That didn't work. Check the username, the password and the code, and try again.";
 export const LOCKED_MESSAGE = "Too many attempts. Wait 15 minutes, then try again.";
 
@@ -67,6 +72,7 @@ export async function checkAdminSignIn(input: SignInInput, deps: SignInDeps, loc
   }
   if (!(await deps.verifyPassword(rec.passwordHash, password))) return fail("wrong password");
   if (rec.role !== "ADMIN") return fail("not an admin");
+  if (!rec.owner) return fail("not the owner");
   if (!rec.enabled || !rec.totpSecret) return fail("password sign-in not switched on");
   if (!code) return fail("no code");
 

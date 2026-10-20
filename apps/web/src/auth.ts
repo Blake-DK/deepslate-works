@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { createHash } from "node:crypto";
-import { authConfig, SHORT_SESSION_MS, tokenExpired, type AppToken } from "@/auth.config";
+import { authConfig, SHORT_SESSION_MS, SSO_PROVIDER, tokenExpired, type AppToken } from "@/auth.config";
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { dummyVerifyPassword, verifyPassword } from "@/server/auth/password";
@@ -20,6 +20,7 @@ import { auditSignIn, countryOf, signInDeps } from "@/server/auth/admin-login";
 import { adminLockouts } from "@/server/auth/lockout";
 import { logAuthError, reportSignIn } from "@/server/auth/signin-report";
 import { testerGone } from "@/server/testers";
+import { ssoSignIn } from "@/server/auth/sso";
 
 class RateLimited extends CredentialsSignin {
   code = "rate_limited";
@@ -31,7 +32,7 @@ class AdminFailed extends CredentialsSignin {
   code = "admin_failed";
 }
 
-const VIA: Record<string, NonNullable<AppToken["via"]>> = { discord: "discord", credentials: "email", "admin-password": "password", "one-time-link": "link" };
+const VIA: Record<string, NonNullable<AppToken["via"]>> = { [SSO_PROVIDER]: "sso", discord: "discord", credentials: "email", "admin-password": "password", "one-time-link": "link" };
 
 /**
  * Discord `guilds` scope: list the user's servers and look for ours. Three answers (docs/35 R-12): true, false, and
@@ -56,39 +57,43 @@ async function isGuildMember(accessToken: string | undefined, guildId: string): 
 
 const credentialsSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
+const memberEmailLogin = Credentials({
+  credentials: { email: {}, password: {} },
+  async authorize(raw) {
+    const parsed = credentialsSchema.safeParse(raw);
+    if (!parsed.success) return null;
+    const email = parsed.data.email.toLowerCase();
+    const ip = await clientIp();
+    if (!loginLimiter.allow(ip)) {
+      await audit({ action: "auth.login", params: { email, ip }, result: "DENIED", detail: "rate limited" });
+      throw new RateLimited();
+    }
+    const user = await db.user.findUnique({ where: { email } });
+    const hash = user?.passwordHash;
+    const ok = hash ? await verifyPassword(parsed.data.password, hash) : false;
+    if (!hash) await dummyVerifyPassword(parsed.data.password);
+    if (!user || !ok) {
+      await audit({ action: "auth.login", params: { email, ip }, result: "DENIED", detail: "bad credentials" });
+      return null;
+    }
+    // docs/31 B-35: an admin never signs in by email and password alone (docs/04: "no password-only path").
+    // An email-fallback member who was made admin uses Discord, or the admin sign-in with its code.
+    if (user.role === "ADMIN") {
+      await audit({ userId: user.id, action: "auth.login", params: { email, ip }, result: "DENIED", detail: "admin by email and password" });
+      return null;
+    }
+    await touchLastSeen(user.id);
+    return { id: user.id, name: user.displayName };
+  },
+});
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
     ...authConfig.providers,
-    Credentials({
-      credentials: { email: {}, password: {} },
-      async authorize(raw) {
-        const parsed = credentialsSchema.safeParse(raw);
-        if (!parsed.success) return null;
-        const email = parsed.data.email.toLowerCase();
-        const ip = await clientIp();
-        if (!loginLimiter.allow(ip)) {
-          await audit({ action: "auth.login", params: { email, ip }, result: "DENIED", detail: "rate limited" });
-          throw new RateLimited();
-        }
-        const user = await db.user.findUnique({ where: { email } });
-        const hash = user?.passwordHash;
-        const ok = hash ? await verifyPassword(parsed.data.password, hash) : false;
-        if (!hash) await dummyVerifyPassword(parsed.data.password);
-        if (!user || !ok) {
-          await audit({ action: "auth.login", params: { email, ip }, result: "DENIED", detail: "bad credentials" });
-          return null;
-        }
-        // docs/31 B-35: an admin never signs in by email and password alone (docs/04: "no password-only path").
-        // An email-fallback member who was made admin uses Discord, or the admin sign-in with its code.
-        if (user.role === "ADMIN") {
-          await audit({ userId: user.id, action: "auth.login", params: { email, ip }, result: "DENIED", detail: "admin by email and password" });
-          return null;
-        }
-        await touchLastSeen(user.id);
-        return { id: user.id, name: user.displayName };
-      },
-    }),
+    // The members' email and password sign-in (the invite's "No Discord?"): only while Authentik is not set up. With
+    // it, someone without Discord signs in there with Microsoft (docs/04).
+    ...(env.ssoEnabled ? [] : [memberEmailLogin]),
     // Admins only (planner, 2026-10-01): username + password + authenticator code (or a recovery code), all three.
     Credentials({
       id: "admin-password",
@@ -131,6 +136,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     ...authConfig.callbacks,
     async signIn({ user, account, profile }) {
+      if (account?.provider === SSO_PROVIDER) return ssoSignIn(profile);
       if (account?.provider !== "discord") return true;
       const discordId = account.providerAccountId;
       // docs/31 B-37: removed and blocked by an admin. Refused before the guild is asked and before any account is made.
@@ -222,14 +228,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const dbUser =
           account?.provider === "discord"
             ? await db.user.findUnique({ where: { discordId: account.providerAccountId }, include })
-            : await db.user.findUnique({ where: { id: user.id! }, include });
+            : account?.provider === SSO_PROVIDER
+              ? await db.user.findUnique({ where: { authentikSub: account.providerAccountId }, include })
+              : await db.user.findUnique({ where: { id: user.id! }, include });
         if (!dbUser) return null;
         const t = token as AppToken;
         t.uid = dbUser.id;
         t.role = dbUser.role;
         t.sv = dbUser.sessionVersion;
         t.via = VIA[account?.provider ?? ""] ?? "email";
-        if (t.via === "password" || t.via === "link") t.until = Date.now() + SHORT_SESSION_MS;
+        // docs/04: an admin's Authentik session lasts 12 hours too, so leaving deepslate-admins counts within a day
+        if (t.via === "password" || t.via === "link" || (t.via === "sso" && dbUser.role === "ADMIN")) t.until = Date.now() + SHORT_SESSION_MS;
         if (t.via === "password") t.pa = dbUser.adminLogin?.passwordAt.getTime();
       }
       return token;

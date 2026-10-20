@@ -11,6 +11,14 @@ export const env = {
   ADMIN_DISCORD_ID: str("ADMIN_DISCORD_ID"),
   DISCORD_GUILD_ID: str("DISCORD_GUILD_ID"),
   DISCORD_GUILD_AUTO_JOIN: str("DISCORD_GUILD_AUTO_JOIN", "0") === "1",
+  // docs/04: sign-in through Authentik (Discord or Microsoft there). All three set: the sign-in pages offer it, and the
+  // members' email and password sign-in is gone. The issuer is the provider's own, with its trailing slash.
+  AUTHENTIK_ISSUER: str("AUTHENTIK_ISSUER"),
+  AUTHENTIK_CLIENT_ID: str("AUTHENTIK_CLIENT_ID"),
+  AUTHENTIK_CLIENT_SECRET: str("AUTHENTIK_CLIENT_SECRET"),
+  // The site's own Discord sign-in: unset, it is on only while Authentik is not set up; "1" keeps it on beside
+  // Authentik (a small second button), "0" turns it off.
+  DISCORD_DIRECT_LOGIN: str("DISCORD_DIRECT_LOGIN"),
   API_URL: str("API_URL"),
   API_SERVICE_TOKEN: str("API_SERVICE_TOKEN"),
   MANIFEST_KEY: str("MANIFEST_KEY"),
@@ -35,6 +43,13 @@ export const env = {
   isProd: process.env.NODE_ENV === "production",
   get discordEnabled() {
     return Boolean(this.DISCORD_CLIENT_ID && this.DISCORD_CLIENT_SECRET);
+  },
+  get ssoEnabled() {
+    return Boolean(this.AUTHENTIK_ISSUER && this.AUTHENTIK_CLIENT_ID && this.AUTHENTIK_CLIENT_SECRET);
+  },
+  /** The site's own Discord sign-in (the provider and its button). */
+  get discordLogin() {
+    return this.discordEnabled && (this.DISCORD_DIRECT_LOGIN === "1" || (this.DISCORD_DIRECT_LOGIN !== "0" && !this.ssoEnabled));
   },
   get secureCookies() {
     return this.AUTH_URL.startsWith("https://");

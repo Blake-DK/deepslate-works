@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { signIn } from "@/auth";
+import { SSO_PROVIDER } from "@/auth.config";
 import { env } from "@/env";
 import { findValidInvite } from "@/server/auth/invites";
 import { createUser } from "@/server/auth/users";
@@ -13,15 +14,29 @@ import { inviteLimiter } from "@/server/auth/rate-limit";
 import { clientIp } from "@/server/auth/request";
 import { db } from "@/server/db";
 
-export async function joinWithDiscord(formData: FormData) {
+/** The invite goes into a short-lived cookie that the sign-in reads (auth.ts, server/auth/sso.ts), then off to sign in. */
+async function holdInvite(formData: FormData) {
   const code = String(formData.get("code") ?? "");
   const invite = await findValidInvite(code);
   if (!invite) redirect(`/join/${encodeURIComponent(code)}`);
-  if (!env.discordEnabled) redirect(`/join/${invite.code}/email?error=discord-off`);
   const jar = await cookies();
   jar.set(INVITE_COOKIE, invite.code, {
     httpOnly: true, sameSite: "lax", secure: env.secureCookies, path: "/", maxAge: INVITE_COOKIE_MAX_AGE,
   });
+  return invite;
+}
+
+/** docs/04: through Authentik, with Discord or Microsoft. */
+export async function joinWithSso(formData: FormData) {
+  if (!env.ssoEnabled) redirect(`/join/${encodeURIComponent(String(formData.get("code") ?? ""))}`);
+  await holdInvite(formData);
+  await signIn(SSO_PROVIDER, { redirectTo: "/onboarding" });
+}
+
+export async function joinWithDiscord(formData: FormData) {
+  const code = String(formData.get("code") ?? "");
+  if (!env.discordLogin) redirect(env.ssoEnabled ? `/join/${encodeURIComponent(code)}` : `/join/${encodeURIComponent(code)}/email?error=discord-off`);
+  await holdInvite(formData);
   await signIn("discord", { redirectTo: "/onboarding" });
 }
 
@@ -33,8 +48,9 @@ const registerSchema = z.object({
 });
 
 export async function registerWithEmail(formData: FormData) {
-  const parsed = registerSchema.safeParse(Object.fromEntries(formData));
   const code = String(formData.get("code") ?? "");
+  if (env.ssoEnabled) redirect(`/join/${encodeURIComponent(code)}`); // gone with Authentik (docs/04)
+  const parsed = registerSchema.safeParse(Object.fromEntries(formData));
   const back = (err: string): never => redirect(`/join/${encodeURIComponent(code)}/email?error=${err}`);
   if (!parsed.success) return back(parsed.error.issues[0]?.message ?? "form");
   const input = parsed.data;

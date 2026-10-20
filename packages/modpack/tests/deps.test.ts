@@ -162,7 +162,7 @@ const xaero = async (minimap: string, worldmap: string, opacFrom: string) => {
 // 2026-10-20: Create 6.0.10 carries Flywheel 1.0.6 as dev.engine-room.flywheel:flywheel-neoforge-1.21.1, Vanillin
 // 1.1.3 carries Flywheel 1.0.4 as dev.engine-room.flywheel:neoforge: two identifiers, so both are candidates, and PCs
 // loaded 1.0.4. Create Aeronautics' nested Simulated requires flywheel [1.0.6,) on the client, Sable takes it optionally.
-const flywheelCase = async (withVanillin = true) => {
+const flywheelCase = async (withVanillin = true, withAeronautics = true) => {
   const flywheel = (v: string) => jar([{ id: "flywheel", version: v, deps: [["minecraft", "required", "[1.21.1,1.21.2)", "CLIENT"], ["neoforge", "required", "[21.1.66,)", "CLIENT"], ["sodium", "optional", "[0.6.0-beta.2,)", "CLIENT"]] }]);
   const simulated = await jar([{ id: "simulated", version: "1.3.2", deps: [["create", "required", "[6.0.10,)", "BOTH"], ["flywheel", "required", "[1.0.6,)", "CLIENT"], ["sable", "required", "[2.0.0,3.0.0)", "BOTH"]] }]);
   const files: Array<[LockEntry, Buffer]> = [
@@ -171,6 +171,7 @@ const flywheelCase = async (withVanillin = true) => {
     [entry("sable", "both"), await jar([{ id: "sable", version: "2.0.6", deps: [["flywheel", "optional", "[1.0.6,)", "CLIENT"], ["create", "optional", "[6.0.10,6.1.0)", "CLIENT"], ["sodium", "incompatible", "(,0.8.12-alpha.2+mc1.21.1)"]] }])],
     [entry("sodium", "client"), await jar([{ id: "sodium", version: "0.8.13+mc1.21.1" }])],
   ];
+  if (!withAeronautics) files.splice(1, 2); // Create Aeronautics and Sable
   if (withVanillin) files.push([entry("flw-vanillin", "client"), await jar([{ id: "vanillin", version: "1.1.3", deps: [["flywheel", "required", "[1.0.0,2.0)", "CLIENT"]] }], [{ group: "dev.engine-room.flywheel", artifact: "neoforge", range: "[1.0.4,)", version: "1.0.4", path: "META-INF/jars/flywheel-neoforge-1.21.1-1.0.4.jar", jar: await flywheel("1.0.4") }])]);
   return files;
 };
@@ -195,6 +196,11 @@ describe("checkPackDependencies: the two packs that passed Lock and failed on ev
   });
   it("without Vanillin it passes: one Flywheel, and the server never had Vanillin's", async () => {
     expect(await pack(await flywheelCase(false))).toEqual([]);
+  });
+  it("Create and Vanillin alone (live since October): both take flywheel [1.0.0,2.0), so the two Flywheels are a warning, not an error", async () => {
+    expect(await pack(await flywheelCase(true, false))).toEqual([
+      { level: "warn", message: "on PCs: flywheel comes in 2 versions, and which one loads is not certain: 1.0.6 (create > flywheel-neoforge-1.21.1-1.0.6.jar, as dev.engine-room.flywheel:flywheel-neoforge-1.21.1) and 1.0.4 (flw-vanillin > flywheel-neoforge-1.21.1-1.0.4.jar, as dev.engine-room.flywheel:neoforge); every mod that names it takes each" },
+    ]);
   });
 });
 

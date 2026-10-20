@@ -157,7 +157,7 @@ It then works out what loads, separately for PCs (everything but server-only) an
 - a required dependency is missing, or one of its versions that may load is outside the range;
 - an optional one is there in a version outside the range (the Xaero case: NeoForge refuses that too);
 - an incompatible one is there in range;
-- one mod id comes in two versions under two jar-in-jar identifiers: which loads is not certain, so both sources are named (Flywheel 1.0.6 in Create as `dev.engine-room.flywheel:flywheel-neoforge-1.21.1`, 1.0.4 in Vanillin as `dev.engine-room.flywheel:neoforge`; PCs loaded 1.0.4), and every such version is held to each range;
+- one mod id comes in two versions under two jar-in-jar identifiers and a range refuses one of them. Which version loads is not certain (Flywheel 1.0.6 in Create as `dev.engine-room.flywheel:flywheel-neoforge-1.21.1`, 1.0.4 in Vanillin as `dev.engine-room.flywheel:neoforge`; PCs loaded 1.0.4), so every such version is held to each range, and the error names both sources. When every range takes each version, the two versions are a warning (Create and Vanillin alone both take `flywheel [1.0.0,2.0)`; live has run on that since October);
 - two jars in the mods folder have one mod id, or no copy of a jar-in-jar library fits every carrier's range.
 
 A discouraged dependency in range is a warning. A jar that could not be read (a private jar not on this machine) is named, and a required mod missing then is a warning, not an error. Only Lock with a jar cache runs the check: the CLI's `modpack lock` does; Admin → Modpack → Lock passes none and says in its log that nothing was looked into.

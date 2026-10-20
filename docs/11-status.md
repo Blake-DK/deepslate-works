@@ -43,6 +43,11 @@ say live is stopped, held or to be trimmed in place, this section wins.
   requires `flywheel [1.0.6,)`; Sable 2.0.6 works with `[1.0.6,)` only. Nothing on the server, and nothing else. So
   **`modpack lock` refuses this pack until the Flywheel clash is fixed**, and `modpack lint` with the jars at hand
   exits 1. It is not fixed here: that is a pack decision.
+- **The same day, the two-versions rule eased:** two versions of one mod id are an error only when a range refuses
+  one of them; when every range takes each, they are a warning that still names both sources. Create and Vanillin
+  alone (live since October, both `flywheel [1.0.0,2.0)`) give that warning and no error. With Create Aeronautics and
+  Sable in, the three errors above stand. They were taken out the same day (`4ac7c272`): `dev`'s lock `18f2629f`
+  (104 jars, every one read) gives 0 errors and that one warning in `modpack lint` and `modpack check-deps`.
 - **Not covered:** Admin → Modpack → Lock passes no jar cache, so it checks neither channels nor dependencies; its
   log now says so. A mod's version filled in at build time and not in its manifest is not held to ranges.
 

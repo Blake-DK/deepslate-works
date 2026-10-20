@@ -432,8 +432,10 @@ const label = (p: Provided) => `${p.version ?? "(version not given)"} (${p.sourc
  * One set of jars as one game loads them (`client`: a PC; `server`: the server). Which copy of each jar-in-jar
  * library loads is NeoForge's choice: per jar-in-jar identifier (group:artifact) the newest version every jar
  * carrying it accepts; a mod in the mods folder itself wins over any jar-in-jar copy of it. The same mod id under
- * two identifiers in two versions is a problem of its own (Create's Flywheel 1.0.6 as `…:flywheel-neoforge-1.21.1`
- * and Vanillin's 1.0.4 as `…:neoforge`: PCs loaded 1.0.4), and every version that may load is held to each range.
+ * two identifiers in two versions may load as either (Create's Flywheel 1.0.6 as `…:flywheel-neoforge-1.21.1` and
+ * Vanillin's 1.0.4 as `…:neoforge`: PCs loaded 1.0.4), so every such version is held to each range, and the two
+ * versions are named as an error when a range refuses one of them, as a warning when every range takes each (Create
+ * and Vanillin alone both take flywheel [1.0.0,2.0), and live has run on that since October).
  */
 export function checkJarSet(files: Array<{ slug: string; jar: JarMods | null }>, game: Game, side: "client" | "server"): DepProblem[] {
   const problems: DepProblem[] = [];
@@ -493,9 +495,14 @@ export function checkJarSet(files: Array<{ slug: string; jar: JarMods | null }>,
       loaded.push({ mod, source: chosen.source });
     }
   }
+  // a warning until a range refuses one of the versions (below), then an error
+  const twoVersions = new Map<string, DepProblem>();
   for (const [modId, list] of provided) {
     const versions = new Set(list.map((p) => p.version));
-    if (versions.size > 1 && !topLevel.has(modId)) error(`${modId} comes in ${versions.size} versions, and which one loads is not certain: ${list.map(label).join(" and ")}`);
+    if (versions.size < 2 || topLevel.has(modId)) continue;
+    const p: DepProblem = { level: "warn", message: `${modId} comes in ${versions.size} versions, and which one loads is not certain: ${list.map(label).join(" and ")}` };
+    problems.push(p);
+    twoVersions.set(modId, p);
   }
   // NeoForge and Minecraft are there whatever the jars say
   if (!provided.has("minecraft")) provided.set("minecraft", [{ version: game.minecraft, source: "Minecraft" }]);
@@ -523,16 +530,22 @@ export function checkJarSet(files: Array<{ slug: string; jar: JarMods | null }>,
         else error(`${who} requires ${dep.modId} ${shown}, which is not in the pack`);
         continue;
       }
+      const refused = (message: string) => {
+        error(message);
+        const two = twoVersions.get(dep.modId);
+        if (two) two.level = "error";
+      };
       for (const p of have) {
         if (p.version === null) continue; // nothing to hold it to
         const fits = inRange(range, p.version) || (dep.modId === "minecraft" && (MINECRAFT_ALSO[p.version] ?? []).some((v) => inRange(range, v)));
-        if (dep.type === "required" && !fits) error(`${who} requires ${dep.modId} ${shown}, but the pack has ${dep.modId} ${label(p)}`);
-        if (dep.type === "optional" && !fits) error(`${who} works with ${dep.modId} ${shown} only, but the pack has ${dep.modId} ${label(p)}`);
-        if (dep.type === "incompatible" && fits) error(`${who} is incompatible with ${dep.modId} ${shown}, and the pack has ${dep.modId} ${label(p)}`);
+        if (dep.type === "required" && !fits) refused(`${who} requires ${dep.modId} ${shown}, but the pack has ${dep.modId} ${label(p)}`);
+        if (dep.type === "optional" && !fits) refused(`${who} works with ${dep.modId} ${shown} only, but the pack has ${dep.modId} ${label(p)}`);
+        if (dep.type === "incompatible" && fits) refused(`${who} is incompatible with ${dep.modId} ${shown}, and the pack has ${dep.modId} ${label(p)}`);
         if (dep.type === "discouraged" && fits) warn(`${who} discourages ${dep.modId} ${shown}, and the pack has ${dep.modId} ${label(p)}`);
       }
     }
   }
+  for (const p of twoVersions.values()) if (p.level === "warn") p.message += "; every mod that names it takes each";
   return problems;
 }
 
@@ -551,6 +564,7 @@ export function checkPackDependencies(lock: Pick<LockFile, "files" | "minecraft"
       const set = files.filter((f) => (side === "client" ? f.side !== "server" : f.side !== "client"));
       for (const p of checkJarSet(set.map((f) => ({ slug: f.slug, jar: jars.get(f.filename) ?? null })), lock, side)) {
         const s = seen.get(p.message) ?? { level: p.level, sides: new Set(), variants: new Set() };
+        if (p.level === "error") s.level = "error";
         s.sides.add(side);
         s.variants.add(v);
         seen.set(p.message, s);

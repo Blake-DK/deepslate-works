@@ -15,13 +15,15 @@ and no second bot comes online. The cutover removes that line.
 
 | File | What it is |
 |---|---|
-| `docker-compose.yml` | The home stack: postgres, caddy, web, api, one map relay, backups, geoipupdate (profile `geoip`) and the test pair (profile `test`, not wired up yet). Four networks named for the host's firewall: `ds-edge` (external, shared with the site's newt), `ds-web`, `ds-amp`, `ds-internal` |
+| `docker-compose.yml` | The home stack: the site's newt, postgres, caddy, web, api, one map relay, backups, geoipupdate (profile `geoip`) and the test pair (profile `test`, not wired up yet). Four networks named for the host's firewall: `ds-edge` (made once before the stack, so it outlives a `compose down`), `ds-web`, `ds-amp`, `ds-internal` |
 | `Caddyfile` | The stack's own Caddy on :80 behind the newt: the site, the map (login enforced by the portal) and the test site, host names from `.env`; trusts forwarded headers from `ds-edge` only and passes one `X-Forwarded-For` on |
 | `.env.example` | Every variable the home stack reads. Copy to `deploy/home/.env` (git-ignored) and replace every `replace-me-...` and all-zero id |
 | `deploy.sh` | The one way to deploy; `check.sh` runs the checks from this folder (`../check.sh`) |
 
-What runs apart: the site's newt (`deepslate-newt`, its own stack on `ds-edge`), and the host's `deepslate-firewall`
-service, which gates the four networks by bridge name. The newt's credentials never enter this checkout.
+What runs apart: the host's `deepslate-firewall` service, which gates the four networks by bridge name. The newt
+(`deepslate-newt`, the service `newt`) is Pangolin's tunnel client for the site `deepslate`: its id and secret are
+`NEWT_ID` and `NEWT_SECRET` in `.env`, with the stack's other secrets. Until 2026-10-23 it ran as a stack of its own
+under Dockhand; now one `deploy.sh` starts, updates and stops everything the site needs.
 
 ## Where things live
 
@@ -38,7 +40,7 @@ First time (after the folders and the network exist: docker-01v's L3 made both):
 
 ```
 cd /data/stacks/deepslate                      # the checkout, owned by the deploy user (uid 1000)
-cp deploy/home/.env.example deploy/home/.env   # fill it in; the newt's id and secret are NOT here (they are the newt stack's)
+cp deploy/home/.env.example deploy/home/.env   # fill it in, the newt's id and secret included (Pangolin → Sites → deepslate)
 docker login ghcr.io                           # once, a token with read:packages
 sudo deploy/home/deploy.sh
 ```

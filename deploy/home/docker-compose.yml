@@ -1,10 +1,10 @@
 # Deepslate Works on docker-01v (planner doc 62): the home stack, published through Pangolin.
 #
-# No WireGuard: api reaches the AMP host over the LAN. No published ports, no Docker socket. The site's newt is not
-# here: it runs as its own stack (deepslate-newt) on the external network ds-edge, where it meets deepslate-caddy by
-# that name. deepslate-firewall on the host gates the four networks by their bridge names (ds-edge, ds-web, ds-amp,
-# ds-internal), so the names below are part of the contract:
-#   ds-edge      caddy (and the newt): Pangolin's tunnel only            ds-amp       api, the map relay: the AMP host's
+# No WireGuard: api reaches the AMP host over the LAN. No published ports, no Docker socket. The site's newt (Pangolin's
+# tunnel client) is the service `newt` below, on the network ds-edge, where it meets deepslate-caddy by that name.
+# deepslate-firewall on the host gates the four networks by their bridge names (ds-edge, ds-web, ds-amp, ds-internal),
+# so the names below are part of the contract:
+#   ds-edge      the newt and caddy: Pangolin's tunnel only              ds-amp       api, the map relay: the AMP host's
 #   ds-web       caddy, web, the map relay: public https only                          four ports and the internet
 #   ds-internal  web, api, postgres, backups: no outside access at all
 #
@@ -23,7 +23,7 @@ x-logging: &logging
 
 networks:
   ds-edge:
-    external: true                      # made before the stack (docker network create, bridge ds-edge), shared with the newt
+    external: true                      # made once before the stack (docker network create, bridge ds-edge): it outlives a compose down
   ds-web:
     driver_opts:
       com.docker.network.bridge.name: ds-web
@@ -59,6 +59,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  # Pangolin's tunnel client for the site "deepslate" (planner doc 62 §2): it connects out to PANGOLIN_ENDPOINT and hands
+  # the site's resources to deepslate-caddy:80. Only on ds-edge, whose firewall rules allow exactly that tunnel. No Docker
+  # socket, no published ports. Its id and secret live in deploy/home/.env with the stack's other secrets (a new pair
+  # comes from the site's page in Pangolin). Until 2026-10-23 it was a stack of its own under Dockhand.
+  newt:
+    image: fosrl/newt:1.19.0@sha256:0189c8287058b800cca825590e4c39946b3815344ca48678dd0b96616d639319
+    container_name: deepslate-newt
+    restart: unless-stopped
+    logging: *logging
+    mem_limit: 64m
+    cpus: "0.5"
+    networks: [ds-edge]
+    environment:
+      NEWT_ID: ${NEWT_ID:?NEWT_ID is the Pangolin site's newt id; set it in deploy/home/.env}
+      NEWT_SECRET: ${NEWT_SECRET:?NEWT_SECRET is the Pangolin site's newt secret; set it in deploy/home/.env}
+      PANGOLIN_ENDPOINT: ${PANGOLIN_ENDPOINT:?PANGOLIN_ENDPOINT is Pangolin's https address; set it in deploy/home/.env}
+    security_opt:
+      - no-new-privileges:true
 
   # The stack's own reverse proxy, plain http on :80 for the newt (Pangolin's Traefik terminates TLS). It trusts only
   # ds-edge for the visitor's address and passes exactly one X-Forwarded-For on to web (deploy/home/Caddyfile).

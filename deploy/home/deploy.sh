@@ -10,7 +10,8 @@
 #
 # docs/31 B-08: the images are the ones of this commit, never the moving `latest`. A commit that changed only docs has
 # no images: it runs those of the last commit that changed code. Derived from deploy/deploy.sh (2026-10-23): no
-# WireGuard, no Dockhand mirror, no designer; two roots (DEEPSLATE_DIR, DEEPSLATE_DATA); the geoip profile.
+# WireGuard, no Dockhand mirror, no designer; two roots (DEEPSLATE_DIR, DEEPSLATE_DATA); the geoip profile; the site's
+# newt is a service of the stack.
 set -euo pipefail
 
 cd "$(dirname "$(readlink -f "$0")")/../.."
@@ -67,6 +68,9 @@ Remove it before deploying. Nothing was deployed."
 check_git_guards
 
 grep -Eq '^GHCR_OWNER=[a-z0-9-]+$' "$ENV_FILE" || die "set GHCR_OWNER in $ENV_FILE (GitHub owner, lower case)"
+# the newt (the stack's Pangolin tunnel client) has no default for these; without them the site is not reachable
+for v in NEWT_ID NEWT_SECRET; do grep -Eq "^$v=.+" "$ENV_FILE" || die "set $v in $ENV_FILE (the Pangolin site's newt credentials)"; done
+grep -Eq '^PANGOLIN_ENDPOINT=https://[A-Za-z0-9.-]+$' "$ENV_FILE" || die "set PANGOLIN_ENDPOINT in $ENV_FILE (Pangolin's https address, no path)"
 grep -Eq "^DEEPSLATE_DIR=$(pwd)\$" "$ENV_FILE" || die "set DEEPSLATE_DIR=$(pwd) in $ENV_FILE (absolute path of this checkout)"
 # docs/42: the test pair is not wired up at home yet (no deploy/home/test-up.sh); its lines may keep their placeholders
 grep -Eq '^TEST_STACK=1$' "$ENV_FILE" && die "TEST_STACK=1 is not supported by deploy/home yet (README); set TEST_STACK=0"
@@ -78,7 +82,7 @@ if grep -Eq '^GEOIPUPDATE_ACCOUNT_ID=.+' "$ENV_FILE"; then geoip_on=1; COMPOSE+=
 avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
 echo "memory: ${avail} MB available"
 [ "$avail" -ge "$MIN_FREE_MB" ] || die "only ${avail} MB available (need ${MIN_FREE_MB}); see what is using it: docker stats --no-stream"
-docker network inspect ds-edge >/dev/null 2>&1 || die "the network ds-edge does not exist: docker network create -o com.docker.network.bridge.name=ds-edge ds-edge (and the site's newt runs on it)"
+docker network inspect ds-edge >/dev/null 2>&1 || die "the network ds-edge does not exist: docker network create -o com.docker.network.bridge.name=ds-edge ds-edge (the newt and caddy join it; deepslate-firewall knows it by that bridge name)"
 
 step "git pull"
 # Commits made here (Admin -> Lock and Apply results commit inside web, and never push) must reach the branch this

@@ -1,9 +1,10 @@
 # Sourced by deploy/deploy.sh and deploy/test-up.sh (docs/42): the test server's lines of deploy/.env, read and checked.
+# On docker-01v deploy/home/deploy.sh and deploy/home/test-up.sh source it with ENV_FILE=deploy/home/.env.
 #
 #   envval NAME        the value of NAME in deploy/.env ("" when it is not there)
 #   test_env_check     prints every TEST_ line that is missing or wrong, and fails when there is one
 
-envval() { sed -n "s/^$1=//p" deploy/.env | tail -1; }
+envval() { sed -n "s/^$1=//p" "${ENV_FILE:-deploy/.env}" | tail -1; }
 
 test_env_check() {
   local bad=0 dir url host cookie mock token summary live_token

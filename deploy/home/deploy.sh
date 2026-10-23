@@ -10,8 +10,8 @@
 #
 # docs/31 B-08: the images are the ones of this commit, never the moving `latest`. A commit that changed only docs has
 # no images: it runs those of the last commit that changed code. Derived from deploy/deploy.sh (2026-10-23): no
-# WireGuard, no Dockhand mirror, no designer; two roots (DEEPSLATE_DIR, DEEPSLATE_DATA); the geoip profile; the site's
-# newt is a service of the stack.
+# WireGuard, no Dockhand mirror; two roots (DEEPSLATE_DIR, DEEPSLATE_DATA); the geoip, test and designer profiles; the
+# site's newt is a service of the stack.
 set -euo pipefail
 
 cd "$(dirname "$(readlink -f "$0")")/../.."
@@ -72,12 +72,30 @@ grep -Eq '^GHCR_OWNER=[a-z0-9-]+$' "$ENV_FILE" || die "set GHCR_OWNER in $ENV_FI
 for v in NEWT_ID NEWT_SECRET; do grep -Eq "^$v=.+" "$ENV_FILE" || die "set $v in $ENV_FILE (the Pangolin site's newt credentials)"; done
 grep -Eq '^PANGOLIN_ENDPOINT=https://[A-Za-z0-9.-]+$' "$ENV_FILE" || die "set PANGOLIN_ENDPOINT in $ENV_FILE (Pangolin's https address, no path)"
 grep -Eq "^DEEPSLATE_DIR=$(pwd)\$" "$ENV_FILE" || die "set DEEPSLATE_DIR=$(pwd) in $ENV_FILE (absolute path of this checkout)"
-# docs/42: the test pair is not wired up at home yet (no deploy/home/test-up.sh); its lines may keep their placeholders
-grep -Eq '^TEST_STACK=1$' "$ENV_FILE" && die "TEST_STACK=1 is not supported by deploy/home yet (README); set TEST_STACK=0"
-placeholders=$(grep -E '^[A-Z_]+=(.*replace-me.*|0{17,}|00000000-0000-.*)$' "$ENV_FILE" | cut -d= -f1 | grep -v '^TEST_' | tr '\n' ' ' || true)
+# docs/42: the test server's copy of the site (compose profile `test`) runs only while TEST_STACK=1. Its TEST_ lines
+# may keep their placeholders while it is off.
+test_on=0
+if grep -Eq '^TEST_STACK=1$' "$ENV_FILE"; then test_on=1; fi
+placeholders=$(grep -E '^[A-Z_]+=(.*replace-me.*|0{17,}|00000000-0000-.*)$' "$ENV_FILE" | cut -d= -f1 | { if [ "$test_on" = 1 ]; then cat; else grep -v '^TEST_'; fi; } | tr '\n' ' ' || true)
 [ -z "$placeholders" ] || die "$ENV_FILE still has placeholder values from .env.example: ${placeholders}(fill them in, or leave optional ones empty)"
 geoip_on=0
 if grep -Eq '^GEOIPUPDATE_ACCOUNT_ID=.+' "$ENV_FILE"; then geoip_on=1; COMPOSE+=(--profile geoip); fi
+# docs/39: the build designer runs only while DESIGNER_CMD is set (compose profile `designer`). Its paths are the
+# designer's own host user's and must exist here, or docker would make them as root.
+designer_on=0
+if grep -Eq '^DESIGNER_CMD=.+' "$ENV_FILE"; then
+  designer_on=1; COMPOSE+=(--profile designer)
+  for v in DESIGNER_MODEL DESIGNER_TOKEN; do grep -Eq "^$v=.+" "$ENV_FILE" || die "DESIGNER_CMD is set, but $v is empty in $ENV_FILE (docs/39)"; done
+  for v in DESIGNER_HOME DESIGNER_BIN_DIR DESIGNER_VERSIONS_DIR; do
+    d=$(sed -n "s/^$v=//p" "$ENV_FILE" | tail -1)
+    [ -d "$d" ] || die "DESIGNER_CMD is set, but $v=$d is not a folder on this host (docs/39 Step 1: the designer's own user, the CLI installed and signed in there). Set DESIGNER_CMD empty to deploy without the designer."
+  done
+fi
+if [ "$test_on" = 1 ]; then
+  export ENV_FILE
+  . deploy/test-env.sh
+  test_env_check || die "TEST_STACK=1, but the test server is not set up yet (above). Set TEST_STACK=0 to deploy without it. Nothing was deployed."
+fi
 
 avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
 echo "memory: ${avail} MB available"
@@ -172,6 +190,20 @@ fi
 step "up"
 "${COMPOSE[@]}" up -d --remove-orphans
 [ "$geoip_on" = 1 ] || { docker inspect deepslate-geoipupdate >/dev/null 2>&1 && { echo "GEOIPUPDATE_ACCOUNT_ID is empty: removing deepslate-geoipupdate"; docker rm -f deepslate-geoipupdate >/dev/null; } || true; }
+# docs/39: deepslate-designer has tools/designer mounted as a folder, so it sees a new server.mjs at once but keeps
+# running the one it started with; it is restarted when the file is newer than the container (a design in progress
+# is lost, and the page says so). With DESIGNER_CMD emptied, `up` leaves the container running (its service is still
+# in the file, under a profile not passed), so it is removed here.
+if [ "$designer_on" = 1 ]; then
+  designer_started=$(date -d "$(docker inspect -f '{{.State.StartedAt}}' deepslate-designer 2>/dev/null)" +%s 2>/dev/null || echo 0)
+  if [ "$(stat -c %Y tools/designer/server.mjs)" -gt "$designer_started" ]; then
+    echo "tools/designer/server.mjs is newer than deepslate-designer; restarting it"
+    "${COMPOSE[@]}" restart designer
+  fi
+elif docker inspect deepslate-designer >/dev/null 2>&1; then
+  echo "DESIGNER_CMD is empty in $ENV_FILE: removing deepslate-designer"
+  docker rm -f deepslate-designer >/dev/null
+fi
 
 # docs/35 R-19: backup-loop.sh is mounted as one file; a changed script needs the container restarted
 backups_stale=0
@@ -232,7 +264,21 @@ amp_host=$(sed -n 's/^AMP_HOST=//p' "$ENV_FILE" | tail -1)
   docker exec deepslate-api ssh-keyscan -t ed25519 ${amp_host:-<AMP_HOST>} > deploy/keys/known_hosts && chmod 644 deploy/keys/known_hosts
 then compare its fingerprint with the AMP host's own (ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub there)."
 
+# docs/42: the test server's pair, after the live stack and its health gate, and never in their way. While TEST_STACK=1
+# its database is made when missing and the two are started (deploy/home/test-up.sh, without a pull: their images are
+# pulled by test-up.sh alone). A test pair that does not start is said at the end; the live deploy stands.
+test_problem=
+if [ "$test_on" = 1 ]; then
+  step "test server"
+  TEST_UP_FROM_DEPLOY=1 TEST_UP_PULL=0 deploy/home/test-up.sh || test_problem="the test server did not start (above); the live site is deployed. Fix it, then: sudo deploy/home/test-up.sh"
+else
+  for c in deepslate-api-test deepslate-web-test; do
+    if docker inspect "$c" >/dev/null 2>&1; then echo "TEST_STACK is not 1 in $ENV_FILE: removing $c"; docker rm -f "$c" >/dev/null; fi
+  done
+fi
+
 step "prune old images"
 docker image prune -f
 [ "$backups_stale" = 0 ] || die "everything else is deployed, but deepslate-backups does not run the checkout's backup-loop.sh: ${COMPOSE[*]} restart backups, then docker logs --tail 20 deepslate-backups"
+[ -z "$test_problem" ] || die "$test_problem"
 echo "deployed."

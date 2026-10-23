@@ -1,0 +1,103 @@
+# The stack's own Caddy on docker-01v (doc 62 §2, §3.2). Plain http on :80: Pangolin's Traefik terminates TLS and the
+# site's newt hands the request to deepslate-caddy on ds-edge. The host names come from deploy/home/.env (SITE_HOST,
+# MAP_HOST, TEST_HOST), so this file holds placeholders only.
+{
+	auto_https off
+	# The visitor's address: trust the forwarded headers only from ds-edge (the newt), and from nobody further back,
+	# then pass exactly one X-Forwarded-For on, so clientIp() (apps/web/src/server/auth/request.ts) takes the visitor.
+	servers {
+		trusted_proxies static {$DS_EDGE_SUBNET}
+		trusted_proxies_strict
+	}
+}
+
+(common) {
+	# No request body above 50 MB (Alex, 2026-10-07): room above the biggest server action (26 MB of poll pictures).
+	request_body {
+		max_size 50MB
+	}
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+(to_web) {
+	# the site: one X-Forwarded-For, the public scheme, the host the visitor asked for
+	header_up X-Forwarded-For {client_ip}
+	header_up X-Forwarded-Proto https
+	header_up X-Forwarded-Host {host}
+}
+
+http://{$SITE_HOST} {
+	import common
+	header X-Frame-Options SAMEORIGIN
+	reverse_proxy deepslate-web:3000 {
+		import to_web
+	}
+}
+
+# Live map (BlueMap on the AMP host, through the relay on ds-web). Login enforced by the portal.
+http://{$MAP_HOST} {
+	import common
+	# Only the portal may show the map inside its own pages (Alex, 2026-09-29).
+	header {
+		Content-Security-Policy "frame-ancestors https://{$SITE_HOST}"
+		defer
+	}
+	# forward_auth returns the 401 as-is, so spell it out: 2xx from /api/auth/verify -> map, 401 -> portal login.
+	reverse_proxy deepslate-web:3000 {
+		import to_web
+		method GET
+		rewrite /api/auth/verify
+		header_up X-Forwarded-Method {method}
+		header_up X-Forwarded-Uri {uri}
+		@good status 2xx
+		handle_response @good {
+			reverse_proxy deepslate-map-relay:8100
+		}
+		@unauth status 401
+		handle_response @unauth {
+			redir https://{$SITE_HOST}/login?next=https://{$MAP_HOST}{http.request.orig_uri}
+		}
+	}
+}
+
+# docs/42: the test server's site (web-test), admins only, as on the VPS. Served only while the test pair runs; until
+# then this host name answers 502, which Pangolin shows as unavailable.
+http://{$TEST_HOST} {
+	import common
+	header {
+		X-Frame-Options SAMEORIGIN
+		X-Robots-Tag "noindex, nofollow"
+	}
+	reverse_proxy deepslate-web:3000 {
+		import to_web
+		method GET
+		rewrite /api/auth/verify/admin
+		header_up X-Forwarded-Method {method}
+		header_up X-Forwarded-Uri {uri}
+		@good status 2xx
+		handle_response @good {
+			reverse_proxy deepslate-web-test:3000 {
+				import to_web
+				# the live session cookie (and its chunks .0, .1) never reaches web-test, which has a cookie of its own
+				header_up Cookie `(^|;\s*)__Secure-authjs\.session-token(\.\d+)?=[^;]*` ""
+			}
+		}
+		@unauth status 401
+		handle_response @unauth {
+			redir https://{$SITE_HOST}/login?next=https://{$TEST_HOST}{http.request.orig_uri}
+		}
+		@member status 403
+		handle_response @member {
+			respond "Admins only. This site is for the people who run the server." 403
+		}
+	}
+}

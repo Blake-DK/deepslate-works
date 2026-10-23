@@ -350,7 +350,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
         // a wake that has just failed (AMP refused the start, or three minutes without Running) is told at once
         if (wake.phase === "failed" && wakeWas !== "failed") void healthWatch.wakeFailed();
         wakeWas = wake.phase;
-        tunnelUp = live ? true : await tcpReachable(env.AMP_TUNNEL_IP, 22);
+        tunnelUp = live ? true : await tcpReachable(env.AMP_HOST, 22);
         const now = live !== null;
         if (reachable !== null && now !== reachable) {
           await prismaRecorderStore.addEvent(now

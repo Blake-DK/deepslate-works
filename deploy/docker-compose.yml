@@ -166,6 +166,7 @@ services:
       AMP_PASSWORD: ${AMP_PASSWORD:-}
       AMP_MOCK: ${AMP_MOCK:-}
       AMP_TUNNEL_IP: ${AMP_TUNNEL_IP:-}
+      AMP_HOST: ${AMP_HOST:-}         # doc 62: the AMP host for the reachability check; empty here, so the tunnel address above is used
       ROUTER_DASH_URL: ${ROUTER_DASH_URL:-}
       # Admin → Server → Router never removes the route players join by; without it here, that guard is off
       SERVER_ADDRESS: ${SERVER_ADDRESS:-}
@@ -369,6 +370,7 @@ services:
       AMP_PASSWORD: ${TEST_AMP_PASSWORD:-}
       AMP_MOCK: ${TEST_AMP_MOCK:-}
       AMP_TUNNEL_IP: ${AMP_TUNNEL_IP:-}
+      AMP_HOST: ${AMP_HOST:-}         # doc 62: the AMP host for the reachability check; empty here, so the tunnel address above is used
       ROUTER_DASH_URL: ${ROUTER_DASH_URL:-}   # read only from the test server (routes/router.ts)
       SERVER_ADDRESS: ${TEST_SERVER_ADDRESS:-}
       RSYNC_TARGET: ${TEST_RSYNC_TARGET:-}

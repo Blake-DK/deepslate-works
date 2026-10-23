@@ -6,6 +6,9 @@ import { describe, expect, it } from "vitest";
 // guard that keeps Admin → Server → Router from removing the route players join by.
 const envTs = readFileSync(new URL("../src/env.ts", import.meta.url), "utf8");
 const compose = readFileSync(new URL("../../../deploy/docker-compose.yml", import.meta.url), "utf8");
+// doc 62: the home stack (deploy/home) has the same rule; there the tunnel's address is retired (AMP_HOST names the host)
+const homeCompose = readFileSync(new URL("../../../deploy/home/docker-compose.yml", import.meta.url), "utf8");
+const RETIRED_AT_HOME = new Set(["AMP_TUNNEL_IP"]);
 
 /** Set by the image itself, never from deploy/.env. */
 const FROM_THE_IMAGE = new Set(["PORT", "REPO_DIR", "MODPACK_PKG_DIR"]);
@@ -16,8 +19,8 @@ const TEST_ONLY = new Set(["TEST_MODE", "TEST_SUMMARY_TOKEN", "TEST_APP_TOKEN", 
 // docs/42a (2026-10-08): silent on Discord: no bot, not marked as the one that talks to it, none of the players' webhooks
 const NOT_ON_TEST = new Set(["DISCORD_BOT_TOKEN", "DISCORD_CLIENT_ID", "DISCORD_TALKS", "DISCORD_PLAYER_ROLE_ID", "DISCORD_WEBHOOK_FEED", "DISCORD_WEBHOOK_ADMIN", "DISCORD_WEBHOOK_UPDATES"]);
 
-const block = (service: string) => {
-  const from = compose.slice(compose.indexOf(`\n  ${service}:`));
+const block = (service: string, file = compose) => {
+  const from = file.slice(file.indexOf(`\n  ${service}:`));
   const env = from.slice(from.indexOf("\n    environment:"), from.indexOf("\n    volumes:"));
   return new Set([...env.matchAll(/^ {6}([A-Z][A-Z0-9_]+):/gm)].map((m) => m[1]!));
 };
@@ -38,5 +41,16 @@ describe("api's environment in compose", () => {
     expect([...NOT_ON_TEST].filter((k) => passed.has(k))).toEqual([]);
     expect(compose).toMatch(/\n {2}api-test:\n {4}profiles: \[test\]\n/);
     expect(compose).toMatch(/\n {2}web-test:\n {4}profiles: \[test\]\n/);
+  });
+
+  it("doc 62: the home stack passes them too, the tunnel address excepted", () => {
+    const passed = block("api", homeCompose);
+    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !TEST_ONLY.has(k) && !RETIRED_AT_HOME.has(k) && !passed.has(k))).toEqual([]);
+    expect([...TEST_ONLY, ...RETIRED_AT_HOME].filter((k) => passed.has(k))).toEqual([]);
+    const test = block("api-test", homeCompose);
+    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !NOT_ON_TEST.has(k) && !RETIRED_AT_HOME.has(k) && !test.has(k))).toEqual([]);
+    expect([...NOT_ON_TEST].filter((k) => test.has(k))).toEqual([]);
+    expect(homeCompose).toMatch(/\n {2}api-test:\n {4}profiles: \[test\]\n/);
+    expect(homeCompose).toMatch(/\n {2}web-test:\n {4}profiles: \[test\]\n/);
   });
 });

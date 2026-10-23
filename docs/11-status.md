@@ -26,6 +26,37 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The dry run at home (2026-10-23, doc 62 §5.4; nothing cut over)
+
+- **What ran:** the home stack of `deploy/home/` on docker-01v, from a checkout on `dev` (3069e8d1) with the images of
+  7beb6b78, against the test instance DeepslateTest01, with a copy of the live database (last night's dump) and the
+  live `data/`. Published through Pangolin on two test names, the map's under the site's so the login cookie reaches
+  it. The VPS's test pair was stopped for the window and started again after it; the live stack never changed. The
+  home stack was paused afterwards (`docker compose stop`, everything kept) so that one api works the test server.
+- **Proven:** the site and the map answer through Pangolin's Traefik, the site's newt and Caddy; a forged
+  `X-Forwarded-For` is replaced and Caddy trusts the newt only; from inside `web` nothing on the LAN or the tailnet
+  answers while Authentik does by its public name; from `api` the AMP host's four ports and the internet answer and
+  nothing else; a Deepslate container cannot open a connection to the host itself; sign-in through Authentik and with
+  password + authenticator (the live `TOTP_SEAL_KEY`); the Discord server question answered by the bot token with no
+  second bot online (`DISCORD_TALKS=0`, below); wake and console on the test server; a full build through the site
+  (one SSE response, finished clean, 87 jars with the private one from `data/private-jars/`); a signed-in download of
+  the app; the sync's dry run over the LAN with the test key; the nightly dump and a restore into a scratch database
+  with equal counts; `/api/health` green (tunnel, amp, rsync) throughout.
+- **Not proven:** the map behind its login and panning without a CrowdSec decision, because tcp 8100 from docker-01v
+  to the AMP host is dropped between the two VMs on the hypervisor, outside both guests; and the real sync, skipped
+  on purpose: it would have removed the season-1 jars the VPS's test api ships to the test server. Both come with
+  the cutover, where the live sync removes nothing.
+- **Changes on `dev` from the dry run:** `deploy/home/deploy.sh` checks the checkout against the branch it follows
+  (`origin/main` live, `origin/dev` for the dry run) instead of `origin/main` alone (371a085b); the home api's
+  `DISCORD_TALKS` comes from `deploy/home/.env` and defaults to 1 (3069e8d1): with 0 the bot token only answers
+  sign-in's membership question.
+- **For the cutover (doc 62 §5.5), learnt here:** the home `.env` gets the live instance, names, rrsync key and
+  webhooks and loses `DISCORD_TALKS=0`; the checkout moves to `main`, so the root copy of `.git/config` is remade;
+  `data/` and `dist/` are copied again and the database restored fresh from the final dump; the live Pangolin
+  resources need their DNS records before they are made, or one disable/enable afterwards, or Traefik keeps its
+  placeholder certificate; `deploy/**` changes build no images, so a deploy from `dev` pins `IMAGE_TAG`; the test
+  instance's tree needs `_backup/db/` for the api's dump push (the live one has it).
+
 ## The home stack, prepared on `dev` (2026-10-23, planner doc 62; nothing deployed)
 
 - **What:** `deploy/home/` holds the stack for the home Docker VM (docs/62 §2): `docker-compose.yml` with the four

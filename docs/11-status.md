@@ -26,6 +26,25 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The home stack, prepared on `dev` (2026-10-23, planner doc 62; nothing deployed)
+
+- **What:** `deploy/home/` holds the stack for the home Docker VM (docs/62 §2): `docker-compose.yml` with the four
+  networks `ds-edge` (external, shared with the site's own Pangolin newt, which runs apart), `ds-web`, `ds-amp` and
+  `ds-internal`, no WireGuard, one map relay, the stack's own Caddy on :80 behind the newt, `geoipupdate` on a
+  profile; `Caddyfile` (trusts forwarded headers from `ds-edge` only, one `X-Forwarded-For` to web); `.env.example`
+  (the AMP host on the LAN: `AMP_HOST`, `AMP_URL`, `ROUTER_DASH_URL`, `RSYNC_TARGET`); `deploy.sh` and `check.sh`
+  derived from the VPS's; a README. `deploy/rerun.sh` takes its file list from the caller now.
+- **Code:** api's `AMP_HOST` names the AMP host for `/health`'s `tunnel` check (the key keeps its name; it is a TCP
+  check of the host's sshd, over the tunnel on the VPS and the LAN at home); an empty `AMP_HOST` falls back to
+  `AMP_TUNNEL_IP`, so the VPS stack is unchanged (`env-amp-host.test.ts`). The admin modpack route sends an SSE
+  comment every 15 s while it waits on api, so a silent sync is never cut by a hop in front (`sse-keepalive.test.ts`).
+  BlueMap's web server binds every address (`modpack/server/config/bluemap/webserver.conf`): the VPS relay keeps
+  reaching it over the tunnel, the home relay on the LAN, each gated by the AMP host's own rules; it takes effect at
+  the first sync's server restart, after the AMP host's 8100 gate is in place.
+- **Not changed:** `deploy/docker-compose.yml`, `deploy/deploy.sh` and the VPS keep running as before until the
+  cutover (docs/62 §5.5). The test pair is not wired up at home yet (`TEST_STACK=1` is refused there). docs/00, 02,
+  09, 13, 17, 28, 38 and 42 change at the clean-up (docs/62 §7).
+
 ## Sign-in through Authentik (2026-10-20, deployed: PR #90, `d49a7584`)
 
 - **What (Alex: move the site's sign-in to his Authentik):** docs/04 "Sign-in through Authentik". OpenID Connect with

@@ -62,6 +62,13 @@ through Authentik, Alex's identity provider, with Discord or Microsoft there. Wi
   Discord ID" in the event log). No account with homelab rights carries a Discord connection.
 - **The test site** uses the same provider and settings with its own address, its own database and its own accounts.
   The Discord server rule is off there (api-test has no bot, and the test site is admins only already, docs/42 §3).
+- **Authentik's sign-in page** for this site has its own look, from brand CSS kept in Authentik (2026-10-20). It
+  loads `/brand/hero.png` and `/brand/deepslate-tile@3x.png` from the live site, and shows the site's own logo
+  (`/brand/logo-512.png`, the one picked on Admin → Branding) where every other Authentik page shows Alex's own: do not
+  rename or move any of the three without telling Alex (`tests/authentik-brand.test.ts` holds them). It may also use the pixel font: the
+  middleware gives `/brand/fonts/*` `Access-Control-Allow-Origin` with Authentik's origin, taken from
+  `AUTHENTIK_ISSUER` (`src/lib/font-cors.ts`); nothing else gets the header, and without the setting there is none. In Authentik's dashboard the app sits in
+  "Games".
 - **Break-glass** is the owner's password sign-in below.
 
 ## Flow

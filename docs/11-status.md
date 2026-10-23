@@ -26,25 +26,31 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Sign-in through Authentik (2026-10-20, on `dev`, not on `main`, not deployed)
+## Sign-in through Authentik (2026-10-20, deployed: PR #90, `d49a7584`)
 
 - **What (Alex: move the site's sign-in to his Authentik):** docs/04 "Sign-in through Authentik". OpenID Connect with
   PKCE against the provider `deepslate`; accounts found by Discord ID only (`User.authentikSub`, migration
   `0037_authentik_sub`); the group `deepslate-admins` makes an admin at every sign-in, with three guards; api's new
   `GET /discord/member/:id` for the Discord server rule; Set Discord ID… on People for an account without one; the
-  members' email sign-in and the site's own Discord sign-in off once the three `AUTHENTIK_*` settings are in
-  `deploy/.env`; password sign-in the owner's only (the break-glass, docs/09 Runbook). Without the settings nothing
-  changes. Tests: `sso-core.test.ts`, `sso-provider.test.ts` (the real handler against a fake Authentik: PKCE, state,
-  nonce, scopes, issuer, audience), `discord-member.test.ts`, owner-only in `admin-signin.test.ts`.
-- **Authentik's side** is made by the session on Authentik's host, from Alex's paste: the groups, the scope mappings
-  (no groups in `profile`, no email), the provider, the application, a sign-in flow with only the Discord and Microsoft
-  buttons, the Discord source (off until every application has a binding and Alex says so), and the two admins as
-  Authentik users of their own connected to their Discord IDs. Nobody's homelab account is linked.
-- **Not done yet, in order, each on Alex's go:** the client ID and secret into `deploy/.env` (typed in, never shown);
-  the test site on the new `dev` images; Discord and Microsoft tried there; the `dev` → `main` PR (its change log entry
-  `2026-10-20-sign-in`, not live); the live deploy; `live: true` once players sign in.
-- **The test site needs the live checkout's compose:** `test-up.sh` runs `deploy/docker-compose.yml` of the live
-  checkout (`main`), which does not pass the `AUTHENTIK_*` settings to `web-test` until this is on `main`.
+  members' email sign-in and the site's own Discord sign-in off now that the three `AUTHENTIK_*` settings are in
+  `deploy/.env`; password sign-in the owner's only (the break-glass, docs/09 Runbook). Tests: `sso-core.test.ts`,
+  `sso-provider.test.ts` (the real handler against a fake Authentik: PKCE, state, nonce, scopes, issuer, audience),
+  `discord-member.test.ts`, owner-only in `admin-signin.test.ts`, `authentik-brand.test.ts`.
+- **Authentik's side**, made by the session on Authentik's host from Alex's paste: the groups, the scope mappings (no
+  groups in `profile`, no email; `discord_id` always as text), the provider, the application, a sign-in flow with only
+  the Discord and Microsoft buttons, the Discord source (switched on before the test, once every application was found to have
+  a binding), the two admins as Authentik users of their own connected to their Discord IDs. Alex's own Microsoft admin
+  account carries the attribute `deepslate_discord_id` and the group, so a Microsoft sign-in there lands in his
+  account; it has no Discord connection. Authentik's sign-in page loads two of the site's pictures (docs/04).
+- **Tried on the test site** (19:18 and 19:35 UTC): Discord in a private window and Alex's Microsoft session, both into
+  his test account as admin. `web-test` got the settings once from the test checkout's compose (`main`'s did not pass
+  them yet); since the deploy `main`'s does.
+- **Live:** PR #90 merged 19:38 UTC, then deployed; both containers on `d49a7584`, migration applied, the bot's
+  Discord server check answers. Alex signed in through Authentik at 20:13:30 UTC: linked, still admin.
+- **Still to come:** Brax's account (no Discord ID: Set Discord ID… plus an Authentik user like m1ku's, or an invite and
+  a Microsoft sign-in); the first Discord player who was not pre-linked (then the Authentik session checks the new
+  user: empty email, external, `users/deepslate`, `deepslate-players` only); the change log entry
+  `2026-10-20-sign-in` set live once players sign in. `43089deb` (the pictures' test) is on `dev`, for the next PR.
 
 ## Lock checks what the mods need of each other (2026-10-20, on `dev`, not on `main`)
 

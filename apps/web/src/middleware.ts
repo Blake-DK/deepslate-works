@@ -2,14 +2,23 @@ import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import { authConfig } from "@/auth.config";
 import { appTokenRequest } from "@/lib/test-app-paths";
+import { FONT_PATH, fontOrigin } from "@/lib/font-cors";
+import { env } from "@/env";
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC = [/^\/login(\/admin|\/once\/[A-Za-z0-9_-]{1,80})?$/, /^\/(privacy|terms)$/, /^\/branding\/[a-z]+-[0-9a-f]{12}\.(png|webp|svg)$/, /^\/join\/[^/]+(\/.*)?$/, /^\/api\/auth\//, /^\/api\/health(\/live)?$/, /^\/api\/version$/, /^\/api\/modpack\/(manifest|extras)$/, /^\/downloads\//, /^\/api\/launcher\//, /^\/api\/installer\/report$/, /^\/api\/play\/wake$/, /^\/api\/app\/(home|start|updates)$/, /^\/api\/app\/head\/[0-9A-Fa-f-]{32,36}\.png$/, /^\/api\/app\/news\/[A-Za-z0-9_-]{1,40}\/seen$/, /^\/api\/polls\/[A-Za-z0-9_-]{1,40}\/vote$/, /^\/news-image\/[^/]+$/, /^\/brand\/fonts\/[A-Za-z-]+\.(ttf|txt)$/];
+const PUBLIC = [/^\/login(\/admin|\/once\/[A-Za-z0-9_-]{1,80})?$/, /^\/(privacy|terms)$/, /^\/branding\/[a-z]+-[0-9a-f]{12}\.(png|webp|svg)$/, /^\/join\/[^/]+(\/.*)?$/, /^\/api\/auth\//, /^\/api\/health(\/live)?$/, /^\/api\/version$/, /^\/api\/modpack\/(manifest|extras)$/, /^\/downloads\//, /^\/api\/launcher\//, /^\/api\/installer\/report$/, /^\/api\/play\/wake$/, /^\/api\/app\/(home|start|updates)$/, /^\/api\/app\/head\/[0-9A-Fa-f-]{32,36}\.png$/, /^\/api\/app\/news\/[A-Za-z0-9_-]{1,40}\/seen$/, /^\/api\/polls\/[A-Za-z0-9_-]{1,40}\/vote$/, /^\/news-image\/[^/]+$/];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   if (pathname.startsWith("/_next/image")) return new NextResponse(null, { status: 404 }); // the optimiser is off (next.config.ts)
+  // Public. docs/04: Authentik's sign-in page for this site may load the pixel font from here (lib/font-cors.ts).
+  if (FONT_PATH.test(pathname)) {
+    const res = NextResponse.next();
+    const origin = fontOrigin(env.AUTHENTIK_ISSUER);
+    if (origin) res.headers.set("access-control-allow-origin", origin);
+    return res;
+  }
   if (PUBLIC.some((re) => re.test(pathname))) return NextResponse.next();
   // docs/45: the launcher's Test section. Only an app's request (a launcher token) goes through to the routes, which
   // check the token's user is an admin and answer anyone else as this middleware answers a path that does not exist.

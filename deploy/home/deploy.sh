@@ -81,10 +81,13 @@ echo "memory: ${avail} MB available"
 docker network inspect ds-edge >/dev/null 2>&1 || die "the network ds-edge does not exist: docker network create -o com.docker.network.bridge.name=ds-edge ds-edge (and the site's newt runs on it)"
 
 step "git pull"
-# Commits made here (Admin -> Lock and Apply results commit inside web, and never push) must reach origin/main first.
-git_here fetch -q origin main
-unpushed=$(git_here log --format='  %h %s' origin/main..HEAD)
-[ -z "$unpushed" ] || die "the checkout has commits that are not on origin/main:
+# Commits made here (Admin -> Lock and Apply results commit inside web, and never push) must reach the branch this
+# checkout follows first: origin/main for the live stack; origin/dev while the dry run (doc 62 §5.4) runs from dev.
+upstream=$(git_here rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
+[[ "$upstream" =~ ^origin/(main|dev)$ ]] || die "this checkout follows '${upstream:-no branch}', not origin/main or origin/dev. Nothing was deployed."
+git_here fetch -q origin "${upstream#origin/}"
+unpushed=$(git_here log --format='  %h %s' "$upstream..HEAD")
+[ -z "$unpushed" ] || die "the checkout has commits that are not on $upstream:
 $unpushed
 Push them as a branch (runuser -u $owner -- git push origin HEAD:refs/heads/<name>), open a PR, merge it, then deploy again. Nothing was deployed."
 running_web=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' deepslate-web 2>/dev/null | sed -n 's/^PORTAL_COMMIT=//p') || running_web=

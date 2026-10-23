@@ -2,6 +2,7 @@ import { loadCurrentUser } from "@/server/auth/session";
 import { CMDS, runModpack, type Cmd } from "@/server/modpack/run";
 import { audit } from "@/server/events";
 import { fromAnotherSite } from "@/server/same-origin";
+import { keepAlive } from "@/server/sse";
 
 export const maxDuration = 600;
 
@@ -18,14 +19,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ cmd: st
     async start(controller) {
       let failed = false;
       const send = (line: string) => controller.enqueue(enc.encode(`data: ${line.replace(/\n/g, " ")}\n\n`));
-      send(`> modpack ${cmd}`);
-      for await (const line of runModpack(cmd as Cmd, user)) {
-        if (line.startsWith("ERROR") || line.startsWith("busy")) failed = true;
-        send(line);
+      // a sync is silent for up to 15 minutes while rsync and the restart run: keep the response alive meanwhile
+      const stopPing = keepAlive((chunk) => controller.enqueue(chunk));
+      try {
+        send(`> modpack ${cmd}`);
+        for await (const line of runModpack(cmd as Cmd, user)) {
+          if (line.startsWith("ERROR") || line.startsWith("busy")) failed = true;
+          send(line);
+        }
+        await audit({ userId: user.id, action: `modpack.${cmd}`, params: {}, result: failed ? "FAILED" : "OK" });
+        send(failed ? "event: failed" : "event: done");
+      } finally {
+        stopPing();
+        controller.close();
       }
-      await audit({ userId: user.id, action: `modpack.${cmd}`, params: {}, result: failed ? "FAILED" : "OK" });
-      send(failed ? "event: failed" : "event: done");
-      controller.close();
     },
   });
   return new Response(stream, { headers: { "content-type": "text/event-stream", "cache-control": "no-cache", "x-accel-buffering": "no" } });

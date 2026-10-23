@@ -140,9 +140,11 @@ services:
       MAP_URL: ${MAP_URL:-}
       SERVER_ADDRESS: ${SERVER_ADDRESS:?SERVER_ADDRESS is the address players join; set it in deploy/home/.env}
       MODRINTH_USER_AGENT: ${MODRINTH_USER_AGENT:-deepslate-works/0.1}
-      # docs/39: the build designer is off at home (doc 62 §1.4); its pages say so while these are empty
-      DESIGNER_URL: ""
-      DESIGNER_TOKEN: ""
+      # docs/39: the build designer (the service `designer`, profile `designer`); the card says "Not set up" while
+      # DESIGNER_URL is empty
+      DESIGNER_URL: ${DESIGNER_URL:-}
+      DESIGNER_TOKEN: ${DESIGNER_TOKEN:-}
+      DESIGNER_DAILY: ${DESIGNER_DAILY:-80}
       # docs/42: the test server's card on Control Room and the Live | Test switch, for admins; nothing unless TEST_STACK=1
       TEST_STACK: ${TEST_STACK:-0}
       TEST_SITE_URL: ${TEST_AUTH_URL:-}
@@ -274,8 +276,11 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # docs/42: the test server's own copy of the site, hidden from players. Profile `test`, only while TEST_STACK=1.
-  # Not wired up at home yet: deploy/home/deploy.sh refuses TEST_STACK=1 until a home test-up.sh exists (README).
+  # docs/42: the test server's own copy of the site, hidden from players. Profile `test`: deploy/home/deploy.sh starts
+  # both while TEST_STACK=1 (through deploy/home/test-up.sh) and removes them when it is not. Their images are tag
+  # TEST_IMAGE_TAG (dev: CI builds it on each push to dev that changes an image), pulled by test-up.sh, never by a live
+  # deploy. Every host path is the test checkout's (TEST_DIR), so nothing the test site builds lands in the live dist/.
+  # The defaults only keep `docker compose config` working while the TEST_ variables are unset.
   web-test:
     profiles: [test]
     image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-web:${TEST_IMAGE_TAG:-dev}
@@ -386,6 +391,51 @@ services:
       timeout: 20s
       retries: 3
       start_period: 40s
+
+  # docs/39: the build designer, a CLI run for admins by tools/designer/server.mjs, as the designer's own host user,
+  # signed in on Alex's plan. Profile `designer`: deploy.sh starts it only while DESIGNER_CMD is set in deploy/home/.env.
+  # web reaches it at deepslate-designer:4100 with DESIGNER_TOKEN. The CLI gets no tools and only HOME and PATH of the
+  # environment. On ds-web, where the host's firewall allows public https and nothing private: the model's API, and
+  # web, which is on ds-web too. Moved from the VPS on 2026-10-23.
+  designer:
+    profiles: [designer]
+    image: node:22-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d
+    container_name: deepslate-designer
+    restart: unless-stopped
+    logging: *logging
+    cap_drop: [ALL]
+    mem_limit: 768m                     # the CLI used under 300 MB in each call of docs/39 Step 0.4
+    user: "${DESIGNER_UID:-65534}:${DESIGNER_GID:-65534}"
+    read_only: true
+    tmpfs: [/tmp]
+    networks: [ds-web]
+    working_dir: /tmp
+    command: ["node", "/designer/server.mjs"]
+    environment:
+      HOME: ${DESIGNER_HOME:-/nonexistent}
+      PATH: ${DESIGNER_BIN_DIR:-/nonexistent}:/usr/local/bin:/usr/bin:/bin
+      DISABLE_AUTOUPDATER: "1"
+      DESIGNER_CMD: ${DESIGNER_CMD:-}
+      DESIGNER_MODEL: ${DESIGNER_MODEL:-}
+      DESIGNER_TOKEN: ${DESIGNER_TOKEN:-}
+      DESIGNER_CREDENTIALS: ${DESIGNER_CREDENTIALS:-}
+      DESIGNER_DAILY: ${DESIGNER_DAILY:-80}   # the designer keeps its own count too (tools/designer/server.mjs)
+      DESIGNER_DATA: /designer-data
+    volumes:
+      - ${DEEPSLATE_DIR}/tools/designer:/designer:ro          # server.mjs and the instructions; web cannot write here
+      # blocks.json. web CAN write this: it mounts modpack/ read-write. server.mjs takes only plain ids, known kinds and
+      # plain property values from it, and drops anything else (blockListText).
+      - ${DEEPSLATE_DIR}/modpack/designer:/designer-data:ro
+      - ${DESIGNER_HOME:-/nonexistent}:${DESIGNER_HOME:-/nonexistent}
+      - ${DESIGNER_BIN_DIR:-/nonexistent/bin}:${DESIGNER_BIN_DIR:-/nonexistent/bin}:ro
+      - ${DESIGNER_VERSIONS_DIR:-/nonexistent/versions}:${DESIGNER_VERSIONS_DIR:-/nonexistent/versions}:ro
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(4100, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
 
   backups:
     image: postgres:16-alpine

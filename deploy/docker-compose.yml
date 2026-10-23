@@ -117,10 +117,10 @@ services:
       start_period: 40s
 
   wireguard:
-    # docs/31 B-22: pinned to the image that was running on 2026-10-04 (read with docker image inspect, docs/11),
+    # docs/31 B-22: pinned to the image current on 2026-10-23 (1.0.20260223-r0-ls127; read with docker image inspect, docs/11),
     # so neither a deploy nor Dockhand's redeploy can swap the tunnel's image unasked. To update on purpose: pull
     # the new tag, read its digest, change it here, deploy on a quiet night.
-    image: lscr.io/linuxserver/wireguard@sha256:216ca1ce9da7bfe26fb752111d952487804bd18933bbd4794970d424bf8adfe9
+    image: lscr.io/linuxserver/wireguard@sha256:e2f655e1956a6db476bc879bf721f3f8bfed49c6d8fbcf39495d7ecb991d8228
     container_name: deepslate-wg
     restart: unless-stopped
     logging: *logging
@@ -217,7 +217,7 @@ services:
       start_period: 40s
 
   map-relay-inner:
-    image: alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50
+    image: alpine/socat@sha256:22d77becaeeea8ef56b8c4bb2312323acafe85354be6a85714ff5050e3537842
     container_name: deepslate-map-relay-inner
     restart: unless-stopped
     logging: *logging
@@ -229,7 +229,7 @@ services:
     depends_on: [wireguard]
 
   map-relay-outer:
-    image: alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50
+    image: alpine/socat@sha256:22d77becaeeea8ef56b8c4bb2312323acafe85354be6a85714ff5050e3537842
     container_name: deepslate-map-relay-outer
     restart: unless-stopped
     logging: *logging
@@ -249,7 +249,7 @@ services:
   # itself. The defaults only keep `docker compose` working while the variables are unset.
   designer:
     profiles: [designer]
-    image: node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+    image: node:22-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d
     container_name: deepslate-designer
     restart: unless-stopped
     logging: *logging

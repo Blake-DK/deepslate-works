@@ -7,7 +7,9 @@ two never run on the same host.
 The checkout follows `main` (what is deployed). For the dry run of doc 62 §5.4 it follows `dev`: `deploy.sh` then
 checks the checkout against `origin/dev` instead of `origin/main`, and nothing else. Images exist only for the `dev`
 commits that changed something an image is made of (the workflow dev-images), so pin the newest of those:
-`sudo IMAGE_TAG=<its full sha> deploy/home/deploy.sh`.
+`sudo IMAGE_TAG=<its full sha> deploy/home/deploy.sh`. While the VPS's api is still the one that talks to Discord, the
+dry run sets `DISCORD_TALKS=0` with the bot token in place: sign-in can ask whether an account is in the Discord server,
+and no second bot comes online. The cutover removes that line.
 
 ## What is in this folder
 

@@ -180,8 +180,11 @@ services:
       LIMBO_POS: ${LIMBO_POS:-}
       SPAWN_POS: ${SPAWN_POS:-}
       # docs/42a: this api is the one instance that talks to the players' Discord (the bot and the webhooks below).
-      # Exactly one live api may run (doc 62 §3.4): the cutover stops the VPS's before this one starts.
-      DISCORD_TALKS: "1"
+      # Exactly one live api may run (doc 62 §3.4): the cutover stops the VPS's before this one starts. Unset or 1 =
+      # it talks. 0 = the dry run of doc 62 §5.4, while the VPS's api is still the one that talks: the bot token is
+      # then used only to answer the sign-in's "is this account in the Discord server?" (discord/member.ts); no bot
+      # comes online and the webhooks below are not used.
+      DISCORD_TALKS: ${DISCORD_TALKS:-1}
       DISCORD_PLAYER_ROLE_ID: ${DISCORD_PLAYER_ROLE_ID:-}
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}

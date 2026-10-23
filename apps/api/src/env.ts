@@ -9,6 +9,10 @@ const schema = z.object({
   AMP_USERNAME: z.string().default("webapp"),
   AMP_PASSWORD: z.string().default(""),
   AMP_MOCK: z.enum(["0", "1"]).default("0"),
+  // The AMP host's address for the reachability check (/health "tunnel": its sshd answers) and anything else that
+  // names the host itself. Doc 62: at home it is the LAN address; on the VPS it stays the tunnel's far end, which
+  // AMP_TUNNEL_IP still names there, so an empty AMP_HOST falls back to it (loadEnv).
+  AMP_HOST: z.string().optional(),
   AMP_TUNNEL_IP: z.string().default("10.77.0.2"),
   // the mc-router dashboard on the AMP host (Admin → Server → Router), over the tunnel; it has no login of its own
   ROUTER_DASH_URL: z.string().url().default("http://10.77.0.2:8090"),
@@ -57,7 +61,7 @@ const schema = z.object({
   SEASONS_SHIP: z.string().regex(/^[a-z0-9_, ]{0,200}$/, "SEASONS_SHIP: season ids, separated by commas").optional(),
 });
 
-export type Env = z.infer<typeof schema>;
+export type Env = Omit<z.infer<typeof schema>, "AMP_HOST"> & { AMP_HOST: string };
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   // Empty values in deploy/.env (e.g. `SPAWN_POS=`) mean "unset".
@@ -67,5 +71,5 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     const lines = parsed.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n");
     throw new Error(`api: bad environment\n${lines}`);
   }
-  return parsed.data;
+  return { ...parsed.data, AMP_HOST: parsed.data.AMP_HOST ?? parsed.data.AMP_TUNNEL_IP };
 }

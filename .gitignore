@@ -8,6 +8,7 @@ coverage/
 .env.*
 !.env.example
 deploy/.env
+deploy/home/.env
 .DS_Store
 deploy/wireguard/wg_confs/
 deploy/wireguard/*.key

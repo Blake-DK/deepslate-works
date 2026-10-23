@@ -8,7 +8,7 @@
 # deploy lock it inherits (OPS_LOCK_INHERITED, deploy/ops-lock.sh), and DEEPSLATE_DEPLOY_RERUN stops it from
 # running itself again. Plain sh and busybox, so the tests run it as it is.
 
-DEPLOY_SELF_FILES="deploy/deploy.sh deploy/git-guard.sh deploy/ops-lock.sh deploy/rerun.sh"
+DEPLOY_SELF_FILES=${DEPLOY_SELF_FILES:-"deploy/deploy.sh deploy/git-guard.sh deploy/ops-lock.sh deploy/rerun.sh"}
 
 # deploy_rerun_if_changed <commit before the pull> <commit after it>
 deploy_rerun_if_changed() {

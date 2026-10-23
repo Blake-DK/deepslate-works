@@ -6,7 +6,7 @@ import { sshCommand } from "./modpack/ssh.js";
 
 export type Health = { ok: boolean; tunnel: "ok" | "down"; amp: "ok" | "mock" | "unconfigured" | "unreachable" | "auth_failed" | "instance_down"; rsync: "ok" | "wrong_root" | "no_key" | "down" };
 
-/** TCP connect to sshd on the AMP host: up means the tunnel carries traffic. */
+/** TCP connect to sshd on the AMP host: up means the path to it carries traffic (the tunnel on the VPS, the LAN at home). */
 export function tcpReachable(host: string, port: number, timeoutMs = 2000): Promise<boolean> {
   return new Promise((resolve) => {
     const s = connect({ host, port });
@@ -52,7 +52,7 @@ let cache: { at: number; value: Health } | null = null;
 
 export async function health(env: Env, amp: Amp): Promise<Health> {
   if (cache && Date.now() - cache.at < 30_000) return cache.value;
-  const tunnelUp = await tcpReachable(env.AMP_TUNNEL_IP, 22);
+  const tunnelUp = await tcpReachable(env.AMP_HOST, 22);
   let ampState: Health["amp"];
   if (env.AMP_MOCK === "1") ampState = "mock";
   else if (!env.AMP_INSTANCE_ID || !env.AMP_PASSWORD) ampState = "unconfigured";

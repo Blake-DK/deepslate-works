@@ -2,6 +2,9 @@
 
 ## Where live is now, 2026-10-10 (from the planner's handover, docs/47 §1)
 
+**2026-10-23:** the site now runs on docker-01v (the next section); the VPS stack is stopped. The rest of this section
+is the 2026-10-10 record.
+
 Read `docs/47-planner-handover-2026-10-10.md` after this section: what happened today, Alex's decisions, what is live
 but not proven in real use, and the open work in order. Times UTC. The sections below are from before it; where they
 say live is stopped, held or to be trimmed in place, this section wins.
@@ -25,6 +28,39 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Next, with nobody online:** the refill from the site's pre-generation (overworld centre 0 0 radius 10176, then the
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
+
+## Live at home: the cutover, then the whole stack on docker-01v (2026-10-23, deployed: `main` 8e5cbe7)
+
+Doc 62's move happened today, on `main` 687bd71f (PR #93), 1bfce1d (PR #94) and 8e5cbe7 (PR #95). Times UTC. The
+section above describes the VPS; from today the site is served from docker-01v through Pangolin.
+
+- **Cutover, 18:29 to 18:36.** The VPS's web and api stopped; the final dump restored into a fresh database at home
+  (11 users, 12,897 events, 37 migrations, equal at both ends); `dist/` and `data/` copied; the home checkout on `main`
+  with the live env values and the live rrsync key; `sudo deploy/home/deploy.sh`; two Pangolin resources on the site
+  `deepslate` (the site and the map) to `deepslate-caddy:80`, Pangolin's own login off; the two names as CNAMEs to
+  Pangolin; one disable/enable of each resource so Traefik fetched the certificates (it tries once at creation and
+  never retries by itself). Before the window the live server was restarted once, with a one-minute warning, so BlueMap
+  binds every address (`modpack/server/config/bluemap/webserver.conf`, `ip: "0.0.0.0"`, PR #93); the game server was
+  not touched otherwise.
+- **The whole stack in one place, 19:15 to 19:20.** The newt is the service `newt` of `deploy/home/docker-compose.yml`
+  (PR #94; until then a stack of its own under Dockhand, whose stack `deepslate-newt` is to be deleted there). The test
+  pair runs at home (`deploy/home/test-up.sh`, PR #95; checkout `/data/stacks/deepslate-test` on `dev`, the database
+  `deepslate_test` restored from the VPS, a third resource for `TEST_HOST` on the same site). The designer runs at home
+  (profile `designer`, on `ds-web`: public https and nothing private; its host user and home moved from the VPS after
+  the VPS copy was stopped, so one sign-in is ever in use). GeoIP: the stack's own `geoipupdate` writes the file in
+  `DEEPSLATE_DATA/geoip`. Proofs: live health `tunnel ok, amp ok, rsync ok, bot on`; test health ok against the test
+  instance; the designer signed in; all three names answer through Pangolin with their certificates.
+- **Lessons.** `deploy/home/deploy.sh` checks the env before its own `git pull`, so a deploy that brings a new check
+  (`TEST_STACK=1` today) must pull first, or the old script refuses; the Dockhand newt had already been removed, and the
+  site was unreachable for 36 s. The VPS's `TEST_RSYNC_TARGET` is the tunnel's address and must not be copied home: at
+  home every rsync target is the AMP host's LAN address.
+- **The VPS** keeps web, api, the designer and the test pair stopped and intact for two weeks (rollback: the two names
+  back to the VPS, `docker start`); db, wg and the shared services still run. Then the clean-up of doc 62 §7: the
+  WireGuard peer on the AMP host, `deepslate-wg` and udp 51820 on the VPS, the VPS stack, the tunnel's lines on the AMP
+  host, the old whitelist names, the two dry-run resources and their records, the temporary access by 2026-12-06.
+- **Open.** Uptime Kuma's check on the live `/api/health/live`; the `dev` images are at 7beb6b7 (the last push to
+  `dev` that changed an image), so the test site runs code older than its checkout until the next such push; offsite
+  copies of the home dumps.
 
 ## The dry run at home (2026-10-23, doc 62 §5.4; nothing cut over)
 

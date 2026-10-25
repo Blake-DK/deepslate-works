@@ -10,9 +10,9 @@ export function Heatmap({ grid }: { grid: number[][] }) {
   return (
     <div className="space-y-2">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[34rem] border-separate border-spacing-0.5 text-[10px]" aria-label="Minutes played by day and hour, UK time">
+        <table className="w-full min-w-[18rem] table-fixed border-separate border-spacing-0.5 text-[10px]" aria-label="Minutes played by day and hour, UK time">
           <thead>
-            <tr><td />{Array.from({ length: 24 }, (_, h) => <th key={h} scope="col" className="font-normal text-muted-foreground">{h % 3 === 0 ? String(h).padStart(2, "0") : ""}</th>)}</tr>
+            <tr><td className="w-8" />{Array.from({ length: 24 }, (_, h) => <th key={h} scope="col" className="font-normal text-muted-foreground">{h % 3 === 0 ? String(h).padStart(2, "0") : ""}</th>)}</tr>
           </thead>
           <tbody>
             {grid.map((row, d) => (

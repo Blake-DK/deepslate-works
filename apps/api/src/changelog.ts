@@ -342,6 +342,11 @@ export const CHANGES: Change[] = [
       "If you are already signed in, nothing changes until you sign out.",
     ],
   },
+  {
+    id: "2026-10-25-busiest-hours",
+    date: "2026-10-25",
+    lines: ["Players & stats → Stats: the Busiest hours chart now fits its box, with no scroll bar to see the whole day."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

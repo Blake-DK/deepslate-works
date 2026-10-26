@@ -9,17 +9,21 @@
 // by the server and its live check passed; not at merge. So a new entry goes in without `live`, and a later commit
 // sets `live: true` once the live check has passed; the deploy after that posts it. Without it the bot never sees it.
 //
+// Alex, 2026-10-26: a mod update's entry is posted on the modpack Sync instead. Mark it `onSync`: the bot posts it once
+// the server's last start loaded every mod of the deployed pack, with none missing and no problem (the check after a
+// Sync), so no second deploy is needed. A site-only entry still takes `live`.
+//
 // docs/53 D2, as Alex settled it on 2026-10-12: every entry is a reply in "Change log". An entry with a `title` (1 to 90
 // characters) is a big update that changes the game: the title leads its reply in bold and it tags @Minecraft (D1).
 // Give a title only to those; site and look changes and bug fixes go without one and ping nobody. `noPing`: an entry
 // that has pinged everyone once already, posted again without the tag. No entry names a season's mods or bosses (the test reads them
 // from mods.json and the season files).
 
-export type Change = { id: string; date: string; title?: string; lines: string[]; live?: true; noPing?: true };
+export type Change = { id: string; date: string; title?: string; lines: string[]; live?: true; onSync?: true; noPing?: true };
 
-/** What the bot may post: only entries marked live (liveChanges(CHANGES) in server.ts). */
+/** What the bot may post: entries marked live, and those that wait for a Sync (liveChanges(CHANGES) in server.ts). */
 export function liveChanges(all: Change[]): Change[] {
-  return all.filter((c) => c.live === true);
+  return all.filter((c) => c.live === true || c.onSync === true);
 }
 
 export const CHANGES: Change[] = [
@@ -359,6 +363,7 @@ export const CHANGES: Change[] = [
     // `live: true` only after the live check (the rule above).
     id: "2026-10-26-mod-update",
     date: "2026-10-26",
+    onSync: true,
     title: "Mod updates, and what's new since the last post",
     lines: [
       "The minimap and world map are on their newest versions again. They were held back since 5 October because they needed a newer claims mod; that is updated now too, and your claims are kept.",

@@ -29,7 +29,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Every mod to its newest version but Quarry and voice chat (2026-10-26, on `dev` and the test server; not deployed)
+## Every mod to its newest version but Quarry and voice chat (2026-10-26, deployed 20:57 UTC, synced on live 22:31)
 
 - **Alex:** "update them all", with a change log for Discord covering everything since the last post.
 - **Checked:** every switched-on pin in `mods.json` and every Extra against Modrinth's NeoForge 1.21.1 versions, a mod
@@ -64,6 +64,10 @@ say live is stopped, held or to be trimmed in place, this section wins.
   the six entries never posted (`2026-10-11-mods-guide-by-type`, `2026-10-14-ashmoon-radiation`,
   `2026-10-16-privacy-terms`, `2026-10-20-mod-videos`, `2026-10-20-sign-in`, `2026-10-25-busiest-hours`), which stay
   without `live`. The last post in Discord was `2026-10-20-create-addons` at 16:35 UTC (`DiscordPost`, live database).
+
+**Live (2026-10-26).** PR #97 was merged and deployed at 20:57 UTC, and Alex ran Build and Sync on live. The server's 22:31 start loaded 138 files, with none missing and no problems; `modpack/server-loaded.json` now holds that start (check-sides: sides OK). The change log was not posted after the deploy, because the entry had no `live`.
+
+**The change log now posts on the Sync (Alex, 2026-10-26).** A change log entry can be marked `onSync` (`apps/api/src/changelog.ts`). The bot posts it once the server's last start (Setting `_serverMods`) loaded every mod the deployed pack gives it, with no problems. The check runs against the lock the api has now (`packLoaded`, `apps/api/src/modpack/server-mods.ts`), so a start from before a deploy does not count. The bot checks once a minute. Entries after a waiting one wait too, so replies stay oldest first. A site-only entry still uses `live`. `2026-10-26-mod-update` is marked `onSync`; live's 22:31 start already passes the check, so the deploy of this change posts it.
 
 ## Live at home: the cutover, then the whole stack on docker-01v (2026-10-23, deployed: `main` 8e5cbe7)
 

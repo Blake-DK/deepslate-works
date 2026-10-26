@@ -77,6 +77,8 @@ type Deps = {
   updates?: Webhook | null; // docs/22 §13: the forum season-updates
   bot?: VotePoster | null; // docs/22: set when DISCORD_BOT_TOKEN is
   changes?: Change[]; // the change log's entries (changelog.ts); absent: no change log post
+  /** Alex, 2026-10-26: whether the server's last start loaded the deployed pack in full (entries marked `onSync` wait for it). */
+  synced?: () => Promise<boolean>;
   chatRelay?: boolean; // docs/22 §5: game chat to #game-chat needs the bot (the chat channel is picked through it)
   /** docs/53 D1: the player role's id while new posts in season-updates may tag it (role.ts); null or absent: no tag. */
   playerRole?: () => string | null;
@@ -791,7 +793,8 @@ export class Announcer {
   /**
    * Every entry of changelog.ts that has not been posted yet becomes a reply in the one post "Change log" in
    * season-updates, oldest first. The post is made the first time; one deleted by hand is made again. Looked at once
-   * a minute until everything is posted, so in practice once after each deploy. Without the forum's webhook: nothing.
+   * a minute until everything is posted, so in practice once after each deploy (an entry marked `onSync`: once the
+   * server has started the deployed pack in full, after the Sync). Without the forum's webhook: nothing.
    * An entry Discord refuses for good is marked as posted and skipped, so it cannot hold up the ones after it.
    * docs/53 D2 (Alex, 2026-10-12): an entry with a `title` is a big game update and tags @Minecraft (D1), unless it is
    * marked `noPing`; the others (site changes, fixes) and the post's own opening message ping nobody.
@@ -811,6 +814,8 @@ export class Announcer {
     for (const c of changes) {
       const key = `changelog:${c.id}`;
       if (await this.postOf(key)) continue;
+      // a mod update waits for the Sync; the entries after it wait too, so the replies stay oldest first
+      if (c.onSync && !c.live && !(await this.d.synced?.().catch(() => false))) return;
       const role = c.title && !c.noPing ? this.role("updates") : null;
       const msg = tagged(asServer(brand, changeText(c, DISCORD_MAX - tagPrefix(role).length)), role);
       threadId ??= await open();

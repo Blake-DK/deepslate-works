@@ -48,7 +48,7 @@ import { countryOf } from "./events/geo.js";
 import { runRetentionIfDue } from "./events/retention.js";
 import { requireAdmin } from "./auth.js";
 import { verifyRoutes } from "./routes/verify.js";
-import { ServerMods, SERVER_MODS_KEY } from "./modpack/server-mods.js";
+import { packLoaded, ServerMods, SERVER_MODS_KEY } from "./modpack/server-mods.js";
 import { getSection } from "./settings.js";
 import { Announcer } from "./discord/announcer.js";
 import { prismaFeedStore } from "./discord/store.js";
@@ -160,7 +160,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
   const feed = new Announcer({
     store: prismaFeedStore(portal, env.REPO_DIR), feed: hook(outlets.feed), admin: hook(outlets.admin), updates: hook(outlets.updates),
     // docs/42 §3: the test server posts no change log
-    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: testMode ? [] : liveChanges(CHANGES), portal, log: (o, m) => app.log.info(o, m),
+    bot: bot ? votePoster(bot) : null, chatRelay: Boolean(bot), changes: testMode ? [] : liveChanges(CHANGES), synced: () => packLoaded(env.REPO_DIR), portal, log: (o, m) => app.log.info(o, m),
     // docs/53 D1: new posts in season-updates tag that role, while it is on and Discord knows it
     playerRole: () => roles?.mention() ?? null,
   });

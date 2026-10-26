@@ -15,7 +15,7 @@ type Call = { method: string; url: string; body: Record<string, unknown> };
 const ONE: Change = { id: "a", date: "2026-10-04", lines: ["First thing.", "Second thing."] };
 const TWO: Change = { id: "b", date: "2026-11-01", lines: ["Later thing."] };
 
-function setup(changes: Change[], opts: { updates?: boolean; answer?: (c: Call) => Response | null; role?: string | null } = {}) {
+function setup(changes: Change[], opts: { updates?: boolean; answer?: (c: Call) => Response | null; role?: string | null; synced?: () => Promise<boolean> } = {}) {
   const calls: Call[] = [];
   let ids = 1000;
   const f = (async (url: string, init: RequestInit = {}) => {
@@ -51,7 +51,7 @@ function setup(changes: Change[], opts: { updates?: boolean; answer?: (c: Call) 
     brand: async () => ({ name: "Deepslate Works", avatar: null }),
   };
   const logs: string[] = [];
-  const make = (list: Change[]) => new Announcer({ store, feed, admin: null, updates, changes: list, portal: "https://deepslate.dsw.test", log: (_o, m) => void logs.push(m), now: () => new Date(clock), playerRole: () => opts.role ?? null });
+  const make = (list: Change[]) => new Announcer({ store, feed, admin: null, updates, changes: list, synced: opts.synced, portal: "https://deepslate.dsw.test", log: (_o, m) => void logs.push(m), now: () => new Date(clock), playerRole: () => opts.role ?? null });
   const sent = () => calls.filter((c) => c.method === "POST");
   return { a: make(changes), make, posts, store, sent, logs, later: (ms: number) => void (clock += ms) };
 }
@@ -188,6 +188,10 @@ describe("an entry posts only once it is live (planner, 2026-10-09)", () => {
     expect(liveChanges(list).map((c) => c.id)).toEqual(["b"]);
     expect(liveChanges([])).toEqual([]);
   });
+  it("passes on an entry that waits for the Sync too (Alex, 2026-10-26)", async () => {
+    const { liveChanges } = await import("../src/changelog.js");
+    expect(liveChanges([{ id: "a", date: "2026-10-26", lines: ["x"] }, { id: "m", date: "2026-10-26", lines: ["mods"], onSync: true }]).map((c) => c.id)).toEqual(["m"]);
+  });
   it("keeps the entry posted on 2026-10-09 marked live", () => {
     expect(CHANGES.find((c) => c.id === "2026-10-08-entrance-room")?.live).toBe(true);
   });
@@ -317,5 +321,44 @@ describe("the entries in the repo, docs/53 D2", () => {
   it("every entry passes", () => {
     for (const c of CHANGES) expect(lint(c, names), c.id).toEqual([]);
     expect(CHANGES.filter((c) => c.title).map((c) => c.id)).toEqual(expect.arrayContaining(["2026-10-12-power-and-gear-coming-in-log", "2026-10-12-power-and-gear-landed"]));
+  });
+});
+
+describe("a mod update's entry is posted on the Sync (Alex, 2026-10-26)", () => {
+  const MODS: Change = { id: "mods", date: "2026-10-26", lines: ["Mods updated."], onSync: true };
+  it("waits until the server has started the deployed pack in full, then posts it without another deploy", async () => {
+    let loaded = false;
+    const t = setup([MODS], { synced: async () => loaded });
+    await t.a.round();
+    expect(t.sent().length).toBe(0);
+    t.later(61_000);
+    await t.a.round();
+    expect(t.sent().length).toBe(0);
+    loaded = true;
+    t.later(61_000);
+    await t.a.round();
+    expect(t.sent().map((c) => c.body.content ?? null)).toEqual([expect.any(String), "**26 October 2026**\n• Mods updated."]);
+    expect(t.posts.get("changelog:mods")).toBeTruthy();
+  });
+  it("holds the entries after it back too, so the replies stay oldest first", async () => {
+    let loaded = false;
+    const t = setup([MODS, { ...TWO, live: true }], { synced: async () => loaded });
+    await t.a.round();
+    expect(t.posts.get("changelog:b")).toBeUndefined();
+    loaded = true;
+    t.later(61_000);
+    await t.a.round();
+    expect(t.sent().slice(1).map((c) => c.body.content)).toEqual(["**26 October 2026**\n• Mods updated.", "**1 November 2026**\n• Later thing."]);
+  });
+  it("posts nothing while the check cannot be made", async () => {
+    const t = setup([MODS], { synced: async () => { throw new Error("database away"); } });
+    await t.a.round();
+    expect(t.sent().length).toBe(0);
+    const u = setup([MODS]);
+    await u.a.round();
+    expect(u.sent().length).toBe(0);
+  });
+  it("the mod update of 2026-10-26 waits for the Sync", () => {
+    expect(CHANGES.find((c) => c.id === "2026-10-26-mod-update")?.onSync).toBe(true);
   });
 });

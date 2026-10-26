@@ -115,3 +115,16 @@ export class ServerMods {
     return { at, files: loaded, problems, expected, missing, source, modIds };
   }
 }
+
+/**
+ * Alex, 2026-10-26: whether the server's last start (Setting "_serverMods") loaded every mod the deployed pack gives
+ * it, with no problem. Held against the lock this api has now, not the one of that start, so a start from before a
+ * deploy does not count for the pack after it. The change log's `onSync` entries wait for it (discord/announcer.ts).
+ */
+export async function packLoaded(repoDir: string): Promise<boolean> {
+  const value = (await db.setting.findUnique({ where: { key: SERVER_MODS_KEY } }))?.value as { files?: Loaded[] } | null | undefined;
+  const files = Array.isArray(value?.files) ? value.files : [];
+  if (files.length === 0) return false;
+  const lock = (await readShippedLock(repoDir)) as unknown as LockLike;
+  return missingOnServer(files, lock).missing.length === 0 && compareLoaded(files, lock).length === 0;
+}

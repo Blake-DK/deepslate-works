@@ -69,7 +69,7 @@ services:
     container_name: deepslate-newt
     restart: unless-stopped
     logging: *logging
-    mem_limit: 64m
+    mem_limit: 500m                     # at 64m the kernel killed it under load (idle ~18 MiB, bursts past 64)
     cpus: "0.5"
     networks: [ds-edge]
     environment:

@@ -29,6 +29,42 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Every mod to its newest version but Quarry and voice chat (2026-10-26, on `dev` and the test server; not deployed)
+
+- **Alex:** "update them all", with a change log for Discord covering everything since the last post.
+- **Checked:** every switched-on pin in `mods.json` and every Extra against Modrinth's NeoForge 1.21.1 versions, a mod
+  pinned to a beta taking the newest beta, one pinned to a release the newest release. 85 already newest.
+- **Moved (12 pins):** ModernFix 5.27.27, Xaero's Minimap 26.6.0 and World Map 1.47.0 with Open Parties and Claims
+  0.33.0 (beta, as every build of it is; this ends the 2026-10-05 hold below: the maps needed claims 0.32.4 or newer),
+  Corpse 1.1.22, Simple Voice Chat 2.6.26 (beta), Sophisticated Backpacks 3.26.15.2227 and Core 1.5.18.2431 (B-10's pins
+  off), Amendments 2.2.2, Naturalist 2.0.7, Friends & Foes 5.0.4, Puzzles Lib 21.1.66. Lock also took GuideME 21.1.20,
+  MezzConfig 0.6.9 and Titanium 4.0.51, and in Extras Sound Physics Remastered 1.5.2. Lock `d14f7be6` (105 files),
+  extras `85c40b17`; its dependency check passed (the two private jars not read, as always).
+- **Not moved:** Quarry stays on 21.1.164: Quarry Pause accepts `[21.1.164,21.1.165)` only, and 21.1.165 adds a log
+  file and nothing else. NeoForge stays pinned at 21.1.253 (21.1.265 is out): it moves with the AMP install (B-25).
+- **CI's `check-sides` fails** until `server-loaded.json` comes from a start of this lock, as on 2026-10-20: the server
+  still loads the 13 older jars. Next: Build and Sync on the test server, a PC joins through Test, then
+  `server-loaded.json` from the test database (`_serverMods`); for live, an AMP backup first (claims move 0.31 → 0.33).
+- **On the test server, 19:5x UTC (Alex: "run Build and Sync on the test server yourself"):** the test checkout pulled
+  to `dev` 6fc46dd; Build all through the test api as Alex's admin account (pack `0.1.0+d14f7be6`, 92 mods on the
+  server, 13 downloaded); Sync: 13 jars updated, server woken, started 19:56:51, 143 files loaded, 0 missing, 0
+  problems. `server-loaded.json` from that start (Season 1 shipped, as on test); `check-sides`: sides OK. Not done:
+  a PC joining through Test (the test build has no DeepslateWorks.exe in `dist/ci`, as before), the claims screen
+  looked at in game, anything on live.
+- **A test PC refused to start (20:1x UTC, Alex's screenshot):** "Mod voicechat only supports sound_physics_remastered
+  1.21.1-1.5.2 or above. Currently 1.21.1-1.4.10". Voice chat 2.6.25 and 2.6.26 hold the Sound Physics Extra to 1.5.2
+  or newer; the Extras lock moved it to 1.5.2, but the test folder's Extra was still 1.4.10 (a test Play keeps its own
+  Extras, docs/07), and nothing proves a live Play swaps the Extra before the game starts. **Fix:** voice chat back to
+  2.6.24 (live's, no such rule), lock `65d45be8`; the Extra stays at 1.5.2, which 2.6.24 takes. **Lock checks the
+  Extras now** (docs/06 "The Extras beside the pack"): it stopped on the 2.6.26 pack with the old Extras lock, naming
+  this very error, and passes on 2.6.24. Voice chat can move once every PC has Sound Physics 1.5.2. Test server
+  built and synced again: started 20:29:23 UTC on 2.6.24, 143 files, none missing, no problems; `server-loaded.json`
+  from that start. Alex then pressed Play on the Test tab (pack `0.1.0+65d45be8`): the game loaded.
+- **Change log:** one entry `2026-10-26-mod-update` (title, so it tags @Minecraft; not live) holds the mod update and
+  the six entries never posted (`2026-10-11-mods-guide-by-type`, `2026-10-14-ashmoon-radiation`,
+  `2026-10-16-privacy-terms`, `2026-10-20-mod-videos`, `2026-10-20-sign-in`, `2026-10-25-busiest-hours`), which stay
+  without `live`. The last post in Discord was `2026-10-20-create-addons` at 16:35 UTC (`DiscordPost`, live database).
+
 ## Live at home: the cutover, then the whole stack on docker-01v (2026-10-23, deployed: `main` 8e5cbe7)
 
 Doc 62's move happened today, on `main` 687bd71f (PR #93), 1bfce1d (PR #94) and 8e5cbe7 (PR #95). Times UTC. The

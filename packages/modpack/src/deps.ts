@@ -1,5 +1,6 @@
 import path from "node:path";
 import { sha512File } from "./download";
+import type { ExtrasLock } from "./extras";
 import { shippedFiles, type LockFile } from "./lock";
 import { privateJarOf } from "./mod-url";
 import { openZip, openZipOnDisk, type Zip } from "./zip";
@@ -581,4 +582,38 @@ export function checkPackDependencies(lock: Pick<LockFile, "files" | "minecraft"
   const unread = lock.files.filter((f) => !jars.get(f.filename));
   if (unread.length) out.push({ level: "warn", message: `dependencies: ${unread.length} of ${lock.files.length} jars not read, so not checked: ${unread.map((f) => f.slug).join(", ")}` });
   return out.sort((a, b) => (a.level === b.level ? 0 : a.level === "error" ? -1 : 1));
+}
+
+/**
+ * The Extras beside the pack on a PC (2026-10-26): Simple Voice Chat 2.6.25 and newer take Sound Physics Remastered
+ * 1.5.2 or newer only, and a test PC still had the Extra at 1.4.10 when the pack moved to 2.6.26: "Error loading
+ * mods". Each set of Extras (every mod Extra switched on at once) is held to the pack's PC side, with no season
+ * shipped, each season and all of them; `sets` are the Extras as locked now and as PCs may still have them (the lock
+ * before), since a PC can keep an old Extra after its pack has moved. Problems the pack has without any Extra are the
+ * pack's check's to report and are left out here. `jars` holds the pack's and the Extras' JarMods by filename.
+ */
+export function checkExtrasDependencies(
+  lock: Pick<LockFile, "files" | "minecraft" | "neoforge">,
+  sets: Array<{ name: string; extras: Pick<ExtrasLock, "extras"> }>,
+  jars: Map<string, JarMods | null>,
+): DepProblem[] {
+  const seasons = [...new Set(lock.files.flatMap((f) => (f.season ? [f.season] : [])))].sort();
+  const variants: string[][] = [[], ...seasons.map((s) => [s]), ...(seasons.length > 1 ? [seasons] : [])];
+  const seen = new Map<string, DepProblem>();
+  for (const ship of variants) {
+    const pc = shippedFiles(lock, ship)
+      .filter((f) => f.side !== "server")
+      .map((f) => ({ slug: f.slug, jar: jars.get(f.filename) ?? null }));
+    const alone = new Set(checkJarSet(pc, lock, "client").map((p) => p.message));
+    for (const set of sets) {
+      const extra = [...new Map(set.extras.extras.flatMap((x) => x.files.filter((f) => f.kind === "mod")).map((f) => [f.filename, f])).values()];
+      for (const p of checkJarSet([...pc, ...extra.map((f) => ({ slug: `Extra ${f.slug}`, jar: jars.get(f.filename) ?? null }))], lock, "client")) {
+        if (alone.has(p.message)) continue;
+        const message = `on PCs with ${set.name}: ${p.message}`;
+        const had = seen.get(message);
+        if (!had || p.level === "error") seen.set(message, { level: p.level, message });
+      }
+    }
+  }
+  return [...seen.values()].sort((a, b) => (a.level === b.level ? 0 : a.level === "error" ? -1 : 1));
 }

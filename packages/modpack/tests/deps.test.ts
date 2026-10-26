@@ -5,7 +5,7 @@ import path from "node:path";
 import { PassThrough } from "node:stream";
 import archiver from "archiver";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { checkPackDependencies, compareVersions, inRange, jarMods, parseRange, readModsToml, type JarMods } from "../src/deps";
+import { checkExtrasDependencies, checkPackDependencies, compareVersions, inRange, jarMods, parseRange, readModsToml, type JarMods } from "../src/deps";
 import { buildLock, type LockEntry } from "../src/lock";
 import type { Manifest, Mod } from "../src/schema";
 import { openZip } from "../src/zip";
@@ -201,6 +201,30 @@ describe("checkPackDependencies: the two packs that passed Lock and failed on ev
     expect(await pack(await flywheelCase(true, false))).toEqual([
       { level: "warn", message: "on PCs: flywheel comes in 2 versions, and which one loads is not certain: 1.0.6 (create > flywheel-neoforge-1.21.1-1.0.6.jar, as dev.engine-room.flywheel:flywheel-neoforge-1.21.1) and 1.0.4 (flw-vanillin > flywheel-neoforge-1.21.1-1.0.4.jar, as dev.engine-room.flywheel:neoforge); every mod that names it takes each" },
     ]);
+  });
+});
+
+describe("checkExtrasDependencies: the pack beside the Extras on a PC", () => {
+  // 2026-10-26: Simple Voice Chat 2.6.26 takes Sound Physics Remastered 1.5.2 or newer only; the Extras lock moved the
+  // Extra to 1.5.2 with it, but a PC that had not updated its Extras still had 1.4.10, and the game refused to start
+  const voice = entry("simple-voice-chat", "both");
+  const fileOf = (version: string) => ({ slug: "sound-physics-remastered", name: "Sound Physics Remastered", kind: "mod" as const, versionId: "v" + version, versionNumber: version, versionType: "beta", filename: `sound-physics-${version}.jar`, url: "https://cdn.modrinth.com/s.jar", sha512: "0", size: 1 });
+  const extras = (version: string) => ({ extras: [{ id: "sound-physics", name: "Sound Physics", description: "x", fps: "Medium" as const, requires: [], modIds: ["sound_physics_remastered"], files: [fileOf(version)], size: 1, picture: null }] });
+  async function jars(voiceNeeds: string | null) {
+    const m = new Map<string, JarMods | null>();
+    m.set(voice.filename, jarMods(openZip(await jar([{ id: "voicechat", version: "2.6.26", deps: voiceNeeds ? [["sound_physics_remastered", "optional", voiceNeeds, "BOTH"]] : [] }]))));
+    for (const v of ["1.21.1-1.4.10", "1.21.1-1.5.2"]) m.set(`sound-physics-${v}.jar`, jarMods(openZip(await jar([{ id: "sound_physics_remastered", version: v }]))));
+    return m;
+  }
+  const lock = { files: [voice], minecraft: "1.21.1", neoforge: "21.1.253" };
+  it("refuses a pack the Extras PCs still have do not fit, naming that set", async () => {
+    const found = checkExtrasDependencies(lock, [{ name: "every Extra on", extras: extras("1.21.1-1.5.2") }, { name: "every Extra on, as PCs have them before they update", extras: extras("1.21.1-1.4.10") }], await jars("[1.21.1-1.5.2,)"));
+    expect(found).toEqual([
+      { level: "error", message: "on PCs with every Extra on, as PCs have them before they update: voicechat 2.6.26 (simple-voice-chat) works with sound_physics_remastered [1.21.1-1.5.2,) only, but the pack has sound_physics_remastered 1.21.1-1.4.10 (Extra sound-physics-remastered)" },
+    ]);
+  });
+  it("passes when every set fits (voice chat 2.6.24 names no Sound Physics)", async () => {
+    expect(checkExtrasDependencies(lock, [{ name: "every Extra on", extras: extras("1.21.1-1.5.2") }, { name: "before", extras: extras("1.21.1-1.4.10") }], await jars(null))).toEqual([]);
   });
 });
 

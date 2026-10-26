@@ -174,6 +174,7 @@ export const CHANGES: Change[] = [
   },
   {
     // The Mods guide by type (docs/52). Set `live: true` only after the live check (the rule above).
+    // Never posted on its own: folded into "2026-10-26-mod-update" (below), so it stays without `live`.
     id: "2026-10-11-mods-guide-by-type",
     date: "2026-10-11",
     lines: [
@@ -282,6 +283,7 @@ export const CHANGES: Change[] = [
   {
     // Ashmoon's air is radiation now, stronger the deeper you go (Alex, 2026-10-14). Set `live: true` only after the
     // live check (the rule above).
+    // Never posted on its own: folded into "2026-10-26-mod-update" (below), so it stays without `live`.
     id: "2026-10-14-ashmoon-radiation",
     date: "2026-10-14",
     title: "Ashmoon is radioactive",
@@ -293,6 +295,7 @@ export const CHANGES: Change[] = [
   },
   {
     // docs/22a §6: the privacy and terms pages the Discord app links to.
+    // Never posted on its own: folded into "2026-10-26-mod-update" (below), so it stays without `live`.
     id: "2026-10-16-privacy-terms",
     date: "2026-10-16",
     lines: ["The site has a Privacy page and a Terms page, linked at the bottom of every page: what the site keeps about you and for how long, and how the server works. Anyone can open them, signed in or not."],
@@ -330,16 +333,44 @@ export const CHANGES: Change[] = [
   },
   {
     // Videos on three mod cards (Alex, 2026-10-20). Set `live: true` once the deploy is on the site (the rule above).
+    // Never posted on its own: folded into "2026-10-26-mod-update" (below), so it stays without `live`.
     id: "2026-10-20-mod-videos",
     date: "2026-10-20",
     lines: ["The Mods page has videos for ArPhEx, Mutant Monsters and Nyf's Spiders, the creepy-crawlies and mutants on Ashmoon."],
   },
   {
+    // Never posted on its own: folded into "2026-10-26-mod-update" (below), so it stays without `live`.
     id: "2026-10-20-sign-in",
     date: "2026-10-20",
     lines: [
       "Signing in to the site has a new button: Sign in with Discord or Microsoft. Press it, then press Discord on the page that opens. Your account, your votes and your Minecraft link stay as they are.",
       "If you are already signed in, nothing changes until you sign out.",
+    ],
+  },
+  {
+    // Never posted on its own: folded into "2026-10-26-mod-update" (below), so it stays without `live`.
+    id: "2026-10-25-busiest-hours",
+    date: "2026-10-25",
+    lines: ["Players & stats → Stats: the Busiest hours chart now fits its box, with no scroll bar to see the whole day."],
+  },
+  {
+    // The mod update of 2026-10-26 (Alex: "update them all"), and with it every change since the last post (2026-10-20
+    // 16:35 UTC) that was never posted, the six entries above without `live` among them; those stay unposted. Set
+    // `live: true` only after the live check (the rule above).
+    id: "2026-10-26-mod-update",
+    date: "2026-10-26",
+    title: "Mod updates, and what's new since the last post",
+    lines: [
+      "The minimap and world map are on their newest versions again. They were held back since 5 October because they needed a newer claims mod; that is updated now too, and your claims are kept.",
+      "Claims (Open Parties and Claims) has a new settings screen with a search bar, and each option says what it does when you point at it.",
+      "Also updated: Sophisticated Backpacks, Corpse, Amendments, Naturalist, Friends & Foes, ModernFix, and Sound Physics in the app's Extras.",
+      "Ashmoon's bad air below y 30 is radiation: stronger the deeper you go, and masks wear out faster down there. Below y -25 only a full hazmat suit or a full MekaSuit keeps you alive.",
+      "Signing in to the site: press Sign in with Discord or Microsoft, then Discord on the next page. Your account, votes and Minecraft link stay as they are.",
+      "The Mods guide is split up by type (getting around, mining, storage, building, factories, farming and more), with links to each section under the search box.",
+      "The Mods page has videos for the creepy-crawlies and mutants on Ashmoon.",
+      "The site has Privacy and Terms pages, linked at the bottom of every page.",
+      "Players & stats → Stats: the Busiest hours chart fits its box now, no scrolling.",
+      "Press Play to update.",
     ],
   },
 ];

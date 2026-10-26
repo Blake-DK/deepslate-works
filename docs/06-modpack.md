@@ -164,6 +164,8 @@ It then works out what loads, separately for PCs (everything but server-only) an
 
 A discouraged dependency in range is a warning. A jar that could not be read (a private jar not on this machine) is named, and a required mod missing then is a warning, not an error. Only Lock with a jar cache runs the check: the CLI's `modpack lock` does; Admin → Modpack → Lock passes none and says in its log that nothing was looked into.
 
+**The Extras beside the pack (2026-10-26).** Simple Voice Chat 2.6.25 and newer take Sound Physics Remastered 1.5.2 or newer only (an optional dependency, so only when the Extra is on). The Lock that moved voice chat to 2.6.26 also moved the Extra to 1.5.2, but a test PC still had the Extra at 1.4.10 and the game stopped at "Error loading mods". Lock now also holds the pack's PC side (no season, each season, all of them) beside every mod Extra switched on at once, twice: the Extras as just locked, and, when they changed, the Extras of the lock before, as PCs still have them until they update. An error there stops Lock and writes neither lock. `check-deps` does the first of the two for the lock as committed. Problems the pack has without any Extra are left to the pack's own check.
+
 All commands can be run again without harm and print what they changed. Network failures are tried three times and then fail loudly; a half-written lockfile is never left behind (write to temp, rename).
 
 A build makes `dist/server/config/` and `dist/server/datapacks/` afresh each time, so a settings file taken out of the pack does not stay behind (since 2026-09-29; TabTPS's lingered until then). Sync still never deletes on the server: `config/tabtps/` is on the instance, unused.

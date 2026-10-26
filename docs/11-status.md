@@ -29,7 +29,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Every mod to its newest version (2026-10-26, on `dev`; not on the test server, not deployed)
+## Every mod to its newest version (2026-10-26, on `dev` and the test server; not deployed)
 
 - **Alex:** "update them all", with a change log for Discord covering everything since the last post.
 - **Checked:** every switched-on pin in `mods.json` and every Extra against Modrinth's NeoForge 1.21.1 versions, a mod
@@ -45,6 +45,12 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **CI's `check-sides` fails** until `server-loaded.json` comes from a start of this lock, as on 2026-10-20: the server
   still loads the 13 older jars. Next: Build and Sync on the test server, a PC joins through Test, then
   `server-loaded.json` from the test database (`_serverMods`); for live, an AMP backup first (claims move 0.31 → 0.33).
+- **On the test server, 19:5x UTC (Alex: "run Build and Sync on the test server yourself"):** the test checkout pulled
+  to `dev` 6fc46dd; Build all through the test api as Alex's admin account (pack `0.1.0+d14f7be6`, 92 mods on the
+  server, 13 downloaded); Sync: 13 jars updated, server woken, started 19:56:51, 143 files loaded, 0 missing, 0
+  problems. `server-loaded.json` from that start (Season 1 shipped, as on test); `check-sides`: sides OK. Not done:
+  a PC joining through Test (the test build has no DeepslateWorks.exe in `dist/ci`, as before), the claims screen
+  looked at in game, anything on live.
 - **Change log:** one entry `2026-10-26-mod-update` (title, so it tags @Minecraft; not live) holds the mod update and
   the six entries never posted (`2026-10-11-mods-guide-by-type`, `2026-10-14-ashmoon-radiation`,
   `2026-10-16-privacy-terms`, `2026-10-20-mod-videos`, `2026-10-20-sign-in`, `2026-10-25-busiest-hours`), which stay

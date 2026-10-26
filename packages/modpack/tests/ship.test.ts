@@ -68,12 +68,12 @@ describe("the repo's pack (docs/44, 'Done when')", () => {
     const { seasons } = await loadSeasons(path.join(MODPACK, "seasons"));
     for (const x of m.mods.filter((y) => y.season)) expect(seasons.map((s) => s.id)).toContain(x.season);
   });
-  it("live, shipping nothing, keeps the pack it has (0.1.0+8fb3d45e, 100 files since the 2026-10-26 updates (every mod to its newest but Quarry); before them since the 2026-10-20's updates (JEI 19.64 brings MezzConfig; Corpse, Entity Culling, ImmediatelyFast, ModernFix, Puzzles Lib, Placebo, Kotlin for Forge newer); 99 since Create: Connected and Create: The Factory Must Grow, 2026-10-20 (Create Aeronautics and Sable in and out the same day: their Flywheel 1.0.6 against Vanillin's 1.0.4); 97 before, since the animal and cosy mods: ten mods, two libraries and Moonlight, the duplicates dropped; 84 before, since the horror mobs on Ashmoon (ArPhEx, Mutant Monsters, Nyf's Spiders, with GeckoLib and Puzzles Lib) since Vanishmod, server only; Macaw's Holidays; the flower mods, docs/59; the gas mask's icon in the resource pack, docs/55 M8); a server shipping s1 gets all 105 (with the horror trial on Ashmoon)", async () => {
+  it("live, shipping nothing, keeps the pack it has (0.1.0+5fba53c9, 100 files since the 2026-10-26 updates (every mod to its newest but Quarry and Simple Voice Chat); before them since the 2026-10-20's updates (JEI 19.64 brings MezzConfig; Corpse, Entity Culling, ImmediatelyFast, ModernFix, Puzzles Lib, Placebo, Kotlin for Forge newer); 99 since Create: Connected and Create: The Factory Must Grow, 2026-10-20 (Create Aeronautics and Sable in and out the same day: their Flywheel 1.0.6 against Vanillin's 1.0.4); 97 before, since the animal and cosy mods: ten mods, two libraries and Moonlight, the duplicates dropped; 84 before, since the horror mobs on Ashmoon (ArPhEx, Mutant Monsters, Nyf's Spiders, with GeckoLib and Puzzles Lib) since Vanishmod, server only; Macaw's Holidays; the flower mods, docs/59; the gas mask's icon in the resource pack, docs/55 M8); a server shipping s1 gets all 105 (with the horror trial on Ashmoon)", async () => {
     const lock = await realLock();
     expect(lock.hash).toBe(packHash(lock.neoforge, lock.files, lock.configs, lock.resourcepack)); // the lock's own hash is over everything
     const live = shippedLock(lock, []);
     expect(live.files).toHaveLength(100);
-    expect(live.hash.slice(0, 8)).toBe("8fb3d45e");
+    expect(live.hash.slice(0, 8)).toBe("5fba53c9");
     const test = shippedLock(lock, ["s1"]);
     expect(test.files).toHaveLength(105);
     expect(test.hash).toBe(lock.hash);

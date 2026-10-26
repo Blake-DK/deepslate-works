@@ -363,7 +363,7 @@ export const CHANGES: Change[] = [
     lines: [
       "The minimap and world map are on their newest versions again. They were held back since 5 October because they needed a newer claims mod; that is updated now too, and your claims are kept.",
       "Claims (Open Parties and Claims) has a new settings screen with a search bar, and each option says what it does when you point at it.",
-      "Also updated: Sophisticated Backpacks, Simple Voice Chat, Corpse, Amendments, Naturalist, Friends & Foes, ModernFix, and Sound Physics in the app's Extras.",
+      "Also updated: Sophisticated Backpacks, Corpse, Amendments, Naturalist, Friends & Foes, ModernFix, and Sound Physics in the app's Extras.",
       "Ashmoon's bad air below y 30 is radiation: stronger the deeper you go, and masks wear out faster down there. Below y -25 only a full hazmat suit or a full MekaSuit keeps you alive.",
       "Signing in to the site: press Sign in with Discord or Microsoft, then Discord on the next page. Your account, votes and Minecraft link stay as they are.",
       "The Mods guide is split up by type (getting around, mining, storage, building, factories, farming and more), with links to each section under the search box.",

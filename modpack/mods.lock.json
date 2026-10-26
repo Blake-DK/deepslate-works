@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-26T19:34:32.485Z",
+  "generatedAt": "2026-10-26T20:22:53.459Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "d14f7be62970d5c0db407d97dbe3661bbec1d810f2f8d94ad06e77cfc0bb277f",
+  "hash": "65d45be8607dd35ba5959b0c3fad7104ecb145d858db82ae39ae0bb98d1055e2",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -1833,14 +1833,14 @@
       "slug": "simple-voice-chat",
       "name": "Simple Voice Chat",
       "projectId": "9eGKb6K1",
-      "versionId": "BdfNq5zU",
-      "versionNumber": "neoforge-1.21.1-2.6.26",
+      "versionId": "qqNx1Yjm",
+      "versionNumber": "neoforge-1.21.1-2.6.24",
       "versionType": "beta",
-      "filename": "voicechat-neoforge-1.21.1-2.6.26.jar",
-      "url": "https://cdn.modrinth.com/data/9eGKb6K1/versions/BdfNq5zU/voicechat-neoforge-1.21.1-2.6.26.jar",
-      "sha512": "919033cadb14715630d2904b682daa063de8b4a7482fe75559fc20a6b7c7e03c2f27e18770a5102d35e5ecc7539f64bf8f44039fd7eeea406547f1d748145edf",
-      "sha1": "290776453dcd26131f466ea3af80f2e480068cbb",
-      "size": 4936690,
+      "filename": "voicechat-neoforge-1.21.1-2.6.24.jar",
+      "url": "https://cdn.modrinth.com/data/9eGKb6K1/versions/qqNx1Yjm/voicechat-neoforge-1.21.1-2.6.24.jar",
+      "sha512": "730d2b2acc39afbac16cd3e4312d411e6f226f71aa58e26ff9c772110f962b2e2c7810baa3cd19cd82d28aed85c58d0c0df1ed5fc97dad8a89655008f3461a31",
+      "sha1": "436ee200d5192ffda65fcf70c42c086fcdc00826",
+      "size": 4934688,
       "side": "both",
       "requiredBy": [],
       "modrinth": {

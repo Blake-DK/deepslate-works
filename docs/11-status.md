@@ -59,7 +59,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Extras now** (docs/06 "The Extras beside the pack"): it stopped on the 2.6.26 pack with the old Extras lock, naming
   this very error, and passes on 2.6.24. Voice chat can move once every PC has Sound Physics 1.5.2. Test server
   built and synced again: started 20:29:23 UTC on 2.6.24, 143 files, none missing, no problems; `server-loaded.json`
-  from that start.
+  from that start. Alex then pressed Play on the Test tab (pack `0.1.0+65d45be8`): the game loaded.
 - **Change log:** one entry `2026-10-26-mod-update` (title, so it tags @Minecraft; not live) holds the mod update and
   the six entries never posted (`2026-10-11-mods-guide-by-type`, `2026-10-14-ashmoon-radiation`,
   `2026-10-16-privacy-terms`, `2026-10-20-mod-videos`, `2026-10-20-sign-in`, `2026-10-25-busiest-hours`), which stay

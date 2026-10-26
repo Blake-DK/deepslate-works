@@ -29,7 +29,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Every mod to its newest version (2026-10-26, on `dev` and the test server; not deployed)
+## Every mod to its newest version but Quarry and voice chat (2026-10-26, on `dev` and the test server; not deployed)
 
 - **Alex:** "update them all", with a change log for Discord covering everything since the last post.
 - **Checked:** every switched-on pin in `mods.json` and every Extra against Modrinth's NeoForge 1.21.1 versions, a mod
@@ -51,6 +51,13 @@ say live is stopped, held or to be trimmed in place, this section wins.
   problems. `server-loaded.json` from that start (Season 1 shipped, as on test); `check-sides`: sides OK. Not done:
   a PC joining through Test (the test build has no DeepslateWorks.exe in `dist/ci`, as before), the claims screen
   looked at in game, anything on live.
+- **A test PC refused to start (20:1x UTC, Alex's screenshot):** "Mod voicechat only supports sound_physics_remastered
+  1.21.1-1.5.2 or above. Currently 1.21.1-1.4.10". Voice chat 2.6.25 and 2.6.26 hold the Sound Physics Extra to 1.5.2
+  or newer; the Extras lock moved it to 1.5.2, but the test folder's Extra was still 1.4.10 (a test Play keeps its own
+  Extras, docs/07), and nothing proves a live Play swaps the Extra before the game starts. **Fix:** voice chat back to
+  2.6.24 (live's, no such rule), lock `65d45be8`; the Extra stays at 1.5.2, which 2.6.24 takes. **Lock checks the
+  Extras now** (docs/06 "The Extras beside the pack"): it stopped on the 2.6.26 pack with the old Extras lock, naming
+  this very error, and passes on 2.6.24. Voice chat can move once every PC has Sound Physics 1.5.2.
 - **Change log:** one entry `2026-10-26-mod-update` (title, so it tags @Minecraft; not live) holds the mod update and
   the six entries never posted (`2026-10-11-mods-guide-by-type`, `2026-10-14-ashmoon-radiation`,
   `2026-10-16-privacy-terms`, `2026-10-20-mod-videos`, `2026-10-20-sign-in`, `2026-10-25-busiest-hours`), which stay

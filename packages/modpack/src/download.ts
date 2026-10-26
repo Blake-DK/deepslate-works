@@ -25,7 +25,7 @@ export async function sha512File(file: string): Promise<string | null> {
  * renamed; 3 tries. A private jar (docs/58) is never downloaded: it is copied from `privateDir`, and only when it is
  * the very file the lock names.
  */
-export async function fetchJar(entry: LockEntry, dest: string, log: (m: string) => void = () => {}, opts: { privateDir?: string } = {}): Promise<"cached" | "downloaded"> {
+export async function fetchJar(entry: Pick<LockEntry, "url" | "filename" | "sha512" | "size">, dest: string, log: (m: string) => void = () => {}, opts: { privateDir?: string } = {}): Promise<"cached" | "downloaded"> {
   // before the cache too: a jar already on disk under a foreign address's name is no better
   const bad = modUrlProblem(entry.url);
   if (bad) throw new Error(`${entry.filename}: ${bad}`);
@@ -67,7 +67,7 @@ export async function fetchJar(entry: LockEntry, dest: string, log: (m: string) 
 }
 
 /** docs/58: the private jar the lock names, from `dir`, checked before and after the copy. Missing or other: an error that says so. */
-async function copyPrivateJar(entry: LockEntry, dest: string, dir: string | undefined): Promise<void> {
+async function copyPrivateJar(entry: Pick<LockEntry, "url" | "filename" | "sha512" | "size">, dest: string, dir: string | undefined): Promise<void> {
   const name = privateJarOf(entry.url);
   if (!name || name !== entry.filename) throw new Error(`${entry.filename}: the lock's address names another file (${entry.url})`);
   if (!dir) throw new Error(`${name}: a private jar (docs/58), and no folder of private jars was given`);

@@ -8,12 +8,12 @@ import { buildLock, diffLocks, shippedLock, type LockFile } from "./lock";
 import { applyTestOverlay, buildConfigZip, buildInstaller, buildServer, removeClientPack } from "./build";
 import { modpackPaths } from "./paths";
 import { buildItems } from "./items";
-import { lockExtras, prepareExtrasLock } from "./extras";
+import { prepareExtrasLock, type ExtrasLock } from "./extras";
 import type { Manifest } from "./schema";
 import { buildSeasons, loadSeasons, readShip, shipNotice } from "./seasons";
 import { buildBuilds } from "./builds";
 import { designFile, designPrompt } from "./design-cli";
-import { checkPackDependencies, readLockJars } from "./deps";
+import { checkExtrasDependencies, checkPackDependencies, jarModsOnDisk, readLockJars, type DepProblem } from "./deps";
 import { fetchJar } from "./download";
 
 const [cmd = "help", ...rest] = process.argv.slice(2);
@@ -37,6 +37,41 @@ async function loadLock(): Promise<LockFile | null> {
   } catch {
     return null;
   }
+}
+
+async function loadExtrasLock(): Promise<ExtrasLock | null> {
+  try {
+    return JSON.parse(await readFile(P.extrasLock, "utf8")) as ExtrasLock;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * deps.ts checkExtrasDependencies: the pack beside the Extras as locked and, when they differ, as PCs may still have
+ * them (`before`). The Extras' jars are fetched into Lock's cache like the pack's.
+ */
+async function extrasProblems(lock: LockFile, now: ExtrasLock | null, before: ExtrasLock | null): Promise<DepProblem[]> {
+  const sets = [
+    ...(now ? [{ name: "every Extra on", extras: now }] : []),
+    ...(before && before.hash !== now?.hash ? [{ name: "every Extra on, as PCs have them before they update", extras: before }] : []),
+  ];
+  if (!sets.length) return [];
+  const jars = await readLockJars(lock, { cache: lockJars, privateDir: P.privateJars });
+  for (const set of sets) {
+    for (const f of set.extras.extras.flatMap((x) => x.files.filter((y) => y.kind === "mod"))) {
+      if (jars.has(f.filename)) continue;
+      const at = path.join(lockJars, f.filename);
+      try {
+        await fetchJar(f, at, log);
+        jars.set(f.filename, jarModsOnDisk(at));
+      } catch (e) {
+        log(`WARN  extras: ${f.filename}: ${e instanceof Error ? e.message : String(e)}`);
+        jars.set(f.filename, null);
+      }
+    }
+  }
+  return checkExtrasDependencies(lock, sets, jars);
 }
 
 async function requireLock(): Promise<LockFile> {
@@ -93,9 +128,22 @@ async function main() {
       // 2.1.0: sides, Modrinth's word on them and the jars' channels are written even when no version moved
       const meta = (l: LockFile) => JSON.stringify(l.files.map((f) => [f.slug, f.side, f.modrinth ?? null, f.channels ?? null]));
       if (prev && meta(prev) !== meta(lock)) log("~ sides / channels recorded");
+      // 2026-10-26: the pack beside the Extras, as locked now and as PCs still have them; an error writes nothing
+      const extrasBefore = await loadExtrasLock();
+      const extrasStop = async (now: ExtrasLock | null) => {
+        const problems = await extrasProblems(lock, now, extrasBefore);
+        for (const p of problems) log(`${p.level.toUpperCase().padEnd(5)} ${p.message}`);
+        return problems.some((p) => p.level === "error");
+      };
       if (prev && changed === 0 && meta(prev) === meta(lock) && !rest.includes("--force")) {
         log(`mods.lock.json unchanged (${lock.files.length} files, NeoForge ${lock.neoforge}, hash ${lock.hash.slice(0, 8)})`);
-        await lockExtras(P, lock, manifest.loader, log);
+        const extras = await prepareExtrasLock(P, lock, manifest.loader, log);
+        if (await extrasStop(extras.lock)) {
+          await rm(`${P.extrasLock}.tmp`, { force: true });
+          console.error("Lock stopped: the pack and the Extras do not fit together (above). Nothing written.");
+          process.exit(1);
+        }
+        await extras.commit();
         process.exit(0);
       }
       // docs/35 R-43: both locks are worked out first, then both renamed into place. The pack's lock used to be in
@@ -106,6 +154,12 @@ async function main() {
         await rm(tmp, { force: true });
         throw e;
       });
+      if (await extrasStop(extras.lock)) {
+        await rm(tmp, { force: true });
+        await rm(`${P.extrasLock}.tmp`, { force: true });
+        console.error("Lock stopped: the pack and the Extras do not fit together (above). Nothing written.");
+        process.exit(1);
+      }
       await rename(tmp, P.lock);
       log(`wrote ${P.lock}: ${lock.files.length} files, NeoForge ${lock.neoforge}, hash ${lock.hash.slice(0, 8)}`);
       await extras.commit();
@@ -139,7 +193,7 @@ async function main() {
           log(`WARN  ${f.slug}: ${e instanceof Error ? e.message : String(e)}`);
         }
       }
-      const problems = checkPackDependencies(lock, await readLockJars(lock, { cache: lockJars }));
+      const problems = [...checkPackDependencies(lock, await readLockJars(lock, { cache: lockJars })), ...(await extrasProblems(lock, await loadExtrasLock(), null))];
       for (const p of problems) log(`${p.level.toUpperCase().padEnd(5)} ${p.message}`);
       const errors = problems.filter((p) => p.level === "error").length;
       log(`${lock.files.length} files in the lock (NeoForge ${lock.neoforge}): ${errors ? `${errors} error(s)` : "dependencies OK"}, ${problems.length - errors} warning(s)`);

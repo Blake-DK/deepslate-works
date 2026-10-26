@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-20T13:44:36.904Z",
+  "generatedAt": "2026-10-26T19:34:36.259Z",
   "minecraft": "1.21.1",
-  "hash": "0144e81e1b33e226ecd3d7d3c96bbc2d6edcc120bc0ce044d6d77f6aa9789f29",
+  "hash": "85c40b1712db2537fd543f4e7a8590eca831b39d7e5a0b5e035d65a68eafc63e",
   "extras": [
     {
       "id": "iris",
@@ -19,7 +19,7 @@
           "kind": "mod",
           "versionId": "KduFYu4t",
           "versionNumber": "1.8.14-beta.1+1.21.1-neoforge",
-          "versionType": "beta",
+          "versionType": "release",
           "filename": "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar",
           "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/KduFYu4t/iris-neoforge-1.8.14-beta.1%2Bmc1.21.1.jar",
           "sha512": "33fddb430e16222902eac75b8b3d57c381b0f3cc729f3b56c4628df12ca108f23a0b11e2feb167923d6d14d1fc7e8ee1a977ec421b19d1951bdca74c4092b9c5",
@@ -201,16 +201,16 @@
           "slug": "sound-physics-remastered",
           "name": "Sound Physics Remastered",
           "kind": "mod",
-          "versionId": "cTTunNxQ",
-          "versionNumber": "neoforge-1.21.1-1.4.10",
+          "versionId": "85fA7L1W",
+          "versionNumber": "neoforge-1.21.1-1.5.2",
           "versionType": "beta",
-          "filename": "sound-physics-remastered-neoforge-1.21.1-1.4.10.jar",
-          "url": "https://cdn.modrinth.com/data/qyVF9oeo/versions/cTTunNxQ/sound-physics-remastered-neoforge-1.21.1-1.4.10.jar",
-          "sha512": "ebe5307c84571f5133251bb3e5ca01293dad94821f396cedb4084b46267396b4c36d7f956887ce883e40630b9f4ce4e4cedd20e3764eedbda6c2b635bdaa21a5",
-          "size": 199310
+          "filename": "sound-physics-remastered-neoforge-1.21.1-1.5.2.jar",
+          "url": "https://cdn.modrinth.com/data/qyVF9oeo/versions/85fA7L1W/sound-physics-remastered-neoforge-1.21.1-1.5.2.jar",
+          "sha512": "958747dc1914536e357512dd2f0b926f2ee936dace3f9a43a0e8eb51ae6f35b9c7359529ee48d2ac50d190b02b617d94d22eced202ecd3056494c71a4958b14b",
+          "size": 204230
         }
       ],
-      "size": 199310,
+      "size": 204230,
       "picture": "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"
     },
     {

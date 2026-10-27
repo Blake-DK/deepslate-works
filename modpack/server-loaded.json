@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-27T22:35:58.101Z",
+  "at": "2026-10-27T23:21:13.634Z",
   "source": "logs/latest.log",
   "files": [
     {
@@ -151,7 +151,7 @@
       "nested": false
     },
     {
-      "filename": "guideme-21.1.20.jar",
+      "filename": "guideme-21.1.21.jar",
       "nested": false
     },
     {

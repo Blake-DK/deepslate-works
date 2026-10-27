@@ -41,17 +41,16 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **The crash itself (open):** `NullPointerException` in Fairy Lights 1.2.3's JEI plugin,
   `GenericRecipeExtension.java:47`, `ingredient.getTooltip()` on a null ingredient, from JEI 19.64.0.455's
   `RecipeSlot.addTooltip`. It happens when the mouse is over a slot of the hanging lights or pennant bunting recipe
-  in JEI, not on crafting. 1.2.3 is the newest NeoForge build.
-- **The swap, on `dev` (not tested, not live):** `fairy-lights-fabric` → `fairy-lighting` 8.0.16 (`E1I8EFtk`,
-  imbavirus, MIT). Same mod id `fairylights`, same item, block entity (`fairylights:fastener`) and recipe names; its
-  JEI plugin has no `GenericRecipeExtension` and asks no ingredient for a tooltip. Fairy Lights Reborn (`fairylights`
-  on Modrinth, Rafacasari, 1.3.1) was passed over: all rights reserved, and it carries Flywheel 1.0.6 with the range
-  `[1.0.6,)`, the rule that made Lock refuse Create Aeronautics against Vanillin's 1.0.4. Lock `43094eae` (105 files,
-  only the one entry moved); live's pack `bf097daf`. Change log `2026-10-27-fairy-lights`, `onSync`.
-- **Before a PR to `main`:** Build and Sync on the test server, a PC through Test opens both recipes in JEI and
-  hovers every slot, and lights placed under 1.2.3 are looked at after the swap (the save format inside the fastener
-  was not compared: the 1.2.3 port keeps a NeoForge attachment, the others not). Then `server-loaded.json` from that
-  start, or CI's `check-sides` fails.
+  in JEI, not on crafting. 1.2.3 is the newest NeoForge build. Reported upstream: lucalabs-de/FairyLightsFabric#32.
+  Issue #31 there (open) is another 1.2.3 crash: pennant bunting placed, then the pause menu.
+- **The fix, on `dev` (not tested, not live):** our own 1.2.3-dsw.1, `mods/fairylights-jei-fix/` (README): the released
+  jar with `if (ingredient == null) return;` in front of that callback, put in by ASM, every other entry unchanged; a
+  docs/58 private jar (sha512 `a0da05d7…`). The same mod, so placed lights stay. Lock `e7933b36`, only this entry
+  moved; live's pack `8467c116`. Change log `2026-10-27-fairy-lights-jei`, `onSync`. A swap to Fairy Lighting 8.0.16
+  was on `dev` for an hour (`d23b7b9`) and is undone in the same commit as the fix.
+- **Before a PR to `main`:** the jar into the test stack's `data/private-jars/` (done) and, on Alex's yes, live's;
+  Build and Sync on the test server; a PC through Test opens both recipes in JEI and hovers every slot; then
+  `server-loaded.json` from that start, or CI's `check-sides` fails.
 
 ## Every mod to its newest version but Quarry and voice chat (2026-10-26, deployed 20:57 UTC, synced on live 22:31)
 

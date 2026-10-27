@@ -2312,7 +2312,7 @@
       "howTo": "Chiseled versions of Create's blocks, made in Rechiseled's **chiseling table**."
     },
     {
-      "slug": "fairy-lighting",
+      "slug": "fairy-lights-fabric",
       "name": "Fairy Lights",
       "category": "building",
       "side": "both",
@@ -2322,7 +2322,7 @@
       "hidden": false,
       "exclusiveGroup": null,
       "description": "Strings of lights to hang between fences and walls: fairy lights, lanterns, bulbs, stars, hearts and more, in any colour, plus pennant bunting, tinsel and garlands.",
-      "wiki": "https://modrinth.com/mod/fairy-lighting",
+      "wiki": "https://github.com/lucalabs-de/FairyLightsFabric",
       "videos": [
         {
           "title": "Fairy Lights Mod Review",
@@ -2333,7 +2333,11 @@
           "url": "https://www.youtube.com/watch?v=imuXZia1kQg"
         }
       ],
-      "version": "E1I8EFtk",
+      "source": {
+        "private": "fairylights-neoforge-1.21.1-1.2.3-dsw.1.jar",
+        "sha512": "a0da05d77e3c12a8103d9dfda4f337df10394b51b47102852ea16a0d02e2f1bc3259ccb20e1d8cc37edce9bda1e1ba5c9ab3f8df06f382f5c0928c824a0b2418",
+        "note": "1.2.3 with its JEI tooltip crash fixed: built by mods/fairylights-jei-fix/build.sh"
+      },
       "requires": [],
       "guide": "game",
       "topic": "building",

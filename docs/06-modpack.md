@@ -261,7 +261,7 @@ Straight into the pack, no vote, none suggested. Each is the newest **release** 
 | `cosy-critters` | animals, client only (particles, nothing on the server) | L | |
 | `lets-do-meadow`, `lets-do-vinery` | world, farming | M | `architectury-api`; each jar carries its own Foundation library inside |
 | `comforts` | world, friends | L | |
-| `fairy-lighting` (the imbavirus port, MIT; until 2026-10-27 `fairy-lights-fabric`, whose JEI plugin crashed the game on the hanging lights and pennant bunting recipes) | building | M | |
+| `fairy-lights-fabric` (the lucalabs-de port, MIT; since 2026-10-27 our patched 1.2.3-dsw.1, `mods/fairylights-jei-fix/`: its JEI tooltip crashed the game) | building | M | |
 | `amendments` | building | L | `moonlight` (switched on and pinned for it) |
 | `twigs` | building | L | |
 

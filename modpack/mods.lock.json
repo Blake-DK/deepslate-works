@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-27T21:11:36.652Z",
+  "generatedAt": "2026-10-27T21:46:36.806Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "43094eae8ce182115caa2b0d9070a912a0132921acfaa032fa3ada0004d3e57e",
+  "hash": "e7933b3611f55592331c8db4466c5c730bd75285f061b5409eb9698851bcfb50",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -686,23 +686,19 @@
       "channels": "none"
     },
     {
-      "slug": "fairy-lighting",
+      "slug": "fairy-lights-fabric",
       "name": "Fairy Lights",
-      "projectId": "BC84wYkA",
-      "versionId": "E1I8EFtk",
-      "versionNumber": "8.0.16",
-      "versionType": "release",
-      "filename": "fairylights-8.0.16-neoforge-1.21.1.jar",
-      "url": "https://cdn.modrinth.com/data/BC84wYkA/versions/E1I8EFtk/fairylights-8.0.16-neoforge-1.21.1.jar",
-      "sha512": "92986cefcfe33362c2b648025534ccab7b8002a9c653c29692b2784567284ff36c6ae94f603606520eb399eecb87af6454541a5f68682af074bee75e735c0ecd",
-      "sha1": "1063ca0e0662d31c2cb5d36275302058e5781a4b",
-      "size": 855507,
       "side": "both",
+      "projectId": "",
+      "versionId": "private-a0da05d77e3c12a8",
+      "versionNumber": "1.2.3-dsw.1",
+      "versionType": "release",
+      "filename": "fairylights-neoforge-1.21.1-1.2.3-dsw.1.jar",
+      "url": "/downloads/mods/fairylights-neoforge-1.21.1-1.2.3-dsw.1.jar",
+      "sha512": "a0da05d77e3c12a8103d9dfda4f337df10394b51b47102852ea16a0d02e2f1bc3259ccb20e1d8cc37edce9bda1e1ba5c9ab3f8df06f382f5c0928c824a0b2418",
+      "sha1": "005514a6a3afe56db3be51fd3c73ff703893677b",
+      "size": 637931,
       "requiredBy": [],
-      "modrinth": {
-        "client": "required",
-        "server": "required"
-      },
       "channels": "required"
     },
     {

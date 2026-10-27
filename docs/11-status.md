@@ -48,9 +48,12 @@ say live is stopped, held or to be trimmed in place, this section wins.
   docs/58 private jar (sha512 `a0da05d7…`). The same mod, so placed lights stay. Lock `e7933b36`, only this entry
   moved; live's pack `8467c116`. Change log `2026-10-27-fairy-lights-jei`, `onSync`. A swap to Fairy Lighting 8.0.16
   was on `dev` for an hour (`d23b7b9`) and is undone in the same commit as the fix.
-- **Before a PR to `main`:** the jar into the test stack's `data/private-jars/` (done) and, on Alex's yes, live's;
-  Build and Sync on the test server; a PC through Test opens both recipes in JEI and hovers every slot; then
-  `server-loaded.json` from that start, or CI's `check-sides` fails.
+- **On the test server (22:3x UTC):** the first test showed the crash again, but on the old pack: the test checkout
+  was still at `4ee1f8f` (lock `65d45be8`). Pulled to `dev` `d14687d`; Alex ran Build and Sync. The server's 22:35:58
+  start loaded `fairylights-neoforge-1.21.1-1.2.3-dsw.1.jar`, 143 files, none missing, no problems. Alex's test Play
+  (app 3.6.7, pack `0.1.0+e7933b36`): game check "all 92 mods loaded"; both recipes opened in JEI, every slot hovered,
+  no crash. `server-loaded.json` from that start; `check-sides`: sides OK.
+- **Before a PR to `main`:** the jar into live's `data/private-jars/`, on Alex's yes; live's Build fails without it.
 
 ## Every mod to its newest version but Quarry and voice chat (2026-10-26, deployed 20:57 UTC, synced on live 22:31)
 

@@ -321,6 +321,7 @@ namespace DeepslateWorks
             object prevOurs = J.Has(prev, "renderDistance") ? J.Get(prev, "renderDistance") : null;
             object ourRender = prevOurs;
             var keysSet = J.Strs(prev, "keysSet");   // 3.6.6: the pack's keys, each set once (Files.cs SetKeyDefaults)
+            var packsSet = J.Strs(prev, "packsSet");   // 3.6.8: the mods' own resource packs, each switched on once (SetPackDefaults)
             if (run.DryRun) run.Note(string.Format("(dry run) render distance for this PC: {0}", rd));
             else if (Env.TestTarget)
             {
@@ -329,6 +330,7 @@ namespace DeepslateWorks
                 try { var cl = SetChatLinks(options); if (cl != null) run.Tick(cl); }
                 catch (Exception e) { run.Note("Chat links were left as they are: " + e.Message); }
                 keysSet = KeyDefaultsStep(run, options, keysSet);
+                packsSet = PackDefaultsStep(run, options, packsSet);
             }
             else
             {
@@ -342,6 +344,7 @@ namespace DeepslateWorks
                 }
                 catch (Exception e) { run.Note("The render distance was left as it is: " + e.Message); }
                 keysSet = KeyDefaultsStep(run, options, keysSet);
+                packsSet = PackDefaultsStep(run, options, packsSet);
             }
 
             // ---- extras (2.0.0): every extra downloaded into extras\, nothing switched on; the Extras tab switches them -----
@@ -474,7 +477,7 @@ namespace DeepslateWorks
                 try { SavePackList(PackListPath, manifest); } catch (Exception e) when (!IsControl(e)) { Log.Line("could not keep the mod list for the game check: " + e.Message); }
             }
             if (!run.DryRun)
-                Json.WriteFile(Env.InstalledFile, J.O("version", run.PackSeen, "installedAt", now, "hash", J.Get(manifest, "hash"), "installer", Env.Version, "renderDistance", ourRender, "keysSet", keysSet));
+                Json.WriteFile(Env.InstalledFile, J.O("version", run.PackSeen, "installedAt", now, "hash", J.Get(manifest, "hash"), "installer", Env.Version, "renderDistance", ourRender, "keysSet", keysSet, "packsSet", packsSet));
             if (!run.DryRun) run.Emit(J.O("t", "installed", "pack", run.PackSeen ?? ""));   // the window's footer: the pack on this PC now
 
             // ---- d. the report, e. the game -------------------------------------------------------------------------

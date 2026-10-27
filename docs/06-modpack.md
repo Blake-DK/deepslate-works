@@ -287,6 +287,21 @@ Asked for together with Create Power Grid, The Factory Must Grow, Pollution of t
 - **Not taken:** Pollution of the Realms (Alex: no pollution), Fullbright (Alex: skip; it takes the dark out of caves, nights and Ashmoon). Create Power Grid: not added, Alex asked what a swap for Crafts & Additions would lose (live builds and items with it, the quarry's power plan and the guide's Electricity part rest on it); Crafts & Additions stays.
 - **The Factory Must Grow and the metals it shares** (read from the three jars): TFMG, Immersive Engineering and Mekanism put their lead, nickel, aluminium and steel (ingots, nuggets, plates or sheets, ores, raw metal, blocks) in the same `c:` tags, and their recipes ask for the tags: TFMG 22 lead, 17 nickel, 67 aluminium and 73 steel inputs by tag; IE 46, 44, 56 and 74; Mekanism 28 lead and 36 steel. So any mod's ore is smelted, crushed and used by the others. The exceptions were TFMG's steel cogwheel, large steel cogwheel and steel flywheel, which named `tfmg:steel_ingot`: `deepslate-tools` carries the three with `c:ingots/steel` (and a `mod_loaded` condition). TFMG's steel mechanism takes TFMG's own lead and nickel sheets, which its press makes from any mod's ingots. There is more lead and nickel ore in new land than before (IE's and TFMG's). Not yet seen: grenades and napalm inside a claim.
 
+## Connected textures and zoom (Alex, 2026-10-27)
+
+| Slug | What | Load | Brings |
+|---|---|---|---|
+| `continuity-neoforged` (Continuity: NeoForged 3.0.9, aspctt, LGPL-3.0) | client only | L | |
+| `just-zoom` (Keksuccino, DSMSL) | client only | L | `konkrete` (hidden base entry) |
+
+- **Continuity:** the NeoForge rebuild, not `continuity` itself: that one's NeoForge build runs only through Sinytra
+  Connector and Forgified Fabric API. Its connected textures are the mod's own resource pack "Default Connected
+  Textures" (`mod/continuity:resourcepacks/default`), registered switched off; app 3.6.8 switches it on once per PC
+  (docs/07 "3.6.8"). Its "Glass Pane Culling Fix" pack is left as the mod has it (off).
+- **Just Zoom:** zoom on **C** (the mod's Z is TaCZ's attachments screen), its options key unbound (B is Xaero's new
+  waypoint); both set by app 3.6.8. C stays shared with TaCZ crawl, Big Cannons' pitch mode, Cataclysm's helmet
+  ability and ArPhEx's power key: Alex's choice, the key OptiFine players know. Mouse wheel while zooming.
+
 ## Render distance by PC tier (planner, 2026-09-30)
 
 `mods.json` `render_by_tier`, next to `server_properties`: HIGH 12 / 8, MID 10 / 8, LOW 8 / 6 (render / simulation, in chunks). The mod list (`/api/modpack/manifest`) sends `render_distance` and `simulation_distance` for the caller's measured PC tier (`User.pcTier`; none known: LOW), as plain numbers every installer reads, plus `tier`. The server's own `view-distance` is 12 and `simulation-distance` stays 8 (the expected values in `server_properties`; AMP writes the file, see docs/15).

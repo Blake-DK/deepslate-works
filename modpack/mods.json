@@ -309,6 +309,72 @@
       "guide": "behind"
     },
     {
+      "slug": "continuity-neoforged",
+      "name": "Continuity",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Connected textures: glass, sandstone and bookshelves placed side by side join up into one smooth surface, without the lines between blocks.",
+      "wiki": "https://github.com/aspctt/continuity-neoforge",
+      "videos": [],
+      "noVideosFound": "2026-10-27",
+      "version": "kgny9dWp",
+      "requires": [],
+      "guide": "behind",
+      "howTo": "Nothing to do: the app switches on its **Default Connected Textures** resource pack the first time you play. To see blocks as before, take it off under **Options** \u2192 **Resource Packs**."
+    },
+    {
+      "slug": "just-zoom",
+      "name": "Just Zoom",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Zoom in like a spyglass with one key, and a better spyglass: scroll to zoom it further in or out.",
+      "wiki": "https://modrinth.com/mod/just-zoom",
+      "videos": [],
+      "noVideosFound": "2026-10-27",
+      "version": "Ha3713r0",
+      "requires": [
+        "konkrete"
+      ],
+      "guide": "helper",
+      "howTo": "Hold **C** to zoom in, and scroll the mouse wheel while you hold it to zoom further in or out. Let go to see normally again. A spyglass zooms the same way.",
+      "keys": [
+        {
+          "key": "C",
+          "does": "Zoom (hold)"
+        },
+        {
+          "key": "Mouse wheel",
+          "does": "Zoom further in or out while zooming"
+        }
+      ]
+    },
+    {
+      "slug": "konkrete",
+      "name": "Konkrete",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Just Zoom.",
+      "wiki": "https://modrinth.com/mod/konkrete",
+      "videos": [],
+      "version": "stJDU839",
+      "requires": []
+    },
+    {
       "slug": "jei",
       "name": "Just Enough Items",
       "category": "base",

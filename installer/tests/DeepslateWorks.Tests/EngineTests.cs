@@ -219,6 +219,53 @@ namespace DeepslateWorks.Tests
             Assert.All(Engine.KeyDefaults, k => Assert.NotEqual(k.Mod, k.Ours));
         }
 
+        [Fact] public void Pack_resource_packs_are_switched_on_once()
+        {
+            using (var s = new Scratch())
+            {
+                var of = s.P("options.txt");
+                var mods = s.P("mods");
+                const string Id = "mod/continuity:resourcepacks/default";
+                var r = Engine.SetPackDefaults(of, mods, null);   // no options.txt: nothing to do, nothing done
+                Assert.Empty(r.Done); Assert.False(File.Exists(of));
+
+                // no resourcePacks line yet (the game has not written one): left alone, not done
+                File.WriteAllText(of, Game);
+                r = Engine.SetPackDefaults(of, mods, null);
+                Assert.Empty(r.Done); Assert.Equal(Game, File.ReadAllText(of));
+
+                // the mod is not in mods\ (yet): left alone, not done
+                var game = Game.Replace("lang:en_gb", "resourcePacks:[\"vanilla\",\"mod_resources\",\"file/extras-pack.zip\",\"file/deepslate-textures.zip\"]\r\nlang:en_gb");
+                File.WriteAllText(of, game);
+                Assert.Empty(Engine.SetPackDefaults(of, mods, null).Done);
+                Assert.Equal(game, File.ReadAllText(of));
+
+                // with the jar: switched on below every pack from a file, everything else as it was, and done
+                Directory.CreateDirectory(mods);
+                File.WriteAllText(Path.Combine(mods, "ContinuityNeoForge-3.0.9+1.21.1.jar"), "x");
+                r = Engine.SetPackDefaults(of, mods, null);
+                Assert.Equal(new[] { "connected textures on" }, r.Changed);
+                Assert.Equal(new[] { Id }, r.Done);
+                Assert.Equal(game.Replace("\"mod_resources\",", "\"mod_resources\",\"" + Id + "\","), File.ReadAllText(of));
+
+                // done before: the player switched it off since, and it stays off
+                File.WriteAllText(of, game);
+                r = Engine.SetPackDefaults(of, mods, new[] { Id });
+                Assert.Empty(r.Changed); Assert.Equal(game, File.ReadAllText(of));
+
+                // already on (the player's own choice): nothing written, and done
+                var on = game.Replace("\"file/extras-pack.zip\",", "\"file/extras-pack.zip\",\"" + Id + "\",");
+                File.WriteAllText(of, on);
+                r = Engine.SetPackDefaults(of, mods, null);
+                Assert.Empty(r.Changed); Assert.Equal(new[] { Id }, r.Done); Assert.Equal(on, File.ReadAllText(of));
+
+                // only built-in packs: on at the end
+                File.WriteAllText(of, "resourcePacks:[\"vanilla\"]\nlang:en_gb\n");
+                Engine.SetPackDefaults(of, mods, null);
+                Assert.Equal("resourcePacks:[\"vanilla\",\"" + Id + "\"]\nlang:en_gb\n", File.ReadAllText(of));
+            }
+        }
+
         [Fact] public void Servers_dat_is_the_same_bytes_as_2_0()
         {
             var b = Engine.ServersDat("Deepslate Works", "mc.dsw.test");

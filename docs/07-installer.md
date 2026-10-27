@@ -43,6 +43,23 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.8: zoom on C, connected textures switched on (Alex, 2026-10-27)
+
+- **Just Zoom's keys** join `Engine.KeyDefaults`: `justzoom.keybinds.keybind.zoom` Z → **C**, and
+  `justzoom.keybinds.keybind.open_options` B → none. Defaults read from `de.keksuccino.justzoom.KeyMappings` (3.1.0):
+  zoom GLFW 90 (Z), zoom in and out mouse 8 and 9, options GLFW 66 (B). Z is TaCZ's refit (attachments) screen, B
+  Xaero's new waypoint. C stays shared with TaCZ crawl, Big Cannons' pitch mode, Cataclysm's helmet and ArPhEx
+  (Alex's choice). Set once per PC, the same way as 3.6.6's keys.
+- **The mods' own resource packs: `Engine.PackDefaults`, `SetPackDefaults`**, every Play (live and test) after the
+  keys. Continuity: NeoForged registers its connected textures as a built-in pack switched off
+  (`ContinuityClient.addBuiltinPack`: `continuity:resourcepacks/default`, alwaysActive false); NeoForge names it
+  `mod/` + that location (`AddPackFindersEvent.addPackFinders`, 1.21.1 branch). The step puts that id into
+  `resourcePacks` below the first `file/` pack (so under the extras', the villagers' and the player's own), once per
+  PC, remembered in installed.json's `packsSet`. Done when the id is in the list with a `ContinuityNeoForge-*.jar` in
+  `mods\` (the game keeps the id then), so a player who switches it off keeps it off. Not done, and nothing written,
+  without options.txt, without a `resourcePacks` line (the game's own default list would be lost) or without the jar.
+- Tests: `Pack_resource_packs_are_switched_on_once` (each of those cases).
+
 ## 3.6.7: Send to Alex sends up to 4 MB (Alex, 2026-10-27)
 
 - A player's game crashed on opening two Fairy Lights recipes in JEI. Send to Alex sends the app log (3,000 lines),

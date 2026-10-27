@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using Xunit;
 
 namespace DeepslateWorks.Tests
@@ -75,6 +76,24 @@ namespace DeepslateWorks.Tests
                 Assert.Contains("===== deepslate-works.log =====", J.Str(j, "log"));
                 Assert.Contains("===== game-latest.log =====", J.Str(j, "log"));
                 Assert.DoesNotContain("tok-123", body);
+            }
+        }
+
+        [Fact] public void Send_to_Alex_keeps_a_log_over_512_KB_whole()
+        {
+            using (new Scratch())
+            {
+                Http.Token = "tok-123";
+                File.WriteAllLines(Env.LogFile, new[] { "[2026-10-27T18:02:11] started: Deepslate Works 3.6.7" });
+                GameLog(Enumerable.Range(0, 3999).Select(i => "[18:02:" + (i % 60).ToString("00") + "] [Render thread/INFO]: line " + i + " " + new string('x', 200)).Concat(new[] { "[18:03:00] [main/ERROR]: the last line" }).ToArray());
+                string body = null;
+                Http.Fake = (m, u, b) => { body = b; return Tuple.Create(200, "{\"ok\":true}"); };
+                Assert.Null(LogBundle.Send("0.1.0+c99f2aae"));
+                var log = J.Str(Json.Parse(body), "log");
+                Assert.True(Encoding.UTF8.GetByteCount(log) > 512 * 1024);
+                Assert.DoesNotContain("the middle of the log was cut", log);
+                Assert.Contains("line 0 ", log);
+                Assert.Contains("the last line", log);
             }
         }
 

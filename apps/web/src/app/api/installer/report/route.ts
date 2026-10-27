@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { audit } from "@/server/events";
 import { bearer, userFromLauncherToken } from "@/server/launcher";
 import { RateLimiter } from "@/server/auth/rate-limit";
-import { missingLine, NO_PC_MODES, playLinkMissing, reportSchema, sanitizeReport, suggestTier } from "@/lib/install-report";
+import { MAX_LOG_BYTES, missingLine, NO_PC_MODES, playLinkMissing, reportSchema, sanitizeReport, suggestTier } from "@/lib/install-report";
 import { getSettings } from "@/server/settings";
 import { mayReport } from "@/shared/access";
 import { getInstaller } from "@/server/modpack/lock";
@@ -15,7 +15,8 @@ export const dynamic = "force-dynamic";
 // docs/07 "Install reports": the installer posts here at the end of every run, signed in with the same
 // launcher token it uses for the mod list. Nothing anonymous is accepted. What arrives is redacted again
 // before it is stored (the installer already did it once on the PC).
-const MAX_BODY = 1_300_000;
+// the log as JSON (a line's < > & ' escaped as \u003c and so on) and the rest of the report
+const MAX_BODY = Math.ceil(MAX_LOG_BYTES * 2.5);
 const g = globalThis as unknown as { __dwInstallLimiter?: RateLimiter };
 const limiter = (g.__dwInstallLimiter ??= new RateLimiter(20, 3_600_000));
 

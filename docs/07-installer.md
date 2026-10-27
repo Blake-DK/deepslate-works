@@ -43,6 +43,15 @@ A file downloaded by PowerShell carries no mark of the web, so SmartScreen does 
 
 Signing would then be one CI step (`azure/artifact-signing-action`, with a service principal's secrets in GitHub) between the build and the checksum. Signed builds build SmartScreen reputation faster, but a brand-new certificate can still be warned about for a while.
 
+## 3.6.7: Send to Alex sends up to 4 MB (Alex, 2026-10-27)
+
+- A player's game crashed on opening two Fairy Lights recipes in JEI. Send to Alex sends the app log (3,000 lines),
+  the game's latest.log (4,000) and the newest crash report together, and with this pack that is often over 1 MB. At
+  512 KB the middle was cut, and the crash report's error and "suspected mods" at its top could be what went.
+- `LogBundle.SendBytes` is 4 MB, and the post waits up to 120 s for a slow connection. The site takes the same
+  (`install-report.ts` `MAX_LOG_BYTES`; the route's body limit is 2.5 times that for the JSON). Every other report
+  (Play, unfinished run, game check) still cuts at 512 KB on the PC. An app before 3.6.7 still sends at most 512 KB.
+
 ## 3.6.6: the pack's keys, one job per key (Alex, 2026-10-14)
 
 - Several mods ship the same default key, so one press did two things: R reloaded a gun and the shaders, M opened the

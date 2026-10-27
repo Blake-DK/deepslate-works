@@ -7,7 +7,9 @@ import { TEST_MODES } from "@/shared/join-gate";
 // before it is stored, because a copy of the script someone edited, or a bug in it, must not be able to put
 // a name or an address into the database. Pure, so it is tested.
 
-export const MAX_LOG_BYTES = 512 * 1024;
+// 3.6.7: 4 MB, for Send to Alex: the app log, the game log and a crash report together are often over 1 MB with this
+// pack, and at 512 KB the cut in the middle could take the crash report's own error out.
+export const MAX_LOG_BYTES = 4 * 1024 * 1024;
 // "skipped": another copy was already running (installer 1.5.0's lock); nothing was done, and it is not a failure.
 export const OUTCOMES = ["ok", "failed", "cancelled", "skipped"] as const;
 export type Outcome = (typeof OUTCOMES)[number];

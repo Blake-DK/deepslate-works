@@ -32,7 +32,7 @@ describe("Building and decoration", () => {
       expect([x.slug, x.hidden]).toEqual([x.slug, false]);
     }
     // Fairy Lights (Alex, 2026-10-20): every string of lights is drawn moving, so it costs more than a block does
-    expect(b.filter((x) => x.load !== "L").map((x) => x.slug).sort()).toEqual(["fairy-lights-fabric", "rechiseled", "supplementaries"]);
+    expect(b.filter((x) => x.load !== "L").map((x) => x.slug).sort()).toEqual(["fairy-lighting", "rechiseled", "supplementaries"]);
     expect(b.some((x) => x.slug === "chipped")).toBe(false);
   });
   it("has each library a building mod needs, as a hidden base entry", async () => {

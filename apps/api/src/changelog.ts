@@ -378,6 +378,15 @@ export const CHANGES: Change[] = [
       "Press Play to update.",
     ],
   },
+  {
+    id: "2026-10-27-fairy-lights",
+    date: "2026-10-27",
+    lines: [
+      "Opening the recipe for hanging lights or pennant bunting in JEI no longer crashes the game: Fairy Lights is swapped for Fairy Lighting, another version of the same mod. The lights, bunting and garlands and their recipes are the same.",
+      "Press Play to update.",
+    ],
+    onSync: true,
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

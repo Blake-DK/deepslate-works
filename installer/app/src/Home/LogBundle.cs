@@ -25,6 +25,9 @@ namespace DeepslateWorks
         public const int AppLines = 3000;
         /// <summary>The game log's lines kept: its end, where a failure is.</summary>
         public const int GameLines = 4000;
+        /// <summary>3.6.7: what Send to Alex may send (the site takes up to the same, install-report.ts MAX_LOG_BYTES). The
+        /// three parts together are often over 1 MB; the other reports keep 512 KB.</summary>
+        public const int SendBytes = 4 * 1024 * 1024;
 
         static string GameDir => Env.LiveDataDir;
 
@@ -121,8 +124,8 @@ namespace DeepslateWorks
             if (string.IsNullOrEmpty(Http.Token)) { try { if (File.Exists(Env.TokenFile)) Http.Token = J.Str(Json.Parse(File.ReadAllText(Env.TokenFile)), "token"); } catch { } }
             if (string.IsNullOrEmpty(Http.Token)) return "This PC isn't signed in yet, so there is nowhere to send it. Use Save log and send Alex the zip instead.";
             var rep = J.O("packVersion", string.IsNullOrEmpty(pack) ? "unknown" : pack, "installerVersion", Env.Version, "mode", "log_sent", "outcome", "ok",
-                          "durationSec", 0, "log", Report.Shorten(Text(Parts(gameDir)), 512 * 1024), "system", null);
-            try { Http.PostJson(Env.ReportUrl, rep, 30); Log.Line("log sent to the site"); return null; }
+                          "durationSec", 0, "log", Report.Shorten(Text(Parts(gameDir)), SendBytes), "system", null);
+            try { Http.PostJson(Env.ReportUrl, rep, 120); Log.Line("log sent to the site"); return null; }
             catch (Exception e) { Log.Line("log not sent: " + e.Message); return "It didn't go: " + e.Message; }
         }
 

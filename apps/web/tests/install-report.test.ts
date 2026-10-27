@@ -35,7 +35,7 @@ describe("truncateMiddle", () => {
     expect(truncateMiddle("short", 100)).toBe("short");
   });
   it("cuts the middle and keeps both ends, within the limit, also with wide characters", () => {
-    const log = `START versions here\n${"x".repeat(700_000)}\n${"é".repeat(1000)}\nFAIL the end`;
+    const log = `START versions here\n${"x".repeat(MAX_LOG_BYTES + 200_000)}\n${"é".repeat(1000)}\nFAIL the end`;
     const out = truncateMiddle(log);
     expect(new TextEncoder().encode(out).length).toBeLessThanOrEqual(MAX_LOG_BYTES);
     expect(out.startsWith("START versions here")).toBe(true);

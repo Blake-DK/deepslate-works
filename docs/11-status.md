@@ -33,7 +33,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
 
 - **How it updates now:** a Redeploy of Dockhand's stack `deepslate` (Docker-01V). It pulls `latest` of every image,
   then runs `init`, `repo-sync`, `installer`, `db-prep` (a dump) and `migrate` before web and api start
-  (deploy/home/README.md). `deploy/home/deploy.sh` still works and does the same.
+  (deploy/home/README.md). `deploy/home/deploy.sh` and `test-up.sh` are retired (below).
 - **Where the live compose is:** Dockhand's own copy (compose and `.env` in its data folder), editable there; the
   checkout's `deploy/home/` copy is the reference. The `.env` there is `deploy/home/.env` plus `IMAGE_TAG=latest`,
   `INSTALLER_TAG=latest`, `DEEPSLATE_UID`/`GID=1000`, `GIT_GUARD_DIR=/root/.config/deepslate` and

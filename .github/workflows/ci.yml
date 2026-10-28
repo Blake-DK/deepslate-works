@@ -108,8 +108,8 @@ jobs:
 
   # The stack's other images, each an upstream image with a file or two of this repository inside, so a redeploy brings
   # a changed file and the newest upstream at once: the database (deploy/images/db: pgautoupgrade, always the newest
-  # PostgreSQL), the nightly dumps, Caddy with the Caddyfile and the build designer. Built on the same events as
-  # `images`, and also on the weekly run, always on a freshly pulled upstream.
+  # PostgreSQL), the dumps, Caddy with the Caddyfile, the build designer and the one-shot steps (deploy/images/ops).
+  # Built on the same events as `images`, and also on the weekly run, always on a freshly pulled upstream.
   base-images:
     needs: check
     if: >-
@@ -125,7 +125,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [db, backups, caddy, designer]
+        image: [db, backups, caddy, designer, ops]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: names

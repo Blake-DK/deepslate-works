@@ -8,10 +8,16 @@
 #   ds-web       caddy, web, the map relay: public https only                          four ports and the internet
 #   ds-internal  web, api, postgres, backups: no outside access at all
 #
-# `web` and `api` are built by CI and pulled from GHCR; this host never builds them (deploy/home/deploy.sh). Every
-# service carries a memory limit. Two roots, both absolute in deploy/home/.env: DEEPSLATE_DIR, the checkout (modpack/,
-# installer/, .git, deploy/keys) and DEEPSLATE_DATA, the data (postgres/, backups/, data/, dist/, geoip/, caddy/).
-# Until the cutover the VPS runs deploy/docker-compose.yml; this file runs nothing there.
+# Every image is built by CI and pulled from GHCR (`latest`, or IMAGE_TAG); this host never builds one. Every service
+# carries a memory limit. Two roots, both absolute in deploy/home/.env: DEEPSLATE_DIR, the checkout (modpack/, .git,
+# deploy/keys) and DEEPSLATE_DATA, the data (postgres/, backups/, data/, dist/, geoip/, caddy/).
+#
+# Updating: a redeploy (`docker compose up -d`, or Redeploy in Dockhand, with deploy/home/.env) pulls every image and
+# runs the one-shot steps below before the site starts: init (folders and owners), repo-sync (the checkout brought
+# forward), db-prep (a dump, then the test database if missing), migrate, and installer (the exe into dist/ci). The
+# database image upgrades its data to a new PostgreSQL by itself (deploy/images/db). COMPOSE_PROFILES in the env file
+# turns on the designer, geoip and test services. A change to this file itself is read on the redeploy after the one
+# whose repo-sync pulled it. deploy/home/deploy.sh still works and does the same with its own checks.
 name: deepslate
 
 # docs/31 B-21: without this the json-file logs grow without end (api writes a line for every AMP poll).
@@ -36,8 +42,138 @@ networks:
       com.docker.network.bridge.name: ds-internal
 
 services:
+  # The one-shot steps of a redeploy, in this order: init, then repo-sync and installer, db-prep once the database is
+  # up, then migrate. Compose removes the old containers before these run, so a step that fails leaves every service
+  # after it stopped: db-prep and migrate fail only where going on would be worse; init and repo-sync say what they
+  # refused and go on. Each exits when done; `docker compose ps -a` and its log show what it did.
+  init:
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-ops:${IMAGE_TAG:-latest}
+    pull_policy: always
+    container_name: deepslate-init
+    restart: "no"
+    logging: *logging
+    user: "0:0"                         # the folders have four owners; root with only the three capabilities it needs
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
+    mem_limit: 32m
+    network_mode: none
+    command: ["sh", "/usr/local/lib/deepslate/init.sh"]
+    volumes:
+      - ${DEEPSLATE_DATA:?DEEPSLATE_DATA is the data root; set it in deploy/home/.env}:/data
+      - ${DEEPSLATE_DIR:?DEEPSLATE_DIR is the checkout; set it in deploy/home/.env}/deploy/keys:/keys
+    security_opt:
+      - no-new-privileges:true
+
+  # The checkout to the branch it follows (main; dev for the dry run), as its owner, with the guards of deploy.sh:
+  # .git/config and .git/hooks must match the copies under /root that web cannot reach (deploy/README.md). Commits made
+  # here and not pushed, a guard that does not match, or a fetch that fails: it says so in its log and the stack starts
+  # on the checkout as it was. On ds-web: GitHub over https, nothing private. The repository is public: no credentials.
+  repo-sync:
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-ops:${IMAGE_TAG:-latest}
+    pull_policy: always
+    container_name: deepslate-repo-sync
+    restart: "no"
+    logging: *logging
+    user: "${DEEPSLATE_UID:-1000}:${DEEPSLATE_GID:-1000}"   # the checkout's owner
+    cap_drop: [ALL]
+    mem_limit: 256m
+    read_only: true
+    tmpfs: [/tmp]
+    networks: [ds-web]
+    environment:
+      HOME: /tmp
+      SYNC_BRANCHES: main dev
+      GIT_CONFIG_EXPECTED: /guard/git-config.expected
+      GIT_HOOKS_EXPECTED: /guard/git-hooks.expected
+    command: ["sh", "/usr/local/lib/deepslate/repo-sync.sh"]
+    volumes:
+      - ${DEEPSLATE_DIR}:/repo
+      - ${GIT_GUARD_DIR:-/root/.config/deepslate}/git-config.expected:/guard/git-config.expected:ro
+      - ${GIT_GUARD_DIR:-/root/.config/deepslate}/git-hooks.expected:/guard/git-hooks.expected:ro
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
+
+  # docs/31 B-19: a dump before the migrations (pre-deploy-*.sql.gz beside the nightly dumps, the newest 10 kept), and
+  # the test database when the test server is on and it is missing (docs/42 §5.2). A dump that fails stops here.
+  db-prep:
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-backups:latest
+    pull_policy: always
+    container_name: deepslate-db-prep
+    restart: "no"
+    logging: *logging
+    user: "70:70"
+    cap_drop: [ALL]
+    mem_limit: 128m
+    networks: [ds-internal]
+    environment:
+      PGHOST: postgres
+      PGUSER: deepslate
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: deepslate
+      ENSURE_TEST_DB: ${TEST_STACK:-0}
+    command: ["sh", "/usr/local/bin/pre-deploy.sh"]
+    volumes:
+      - ${DEEPSLATE_DATA}/backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  # The database migrations of this web image, before web and api start. There is no way back from one but db-prep's
+  # dump. web still applies them at its own start too, which then finds nothing to do.
+  migrate:
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-web:${IMAGE_TAG:-latest}
+    pull_policy: always
+    container_name: deepslate-migrate
+    restart: "no"
+    logging: *logging
+    cap_drop: [ALL]
+    mem_limit: 512m
+    networks: [ds-internal]
+    environment:
+      DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate
+    command: ["pnpm", "--filter", "web", "exec", "prisma", "migrate", "deploy"]
+    depends_on:
+      db-prep:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
+
+  # Deepslate Works 3.0: the Windows app, published by CI as a small image (.github/workflows/installer.yml); its command
+  # copies the exe into dist/ci when it changed. Admin -> Build (installer) checks it and hands it out. Nothing waits
+  # on it: without it the site keeps what it hands out now.
+  installer:
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-installer:${INSTALLER_TAG:-latest}
+    pull_policy: always
+    container_name: deepslate-installer
+    restart: "no"
+    logging: *logging
+    user: "1000:1000"                   # dist/ belongs to uid 1000
+    cap_drop: [ALL]
+    mem_limit: 32m
+    network_mode: none
+    read_only: true
+    environment:
+      OUT: /out
+    volumes:
+      - ${DEEPSLATE_DATA}/dist:/out
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
+
+  # Always the newest PostgreSQL: deploy/images/db is pgautoupgrade, which upgrades older data in place on start, after
+  # copying it to postgres-pre-upgrade/ (the newest two copies kept). It follows `latest` only, never IMAGE_TAG: data
+  # once upgraded cannot be started by an older PostgreSQL, so a rollback of web and api must not take the database
+  # back. From 18 on the data is in postgres/<major>/docker; the folder is mounted one level up for that.
   postgres:
-    image: postgres:16-alpine
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-db:latest
+    pull_policy: always
     container_name: deepslate-db
     restart: unless-stopped
     logging: *logging
@@ -45,7 +181,8 @@ services:
     # to chown or switch users and the container keeps no Linux capabilities. The data folder is 70:70, mode 700.
     user: "70:70"
     cap_drop: [ALL]
-    mem_limit: 256m
+    mem_limit: 512m                     # pg_upgrade and the reindex after it run in here too
+    stop_grace_period: 60s              # a clean shutdown: an upgrade will not start from a killed cluster
     command: ["postgres", "-c", "shared_buffers=128MB"]
     networks: [ds-internal]
     environment:
@@ -53,19 +190,20 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: deepslate
     volumes:
-      - ${DEEPSLATE_DATA:?DEEPSLATE_DATA is the data root; set it in deploy/home/.env}/postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U deepslate -d deepslate"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      - ${DEEPSLATE_DATA}/postgres:/var/lib/postgresql
+      - ${DEEPSLATE_DATA}/postgres-pre-upgrade:/pre-upgrade
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    # the image's healthcheck: healthy once the database answers, and not while an upgrade runs
 
   # Pangolin's tunnel client for the site "deepslate" (planner doc 62 §2): it connects out to PANGOLIN_ENDPOINT and hands
   # the site's resources to deepslate-caddy:80. Only on ds-edge, whose firewall rules allow exactly that tunnel. No Docker
   # socket, no published ports. Its id and secret live in deploy/home/.env with the stack's other secrets (a new pair
   # comes from the site's page in Pangolin). Until 2026-10-23 it was a stack of its own under Dockhand.
   newt:
-    image: fosrl/newt:1.19.0@sha256:0189c8287058b800cca825590e4c39946b3815344ca48678dd0b96616d639319
+    image: fosrl/newt:latest
+    pull_policy: always
     container_name: deepslate-newt
     restart: unless-stopped
     logging: *logging
@@ -82,7 +220,8 @@ services:
   # The stack's own reverse proxy, plain http on :80 for the newt (Pangolin's Traefik terminates TLS). It trusts only
   # ds-edge for the visitor's address and passes exactly one X-Forwarded-For on to web (deploy/home/Caddyfile).
   caddy:
-    image: caddy:2.10-alpine@sha256:d8c17a862962def15cde69863a3a463f25a2664942eafd7bdbf050e9c3116b83
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-caddy:${IMAGE_TAG:-latest}   # caddy:2-alpine with deploy/home/Caddyfile inside
+    pull_policy: always
     container_name: deepslate-caddy
     restart: unless-stopped
     logging: *logging
@@ -96,9 +235,11 @@ services:
       TEST_HOST: ${TEST_HOST:-test.deepslate.dsw.test}
       DS_EDGE_SUBNET: ${DS_EDGE_SUBNET:-172.27.0.0/16}
     volumes:
-      - ${DEEPSLATE_DIR:?DEEPSLATE_DIR is the checkout; set it in deploy/home/.env}/deploy/home/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${DEEPSLATE_DATA}/caddy/data:/data
       - ${DEEPSLATE_DATA}/caddy/config:/config
+    depends_on:
+      init:
+        condition: service_completed_successfully
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -162,6 +303,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      repo-sync:
+        condition: service_completed_successfully
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -222,8 +367,7 @@ services:
       # the nightly database dumps; api copies the newest to the AMP host (docs/28 §4.7)
       - ${DEEPSLATE_DATA}/backups:/dbdumps:ro
       - ${DEEPSLATE_DATA}/dist:/repo/dist                # `modpack build` writes it (owner uid 1000); the sync rsyncs dist/server/ to the AMP host
-      - ${DEEPSLATE_DIR}/modpack:/repo/modpack:ro
-      - ${DEEPSLATE_DIR}/installer:/repo/installer:ro
+      - ${DEEPSLATE_DIR}/modpack:/repo/modpack:ro       # installer/ is in the image
       - ${DEEPSLATE_DATA}/data/news:/repo/data/news:ro   # docs/21: news pictures go to Discord as attachments
       - ${DEEPSLATE_DATA}/data/builds:/repo/data/builds:ro # docs/34 §10: builds an admin uploaded
       - ${DEEPSLATE_DATA}/data/private-jars:/repo/data/private-jars:ro # docs/58: private jars
@@ -232,11 +376,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      web:
-        condition: service_healthy     # web applies the database migrations when it starts; api needs them done
+      migrate:
+        condition: service_completed_successfully
+      repo-sync:
+        condition: service_completed_successfully
     security_opt:
       - no-new-privileges:true
-    # docs/31 B-09: api answers. Whether it reaches the AMP host is in the answer and is checked by deploy.sh.
+    # docs/31 B-09: api answers. Whether it reaches the AMP host is in the answer (deploy.sh checks it; web's /api/health).
     healthcheck:
       test: ["CMD-SHELL", "wget -qO /dev/null --header=\"Authorization: Bearer $$API_SERVICE_TOKEN\" http://127.0.0.1:4000/health"]
       interval: 30s
@@ -246,7 +392,8 @@ services:
 
   # The map: one relay from ds-web to BlueMap on the AMP host (the VPS needed two, one each side of the tunnel).
   map-relay:
-    image: alpine/socat@sha256:22d77becaeeea8ef56b8c4bb2312323acafe85354be6a85714ff5050e3537842
+    image: alpine/socat:latest
+    pull_policy: always
     container_name: deepslate-map-relay
     restart: unless-stopped
     logging: *logging
@@ -256,11 +403,12 @@ services:
     networks: [ds-web, ds-amp]
     command: TCP-LISTEN:8100,fork,reuseaddr TCP:${AMP_HOST:?AMP_HOST is the AMP host's LAN address; set it in deploy/home/.env}:8100
 
-  # MaxMind's GeoLite2-Country for the analytics page, refreshed every 72 h. Profile `geoip`: deploy.sh starts it only
-  # while GEOIPUPDATE_ACCOUNT_ID is set in deploy/home/.env; without it api runs with no countries.
+  # MaxMind's GeoLite2-Country for the analytics page, refreshed every 72 h. Profile `geoip`: on while COMPOSE_PROFILES
+  # names it (deploy.sh: while GEOIPUPDATE_ACCOUNT_ID is set in deploy/home/.env); without it api runs with no countries.
   geoipupdate:
     profiles: [geoip]
-    image: ghcr.io/maxmind/geoipupdate:v7@sha256:45e15eb310528fd308c5c0abee9a8e6d580f1e2b1251e960dec2863dc7f0102f
+    image: ghcr.io/maxmind/geoipupdate:latest
+    pull_policy: always
     container_name: deepslate-geoipupdate
     restart: unless-stopped
     logging: *logging
@@ -273,18 +421,67 @@ services:
       GEOIPUPDATE_FREQUENCY: 72
     volumes:
       - ${DEEPSLATE_DATA}/geoip:/usr/share/GeoIP
+    depends_on:
+      init:
+        condition: service_completed_successfully
     security_opt:
       - no-new-privileges:true
 
-  # docs/42: the test server's own copy of the site, hidden from players. Profile `test`: deploy/home/deploy.sh starts
-  # both while TEST_STACK=1 (through deploy/home/test-up.sh) and removes them when it is not. Their images are tag
-  # TEST_IMAGE_TAG (dev: CI builds it on each push to dev that changes an image), pulled by test-up.sh, never by a live
-  # deploy. Every host path is the test checkout's (TEST_DIR), so nothing the test site builds lands in the live dist/.
-  # The defaults only keep `docker compose config` working while the TEST_ variables are unset.
+  # docs/42: the test server's own copy of the site, hidden from players. Profile `test`: on while COMPOSE_PROFILES names
+  # it (deploy.sh: while TEST_STACK=1, through deploy/home/test-up.sh); TEST_STACK=1 also tells db-prep to make the
+  # test database. Their images are tag TEST_IMAGE_TAG (dev: CI builds it on each push to dev that changes an image),
+  # pulled on a redeploy. Every host path is the test checkout's (TEST_DIR, on dev), so nothing the test site builds
+  # lands in the live dist/. The defaults only keep `docker compose config` working while the TEST_ variables are unset.
+  init-test:
+    profiles: [test]
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-ops:${IMAGE_TAG:-latest}
+    pull_policy: always
+    container_name: deepslate-init-test
+    restart: "no"
+    logging: *logging
+    user: "0:0"
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
+    mem_limit: 32m
+    network_mode: none
+    command: ["sh", "/usr/local/lib/deepslate/init.sh"]
+    volumes:
+      - ${TEST_DIR:-/nonexistent}:/test
+      - ${DEEPSLATE_DIR}/deploy/keys-test:/keys-test
+    security_opt:
+      - no-new-privileges:true
+
+  # deploy/test-pull.sh's job: the test checkout to origin/dev (not while it is held). Its .git is mounted into no
+  # container read-write, so it has no guard copies.
+  repo-sync-test:
+    profiles: [test]
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-ops:${IMAGE_TAG:-latest}
+    pull_policy: always
+    container_name: deepslate-repo-sync-test
+    restart: "no"
+    logging: *logging
+    user: "${DEEPSLATE_UID:-1000}:${DEEPSLATE_GID:-1000}"
+    cap_drop: [ALL]
+    mem_limit: 256m
+    read_only: true
+    tmpfs: [/tmp]
+    networks: [ds-web]
+    environment:
+      HOME: /tmp
+      SYNC_BRANCHES: dev
+    command: ["sh", "/usr/local/lib/deepslate/repo-sync.sh"]
+    volumes:
+      - ${TEST_DIR:-/nonexistent}:/repo
+    depends_on:
+      init-test:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
+
   web-test:
     profiles: [test]
     image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-web:${TEST_IMAGE_TAG:-dev}
-    pull_policy: missing
+    pull_policy: always
     container_name: deepslate-web-test
     restart: unless-stopped
     logging: *logging
@@ -320,6 +517,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-prep:
+        condition: service_completed_successfully   # the test database exists
+      repo-sync-test:
+        condition: service_completed_successfully
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -332,7 +533,7 @@ services:
   api-test:
     profiles: [test]
     image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-api:${TEST_IMAGE_TAG:-dev}
-    pull_policy: missing
+    pull_policy: always
     container_name: deepslate-api-test
     restart: unless-stopped
     logging: *logging
@@ -372,7 +573,6 @@ services:
       - ${DEEPSLATE_DIR}/deploy/keys-test:/run/keys:ro
       - ${TEST_DIR:-/nonexistent}/dist:/repo/dist
       - ${TEST_DIR:-/nonexistent}/modpack:/repo/modpack:ro
-      - ${TEST_DIR:-/nonexistent}/installer:/repo/installer:ro
       - ${TEST_DIR:-/nonexistent}/data/news:/repo/data/news:ro
       - ${TEST_DIR:-/nonexistent}/data/builds:/repo/data/builds:ro
       - ${TEST_DIR:-/nonexistent}/data/private-jars:/repo/data/private-jars:ro
@@ -393,13 +593,15 @@ services:
       start_period: 40s
 
   # docs/39: the build designer, a CLI run for admins by tools/designer/server.mjs, as the designer's own host user,
-  # signed in on Alex's plan. Profile `designer`: deploy.sh starts it only while DESIGNER_CMD is set in deploy/home/.env.
+  # signed in on Alex's plan. Profile `designer`: on while COMPOSE_PROFILES names it (deploy.sh: while DESIGNER_CMD is
+  # set in deploy/home/.env). server.mjs and the instructions are in the image (deploy/images/designer).
   # web reaches it at deepslate-designer:4100 with DESIGNER_TOKEN. The CLI gets no tools and only HOME and PATH of the
   # environment. On ds-web, where the host's firewall allows public https and nothing private: the model's API, and
   # web, which is on ds-web too. Moved from the VPS on 2026-10-23.
   designer:
     profiles: [designer]
-    image: node:22-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-designer:${IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: deepslate-designer
     restart: unless-stopped
     logging: *logging
@@ -422,13 +624,15 @@ services:
       DESIGNER_DAILY: ${DESIGNER_DAILY:-80}   # the designer keeps its own count too (tools/designer/server.mjs)
       DESIGNER_DATA: /designer-data
     volumes:
-      - ${DEEPSLATE_DIR}/tools/designer:/designer:ro          # server.mjs and the instructions; web cannot write here
       # blocks.json. web CAN write this: it mounts modpack/ read-write. server.mjs takes only plain ids, known kinds and
       # plain property values from it, and drops anything else (blockListText).
       - ${DEEPSLATE_DIR}/modpack/designer:/designer-data:ro
       - ${DESIGNER_HOME:-/nonexistent}:${DESIGNER_HOME:-/nonexistent}
       - ${DESIGNER_BIN_DIR:-/nonexistent/bin}:${DESIGNER_BIN_DIR:-/nonexistent/bin}:ro
       - ${DESIGNER_VERSIONS_DIR:-/nonexistent/versions}:${DESIGNER_VERSIONS_DIR:-/nonexistent/versions}:ro
+    depends_on:
+      repo-sync:
+        condition: service_completed_successfully   # modpack/designer
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -438,11 +642,12 @@ services:
       retries: 3
 
   backups:
-    image: postgres:16-alpine
+    image: ghcr.io/${GHCR_OWNER:-unset}/deepslate-backups:latest   # postgres:alpine with backup-loop.sh; never older than the database
+    pull_policy: always
     container_name: deepslate-backups
     restart: unless-stopped
     logging: *logging
-    # the image's postgres user, not root: deploy.sh gives the dumps' folder to 70:70 (api reads the dumps as uid 1000)
+    # the image's postgres user, not root: init gives the dumps' folder to 70:70 (api reads the dumps as uid 1000)
     user: "70:70"
     cap_drop: [ALL]
     mem_limit: 64m
@@ -451,11 +656,9 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ${DEEPSLATE_DATA}/backups:/backups
-      # One file, so the container keeps the script it was started with when git replaces it; deploy.sh compares the
-      # two after `up` and restarts this container when they differ (docs/35 R-19).
-      - ${DEEPSLATE_DIR}/deploy/backup-loop.sh:/backup-loop.sh:ro
     depends_on:
       postgres:
         condition: service_healthy
-    # Nightly pg_dump at 00:00 UTC to deepslate-YYYY-MM-DD.sql.gz, the newest 14 kept (deploy/backup-loop.sh)
+    # Nightly pg_dump at 00:00 UTC to deepslate-YYYY-MM-DD.sql.gz, the newest 14 kept (deploy/backup-loop.sh, in the
+    # image since it has to change with it: a new script arrives with the image, and the container with it)
     command: ["sh", "/backup-loop.sh"]

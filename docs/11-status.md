@@ -33,6 +33,32 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## New terrain: Overhauled Overworld and Streams Reflowing, on test (2026-10-28, on `dev` f8716f1, not on `main`)
+
+- **Alex:** add William Wythers' Overhauled Overworld and Streams Reflowing, and regenerate every chunk of the live
+  overworld that players have not touched. First a fresh world on the live seed on the test server, to see it.
+- **On `dev`:** WWOO 2.6.7 (`sU7oaRZv`, server only: vanilla blocks), Cristel Lib 3.1.7 and Cloth Config 15.0.140
+  (server only, its libraries), Streams Reflowing 2.15.2 (`vbJ5meb8`, server and PCs). Lock: live pack
+  `0.1.0+1c2c1442`, 107 files (112 with s1). Both only shape new land.
+- **Read from the jars:** WWOO's main pack replaces the vanilla biome files (features, trees, plants) and has no noise
+  settings, so the shape of the land stays the seed's. Its add-ons (Cliffs and Coves, Navigable Rivers, Towering
+  Tepuis) change terrain and sit behind its config; read their defaults after the first start. Streams goes to
+  `#streamsreflowing:stream_biomes`, which takes `#minecraft:is_overworld`, and the Moon's three biomes are in that
+  tag: check on test whether the Moon gets streams (its feature type is "overworld", so maybe not).
+- **Test world replaced (17:57 UTC):** the test server was stopped (since 2026-10-27 23:26). Its world (20.1 GB,
+  30,746 files) is copied to docker-01v `/home/ladm/deepslate-regen-2026-10/test-world-20261028`, then everything in
+  `world/` but `datapacks/` and `serverconfig/` was deleted. `level-seed` in the test `server.properties` is live's
+  (`level.dat` of both read: the same seed). The test checkout is at `f8716f1`. **Next, Alex:** test site Build and
+  Sync, start, Pre-generation around spawn, look in the game and on the test map.
+- **The live regen, prepared, not run:** live's overworld is generated from x −11,264 to 13,119 and z ±10,180
+  (1,612 regions, 17.9 GB, 1,625,390 chunks). A read-only copy of its regions and claims is in
+  `/home/ladm/deepslate-regen-2026-10/live-copy`; `live-chunks.csv` has every chunk's `InhabitedTime`. Kept: chunks
+  with 2 minutes or more of player time and the server's spawn claim (no player has a claim), plus 2 chunks around
+  them: 34,574 chunks kept, 1,590,816 (97.9%) to regenerate (`keep-120s-m2.csv`, `keep-map-120s-m2.png`). At 30 s:
+  67,269 kept; at 5 minutes: 19,311. The cut itself is for Alex's offline window, from a fresh copy taken with the
+  server stopped, by the AMP host's trim scripts of 2026-10-10, after a full backup; then Build, Sync and a full
+  pre-generation.
+
 ## The home stack updates itself; PostgreSQL 18 (2026-10-28, deployed: `main` 63131b4, PR #103)
 
 - **How it updates now:** a Redeploy of Dockhand's stack `deepslate` (Docker-01V). It pulls `latest` of every image,

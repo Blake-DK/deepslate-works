@@ -29,6 +29,24 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The home stack updates itself; PostgreSQL 18 (2026-10-28, deployed: `main` 63131b4, PR #103)
+
+- **How it updates now:** a Redeploy of Dockhand's stack `deepslate` (Docker-01V). It pulls `latest` of every image,
+  then runs `init`, `repo-sync`, `installer`, `db-prep` (a dump) and `migrate` before web and api start
+  (deploy/home/README.md). `deploy/home/deploy.sh` still works and does the same.
+- **Where the live compose is:** Dockhand's own copy (compose and `.env` in its data folder), editable there; the
+  checkout's `deploy/home/` copy is the reference. The `.env` there is `deploy/home/.env` plus `IMAGE_TAG=latest`,
+  `INSTALLER_TAG=latest`, `DEEPSLATE_UID`/`GID=1000`, `GIT_GUARD_DIR=/root/.config/deepslate` and
+  `COMPOSE_PROFILES=designer,geoip,test`.
+- **Private images:** Redeploy with pull does not log in to GHCR for web, api and installer; pull them first through
+  Dockhand (Images → Pull), then Redeploy.
+- **Database:** upgraded 16 → 18.6 in place at 14:39 UTC by `deepslate-db`. The copy before it is in
+  `postgres-pre-upgrade/pg16-20261028T143938Z` (89 MB); dumps `backups/manual-before-pg18-20261028T142646Z.sql.gz` and
+  `backups/pre-deploy-20261028T143949Z.sql.gz`. 26 tables, the counts checked (User 11, Event 14582, InstallReport 687).
+  No pending migrations.
+- **Live:** web and api on `latest` = `63131b4`, healthy; the checkout at `63131b4`; the test checkout moved to
+  `3d648dc`. The site answered and api's `/health` was 200 after.
+
 ## Fairy Lights fix, Continuity, Just Zoom, app 3.6.8 (2026-10-28, deployed: `main` badb1f08, PR #102)
 
 - **What went out:** our Fairy Lights 1.2.3-dsw.1 (the JEI crash fix, the section below), Continuity with its

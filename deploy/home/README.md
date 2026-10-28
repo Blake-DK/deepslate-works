@@ -5,6 +5,12 @@ deploy/home/.env up -d`, or Redeploy in Dockhand), or `sudo deploy/home/deploy.s
 checks around it (the commit's own images, the health of web and api after). The VPS keeps `deploy/deploy.sh` and
 `deploy/docker-compose.yml` until the cutover; the two never run on the same host.
 
+**The live stack is Dockhand's own copy** (since 2026-10-28): Dockhand's stack `deepslate` (Docker-01V) keeps its
+compose file and `.env` in its own data folder, where they can be edited and redeployed from Dockhand. The checkout
+stays clean, so `repo-sync` can always move it. This folder's `docker-compose.yml` and `.env.example` are the reference:
+a change to them reaches the live stack only when it is pasted into Dockhand. `deploy/home/.env` stays for `deploy.sh`
+and `test-up.sh`; a secret changed in one place has to be changed in the other.
+
 ## What a redeploy does
 
 Every image is pulled (`IMAGE_TAG`, normally `latest`: main's newest), then one-shot steps run before the site starts.
@@ -35,8 +41,9 @@ has read the file before the step runs). Caddy's Caddyfile, `backup-loop.sh`, th
 files are inside their images, so they arrive with the first redeploy.
 
 **Dockhand** needs a GHCR login with `read:packages`: `deepslate-web`, `deepslate-api` and `deepslate-installer` are
-private packages (`deepslate-db`, `-backups`, `-caddy`, `-designer` and `-ops` are public). It runs the stack with this
-folder's `docker-compose.yml` and `.env`.
+private packages (`deepslate-db`, `-backups`, `-caddy`, `-designer` and `-ops` are public). A Redeploy with "pull" does
+not log in for the private ones and quietly keeps the old image: pull those three first (Images → Pull, which uses
+Dockhand's GitHub registry), then redeploy. It runs the stack with its own copy of the compose file and `.env` (above).
 
 Roll back: `IMAGE_TAG=<commit sha>` in `.env`, then redeploy (or `sudo IMAGE_TAG=<sha> deploy/home/deploy.sh`). A
 migration has no way back but the `pre-deploy-*` dump before it.
@@ -96,7 +103,7 @@ provider's redirect URIs for `AUTH_URL` and `TEST_AUTH_URL`.
 Since 2026-10-23 everything the VPS ran is here, in the one stack: the test pair (`TEST_STACK=1`; its checkout at
 `TEST_DIR`, on dev, brought forward with `deploy/test-pull.sh <TEST_DIR>` as its owner) and the designer (`DESIGNER_CMD`
 set; its host user `designer`, uid 1010, with the CLI installed and signed in, docs/39; on `ds-web`, so it reaches public
-https and nothing private). Not here: the Dockhand mirror of the VPS (dropped, doc 62 §1.5); Dockhand now runs this file itself. Roll back: `sudo IMAGE_TAG=<commit sha>
+https and nothing private). Not here: the Dockhand mirror of the VPS (dropped, doc 62 §1.5); Dockhand now runs its own copy of this file. Roll back: `sudo IMAGE_TAG=<commit sha>
 deploy/home/deploy.sh`.
 Logs: `docker logs -f deepslate-web`. The Discord bot runs in `api`: exactly one live api, so the VPS's api is stopped
 before this one starts (the cutover, doc 62 §5.5).

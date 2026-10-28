@@ -4,6 +4,8 @@ Security planner, started 2026-10-07. The threat model, the invariants, the clie
 
 **Where the open findings are (Alex, 2026-10-07).** A finding with its evidence is a signpost until it is fixed, so open findings, their specs and the build order live in a private repository, branch `security` (the README there says how a building session reads them). A finding appears here once it is Fixed, Verified, Accepted or Not applicable, with the date. The IDs (`SR-nn`) are shared between the two places. The first two commits of this file on `dev` carried the open findings in full; they were moved the same day.
 
+> **2026-10-28:** the VPS is no longer used. Since 2026-10-23 the site runs at home on docker-01v as one Docker Compose stack in Dockhand (`deploy/home/docker-compose.yml`, deploy/home/README.md), published through Pangolin; there is no WireGuard tunnel and `api` reaches the AMP host over the LAN, on a network (`ds-amp`) that `web` is not on. Invariants (§2) and secrets (§6) are brought up to date below; the hop table (§3) and the TLS decision (§4) were verified on the VPS on 2026-10-07 and stand as that record: read `deepslate-wg:4000` as `deepslate-api:4000`, and "inside WireGuard" as the LAN between docker-01v and the AMP host (plain HTTP and SSH; the AMP host admits docker-01v alone on those ports).
+
 **State on 2026-10-07:** `main` `5b864710`, running on the VPS. Snyk's scan of that commit, as Alex pasted it, is triaged (§5 for what is closed; the rest privately).
 
 ## 1. Threat model
@@ -31,12 +33,12 @@ A change that weakens one needs a written decision from Alex.
 
 | # | Invariant | Status 2026-10-07 | Evidence |
 |---|---|---|---|
-| I1 | `web` is internet-facing, has no route to the homelab and holds no AMP credentials | Met | `deploy/docker-compose.yml`: `web` on `web` + `internal`, an explicit environment list (no AMP, bot or webhook variables); the tunnel namespace is on `internal` only |
-| I2 | `api` is the only code that talks to AMP, BlueMap or rsync; reachable only from the internal network, with the service token as a second layer; it re-checks role, username and rate limits itself and does not trust `web` | Partly met | `api` is `network_mode: service:wireguard`, on `internal` only. The token is checked timing-safely (`apps/api/src/auth.ts`). The "does not trust `web`" half is being tightened (private register) |
+| I1 | `web` is internet-facing, has no route to the homelab and holds no AMP credentials | Met | `deploy/docker-compose.yml`: `web` on `web` + `internal`, an explicit environment list (no AMP, bot or webhook variables); the tunnel namespace is on `internal` only. Home stack: `web` on `ds-web` + `ds-internal`, `api` on `ds-internal` + `ds-amp` (`deploy/home/docker-compose.yml`); the host's `deepslate-firewall` gates them by bridge name |
+| I2 | `api` is the only code that talks to AMP, BlueMap or rsync; reachable only from the internal network, with the service token as a second layer; it re-checks role, username and rate limits itself and does not trust `web` | Partly met | `api` is `network_mode: service:wireguard`, on `internal` only (home stack: on `ds-internal` and `ds-amp`, nothing `caddy` reaches). The token is checked timing-safely (`apps/api/src/auth.ts`). The "does not trust `web`" half is being tightened (private register) |
 | I3 | No shell access through the app for anyone; the admin console is the raw Minecraft console only, audited; Kill is admin-only, in `api` | Met | `console.send` in `apps/api/src/actions/registry.ts` (ADMIN, one line, audited, 5/s); `apps/api/src/actions/run.ts` is the only sender; `/server/kill` 409 unless Stopping |
-| I4 | The deploy key can only rsync into the instance folder (rrsync), never run commands | Met | `command="/usr/bin/rrsync <instance>/Minecraft",restrict,from="10.77.0.1"` on the AMP host (docs/15a §7); the host key is pinned (`deploy/keys/known_hosts` exists on the VPS, 2026-10-04) |
+| I4 | The deploy key can only rsync into the instance folder (rrsync), never run commands | Met | `command="/usr/bin/rrsync <instance>/Minecraft",restrict,from="10.77.0.1"` on the AMP host (docs/15a §7); the host key is pinned (`deploy/keys/known_hosts` exists on the VPS, 2026-10-04). Home stack: the key's `from=` names docker-01v (deploy/home/README.md) |
 | I5 | The manifest and downloads are never public | Met | `/api/modpack/manifest` and `/downloads/*` need a launcher token, a session that may download, or `MANIFEST_KEY` (`apps/web/src/app/api/modpack/manifest/route.ts`, `server/modpack/gate.ts`). GHCR packages answer 403 to an anonymous pull (checked 2026-10-07) |
-| I6 | The VPS never builds images; CI builds, the VPS pulls | Met | No `build:` in the compose file; `deploy.sh` pulls `ghcr.io/<owner>/deepslate-{web,api}:<sha>` |
+| I6 | The host never builds images; CI builds, the host pulls | Met | No `build:` in the compose file. Home stack: Dockhand pulls `ghcr.io/<owner>/deepslate-*` (`IMAGE_TAG`) and redeploys (until 2026-10-23 `deploy.sh` on the VPS pulled them by sha) |
 | I7 | `main` only changes by PR with a passing `check` job | Met | Branch protection on `main`: required status check `check`, pull request required, force pushes and deletions off |
 | I8 | Public repo: no real domain, IP, email, Minecraft or Discord name or player UUID anywhere; placeholders only; scanner output redacted before it is written | Met | Pre-push greps in the working rules; this register uses placeholders only |
 
@@ -100,24 +102,24 @@ Snyk's counts: 0 critical, 11 high, 9 medium, 59 low across 7 projects; 66 disti
 
 ## 6. Secrets and rotation
 
-Values are never written here. "Last rotated" is filled in by the VPS or AMP host session from what they know, as a date only.
+Values are never written here. "Last rotated" is filled in by the building or AMP host session from what they know, as a date only.
 
 | Secret | Where it lives | Who holds it | How to rotate | Last rotated |
 |---|---|---|---|---|
-| `AUTH_SECRET` | `deploy/.env` → `web` | VPS root, `web` | New value, deploy; everyone signs in again (and, until the authenticator seal has a key of its own, every admin sets the authenticator up again, docs/04) | never (set 2026-09) |
-| `API_SERVICE_TOKEN` | `deploy/.env` → `web`, `api` | VPS root, both containers | New value, deploy (both restart) | never |
-| `POSTGRES_PASSWORD` | `deploy/.env` → `postgres`, `web`, `api`, `backups` | VPS root, four containers | `ALTER USER` in Postgres, then `.env`, then deploy | never |
-| `DISCORD_CLIENT_SECRET` | `deploy/.env` → `web` | Developer Portal, VPS root | Regenerate in the portal, `.env`, deploy | unknown |
-| `DISCORD_BOT_TOKEN` | `deploy/.env` → `api` | Developer Portal, VPS root | Reset in the portal, `.env`, deploy | unknown |
-| `DISCORD_WEBHOOK_FEED`, `_ADMIN`, `_UPDATES` | `deploy/.env` → `api` | Discord channel settings, VPS root | New webhook per channel, `.env`, deploy | unknown |
-| `AMP_PASSWORD` (`webapp`) | `deploy/.env` → `api` | AMP, VPS root | docs/09 runbook | 2026-09-29 (the copy on the AMP host removed) |
-| `MANIFEST_KEY` | `deploy/.env` → `web` | VPS root, admins' tools | New value, deploy | never |
-| `TEST_SUMMARY_TOKEN` | `deploy/.env` → live `web`, `api-test` | VPS root | New value (`openssl rand -hex 32`), deploy and `deploy/test-up.sh` | never |
-| `TEST_APP_TOKEN` (five paths, docs/57) | `deploy/.env` → live `web`, `api-test` | VPS root | New value (`openssl rand -hex 32`), deploy and `deploy/test-up.sh` | never |
-| WireGuard private keys | `deploy/wireguard/wg_confs/wg0.conf`; `/etc/wireguard/wg0.conf` on the AMP host | uid 1000 on the VPS; root on the AMP host | New pair on each side, swap public keys, restart both ends (a few minutes of tunnel outage) | never |
-| Deploy key (ed25519) | `deploy/keys/deploy.key` (VPS), `~amp/.ssh/authorized_keys` (AMP host) | uid 1000 on the VPS; `amp` | New pair, replace the `authorized_keys` line, deploy | never |
-| GHCR pull credential | root's Docker config on the VPS | VPS root | New token with `read:packages`, `docker login` as root | unknown |
-| `ladm`'s git credential | `/home/ladm/.config/deepslate/git-credentials` | `ladm` | New token (contents: read; the checkout only pulls) | unknown |
+| `AUTH_SECRET` | the stack's `.env` (Dockhand) → `web` | Dockhand, docker-01v root, `web` | New value, redeploy; everyone signs in again (and, until the authenticator seal has a key of its own, every admin sets the authenticator up again, docs/04) | never (set 2026-09) |
+| `API_SERVICE_TOKEN` | the stack's `.env` (Dockhand) → `web`, `api` | Dockhand, docker-01v root, both containers | New value, redeploy (both restart) | never |
+| `POSTGRES_PASSWORD` | the stack's `.env` (Dockhand) → `postgres`, `web`, `api`, `backups` | Dockhand, docker-01v root, four containers | `ALTER USER` in Postgres, then `.env`, then redeploy | never |
+| `DISCORD_CLIENT_SECRET` | the stack's `.env` (Dockhand) → `web` | Developer Portal, Dockhand, docker-01v root | Regenerate in the portal, `.env`, redeploy | unknown |
+| `DISCORD_BOT_TOKEN` | the stack's `.env` (Dockhand) → `api` | Developer Portal, Dockhand, docker-01v root | Reset in the portal, `.env`, redeploy | unknown |
+| `DISCORD_WEBHOOK_FEED`, `_ADMIN`, `_UPDATES` | the stack's `.env` (Dockhand) → `api` | Discord channel settings, Dockhand, docker-01v root | New webhook per channel, `.env`, redeploy | unknown |
+| `AMP_PASSWORD` (`webapp`) | the stack's `.env` (Dockhand) → `api` | AMP, Dockhand, docker-01v root | docs/09 runbook | 2026-09-29 (the copy on the AMP host removed) |
+| `MANIFEST_KEY` | the stack's `.env` (Dockhand) → `web` | Dockhand, docker-01v root, admins' tools | New value, redeploy | never |
+| `TEST_SUMMARY_TOKEN` | the stack's `.env` (Dockhand) → live `web`, `api-test` | Dockhand, docker-01v root | New value (`openssl rand -hex 32`), redeploy | never |
+| `TEST_APP_TOKEN` (five paths, docs/57) | the stack's `.env` (Dockhand) → live `web`, `api-test` | Dockhand, docker-01v root | New value (`openssl rand -hex 32`), redeploy | never |
+| WireGuard private keys | Obsolete since 2026-10-23 (no tunnel at home): `deploy/wireguard/wg_confs/wg0.conf` on the VPS, `/etc/wireguard/wg0.conf` on the AMP host | uid 1000 on the VPS; root on the AMP host | Retire both ends | never |
+| Deploy key (ed25519) | `deploy/keys/deploy.key` (the home checkout), `~amp/.ssh/authorized_keys` (AMP host) | uid 1000 on docker-01v; `amp` | New pair, replace the `authorized_keys` line, redeploy | never |
+| GHCR pull credential | Dockhand's GitHub registry login (until 2026-10-23 root's Docker config on the VPS) | Dockhand | New token with `read:packages`, in Dockhand's registry settings | unknown |
+| `ladm`'s git credential (VPS) | Obsolete since 2026-10-23: `/home/ladm/.config/deepslate/git-credentials` on the VPS. At home `repo-sync` fetches the public repository without one | `ladm` | Revoke the token | unknown |
 | Actions secrets: `PORTAL_URL` (not a secret, a hidden value); the signing key | GitHub repository secrets and environments | Alex's GitHub account | In the repository's settings | n/a |
 | S3 and NAS credentials for backups | AMP on the homelab | AMP host root | In AMP; `api` never holds them (docs/28 §11) | unknown |
 

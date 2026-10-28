@@ -1,5 +1,7 @@
 # 47 · Planner handover, 2026-10-10
 
+> **2026-10-28:** the VPS is no longer used; the site runs at home on docker-01v, deployed by a Redeploy in Dockhand (deploy/home/README.md). VPS paths, `deploy.sh` and the tunnel below are the record of their day.
+
 Times are UTC. This follows docs/46. Read docs/11 first, then this.
 
 ## 1. Where live is now

@@ -49,7 +49,7 @@ export async function* runBuild(
   try {
     await access(c.env.DIST_DIR ?? `${env.REPO_DIR}/dist`, constants.W_OK);
   } catch {
-    yield { line: `ERROR ${c.env.DIST_DIR} is not writable by api (uid ${process.getuid?.() ?? "?"}): run deploy/deploy.sh as root once, it fixes the owner` };
+    yield { line: `ERROR ${c.env.DIST_DIR} is not writable by api (uid ${process.getuid?.() ?? "?"}): redeploy the stack once: its init step fixes the owner` };
     yield { done: true, ok: false, code: 1 };
     return;
   }

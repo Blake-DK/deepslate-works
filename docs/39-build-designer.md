@@ -1,5 +1,7 @@
 # 39. The build designer: describe a build, see it, keep it (plan, Alex 2026-10-07)
 
+> **2026-10-28:** the VPS is no longer used. The designer runs in the home stack on docker-01v (profile `designer` in `deploy/home/docker-compose.yml`, on `ds-web`; its host user `designer`, uid 1010). Where this plan says the VPS, the tunnel or `deploy.sh`, read deploy/home/README.md.
+
 ## Context
 
 docs/37 made it possible to bring a build file in, check it and place it. What is still missing is the file itself:
@@ -203,7 +205,7 @@ and seed and return the whole recipe.
       - no-new-privileges:true
 ```
 
-- **The host user.** A user of its own on the VPS (not root, not ladm), with the CLI installed and signed in once
+- **The host user.** A user of its own on the host (not root, not the checkout's owner; at home `designer`, uid 1010), with the CLI installed and signed in once
   by Alex and an empty settings file: no plugins, no default model. Alex's note measured about 10k tokens a call
   for a root login that carries plugins. The three folders above are that user's. The container runs as that
   user's uid so a refreshed token is written back with the right owner.

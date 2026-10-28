@@ -27,7 +27,7 @@ type Overview = { feed: Hook; admin: Hook; updates?: Hook; bot?: BotView; role?:
 
 /** docs/22 §7: the bot's state in one line. */
 function botLine(b: BotView | undefined): React.ReactNode {
-  if (!b || b.state === "unset") return <>No bot token set. Ask the VPS session to add <span className="font-mono">DISCORD_BOT_TOKEN</span>.</>;
+  if (!b || b.state === "unset") return <>No bot token set. Add <span className="font-mono">DISCORD_BOT_TOKEN</span> to the stack&apos;s .env in Dockhand, then redeploy.</>;
   if (b.state === "no_guild") return <>The bot has a token but no server: <span className="font-mono">DISCORD_GUILD_ID</span> is not set.</>;
   if (b.state === "refused") return <span className="text-danger">{b.refused === "intents" ? "Switch on Message Content Intent and Server Members Intent in the Developer Portal (Bot page)." : "Discord refused the token."}</span>;
   if (b.state !== "on") return <>Connecting to Discord…</>;
@@ -37,7 +37,7 @@ function botLine(b: BotView | undefined): React.ReactNode {
 function where(h: Hook, env: string): React.ReactNode {
   switch (h.state) {
     case "unset":
-      return <>No webhook set. Ask the VPS session to add <span className="font-mono">{env}</span>.</>;
+      return <>No webhook set. Add <span className="font-mono">{env}</span> to the stack&apos;s .env in Dockhand, then redeploy.</>;
     case "refused":
       return <span className="text-danger">Discord refused the webhook.</span>;
     case "unreachable":
@@ -89,7 +89,7 @@ export default async function DiscordSection({ searchParams, tab }: { searchPara
               <dt className="font-medium">#game-chat</dt>
               <dd>{where(overview.feed, "DISCORD_WEBHOOK_FEED")}</dd>
               <dt className="font-medium">season-updates</dt>
-              <dd>{!overview.updates || overview.updates.state === "unset" ? <>No webhook set{overview.bot && overview.bot.state !== "unset" ? <>: votes, news and the season are not posted. Ask the VPS session to add <span className="font-mono">DISCORD_WEBHOOK_UPDATES</span>.</> : <> (optional): votes and news go to #game-chat as before.</>}</> : where(overview.updates, "DISCORD_WEBHOOK_UPDATES")}</dd>
+              <dd>{!overview.updates || overview.updates.state === "unset" ? <>No webhook set{overview.bot && overview.bot.state !== "unset" ? <>: votes, news and the season are not posted. Add <span className="font-mono">DISCORD_WEBHOOK_UPDATES</span> to the stack&apos;s .env in Dockhand, then redeploy.</> : <> (optional): votes and news go to #game-chat as before.</>}</> : where(overview.updates, "DISCORD_WEBHOOK_UPDATES")}</dd>
               <dt className="font-medium">Admin channel</dt>
               <dd>{overview.admin.state === "unset" ? <>None. Pick a private channel as the admin channel on the Channels &amp; bot tab; crashes and problems are not posted until then.</> : where(overview.admin, "DISCORD_WEBHOOK_ADMIN")}
                 {overview.leftOut && overview.leftOut.count > 0 && (
@@ -103,7 +103,7 @@ export default async function DiscordSection({ searchParams, tab }: { searchPara
               <dd>
                 {!overview.role || overview.role.state === "off" ? (
                   <>
-                    Off. Ask the VPS session to add <span className="font-mono">DISCORD_PLAYER_ROLE_ID</span>; then everyone who has linked their game gets the role.
+                    Off. Add <span className="font-mono">DISCORD_PLAYER_ROLE_ID</span> to the stack&apos;s .env in Dockhand and redeploy; then everyone who has linked their game gets the role.
                     <span className="block text-muted-foreground">Posts in season-updates go out without tagging anyone until it is on.</span>
                   </>
                 ) : (

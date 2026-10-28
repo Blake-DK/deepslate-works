@@ -35,7 +35,7 @@ A mod in `mods.json` may say where its file comes from instead of Modrinth:
 "source": { "private": "mowziesmobs-1.21.1-1.8.2-dsw.1.jar", "sha512": "<from the CI log>", "note": "docs/58: Sculptor crash fix" }
 ```
 
-- **The file** lives on the VPS in a git-ignored folder (`data/private-jars/`, mounted read-only where Build and the
+- **The file** lives in the stack's data folder, git-ignored (`data/private-jars/`, on the VPS until 2026-10-23; mounted read-only where Build and the
   web need it). It is put there by hand from the CI artifact, its sha512 checked against the lock before anything
   uses it.
 - **Lock** writes the entry with `filename`, `sha512`, `size` from the file on disk and a URL on the **site itself**,

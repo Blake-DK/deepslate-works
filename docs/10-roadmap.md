@@ -1,6 +1,6 @@
 # 10 · Roadmap and acceptance criteria
 
-Work top to bottom. A phase is done when every box in its "Done when" list is true and Alex has clicked through it on the VPS. Then commit a tag `phase-N`.
+Work top to bottom. A phase is done when every box in its "Done when" list is true and Alex has clicked through it on the live site. Then commit a tag `phase-N`.
 
 **State on 2026-10-03, 19:00 UTC** (checked against `main` `7d0e5be` and the running server; the full check is "Where the build stands" in `docs/11-status.md`). A box is ticked only with what shows it, in italics after it. `phase-0` is the only tag. Phases 0 to 3 are built and in daily use, each with boxes that need a person to click through. The planner's additions are built: docs/14 joining, docs/16 analytics and event log, docs/17 mc-router, docs/18 guide, docs/21 launcher look and Discord feed (steps 1 to 3), docs/22 Discord bot (steps 1 to 6), docs/23 site look (all four steps), docs/25 starter kit. Started: docs/20 seasons (step 1 of 6) and docs/24 world regen (run as Alex amended it). Not begun: Phase 4 and docs/19. Going live is the next milestone; "Open items, by priority" at the end of this file is the order of work.
 
@@ -14,7 +14,7 @@ Build:
 - Layout shell: top nav (Home, Mods, Vote, Install, Map, Players, Admin for admins), phone-friendly, dark and light themes.
 
 Done when:
-- [x] `docker compose up -d` on the VPS serves the site over HTTPS. *Since 2026-09-28; deployed by `deploy/deploy.sh` since 2026-09-29.*
+- [x] `docker compose up -d` on the VPS serves the site over HTTPS. *Since 2026-09-28; deployed by `deploy/deploy.sh` since 2026-09-29. Since 2026-10-23 the site runs at home on docker-01v, deployed by a Redeploy in Dockhand (deploy/home/README.md); the VPS is no longer used.*
 - [x] Alex logs in with Discord and lands on an admin page. *Daily since 2026-09-28.*
 - [ ] An invite link lets a second Discord account in; a third account without an invite is refused with the right message. *Not clicked through: members come in through the Discord server (`DISCORD_GUILD_AUTO_JOIN=1`), and one invite was made, for kanefinch, who joined by it on 2026-09-29. The refusal has not been watched.*
 - [ ] The email/password fallback works for one invite. *Sign-in with email and password is used by every test script; through an invite, not clicked through.*

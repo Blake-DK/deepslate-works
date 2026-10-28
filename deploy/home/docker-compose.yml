@@ -9,15 +9,15 @@
 #   ds-internal  web, api, postgres, backups: no outside access at all
 #
 # Every image is built by CI and pulled from GHCR (`latest`, or IMAGE_TAG); this host never builds one. Every service
-# carries a memory limit. Two roots, both absolute in deploy/home/.env: DEEPSLATE_DIR, the checkout (modpack/, .git,
+# carries a memory limit. Two roots, both absolute in the stack's .env: DEEPSLATE_DIR, the checkout (modpack/, .git,
 # deploy/keys) and DEEPSLATE_DATA, the data (postgres/, backups/, data/, dist/, geoip/, caddy/).
 #
-# Updating: a redeploy (`docker compose up -d`, or Redeploy in Dockhand, with deploy/home/.env) pulls every image and
+# Updating: Redeploy in Dockhand, which keeps its own copy of this file and the .env (deploy/home/README.md), pulls every image and
 # runs the one-shot steps below before the site starts: init (folders and owners), repo-sync (the checkout brought
 # forward), db-prep (a dump, then the test database if missing), migrate, and installer (the exe into dist/ci). The
 # database image upgrades its data to a new PostgreSQL by itself (deploy/images/db). COMPOSE_PROFILES in the env file
 # turns on the designer, geoip and test services. A change to this file itself is read on the redeploy after the one
-# whose repo-sync pulled it. deploy/home/deploy.sh still works and does the same with its own checks.
+# whose repo-sync pulled it, and only once it is pasted into Dockhand's copy.
 name: deepslate
 
 # docs/31 B-21: without this the json-file logs grow without end (api writes a line for every AMP poll).
@@ -59,12 +59,12 @@ services:
     network_mode: none
     command: ["sh", "/usr/local/lib/deepslate/init.sh"]
     volumes:
-      - ${DEEPSLATE_DATA:?DEEPSLATE_DATA is the data root; set it in deploy/home/.env}:/data
-      - ${DEEPSLATE_DIR:?DEEPSLATE_DIR is the checkout; set it in deploy/home/.env}/deploy/keys:/keys
+      - ${DEEPSLATE_DATA:?DEEPSLATE_DATA is the data root; set it in the stack's .env}:/data
+      - ${DEEPSLATE_DIR:?DEEPSLATE_DIR is the checkout; set it in the stack's .env}/deploy/keys:/keys
     security_opt:
       - no-new-privileges:true
 
-  # The checkout to the branch it follows (main; dev for the dry run), as its owner, with the guards of deploy.sh:
+  # The checkout to the branch it follows (main; dev for the dry run), as its owner, with the guards deploy.sh had:
   # .git/config and .git/hooks must match the copies under /root that web cannot reach (deploy/README.md). Commits made
   # here and not pushed, a guard that does not match, or a fetch that fails: it says so in its log and the stack starts
   # on the checkout as it was. On ds-web: GitHub over https, nothing private. The repository is public: no credentials.
@@ -199,7 +199,7 @@ services:
 
   # Pangolin's tunnel client for the site "deepslate" (planner doc 62 §2): it connects out to PANGOLIN_ENDPOINT and hands
   # the site's resources to deepslate-caddy:80. Only on ds-edge, whose firewall rules allow exactly that tunnel. No Docker
-  # socket, no published ports. Its id and secret live in deploy/home/.env with the stack's other secrets (a new pair
+  # socket, no published ports. Its id and secret live in the stack's .env with the stack's other secrets (a new pair
   # comes from the site's page in Pangolin). Until 2026-10-23 it was a stack of its own under Dockhand.
   newt:
     image: fosrl/newt:latest
@@ -211,9 +211,9 @@ services:
     cpus: "0.5"
     networks: [ds-edge]
     environment:
-      NEWT_ID: ${NEWT_ID:?NEWT_ID is the Pangolin site's newt id; set it in deploy/home/.env}
-      NEWT_SECRET: ${NEWT_SECRET:?NEWT_SECRET is the Pangolin site's newt secret; set it in deploy/home/.env}
-      PANGOLIN_ENDPOINT: ${PANGOLIN_ENDPOINT:?PANGOLIN_ENDPOINT is Pangolin's https address; set it in deploy/home/.env}
+      NEWT_ID: ${NEWT_ID:?NEWT_ID is the Pangolin site's newt id; set it in the stack's .env}
+      NEWT_SECRET: ${NEWT_SECRET:?NEWT_SECRET is the Pangolin site's newt secret; set it in the stack's .env}
+      PANGOLIN_ENDPOINT: ${PANGOLIN_ENDPOINT:?PANGOLIN_ENDPOINT is Pangolin's https address; set it in the stack's .env}
     security_opt:
       - no-new-privileges:true
 
@@ -230,8 +230,8 @@ services:
     mem_limit: 64m
     networks: [ds-edge, ds-web]
     environment:
-      SITE_HOST: ${SITE_HOST:?SITE_HOST is the site's host name (deepslate.dsw.test); set it in deploy/home/.env}
-      MAP_HOST: ${MAP_HOST:?MAP_HOST is the map's host name (map.deepslate.dsw.test); set it in deploy/home/.env}
+      SITE_HOST: ${SITE_HOST:?SITE_HOST is the site's host name (deepslate.dsw.test); set it in the stack's .env}
+      MAP_HOST: ${MAP_HOST:?MAP_HOST is the map's host name (map.deepslate.dsw.test); set it in the stack's .env}
       TEST_HOST: ${TEST_HOST:-test.deepslate.dsw.test}
       DS_EDGE_SUBNET: ${DS_EDGE_SUBNET:-172.27.0.0/16}
     volumes:
@@ -279,7 +279,7 @@ services:
       API_SERVICE_TOKEN: ${API_SERVICE_TOKEN}
       MANIFEST_KEY: ${MANIFEST_KEY:-}
       MAP_URL: ${MAP_URL:-}
-      SERVER_ADDRESS: ${SERVER_ADDRESS:?SERVER_ADDRESS is the address players join; set it in deploy/home/.env}
+      SERVER_ADDRESS: ${SERVER_ADDRESS:?SERVER_ADDRESS is the address players join; set it in the stack's .env}
       MODRINTH_USER_AGENT: ${MODRINTH_USER_AGENT:-deepslate-works/0.1}
       # docs/39: the build designer (the service `designer`, profile `designer`); the card says "Not set up" while
       # DESIGNER_URL is empty
@@ -382,7 +382,7 @@ services:
         condition: service_completed_successfully
     security_opt:
       - no-new-privileges:true
-    # docs/31 B-09: api answers. Whether it reaches the AMP host is in the answer (deploy.sh checks it; web's /api/health).
+    # docs/31 B-09: api answers. Whether it reaches the AMP host is in the answer (web's /api/health).
     healthcheck:
       test: ["CMD-SHELL", "wget -qO /dev/null --header=\"Authorization: Bearer $$API_SERVICE_TOKEN\" http://127.0.0.1:4000/health"]
       interval: 30s
@@ -401,10 +401,10 @@ services:
     cap_drop: [ALL]
     mem_limit: 32m
     networks: [ds-web, ds-amp]
-    command: TCP-LISTEN:8100,fork,reuseaddr TCP:${AMP_HOST:?AMP_HOST is the AMP host's LAN address; set it in deploy/home/.env}:8100
+    command: TCP-LISTEN:8100,fork,reuseaddr TCP:${AMP_HOST:?AMP_HOST is the AMP host's LAN address; set it in the stack's .env}:8100
 
   # MaxMind's GeoLite2-Country for the analytics page, refreshed every 72 h. Profile `geoip`: on while COMPOSE_PROFILES
-  # names it (deploy.sh: while GEOIPUPDATE_ACCOUNT_ID is set in deploy/home/.env); without it api runs with no countries.
+  # names it (with GEOIPUPDATE_ACCOUNT_ID set in the .env); without it api runs with no countries.
   geoipupdate:
     profiles: [geoip]
     image: ghcr.io/maxmind/geoipupdate:latest
@@ -428,7 +428,7 @@ services:
       - no-new-privileges:true
 
   # docs/42: the test server's own copy of the site, hidden from players. Profile `test`: on while COMPOSE_PROFILES names
-  # it (deploy.sh: while TEST_STACK=1, through deploy/home/test-up.sh); TEST_STACK=1 also tells db-prep to make the
+  # it, with TEST_STACK=1, which also tells db-prep to make the
   # test database. Their images are tag TEST_IMAGE_TAG (dev: CI builds it on each push to dev that changes an image),
   # pulled on a redeploy. Every host path is the test checkout's (TEST_DIR, on dev), so nothing the test site builds
   # lands in the live dist/. The defaults only keep `docker compose config` working while the TEST_ variables are unset.
@@ -593,8 +593,8 @@ services:
       start_period: 40s
 
   # docs/39: the build designer, a CLI run for admins by tools/designer/server.mjs, as the designer's own host user,
-  # signed in on Alex's plan. Profile `designer`: on while COMPOSE_PROFILES names it (deploy.sh: while DESIGNER_CMD is
-  # set in deploy/home/.env). server.mjs and the instructions are in the image (deploy/images/designer).
+  # signed in on Alex's plan. Profile `designer`: on while COMPOSE_PROFILES names it (with DESIGNER_CMD
+  # set in the .env). server.mjs and the instructions are in the image (deploy/images/designer).
   # web reaches it at deepslate-designer:4100 with DESIGNER_TOKEN. The CLI gets no tools and only HOME and PATH of the
   # environment. On ds-web, where the host's firewall allows public https and nothing private: the model's API, and
   # web, which is on ds-web too. Moved from the VPS on 2026-10-23.

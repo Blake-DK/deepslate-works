@@ -4,7 +4,7 @@
 
 A private website for a friends' modded Minecraft server called **Deepslate Works**. It starts as a mod catalogue and vote, becomes the place people download the one-click installer and press Play, and ends up as the control panel for the server: who is online, a live map, the event log, and (Phase 4, not built) self-service actions like "take me home". Nobody asks to be whitelisted: a newcomer joins, lands in an entrance room, clicks one link and is in (docs/14).
 
-The server itself runs on CubeCoders **AMP** (Minecraft Java module) **on Alex's homelab**; the portal runs on the VPS in Docker. Players reach the game at `mc.dsw.test` by a port forward to mc-router on the homelab (docs/17; Pangolin is no longer part of it); the portal reaches AMP through a WireGuard tunnel confined to Docker (docs/13).
+The server itself runs on CubeCoders **AMP** (Minecraft Java module) **on Alex's homelab**; the portal runs there too, as one Docker Compose stack (`deepslate`, managed in Dockhand; deploy/home/README.md) and published through Pangolin (docs/62). Players reach the game at `mc.dsw.test` by a port forward to mc-router on the homelab (docs/17; Pangolin carries the site, not the game); the portal's api reaches AMP over the LAN. Until 2026-10-23 the portal ran on a VPS and reached AMP through a WireGuard tunnel (docs/13); the VPS is no longer used.
 
 ## Who uses it
 
@@ -21,7 +21,7 @@ Assume the player has never installed a mod, may be on a laptop from 2017 with 8
 2. **Weak PCs are first-class.** The base pack is performance mods first; every optional mod carries a load rating; the installer sizes RAM automatically.
 3. **The manifest is the truth.** One `mods.json` drives the catalogue, the vote, the installer and the server files. If they ever disagree, nobody can connect.
 4. **Players can't break the server.** Every action they can take is a named operation with validation, permissions and an audit trail. Nobody gets a console.
-5. **Boring infrastructure.** One VPS, one compose file, one reverse proxy, Postgres. No Kubernetes, no queues, no microservices.
+5. **Boring infrastructure.** One host, one compose file, one reverse proxy, Postgres. No Kubernetes, no queues, no microservices.
 
 ## Fixed decisions
 
@@ -37,7 +37,7 @@ Assume the player has never installed a mod, may be on a laptop from 2017 with 8
 
 | Phase | Name | Outcome |
 |---|---|---|
-| 0 | Foundation | Repo, compose, Caddy, auth, invites, admin can log in on the VPS |
+| 0 | Foundation | Repo, compose, Caddy, auth, invites, admin can log in on the live site |
 | 1 | Catalogue & vote | Players log in, read about each mod (video + wiki links), vote; admin closes and sees results |
 | 2 | Modpack & installer | Manifest lockfile, client installer (Windows one-click; Windows only, decided 2026-09-29), server sync to AMP |
 | 3 | Server dashboard | Status, online players, TPS, live map behind login, announcements; with docs/14 (joining) and docs/16 (analytics, files, event log, branding) |

@@ -1,5 +1,5 @@
 # The stack's own Caddy on docker-01v (doc 62 §2, §3.2). Plain http on :80: Pangolin's Traefik terminates TLS and the
-# site's newt hands the request to deepslate-caddy on ds-edge. The host names come from deploy/home/.env (SITE_HOST,
+# site's newt hands the request to deepslate-caddy on ds-edge. The host names come from the stack's .env (SITE_HOST,
 # MAP_HOST, TEST_HOST), so this file holds placeholders only.
 {
 	auto_https off

@@ -1,5 +1,7 @@
 # 60 · GitHub security review
 
+> **2026-10-28:** the VPS is no longer used; the site runs at home on docker-01v, deployed by a Redeploy in Dockhand (deploy/home/README.md). VPS paths, `deploy.sh` and the tunnel below are the record of their day.
+
 Planned 2026-10-12, nothing checked yet. docs/54 switched GitHub's security features on. This is the review of the
 GitHub side as a whole: the account, the repository's settings, the workflows, the packages, what the public can read
 and what the scanners have raised. It is read-only. Fixes come afterwards as their own work.

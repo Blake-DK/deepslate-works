@@ -24,7 +24,7 @@ export type KeyBind = z.infer<typeof keySchema>;
 /** A short "how to use it", in the portal's small Markdown (bold, lists, links). */
 export const howToSchema = z.string().min(1).max(700);
 
-// docs/58: a mod whose jar is not Modrinth's but one kept on the VPS (data/private-jars/), e.g. a patched build of a
+// docs/58: a mod whose jar is not Modrinth's but one kept in the stack's data folder (data/private-jars/), e.g. a patched build of a
 // mod. Never published: the site hands it out behind its gate. `sha512` is the build's own (its CI log); Lock and
 // Build refuse a file that is not that one.
 export const privateSourceSchema = z.object({

@@ -1,5 +1,7 @@
 # 31 · Review and bug list
 
+> **2026-10-28:** the VPS is no longer used; the site runs at home on docker-01v, deployed by a Redeploy in Dockhand (deploy/home/README.md). VPS paths, `deploy.sh` and the tunnel below are the record of their day.
+
 VPS session, 2026-10-04, 12:30 to 12:50 UTC, against `main` `21df993`. Review only: nothing was fixed, deployed, synced or restarted. The roadmap that goes with it is `docs/32-seasons-1-to-4-roadmap.md`.
 
 ## How it was done, and what could not be done

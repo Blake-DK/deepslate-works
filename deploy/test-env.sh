@@ -1,5 +1,4 @@
 # Sourced by deploy/deploy.sh and deploy/test-up.sh (docs/42): the test server's lines of deploy/.env, read and checked.
-# On docker-01v deploy/home/deploy.sh and deploy/home/test-up.sh source it with ENV_FILE=deploy/home/.env.
 #
 #   envval NAME        the value of NAME in deploy/.env ("" when it is not there)
 #   test_env_check     prints every TEST_ line that is missing or wrong, and fails when there is one

@@ -17,7 +17,7 @@ Keep it this small; add columns when a phase needs them.
 | `SiteSettings` | the site (one row, `site`) | `live`, the launch switch |
 | `Setting` | a group of settings | `branding`, `privacy`, `retention`, `files`, `joining`, edited on the admin pages; and what the portal keeps for itself: `_pregen` (the plan of the pre-generation), `_packSynced` (the pack the server was last given, which a join is held against) |
 | `Announcement` | a news item | `image` is a file name under `data/news/` |
-| `Session` | one stay on the Minecraft server | `mcUuid` is `name:<name>` until the UUID is known. `ip` is for admins and is removed after 30 days; `country` is worked out once, from a database on the VPS |
+| `Session` | one stay on the Minecraft server | `mcUuid` is `name:<name>` until the UUID is known. `ip` is for admins and is removed after 30 days; `country` is worked out once, from a GeoLite2 database beside the site (`geoip/`) |
 | `Event` | a line in the event log | see below |
 | `ServerSnapshot` | what the server was like at a moment | state, players, TPS, CPU, memory, `pings`. Every 15 s while it runs, every five minutes while it does not; after 48 hours thinned to one in five minutes; kept 30 days |
 
@@ -46,7 +46,7 @@ Players see `JOIN`, `LEAVE`, `DEATH`, `ADVANCEMENT`, `SERVER_START` and `SERVER_
 - **Mods.** They live in `modpack/mods.json` and `mods.lock.json`. Ballots reference mods by slug so a mod removed from the manifest still shows up in old results as "removed".
 - **Map data.** BlueMap owns it.
 - **Player inventories, homes, stats.** Read live from the server when a feature needs them; don't mirror.
-- **Uploaded pictures.** `data/branding/`, `data/news/` on the VPS; the tables hold the file names.
+- **Uploaded pictures.** `data/branding/`, `data/news/` in the stack's data folder (`DEEPSLATE_DATA/data`); the tables hold the file names.
 - **Who is held in the entrance room right now.** In `api`'s memory; after a restart it is worked out again from who is on and what tags they carry.
 
 ## Roles and permissions

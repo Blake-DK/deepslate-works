@@ -74,7 +74,7 @@ export async function storeImage(slot: Slot, upload: File): Promise<Stored> {
     await writeFile(path.join(BRANDING_DIR, `${file}.part`), data, { mode: 0o644 });
     await rename(path.join(BRANDING_DIR, `${file}.part`), path.join(BRANDING_DIR, file));
   } catch (e) {
-    return { ok: false, reason: `The picture could not be saved on the server (${e instanceof Error ? e.message : "unknown"}). Run deploy/deploy.sh once as root: it creates the folder.` };
+    return { ok: false, reason: `The picture could not be saved on the server (${e instanceof Error ? e.message : "unknown"}). Redeploy the stack once: its init step creates the folder.` };
   }
   return { ok: true, file, kind, bytes: data.length, dropped };
 }

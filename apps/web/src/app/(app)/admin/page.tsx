@@ -106,7 +106,7 @@ export default async function AdminOverview({ searchParams }: { searchParams: Pa
       {/* docs/39: a row only when the designer is set up and not well */}
       {designer && !designer.ok && (
         <p className="text-sm text-danger" data-testid="designer-problem">
-          {designer.signedIn === false ? "The build designer is signed out: sign in on the VPS as its own user (no restart needed)." : `The build designer is not well: ${designer.error ?? "its CLI does not answer"}.`}
+          {designer.signedIn === false ? "The build designer is signed out: sign it in again on the server, as its own user (no restart needed)." : `The build designer is not well: ${designer.error ?? "its CLI does not answer"}.`}
         </p>
       )}
 

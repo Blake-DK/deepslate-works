@@ -54,8 +54,10 @@ describe("the container healthcheck's path", () => {
   });
 
   it("is what Docker's healthcheck for web calls", () => {
-    const compose = readFileSync(new URL("../../../deploy/docker-compose.yml", import.meta.url), "utf8");
-    const web = compose.slice(compose.indexOf("\n  web:"), compose.indexOf("\n  wireguard:"));
+    const compose = readFileSync(new URL("../../../deploy/home/docker-compose.yml", import.meta.url), "utf8");
+    const from = compose.slice(compose.indexOf("\n  web:") + 1);
+    // the web service's block: up to the next service (two-space key) or comment at that level
+    const web = from.slice(0, from.search(/\n {2}[#a-z]/));
     expect(web).toContain('"http://127.0.0.1:3000/api/health/live"');
     expect(web).not.toMatch(/3000\/api\/health"/);
   });

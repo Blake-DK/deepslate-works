@@ -1,7 +1,7 @@
 import { db } from "@/server/db";
 import { missingEnv } from "@/env";
 
-// What Docker's healthcheck calls (deploy/docker-compose.yml): web itself and its database, nothing it would have to
+// What Docker's healthcheck calls (deploy/home/docker-compose.yml): web itself and its database, nothing it would have to
 // wait on. On 2026-10-07 the first deploy of the build designer stopped at "deepslate-web is unhealthy" because
 // /api/health waited on a designer that had not been started (and on api). /api/health keeps the detail for admins
 // and deploy.sh; this answers yes or no within two seconds, whatever else is down.

@@ -4,7 +4,6 @@
 dist
 deploy/.env
 deploy/.env.*
-!deploy/.env.example
 **/*.log
 deploy/wireguard
 deploy/keys

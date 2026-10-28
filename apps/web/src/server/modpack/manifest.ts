@@ -76,7 +76,7 @@ function git(args: string[]): Promise<{ ok: boolean; output: string }> {
 
 /** Commits manifest files so their history lives in git. Failure is reported, not thrown: the files are already written. */
 export async function commitManifest(message: string, author: { name: string; email?: string }, files: string[] = ["modpack/mods.json"]): Promise<{ ok: boolean; output: string }> {
-  // docs/42 T3: the test site's checkout follows origin/dev (deploy/test-pull.sh) and is never committed to
+  // docs/42 T3: the test site's checkout follows origin/dev (the stack's repo-sync-test) and is never committed to
   if (process.env.TEST_MODE === "1") return { ok: false, output: "The test site never writes to git" };
   const add = await git(["add", "--", ...files]);
   if (!add.ok) return add;

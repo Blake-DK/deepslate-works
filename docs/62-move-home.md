@@ -5,7 +5,7 @@
 > over the LAN. The VPS is no longer used. How to deploy: deploy/home/README.md. The doc edits of §7 were made on
 > 2026-10-28 for 00, 02, 09, 28, 42 and the working rules' public copies (README, ROADMAP); 13 and 17 are planner input
 > and were left as they are, and 38 got a dated note rather than new entries. Still open: the clean-up of §5 step 6
-> (the WireGuard peer on the AMP host, the stopped VPS stack) and the VPS-only files in `deploy/` (deploy/README.md).
+> (the WireGuard peer on the AMP host, the stopped VPS stack) (the VPS-only files in `deploy/` were removed on 2026-10-28).
 > The text below is the plan as decided on 2026-10-22.
 
 Decided, not started. Nothing has changed on any host. Until the cutover (§5 step 5), docs 00, 02, 09, 13, 17, 28 and

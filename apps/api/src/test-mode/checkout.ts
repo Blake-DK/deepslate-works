@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 // docs/42 §5.3: the test site says what it runs, the images' commit and the checkout's. The test checkout's .git is
-// mounted read-only into api-test (deploy/docker-compose.yml), and this reads its HEAD without running git: HEAD names
+// mounted read-only into api-test (deploy/home/docker-compose.yml), and this reads its HEAD without running git: HEAD names
 // a branch, whose commit is in its own file or, after a `git gc`, in packed-refs.
 
 const SHA = /^[0-9a-f]{40}$/;

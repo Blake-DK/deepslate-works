@@ -20,7 +20,7 @@ Dockhand's data folder          the live compose file and .env of the stack (the
 published through Pangolin by the stack's own newt (docs/62). AMP stays on the AMP host, which api reaches over the LAN.
 
 Until 2026-10-23 the stack ran on a VPS from `deploy/docker-compose.yml`, deployed by `deploy/deploy.sh`, and reached
-the homelab through a WireGuard tunnel. `deploy/README.md` describes that setup; it is kept for reference only.
+the homelab through a WireGuard tunnel. Its files were removed on 2026-10-28; git history keeps them.
 
 ## Deploying (the only way)
 

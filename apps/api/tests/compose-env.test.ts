@@ -1,16 +1,15 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-// api gets an explicit environment in deploy/docker-compose.yml, not the whole .env. A variable env.ts reads but the
+// api gets an explicit environment in deploy/home/docker-compose.yml, not the whole .env. A variable env.ts reads but the
 // list leaves out is silently unset in production: on 2026-10-07 SERVER_ADDRESS was missing, which switched off the
 // guard that keeps Admin → Server → Router from removing the route players join by.
 const envTs = readFileSync(new URL("../src/env.ts", import.meta.url), "utf8");
-const compose = readFileSync(new URL("../../../deploy/docker-compose.yml", import.meta.url), "utf8");
-// doc 62: the home stack (deploy/home) has the same rule; there the tunnel's address is retired (AMP_HOST names the host)
-const homeCompose = readFileSync(new URL("../../../deploy/home/docker-compose.yml", import.meta.url), "utf8");
+const compose = readFileSync(new URL("../../../deploy/home/docker-compose.yml", import.meta.url), "utf8");
+// doc 62: the tunnel's address is retired at home (AMP_HOST names the AMP host)
 const RETIRED_AT_HOME = new Set(["AMP_TUNNEL_IP"]);
 
-/** Set by the image itself, never from deploy/.env. */
+/** Set by the image itself, never from the .env. */
 const FROM_THE_IMAGE = new Set(["PORT", "REPO_DIR", "MODPACK_PKG_DIR"]);
 /** docs/42: only the test server's api has these; the live one must not (TEST_MODE unset is what keeps live as it was). */
 // docs/42a (2026-10-08): and a private Discord channel's webhooks, which the live api never reads (it talks to the players')
@@ -31,26 +30,15 @@ describe("api's environment in compose", () => {
   it("passes every variable env.ts reads", () => {
     expect(read.length).toBeGreaterThan(20);
     const passed = block("api");
-    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !TEST_ONLY.has(k) && !passed.has(k))).toEqual([]);
-    expect([...TEST_ONLY].filter((k) => passed.has(k))).toEqual([]);
+    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !TEST_ONLY.has(k) && !RETIRED_AT_HOME.has(k) && !passed.has(k))).toEqual([]);
+    expect([...TEST_ONLY, ...RETIRED_AT_HOME].filter((k) => passed.has(k))).toEqual([]);
   });
 
   it("docs/42: the test server's api gets them too, TEST_MODE among them, and no bot", () => {
     const passed = block("api-test");
-    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !NOT_ON_TEST.has(k) && !passed.has(k))).toEqual([]);
+    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !NOT_ON_TEST.has(k) && !RETIRED_AT_HOME.has(k) && !passed.has(k))).toEqual([]);
     expect([...NOT_ON_TEST].filter((k) => passed.has(k))).toEqual([]);
     expect(compose).toMatch(/\n {2}api-test:\n {4}profiles: \[test\]\n/);
     expect(compose).toMatch(/\n {2}web-test:\n {4}profiles: \[test\]\n/);
-  });
-
-  it("doc 62: the home stack passes them too, the tunnel address excepted", () => {
-    const passed = block("api", homeCompose);
-    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !TEST_ONLY.has(k) && !RETIRED_AT_HOME.has(k) && !passed.has(k))).toEqual([]);
-    expect([...TEST_ONLY, ...RETIRED_AT_HOME].filter((k) => passed.has(k))).toEqual([]);
-    const test = block("api-test", homeCompose);
-    expect(read.filter((k) => !FROM_THE_IMAGE.has(k) && !NOT_ON_TEST.has(k) && !RETIRED_AT_HOME.has(k) && !test.has(k))).toEqual([]);
-    expect([...NOT_ON_TEST].filter((k) => test.has(k))).toEqual([]);
-    expect(homeCompose).toMatch(/\n {2}api-test:\n {4}profiles: \[test\]\n/);
-    expect(homeCompose).toMatch(/\n {2}web-test:\n {4}profiles: \[test\]\n/);
   });
 });

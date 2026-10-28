@@ -20,6 +20,9 @@ RUN pnpm --filter api build
 FROM base AS run
 ENV NODE_ENV=production PORT=4000 REPO_DIR=/repo MODPACK_PKG_DIR=/app/packages/modpack
 COPY --from=build --chown=node:node /app /app
+# What `modpack build` reads from installer/ (INSTALLER_ZIP_FILES and VERSION, packages/modpack/src/build.ts), so the
+# image brings its own and needs no checkout of the same commit beside it
+COPY installer/DeepslateWorks.ps1 installer/README.txt installer/Setup.bat installer/VERSION /repo/installer/
 USER node
 WORKDIR /app/apps/api
 EXPOSE 4000

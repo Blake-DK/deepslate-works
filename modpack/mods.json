@@ -309,6 +309,72 @@
       "guide": "behind"
     },
     {
+      "slug": "continuity-neoforged",
+      "name": "Continuity",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Connected textures: glass, sandstone and bookshelves placed side by side join up into one smooth surface, without the lines between blocks.",
+      "wiki": "https://github.com/aspctt/continuity-neoforge",
+      "videos": [],
+      "noVideosFound": "2026-10-27",
+      "version": "kgny9dWp",
+      "requires": [],
+      "guide": "behind",
+      "howTo": "Nothing to do: the app switches on its **Default Connected Textures** resource pack the first time you play. To see blocks as before, take it off under **Options** \u2192 **Resource Packs**."
+    },
+    {
+      "slug": "just-zoom",
+      "name": "Just Zoom",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Zoom in like a spyglass with one key, and a better spyglass: scroll to zoom it further in or out.",
+      "wiki": "https://modrinth.com/mod/just-zoom",
+      "videos": [],
+      "noVideosFound": "2026-10-27",
+      "version": "Ha3713r0",
+      "requires": [
+        "konkrete"
+      ],
+      "guide": "helper",
+      "howTo": "Hold **C** to zoom in, and scroll the mouse wheel while you hold it to zoom further in or out. Let go to see normally again. A spyglass zooms the same way.",
+      "keys": [
+        {
+          "key": "C",
+          "does": "Zoom (hold)"
+        },
+        {
+          "key": "Mouse wheel",
+          "does": "Zoom further in or out while zooming"
+        }
+      ]
+    },
+    {
+      "slug": "konkrete",
+      "name": "Konkrete",
+      "category": "base",
+      "side": "client",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Just Zoom.",
+      "wiki": "https://modrinth.com/mod/konkrete",
+      "videos": [],
+      "version": "stJDU839",
+      "requires": []
+    },
+    {
       "slug": "jei",
       "name": "Just Enough Items",
       "category": "base",
@@ -2333,7 +2399,11 @@
           "url": "https://www.youtube.com/watch?v=imuXZia1kQg"
         }
       ],
-      "version": "LQ4yv2U3",
+      "source": {
+        "private": "fairylights-neoforge-1.21.1-1.2.3-dsw.1.jar",
+        "sha512": "a0da05d77e3c12a8103d9dfda4f337df10394b51b47102852ea16a0d02e2f1bc3259ccb20e1d8cc37edce9bda1e1ba5c9ab3f8df06f382f5c0928c824a0b2418",
+        "note": "1.2.3 with its JEI tooltip crash fixed: built by mods/fairylights-jei-fix/build.sh"
+      },
       "requires": [],
       "guide": "game",
       "topic": "building",

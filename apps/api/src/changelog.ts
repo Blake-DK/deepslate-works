@@ -378,6 +378,26 @@ export const CHANGES: Change[] = [
       "Press Play to update.",
     ],
   },
+  {
+    id: "2026-10-27-fairy-lights-jei",
+    date: "2026-10-27",
+    lines: [
+      "Looking at the recipe for hanging lights or pennant bunting in JEI no longer crashes the game.",
+      "Press Play to update.",
+    ],
+    onSync: true,
+  },
+  {
+    id: "2026-10-27-zoom-connected-textures",
+    date: "2026-10-27",
+    lines: [
+      "Hold C to zoom in, like a spyglass, and scroll the mouse wheel while you hold it to zoom further in or out (Just Zoom).",
+      "Glass, sandstone and bookshelves next to each other now join up into one smooth surface (Continuity). It is switched on for you; Options → Resource Packs → Default Connected Textures turns it off.",
+      "C also crawls (the guns mod) and is a key for a few pieces of gear; change any of them under Options → Controls.",
+      "Press Play to update.",
+    ],
+    onSync: true,
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

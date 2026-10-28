@@ -244,6 +244,10 @@ namespace DeepslateWorks
             Key("key.curios.open.desc", "g", null, "no Curios key"),                                    // G: TaCZ fire mode
             Key("gui.xaero_waypoints_key", "u", null, "no waypoint list key"),                          // U: Corpse's death history
             Key("gui.xaero_enlarge_map", "z", null, "no bigger minimap key"),                           // Z: TaCZ attachments
+            // 3.6.8 (Alex, 2026-10-27): Just Zoom on C, as OptiFine had it; C stays shared with TaCZ crawl, Big Cannons'
+            // pitch mode, Cataclysm's helmet and ArPhEx (Alex's choice). Its options screen on B is Xaero's new waypoint.
+            Key("justzoom.keybinds.keybind.zoom", "z", "c", "zoom on C"),                               // Z: TaCZ attachments
+            Key("justzoom.keybinds.keybind.open_options", "b", null, "no zoom options key"),            // B: Xaero's new waypoint
         };
 
         public sealed class KeysResult
@@ -303,6 +307,80 @@ namespace DeepslateWorks
                 return r.Done;
             }
             catch (Exception e) { run.Note("The pack's keys were left as they are: " + e.Message); return doneBefore; }
+        }
+
+        // ---- the pack's resource packs (Alex, 2026-10-27; 3.6.8) ---------------------------------------------------------
+        // Continuity's connected textures are a resource pack inside the mod ("Default Connected Textures"), which the mod
+        // registers switched off, so nobody would see them. The pack switches it on once per PC, below every pack from a
+        // file (the extras', the villagers', the player's own), remembered in installed.json's packsSet. Done once the
+        // id is in resourcePacks with the mod's jar in mods\ (the game keeps it then); a player who switches it off later
+        // keeps it off. Without a resourcePacks line (the game has not written its options yet) nothing is added: the
+        // game's own default list would be lost.
+        public sealed class PackDefault
+        {
+            public string Id, JarPrefix, Words;   // Id: NeoForge's "mod/" + the mod's pack location; Words: the tick line
+        }
+
+        public static readonly PackDefault[] PackDefaults =
+        {
+            // ContinuityClient.addBuiltinPack("default"): continuity:resourcepacks/default, alwaysActive false (3.0.9)
+            new PackDefault { Id = "mod/continuity:resourcepacks/default", JarPrefix = "ContinuityNeoForge-", Words = "connected textures on" },
+        };
+
+        public sealed class PacksResult
+        {
+            public List<string> Done = new List<string>();     // installed.json's packsSet
+            public List<string> Changed = new List<string>();  // the Words of the packs switched on this time
+        }
+
+        public static PacksResult SetPackDefaults(string path, string modsDir, IEnumerable<string> doneBefore)
+        {
+            var r = new PacksResult();
+            var done = new HashSet<string>(doneBefore ?? new string[0], StringComparer.Ordinal);
+            r.Done.AddRange(done);
+            if (!File.Exists(path)) return r;
+            var text = File.ReadAllText(path);
+            var m = Regex.Match(text, @"(?m)^resourcePacks:(.*?)(?=\r?$)");
+            if (!m.Success) return r;
+            List<string> list;
+            try { list = Extras.ParseList(m.Groups[1].Value); }
+            catch { return r; }
+            var changed = false;
+            foreach (var p in PackDefaults)
+            {
+                if (done.Contains(p.Id)) continue;
+                var jar = Directory.Exists(modsDir) && Directory.GetFiles(modsDir, p.JarPrefix + "*.jar").Length > 0;
+                if (!jar) continue;
+                if (!list.Contains(p.Id))
+                {
+                    var at = list.FindIndex(x => x.StartsWith("file/", StringComparison.Ordinal));
+                    list.Insert(at < 0 ? list.Count : at, p.Id);
+                    r.Changed.Add(p.Words);
+                    changed = true;
+                }
+                done.Add(p.Id);
+                r.Done.Add(p.Id);
+            }
+            if (changed)
+            {
+                var tmp = path + ".new";
+                WriteText(tmp, text.Substring(0, m.Index) + "resourcePacks:" + GameOptions.PackListText(list) + text.Substring(m.Index + m.Length));
+                MoveOver(tmp, path);
+            }
+            return r;
+        }
+
+        /// <summary>The engine's step: SetPackDefaults, ticked when a pack was switched on. Returns installed.json's
+        /// packsSet (what it was on a failure, so the next Play tries again).</summary>
+        static List<string> PackDefaultsStep(Run run, string options, List<string> doneBefore)
+        {
+            try
+            {
+                var r = SetPackDefaults(options, Path.Combine(Path.GetDirectoryName(options), "mods"), doneBefore);
+                if (r.Changed.Count > 0) run.Tick("Resource packs set for the pack: " + string.Join(", ", r.Changed));
+                return r.Done;
+            }
+            catch (Exception e) { run.Note("The pack's resource packs were left as they are: " + e.Message); return doneBefore; }
         }
 
         // ---- the server list (servers.dat: uncompressed NBT, one entry) ---------------------------------------------

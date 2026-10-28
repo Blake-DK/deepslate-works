@@ -4,9 +4,9 @@ name: installer
 on:
   push:
     branches: [main]
-    paths: [installer/**, branding/launcher/**, .github/workflows/installer.yml]
+    paths: [installer/**, branding/launcher/**, deploy/images/installer/**, .github/workflows/installer.yml]
   pull_request:
-    paths: [installer/**, branding/launcher/**, .github/workflows/installer.yml]
+    paths: [installer/**, branding/launcher/**, deploy/images/installer/**, .github/workflows/installer.yml]
   workflow_dispatch:
 
 # docs/35 R-20: the runs of pushes to main go one after the other, in the order of the pushes, so the image's moving
@@ -181,8 +181,9 @@ jobs:
           path: shots
           if-no-files-found: ignore
 
-  # main only: the exe as a tiny image (FROM scratch: the exe, its .sha256, VERSION) that deploy/deploy.sh copies into
-  # dist/ci; Admin -> Build (installer) then hands it out. Tagged with the version, the commit and latest.
+  # main only: the exe as a tiny image (busybox: the exe, its .sha256, VERSION and deploy/images/installer/copy-out.sh)
+  # whose command copies them into dist/ci, run by the stack on each redeploy; Admin -> Build (installer) then hands it
+  # out. Tagged with the version, the commit and latest.
   publish:
     needs: app
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -191,6 +192,10 @@ jobs:
       contents: read
       packages: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          sparse-checkout: deploy/images/installer
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: deepslate-works-*
@@ -200,7 +205,7 @@ jobs:
           set -eu
           v=$(cat publish/VERSION)
           img="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/deepslate-installer"
-          printf 'FROM scratch\nCOPY DeepslateWorks.exe DeepslateWorks.exe.sha256 VERSION /\n' > publish/Dockerfile
+          cp repo/deploy/images/installer/Dockerfile repo/deploy/images/installer/copy-out.sh publish/
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           docker build --label org.opencontainers.image.source=https://github.com/${{ github.repository }} --label org.opencontainers.image.revision=${{ github.sha }} -t "$img:$v" -t "$img:${{ github.sha }}" -t "$img:latest" publish
           docker push --all-tags "$img"

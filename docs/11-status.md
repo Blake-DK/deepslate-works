@@ -29,6 +29,32 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## App 3.6.7: Send to Alex sends up to 4 MB (2026-10-27, deployed: `main` 5ced984, PR #101)
+
+- **Why:** a player's game crashed on two Fairy Lights recipes in JEI. Send to Alex sends the app log, the game log
+  and the newest crash report together, which with this pack is often over 1 MB; at 512 KB the middle was cut and the
+  crash report's error could be what went. Now 4 MB in the app (`LogBundle.SendBytes`, 120 s to send) and on the site
+  (`MAX_LOG_BYTES`, body limit 2.5 times that). Other reports keep 512 KB. docs/07 "3.6.7".
+- **Live:** web and api on `5ced984`, health all ok; Build (installer) at 21:05 UTC hands out 3.6.7 (sha256
+  `cfa8bfa4d494840620d150a3c4bf57343965d8cb142f09dd1c876d4f572aa20a`, the CI build of the merge). PCs move at their
+  next Play. The first Build press left 3.6.6 in place with no event; the second one took.
+- **The crash itself (open):** `NullPointerException` in Fairy Lights 1.2.3's JEI plugin,
+  `GenericRecipeExtension.java:47`, `ingredient.getTooltip()` on a null ingredient, from JEI 19.64.0.455's
+  `RecipeSlot.addTooltip`. It happens when the mouse is over a slot of the hanging lights or pennant bunting recipe
+  in JEI, not on crafting. 1.2.3 is the newest NeoForge build. Reported upstream: lucalabs-de/FairyLightsFabric#32.
+  Issue #31 there (open) is another 1.2.3 crash: pennant bunting placed, then the pause menu.
+- **The fix, on `dev` (not tested, not live):** our own 1.2.3-dsw.1, `mods/fairylights-jei-fix/` (README): the released
+  jar with `if (ingredient == null) return;` in front of that callback, put in by ASM, every other entry unchanged; a
+  docs/58 private jar (sha512 `a0da05d7…`). The same mod, so placed lights stay. Lock `e7933b36`, only this entry
+  moved; live's pack `8467c116`. Change log `2026-10-27-fairy-lights-jei`, `onSync`. A swap to Fairy Lighting 8.0.16
+  was on `dev` for an hour (`d23b7b9`) and is undone in the same commit as the fix.
+- **On the test server (22:3x UTC):** the first test showed the crash again, but on the old pack: the test checkout
+  was still at `4ee1f8f` (lock `65d45be8`). Pulled to `dev` `d14687d`; Alex ran Build and Sync. The server's 22:35:58
+  start loaded `fairylights-neoforge-1.21.1-1.2.3-dsw.1.jar`, 143 files, none missing, no problems. Alex's test Play
+  (app 3.6.7, pack `0.1.0+e7933b36`): game check "all 92 mods loaded"; both recipes opened in JEI, every slot hovered,
+  no crash. `server-loaded.json` from that start; `check-sides`: sides OK.
+- **Before a PR to `main`:** the jar into live's `data/private-jars/`, on Alex's yes; live's Build fails without it.
+
 ## Every mod to its newest version but Quarry and voice chat (2026-10-26, deployed 20:57 UTC, synced on live 22:31)
 
 - **Alex:** "update them all", with a change log for Discord covering everything since the last post.

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-26T20:22:53.459Z",
+  "generatedAt": "2026-10-27T23:05:30.963Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "65d45be8607dd35ba5959b0c3fad7104ecb145d858db82ae39ae0bb98d1055e2",
+  "hash": "88ecc80bb032bc06f5c71d5385ac4792c64e0eddc34953edae416f6c153c8c4d",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -355,6 +355,26 @@
       "channels": "required"
     },
     {
+      "slug": "continuity-neoforged",
+      "name": "Continuity",
+      "projectId": "AOAMhINn",
+      "versionId": "kgny9dWp",
+      "versionNumber": "3.0.9+1.21.1",
+      "versionType": "release",
+      "filename": "ContinuityNeoForge-3.0.9+1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/AOAMhINn/versions/kgny9dWp/ContinuityNeoForge-3.0.9%2B1.21.1.jar",
+      "sha512": "62f0917e9a2bb45f3d72d4a0a3f9fc5da2c228c8b4966bf00f2493fdffd9c9a822a22d8ea4472942c0474af3e89579f8b415d9ac09022463d3250b46765d6221",
+      "sha1": "16e1d3b5aa7552639d1a56aedd041d71d1af25f7",
+      "size": 1031104,
+      "side": "client",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "copycats",
       "name": "Create: Copycats+",
       "projectId": "UT2M39wf",
@@ -688,21 +708,17 @@
     {
       "slug": "fairy-lights-fabric",
       "name": "Fairy Lights",
-      "projectId": "OuLVx5LM",
-      "versionId": "LQ4yv2U3",
-      "versionNumber": "1.2.3+1.21.1_neoforge",
-      "versionType": "release",
-      "filename": "fairylights-neoforge-1.21.1-1.2.3.jar",
-      "url": "https://cdn.modrinth.com/data/OuLVx5LM/versions/LQ4yv2U3/fairylights-neoforge-1.21.1-1.2.3.jar",
-      "sha512": "53d293170595cb45c0742aa6388a790799e760c88e704b55fcc3d729153d923aff0963675a35b670b22b5a2028424cce7aedbaa2531a22bda62bcae81444871e",
-      "sha1": "08ed4551de4c3228386b97ccbd1e58828eab5c38",
-      "size": 628094,
       "side": "both",
+      "projectId": "",
+      "versionId": "private-a0da05d77e3c12a8",
+      "versionNumber": "1.2.3-dsw.1",
+      "versionType": "release",
+      "filename": "fairylights-neoforge-1.21.1-1.2.3-dsw.1.jar",
+      "url": "/downloads/mods/fairylights-neoforge-1.21.1-1.2.3-dsw.1.jar",
+      "sha512": "a0da05d77e3c12a8103d9dfda4f337df10394b51b47102852ea16a0d02e2f1bc3259ccb20e1d8cc37edce9bda1e1ba5c9ab3f8df06f382f5c0928c824a0b2418",
+      "sha1": "005514a6a3afe56db3be51fd3c73ff703893677b",
+      "size": 637931,
       "requiredBy": [],
-      "modrinth": {
-        "client": "required",
-        "server": "required"
-      },
       "channels": "required"
     },
     {
@@ -893,14 +909,14 @@
       "slug": "guideme",
       "name": "GuideME",
       "projectId": "Ck4E7v7R",
-      "versionId": "mUlgxNj8",
-      "versionNumber": "21.1.20",
+      "versionId": "JBFCgJmg",
+      "versionNumber": "21.1.21",
       "versionType": "release",
-      "filename": "guideme-21.1.20.jar",
-      "url": "https://cdn.modrinth.com/data/Ck4E7v7R/versions/mUlgxNj8/guideme-21.1.20.jar",
-      "sha512": "5e87550a56f97a23996b4c2e06a067a985f9dbbb3a79dd07a302fab275ff24637ed875e50eeafce030dd828799d323e50d86cc2509d53011069c895886a1cbdb",
-      "sha1": "3003020c170cc84ea307fa1d212d80268806a9be",
-      "size": 9325132,
+      "filename": "guideme-21.1.21.jar",
+      "url": "https://cdn.modrinth.com/data/Ck4E7v7R/versions/JBFCgJmg/guideme-21.1.21.jar",
+      "sha512": "ec34f1ac05518ef05399a9a516837f96546e19a75b2b6150d17e01eba7e83b7ce1ac2aac8a2066c0be6e24ecab5b25b16a48939736be700cad8b383388d8b720",
+      "sha1": "36007b739ad2206f5ec2d63e5c8bd6f7e0a43161",
+      "size": 9329830,
       "side": "both",
       "requiredBy": [
         "ae2"
@@ -1030,6 +1046,48 @@
         "server": "optional"
       },
       "channels": "optional"
+    },
+    {
+      "slug": "just-zoom",
+      "name": "Just Zoom",
+      "projectId": "iAiqcykM",
+      "versionId": "Ha3713r0",
+      "versionNumber": "3.1.0-1.21.1-neoforge",
+      "versionType": "release",
+      "filename": "justzoom_neoforge_3.1.0_MC_1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/iAiqcykM/versions/Ha3713r0/justzoom_neoforge_3.1.0_MC_1.21.1.jar",
+      "sha512": "4e673b1dadfb4c84cf0ad113b4199d8c9ef8677fbc4fc27e403cc2b0ab481e261d8d4b46383ce845c7063bfdc0aba3f87008b36cb9c5ec2edd272984b0ea6b17",
+      "sha1": "e8eb95e2ff3730a9cf0491b1221745e4b6eb4d45",
+      "size": 168109,
+      "side": "client",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "unsupported"
+      },
+      "channels": "optional"
+    },
+    {
+      "slug": "konkrete",
+      "name": "Konkrete",
+      "projectId": "J81TRJWm",
+      "versionId": "stJDU839",
+      "versionNumber": "1.9.9-1.21-neoforge",
+      "versionType": "release",
+      "filename": "konkrete_neoforge_1.9.9_MC_1.21.jar",
+      "url": "https://cdn.modrinth.com/data/J81TRJWm/versions/stJDU839/konkrete_neoforge_1.9.9_MC_1.21.jar",
+      "sha512": "378bd12e3c32329abbae5cd514e1d1cc2a3cc3a45979fedb1d4e4c0a6732bdcf4b7d1bf7f7a112074bf288957edf86152c9c090a27d1d5de84a9a7825d3d6511",
+      "sha1": "97771eb287d5ac7fe667d1df9493d5e54c8ca1fa",
+      "size": 618842,
+      "side": "client",
+      "requiredBy": [
+        "just-zoom"
+      ],
+      "modrinth": {
+        "client": "optional",
+        "server": "optional"
+      },
+      "channels": "none"
     },
     {
       "slug": "kotlin-lang-forge",

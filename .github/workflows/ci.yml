@@ -2,8 +2,8 @@ name: ci
 # `dev` is where work lands: a push to it runs the checks, nothing more. Images are built and
 # pushed for `main` only, and a pull request (dev → main is the usual one) builds them without pushing.
 # A push that changes only docs/ or Markdown files at the top (README, ROADMAP) runs nothing: they are in no image
-# and no test. Such a commit on main has no images of its own, so deploy/deploy.sh then deploys the images of the
-# last commit before it that changed anything else; the two lists must stay the same. A pull request always runs:
+# and no test. Such a commit on main has no images of its own, so `latest` stays on the last commit before it that
+# changed anything else, and a redeploy runs those; the two lists must stay the same. A pull request always runs:
 # `check` is required on main, and a skipped workflow leaves a required check waiting for ever (PR #25).
 # Once a week (and by hand) main's stack images are built again on the newest upstream images they start from
 # (`base-images`: the database follows the newest PostgreSQL), so a redeploy of the stack brings those too.

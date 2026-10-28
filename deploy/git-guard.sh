@@ -1,8 +1,8 @@
-# Sourced by deploy/deploy.sh. `web` can write this checkout's .git (Admin -> Lock commits there), so it could leave a
-# hook in .git/hooks. deploy.sh's own git runs no hooks (git_here), but every other git command on this host does, as
-# the checkout's owner: a hook that is not the one Alex read would run as him at the next commit or push. The hooks
+# Sourced by the stack's repo-sync (deploy/images/ops). `web` can write this checkout's .git (Admin -> Lock commits
+# there), so it could leave a hook in .git/hooks. repo-sync's own git runs no hooks, but every other git command on
+# this host does, as the checkout's owner: a hook that is not the one Alex read would run as him at the next commit or push. The hooks
 # that may be there are listed, with their sha256, in a file under /root that web cannot reach; anything else in
-# .git/hooks, or a hook whose bytes changed, stops the deploy. Plain sh and busybox, so the tests run it as it is.
+# .git/hooks, or a hook whose bytes changed, stops repo-sync. Plain sh and busybox, so the tests run it as it is.
 
 # One line per entry in <hooks dir> that is not a .sample: "<sha256>  <name>" for a regular file, "<kind>  <name>"
 # for anything else (a link, a folder), sorted by name.

@@ -451,7 +451,7 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # deploy/test-pull.sh's job: the test checkout to origin/dev (not while it is held). Its .git is mounted into no
+  # The test checkout to origin/dev (not while it is held). Its .git is mounted into no
   # container read-write, so it has no guard copies.
   repo-sync-test:
     profiles: [test]

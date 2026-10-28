@@ -306,13 +306,13 @@ export async function buildInstaller(m: Manifest, lock: LockFile, paths: { dist:
   return out;
 }
 
-/** Where deploy/deploy.sh puts the app CI built (3.0): DeepslateWorks.exe, its .sha256 and VERSION, from the image ghcr.io/<owner>/deepslate-installer. */
+/** Where the stack's installer step puts the app CI built (3.0): DeepslateWorks.exe, its .sha256 and VERSION, from the image ghcr.io/<owner>/deepslate-installer. */
 export const CI_EXE_DIR = "ci";
 export const EXE_NAME = "DeepslateWorks.exe";
 
 /**
- * Deepslate Works 3.0 (docs/07): the exe is built and tested by CI on a windows runner, never here. deploy.sh copies it
- * out of its image into dist/ci/; this checks it against the checksum CI wrote and its VERSION, and publishes it as
+ * Deepslate Works 3.0 (docs/07): the exe is built and tested by CI on a windows runner, never here. The stack's
+ * installer step copies it out of its image into dist/ci/; this checks it against the checksum CI wrote and its VERSION, and publishes it as
  * dist/DeepslateWorks.exe, described in installer.json as `exe`. No exe there (or one that does not check out): `exe`
  * is null, and the site hands out the PowerShell installer as before. The exe is never changed here: no stamping, the
  * site's address is built in (installer.yml), so the checksum CI made is the one every PC checks.

@@ -23,7 +23,7 @@ export default async function ModpackAdminPage() {
       {driftSays && <Alert tone="warn" data-testid="pack-drift">{driftSays}</Alert>}
       {/* docs/42 T4, the test site only */}
       {livePack && <Alert tone="warn" data-testid="test-pack-differs">Your PC has the live pack. It will not match this server: the test checkout has pack {livePack.test}, the live site hands out {livePack.live}.</Alert>}
-      {testRefusal() && <p className="text-sm text-muted-foreground" data-testid="test-no-lock">This is the test site: Lock is refused here ({testRefusal()}). The lock is the test checkout&apos;s, brought to origin/dev by <span className="font-mono">deploy/test-pull.sh</span>.</p>}
+      {testRefusal() && <p className="text-sm text-muted-foreground" data-testid="test-no-lock">This is the test site: Lock is refused here ({testRefusal()}). The lock is the test checkout&apos;s, which follows the <span className="font-mono">dev</span> branch: each redeploy of the stack brings it up to date.</p>}
       <Card>
         <CardHeader>
           <CardTitle>Pack {manifest.version}{lock ? `+${lock.hash.slice(0, 8)}` : ""}</CardTitle>

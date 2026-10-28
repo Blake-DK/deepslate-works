@@ -1,8 +1,8 @@
 name: dev-images
 # docs/42 §5.3 (2026-10-10): the test site follows `dev`, the live site follows `main`. A push to dev that changes
-# something an image is made of builds both images, tagged with the commit and with the moving tag `dev`; on the VPS
-# `sudo deploy/test-up.sh` pulls `dev` and starts the test pair on it. Live never runs `dev`: deploy/deploy.sh pulls
-# main's images by the commit's sha only (ci.yml builds those; this file leaves ci.yml as it was).
+# something an image is made of builds both images, tagged with the commit and with the moving tag `dev`; a redeploy
+# of the home stack (deploy/home/README.md) pulls `dev` for the test pair. Live never runs `dev`: it runs main's
+# images, `latest` (ci.yml builds those; this file leaves ci.yml as it was).
 #
 # Not started by a push that changes only docs, the Markdown files at the top, deploy/, tools/ or the other
 # workflows: no image reads them (the designer runs tools/designer from a mount, deploy/ is the host's). The filter is

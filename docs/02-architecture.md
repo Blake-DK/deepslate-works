@@ -20,7 +20,7 @@
 
 Everything runs on docker-01v at home as one Docker Compose stack, `deepslate`, managed in Dockhand: `deploy/home/docker-compose.yml` is the reference, Dockhand keeps the live copy and the `.env` (deploy/home/README.md). The site is published through Pangolin (docs/62): the stack's own `newt` is the tunnel client, and the stack's own Caddy serves plain http behind it. No container publishes a port. The four networks are gated by the host's `deepslate-firewall` by bridge name: `ds-edge` (newt and caddy only), `ds-web` (public https only), `ds-amp` (the AMP host's few ports and the internet), `ds-internal` (no outside access). Players never touch the stack for game traffic: Minecraft and voice chat go to the homelab's own address, where mc-router hands `mc.dsw.test` to the instance (docs/17).
 
-Until 2026-10-23 the portal ran on a VPS from `deploy/docker-compose.yml`, behind a shared Caddy, and reached the homelab through a WireGuard tunnel confined to Docker (`deepslate-wg`, docs/13 §3). The VPS is no longer used; `deploy/README.md` describes that setup.
+Until 2026-10-23 the portal ran on a VPS from `deploy/docker-compose.yml`, behind a shared Caddy, and reached the homelab through a WireGuard tunnel confined to Docker (`deepslate-wg`, docs/13 §3). The VPS is no longer used; its files were removed on 2026-10-28 (git history keeps them).
 
 | Container | Image | Memory | What it holds |
 |---|---|---|---|
@@ -97,7 +97,7 @@ The images are built by GitHub Actions and pulled; **the host never builds** (do
     ├── images/               the stack's own images (db, backups, caddy, designer, ops, installer), built by CI
     ├── check.sh              typecheck, lint and tests in a container with a memory cap
     ├── keys/                 the rrsync deploy key (not in git)
-    └── README.md             the retired VPS setup (deploy.sh, docker-compose.yml, wg0.conf.example …), kept for reference
+    └── README.md             what is in deploy/, and the checkout's git guards
 ```
 
 ## Data flow

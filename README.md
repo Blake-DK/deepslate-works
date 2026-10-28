@@ -71,4 +71,4 @@ pnpm lint && pnpm typecheck
 
 Deploys are a Redeploy of the stack `deepslate` in Dockhand and nothing else; the host never builds images. See [deploy/home/README.md](deploy/home/README.md) and [docs/09-ops.md](docs/09-ops.md).
 
-The whole server setup is in [`deploy/home/`](deploy/home/): the compose file and an example `.env` with every variable and a placeholder value. [deploy/home/README.md](deploy/home/README.md) lists what each file is. The rest of [`deploy/`](deploy/) is the retired VPS setup ([deploy/README.md](deploy/README.md)) and scripts the home stack still uses.
+The whole server setup is in [`deploy/home/`](deploy/home/): the compose file and an example `.env` with every variable and a placeholder value. [deploy/home/README.md](deploy/home/README.md) lists what each file is. The rest of [`deploy/`](deploy/) is the stack's images and the scripts it still uses ([deploy/README.md](deploy/README.md)).

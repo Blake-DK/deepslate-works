@@ -22,7 +22,7 @@ export async function* runModpack(cmd: Cmd, admin: { id: string; displayName: st
   try {
     // docs/42 T3: the lock on the test site is whatever its checkout has
     if (cmd === "lock" && testRefusal()) {
-      yield `${testRefusal()}: the lock here is the test checkout's (deploy/test-pull.sh brings it to origin/dev)`;
+      yield `${testRefusal()}: the lock here is the test checkout's (it follows dev, and each redeploy of the stack brings it up to date)`;
       return;
     }
     if (cmd === "lock") {

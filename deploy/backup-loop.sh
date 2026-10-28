@@ -1,5 +1,5 @@
 #!/bin/sh
-# The nightly database dump, run by the `backups` container (deploy/docker-compose.yml).
+# The nightly database dump, run by the `backups` container (deploy/home/docker-compose.yml).
 #
 #   deepslate-YYYY-MM-DD.sql.gz in $BACKUP_DIR, the newest $KEEP kept; pre-* dumps are never counted or removed.
 #   A failed dump is not kept (.part is renamed only on success, and only when gzip reads it back whole), so it

@@ -1,7 +1,7 @@
 name: codeql
 # docs/54: CodeQL on the repository's own code, results in the Security tab (Code scanning). Four languages, none of
 # them built: JavaScript and TypeScript (apps/web, apps/api, packages/modpack, tools/designer), C# (installer/app),
-# Python (deploy/dockhand-sync.py and the icon and art scripts) and the workflow files themselves.
+# Python (the icon and art scripts) and the workflow files themselves.
 # Advanced setup, not GitHub's default setup: default setup scans main only and wants C# built on a Windows runner;
 # this file scans dev as well as main and reads C# with no build. Default setup must stay off in Settings: with both
 # on, this workflow's uploads are refused.

@@ -29,6 +29,22 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Fairy Lights fix, Continuity, Just Zoom, app 3.6.8 (2026-10-28, deployed: `main` badb1f08, PR #102)
+
+- **What went out:** our Fairy Lights 1.2.3-dsw.1 (the JEI crash fix, the section below), Continuity with its
+  connected textures pack switched on once per PC, Just Zoom with zoom on C (Konkrete with it), app 3.6.8 (docs/07
+  "3.6.8"), and the image recipes of `cb071c2` (no compose change: live's database stays on postgres:16-alpine).
+- **Live:** PR #102 merged 12:25 UTC. `deepslate-web` and `deepslate-api` on `ghcr.io/blake-dk/deepslate-*:badb1f08…`,
+  both healthy; the checkout at `badb1f08`. Build (installer) at 13:04:39 hands out 3.6.8, sha256
+  `1805fab804b9137d642287c08a13cf3eb37795c75600bfea5ad591cc142cbeb3`, the same as `dist/ci`. The dsw.1 jar is in
+  live's `data/private-jars/` (sha512 `a0da05d7…`). Pack `0.1.0+5e3f2475` (lock `88ecc80b`), synced 13:04:55 with a
+  restart. The server's 13:05:26 start loaded `fairylights-neoforge-1.21.1-1.2.3-dsw.1.jar` and `guideme-21.1.21.jar`,
+  138 files (89 top level), no problems.
+- **Change log:** `2026-10-27-fairy-lights-jei` and `2026-10-27-zoom-connected-textures` (both `onSync`) posted in
+  "Change log" at 13:05:47.
+- **Not seen yet:** no install report since the deploy, so no PC has shown 3.6.8 setting zoom on C, switching on
+  Continuity's pack, or the game check with the new mods. The first player Play on 3.6.8 will show it.
+
 ## App 3.6.7: Send to Alex sends up to 4 MB (2026-10-27, deployed: `main` 5ced984, PR #101)
 
 - **Why:** a player's game crashed on two Fairy Lights recipes in JEI. Send to Alex sends the app log, the game log

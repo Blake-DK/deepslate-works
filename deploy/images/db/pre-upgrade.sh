@@ -35,6 +35,9 @@ fi
 if [ -n "$src" ]; then
   have=$(cat "$src/PG_VERSION")
   if [ "$have" != "$target" ]; then
+    # pg_upgrade needs a cluster that was shut down cleanly; a postmaster.pid left behind (the old container was killed)
+    # also stops the upgrade's own start, after the data has already been moved into its work folder
+    [ ! -e "$src/postmaster.pid" ] || die "the PostgreSQL $have data in $src was not shut down cleanly (postmaster.pid is there). Start it once on PostgreSQL $have and stop it cleanly, then start this image again. Nothing was changed."
     stamp=$(date -u +%Y%m%dT%H%M%SZ)
     dest="$PRE/pg$have-$stamp"
     echo "deepslate-db: PostgreSQL $have data, image $target: copying $src to $dest before the upgrade"

@@ -48,8 +48,8 @@ Also on the way:
 
 | Part | Where | What |
 |---|---|---|
-| `apps/web` | a VPS, behind Caddy | The site (Next.js). Faces the internet; has no route to the game server |
-| `apps/api` | the VPS, inside a WireGuard tunnel | The only code that talks to the game server's control panel (CubeCoders AMP). Every server action is a named, checked and logged operation; nobody gets a shell |
+| `apps/web` | Alex's homelab, one Docker Compose stack, published through Pangolin | The site (Next.js). Faces the internet; has no route to the game server |
+| `apps/api` | the same stack, on its own network to the game server | The only code that talks to the game server's control panel (CubeCoders AMP). Every server action is a named, checked and logged operation; nobody gets a shell |
 | `packages/modpack`, `modpack/` | the repo | One file, `modpack/mods.json`, says which mods are in. The site, the app and the server all read from it |
 | `installer/` | players' PCs | Deepslate Works for Windows: installs, updates and starts the game |
 | The game server | Alex's homelab | Minecraft under AMP, the live map (BlueMap), backups to a NAS and to S3 |
@@ -69,6 +69,6 @@ pnpm test                # vitest
 pnpm lint && pnpm typecheck
 ```
 
-Deploys are `deploy/deploy.sh` on the VPS and nothing else; the VPS never builds images. See [docs/09-ops.md](docs/09-ops.md).
+Deploys are a Redeploy of the stack `deepslate` in Dockhand and nothing else; the host never builds images. See [deploy/home/README.md](deploy/home/README.md) and [docs/09-ops.md](docs/09-ops.md).
 
-The whole server setup is in [`deploy/`](deploy/): the compose file, an example `.env` with every variable and a placeholder value, the WireGuard example and the scripts. [deploy/README.md](deploy/README.md) lists what each file is.
+The whole server setup is in [`deploy/home/`](deploy/home/): the compose file and an example `.env` with every variable and a placeholder value. [deploy/home/README.md](deploy/home/README.md) lists what each file is. The rest of [`deploy/`](deploy/) is the retired VPS setup ([deploy/README.md](deploy/README.md)) and scripts the home stack still uses.

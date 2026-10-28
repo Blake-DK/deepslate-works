@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Typecheck, lint and tests on a host without Node, in a throwaway container with a memory cap.
-# The VPS never builds images and never runs anything heavy outside a limit (docs/09).
+# The host never builds images and never runs anything heavy outside a limit (docs/09).
 #
 #   deploy/check.sh                 everything
 #   deploy/check.sh api             one workspace package (api | web | modpack)

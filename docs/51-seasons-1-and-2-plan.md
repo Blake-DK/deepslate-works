@@ -1,5 +1,7 @@
 # 51 · Seasons 1 and 2: the plan
 
+> **2026-10-28:** the VPS is no longer used; the site runs at home on docker-01v (deploy/home/README.md). "VPS" as an owner below means the session that builds the site; "deploy" means a Redeploy in Dockhand.
+
 VPS session, 2026-10-11, with Alex. Builds on docs/20 (the mechanism), docs/32 (the content of Seasons 1 to 4),
 docs/34 (Season 1's build plan), docs/36 (zones by the shift), docs/42 (the test server) and docs/44 (season mods).
 **Where this file and those differ on dates, on the order of work, or on where something is proven, this file holds.**

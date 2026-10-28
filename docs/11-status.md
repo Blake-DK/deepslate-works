@@ -2,6 +2,10 @@
 
 ## Where live is now, 2026-10-10 (from the planner's handover, docs/47 §1)
 
+**2026-10-28:** the VPS is no longer used for Deepslate. Everything runs at home on docker-01v as the one stack
+`deepslate` in Dockhand (deploy/home/README.md); the current-state docs say so. VPS paths, `deploy/deploy.sh` and the
+tunnel in the dated sections below are the record of their day.
+
 **2026-10-23:** the site now runs on docker-01v (the next section); the VPS stack is stopped. The rest of this section
 is the 2026-10-10 record.
 

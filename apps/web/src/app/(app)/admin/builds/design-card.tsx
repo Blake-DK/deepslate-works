@@ -154,7 +154,7 @@ export function DesignCard({ state, designs, blocks, initial, left, job: firstJo
       <Card className={cn(state === "notOwner" && "opacity-60")} data-testid="design-card">
         <CardHeader>
           <CardTitle>Design a build</CardTitle>
-          <CardDescription>{state === "off" ? "Not set up. The designer runs in a container of its own on the VPS (docs/39)." : "Only the owner can use the designer: it runs on the owner's own plan."}</CardDescription>
+          <CardDescription>{state === "off" ? "Not set up. The designer runs in a container of its own beside the site (docs/39)." : "Only the owner can use the designer: it runs on the owner's own plan."}</CardDescription>
         </CardHeader>
       </Card>
     );

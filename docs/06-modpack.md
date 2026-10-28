@@ -145,7 +145,7 @@ The first plan's list had FTB Essentials, FTB Ultimine, Advanced Mining Dimensio
 
 There is no `build client` (Windows only since 2026-09-29: the installer downloads a PC's files itself from the mod list, and a `client.mrpack` left over from before is removed by a build). There is no `sync-server` in the CLI: a sync needs the tunnel and the deploy key, which only `api` has (`POST /modpack/sync`, docs/08). It copies `dist/server/` to the instance by rsync (the mods folder made the same as the build's, settings and datapacks added to what is there, nothing of the server's own deleted) and restarts the server **if the mods changed**. Its log says so ("restarting the server to load the new mods…"), waits for the server to come back up and then checks that it loaded every mod the pack gives it (`POST /modpack/verify`); with the mods unchanged it checks the server's last start. Every start is checked the same way, and a missing mod goes into the event log.
 
-In production Build runs inside the `api` container, under its memory limit, and never on the VPS host (docs/09 "Memory limits"). Lock on the VPS: docs/11 "Where things are" has the command. Jars are streamed to disk and hashed in chunks.
+In production Build runs inside the `api` container, under its memory limit, and never on the host itself (docs/09 "Memory limits"). Lock runs from Admin → Modpack. Jars are streamed to disk and hashed in chunks.
 
 ### What the mods need of each other (`packages/modpack/src/deps.ts`, 2026-10-20)
 
@@ -175,7 +175,7 @@ A build makes `dist/server/config/` and `dist/server/datapacks/` afresh each tim
 | Where | What | Goes to |
 |---|---|---|
 | `modpack/config/fallingtree.json`, `tacz-common.toml` | see "Settings shipped with the pack (2026-09-29 evening)" below | the server and every PC |
-| `modpack/server/config/bluemap/core.conf`, `webserver.conf` | BlueMap: three render threads (one until 2026-09-30, when the VM got 15 GB and the server 10 GB), the address it listens on (the tunnel's). A change is applied by Build, Sync and Admin → Server → Pre-generation → "Reload BlueMap's settings" (`bluemap reload`), no restart | the server |
+| `modpack/server/config/bluemap/core.conf`, `webserver.conf` | BlueMap: three render threads (one until 2026-09-30, when the VM got 15 GB and the server 10 GB), the address it listens on (`0.0.0.0:8100`; the AMP host's nftables admit only the site's host to 8100). A change is applied by Build, Sync and Admin → Server → Pre-generation → "Reload BlueMap's settings" (`bluemap reload`), no restart | the server |
 | `modpack/datapacks/deepslate-limbo/` | the entrance room's dimension (docs/14) | the server's world; a new dimension counts from the next restart |
 | `modpack/server/config/quarryplus.toml` | the quarry's energy costs ×4 (docs/53 Part A): `[powerMap.quarry]` `breakBlockBase` 100, `moveHeadBase` 4, `makeFrame` 60; every other key the mod's default | the server (energy is worked out there); not in the pack's hash |
 | `modpack/server/config/Mekanism/world.toml` | **No retrogen** (docs/55 M1, replacing docs/53 Part B's): Mekanism's own defaults, `enableRegeneration = false`, `userWorldGenVersion = 0`. The main world is never changed to add Mekanism's ores; they are on the Moon alone. The file stays in the pack because Sync never deletes: without it, a server that once had docs/53's `true` and `1` would keep them. **Do not switch regeneration on** | the server; not in the pack's hash |

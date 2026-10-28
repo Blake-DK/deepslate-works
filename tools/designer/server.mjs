@@ -275,7 +275,7 @@ async function main() {
   const e = process.env;
   const token = e.DESIGNER_TOKEN ?? "";
   if (token.length < 32 || !e.DESIGNER_CMD || !e.DESIGNER_MODEL) {
-    console.error("designer: DESIGNER_TOKEN (32 characters or more), DESIGNER_CMD and DESIGNER_MODEL must be set in deploy/.env");
+    console.error("designer: DESIGNER_TOKEN (32 characters or more), DESIGNER_CMD and DESIGNER_MODEL must be set in the stack's .env");
     process.exit(1);
   }
   const handler = createHandler({

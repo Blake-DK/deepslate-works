@@ -1,10 +1,21 @@
-# Deploying on vps-01v
+# The retired VPS setup (vps-01v)
 
-**One way only:** `sudo deploy/deploy.sh` (git pull, pull the two images from GHCR, `up -d`, prune). Details in `docs/09-ops.md`.
+**The VPS is no longer used (2026-10-28).** Since the cutover of 2026-10-23 the site runs at home on docker-01v as one
+Docker Compose stack, `deepslate`, managed in Dockhand. **To deploy, read [home/README.md](home/README.md)**; docs/09
+has the operations side. Nothing below is a way to deploy any more: this file describes how the stack ran on the VPS,
+and is kept for reference until its files are removed.
 
-## What is in this folder
+Still used by the home stack from this folder: `check.sh` (the checks before a push), `backup-loop.sh` (built into the
+`deepslate-backups` image), `git-guard.sh` (built into the `deepslate-ops` image for `repo-sync`), `server-mods.sh`,
+`images/` and `home/`. The rest (`deploy.sh`, `docker-compose.yml`, `.env.example`, `wg0.conf.example`,
+`Caddyfile.snippet`, `dockhand-sync.py`, `test-up.sh`, `test-pull.sh`, `test-db-reset.sh`, `test-env.sh`, `rerun.sh`,
+`ops-lock.sh`) belonged to the VPS.
 
-Everything needed to run the stack is here; nothing else on the host is part of it.
+The VPS's rule was **one way only:** `sudo deploy/deploy.sh` (git pull, pull the two images from GHCR, `up -d`, prune).
+
+## What is in this folder (as it was on the VPS)
+
+Everything needed to run the VPS stack was here; nothing else on that host was part of it.
 
 | File | What it is |
 |---|---|

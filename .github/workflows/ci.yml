@@ -49,7 +49,7 @@ jobs:
       # 2.1.0: every mod both sides need is on PCs (lock sides, Modrinth, jar channels, the server's last start)
       - run: pnpm --filter modpack cli check-sides
 
-  # Images are built here and only here; the VPS pulls them (deploy/deploy.sh). A pull request builds them too, so a
+  # Images are built here and only here; the home stack pulls them (Dockhand, deploy/home/README.md). A pull request builds them too, so a
   # branch's `next build` is proven before it reaches main, but only main pushes them to the registry.
   images:
     needs: check

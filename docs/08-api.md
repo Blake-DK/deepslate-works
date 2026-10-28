@@ -1,6 +1,6 @@
 # 08 · API and server actions
 
-Rewritten 2026-09-29 from the code. Two services answer HTTP: `web` (the site; the internet reaches it) and `api` (in the tunnel's network namespace; only `web` reaches it). Most pages are rendered on the server and read the database themselves, and what a button does is a server action in the page's `actions.ts`, so there are few routes. The first plan's routes (`/api/server/status`, `/api/me`, `/api/actions/<name>`, `/api/admin/vote`, `/api/admin/server/*`, `/api/admin/announce`, `/api/admin/audit`) were never built and are not needed.
+Rewritten 2026-09-29 from the code. Two services answer HTTP: `web` (the site; the internet reaches it) and `api` (on the stack's internal network and the one to the AMP host; only `web` reaches it. On the VPS until 2026-10-23 it sat in the WireGuard tunnel's network namespace). Most pages are rendered on the server and read the database themselves, and what a button does is a server action in the page's `actions.ts`, so there are few routes. The first plan's routes (`/api/server/status`, `/api/me`, `/api/actions/<name>`, `/api/admin/vote`, `/api/admin/server/*`, `/api/admin/announce`, `/api/admin/audit`) were never built and are not needed.
 
 ## `web`: routes
 
@@ -8,7 +8,7 @@ Rewritten 2026-09-29 from the code. Two services answer HTTP: `web` (the site; t
 |---|---|---|---|
 | | `/api/auth/*` | anyone | Auth.js: sign-in, callback, session |
 | GET | `/api/auth/verify` | anyone | 200 with a session, 401 without. Caddy's `forward_auth` asks it for the map host. No body |
-| GET | `/api/health` | anyone | `{ok, db, api:{ok, tunnel, amp, rsync}, missingEnv, discord, guildGate}`. `ok` is the site's own health; the tunnel's state is reported, not required |
+| GET | `/api/health` | anyone | `{ok, db, api:{ok, tunnel, amp, rsync}, missingEnv, discord, guildGate}`. `ok` is the site's own health; the tunnel's state is reported, not required. `tunnel` keeps its name: at home it is a TCP check of the AMP host's sshd over the LAN |
 | POST | `/api/launcher/start` | anyone | the installer asks for a code to show (docs/07) |
 | GET | `/api/launcher/poll` | the installer | has the code been approved; hands over the launcher token once |
 | GET | `/api/modpack/manifest` | a launcher token, or a session, that may download; or `?key=` (`MANIFEST_KEY`, admins' own) | the mod list: pack version, Minecraft and NeoForge versions, files with addresses and checksums, `config_url`, `configs`, profile, memory, `installer: {version, sha256, size}`. 401 without sign-in; 403 `not_live` or `server_offline`. Written into the download log |
@@ -95,7 +95,7 @@ A Minecraft name is `^[A-Za-z0-9_]{3,16}$` wherever one is taken; a dimension, a
 
 ## AMP methods used (recorded from the live instance, 2026-09-28 and 29)
 
-All calls go to the ADS (`AMP_URL=http://10.77.0.2:8080`) at `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>`, JSON body, the session in an `Authorization: Bearer <sessionID>` header (until 2026-10-03 it was `SESSIONID` in the body, which AMP 2.8 logs as deprecated on every call; `Core.Login` has no session and keeps its body). `webapp` is a user **of the instance**, so `Core.Login` also goes through that path (a login against the ADS's own `/API/Core/Login` answers `result: 0, success: false`). The instance's modules (`Core.GetAPISpec`): `Core, MinecraftModule, FileManagerPlugin, LocalFileBackupPlugin, EmailSenderPlugin, WebhookPlugin, CommonCorePlugin, AnalyticsPlugin, StorePlugin`.
+All calls go to the ADS (`AMP_URL=http://<AMP host>:8080`, over the LAN) at `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>`, JSON body, the session in an `Authorization: Bearer <sessionID>` header (until 2026-10-03 it was `SESSIONID` in the body, which AMP 2.8 logs as deprecated on every call; `Core.Login` has no session and keeps its body). `webapp` is a user **of the instance**, so `Core.Login` also goes through that path (a login against the ADS's own `/API/Core/Login` answers `result: 0, success: false`). The instance's modules (`Core.GetAPISpec`): `Core, MinecraftModule, FileManagerPlugin, LocalFileBackupPlugin, EmailSenderPlugin, WebhookPlugin, CommonCorePlugin, AnalyticsPlugin, StorePlugin`.
 
 | Method | Args | What comes back, and what it is used for |
 |---|---|---|

@@ -1,8 +1,9 @@
 # Deploying on docker-01v (the home stack, planner doc 62)
 
 **One way:** Redeploy of the stack `deepslate` in Dockhand (Docker-01V). Since 2026-10-28 there is no deploy script
-here: `deploy.sh` and `test-up.sh` were retired once a redeploy did everything they did. The VPS keeps
-`deploy/deploy.sh` and `deploy/docker-compose.yml` until the cutover; the two never run on the same host.
+here: `deploy.sh` and `test-up.sh` were retired once a redeploy did everything they did. The VPS is no longer used
+(cutover 2026-10-23); its `deploy/deploy.sh` and `deploy/docker-compose.yml` stay in the repo for reference only
+(`deploy/README.md`).
 
 **The live stack is Dockhand's own copy:** Dockhand keeps the compose file and the `.env` (the only copy of the
 secrets) in its own data folder, where they are edited and redeployed. The checkout stays clean, so `repo-sync` can

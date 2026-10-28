@@ -1,11 +1,11 @@
-// A file in the lock is fetched by Build on the VPS and by every PC, and the lock can be written by more than Lock
+// A file in the lock is fetched by Build (in api) and by every PC, and the lock can be written by more than Lock
 // (it lives in the repo the site can write). Modrinth's API only ever gives cdn.modrinth.com addresses, so anything
 // else is a lock Lock did not write: refused in Lock before it is written, before Build fetches it, and by lint. The
 // checksum travels in the same file as the address, so it cannot stand in for this check.
 //
 // docs/58: one more place, the site itself, for a jar that is never published (a patched mod). The lock holds only its
 // path, /downloads/mods/<filename>, never a host: each site hands it out from its own address (AUTH_URL), and Build
-// copies it from the VPS's data/private-jars/ without fetching anything.
+// copies it from the stack's data/private-jars/ without fetching anything.
 export const MOD_HOST = "cdn.modrinth.com";
 export const PRIVATE_PATH = "/downloads/mods/";
 /** A private jar's file name: one plain name, no folders. */

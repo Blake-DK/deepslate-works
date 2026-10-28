@@ -134,7 +134,7 @@ Sessions are signed cookies, so ending one means refusing it: `loadCurrentUser()
 
 ## Rate limits and abuse
 
-- Sign-in and invite routes: 10 requests a minute for each address, counted in the app (`src/server/auth/rate-limit.ts`); the Caddy on this VPS has no module for it.
+- Sign-in and invite routes: 10 requests a minute for each address, counted in the app (`src/server/auth/rate-limit.ts`); the site's Caddy has no module for it.
 - Failed sign-ins are in the event log ("tried to sign in"), without a member's name.
 - Actions in the game by players (Phase 4) will carry limits of their own; none exist yet.
 

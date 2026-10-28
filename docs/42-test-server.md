@@ -1,5 +1,7 @@
 # 42 · The test server: a second, hidden server with its own copy of the site
 
+> **2026-10-28:** the VPS is no longer used. The test pair runs in the home stack on docker-01v, profile `test` in `deploy/home/docker-compose.yml` (its checkout at `TEST_DIR`, brought forward to `origin/dev` by `repo-sync-test`; `db-prep` makes `deepslate_test`; images by `TEST_IMAGE_TAG`, pulled in Dockhand). `deploy.sh`, `test-up.sh`, `test-pull.sh`, the tunnel and `Caddyfile.snippet` below are the VPS-era design. See deploy/home/README.md.
+
 Planner, 2026-10-07. Input for the VPS session: file it as written (renumber if 42 is taken, with `42a` beside it), build it in the order of §9, record deviations in `docs/11-status.md`. The AMP host's half is `docs/42a-test-server-amp-host.md`, a task of its own that Alex hands to the AMP host session.
 
 ## 1. Why and what it is

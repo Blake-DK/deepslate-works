@@ -44,7 +44,7 @@ const MISSING_ACCESS = 50001;
 
 /** What went wrong, in words for the admin channel, with the fix. */
 export function roleProblem(r: Extract<Rest, { ok: false }>): string {
-  if (r.code === UNKNOWN_ROLE) return "The Minecraft role could not be found in the Discord server. Check DISCORD_PLAYER_ROLE_ID in deploy/.env is the role's id (right-click the role, Copy Role ID), then deploy again.";
+  if (r.code === UNKNOWN_ROLE) return "The Minecraft role could not be found in the Discord server. Check DISCORD_PLAYER_ROLE_ID in the stack's .env in Dockhand is the role's id (right-click the role, Copy Role ID), then redeploy.";
   if (r.code === MISSING_PERMISSIONS || r.code === MISSING_ACCESS || r.status === 403)
     return "The bot is not allowed to give or take the Minecraft role. In Discord: Server Settings, Roles, drag the bot's role above Minecraft and give the bot Manage Roles. Players keep playing; the role catches up on the next run.";
   return `The Minecraft role could not be changed: ${r.error}. Players keep playing; it is tried again later.`;

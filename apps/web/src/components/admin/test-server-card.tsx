@@ -62,7 +62,7 @@ export function TestServerCard({ site, testers }: { site: string; testers?: Reac
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">Test server {badge}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
-        {answer?.off && <p className="text-muted-foreground">Off: TEST_STACK is not 1 in deploy/.env, so the test site and its api are not running.</p>}
+        {answer?.off && <p className="text-muted-foreground">Off: TEST_STACK is not 1 in the stack&apos;s .env in Dockhand, so the test site and its api are not running.</p>}
         {!answer?.off && (failed || (answer && !s)) && <p className="text-muted-foreground">The test server&apos;s site does not answer{answer && !answer.off && answer.problem ? ` (${answer.problem})` : ""}. Nothing else here depends on it.</p>}
         {s && (
           <>

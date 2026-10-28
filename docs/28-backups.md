@@ -1,5 +1,7 @@
 # 28 · Backups
 
+> **2026-10-28:** the VPS is no longer used; the site runs at home on docker-01v (deploy/home/README.md). Where this plan says "the VPS", read the home stack: the dumps are in `DEEPSLATE_DATA/backups`, and the "VPS session" is the session that builds the site.
+
 Planner, 2026-10-03, on Alex's "I need a proper backup schedule. I have set up S3 backup and backups to my NFS server but I need it to integrate with the site portal". Input for the VPS session and the AMP host session: read it, don't rewrite it. Report in `docs/11-status.md`. This is a big update: one PR per step of §9 is fine, nothing smaller.
 
 **Amended 2026-10-03 by Alex (schedule):** local backups to the NAS every 6 hours, at 04:00, 10:00, 16:00 and 22:00 UK time; the 04:00 run also goes to S3, every night, and is the only run that pushes the database dump. Local retention 28 backups (7 days); S3 retention 30 days by a lifecycle rule on the bucket, set by Alex. Every rule below applies to every run, not only the nightly one. Backups are expected to be about 18 GB once the map tiles are excluded (§3 C); the AMP host's report gives the real figure.
@@ -273,9 +275,9 @@ Written by the VPS session from what the two sessions saw and **tried once** (§
 
 - **The world, AMP still there**: AMP → the instance → Backups → the backup → Restore, with the server stopped. From S3: the same list, AMP fetches it first.
 - **The world, AMP's list gone**: the archive on the share, unpacked over a stopped instance by the AMP host session, owner and mode kept.
-- **The database**: `gunzip -c deepslate-YYYY-MM-DD.sql.gz | docker exec -i deepslate-db psql -U deepslate -d deepslate` into an empty database, from the VPS's own dumps, the NAS (`deepslate-db/`) or `_backup/db/` inside a world backup.
+- **The database**: `gunzip -c deepslate-YYYY-MM-DD.sql.gz | docker exec -i deepslate-db psql -U deepslate -d deepslate` into an empty database, from the stack's own dumps (`DEEPSLATE_DATA/backups`), the NAS (`deepslate-db/`) or `_backup/db/` inside a world backup.
 - **Both together**: the database dump inside a world backup is the one taken the same night. Use the pair.
-- **Not backed up anywhere by this**: `deploy/.env`, the WireGuard keys and the deploy key. Alex keeps a copy of those in his password manager. They do not go to S3.
+- **Not backed up anywhere by this**: the stack's `.env` (Dockhand's copy) and the deploy key (until 2026-10-23 also `deploy/.env` and the WireGuard keys on the VPS). Alex keeps a copy of those in his password manager. They do not go to S3.
 
 ## 9. Order of work
 

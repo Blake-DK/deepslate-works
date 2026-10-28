@@ -1,5 +1,7 @@
 # 49 · Leftover work, in one place
 
+> **2026-10-28:** the VPS is no longer used; the site runs at home on docker-01v (deploy/home/README.md). "VPS" in the Waits on column now means the session that builds the site. Items that only concerned the VPS are marked obsolete below.
+
 Collected 2026-10-10 against `dev` `ee78660a` and `main` `9c7e673c`, from docs/10, 11, 28, 34 to 48 and the VPS
 session's reports of 2026-10-09 and 2026-10-10. Every item was checked against git, the pull requests (#18 to #29) and
 the code; items found done were dropped. "Unverified" means the doc says open and nothing shows it done, but it could
@@ -78,7 +80,7 @@ Who it waits on: **Alex**, **planner**, **VPS** (the VPS session), **AMP host** 
 
 | Item | What remains | Source | Status | Waits on |
 |---|---|---|---|---|
-| PR #24 proof | Needs a private test webhook in `deploy/.env` and a root `test-up.sh`. | docs/47 §4 | open | Alex (`.env` edits need his go) |
+| PR #24 proof | Needs a private test webhook in the stack's `.env` (Dockhand) and a redeploy (was: `deploy/.env` and a root `test-up.sh` on the VPS). | docs/47 §4 | open | Alex (`.env` edits need his go) |
 
 ## Security
 
@@ -94,14 +96,14 @@ The findings themselves stay in docs/38; this is only what is still to do.
 
 | Item | What remains | Source | Status | Waits on |
 |---|---|---|---|---|
-| Encrypted DB dump | Commit `7f4ddcc5` on the local branch `work/security-a3`, not merged. | docs/43; docs/46 §7.4 | open | Alex, VPS |
+| Encrypted DB dump | Commit `7f4ddcc5` on the local branch `work/security-a3` (a VPS checkout), not merged. | docs/43; docs/46 §7.4 | open | Alex, VPS |
 | Backups package | Restore test into scratch; the portal's own four-a-day runner and status-file reader; "Back up now" while stopped or asleep; progress on the dashboard; a list-only S3 key. | docs/28 §9; docs/46 §7.4 | open | AMP host |
 | BlueMap while asleep | 502s while the server sleeps. | docs/43 §7.6 | open | AMP host |
 | check-sides locally | `deploy/check.sh` does not run it; only `ci.yml` does. | docs/47 §5.8 | open | VPS |
-| Deploy guard | Refuses after a branch with an upstream changes `.git/config`. | docs/47 §5.9 | open | VPS |
-| Pre-push name check | The installed hook differs from the pending copy; install the pending one as root. | VPS report 2026-10-10 | open | Alex (root) |
-| Local git tidy | The old pre-rewrite `phase-0` tag and one wrongly prefixed local branch on the VPS. | VPS report 2026-10-10 | open | VPS |
-| Old copies | About 18.5 GB of old worlds and scratch copies on the AMP host; old `.env` and Caddyfile copies; leftover tables. Nothing is deleted without Alex's word. | docs/47 §5.15; docs/46 §7.9 | open | Alex |
+| Deploy guard | Refuses after a branch with an upstream changes `.git/config`. | docs/47 §5.9 | obsolete (2026-10-28): `deploy.sh` and the VPS are retired; at home `repo-sync` checks `.git/config` itself | — |
+| Pre-push name check | The installed hook differs from the pending copy; install the pending one as root. | VPS report 2026-10-10 | obsolete (2026-10-28) for the VPS checkout; check the home checkout's hooks instead | Alex (root) |
+| Local git tidy | The old pre-rewrite `phase-0` tag and one wrongly prefixed local branch on the VPS. | VPS report 2026-10-10 | obsolete (2026-10-28): the VPS checkout is no longer used | — |
+| Old copies | About 18.5 GB of old worlds and scratch copies on the AMP host; old `.env` and Caddyfile copies; leftover tables; the stopped VPS stack and its data. Nothing is deleted without Alex's word. | docs/47 §5.15; docs/46 §7.9 | open | Alex |
 | AMP host noise | Reverse proxy agent, logrotate, pending updates. | docs/46 §7.7 | open | AMP host |
 | Must-vote polls | Three close 2026-10-11 19:00 UTC; while open they hold non-voters at the door. | docs/43 §7.15 | unverified | Alex |
 

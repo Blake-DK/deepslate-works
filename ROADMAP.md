@@ -21,7 +21,7 @@ Last updated 2026-10-04: the server went live, the first review was done and its
 
 ### Modpack pipeline
 - `mods.json` is the single source of truth; a lockfile pins exact Modrinth versions and hashes.
-- Lock, Build and Sync from the admin UI: the server's mod set is rsynced to the AMP host over a WireGuard tunnel and the server restarted, with streamed logs.
+- Lock, Build and Sync from the admin UI: the server's mod set is rsynced to the AMP host over the LAN and the server restarted, with streamed logs.
 - Settings files ship with the pack to the server and every PC, and count towards the pack version. Two so far: trees fall without an axe (FallingTree), and explosive ammo breaks no blocks (TaCZ).
 - The recommended mods (Create, Crafts & Additions, VeinMiner, backpacks, the quarry, TaCZ, Waystones, Farmer's Delight, Pipez) are on while the vote stays open: 30 of 40 mods, pack `0.1.0+1a48e8ff`. Started once with all of them: 16 s, no errors.
 - Downloads are never public: admins always, players only while the server is running or asleep.
@@ -62,10 +62,10 @@ Last updated 2026-10-04: the server went live, the first review was done and its
 - One dark theme, the launcher's: the deepslate ground, the pixel banner with the name, a Copper line, a tab strip in place of the sidebar, cards on the ground, a bevelled green Play block and a Copper Vote block. All four steps are live (2026-10-03): the tokens and parts, the frame, Home and Votes, and a pass over every other page. Tests keep colours in one file, the pixel face in its four places and every text pair at 4.5:1. Looked at by eye at 1360 and 390 px: still Alex's.
 
 ### Infrastructure
-- Portal on the VPS (Next.js frontend, Fastify API), AMP and the Minecraft server on the homelab, joined by a WireGuard tunnel confined to Docker so the internet-facing app has no route home. Players reach the game by a direct port forward to mc-router on the homelab, which routes `mc.dsw.test`, `boys.dsw.test` and `vanilla.dsw.test` to their servers on one port.
+- Portal (Next.js frontend, Fastify API), AMP and the Minecraft server all on the homelab. The portal is one Docker Compose stack managed in Dockhand and published through Pangolin; the internet-facing app sits on its own Docker network with no route to the AMP host, which only the API reaches (over the LAN). Until 2026-10-23 the portal ran on a VPS, joined to the homelab by a WireGuard tunnel. Players reach the game by a direct port forward to mc-router on the homelab, which routes `mc.dsw.test`, `boys.dsw.test` and `vanilla.dsw.test` to their servers on one port.
 - The AMP instance is unmanaged (its own users), so it is opened directly at its LAN address rather than through the AMP panel.
 - The API is the only thing that talks to AMP, through a least-privilege AMP user that can start, stop, restart, read the console, read files, take and list backups and flip the sleep setting, nothing else. End-process (kill) exists for admins only while the server is stuck in "Stopping".
-- Images built by GitHub Actions and pulled by the VPS; the VPS never builds. Memory limits, swap and earlyoom after one OOM incident.
+- Images built by GitHub Actions and pulled in Dockhand; the host never builds. Every container has a memory limit.
 
 ## Since going live (4 October 2026)
 

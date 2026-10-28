@@ -28,11 +28,13 @@ under Dockhand; now one `deploy.sh` starts, updates and stops everything the sit
 
 ## Where things live
 
-- `DEEPSLATE_DIR` (`/data/stacks/deepslate`): this checkout. `web` mounts `modpack/` and `.git` (Admin → Lock commits
+- `DEEPSLATE_DIR` (`/nvme/stacks/deepslate`): this checkout. `web` mounts `modpack/` and `.git` (Admin → Lock commits
   there), `api` mounts `modpack/`, `installer/` and `deploy/keys` (the rrsync key, uid 1000, plus `known_hosts`).
-- `DEEPSLATE_DATA` (`/data/appdata/deepslate`): `postgres/` (70:70, 700), `backups/` (70:70, the nightly dumps),
+- `DEEPSLATE_DATA` (`/nvme/appdata/deepslate`): `postgres/` (70:70, 700), `backups/` (70:70, the nightly dumps),
   `dist/` and `data/` (uid 1000: built packs, uploaded pictures, builds, private jars), `geoip/`, `caddy/`.
   `deploy.sh` makes them with those owners.
+- Both roots are on docker-01v's `/nvme` disk since 2026-10-28 (the test checkout too, `/nvme/stacks/deepslate-test`).
+  `/data` is kept for media downloads, so a full download disk no longer stops the site.
 - The AMP host is reached on the LAN: `AMP_HOST`, `AMP_URL`, `ROUTER_DASH_URL`, `RSYNC_TARGET` in `.env`. The AMP host
   admits this host alone on 8090 and 8100 (its nftables), and the rrsync key's `from=` names this host.
 - `/api/health` keeps its `tunnel` field: at home it is a TCP check of the AMP host's sshd over the LAN.
@@ -40,7 +42,7 @@ under Dockhand; now one `deploy.sh` starts, updates and stops everything the sit
 First time (after the folders and the network exist: docker-01v's L3 made both):
 
 ```
-cd /data/stacks/deepslate                      # the checkout, owned by the deploy user (uid 1000)
+cd /nvme/stacks/deepslate                      # the checkout, owned by the deploy user (uid 1000)
 cp deploy/home/.env.example deploy/home/.env   # fill it in, the newt's id and secret included (Pangolin → Sites → deepslate)
 docker login ghcr.io                           # once, a token with read:packages
 sudo deploy/home/deploy.sh

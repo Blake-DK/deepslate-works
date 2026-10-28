@@ -1752,6 +1752,42 @@
       "howTo": "A **sleeping bag** is three wool of one colour in a row. Crouch and use it to put it down, then sleep in it: the night passes, but if you die you still wake up at home. For a **hammock**, put up two **rope and nails** facing each other and place the hammock between them; lie in it by day to skip to the night."
     },
     {
+      "slug": "wwoo",
+      "name": "William Wythers' Overhauled Overworld",
+      "category": "world",
+      "side": "server",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Every vanilla biome redone: richer forests, autumn colours, new sub-biomes and softer edges between biomes. Only in new land. Uses only vanilla blocks, so nothing extra to download.",
+      "wiki": "https://modrinth.com/mod/wwoo",
+      "videos": [],
+      "version": "sU7oaRZv",
+      "requires": [
+        "cristel-lib"
+      ],
+      "guide": "behind"
+    },
+    {
+      "slug": "streams-reflowing",
+      "name": "Streams Reflowing",
+      "category": "world",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Streams that run downhill through the land, fill lakes and flow out to rivers and the sea. Only in new land.",
+      "wiki": "https://modrinth.com/mod/streams-reflowing",
+      "videos": [],
+      "version": "vbJ5meb8",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
       "slug": "create-deco",
       "name": "Create Deco",
       "category": "building",
@@ -2821,6 +2857,38 @@
       "wiki": "https://modrinth.com/mod/moonlight",
       "videos": [],
       "version": "fAIfWX6M",
+      "requires": []
+    },
+    {
+      "slug": "cristel-lib",
+      "name": "Cristel Lib",
+      "category": "base",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by William Wythers' Overhauled Overworld.",
+      "wiki": "https://modrinth.com/mod/cristel-lib",
+      "videos": [],
+      "version": "Sduz0AWP",
+      "requires": []
+    },
+    {
+      "slug": "cloth-config",
+      "name": "Cloth Config",
+      "category": "base",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Cristel Lib (for William Wythers' Overhauled Overworld).",
+      "wiki": "https://modrinth.com/mod/cloth-config",
+      "videos": [],
+      "version": "izKINKFg",
       "requires": []
     },
     {

@@ -1,5 +1,8 @@
 # 51 · Seasons 1 and 2: the plan
 
+> **2026-10-29:** how Season 1's bosses arrive as a new world, in order against the live regen, is docs/63. Where it
+> and §5 (B, C), §6 decision 1 or §8's A5 differ, docs/63 holds.
+
 > **2026-10-28:** the VPS is no longer used; the site runs at home on docker-01v (deploy/home/README.md). "VPS" as an owner below means the session that builds the site; "deploy" means a Redeploy in Dockhand.
 
 VPS session, 2026-10-11, with Alex. Builds on docs/20 (the mechanism), docs/32 (the content of Seasons 1 to 4),

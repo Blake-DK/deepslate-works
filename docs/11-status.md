@@ -33,6 +33,15 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Season 1's bosses as a new world: docs/63 (2026-10-29, planned, nothing built or run)
+
+- **Alex:** Season 1 is not switched on; its bosses come in as a new world, not a change to the main overworld.
+- **The plan:** the live regen first, without the s1 mods; then the Frontier pre-generated on test with s1, the
+  terrain and the village mods, snapshotted before anyone enters, and copied to live at the opening on 1 December.
+  A "seal" datapack (empty structure tags) stops boss structures in every new chunk elsewhere, in place of docs/51
+  §8's biome copies. Worldgen mods frozen from the pre-generation to the opening.
+- **Open, for Alex:** docs/63 §6, six decisions with a recommendation each. Nothing changed on test, live or `.env`.
+
 ## Village mods, on `dev` only (2026-10-29, not on test or `main`)
 
 - **Alex:** add the village mods before the live regen. Added, all server only (no PC downloads anything):

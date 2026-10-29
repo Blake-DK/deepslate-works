@@ -3109,13 +3109,17 @@
           "url": "https://www.youtube.com/watch?v=xFgL33GHlsw"
         }
       ],
-      "version": "jawvD7YZ",
       "requires": [
         "geckolib"
       ],
       "guide": "game",
       "topic": "combat",
-      "howTo": "Giant insects and spiders hunt on **Ashmoon**. Bring light, armour and a good weapon, and don't fight them in the dark."
+      "howTo": "Giant insects and spiders hunt on **Ashmoon**. Bring light, armour and a good weapon, and don't fight them in the dark. Their own world, the **Crawling**, is reached through the **Crawling Castle** on Ashmoon: right-click a **Crawling Compass** there to find it, light the four pillars inside with **scorch charges**, then right-click the middle block with an **abyssal crystal**. Its way out brings you home; walk through a basalt portal to get back to Ashmoon.",
+      "source": {
+        "private": "ArPhEx-5.0.2-dsw.1-neoforge-1.21.1.jar",
+        "sha512": "f5f142cee13394d9fdafa49f6832db070550c97e9290469c6b5718e988eeb6670de38a9fe3527575013e4b1070ee6911de623259ae1d4e6f408143d9ccb3e54f",
+        "note": "5.0.2 with Ashmoon in place of the main world: built by mods/arphex-ashmoon/build.sh"
+      }
     },
     {
       "slug": "mutant-monsters",

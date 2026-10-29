@@ -398,6 +398,17 @@ export const CHANGES: Change[] = [
     ],
     onSync: true,
   },
+  {
+    id: "2026-10-29-arphex-ashmoon",
+    date: "2026-10-29",
+    lines: [
+      "The giant insects on Ashmoon now come in all their kinds, two cave spiders that never showed up included. Expect more of them.",
+      "The Crawling Compass works on Ashmoon: right-click it there and it points to the Crawling Castle, the way into the insects' own world.",
+      "Coming back out of that world lands you at home, near the middle of the map; walk through a basalt portal to get back to Ashmoon.",
+      "Press Play to update.",
+    ],
+    onSync: true,
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

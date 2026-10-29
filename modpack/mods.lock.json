@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-29T16:24:51.737Z",
+  "generatedAt": "2026-10-29T22:30:01.898Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "e98f15148c2879f106f66473fd940e8f9a3630f8663694e37fd0e7bd8bf54775",
+  "hash": "c830b7eccc9e3d3ec1d664ead5db7ad85b4a95ab2864ef0d44eb9373a9e31624",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -153,21 +153,17 @@
     {
       "slug": "arphex",
       "name": "ArPhEx (Arthropod Phobia Expansions)",
-      "projectId": "k0RPP4IO",
-      "versionId": "jawvD7YZ",
-      "versionNumber": "5.0.2",
-      "versionType": "release",
-      "filename": "ArPhEx-5.0.2-neoforge-1.21.1.jar",
-      "url": "https://cdn.modrinth.com/data/k0RPP4IO/versions/jawvD7YZ/ArPhEx-5.0.2-neoforge-1.21.1.jar",
-      "sha512": "09a7e63a75ba0173ef6f60a71154a21cf6b5d07a2190d274fc9b75db23f4044ca829385b8931c698c3ed0ef48b06871c545537b2d31e1496b967e38d82922527",
-      "sha1": "876e23454070ccb10852393fff046a57aa20f65d",
-      "size": 13685315,
       "side": "both",
+      "projectId": "",
+      "versionId": "private-f5f142cee13394d9",
+      "versionNumber": "5.0.2-dsw.1",
+      "versionType": "release",
+      "filename": "ArPhEx-5.0.2-dsw.1-neoforge-1.21.1.jar",
+      "url": "/downloads/mods/ArPhEx-5.0.2-dsw.1-neoforge-1.21.1.jar",
+      "sha512": "f5f142cee13394d9fdafa49f6832db070550c97e9290469c6b5718e988eeb6670de38a9fe3527575013e4b1070ee6911de623259ae1d4e6f408143d9ccb3e54f",
+      "sha1": "0a2211ea860856990d8542d8955ce572ad549f5d",
+      "size": 13782313,
       "requiredBy": [],
-      "modrinth": {
-        "client": "required",
-        "server": "required"
-      },
       "channels": "required"
     },
     {

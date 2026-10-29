@@ -103,6 +103,29 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Live:** web and api on `latest` = `63131b4`, healthy; the checkout at `63131b4`; the test checkout moved to
   `3d648dc`. The site answered and api's `/health` was 200 after.
 
+## ArPhEx patched to work on Ashmoon (2026-10-29, on `dev`; not on test or live yet)
+
+- **Why (Alex: "plan that mod better so it works fully"):** read in the 5.0.2 jar, five procedures act only when
+  `dimension == Level.OVERWORLD`. On Ashmoon the Crawling Compass did nothing (and the castle it points to is on
+  Ashmoon only), the random spawn system never ran, Spider Lunger and Spider Recluse never spawned, and neither did the
+  Tormentor's first coming or the random Spider Moth. So the way into the Crawling (progression steps 4 to 11 on the
+  mod's wiki) was closed. docs/06 and the 2026-10-14 section below said the random system ran on Ashmoon; it did not.
+- **Fix:** our 5.0.2-dsw.1, `mods/arphex-ashmoon/` (README): in those five, the overworld comparison is a
+  `deepslate:moon` one; the compass's message reworded; nothing else changed (6,039 entries, same order and dates). A
+  docs/58 private jar, sha512 `f5f142ce…`, the same on two builds. ArPhEx is MIT. Config: `"Spawn in other
+  dimensions" = true` (only the random system reads it; our datapack gives it Ashmoon's and the Crawling's biomes).
+- **Read and fine as they are:** lighting the castle portal and entering the Crawling from Ashmoon, sealing the
+  Tormentor at that portal, the boss summoners (the Arachnoid Trisector's scorched sand on chitin too), bosses' storms
+  (Ashmoon reads the main world's weather). The Crawling's way out lands in the main world near 0 0 (guide and change
+  log say so). The Trisector and Spider Infestors spawn naturally in the Crawling only, as the mod means.
+- **Lock** `c830b7ec`: only ArPhEx moved (a full Lock also moved GuideME and Kotlin for Forge; left out). Live's pack
+  `0.1.0+a58590bd`, still 111 files. Guide text longer, change log `2026-10-29-arphex-ashmoon` (`onSync`).
+- **Not proven:** nobody has run the patched jar. The changed procedures load only when used, so a clean start does
+  not prove them: on test, a player on Ashmoon with a compass (it should point; `locate structure
+  arphex:crawling_castle` to compare), Lungers and Recluses about, the castle → Crawling → home round trip, and no
+  ArPhEx mob in the main world.
+- **Before a PR to `main`:** the jar into live's `data/private-jars/`, on Alex's yes; live's Build fails without it.
+
 ## Fairy Lights fix, Continuity, Just Zoom, app 3.6.8 (2026-10-28, deployed: `main` badb1f08, PR #102)
 
 - **What went out:** our Fairy Lights 1.2.3-dsw.1 (the JEI crash fix, the section below), Continuity with its

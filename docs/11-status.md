@@ -58,6 +58,13 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Sync, start, pre-generate, then `locate structure` for `ctov:`, `villagesandpillages:village_witch` and
   `joshie:village_ocean`.
 - **Only in new land:** they must be on before the regen's pre-generation, like the terrain mods below.
+- **Test without Season 1, world wiped (2026-10-29, 23:0x UTC):** Alex set `TEST_SEASONS_SHIP` empty in Dockhand
+  (the deploy recreated the whole `deepslate` stack, live included; all healthy after). Sync removed the five s1 jars;
+  the test server runs live's pack `96001ad2`, 106 mod ids, no problems. With the server asleep, its `world/` (161 MB,
+  670 files, with s1 structures in it) was copied to docker-01v
+  `/home/ladm/deepslate-regen-2026-10/test-world-20261029`, then emptied but `datapacks/` and `serverconfig/`. Not
+  done: the next start, pre-generation, and BlueMap's old tiles outside the new render. Every Sync also reports
+  "config: 7 file(s) updated": not looked into.
 
 ## New terrain: Overhauled Overworld and Streams Reflowing, on test (2026-10-28, on `dev` f8716f1, not on `main`)
 

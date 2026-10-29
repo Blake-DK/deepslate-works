@@ -14,15 +14,15 @@ describe("the pack a server ships, as api reads it", () => {
     const lock = JSON.parse(await readFile(path.join(REPO, "modpack", "mods.lock.json"), "utf8")) as ShippedLock;
     expect(packHash(lock, lock.files)).toBe(lock.hash);
   });
-  it("live ships nothing yet: 107 files, 0.1.0+1c2c1442 (Overhauled Overworld, Streams Reflowing, Cristel Lib and Cloth Config, 2026-10-28; Continuity, Just Zoom and Konkrete, 2026-10-27; Fairy Lights patched; Mekanism and the quarry pause mod in, docs/53 and docs/56; the two flower mods, docs/59; the gas mask's icon, docs/55 M8; Macaw's Holidays; Vanishmod, server only; the animal and cosy mods, 2026-10-20; Create: Connected and Create: The Factory Must Grow; the 2026-10-20 updates, JEI with MezzConfig; the 2026-10-26 updates, every mod to its newest but Quarry and Simple Voice Chat); the test server with SEASONS_SHIP=s1 gets all 112 (with the horror trial on Ashmoon)", async () => {
+  it("live ships nothing yet: 111 files, 0.1.0+96001ad2 (the village mods: ChoiceTheorem's Overhauled Village with Lithostitched, Villages&Pillages and Tidal Towns, 2026-10-29; Overhauled Overworld, Streams Reflowing, Cristel Lib and Cloth Config, 2026-10-28; Continuity, Just Zoom and Konkrete, 2026-10-27; Fairy Lights patched; Mekanism and the quarry pause mod in, docs/53 and docs/56; the two flower mods, docs/59; the gas mask's icon, docs/55 M8; Macaw's Holidays; Vanishmod, server only; the animal and cosy mods, 2026-10-20; Create: Connected and Create: The Factory Must Grow; the 2026-10-20 updates, JEI with MezzConfig; the 2026-10-26 updates, every mod to its newest but Quarry and Simple Voice Chat); the test server with SEASONS_SHIP=s1 gets all 116 (with the horror trial on Ashmoon)", async () => {
     const live = await readShippedLock(REPO, {});
-    expect(live.files).toHaveLength(107);
-    expect(live.hash.slice(0, 8)).toBe("1c2c1442");
+    expect(live.files).toHaveLength(111);
+    expect(live.hash.slice(0, 8)).toBe("96001ad2");
     expect(live.files.some((f) => f.season)).toBe(false);
     const test = await readShippedLock(REPO, { TEST_MODE: "1", SEASONS_SHIP: "s1" });
-    expect(test.files).toHaveLength(112);
+    expect(test.files).toHaveLength(116);
     expect(await readShippedLock(REPO, { SEASONS_SHIP: "s1" })).toEqual(live); // ignored without TEST_MODE
-    expect(await sitePack(REPO)).toMatch(/\+1c2c1442$/);
+    expect(await sitePack(REPO)).toMatch(/\+96001ad2$/);
   });
   it("SEASONS_SHIP is read as the modpack package reads it", () => {
     expect(shipFor(["s1"], {})).toEqual(["s1"]);

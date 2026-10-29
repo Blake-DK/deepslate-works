@@ -33,6 +33,23 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Village mods, on `dev` only (2026-10-29, not on test or `main`)
+
+- **Alex:** add the village mods before the live regen. Added, all server only (no PC downloads anything):
+  ChoiceTheorem's Overhauled Village 3.6.3 (`ztzRUnQ7`) with its library Lithostitched 1.8.1 (`cZu4cHY3`),
+  Villages&Pillages 2.0.0 (`4wFzeVeV`), Tidal Towns 2.0 (`ahvrY85Y`). Live pack `0.1.0+96001ad2`, 111 files (116
+  with s1). The lock run also moved KotlinLangForge to 2.17.0; that entry was put back by hand and the hash recomputed.
+- **Read from the jars:** CTOV declares Lithostitched as required (Modrinth does not) and adds villages in three sizes
+  for each biome, plus pillager outposts by biome, through Lithostitched worldgen modifiers. Villages&Pillages 2.0
+  is one structure, a witch village in swamps and mangrove swamps. Tidal Towns is data only: an ocean village.
+  CTOV's jar is named `[Neoforge]ctov-3.6.3.jar`: watch that Build and Sync carry the brackets.
+- **Not checked:** the first start with them (docs: start the server once with any new server-side mod), how they
+  sit with Overhauled Overworld, and whether Waystones still puts a waystone in CTOV's villages (it adds them to the
+  vanilla village pools, which CTOV's villages may not use). The test world on the live seed is the place: Build,
+  Sync, start, pre-generate, then `locate structure` for `ctov:`, `villagesandpillages:village_witch` and
+  `joshie:village_ocean`.
+- **Only in new land:** they must be on before the regen's pre-generation, like the terrain mods below.
+
 ## New terrain: Overhauled Overworld and Streams Reflowing, on test (2026-10-28, on `dev` f8716f1, not on `main`)
 
 - **Alex:** add William Wythers' Overhauled Overworld and Streams Reflowing, and regenerate every chunk of the live

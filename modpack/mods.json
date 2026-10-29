@@ -1788,6 +1788,59 @@
       "guide": "behind"
     },
     {
+      "slug": "ct-overhaul-village",
+      "name": "ChoiceTheorem's Overhauled Village",
+      "category": "world",
+      "side": "server",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Villages rebuilt to suit where they stand (jungle, swamp, mountain, beach, dark forest, mushroom islands and more) in three sizes, and new pillager outposts. Only in new land. Runs on the server: nothing on your PC.",
+      "wiki": "https://modrinth.com/mod/ct-overhaul-village",
+      "videos": [],
+      "version": "ztzRUnQ7",
+      "requires": [
+        "lithostitched"
+      ],
+      "guide": "behind"
+    },
+    {
+      "slug": "villages-and-pillages",
+      "name": "Villages&Pillages",
+      "category": "world",
+      "side": "server",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Witch villages in swamps. Only in new land. Runs on the server: nothing on your PC.",
+      "wiki": "https://modrinth.com/mod/villages-and-pillages",
+      "videos": [],
+      "version": "4wFzeVeV",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
+      "slug": "tidal-towns",
+      "name": "Tidal Towns",
+      "category": "world",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Villages built of driftwood that float on the ocean. Only in new land. Runs on the server: nothing on your PC.",
+      "wiki": "https://modrinth.com/mod/tidal-towns",
+      "videos": [],
+      "version": "ahvrY85Y",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
       "slug": "create-deco",
       "name": "Create Deco",
       "category": "building",
@@ -2889,6 +2942,22 @@
       "wiki": "https://modrinth.com/mod/cloth-config",
       "videos": [],
       "version": "izKINKFg",
+      "requires": []
+    },
+    {
+      "slug": "lithostitched",
+      "name": "Lithostitched",
+      "category": "base",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by ChoiceTheorem's Overhauled Village.",
+      "wiki": "https://modrinth.com/mod/lithostitched",
+      "videos": [],
+      "version": "cZu4cHY3",
       "requires": []
     },
     {

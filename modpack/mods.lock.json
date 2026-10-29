@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-28T17:47:16.951Z",
+  "generatedAt": "2026-10-29T16:24:51.737Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "0dc60c8fe1b03b768345ad244bfc99bd350b0e6bab3be4a8fcbe8240899433c9",
+  "hash": "e98f15148c2879f106f66473fd940e8f9a3630f8663694e37fd0e7bd8bf54775",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -646,6 +646,26 @@
       "channels": "none"
     },
     {
+      "slug": "ct-overhaul-village",
+      "name": "ChoiceTheorem's Overhauled Village",
+      "projectId": "fgmhI8kH",
+      "versionId": "ztzRUnQ7",
+      "versionNumber": "3.6.3",
+      "versionType": "release",
+      "filename": "[Neoforge]ctov-3.6.3.jar",
+      "url": "https://cdn.modrinth.com/data/fgmhI8kH/versions/ztzRUnQ7/%5BNeoforge%5Dctov-3.6.3.jar",
+      "sha512": "174125e619f935ca016efaf7d6794edc57fae39ca02295ce63618ae2b286535e4da2084fd7f0ff9506c32c0ea35ceb68659bd646f65e6fbadfdb8fda299dc832",
+      "sha1": "c5fe733d743af20f84eb87dd75b5bb57684f3e05",
+      "size": 7139609,
+      "side": "server",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "curios",
       "name": "Curios API",
       "projectId": "vvuO3ImH",
@@ -1256,6 +1276,26 @@
       "modrinth": {
         "client": "optional",
         "server": "optional"
+      },
+      "channels": "none"
+    },
+    {
+      "slug": "lithostitched",
+      "name": "Lithostitched",
+      "projectId": "XaDC71GB",
+      "versionId": "cZu4cHY3",
+      "versionNumber": "1.8.1-neoforge-21.1",
+      "versionType": "release",
+      "filename": "lithostitched-1.8.1-neoforge-21.1.jar",
+      "url": "https://cdn.modrinth.com/data/XaDC71GB/versions/cZu4cHY3/lithostitched-1.8.1-neoforge-21.1.jar",
+      "sha512": "6c02b8b269269d5aa84cb03bf824a1b5d52838e806c2fec8727eb4049925592dac9bb65c996858751fbb722f22ac59c4be09860e1f01e8f7b97c95be3faf7a57",
+      "sha1": "88cdded5b617e19b4d2676948b5550699de23578",
+      "size": 1023751,
+      "side": "server",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
       },
       "channels": "none"
     },
@@ -2074,6 +2114,26 @@
       "channels": "required"
     },
     {
+      "slug": "tidal-towns",
+      "name": "Tidal Towns",
+      "projectId": "EEIwvQVo",
+      "versionId": "ahvrY85Y",
+      "versionNumber": "2.0+mod",
+      "versionType": "release",
+      "filename": "tidal-towns-2.0.jar",
+      "url": "https://cdn.modrinth.com/data/EEIwvQVo/versions/ahvrY85Y/tidal-towns-2.0.jar",
+      "sha512": "05381c776c16a535cb2500ad062b2acd4261a0069a84c654fe2257f08adf549db198b7fe9d9cc9cf8a375e32f48108d5e3bb5691f80c57be1384f9b3d368e013",
+      "sha1": "f48816fb1b0759350b60e96cd595512fe2b24baf",
+      "size": 586133,
+      "side": "server",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "optional",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "titanium",
       "name": "Titanium",
       "projectId": "1Ro7m06l",
@@ -2154,6 +2214,26 @@
         "server": "required"
       },
       "channels": "optional"
+    },
+    {
+      "slug": "villages-and-pillages",
+      "name": "Villages&Pillages",
+      "projectId": "klXONLDA",
+      "versionId": "4wFzeVeV",
+      "versionNumber": "neoforge-2.0.0+mc1.21.1",
+      "versionType": "release",
+      "filename": "villagesandpillages-neoforge-2.0.0+mc1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/klXONLDA/versions/4wFzeVeV/villagesandpillages-neoforge-2.0.0%2Bmc1.21.1.jar",
+      "sha512": "5454fa7d35cc24cd45dd149cd9ea3667bdeef7c0b44bf0bbd0686c97aa514be7c9aa89e63ea6727f64357eba7d2eff6340f481e87843089228a3fb329cfb6f6a",
+      "sha1": "5093a1cdcf72cf188e4c8c899e9ae087a96b2a8f",
+      "size": 154295,
+      "side": "server",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "unsupported",
+        "server": "required"
+      },
+      "channels": "none"
     },
     {
       "slug": "waystones",

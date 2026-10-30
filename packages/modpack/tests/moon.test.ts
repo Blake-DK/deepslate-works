@@ -369,6 +369,20 @@ describe("the horror trial kept on Ashmoon: ArPhEx's structures and its test-onl
       for (const m of spawners.monster.filter((x) => x.type !== "minecraft:enderman")) expect([m.minCount, m.maxCount]).toEqual([4, 6]);
     }
   });
+  it("ArPhEx works on Ashmoon (2026-10-29): our 5.0.2-dsw.1, and its random spawns let out of the main world but only onto Ashmoon and the Crawling", async () => {
+    // 5.0.2 runs its compass, its random spawns, its underground rule and the Tormentor's first coming only in the
+    // overworld; mods/arphex-ashmoon checks for deepslate:moon there instead
+    const m = JSON.parse(await readFile(path.join(MODPACK, "mods.json"), "utf8")) as { mods: Array<{ slug: string; source?: { private: string } }> };
+    expect(m.mods.find((x) => x.slug === "arphex")?.source?.private).toBe("ArPhEx-5.0.2-dsw.1-neoforge-1.21.1.jar");
+    // the setting lets the random system run outside the overworld; these spawners name only Ashmoon's and the Crawling's biomes
+    const toml = await readFile(path.join(MODPACK, "server/config/ArPhEx Configurations.toml"), "utf8");
+    expect(toml).toContain('"Spawn in other dimensions" = true');
+    const MOBS = path.join(MODPACK, "datapacks/deepslate-moon-mobs/data/arphex/neoforge/biome_modifier");
+    for (const f of ["random_ar_ph_ex", "random_termite", "any_dimension_spawner"]) {
+      const j = JSON.parse(await readFile(path.join(MOBS, `${f}_biome_modifier.json`), "utf8")) as { biomes: string[] };
+      for (const b of j.biomes) expect(b.startsWith("deepslate:moon_") || b.startsWith("arphex:")).toBe(true);
+    }
+  });
 });
 
 describe("every datapack we ship loads (2026-10-14: the test server refused to start)", () => {

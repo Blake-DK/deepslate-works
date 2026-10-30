@@ -20,7 +20,7 @@
 	#Specifically disables the Tormentor boss entirely. It will be unable to be spawned in any form if this is enabled.
 	"Disable Tormentor" = false
 	#Disabled by default. If enabled, most mobs will become able to spawn in any dimension, including dimensions from other mods - may cause issues with some mod dimensions. Note, however, that the mobs will have a low spawn weight in other dimensions.
-	"Spawn in other dimensions" = false
+	"Spawn in other dimensions" = true
 	#By default, the Tormentor can spawn naturally once you defeat the first three bosses. At this point, you probably won't be ready yet to fight it, and so will be forced to seal it and locate a crawling portal (all intentional). Set to false to prevent this, and ensure the Tormentor can only spawn from being summoned. The earlier - Boss natural spawning - config option has the same effect, but also controls other bosses.
 	"Tormentor initial natural spawning" = true
 	#Enabling this will significantly amplfy random-system overworld spawns from the mod, and even add crawling dimension mobs like the spider ambusher into the overworld. Even the non-overworld bosses will spawn rarely in the overworld, except for the Tormentor (this must be summoned manually). Minibosses will spawn commonly. Perfect for fast-paced, intense gameplay!

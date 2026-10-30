@@ -398,6 +398,30 @@ export const CHANGES: Change[] = [
     ],
     onSync: true,
   },
+  {
+    id: "2026-10-29-arphex-ashmoon",
+    date: "2026-10-29",
+    lines: [
+      "The giant insects on Ashmoon now come in all their kinds, two cave spiders that never showed up included. Expect more of them.",
+      "The Crawling Compass works on Ashmoon: right-click it there and it points to the Crawling Castle, the way into the insects' own world.",
+      "Coming back out of that world lands you at home, near the middle of the map; walk through a basalt portal to get back to Ashmoon.",
+      "Press Play to update.",
+    ],
+    onSync: true,
+  },
+  {
+    id: "2026-10-30-new-land",
+    date: "2026-10-30",
+    title: "New land past your builds",
+    lines: [
+      "Everywhere nobody had spent time has been made again with new land: new trees and plants in every kind of land, and streams that run down the hills into the rivers.",
+      "Villages now come in many new styles, one for each kind of land and in three sizes. Look out for a witch village in the swamps and a village on the sea.",
+      "Everything you built, and the land around it, is just as you left it. The new land starts a little way past it, so you may see an edge there.",
+      "Ashmoon's empty land has been made again too, so the Crawling Castle and the other giant-insect places are much closer to its middle now.",
+      "Press Play to update.",
+    ],
+    onSync: true,
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

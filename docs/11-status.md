@@ -33,6 +33,83 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The live regen: docs/64 (2026-10-30, prepared; test check next, nothing changed on live)
+
+- **Alex:** "plan the main world regen of unused chunks and make this go live"; the plan agreed as recommended:
+  a short check on test instead of the week-long preview, the keep rule of docs/64 §1 (2 minutes of player time, claims,
+  lit portals, logout and bed chunks, graves, player waystones, 2 chunks around them, enclosed holes), Ashmoon trimmed
+  too (brings ArPhEx's castle near), radius 5,000 in the window and the rest after, a window before 15 November.
+- **Done:** test checkout fast-forwarded to `9862e25` (it had stayed at `c0caf8e`: `repo-sync-test` runs only on a
+  stack Redeploy); change log entry `2026-10-30-new-land` (titled, `onSync`); the tools of docs/64 §2 written and
+  installed (AMP host `/home/ladm/regen-2026-10/`, docker-01v `/home/ladm/deepslate-regen-2026-10/tools/`). The keep
+  tool reproduces 2026-10-28's 34,574 exactly, then keeps 145 enclosed chunks more; MCA Selector's delete with
+  whole-region lines rehearsed on four live regions, chunk for chunk right.
+- **Since 2026-10-28** live has had 8 joins (last left 2026-10-30 00:26), so the set is made in the window from a
+  stopped copy, never from the old one.
+- **Access:** this host's key is in ladm's `authorized_keys` on the AMP host; passwordless sudo there until
+  2026-10-31 09:30 UTC (a timer removes `/etc/sudoers.d/90-ladm-temp`).
+- **Next:** docs/64 §3 on test (Alex: Build, Sync, Start; then pre-generation and a look), the rehearsal on test, then
+  the window. Old worlds on the AMP host (~180 GB from 2026-10-09/10) are listed for Alex, not removed.
+
+## Season 1's bosses as a new world: docs/63 (2026-10-29, planned, nothing built or run)
+
+- **Alex:** Season 1 is not switched on; its bosses come in as a new world, not a change to the main overworld.
+- **The plan:** the live regen first, without the s1 mods; then the Frontier pre-generated on test with s1, the
+  terrain and the village mods, snapshotted before anyone enters, and copied to live at the opening on 1 December.
+  A "seal" datapack (empty structure tags) stops boss structures in every new chunk elsewhere, in place of docs/51
+  §8's biome copies. Worldgen mods frozen from the pre-generation to the opening.
+- **Open, for Alex:** docs/63 §6, six decisions with a recommendation each. Nothing changed on test, live or `.env`.
+
+## Village mods, on `dev` only (2026-10-29, not on test or `main`)
+
+- **Alex:** add the village mods before the live regen. Added, all server only (no PC downloads anything):
+  ChoiceTheorem's Overhauled Village 3.6.3 (`ztzRUnQ7`) with its library Lithostitched 1.8.1 (`cZu4cHY3`),
+  Villages&Pillages 2.0.0 (`4wFzeVeV`), Tidal Towns 2.0 (`ahvrY85Y`). Live pack `0.1.0+96001ad2`, 111 files (116
+  with s1). The lock run also moved KotlinLangForge to 2.17.0; that entry was put back by hand and the hash recomputed.
+- **Read from the jars:** CTOV declares Lithostitched as required (Modrinth does not) and adds villages in three sizes
+  for each biome, plus pillager outposts by biome, through Lithostitched worldgen modifiers. Villages&Pillages 2.0
+  is one structure, a witch village in swamps and mangrove swamps. Tidal Towns is data only: an ocean village.
+  CTOV's jar is named `[Neoforge]ctov-3.6.3.jar`: watch that Build and Sync carry the brackets.
+- **Not checked:** the first start with them (docs: start the server once with any new server-side mod), how they
+  sit with Overhauled Overworld, and whether Waystones still puts a waystone in CTOV's villages (it adds them to the
+  vanilla village pools, which CTOV's villages may not use). The test world on the live seed is the place: Build,
+  Sync, start, pre-generate, then `locate structure` for `ctov:`, `villagesandpillages:village_witch` and
+  `joshie:village_ocean`.
+- **Only in new land:** they must be on before the regen's pre-generation, like the terrain mods below.
+- **Test without Season 1, world wiped (2026-10-29, 23:0x UTC):** Alex set `TEST_SEASONS_SHIP` empty in Dockhand
+  (the deploy recreated the whole `deepslate` stack, live included; all healthy after). Sync removed the five s1 jars;
+  the test server runs live's pack `96001ad2`, 106 mod ids, no problems. With the server asleep, its `world/` (161 MB,
+  670 files, with s1 structures in it) was copied to docker-01v
+  `/home/ladm/deepslate-regen-2026-10/test-world-20261029`, then emptied but `datapacks/` and `serverconfig/`. Not
+  done: the next start, pre-generation, and BlueMap's old tiles outside the new render. Every Sync also reports
+  "config: 7 file(s) updated": not looked into.
+
+## New terrain: Overhauled Overworld and Streams Reflowing, on test (2026-10-28, on `dev` f8716f1, not on `main`)
+
+- **Alex:** add William Wythers' Overhauled Overworld and Streams Reflowing, and regenerate every chunk of the live
+  overworld that players have not touched. First a fresh world on the live seed on the test server, to see it.
+- **On `dev`:** WWOO 2.6.7 (`sU7oaRZv`, server only: vanilla blocks), Cristel Lib 3.1.7 and Cloth Config 15.0.140
+  (server only, its libraries), Streams Reflowing 2.15.2 (`vbJ5meb8`, server and PCs). Lock: live pack
+  `0.1.0+1c2c1442`, 107 files (112 with s1). Both only shape new land.
+- **Read from the jars:** WWOO's main pack replaces the vanilla biome files (features, trees, plants) and has no noise
+  settings, so the shape of the land stays the seed's. Its add-ons (Cliffs and Coves, Navigable Rivers, Towering
+  Tepuis) change terrain and sit behind its config; read their defaults after the first start. Streams goes to
+  `#streamsreflowing:stream_biomes`, which takes `#minecraft:is_overworld`, and the Moon's three biomes are in that
+  tag: check on test whether the Moon gets streams (its feature type is "overworld", so maybe not).
+- **Test world replaced (17:57 UTC):** the test server was stopped (since 2026-10-27 23:26). Its world (20.1 GB,
+  30,746 files) is copied to docker-01v `/home/ladm/deepslate-regen-2026-10/test-world-20261028`, then everything in
+  `world/` but `datapacks/` and `serverconfig/` was deleted. `level-seed` in the test `server.properties` is live's
+  (`level.dat` of both read: the same seed). The test checkout is at `f8716f1`. **Next, Alex:** test site Build and
+  Sync, start, Pre-generation around spawn, look in the game and on the test map.
+- **The live regen, prepared, not run:** live's overworld is generated from x −11,264 to 13,119 and z ±10,180
+  (1,612 regions, 17.9 GB, 1,625,390 chunks). A read-only copy of its regions and claims is in
+  `/home/ladm/deepslate-regen-2026-10/live-copy`; `live-chunks.csv` has every chunk's `InhabitedTime`. Kept: chunks
+  with 2 minutes or more of player time and the server's spawn claim (no player has a claim), plus 2 chunks around
+  them: 34,574 chunks kept, 1,590,816 (97.9%) to regenerate (`keep-120s-m2.csv`, `keep-map-120s-m2.png`). At 30 s:
+  67,269 kept; at 5 minutes: 19,311. The cut itself is for Alex's offline window, from a fresh copy taken with the
+  server stopped, by the AMP host's trim scripts of 2026-10-10, after a full backup; then Build, Sync and a full
+  pre-generation.
+
 ## The home stack updates itself; PostgreSQL 18 (2026-10-28, deployed: `main` 63131b4, PR #103)
 
 - **How it updates now:** a Redeploy of Dockhand's stack `deepslate` (Docker-01V). It pulls `latest` of every image,
@@ -50,6 +127,29 @@ say live is stopped, held or to be trimmed in place, this section wins.
   No pending migrations.
 - **Live:** web and api on `latest` = `63131b4`, healthy; the checkout at `63131b4`; the test checkout moved to
   `3d648dc`. The site answered and api's `/health` was 200 after.
+
+## ArPhEx patched to work on Ashmoon (2026-10-29, on `dev`; not on test or live yet)
+
+- **Why (Alex: "plan that mod better so it works fully"):** read in the 5.0.2 jar, five procedures act only when
+  `dimension == Level.OVERWORLD`. On Ashmoon the Crawling Compass did nothing (and the castle it points to is on
+  Ashmoon only), the random spawn system never ran, Spider Lunger and Spider Recluse never spawned, and neither did the
+  Tormentor's first coming or the random Spider Moth. So the way into the Crawling (progression steps 4 to 11 on the
+  mod's wiki) was closed. docs/06 and the 2026-10-14 section below said the random system ran on Ashmoon; it did not.
+- **Fix:** our 5.0.2-dsw.1, `mods/arphex-ashmoon/` (README): in those five, the overworld comparison is a
+  `deepslate:moon` one; the compass's message reworded; nothing else changed (6,039 entries, same order and dates). A
+  docs/58 private jar, sha512 `f5f142ce…`, the same on two builds. ArPhEx is MIT. Config: `"Spawn in other
+  dimensions" = true` (only the random system reads it; our datapack gives it Ashmoon's and the Crawling's biomes).
+- **Read and fine as they are:** lighting the castle portal and entering the Crawling from Ashmoon, sealing the
+  Tormentor at that portal, the boss summoners (the Arachnoid Trisector's scorched sand on chitin too), bosses' storms
+  (Ashmoon reads the main world's weather). The Crawling's way out lands in the main world near 0 0 (guide and change
+  log say so). The Trisector and Spider Infestors spawn naturally in the Crawling only, as the mod means.
+- **Lock** `c830b7ec`: only ArPhEx moved (a full Lock also moved GuideME and Kotlin for Forge; left out). Live's pack
+  `0.1.0+a58590bd`, still 111 files. Guide text longer, change log `2026-10-29-arphex-ashmoon` (`onSync`).
+- **Not proven:** nobody has run the patched jar. The changed procedures load only when used, so a clean start does
+  not prove them: on test, a player on Ashmoon with a compass (it should point; `locate structure
+  arphex:crawling_castle` to compare), Lungers and Recluses about, the castle → Crawling → home round trip, and no
+  ArPhEx mob in the main world.
+- **Before a PR to `main`:** the jar into live's `data/private-jars/`, on Alex's yes; live's Build fails without it.
 
 ## Fairy Lights fix, Continuity, Just Zoom, app 3.6.8 (2026-10-28, deployed: `main` badb1f08, PR #102)
 

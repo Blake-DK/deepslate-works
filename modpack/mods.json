@@ -1752,6 +1752,95 @@
       "howTo": "A **sleeping bag** is three wool of one colour in a row. Crouch and use it to put it down, then sleep in it: the night passes, but if you die you still wake up at home. For a **hammock**, put up two **rope and nails** facing each other and place the hammock between them; lie in it by day to skip to the night."
     },
     {
+      "slug": "wwoo",
+      "name": "William Wythers' Overhauled Overworld",
+      "category": "world",
+      "side": "server",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Every vanilla biome redone: richer forests, autumn colours, new sub-biomes and softer edges between biomes. Only in new land. Uses only vanilla blocks, so nothing extra to download.",
+      "wiki": "https://modrinth.com/mod/wwoo",
+      "videos": [],
+      "version": "sU7oaRZv",
+      "requires": [
+        "cristel-lib"
+      ],
+      "guide": "behind"
+    },
+    {
+      "slug": "streams-reflowing",
+      "name": "Streams Reflowing",
+      "category": "world",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Streams that run downhill through the land, fill lakes and flow out to rivers and the sea. Only in new land.",
+      "wiki": "https://modrinth.com/mod/streams-reflowing",
+      "videos": [],
+      "version": "vbJ5meb8",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
+      "slug": "ct-overhaul-village",
+      "name": "ChoiceTheorem's Overhauled Village",
+      "category": "world",
+      "side": "server",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Villages rebuilt to suit where they stand (jungle, swamp, mountain, beach, dark forest, mushroom islands and more) in three sizes, and new pillager outposts. Only in new land. Runs on the server: nothing on your PC.",
+      "wiki": "https://modrinth.com/mod/ct-overhaul-village",
+      "videos": [],
+      "version": "ztzRUnQ7",
+      "requires": [
+        "lithostitched"
+      ],
+      "guide": "behind"
+    },
+    {
+      "slug": "villages-and-pillages",
+      "name": "Villages&Pillages",
+      "category": "world",
+      "side": "server",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Witch villages in swamps. Only in new land. Runs on the server: nothing on your PC.",
+      "wiki": "https://modrinth.com/mod/villages-and-pillages",
+      "videos": [],
+      "version": "4wFzeVeV",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
+      "slug": "tidal-towns",
+      "name": "Tidal Towns",
+      "category": "world",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Villages built of driftwood that float on the ocean. Only in new land. Runs on the server: nothing on your PC.",
+      "wiki": "https://modrinth.com/mod/tidal-towns",
+      "videos": [],
+      "version": "ahvrY85Y",
+      "requires": [],
+      "guide": "behind"
+    },
+    {
       "slug": "create-deco",
       "name": "Create Deco",
       "category": "building",
@@ -2824,6 +2913,54 @@
       "requires": []
     },
     {
+      "slug": "cristel-lib",
+      "name": "Cristel Lib",
+      "category": "base",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by William Wythers' Overhauled Overworld.",
+      "wiki": "https://modrinth.com/mod/cristel-lib",
+      "videos": [],
+      "version": "Sduz0AWP",
+      "requires": []
+    },
+    {
+      "slug": "cloth-config",
+      "name": "Cloth Config",
+      "category": "base",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by Cristel Lib (for William Wythers' Overhauled Overworld).",
+      "wiki": "https://modrinth.com/mod/cloth-config",
+      "videos": [],
+      "version": "izKINKFg",
+      "requires": []
+    },
+    {
+      "slug": "lithostitched",
+      "name": "Lithostitched",
+      "category": "base",
+      "side": "server",
+      "enabled": true,
+      "load": "L",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Library needed by ChoiceTheorem's Overhauled Village.",
+      "wiki": "https://modrinth.com/mod/lithostitched",
+      "videos": [],
+      "version": "cZu4cHY3",
+      "requires": []
+    },
+    {
       "slug": "supermartijn642s-core-lib",
       "name": "SuperMartijn642's Core Lib",
       "category": "base",
@@ -2972,13 +3109,17 @@
           "url": "https://www.youtube.com/watch?v=xFgL33GHlsw"
         }
       ],
-      "version": "jawvD7YZ",
       "requires": [
         "geckolib"
       ],
       "guide": "game",
       "topic": "combat",
-      "howTo": "Giant insects and spiders hunt on **Ashmoon**. Bring light, armour and a good weapon, and don't fight them in the dark."
+      "howTo": "Giant insects and spiders hunt on **Ashmoon**. Bring light, armour and a good weapon, and don't fight them in the dark. Their own world, the **Crawling**, is reached through the **Crawling Castle** on Ashmoon: right-click a **Crawling Compass** there to find it, light the four pillars inside with **scorch charges**, then right-click the middle block with an **abyssal crystal**. Its way out brings you home; walk through a basalt portal to get back to Ashmoon.",
+      "source": {
+        "private": "ArPhEx-5.0.2-dsw.1-neoforge-1.21.1.jar",
+        "sha512": "f5f142cee13394d9fdafa49f6832db070550c97e9290469c6b5718e988eeb6670de38a9fe3527575013e4b1070ee6911de623259ae1d4e6f408143d9ccb3e54f",
+        "note": "5.0.2 with Ashmoon in place of the main world: built by mods/arphex-ashmoon/build.sh"
+      }
     },
     {
       "slug": "mutant-monsters",

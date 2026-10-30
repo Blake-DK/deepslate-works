@@ -225,6 +225,7 @@ const PHRASES: Record<string, string | ((p: P) => string)> = {
   "world.pregenContinue": "turned the pre-generation on again",
   "world.pregenPause": "paused the pre-generation",
   "world.pregenCancel": "called the pre-generation off",
+  "world.pregenCancelWorld": (p) => `called the pre-generation of ${s(p.world)} off`,
   "world.pregenAutoPause": (p) => `a pre-generation nobody had turned on here was paused at ${s(p.percent)}%: the server had been empty for three minutes`,
   "server.kill": "ended the server's process (it was stuck while stopping)",
   "server.restart": (p) => (p.scheduled ? "the planned restart went ahead" : "restarted the server"),

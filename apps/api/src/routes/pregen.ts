@@ -4,40 +4,49 @@ import type { ConsoleTail } from "../amp/console.js";
 import { requireAdmin } from "../auth.js";
 import { mapOf } from "../status/map.js";
 import { PREGEN_WORLD } from "../actions/registry.js";
-import { chunksIn, phase, Refused, type Pregen } from "../status/pregen.js";
+import { areasOf, chunksIn, NONE, phase, Refused, worldOf, type Pregen } from "../status/pregen.js";
 
 // Admin → Server → Pre-generation. Off unless an admin turns it on; see status/pregen.ts.
 
 const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+const area = z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(10_000), world: PREGEN_WORLD.optional() });
 const on = z.object({
   mode: z.enum(["empty", "now"]),
   what: z.enum(["generate", "render", "both"]).default("generate"),
   purge: z.boolean().default(false),
-  area: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(10_000), world: PREGEN_WORLD.optional() }),
+  area,
+  // more worlds at the same time, one area each (Alex, 2026-10-30)
+  also: z.array(area).max(3).default([]),
   window: z.object({ from: clock, to: clock }).nullable().default(null),
   capHours: z.number().min(0.25).max(240).nullable().default(null),
 });
 
 export function pregenRoutes(app: FastifyInstance, tail: ConsoleTail, pregen: Pregen, players: () => number | null = () => null) {
-  const map = () => {
+  const map = (world?: string) => {
     const s = pregen.map.state;
-    const id = mapOf(pregen.plan.area?.world);
+    const id = mapOf(world);
     const m = s.maps[id] ?? null;
     // the estimate is for the task in hand, whichever map that is
     return { id, status: m?.status ?? null, percent: m?.percent ?? null, waiting: m?.pending ?? null, remaining: s.current === id ? s.remaining : null, threads: s.threads, at: s.listAt, stopped: pregen.plan.mapStopped === true };
   };
-  const view = () => ({
-    ...pregen.watch.state,
-    plan: pregen.plan,
-    doing: pregen.lastStep,
-    phase: pregen.plan.mode === "off" ? null : phase(pregen.plan.what, pregen.watch.state.status, false),
-    map: map(),
-    total: pregen.plan.area ? chunksIn(pregen.plan.area.radius) : null,
-    sleep: pregen.sleep,
-    serverState: tail.state,
-    serverRunning: tail.state === 20,
-    online: Math.max(tail.online.size, tail.state === 20 ? (players() ?? 0) : 0),
-  });
+  const view = () => {
+    const st = pregen.status();
+    const areas = areasOf(pregen.plan);
+    return {
+      ...st,
+      plan: pregen.plan,
+      doing: pregen.lastStep,
+      phase: pregen.plan.mode === "off" ? null : phase(pregen.plan.what, st.status, false),
+      map: map(pregen.plan.area?.world),
+      total: areas.length ? areas.reduce((n, a) => n + chunksIn(a.radius), 0) : null,
+      // world by world, when several generate at once
+      worlds: areas.length > 1 ? areas.map((a) => ({ ...NONE, ...pregen.watch.worlds[worldOf(a)], world: worldOf(a), area: a, total: chunksIn(a.radius), map: map(a.world) })) : null,
+      sleep: pregen.sleep,
+      serverState: tail.state,
+      serverRunning: tail.state === 20,
+      online: Math.max(tail.online.size, tail.state === 20 ? (players() ?? 0) : 0),
+    };
+  };
 
   app.get("/pregen", async () => {
     // what AMP allows is asked again when the last answer is a minute old

@@ -299,15 +299,18 @@ export function PregenCard({ pregen, frontiers = [] }: { pregen: Pregen | null; 
   const prog = progress(pregen);
   const mapProg = mapProgress(pregen);
   const perWorld = worldsProgress(pregen);
-  const worldOptions = (
-    <>
-      <option value="minecraft:overworld">Main world (around spawn)</option>
-      <option value="minecraft:the_nether">The Nether (around 0, 0)</option>
-      <option value="minecraft:the_end">The End (around 0, 0)</option>
-      <option value="deepslate:moon">Ashmoon (around 0, 0)</option>
-      {frontiers.map((f) => <option key={f.dimension} value={f.dimension}>Frontier · {f.name} (around 0, 0)</option>)}
-    </>
-  );
+  // a tick and a radius per world (Alex, 2026-10-30); ticked: the worlds of the plan on record, or the main world
+  const planned = [...(pregen?.plan.area ? [pregen.plan.area] : []), ...(pregen?.plan.also ?? [])];
+  const worldRows = [
+    { world: "minecraft:overworld", label: "Main world", where: "around spawn", radius: 1500 },
+    { world: "minecraft:the_nether", label: "The Nether", where: "around 0, 0", radius: 1500 },
+    { world: "minecraft:the_end", label: "The End", where: "around 0, 0", radius: 1500 },
+    { world: "deepslate:moon", label: "Ashmoon", where: "around 0, 0", radius: 3000 },
+    ...frontiers.map((f) => ({ world: f.dimension, label: `Frontier · ${f.name}`, where: "around 0, 0", radius: 1500 })),
+  ].map((r) => {
+    const a = planned.find((x) => (x.world ?? "minecraft:overworld") === r.world);
+    return { ...r, radius: a?.radius ?? r.radius, ticked: planned.length ? Boolean(a) : r.world === "minecraft:overworld" };
+  });
   const bar = (percent: number, label?: string) => <span className="mt-1 block h-2 overflow-hidden border bg-panel" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(percent)}><span className="block h-full bg-primary" style={{ width: `${Math.min(100, percent)}%` }} /></span>;
   // the map alone: chunky is not part of it and has nothing to say
   const renderOnly = pregen?.plan.mode !== undefined && pregen.plan.mode !== "off" && pregen.plan.what === "render";
@@ -355,25 +358,18 @@ export function PregenCard({ pregen, frontiers = [] }: { pregen: Pregen | null; 
             <input type="hidden" name="op" value="on" />
             <input type="hidden" name="x" value={pregen?.plan.area?.x ?? 0} />
             <input type="hidden" name="z" value={pregen?.plan.area?.z ?? 0} />
-            <div>
-              <Label htmlFor="pgw">World</Label>
-              <select id="pgw" name="world" defaultValue={pregen?.plan.area?.world ?? "minecraft:overworld"} className={cn("mt-1 h-8 text-sm", fieldClasses)}>
-                {worldOptions}
-              </select>
-              <p className="mt-1 text-xs text-muted-foreground">A Frontier is in the list once its datapack is shipped; it exists on the server from the start after the Sync.</p>
-            </div>
-            <div><Label htmlFor="pgr">Radius, blocks</Label><Input id="pgr" name="radius" type="number" min={16} max={10000} defaultValue={pregen?.plan.area?.radius ?? 1500} className="h-8 w-28 text-sm" required /></div>
-            <div className="flex flex-wrap items-end gap-2">
-              <span>
-                <Label htmlFor="pgaw">At the same time, also</Label>
-                <select id="pgaw" name="alsoWorld" defaultValue={pregen?.plan.also?.[0]?.world ?? (pregen?.plan.also?.[0] ? "minecraft:overworld" : "")} className={cn("mt-1 h-8 text-sm", fieldClasses)}>
-                  <option value="">Nothing else</option>
-                  {worldOptions}
-                </select>
-              </span>
-              <span><Label htmlFor="pgar">its radius</Label><Input id="pgar" name="alsoRadius" type="number" min={16} max={10000} defaultValue={pregen?.plan.also?.[0]?.radius ?? 3000} className="h-8 w-28 text-sm" /></span>
-            </div>
-            <p className="text-xs text-muted-foreground">Two worlds generate side by side, each with its own task and its own figures, and the map of each is rendered. The server shares its time between them, so each one goes slower than it would alone.</p>
+            <fieldset className="space-y-1 text-sm" data-testid="pregen-worlds">
+              <legend className="mb-1 font-medium">Worlds</legend>
+              {worldRows.map((r, i) => (
+                <div key={r.world} className="flex flex-wrap items-center gap-2">
+                  <label className="flex min-w-48 items-center gap-2"><Check type="checkbox" name="worlds" value={r.world} defaultChecked={r.ticked} />{r.label} <span className="text-xs text-muted-foreground">({r.where})</span></label>
+                  <Label htmlFor={`pgr${i}`} className="sr-only">{r.label}: radius, blocks</Label>
+                  <Input id={`pgr${i}`} name={`radius:${r.world}`} type="number" min={16} max={10000} defaultValue={r.radius} className="h-8 w-28 text-sm" />
+                  <span className="text-xs text-muted-foreground">blocks</span>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">Tick up to four. Ticked worlds generate side by side, each with its own task and figures, and the map of each is rendered. The server shares its time between them, so each one goes slower than it would alone. A Frontier is in the list once its datapack is shipped.</p>
+            </fieldset>
             <p className="text-xs text-muted-foreground">Around {pregen?.plan.area?.x ?? 0}, {pregen?.plan.area?.z ?? 0} (spawn). Another radius calls the present area off and begins a new one; what is already made is passed over quickly. Roughly: {[1500, 3000, 5000, 10000].map((r) => { const c = pregenCost(r); return `${r} = ${c.hours < 1 ? `${Math.round(c.hours * 60)} min` : `${c.hours.toFixed(1)} h`}, ${c.gb < 1 ? c.gb.toFixed(1) : Math.round(c.gb)} GB`; }).join(" · ")}.</p>
             <fieldset className="space-y-1 text-sm">
               <legend className="mb-1 font-medium">What</legend>

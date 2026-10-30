@@ -50,6 +50,147 @@ Rules enforced by `modpack lint`:
 - An `adminOnly` mod is not in a votable category.
 - A shown mod with no videos is a warning, unless `noVideosFound` holds the date YouTube was searched and had nothing genuine about it.
 
+## The pack on live (2026-10-30)
+
+Read from the live server's start at 19:31 UTC (the `_serverMods` capture in database `deepslate`; the test server's
+start at 11:28 loaded the same 97 jars) and from `modpack/mods.json` and `mods.lock.json` at `main` `ccad04a`. The
+site gave pack `0.1.0+a58590bd`, app 3.6.8. **Those files are what counts**; this table is a picture of them.
+
+- 120 mods in the catalogue, 109 switched on. 89 are on the server, 15 are on PCs only, 5 are in the lock but held
+  off the server until Season 1 (docs/44, docs/51, docs/63): L_Ender's Cataclysm, Mowzie's Mobs, Ender Dragon Fight
+  Remastered and their libraries Curios API and Lionfish API.
+- **Mekanism, Mekanism Generators and Mekanism Tools are on** (10.7.19.85): switched on in `d180023` (2026-10-12, docs/53 A, B, E1), live with the Moon on 2026-10-14. Their
+  ores (osmium, tin, fluorite and the rest) are on the Moon only (docs/55). docs/53's "switched off: they lost the
+  vote" is the record of 2026-10-12.
+- Immersive Engineering 12.4.2-194, Industrial Foregoing, AE2 and Create Big Cannons are on, since the Season 1 mods
+  vote on 2026-10-03.
+- In the lock and not in the catalogue, because a mod in the pack needs them: `balm`, `craft-config`, `guideme`, `kotlin-lang-forge`, `mezzconfig`, `placebo`, `titanium`.
+
+| slug | name | category | side | on live | version in the lock |
+|---|---|---|---|---|---|
+| alternate-current | Alternate Current | base | server | **on** | neoforge-mc1.21-1.9.0 |
+| appleskin | AppleSkin | base | both | **on** | 3.0.9+mc1.21 |
+| architectury-api | Architectury API | base | both | **on** | 13.0.11+neoforge |
+| badoptimizations | BadOptimizations | base | client | PCs only | 2.4.1 |
+| bettertabinfo | Better Tab Info | base | client | PCs only | 2.2.1+1.21.1-neoforge |
+| cloth-config | Cloth Config | base | server | **on** | 15.0.140+neoforge |
+| clumps | Clumps | base | both | **on** | 19.0.0.1 |
+| cobweb | Cobweb | base | both | **on** | 1.4.0 |
+| continuity-neoforged | Continuity | base | client | PCs only | 3.0.9+1.21.1 |
+| corpse | Corpse | base | both | **on** | neoforge-1.21.1-1.1.22 |
+| cristel-lib | Cristel Lib | base | server | **on** | neoforge-1.21.1-3.1.7 |
+| custom-window-title | Custom Window Title | base | client | PCs only | 1.4.1 |
+| dynamic-fps | Dynamic FPS | base | client | PCs only | 3.11.4 |
+| entityculling | Entity Culling | base | client | PCs only | 1.11.3 |
+| fallingtree | FallingTree | base | both | **on** | 1.21.1-1.21.1.11 |
+| fastfurnace | FastFurnace | base | both | **on** | 1.21.1-9.0.1 |
+| fastworkbench | FastWorkbench | base | both | **on** | 1.21.1-9.1.3 |
+| ferrite-core | FerriteCore | base | both | **on** | 7.0.3-neoforge |
+| fusion-connected-textures | Fusion (Connected Textures) | base | client | off |  |
+| get-it-together-drops | Get It Together, Drops! | base | server | **on** | v1.4 |
+| immediatelyfast | ImmediatelyFast | base | client | PCs only | 1.6.15+1.21.1-neoforge |
+| jade | Jade | base | both | **on** | 15.10.6+neoforge |
+| jei | Just Enough Items | base | both | **on** | 19.64.0.455 |
+| just-zoom | Just Zoom | base | client | PCs only | 3.1.0-1.21.1-neoforge |
+| konkrete | Konkrete | base | client | PCs only | 1.9.9-1.21-neoforge |
+| lithium | Lithium | base | both | **on** | mc1.21.1-0.15.4-neoforge |
+| lithostitched | Lithostitched | base | server | **on** | 1.8.1-neoforge-21.1 |
+| modernfix | ModernFix | base | both | **on** | 5.27.27+mc1.21.1 |
+| moonlight | Moonlight Lib | base | both | **on** | 1.21.1-3.7.2 |
+| mouse-tweaks | Mouse Tweaks | base | client | PCs only | 1.21-2.26.1-neoforge |
+| noisium | Noisium | base | server | **on** | 2.3.0+mc1.21-1.21.1 |
+| open-parties-and-claims | Open Parties and Claims | base | both | **on** | neoforge-1.21.1-0.33.0 |
+| resourceful-lib | Resourceful Lib | base | both | **on** | 3.0.12 |
+| rpl | Ritchie's Projectile Library | base | both | **on** | 2.1.2 |
+| scalable-cats-force | scalable-cats-force | base | both | **on** | 3.7.1-build-11 |
+| simple-voice-chat | Simple Voice Chat | base | both | **on** | neoforge-1.21.1-2.6.24 |
+| sodium | Sodium | base | client | PCs only | mc1.21.1-0.8.13-neoforge |
+| sophisticated-core | Sophisticated Core | base | both | **on** | 1.21.1-1.5.18.2431 |
+| supermartijn642s-config-lib | SuperMartijn642's Config Lib | base | both | off |  |
+| supermartijn642s-core-lib | SuperMartijn642's Core Lib | base | both | off |  |
+| flw-vanillin | Vanillin | base | client | PCs only | 1.1.3 |
+| xaeros-minimap | Xaero's Minimap | base | client | PCs only | neoforge-1.21.1-26.6.0 |
+| xaeros-world-map | Xaero's World Map | base | client | PCs only | neoforge-1.21.1-1.47.0 |
+| yacl | YetAnotherConfigLib | base | both | **on** | 3.8.2+1.21.1-neoforge |
+| ae2 | Applied Energistics 2 | factories | both | **on** | 19.2.18 |
+| create | Create | factories | both | **on** | 6.0.10+mc1.21.1 |
+| create-big-cannons | Create Big Cannons | factories | both | **on** | 5.11.7 |
+| create-connected | Create: Connected | factories | both | **on** | 1.3.3-mc1.21.1 |
+| createaddition | Create: Crafts & Additions | factories | both | **on** | neoforge-1.21.1-1.6.0 |
+| create-tfmg | Create: The Factory Must Grow | factories | both | **on** | 1.2.0 |
+| immersiveengineering | Immersive Engineering | factories | both | **on** | 12.4.2-194 |
+| industrial-foregoing | Industrial Foregoing | factories | both | **on** | 1.21-3.6.27 |
+| mekanism | Mekanism | factories | both | **on** | 10.7.19.85 |
+| mekanism-generators | Mekanism Generators | factories | both | **on** | 10.7.19.85 |
+| mekanism-tools | Mekanism Tools | factories | both | **on** | 10.7.19.85 |
+| additional-enchanted-miner | Quarry (Additional Enchanted Miner) | mining | both | **on** | 21.1.164 |
+| quarry-pause | Quarry pause | mining | server | **on** | 1.0.0 |
+| sophisticated-backpacks | Sophisticated Backpacks | mining | both | **on** | 1.21.1-3.26.15.2227 |
+| veinminer | VeinMiner | mining | both | **on** | 2.11.2 |
+| tacz-1.21.1 | TaCZ (Timeless and Classics Zero) | guns | both | **on** | 1.1.8-hotfix-r7 |
+| vics-point-blank | Vic's Point Blank | guns | both | off |  |
+| ct-overhaul-village | ChoiceTheorem's Overhauled Village | world | server | **on** | 3.6.3 |
+| comforts | Comforts | world | both | **on** | 9.0.5+1.21.1 |
+| farmers-delight | Farmer's Delight | world | both | **on** | 1.21.1-1.3.4 |
+| lets-do-meadow | Let's Do Meadow | world | both | **on** | 1.4.10 |
+| lets-do-vinery | Let's Do Vinery | world | both | **on** | 1.5.6 |
+| pipez | Pipez | world | both | **on** | neoforge-1.21.1-1.2.31 |
+| streams-reflowing | Streams Reflowing | world | both | **on** | 2.15.2 |
+| tidal-towns | Tidal Towns | world | server | **on** | 2.0+mod |
+| villages-and-pillages | Villages&Pillages | world | server | **on** | neoforge-2.0.0+mc1.21.1 |
+| waystones | Waystones | world | both | **on** | 21.1.46+neoforge-1.21.1 |
+| wwoo | William Wythers' Overhauled Overworld | world | server | **on** | 2.6.7 |
+| amendments | Amendments | building | both | **on** | 1.21-2.2.2 |
+| another-furniture | Another Furniture | building | both | **on** | 4.0.3 |
+| create-deco | Create Deco | building | both | **on** | 2.1.3 |
+| copycats | Create: Copycats+ | building | both | **on** | 3.0.9+mc.1.21.1-neoforge |
+| fairy-lights-fabric | Fairy Lights | building | both | **on** | 1.2.3-dsw.1 |
+| handcrafted | Handcrafted | building | both | **on** | 4.0.3 |
+| macaws-bridges | Macaw's Bridges | building | both | **on** | 3.1.2 |
+| macaws-doors | Macaw's Doors | building | both | **on** | 1.1.5 |
+| macaws-fences-and-walls | Macaw's Fences and Walls | building | both | **on** | 1.2.1 |
+| macaws-furniture | Macaw's Furniture | building | both | **on** | 3.4.1 |
+| macaws-holidays | Macaw's Holidays | building | both | **on** | 1.1.2 |
+| macaws-lights-and-lamps | Macaw's Lights and Lamps | building | both | **on** | 1.1.5 |
+| macaws-paths-and-pavings | Macaw's Paths and Pavings | building | both | **on** | 1.1.1 |
+| macaws-roofs | Macaw's Roofs | building | both | **on** | 2.3.2 |
+| macaws-stairs | Macaw's Stairs | building | both | **on** | 1.0.2 |
+| macaws-trapdoors | Macaw's Trapdoors | building | both | off |  |
+| macaws-windows | Macaw's Windows | building | both | **on** | 2.4.2 |
+| rechiseled | Rechiseled | building | both | off |  |
+| rechiseled-create | Rechiseled: Create | building | both | off |  |
+| serene-shrubbery | Serene Shrubbery | building | both | **on** | 2.4.0 |
+| supplementaries | Supplementaries | building | both | off |  |
+| twigs | Twigs | building | both | **on** | 1.21.1-3.1.2 |
+| wilder-flowers | Wilder Flowers | building | both | **on** | 1.1.0+1.21.1-neoforge |
+| cosy-critters | Cosy Critters & Creepy Crawlies | animals | client | PCs only | v0.3.3+1.21.1-neoforge |
+| critters-and-companions | Critters and Companions | animals | both | **on** | 2.7.0 |
+| friends-and-foes-forge | Friends & Foes | animals | both | **on** | neoforge-5.0.4+mc1.21.1 |
+| naturalist | Naturalist | animals | both | **on** | 2.0.7+1.21.1-neoforge |
+| apothic-attributes | Apothic Attributes | adventure | both | off |  |
+| arphex | ArPhEx (Arthropod Phobia Expansions) | adventure | both | **on** | 5.0.2-dsw.1 |
+| curios | Curios API | adventure | both | held for Season 1 | 9.5.1+1.21.1 |
+| edf-remastered | Ender Dragon Fight Remastered | adventure | server | held for Season 1 | 5.0.2+mod |
+| gateways-to-eternity | Gateways to Eternity | adventure | both | off |  |
+| geckolib | GeckoLib | adventure | both | **on** | 4.9.3 |
+| l_enders-cataclysm | L_Ender's Cataclysm | adventure | both | held for Season 1 | 3.33 |
+| lionfish-api | Lionfish API | adventure | both | held for Season 1 | 3.1 |
+| mowzies-mobs | Mowzie's Mobs | adventure | both | held for Season 1 | 1.8.2-dsw.1 |
+| multiplayerbosses | Multiplayer Bosses | adventure | both | off |  |
+| mutant-monsters | Mutant Monsters | adventure | both | **on** | v21.1.1-1.21.1-NeoForge |
+| nyfs-spiders | Nyf's Spiders | adventure | both | **on** | 3.0.2 |
+| puzzles-lib | Puzzles Lib | adventure | both | **on** | 21.1.66 |
+| async-locator-refined | Async Locator Refined | server | server | **on** | 1.21.1-1.6.0 |
+| bluemap | BlueMap | server | server | **on** | 5.7-neoforge |
+| chunky | Chunky | server | server | **on** | 1.4.23 |
+| server-sided-portals | Server Sided Portals | server | server | **on** | 2.2.1 |
+| servercore | ServerCore | server | server | **on** | 1.5.19+1.21.1 |
+| spark | spark | server | server | **on** | 1.10.124-neoforge-1.21.1 |
+| vanishmod | Vanishmod | server | server | **on** | 1.1.21 |
+| worldedit | WorldEdit | server | server | **on** | 7.3.8 |
+
+The table below is the catalogue of 2026-09-29, kept as the record of its day.
+
 ## The catalogue as it stands (2026-09-29, pack `0.1.0+1a48e8ff`)
 
 Made from `modpack/mods.json` and `mods.lock.json`; **those files are what counts**, this table is a picture of them. 40 mods, 31 in the pack. The lock has 34 files: 25 go to the server, 31 to a PC. "on" with "suggested" is the recommended set, switched on on 2026-09-29 while the vote stays open.

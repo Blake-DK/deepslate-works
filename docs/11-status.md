@@ -33,6 +33,15 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## What live runs, read from the server (2026-10-30, docs only)
+
+- **Live's start at 19:31 UTC** (`_serverMods` in database `deepslate`) loaded 97 jars, no problems; the test server's
+  11:28 start loaded the same 97. The site: pack `0.1.0+a58590bd`, app 3.6.8, 2 playing.
+- **Mekanism, Generators and Tools 10.7.19.85 are on live** (on since `d180023`, live with the Moon on 2026-10-14).
+  docs/53's opening list still says they lost the vote; that is the planner's record of 2026-10-12, left as written.
+- docs/06 has a new section, "The pack on live (2026-10-30)": all 120 catalogue mods with their state (89 on the
+  server, 15 PCs only, 5 held for Season 1, 11 off). Its old table of 2026-09-29 is kept as the record of its day.
+
 ## The live regen: docs/64 (2026-10-30, prepared; test check next, nothing changed on live)
 
 - **Alex:** "plan the main world regen of unused chunks and make this go live"; the plan agreed as recommended:

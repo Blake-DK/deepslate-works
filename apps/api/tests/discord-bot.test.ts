@@ -757,6 +757,23 @@ describe("new posts in season-updates tag @Minecraft (docs/53 D1)", () => {
     expect([t.calls[0]!.body.thread_name, t.calls[0]!.body.content, t.calls[0]!.body.allowed_mentions]).toEqual(["We're live", `<@&${ROLE}>\n**Deepslate Works is open.** Press Play at deepslate.dsw.test`, TAGS]);
   });
 
+  it("We're live always goes in the one post: made the first time, a reply in it after; made again if deleted (Alex, 2026-10-30)", async () => {
+    const t = routed({ role: ROLE });
+    t.add({ meta: { action: "site.settings", params: { live: true, was: false }, result: "OK" } });
+    await t.a.round();
+    t.add({ meta: { action: "site.settings", params: { live: true, was: false }, result: "OK" } });
+    await t.a.round();
+    expect(t.calls.map((c) => [t.where(c), c.body.thread_name ?? null, c.url.match(/thread_id=(\d+)/)?.[1] ?? null])).toEqual([["updates", "We're live", null], ["updates", null, "9001"]]);
+    expect(t.posts.get("live")?.threadId).toBe("9001");
+    const d = routed({ role: ROLE, deleted: true });
+    d.add({ meta: { action: "site.settings", params: { live: true, was: false }, result: "OK" } });
+    await d.a.round();
+    d.add({ meta: { action: "site.settings", params: { live: true, was: false }, result: "OK" } });
+    await d.a.round();
+    expect(d.calls.map((c) => (c.body.thread_name ? "post" : (c.url.match(/thread_id=(\d+)/)?.[1] ?? "?")))).toEqual(["post", "9001", "post"]);
+    expect(d.posts.get("live")?.threadId).not.toBe("9001");
+  });
+
   it("the forum test post, its reply and its edit tag nobody", async () => {
     const t = routed({ role: ROLE });
     expect(await t.a.test("updates")).toEqual({ ok: true });

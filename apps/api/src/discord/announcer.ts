@@ -569,7 +569,8 @@ export class Announcer {
       case "site.settings": {
         if (!sw.live || p.live !== true || p.was !== false) return true;
         const ch = this.twoChannels ? "updates" : "feed";
-        return ok(await this.send(e, 0, ch, "live", tagged(asServer(brand, liveText(brand.name, new URL(this.d.portal).host)), this.role(ch)), undefined, ch === "updates" ? { threadName: LIVE_TITLE, tags: this.tags(sw, "News") } : {}));
+        const msg = tagged(asServer(brand, liveText(brand.name, new URL(this.d.portal).host)), this.role(ch));
+        return ok(ch === "updates" ? await this.live(e, msg, sw, now) : await this.send(e, 0, ch, "live", msg));
       }
       case "poll.open":
       case "vote.open":
@@ -748,6 +749,24 @@ export class Announcer {
     }
     const r = await this.replyToVote(e, 1, kind, id, `${kind} closed`, asServer(brand, voteClosedText(v, this.d.portal)), brand, sw, now);
     return r.ok || !r.retry;
+  }
+
+  // ---- We're live (Alex, 2026-10-30): one forum post, a reply each time it goes on --------------------------------------
+
+  /**
+   * Every "We're live" goes into the one post "We're live" in season-updates: the first makes it, the later ones are
+   * replies in it. One deleted by hand is made again, and the message goes in the new one.
+   */
+  private async live(e: FeedEvent, msg: Message, sw: Switches, now: Date): Promise<Outcome> {
+    const open = async (n: number): Promise<Outcome> => {
+      const r = await this.send(e, n, "updates", "live", msg, undefined, { threadName: LIVE_TITLE, tags: this.tags(sw, "News") });
+      if (r.ok && r.channelId) await this.keep({ key: "live", channel: "updates", messageId: r.id, postedAt: now, editedAt: null, via: "webhook", threadId: r.channelId });
+      return r;
+    };
+    const threadId = (await this.postOf("live"))?.threadId ?? null;
+    if (!threadId) return open(0);
+    const r = await this.send(e, 1, "updates", "live", msg, undefined, { threadId });
+    return r.ok || !r.gone ? r : open(2);
   }
 
   // ---- docs/21 §6, docs/22 §13: season moments, a forum post per boss, per trial and per season ----------------------

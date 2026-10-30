@@ -33,6 +33,24 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## The live regen: docs/64 (2026-10-30, prepared; test check next, nothing changed on live)
+
+- **Alex:** "plan the main world regen of unused chunks and make this go live"; the plan agreed as recommended:
+  a short check on test instead of the week-long preview, the keep rule of docs/64 §1 (2 minutes of player time, claims,
+  lit portals, logout and bed chunks, graves, player waystones, 2 chunks around them, enclosed holes), Ashmoon trimmed
+  too (brings ArPhEx's castle near), radius 5,000 in the window and the rest after, a window before 15 November.
+- **Done:** test checkout fast-forwarded to `9862e25` (it had stayed at `c0caf8e`: `repo-sync-test` runs only on a
+  stack Redeploy); change log entry `2026-10-30-new-land` (titled, `onSync`); the tools of docs/64 §2 written and
+  installed (AMP host `/home/ladm/regen-2026-10/`, docker-01v `/home/ladm/deepslate-regen-2026-10/tools/`). The keep
+  tool reproduces 2026-10-28's 34,574 exactly, then keeps 145 enclosed chunks more; MCA Selector's delete with
+  whole-region lines rehearsed on four live regions, chunk for chunk right.
+- **Since 2026-10-28** live has had 8 joins (last left 2026-10-30 00:26), so the set is made in the window from a
+  stopped copy, never from the old one.
+- **Access:** this host's key is in ladm's `authorized_keys` on the AMP host; passwordless sudo there until
+  2026-10-31 09:30 UTC (a timer removes `/etc/sudoers.d/90-ladm-temp`).
+- **Next:** docs/64 §3 on test (Alex: Build, Sync, Start; then pre-generation and a look), the rehearsal on test, then
+  the window. Old worlds on the AMP host (~180 GB from 2026-10-09/10) are listed for Alex, not removed.
+
 ## Season 1's bosses as a new world: docs/63 (2026-10-29, planned, nothing built or run)
 
 - **Alex:** Season 1 is not switched on; its bosses come in as a new world, not a change to the main overworld.

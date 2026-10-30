@@ -409,6 +409,19 @@ export const CHANGES: Change[] = [
     ],
     onSync: true,
   },
+  {
+    id: "2026-10-30-new-land",
+    date: "2026-10-30",
+    title: "New land past your builds",
+    lines: [
+      "Everywhere nobody had spent time has been made again with new land: new trees and plants in every kind of land, and streams that run down the hills into the rivers.",
+      "Villages now come in many new styles, one for each kind of land and in three sizes. Look out for a witch village in the swamps and a village on the sea.",
+      "Everything you built, and the land around it, is just as you left it. The new land starts a little way past it, so you may see an edge there.",
+      "Ashmoon's empty land has been made again too, so the Crawling Castle and the other giant-insect places are much closer to its middle now.",
+      "Press Play to update.",
+    ],
+    onSync: true,
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

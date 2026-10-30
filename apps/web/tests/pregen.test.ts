@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapProgress, modeText, pregenCost, progress, sleepText, worldName, type Pregen } from "@/lib/pregen";
+import { mapProgress, modeText, pregenCost, progress, sleepText, worldName, worldsProgress, type Pregen } from "@/lib/pregen";
 import { describeAction } from "@/shared/events";
 
 const AREA = { x: 0, z: 0, radius: 1500 };
@@ -20,6 +20,25 @@ describe("progress", () => {
     expect(progress({ ...base, plan: { mode: "off", area: null }, total: null }).line).toBe("Nothing has been generated ahead of time yet.");
     expect(progress({ ...base, status: "finished", chunks: 35721, percent: 100 })).toEqual({ line: "Done: 35,721 chunks, 100%.", percent: 100 });
     expect(progress(null).percent).toBeNull();
+  });
+});
+
+describe("two worlds at once", () => {
+  it("has a line and a bar for each world, and none when there is one world", () => {
+    const moon = { x: 0, z: 0, radius: 3000, world: "deepslate:moon" };
+    const p: Pregen = {
+      ...base,
+      status: "running",
+      worlds: [
+        { world: "minecraft:overworld", area: AREA, total: 35721, status: "finished", chunks: 35721, percent: 100, eta: null, rate: null },
+        { world: "deepslate:moon", area: moon, total: 141376, status: "running", chunks: 70688, percent: 50, eta: "0:30:00", rate: 40 },
+      ],
+    };
+    expect(worldsProgress(p)).toEqual([
+      { name: "the main world", world: "minecraft:overworld", radius: 1500, line: "Done: 35,721 chunks, 100%.", percent: 100 },
+      { name: "Ashmoon", world: "deepslate:moon", radius: 3000, line: "70,688 of 141,376 chunks, 50.0%, about 0:30:00 to go, 40 chunks a second.", percent: 50 },
+    ]);
+    expect(worldsProgress(base)).toEqual([]);
   });
 });
 

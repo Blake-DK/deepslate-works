@@ -707,6 +707,8 @@ export const actions = {
   "world.pregenContinue": define({ name: "world.pregenContinue", role: "ADMIN", input: z.object({}), build: () => ["chunky quiet 30", "chunky continue"] }),
   // chunky asks "are you sure" and wants `confirm`
   "world.pregenCancel": define({ name: "world.pregenCancel", role: "ADMIN", input: z.object({}), build: () => ["chunky cancel", "chunky confirm"] }),
+  // One world's task only, when several worlds generate at once and only one of them changes (chunky asks to confirm either way).
+  "world.pregenCancelWorld": define({ name: "world.pregenCancelWorld", role: "ADMIN", input: z.object({ world: PREGEN_WORLD }), build: (_ctx, { world }) => [`chunky cancel ${world}`, "chunky confirm"] }),
   // Before the server is stopped: a stop in the middle of generating hung at "Saving worlds" (2026-09-29).
   "world.pregenPause": define({ name: "world.pregenPause", role: "ADMIN", input: z.object({}), build: () => ["chunky pause", "save-all flush"] }),
   "world.pregenProgress": define({ name: "world.pregenProgress", role: "ADMIN", input: z.object({}), build: () => ["chunky progress"] }),

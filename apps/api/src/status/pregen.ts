@@ -50,7 +50,7 @@ export type PregenEvent =
   | { type: "pregen"; what: "finished"; world: string; chunks: number | null }
   | { type: "pregen"; what: "none-left" };
 
-const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, at: null };
+export const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, at: null };
 
 /** Pure: the state after chunky has said something. */
 export function nextPregen(s: PregenState, e: PregenEvent, at: Date): PregenState {
@@ -79,6 +79,11 @@ export function nextPregen(s: PregenState, e: PregenEvent, at: Date): PregenStat
 /** What chunky last said. Old lines count too: after a restart of api the page should still say where it stands. */
 export class PregenWatch {
   state: PregenState = NONE;
+  /**
+   * The same, world by world: chunky runs one task per world, side by side (Alex, 2026-10-30: the main world and
+   * Ashmoon at once). A line that names no world is about every task.
+   */
+  worlds: Record<string, PregenState> = {};
   /** When the game last said "Saved the game". */
   savedAt = 0;
 
@@ -86,7 +91,13 @@ export class PregenWatch {
 
   start() {
     this.tail.on((e, info) => {
-      if (e.type === "pregen") this.state = nextPregen(this.state, e, new Date(this.now()));
+      if (e.type === "pregen") {
+        const at = new Date(this.now());
+        this.state = nextPregen(this.state, e, at);
+        const w = "world" in e ? e.world : null;
+        if (w) this.worlds[w] = nextPregen(this.worlds[w] ?? NONE, e, at);
+        else for (const k of Object.keys(this.worlds)) this.worlds[k] = nextPregen(this.worlds[k]!, e, at);
+      }
       if (e.type === "line" && !info.replay && /^Saved the game$/.test(e.text.trim())) this.savedAt = this.now();
     });
   }
@@ -96,16 +107,21 @@ export class PregenWatch {
 
 /** `world`: the dimension; absent = the main world (every plan saved before 2026-10-05). */
 export type Area = { x: number; z: number; radius: number; world?: string };
+export const worldOf = (a: Area) => a.world ?? "minecraft:overworld";
 export type Window = { from: string; to: string }; // "02:00", "08:00", UK time; may run over midnight
 
 export type What = "generate" | "render" | "both";
 
 export type PregenPlan =
-  | { mode: "off"; area: Area | null; /** BlueMap's render threads were stopped from here and are owed a start. */ mapStopped?: boolean }
+  | { mode: "off"; area: Area | null; also?: Area[]; /** BlueMap's render threads were stopped from here and are owed a start. */ mapStopped?: boolean }
   | {
       mode: "empty" | "now";
       what: What;
       area: Area;
+      /** More areas, each in another world, generated at the same time as `area` (absent in plans before 2026-10-30). */
+      also?: Area[];
+      /** The worlds of `also` not handed to chunky yet. */
+      alsoFresh?: string[];
       window: Window | null; // "empty" only
       capHours: number | null; // hours of generating; null = until the area is done
       ranMs: number; // generating time so far
@@ -199,6 +215,35 @@ export function step(plan: Exclude<PregenPlan, { mode: "off" }>, v: View): Step 
   return "run";
 }
 
+/** Every area of a plan: the first, then the ones generated at the same time. */
+export const areasOf = (p: PregenPlan): Area[] => (p.area ? [p.area, ...(p.also ?? [])] : []);
+
+/**
+ * Pure: one state for several worlds' tasks. Running while any runs, finished when all are; chunks added up, the
+ * percentage of all their chunks, the rates added up and the longest estimate.
+ */
+export function combine(states: PregenState[], totals: number[]): PregenState {
+  if (states.length === 1) return states[0]!;
+  const st = states.map((x) => x.status);
+  const status: PregenState["status"] = st.includes("running") ? "running" : st.every((x) => x === "finished") ? "finished" : st.includes("paused") ? "paused" : st.every((x) => x === "cancelled") ? "cancelled" : st.some((x) => x !== "none") ? "paused" : "none";
+  const known = states.some((x) => x.chunks !== null);
+  const chunks = known ? states.reduce((n, x, i) => n + (x.status === "finished" ? (x.chunks ?? totals[i]!) : (x.chunks ?? 0)), 0) : null;
+  const total = totals.reduce((a, b) => a + b, 0);
+  const rates = states.filter((x) => x.status === "running" && x.rate !== null).map((x) => x.rate!);
+  const secs = (eta: string) => eta.split(":").reduce((n, p) => n * 60 + Number(p), 0);
+  const etas = states.filter((x) => x.status === "running" && x.eta).map((x) => x.eta!);
+  const at = states.map((x) => x.at).filter((x): x is string => x !== null).sort().at(-1) ?? null;
+  return {
+    status,
+    world: null,
+    chunks,
+    percent: status === "finished" ? 100 : chunks !== null && total > 0 ? Math.min(100, Math.round((chunks / total) * 10_000) / 100) : null,
+    eta: etas.length ? etas.reduce((a, b) => (secs(b) > secs(a) ? b : a)) : null,
+    rate: rates.length ? rates.reduce((a, b) => a + b, 0) : null,
+    at,
+  };
+}
+
 export const sameArea = (a: Area | null, b: Area | null) => Boolean(a && b && a.x === b.x && a.z === b.z && a.radius === b.radius && (a.world ?? "minecraft:overworld") === (b.world ?? "minecraft:overworld"));
 
 /** Pure: chunks in a square of that radius, as chunky counts them. */
@@ -270,13 +315,25 @@ export class Pregen {
     this.plan =
       loaded && (loaded.mode === "empty" || loaded.mode === "now") && loaded.area
         ? { ...loaded, what: loaded.what ?? "generate", mapAsked: loaded.mapAsked ?? null, mapStopped: loaded.mapStopped ?? false, purge: loaded.purge ?? false }
-        : { mode: "off", area: loaded?.area ?? null, ...(loaded?.mapStopped ? { mapStopped: true } : {}) };
+        : { mode: "off", area: loaded?.area ?? null, ...(loaded?.area && loaded.also?.length ? { also: loaded.also } : {}), ...(loaded?.mapStopped ? { mapStopped: true } : {}) };
     this.lastTick = this.now();
     this.timer = setInterval(() => void this.tick().catch((err) => this.log({ err: String(err) }, "pregen tick failed")), 10_000);
   }
 
   stop() {
     if (this.timer) clearInterval(this.timer);
+  }
+
+  /** Where the plan's chunky tasks stand: the one task, or every world's together. */
+  status(): PregenState {
+    const areas = areasOf(this.plan);
+    if (areas.length <= 1) return this.watch.state;
+    return combine(areas.map((a) => this.watch.worlds[worldOf(a)] ?? NONE), areas.map((a) => chunksIn(a.radius)));
+  }
+
+  /** Is chunky generating: what it last said, or any world of the plan. */
+  private anyRunning(): boolean {
+    return this.watch.state.status === "running" || this.status().status === "running";
   }
 
   /** What AMP says about its sleep mode and about what the portal may do to it. Reads only. */
@@ -312,7 +369,7 @@ export class Pregen {
     return ok;
   }
 
-  async turnOn(input: { mode: "empty" | "now"; what?: What; purge?: boolean; area: Area; window: Window | null; capHours: number | null }, by: string | null) {
+  async turnOn(input: { mode: "empty" | "now"; what?: What; purge?: boolean; area: Area; also?: Area[]; window: Window | null; capHours: number | null }, by: string | null) {
     const what = input.what ?? "generate";
     const purge = input.purge === true && what !== "generate";
     const s = await this.lookAtSleep();
@@ -325,23 +382,41 @@ export class Pregen {
           : `Not turned on: AMP does not let the portal switch sleep mode off, and without that the server is put to sleep in the middle of generating. In the instance's own panel, give the role of the user "webapp" the permission Settings → MinecraftModule → Limits → SleepMode (${SLEEP_PERMISSION}), then turn this on again.`,
       );
     }
+    const also = (input.also ?? []).filter((a) => worldOf(a) !== worldOf(input.area));
+    if (new Set(also.map(worldOf)).size !== also.length) throw new Refused("validation", "One area per world.");
     const was = this.plan;
-    const status = this.watch.state.status;
-    // Another area than the one chunky has: that one is called off first.
-    // Rendering alone leaves chunky and what it has as they are.
-    const another = what !== "render" && was.area !== null && !sameArea(was.area, input.area);
+    const wasAreas = areasOf(was);
+    const gen = what !== "render";
+    // An area chunky has that this plan does not want (another radius, or a world left out): called off first, all
+    // of chunky at once when none of what it has is kept. Rendering alone leaves chunky and what it has as they are.
+    const drop = gen ? wasAreas.filter((b) => ![input.area, ...also].some((a) => sameArea(a, b))) : [];
+    const st = (w: string) => this.watch.worlds[w]?.status ?? (wasAreas.length <= 1 ? this.watch.state.status : "none");
+    const isFresh = (a: Area) => gen && (!wasAreas.some((b) => sameArea(a, b)) || ["finished", "cancelled"].includes(st(worldOf(a))));
     if (was.mode !== "off") await this.turnOff("asked", by);
-    if (another && this.tail.state === 20) await runAction(this.amp, this.ctx(), "world.pregenCancel", {}, by);
-    const fresh = what !== "render" && (another || was.area === null || status === "finished" || status === "cancelled");
-    if (fresh) this.watch.state = NONE;
+    // A world the portal has no area for may still have a task of chunky's own (started on the console, or left from
+    // before: 2026-10-30, a main-world task of radius 10,000 from early October). A start there would ask chunky's
+    // "confirm" and the next "continue" would carry the old task on: it is called off first.
+    const unknown = gen ? [input.area, ...also].filter((a) => !wasAreas.some((b) => worldOf(b) === worldOf(a))) : [];
+    if (this.tail.state === 20) {
+      const all = drop.length > 0 && drop.length === wasAreas.length;
+      if (all) await runAction(this.amp, this.ctx(), "world.pregenCancel", {}, by);
+      else for (const b of [...drop, ...unknown]) await runAction(this.amp, this.ctx(), "world.pregenCancelWorld", { world: worldOf(b) }, by);
+    }
+    const fresh = isFresh(input.area);
+    const alsoFresh = also.filter(isFresh).map(worldOf);
+    if (fresh) {
+      this.watch.state = NONE;
+      this.watch.worlds[worldOf(input.area)] = NONE;
+    }
+    for (const w of alsoFresh) this.watch.worlds[w] = NONE;
     this.wasRunning = this.tail.state === 20; // turning it on is not a server coming up
-    this.plan = { mode: input.mode, what, area: input.area, window: input.mode === "empty" ? input.window : null, capHours: input.capHours, ranMs: 0, since: new Date(this.now()).toISOString(), by, fresh, sleepWas: null, mapAsked: null, mapStopped: this.plan.mode === "off" && this.plan.mapStopped === true, purge };
+    this.plan = { mode: input.mode, what, area: input.area, window: input.mode === "empty" ? input.window : null, capHours: input.capHours, ranMs: 0, since: new Date(this.now()).toISOString(), by, fresh, sleepWas: null, mapAsked: null, mapStopped: this.plan.mode === "off" && this.plan.mapStopped === true, purge, ...(also.length ? { also, alsoFresh } : {}) };
     this.lastCommand = 0;
     this.lastMapCommand = 0;
     this.lastMapAsk = 0;
     this.updatedInARow = 0;
     await this.store.save(this.plan);
-    await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, what, purge, ...input.area, window: input.window, capHours: input.capHours, newArea: fresh }, result: "OK" });
+    await audit({ userId: by, action: "world.pregenOn", params: { mode: input.mode, what, purge, ...input.area, ...(also.length ? { also, alsoFresh } : {}), window: input.window, capHours: input.capHours, newArea: fresh }, result: "OK" });
     await this.tick();
   }
 
@@ -353,14 +428,15 @@ export class Pregen {
     const owed = was.mapStopped && !(await this.mapThreads(true));
     if (was.sleepWas !== null) await this.setSleep(was.sleepWas);
     const map = this.map.state.maps[mapOf(was.area?.world)];
-    const inHand = phase(was.what, this.watch.state.status, reason === "done");
-    this.plan = { mode: "off", area: reason === "done" ? null : was.area, ...(owed ? { mapStopped: true } : {}) };
+    const st = this.status();
+    const inHand = phase(was.what, st.status, reason === "done");
+    this.plan = { mode: "off", area: reason === "done" ? null : was.area, ...(reason !== "done" && was.also?.length ? { also: was.also } : {}), ...(owed ? { mapStopped: true } : {}) };
     this.lastStep = "off";
     await this.store.save(this.plan);
     await audit({
       userId: by,
       action: "world.pregenOff",
-      params: { reason, what: was.what, phase: inHand, percent: this.watch.state.percent, chunks: this.watch.state.chunks, mapPercent: map?.percent ?? null, mapWaiting: map?.pending ?? null, radius: was.area.radius, sleepRestored: was.sleepWas },
+      params: { reason, what: was.what, phase: inHand, percent: st.percent, chunks: st.chunks, ...(was.also?.length ? { worlds: areasOf(was).map(worldOf) } : {}), mapPercent: map?.percent ?? null, mapWaiting: map?.pending ?? null, radius: was.area.radius, sleepRestored: was.sleepWas },
       result: paused ? "OK" : "FAILED",
     });
   }
@@ -395,13 +471,13 @@ export class Pregen {
     const listAt = s.listAt ? Date.parse(s.listAt) : 0;
     if (s.lists !== this.listSeen && listAt >= Date.parse(plan.mapAsked) + MAP_AFTER_ASK_MS && now - listAt >= MAP_SETTLE_MS) {
       this.listSeen = s.lists;
-      this.updatedInARow = rendered(s, mapOf(plan.area.world)) ? this.updatedInARow + 1 : 0;
+      this.updatedInARow = areasOf(plan).every((a) => rendered(s, mapOf(a.world))) ? this.updatedInARow + 1 : 0;
     }
     return this.updatedInARow >= 2;
   }
 
   private async pause(): Promise<boolean> {
-    if (this.tail.state !== 20 || this.watch.state.status !== "running") return true;
+    if (this.tail.state !== 20 || !this.anyRunning()) return true;
     return (await runAction(this.amp, this.ctx(), "world.pregenPause", {}, null)).ok;
   }
 
@@ -410,7 +486,7 @@ export class Pregen {
    * save is waited for (a minute at most). A stop in the middle of generating hung the server at "Saving worlds".
    */
   async quiesce(): Promise<{ paused: boolean; saved: boolean }> {
-    if (this.tail.state !== 20 || this.watch.state.status !== "running") return { paused: false, saved: true };
+    if (this.tail.state !== 20 || !this.anyRunning()) return { paused: false, saved: true };
     const asked = this.now();
     const ok = (await runAction(this.amp, this.ctx(), "world.pregenPause", {}, null)).ok;
     for (let i = 0; ok && i < 60; i++) {
@@ -471,7 +547,7 @@ export class Pregen {
         }
       }
       // Nobody has turned anything on: a pre-generation started by hand on the console is not left to meet AMP's sleep.
-      if (running && online === 0 && this.watch.state.status === "running" && this.emptySince !== null && now - this.emptySince >= 3 * 60_000) {
+      if (running && online === 0 && this.anyRunning() && this.emptySince !== null && now - this.emptySince >= 3 * 60_000) {
         this.emptySince = null;
         await this.pause();
         await audit({ action: "world.pregenAutoPause", params: { percent: this.watch.state.percent, chunks: this.watch.state.chunks }, result: "OK" });
@@ -479,9 +555,10 @@ export class Pregen {
       return;
     }
     const mapDone = this.mapDone(now);
-    const inHand = phase(this.plan.what, this.watch.state.status, mapDone);
-    if (this.watch.state.status === "running" || (inHand === "render" && this.lastStep === "render" && running)) this.plan = { ...this.plan, ranMs: this.plan.ranMs + dt };
-    const isDue = due(this.plan, this.watch.state.status, new Date(now), mapDone) === "yes";
+    const st = this.status();
+    const inHand = phase(this.plan.what, st.status, mapDone);
+    if (st.status === "running" || (inHand === "render" && this.lastStep === "render" && running)) this.plan = { ...this.plan, ranMs: this.plan.ranMs + dt };
+    const isDue = due(this.plan, st.status, new Date(now), mapDone) === "yes";
 
     // AMP's sleep: off while the mode is due, as it was otherwise.
     if (isDue && this.plan.sleepWas === null) {
@@ -499,8 +576,8 @@ export class Pregen {
       await this.store.save(this.plan);
     }
 
-    const s = step(this.plan, { serverRunning: running, online, pregen: this.watch.state.status, at: new Date(now), sleepOff: this.plan.sleepWas !== null && this.sleep.on === false, emptyForMs: this.emptySince === null ? null : now - this.emptySince, sleepDelayMin: this.sleep.delayMin ?? 5, mapDone, lag: this.lag });
-    if (s !== this.lastStep) this.log({ step: s, online, percent: this.watch.state.percent, map: this.map.state.maps[mapOf(this.plan.area?.world)] ?? null }, "pregen");
+    const s = step(this.plan, { serverRunning: running, online, pregen: st.status, at: new Date(now), sleepOff: this.plan.sleepWas !== null && this.sleep.on === false, emptyForMs: this.emptySince === null ? null : now - this.emptySince, sleepDelayMin: this.sleep.delayMin ?? 5, mapDone, lag: this.lag });
+    if (s !== this.lastStep) this.log({ step: s, online, percent: st.percent, map: this.map.state.maps[mapOf(this.plan.area?.world)] ?? null }, "pregen");
     this.lastStep = s;
     switch (s) {
       case "off:done":
@@ -513,7 +590,7 @@ export class Pregen {
       case "pause:playing":
       case "pause:sleep":
       case "pause:lag":
-        if (this.watch.state.status === "running" && now - this.lastCommand >= 15_000) {
+        if (this.anyRunning() && now - this.lastCommand >= 15_000) {
           this.lastCommand = now;
           await this.pause();
         }
@@ -548,12 +625,11 @@ export class Pregen {
           // Deleting a map makes BlueMap render it anew by itself, all of it, when the deleting is done.
           let ok = true;
           // another world than the main one: its own map only; "the whole map" and "delete the map" never reach the others from there
-          const own = mapOf(this.plan.area.world);
-          const maps = this.plan.area.world && this.plan.area.world !== "minecraft:overworld" ? [own] : ALL_MAPS;
-          const { x, z, radius } = this.plan.area;
+          const areas = areasOf(this.plan);
+          const maps = [...new Set(areas.flatMap((a) => (worldOf(a) === "minecraft:overworld" ? ALL_MAPS : [mapOf(a.world)])))];
           if (this.plan.purge) for (const map of maps) ok = ok && (await runAction(this.amp, this.ctx(), "map.purge", { map }, this.plan.by)).ok;
           else if (this.plan.wholeMaps) for (const map of maps) ok = ok && (await runAction(this.amp, this.ctx(), "map.update", { map }, this.plan.by)).ok;
-          else ok = (await runAction(this.amp, this.ctx(), "map.update", { map: own, x, z, radius }, this.plan.by)).ok;
+          else for (const { x, z, radius, world } of areas) ok = ok && (await runAction(this.amp, this.ctx(), "map.update", { map: mapOf(world), x, z, radius }, this.plan.by)).ok;
           if (!ok) return;
           this.updatedInARow = 0;
           this.plan = { ...this.plan, mapAsked: new Date(now).toISOString() };
@@ -566,14 +642,21 @@ export class Pregen {
         return;
       }
       case "run": {
-        if (this.watch.state.status === "running" || now - this.lastCommand < AGAIN_MS) return;
+        const alsoFresh = this.plan.alsoFresh ?? [];
+        if ((st.status === "running" && !alsoFresh.length) || now - this.lastCommand < AGAIN_MS) return;
         this.lastCommand = now;
-        if (this.plan.fresh) {
-          const r = await runAction(this.amp, this.ctx(), "world.pregen", this.plan.area, this.plan.by);
-          if (r.ok) {
-            this.plan = { ...this.plan, fresh: false };
-            await this.store.save(this.plan);
+        if (this.plan.fresh || alsoFresh.length) {
+          // every area not handed over yet, one chunky task per world; then the ones it has already are carried on
+          let plan = this.plan;
+          if (plan.fresh && (await runAction(this.amp, this.ctx(), "world.pregen", plan.area, plan.by)).ok) plan = { ...plan, fresh: false };
+          for (const a of plan.also ?? []) {
+            const w = worldOf(a);
+            if (alsoFresh.includes(w) && (await runAction(this.amp, this.ctx(), "world.pregen", a, plan.by)).ok) plan = { ...plan, alsoFresh: (plan.alsoFresh ?? []).filter((x) => x !== w) };
           }
+          const handedBefore = !this.plan.fresh || (plan.also ?? []).some((a) => !alsoFresh.includes(worldOf(a)));
+          this.plan = plan;
+          await this.store.save(this.plan);
+          if (handedBefore) await runAction(this.amp, this.ctx(), "world.pregenContinue", {}, null);
           return;
         }
         await runAction(this.amp, this.ctx(), "world.pregenContinue", {}, null);

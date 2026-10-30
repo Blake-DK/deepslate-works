@@ -212,7 +212,8 @@ describe("the render step, from turning it on to the finished map", () => {
     await r.pregen.start(); r.pregen.stop();
     r.tail.state = 20;
     await r.pregen.turnOn({ mode: "empty", what: "both", area: AREA, window: null, capHours: null }, null);
-    expect(r.amp.console).toEqual(["chunky quiet 30", "chunky world minecraft:overworld", "chunky shape square", "chunky center 0 0", "chunky radius 1500", "chunky start"]);
+    // no area on record: whatever chunky kept for the world is called off before the new one begins
+    expect(r.amp.console).toEqual(["chunky cancel minecraft:overworld", "chunky confirm", "chunky quiet 30", "chunky world minecraft:overworld", "chunky shape square", "chunky center 0 0", "chunky radius 1500", "chunky start"]);
     expect(r.amp.console.some((c) => c.startsWith("bluemap"))).toBe(false);
     const before = r.amp.console.length;
     r.say(["Task running for minecraft:overworld. Processed: 9511 chunks (26.63%), ETA: 0:08:30, Rate: 51.4 cps, Current: 73, 37"]);

@@ -24,8 +24,18 @@ export type MapView = {
   stopped: boolean;
 };
 export type Plan =
-  | { mode: "off"; area: Area | null }
-  | { mode: "empty" | "now"; what?: What; purge?: boolean; area: Area; window: { from: string; to: string } | null; capHours: number | null; ranMs: number; since: string; sleepWas: boolean | null };
+  | { mode: "off"; area: Area | null; also?: Area[] }
+  | { mode: "empty" | "now"; what?: What; purge?: boolean; area: Area; also?: Area[]; window: { from: string; to: string } | null; capHours: number | null; ranMs: number; since: string; sleepWas: boolean | null };
+
+type Task = {
+  status: "none" | "running" | "paused" | "finished" | "cancelled";
+  chunks: number | null;
+  percent: number | null;
+  eta: string | null;
+  rate: number | null;
+};
+/** One world's task, when several worlds generate at once. */
+export type WorldTask = Task & { world: string; area: Area; total: number; map?: MapView | null };
 
 export type Pregen = {
   status: "none" | "running" | "paused" | "finished" | "cancelled";
@@ -46,6 +56,8 @@ export type Pregen = {
   /** What is in hand while a mode is on. */
   phase?: "generate" | "render" | "done" | null;
   map?: MapView | null;
+  /** World by world, when the plan has more than one; the figures above are all of them together. */
+  worlds?: WorldTask[] | null;
 };
 
 const n = (v: number) => v.toLocaleString("en-GB");
@@ -62,10 +74,19 @@ export type Progress = { line: string; percent: number | null };
 /** Chunks done and to do, the percentage and chunky's own estimate. */
 export function progress(p: Pregen | null): Progress {
   if (!p) return { line: "The site's backend did not answer.", percent: null };
-  const total = p.total ?? (p.chunks !== null && p.percent ? Math.round((p.chunks / p.percent) * 100) : null);
+  return taskProgress(p, p.total, Boolean(p.plan.area));
+}
+
+/** The same for each world, when several generate at once; empty otherwise. */
+export function worldsProgress(p: Pregen | null): Array<Progress & { name: string; radius: number; world: string }> {
+  return (p?.worlds ?? []).map((w) => ({ ...taskProgress(w, w.total, true), name: worldName(w.world), radius: w.area.radius, world: w.world }));
+}
+
+function taskProgress(p: Task, totalIn: number | null, hasArea: boolean): Progress {
+  const total = totalIn ?? (p.chunks !== null && p.percent ? Math.round((p.chunks / p.percent) * 100) : null);
   if (p.status === "finished") return { line: `Done: ${p.chunks !== null ? n(p.chunks) : total !== null ? n(total) : "all"} chunks, 100%.`, percent: 100 };
   if (p.chunks === null || p.percent === null) {
-    return { line: p.plan.area ? `No figures yet${total !== null ? ` (the area is ${n(total)} chunks)` : ""}: chunky says where it stands when it next runs.` : "Nothing has been generated ahead of time yet.", percent: null };
+    return { line: hasArea ? `No figures yet${total !== null ? ` (the area is ${n(total)} chunks)` : ""}: chunky says where it stands when it next runs.` : "Nothing has been generated ahead of time yet.", percent: null };
   }
   const to = p.status === "running" && p.eta ? `, about ${p.eta} to go` : "";
   const rate = p.status === "running" && p.rate ? `, ${p.rate.toFixed(0)} chunks a second` : "";

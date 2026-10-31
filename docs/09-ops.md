@@ -99,7 +99,7 @@ api looks every ten minutes at the things that fail without anybody being told, 
 
 When a check goes from well to wrong, an ERROR event "Health: …" is written; the Discord feed posts it to the admin channel (not counted against the ten problems an hour the game's own errors share). When it is well again, a WARN event says so in Activity. What cannot be looked at (AMP out of reach) is "unknown" and never alerts by itself. Control Room shows "Needs a look" while anything is wrong.
 
-For a monitor outside (Uptime Kuma): `GET https://deepslate.dsw.test/api/health` and alert unless the body contains all of `"ok":true`, `"api":{"ok":true}`, `"watch":true` and `"pack":{"same":true}`. The detail (`checks`) is in the same answer for an admin session.
+For a monitor outside (Uptime Kuma): `GET https://deepslate.dsw.test/api/health`, down unless it answers 200 (web and its database; 503 otherwise) and the body contains `"api":{"ok":true}`. `"watch"` and `"pack"` are in the body too, but a monitor does not go down on them: they are things to look at, not an outage, and the health watch already posts them to the admin channel (Alex, 2026-10-31, after a backup-size warning turned the status page red). The detail (`checks`) is in the same answer for an admin session.
 
 Not looked at: S3, and the age of the NAS copy. Those need the AMP host's `status.json` (docs/28 §3 F).
 

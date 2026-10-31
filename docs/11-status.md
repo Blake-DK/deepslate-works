@@ -33,7 +33,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Redeploy step cleanup (2026-10-31, on `dev`; host timer not installed yet)
+## Redeploy step cleanup (2026-10-31, on `dev`; host timer installed 14:13 UTC)
 
 - **Alex:** a redeploy should remove the containers it does not need. Dockhand already runs `up -d --remove-orphans`, so
   nothing was orphaned; what stayed were the seven finished one-shot steps. Chosen: save their logs, then remove them.
@@ -43,8 +43,9 @@ say live is stopped, held or to be trimmed in place, this section wins.
   `/nvme/appdata/deepslate/deploy-logs/redeploy-<UTC start>.log` (newest 10) and the containers are removed. A failed
   step leaves them all in place. Tried on live with `DRY_RUN=1` (the seven steps of 2026-10-30 23:29, nothing removed)
   and on throwaway containers (removed, failed step left, not settled left, ten files kept).
-- **Next:** Alex installs it once with sudo (deploy/home/README.md, "What runs apart"). Its first run removes the
-  seven steps now on the host, after saving their logs.
+- **Installed** by Alex at 14:13 UTC (deploy/home/README.md, "What runs apart"). Its first run, 14:14, saved the seven
+  steps of 2026-10-30 23:29 to `deploy-logs/redeploy-20261030-232939Z.log` and removed them; the stack shows 11
+  containers, all up, and Dockhand reports it running and healthy.
 
 ## Live ran out of memory in the pre-generation (2026-10-31); one world at a time, on `dev`
 

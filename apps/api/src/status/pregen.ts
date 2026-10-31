@@ -45,23 +45,25 @@ export type PregenState = {
   eta: string | null;
   rate: number | null;
   at: string | null;
+  /** The chunk chunky was last at (chunk coordinates), while it runs. */
+  current: { x: number; z: number } | null;
 };
 
 export type PregenEvent =
-  | { type: "pregen"; what: "running"; world: string; chunks: number; percent: number; eta: string | null; rate: number | null }
+  | { type: "pregen"; what: "running"; world: string; chunks: number; percent: number; eta: string | null; rate: number | null; current?: { x: number; z: number } | null }
   | { type: "pregen"; what: "started" | "continued" | "paused" | "stopped" | "cancelled"; world: string | null }
   | { type: "pregen"; what: "finished"; world: string; chunks: number | null }
   | { type: "pregen"; what: "none-left" }
   | { type: "pregen"; what: "none-running" };
 
-export const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, at: null };
+export const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, at: null, current: null };
 
 /** Pure: the state after chunky has said something. */
 export function nextPregen(s: PregenState, e: PregenEvent, at: Date): PregenState {
   const when = at.toISOString();
   switch (e.what) {
     case "running":
-      return { status: "running", world: e.world, chunks: e.chunks, percent: e.percent, eta: e.eta, rate: e.rate, at: when };
+      return { status: "running", world: e.world, chunks: e.chunks, percent: e.percent, eta: e.eta, rate: e.rate, at: when, current: e.current ?? null };
     case "started":
       return { ...NONE, status: "running", world: e.world, chunks: 0, percent: 0, at: when };
     case "continued":
@@ -72,7 +74,7 @@ export function nextPregen(s: PregenState, e: PregenEvent, at: Date): PregenStat
     case "cancelled":
       return { ...NONE, status: "cancelled", at: when };
     case "finished":
-      return { status: "finished", world: e.world, chunks: e.chunks ?? s.chunks, percent: 100, eta: null, rate: null, at: when };
+      return { status: "finished", world: e.world, chunks: e.chunks ?? s.chunks, percent: 100, eta: null, rate: null, at: when, current: null };
     case "none-left":
       // asked to carry on and there is nothing: the area it had is done (chunky forgets finished tasks). Only ever
       // the answer to `chunky continue`, which the portal sends for an area it has handed over already.
@@ -262,6 +264,7 @@ export function combine(states: PregenState[], totals: number[]): PregenState {
     eta: etas.length ? etas.reduce((a, b) => (secs(b) > secs(a) ? b : a)) : null,
     rate: rates.length ? rates.reduce((a, b) => a + b, 0) : null,
     at,
+    current: states.find((x) => x.status === "running" && x.current)?.current ?? null,
   };
 }
 
@@ -283,7 +286,7 @@ export class Refused extends Error {
 }
 
 const AGAIN_MS = 45_000;
-/** chunky says where it stands every 30 s (`chunky quiet 30`): a running task that has said nothing for this long is asked about. */
+/** chunky says where it stands every 10 s (`chunky quiet 10`): a running task that has said nothing for this long is asked about. */
 const QUIET_MS = 3 * 60_000;
 const MAP_ASK_MS = 30_000;
 /** An answer of BlueMap's counts when it is this old (all its lines are in) and was given this long after the map was asked for. */

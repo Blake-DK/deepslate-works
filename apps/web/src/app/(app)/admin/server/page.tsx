@@ -48,6 +48,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
   const running = status.server === "online";
 
   let body: React.ReactNode;
+  let refreshSeconds = 15;
   if (tab === "power") {
     const [players, schedule, held] = await Promise.all([loadPlayers(caller), loadSchedule(caller), loadHeld(caller)]);
     const maintenance = await loadMaintenanceView(admin.id, status, held?.held ?? null);
@@ -67,6 +68,8 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
     body = <>{backup?.job?.phase === "waiting" && <AutoRefresh seconds={30} />}<BackupCard backup={backup} /></>;
   } else if (tab === "world") {
     const [pregen, initial] = await Promise.all([loadPregen(caller), brandingValues(admin.id, true)]);
+    // live while it generates or renders: chunky says where it stands every 10 s
+    if (pregen?.doing === "run" || pregen?.doing === "render") refreshSeconds = 5;
     body = (
       <div className="space-y-4">
         <BrandingSaved saved={one(q.saved)} error={one(q.error)} note={one(q.note)} />
@@ -94,7 +97,7 @@ export default async function ServerAdminPage({ searchParams }: { searchParams: 
 
   return (
     <TabbedPage title="Server" base="/admin/server" tabs={TABS} current={tab}>
-      {tab !== "files" && tab !== "console" && <AutoRefresh seconds={15} />}
+      {tab !== "files" && tab !== "console" && <AutoRefresh seconds={refreshSeconds} />}
       <Flash msg={msg} detail={detail} />
       {body}
     </TabbedPage>

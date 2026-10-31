@@ -10,7 +10,7 @@ import { Alert } from "@/components/ui/alert";
 import { Input, Label, fieldClasses } from "@/components/ui/input";
 import { HowThisWorks } from "@/components/tabs";
 import { ConfirmSubmit } from "@/components/server/confirm-submit";
-import { mapProgress, modeText, pregenCost, progress, sleepText, worldsProgress, type Pregen } from "@/lib/pregen";
+import { mapProgress, modeText, pregenCost, progress, saidAgo, sleepText, worldsProgress, type Pregen } from "@/lib/pregen";
 import type { getAnnouncements } from "@/server/announcements";
 import { DistanceForm } from "@/components/server/distance-form";
 import { msptTone, waiting, type Distance } from "@/lib/distance";
@@ -315,6 +315,7 @@ export function PregenCard({ pregen, frontiers = [] }: { pregen: Pregen | null; 
   // the map alone: chunky is not part of it and has nothing to say
   const renderOnly = pregen?.plan.mode !== undefined && pregen.plan.mode !== "off" && pregen.plan.what === "render";
   const sleepy = sleepText(pregen);
+  const said = pregen?.status === "running" ? saidAgo(pregen.at, Date.now()) : null;
   return (
     <Card data-testid="pregen">
       <CardHeader>
@@ -333,11 +334,13 @@ export function PregenCard({ pregen, frontiers = [] }: { pregen: Pregen | null; 
                 </div>
               ))}
               {!renderOnly && <p className="text-xs text-muted-foreground">Together: {prog.line}</p>}
+              {said && <p className="text-xs text-muted-foreground" data-testid="pregen-said">Chunky&apos;s last figures: {said}. This card updates by itself while it generates.</p>}
             </div>
           ) : (
             <>
               <p className="text-sm">{pregen?.plan.area ? <>Radius {pregen.plan.area.radius} around {pregen.plan.area.x}, {pregen.plan.area.z}. </> : null}{renderOnly ? null : prog.line}</p>
               {!renderOnly && prog.percent !== null && bar(prog.percent)}
+              {said && <p className="text-xs text-muted-foreground" data-testid="pregen-said">Chunky&apos;s last figures: {said}. This card updates by itself while it generates.</p>}
             </>
           )}
         </div>

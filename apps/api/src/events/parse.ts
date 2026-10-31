@@ -34,6 +34,9 @@ export type GameEvent =
   // "No tasks to continue.": chunky's answer to `chunky continue` when it has nothing left (2026-09-30 06:50, after
   // an api restart the portal had forgotten that the area was finished and asked again and again)
   | { type: "pregen"; what: "none-left" }
+  // "No tasks to pause." and "No tasks running.": nothing is generating (2026-10-31, live printed the first 71 times
+  // after an out-of-memory crash had ended every task while the portal still took them to be running)
+  | { type: "pregen"; what: "none-running" }
   | { type: "pos"; name: string; x: number; y: number; z: number }
   | { type: "dimension"; name: string; dimension: string }
   // `data get entity <name>` (docs/13 §13, the admin's inventory editor): the whole player, read like a save file
@@ -114,6 +117,7 @@ const RE = {
   // chunky. AMP hands the lines over without "[Chunky] " in front; the log file has it.
   pregenRunning: /^(?:\[Chunky\] )?Task running for ([a-z0-9_.:\/-]{1,80})\. Processed: (\d+) chunks \(([\d.]+)%\)(?:, ETA: ([\d:]+))?(?:, Rate: ([\d.]+) cps)?/,
   pregenNoneLeft: /^(?:\[Chunky\] )?No tasks to continue\.$/,
+  pregenNoneRunning: /^(?:\[Chunky\] )?No tasks (?:to pause|running)\.$/,
   pregenFinished: /^(?:\[Chunky\] )?Task finished for ([a-z0-9_.:\/-]{1,80})\.(?: Processed: (\d+) chunks)?/,
   pregenOther: /^(?:\[Chunky\] )?Task (started|continuing|continued|paused|stopped|cancelled|canceled)\b(?: (?:in|for) ([a-z0-9_.:\/-]{1,80}?))?[. ]/,
   // `data get entity <name> Pos` and `... Dimension`, asked before a member is moved to the entrance room
@@ -405,6 +409,7 @@ export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) =
   if ((m = RE.chat.exec(message))) return [{ type: "chat", name: m[1]!, text: m[2]! }];
   if ((m = RE.pregenRunning.exec(message))) return [{ type: "pregen", what: "running", world: m[1]!, chunks: Number(m[2]), percent: Number(m[3]), eta: m[4] ?? null, rate: m[5] ? Number(m[5]) : null }];
   if (RE.pregenNoneLeft.test(message)) return [{ type: "pregen", what: "none-left" }];
+  if (RE.pregenNoneRunning.test(message)) return [{ type: "pregen", what: "none-running" }];
   if ((m = RE.pregenFinished.exec(message))) return [{ type: "pregen", what: "finished", world: m[1]!, chunks: m[2] ? Number(m[2]) : null }];
   if ((m = RE.pregenOther.exec(message))) {
     const w = m[1]!;

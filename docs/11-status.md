@@ -33,6 +33,27 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Live ran out of memory in the pre-generation (2026-10-31); one world at a time, on `dev`
+
+- **03:47 UTC:** `java.lang.OutOfMemoryError: Java heap space` (heap 6 GB), nobody online. Chunky was generating
+  four worlds side by side (`_pregen`: overworld radius 10,000, the Nether, the End and Ashmoon 5,000 each, from
+  PR #109) while BlueMap rendered the new land; the server had been running behind since 03:35. The stop that
+  followed hung while unloading chunks and the watchdog ended it at 03:49 (second crash report). AMP started the
+  server again at 03:49.
+- **Since then nothing generated:** a crash prints no "Task paused/stopped", so the api went on taking all four
+  tasks to be running (12.87 %), never sent `chunky continue`, and chunky answered every pause with "No tasks to
+  pause." (71 times by 13:40).
+- **The 2.3 GB backup** of 01:00 is the regen of 2026-10-30 13:57 to 14:56 (R1 to R5 PASS, 97.9 % of the main world's
+  chunks deleted; the main world's `region/` now 144 files, 0.73 GB), not a fault. The way back is the AMP backup of
+  2026-10-30 01:00 (20.96 GB, local only) and R1's copy on the AMP host. No AMP backup "Before the regen" (W3) is listed.
+- **Fixed on `dev`, not deployed:** worlds generate one after the other in the plan's order (`chunky continue
+  <world>`, any other world paused with `chunky pause <world>`); "No tasks to pause." and "No tasks running." and a
+  server start ("Done") mark running tasks as paused; a running task silent for 3 minutes is asked about with
+  `chunky progress`. A world whose turn has not come is kept as `unhanded` when the mode is turned off. The admin
+  card's text says one at a time. Tests: api 847, web 723.
+- **After the deploy** the live plan carries the main world on first; the Nether, the End and Ashmoon keep chunky's
+  saved tasks and follow in turn. No change to the heap.
+
 ## What live runs, read from the server (2026-10-30, docs only)
 
 - **Live's start at 19:31 UTC** (`_serverMods` in database `deepslate`) loaded 97 jars, no problems; the test server's

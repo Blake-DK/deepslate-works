@@ -12,7 +12,10 @@ live stack only when it is pasted into Dockhand.
 ## What a redeploy does
 
 Every image is pulled (`IMAGE_TAG`, normally `latest`: main's newest), then one-shot steps run before the site starts.
-Each exits when done; `docker compose ps -a` lists them and `docker logs deepslate-<step>` says what it did.
+Each exits when done. A few minutes after the last one, the host's `deepslate-step-cleanup` timer (below) saves their
+logs to `DEEPSLATE_DATA/deploy-logs/redeploy-<UTC start>.log` (newest 10 kept) and removes the finished containers, so
+the stack shows only what runs. A step that failed is left in place with all the others: `docker compose ps -a` lists
+them and `docker logs deepslate-<step>` says what it did.
 
 | Step | What it does | When it cannot |
 |---|---|---|
@@ -57,9 +60,25 @@ The checkout follows `main` (what is deployed); `repo-sync` refuses any other br
 | `Caddyfile` | The stack's own Caddy on :80 behind the newt: the site, the map (login enforced by the portal) and the test site, host names from `.env`; trusts forwarded headers from `ds-edge` only and passes one `X-Forwarded-For` on |
 | `.env.example` | Every variable the home stack reads: the template for the stack's `.env` in Dockhand. Replace every `replace-me-...` and all-zero id |
 | `check.sh` | Runs the repo's checks from this folder (`../check.sh`) |
+| `step-cleanup.sh`, `systemd/` | The host's step cleanup (below): after a redeploy, the steps' logs to a file and their containers removed. `DRY_RUN=1 LOG_DIR=/tmp/x ./step-cleanup.sh` writes the file and removes nothing |
 | `../images/` | The stack's own images, built by CI: `db`, `backups`, `caddy`, `designer`, `ops` (init and repo-sync), `installer` |
 
-What runs apart: the host's `deepslate-firewall` service, which gates the four networks by bridge name. The newt
+What runs apart: the host's `deepslate-firewall` service, which gates the four networks by bridge name, and the
+`deepslate-step-cleanup` timer, which tidies up after a redeploy from outside the stack (the stack has no Docker socket).
+Every two minutes, as uid 1000 (in the docker group), it looks at the project's containers whose restart policy is
+"no": once all have exited with 0 and the last ended three minutes ago, it writes their logs to one file and removes
+them. Installed once, as root, from this folder:
+
+```
+install -m 755 step-cleanup.sh /usr/local/sbin/deepslate-step-cleanup.sh
+install -m 644 systemd/deepslate-step-cleanup.service systemd/deepslate-step-cleanup.timer /etc/systemd/system/
+install -d -o 1000 -g 1000 /nvme/appdata/deepslate/deploy-logs
+systemctl daemon-reload && systemctl enable --now deepslate-step-cleanup.timer
+```
+
+`journalctl -u deepslate-step-cleanup` says what each run did. A new version of the script is installed the same way.
+
+The newt
 (`deepslate-newt`, the service `newt`) is Pangolin's tunnel client for the site `deepslate`: its id and secret are
 `NEWT_ID` and `NEWT_SECRET` in `.env`, with the stack's other secrets. Until 2026-10-23 it ran as a stack of its own
 under Dockhand; now the one stack starts, updates and stops everything the site needs.

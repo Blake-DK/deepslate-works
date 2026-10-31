@@ -33,6 +33,19 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Redeploy step cleanup (2026-10-31, on `dev`; host timer not installed yet)
+
+- **Alex:** a redeploy should remove the containers it does not need. Dockhand already runs `up -d --remove-orphans`, so
+  nothing was orphaned; what stayed were the seven finished one-shot steps. Chosen: save their logs, then remove them.
+- **How:** `deploy/home/step-cleanup.sh` with `deploy/home/systemd/deepslate-step-cleanup.{service,timer}`, on the
+  host, not in the stack (the stack has no Docker socket). Every two minutes, as uid 1000: once every container of the
+  project with restart policy "no" has exited with 0 and three minutes have passed, their logs go to
+  `/nvme/appdata/deepslate/deploy-logs/redeploy-<UTC start>.log` (newest 10) and the containers are removed. A failed
+  step leaves them all in place. Tried on live with `DRY_RUN=1` (the seven steps of 2026-10-30 23:29, nothing removed)
+  and on throwaway containers (removed, failed step left, not settled left, ten files kept).
+- **Next:** Alex installs it once with sudo (deploy/home/README.md, "What runs apart"). Its first run removes the
+  seven steps now on the host, after saving their logs.
+
 ## Live ran out of memory in the pre-generation (2026-10-31); one world at a time, on `dev`
 
 - **03:47 UTC:** `java.lang.OutOfMemoryError: Java heap space` (heap 6 GB), nobody online. Chunky was generating

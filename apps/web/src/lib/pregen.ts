@@ -34,7 +34,7 @@ type Task = {
   eta: string | null;
   rate: number | null;
 };
-/** One world's task, when several worlds generate at once. */
+/** One world's task, when a plan has several worlds (generated one after the other). */
 export type WorldTask = Task & { world: string; area: Area; total: number; map?: MapView | null };
 
 export type Pregen = {
@@ -77,7 +77,7 @@ export function progress(p: Pregen | null): Progress {
   return taskProgress(p, p.total, Boolean(p.plan.area));
 }
 
-/** The same for each world, when several generate at once; empty otherwise. */
+/** The same for each world, when a plan has several; empty otherwise. */
 export function worldsProgress(p: Pregen | null): Array<Progress & { name: string; radius: number; world: string }> {
   return (p?.worlds ?? []).map((w) => ({ ...taskProgress(w, w.total, true), name: worldName(w.world), radius: w.area.radius, world: w.world }));
 }

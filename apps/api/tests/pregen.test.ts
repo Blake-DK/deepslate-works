@@ -151,9 +151,10 @@ describe("the mode, from turning it on to 100%", () => {
     await r.pregen.turnOn({ mode: "empty", area: AREA, window: null, capHours: null }, null);
     expect(r.amp.sleepOn).toBe(false);
     expect(r.saved()).toMatchObject({ mode: "empty", sleepWas: true });
-    expect(r.amp.console).toEqual(["chunky quiet 30", "chunky continue"]); // the same area: carried on, not begun again
+    expect(r.amp.console).toEqual(["chunky quiet 30", "chunky continue minecraft:overworld"]); // the same area: carried on, not begun again
     r.tail.ingest("Task running for minecraft:overworld. Processed: 24500 chunks (68.59%), ETA: 0:03:30, Rate: 50.0 cps, Current: 1, 1");
     r.clock.t += 60 * 60_000; // an hour on an empty server: sleep is off, nothing to do
+    r.tail.ingest("Task running for minecraft:overworld. Processed: 30500 chunks (85.38%), ETA: 0:01:30, Rate: 50.0 cps, Current: 1, 1"); // chunky's word of every half minute
     await r.pregen.tick();
     expect(r.amp.console.length).toBe(2);
     r.tail.ingest("bramble09 joined the game");
@@ -167,7 +168,7 @@ describe("the mode, from turning it on to 100%", () => {
     r.tail.ingest("bramble09 left the game");
     r.clock.t += 60_000;
     await r.pregen.tick();
-    expect(r.amp.console.slice(4)).toEqual(["chunky quiet 30", "chunky continue"]);
+    expect(r.amp.console.slice(4)).toEqual(["chunky quiet 30", "chunky continue minecraft:overworld"]);
     r.tail.ingest("Task finished for minecraft:overworld. Processed: 35721 chunks (100.00%), Total time: 0:12:40");
     r.clock.t += 10_000;
     await r.pregen.tick();
@@ -213,7 +214,7 @@ describe("the mode, from turning it on to 100%", () => {
     r.tail.state = 20; // somebody joined and AMP woke it; they have left again
     r.clock.t += 60_000;
     await r.pregen.tick();
-    expect(r.amp.console).toEqual(["chunky quiet 30", "chunky continue"]);
+    expect(r.amp.console).toEqual(["chunky quiet 30", "chunky continue minecraft:overworld"]);
   });
 
   it("outside the window it is paused and sleep is as it was; inside, sleep is off", async () => {
@@ -227,7 +228,7 @@ describe("the mode, from turning it on to 100%", () => {
     r.clock.t = Date.parse("2026-09-30T01:30:00Z"); // 02:30
     await r.pregen.tick();
     expect(r.amp.sleepOn).toBe(false);
-    expect(r.amp.console).toEqual(["chunky quiet 30", "chunky continue"]);
+    expect(r.amp.console).toEqual(["chunky quiet 30", "chunky continue minecraft:overworld"]);
     r.tail.ingest("Task running for minecraft:overworld. Processed: 24500 chunks (68.59%), ETA: 0:03:30, Rate: 50.0 cps, Current: 1, 1");
     r.clock.t = Date.parse("2026-09-30T07:00:30Z"); // 08:00
     await r.pregen.tick();
@@ -237,53 +238,105 @@ describe("the mode, from turning it on to 100%", () => {
   });
 });
 
-// Alex, 2026-10-30: the main world and Ashmoon at the same time. chunky runs one task per world, side by side.
+// Alex, 2026-10-30: the main world and Ashmoon in one plan. Since 2026-10-31 one after the other: four worlds side by
+// side ran live out of memory.
 const MOON = { x: 0, z: 0, radius: 3000, world: "deepslate:moon" };
-describe("two worlds at once", () => {
-  it("hands the new world to chunky, carries the other on, and ends only when both are done", async () => {
+const RUN_MAIN = "Task running for minecraft:overworld. Processed: 24500 chunks (68.59%), ETA: 0:03:30, Rate: 50.0 cps, Current: 1, 1";
+const RUN_MOON = "Task running for deepslate:moon. Processed: 1000 chunks (6.96%), ETA: 0:20:00, Rate: 30.0 cps, Current: 1, 1";
+describe("several worlds, one at a time", () => {
+  it("carries the main world on; Ashmoon is begun only when the main world is done; ends when both are", async () => {
     const r = rig(true);
     await r.pregen.start(); r.pregen.stop();
     r.tail.state = 20;
     await r.pregen.turnOn({ mode: "now", area: AREA, also: [MOON], window: null, capHours: null }, null);
-    // Ashmoon is new to the portal: whatever chunky may have kept for it is called off before it begins
-    expect(r.amp.console).toEqual(["chunky cancel deepslate:moon", "chunky confirm", "chunky quiet 30", "chunky world deepslate:moon", "chunky shape square", "chunky center 0 0", "chunky radius 3000", "chunky start", "chunky quiet 30", "chunky continue"]);
-    expect(r.saved()).toMatchObject({ mode: "now", also: [MOON], alsoFresh: [] });
-    r.tail.ingest("Task running for minecraft:overworld. Processed: 24500 chunks (68.59%), ETA: 0:03:30, Rate: 50.0 cps, Current: 1, 1");
-    r.tail.ingest("Task running for deepslate:moon. Processed: 1000 chunks (6.96%), ETA: 0:20:00, Rate: 30.0 cps, Current: 1, 1");
-    expect(r.pregen.status()).toMatchObject({ status: "running", chunks: 25500, rate: 80, eta: "0:20:00" });
-    r.tail.ingest("Task finished for minecraft:overworld. Processed: 35721 chunks (100.00%), Total time: 0:12:40");
-    r.clock.t += 60_000;
-    await r.pregen.tick();
-    expect(r.pregen.plan.mode).toBe("now"); // Ashmoon is still going
+    // Ashmoon is new to the portal: whatever chunky may have kept for it is called off; it waits for its turn
+    expect(r.amp.console).toEqual(["chunky cancel deepslate:moon", "chunky confirm", "chunky quiet 30", "chunky continue minecraft:overworld"]);
+    expect(r.saved()).toMatchObject({ mode: "now", also: [MOON], alsoFresh: ["deepslate:moon"] });
+    r.tail.ingest(RUN_MAIN);
+    expect(r.pregen.status()).toMatchObject({ status: "running", chunks: 24500 });
     const sent = r.amp.console.length;
     r.clock.t += 60_000;
     await r.pregen.tick();
-    expect(r.amp.console.length).toBe(sent); // and nothing is sent while it does
+    expect(r.amp.console.length).toBe(sent); // nothing is sent while the main world runs
+    r.tail.ingest("Task finished for minecraft:overworld. Processed: 35721 chunks (100.00%), Total time: 0:12:40");
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.slice(sent)).toEqual(["chunky quiet 30", "chunky world deepslate:moon", "chunky shape square", "chunky center 0 0", "chunky radius 3000", "chunky start"]);
+    expect(r.saved()).toMatchObject({ mode: "now", alsoFresh: [] });
+    r.tail.ingest("Task started in deepslate:moon for the square region centered at 0, 0 with radius 3000.");
+    r.tail.ingest(RUN_MOON);
+    const sent2 = r.amp.console.length;
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.length).toBe(sent2);
+    expect(r.pregen.plan.mode).toBe("now");
     r.tail.ingest("Task finished for deepslate:moon. Processed: 140625 chunks (100.00%), Total time: 1:10:00");
     r.clock.t += 10_000;
     await r.pregen.tick();
     expect(r.pregen.plan).toEqual({ mode: "off", area: null });
   });
 
-  it("a pause and a stop reach both; carried on, both go on", async () => {
+  it("two worlds found running side by side (a plan from before): the later one is paused, the first carries on", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "now", area: AREA, also: [MOON], window: null, capHours: null }, null);
+    r.pregen.plan = { ...r.pregen.plan, alsoFresh: [] } as PregenPlan; // as live had it: every world handed to chunky
+    r.tail.ingest(RUN_MAIN);
+    r.tail.ingest(RUN_MOON);
+    const sent = r.amp.console.length;
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.slice(sent)).toEqual(["chunky pause deepslate:moon", "save-all flush"]);
+    r.tail.ingest("Task paused for deepslate:moon.");
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.length).toBe(sent + 2);
+  });
+
+  it("a world whose turn has not come is still begun, not carried on, after the mode is turned off and on", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "now", area: AREA, also: [MOON], window: null, capHours: null }, null);
+    await r.pregen.turnOff("asked");
+    expect(r.saved()).toMatchObject({ mode: "off", unhanded: ["deepslate:moon"] });
+    await r.pregen.turnOn({ mode: "empty", area: AREA, also: [MOON], window: null, capHours: null }, null);
+    expect(r.saved()).toMatchObject({ mode: "empty", alsoFresh: ["deepslate:moon"] });
+  });
+
+  it("\"No tasks to continue.\" after one world was asked for is about that world alone", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "now", area: AREA, also: [MOON], window: null, capHours: null }, null);
+    r.pregen.plan = { ...r.pregen.plan, alsoFresh: [] } as PregenPlan;
+    r.tail.ingest("No tasks to continue.");
+    expect(r.watch.worlds["minecraft:overworld"]?.status).toBe("finished");
+    expect(r.watch.worlds["deepslate:moon"]?.status ?? "none").toBe("none");
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.slice(-2)).toEqual(["chunky quiet 30", "chunky continue deepslate:moon"]);
+    expect(r.pregen.plan.mode).toBe("now");
+  });
+
+  it("a pause reaches every world; carried on, the world whose turn it is goes on", async () => {
     const r = rig(true);
     await r.pregen.start(); r.pregen.stop();
     r.tail.state = 20;
     await r.pregen.turnOn({ mode: "empty", area: AREA, also: [MOON], window: null, capHours: null }, null);
-    r.tail.ingest("Task running for minecraft:overworld. Processed: 24500 chunks (68.59%), ETA: 0:03:30, Rate: 50.0 cps, Current: 1, 1");
-    r.tail.ingest("Task running for deepslate:moon. Processed: 1000 chunks (6.96%), ETA: 0:20:00, Rate: 30.0 cps, Current: 1, 1");
+    r.tail.ingest(RUN_MAIN);
     const sent = r.amp.console.length;
     r.tail.ingest("bramble09 joined the game");
     r.clock.t += 20_000;
     await r.pregen.tick();
     expect(r.amp.console.slice(sent)).toEqual(["chunky pause", "save-all flush"]);
     r.tail.ingest("Task paused for minecraft:overworld.");
-    r.tail.ingest("Task paused for deepslate:moon.");
     expect(r.pregen.status().status).toBe("paused");
     r.tail.ingest("bramble09 left the game");
     r.clock.t += 60_000;
     await r.pregen.tick();
-    expect(r.amp.console.slice(sent + 2)).toEqual(["chunky quiet 30", "chunky continue"]);
+    expect(r.amp.console.slice(sent + 2)).toEqual(["chunky quiet 30", "chunky continue minecraft:overworld"]);
   });
 
   it("leaving a world out calls off that world's task alone; changing every area calls off all of chunky", async () => {
@@ -329,6 +382,54 @@ describe("two worlds at once", () => {
   });
 });
 
+// 2026-10-31 03:47: live ran out of memory in the middle of generating and was restarted. chunky said nothing about
+// its tasks, so the portal took them to be running and never asked for them again ("No tasks to pause." 71 times).
+describe("a task that ended without a word", () => {
+  it("is read from what chunky says when it has nothing going, as live printed it", () => {
+    expect(parse("[31Oct2026 11:28:10.897] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: [Chunky] No tasks to pause.")).toEqual([{ type: "pregen", what: "none-running" }]);
+    expect(parse("No tasks running.")).toEqual([{ type: "pregen", what: "none-running" }]);
+    const running = nextPregen(NONE, { type: "pregen", what: "running", world: "minecraft:overworld", chunks: 30722, percent: 1.96, eta: "67:59:07", rate: 6.3 }, at);
+    expect(nextPregen(running, { type: "pregen", what: "none-running" }, at)).toMatchObject({ status: "paused", chunks: 30722, rate: null });
+    const done = { ...running, status: "finished" as const };
+    expect(nextPregen(done, { type: "pregen", what: "none-running" }, at).status).toBe("finished");
+  });
+
+  it("a server that has started has nothing going: the world whose turn it is is carried on", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "empty", area: AREA, also: [MOON], window: null, capHours: null }, null);
+    r.pregen.plan = { ...r.pregen.plan, alsoFresh: [] } as PregenPlan;
+    r.tail.ingest(RUN_MAIN);
+    r.tail.ingest("Task paused for deepslate:moon.");
+    r.tail.ingest('Done (22.418s)! For help, type "help"');
+    expect(r.pregen.status().status).toBe("paused");
+    const sent = r.amp.console.length;
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.slice(sent)).toEqual(["chunky quiet 30", "chunky continue minecraft:overworld"]);
+  });
+
+  it("a running task that has said nothing for three minutes is asked about, and carried on when chunky has none", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "now", area: AREA, window: null, capHours: null }, null);
+    r.tail.ingest(RUN_MAIN);
+    const sent = r.amp.console.length;
+    r.clock.t += 2 * 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.length).toBe(sent);
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.slice(sent)).toEqual(["chunky progress"]);
+    r.tail.ingest("No tasks running.");
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.slice(sent + 1)).toEqual(["chunky quiet 30", "chunky continue minecraft:overworld"]);
+  });
+});
+
 describe("before the api stops the server", () => {
   it("a running pre-generation is paused and the save is waited for", async () => {
     const r = rig(true);
@@ -360,6 +461,9 @@ describe("the commands", () => {
   it("are fixed words and checked numbers", () => {
     const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
     expect(actions["world.pregenContinue"].build(ctx, {})).toEqual(["chunky quiet 30", "chunky continue"]);
+    expect(actions["world.pregenContinue"].build(ctx, { world: "deepslate:moon" })).toEqual(["chunky quiet 30", "chunky continue deepslate:moon"]);
+    expect(actions["world.pregenPause"].build(ctx, { world: "deepslate:moon" })).toEqual(["chunky pause deepslate:moon", "save-all flush"]);
+    expect(actions["world.pregenContinue"].input.safeParse({ world: "deepslate:moon; op someone" }).success).toBe(false);
     expect(actions["world.pregenPause"].build(ctx, {})).toEqual(["chunky pause", "save-all flush"]);
     expect(actions["world.pregenCancel"].build(ctx, {})).toEqual(["chunky cancel", "chunky confirm"]);
     expect(actions["world.pregenCancelWorld"].build(ctx, { world: "deepslate:moon" })).toEqual(["chunky cancel deepslate:moon", "chunky confirm"]);

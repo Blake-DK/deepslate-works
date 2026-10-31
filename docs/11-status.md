@@ -33,6 +33,41 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Redeploy step cleanup (2026-10-31, on `dev`; host timer installed 14:13 UTC)
+
+- **Alex:** a redeploy should remove the containers it does not need. Dockhand already runs `up -d --remove-orphans`, so
+  nothing was orphaned; what stayed were the seven finished one-shot steps. Chosen: save their logs, then remove them.
+- **How:** `deploy/home/step-cleanup.sh` with `deploy/home/systemd/deepslate-step-cleanup.{service,timer}`, on the
+  host, not in the stack (the stack has no Docker socket). Every two minutes, as uid 1000: once every container of the
+  project with restart policy "no" has exited with 0 and three minutes have passed, their logs go to
+  `/nvme/appdata/deepslate/deploy-logs/redeploy-<UTC start>.log` (newest 10) and the containers are removed. A failed
+  step leaves them all in place. Tried on live with `DRY_RUN=1` (the seven steps of 2026-10-30 23:29, nothing removed)
+  and on throwaway containers (removed, failed step left, not settled left, ten files kept).
+- **Installed** by Alex at 14:13 UTC (deploy/home/README.md, "What runs apart"). Its first run, 14:14, saved the seven
+  steps of 2026-10-30 23:29 to `deploy-logs/redeploy-20261030-232939Z.log` and removed them; the stack shows 11
+  containers, all up, and Dockhand reports it running and healthy.
+
+## Live ran out of memory in the pre-generation (2026-10-31); one world at a time, on `dev`
+
+- **03:47 UTC:** `java.lang.OutOfMemoryError: Java heap space` (heap 6 GB), nobody online. Chunky was generating
+  four worlds side by side (`_pregen`: overworld radius 10,000, the Nether, the End and Ashmoon 5,000 each, from
+  PR #109) while BlueMap rendered the new land; the server had been running behind since 03:35. The stop that
+  followed hung while unloading chunks and the watchdog ended it at 03:49 (second crash report). AMP started the
+  server again at 03:49.
+- **Since then nothing generated:** a crash prints no "Task paused/stopped", so the api went on taking all four
+  tasks to be running (12.87 %), never sent `chunky continue`, and chunky answered every pause with "No tasks to
+  pause." (71 times by 13:40).
+- **The 2.3 GB backup** of 01:00 is the regen of 2026-10-30 13:57 to 14:56 (R1 to R5 PASS, 97.9 % of the main world's
+  chunks deleted; the main world's `region/` now 144 files, 0.73 GB), not a fault. The way back is the AMP backup of
+  2026-10-30 01:00 (20.96 GB, local only) and R1's copy on the AMP host. No AMP backup "Before the regen" (W3) is listed.
+- **Fixed on `dev`, not deployed:** worlds generate one after the other in the plan's order (`chunky continue
+  <world>`, any other world paused with `chunky pause <world>`); "No tasks to pause." and "No tasks running." and a
+  server start ("Done") mark running tasks as paused; a running task silent for 3 minutes is asked about with
+  `chunky progress`. A world whose turn has not come is kept as `unhanded` when the mode is turned off. The admin
+  card's text says one at a time. Tests: api 847, web 723.
+- **After the deploy** the live plan carries the main world on first; the Nether, the End and Ashmoon keep chunky's
+  saved tasks and follow in turn. No change to the heap.
+
 ## What live runs, read from the server (2026-10-30, docs only)
 
 - **Live's start at 19:31 UTC** (`_serverMods` in database `deepslate`) loaded 97 jars, no problems; the test server's

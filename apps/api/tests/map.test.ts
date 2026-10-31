@@ -504,14 +504,14 @@ describe("chunky with nothing left", () => {
     await p.start(); p.stop();
     r.tail.state = 20;
     r.clock.t += 30_000; await p.tick();
-    expect(r.amp.console).toContain("chunky continue");
+    expect(r.amp.console).toContain("chunky continue minecraft:overworld");
     r.say(["No tasks to continue."]);
     r.clock.t += 30_000; await p.tick();
     r.clock.t += 30_000; await p.tick();
     expect(r.amp.console.filter((c) => c.startsWith("bluemap update"))).toEqual(["bluemap update world 0 0 1500"]);
-    const continues = r.amp.console.filter((c) => c === "chunky continue").length;
+    const continues = r.amp.console.filter((c) => c.startsWith("chunky continue")).length;
     r.clock.t += 60_000; await p.tick();
-    expect(r.amp.console.filter((c) => c === "chunky continue").length).toBe(continues); // no more asking
+    expect(r.amp.console.filter((c) => c.startsWith("chunky continue")).length).toBe(continues); // no more asking
   });
 });
 

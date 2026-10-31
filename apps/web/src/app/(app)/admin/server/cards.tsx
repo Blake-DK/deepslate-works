@@ -368,7 +368,7 @@ export function PregenCard({ pregen, frontiers = [] }: { pregen: Pregen | null; 
                   <span className="text-xs text-muted-foreground">blocks</span>
                 </div>
               ))}
-              <p className="text-xs text-muted-foreground">Tick up to four. Ticked worlds generate side by side, each with its own task and figures, and the map of each is rendered. The server shares its time between them, so each one goes slower than it would alone. A Frontier is in the list once its datapack is shipped.</p>
+              <p className="text-xs text-muted-foreground">Tick up to four. Ticked worlds generate one after the other, in the order of this list, each with its own task and figures, and the map of each is rendered. Only one at a time: four at once ran the server out of memory. A Frontier is in the list once its datapack is shipped.</p>
             </fieldset>
             <p className="text-xs text-muted-foreground">Around {pregen?.plan.area?.x ?? 0}, {pregen?.plan.area?.z ?? 0} (spawn). Another radius calls the present area off and begins a new one; what is already made is passed over quickly. Roughly: {[1500, 3000, 5000, 10000].map((r) => { const c = pregenCost(r); return `${r} = ${c.hours < 1 ? `${Math.round(c.hours * 60)} min` : `${c.hours.toFixed(1)} h`}, ${c.gb < 1 ? c.gb.toFixed(1) : Math.round(c.gb)} GB`; }).join(" · ")}.</p>
             <fieldset className="space-y-1 text-sm">

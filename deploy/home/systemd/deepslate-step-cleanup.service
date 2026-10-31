@@ -1,0 +1,12 @@
+[Unit]
+Description=Deepslate stack: save the one-shot steps' logs after a redeploy, then remove their containers
+Documentation=file:///nvme/stacks/deepslate/deploy/home/README.md
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# the checkout's owner, in the docker group
+User=1000
+Environment=LOG_DIR=/nvme/appdata/deepslate/deploy-logs
+ExecStart=/usr/local/sbin/deepslate-step-cleanup.sh

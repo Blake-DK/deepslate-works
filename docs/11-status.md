@@ -33,6 +33,17 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Pre-generation card live (2026-10-31, on `dev`)
+
+- **Alex:** "i want it to live update what its proccess it". The World tab refreshed every 15 s already, but chunky only
+  reported every 30 s, the card did not say where it was working, and the worlds waiting their turn read "No figures yet".
+- **Now:** `chunky quiet 10` (a report every 10 s, sent with every start and continue); the World tab refreshes every
+  5 s while the pre-generation generates or renders, 15 s otherwise; each running world says where chunky is
+  ("now at x 1,688, z -1,496", the block in the middle of the chunk chunky names) and the card says how old the last
+  figures are; a world whose turn has not come reads "Waits its turn, after the main world".
+- **After the deploy:** the task live has now was continued with `quiet 30`; it reports every 10 s from its next
+  continue (somebody joins and leaves), or at once after `chunky quiet 10` in Admin → Server → Console.
+
 ## Redeploy step cleanup (2026-10-31, on `dev`; host timer installed 14:13 UTC)
 
 - **Alex:** a redeploy should remove the containers it does not need. Dockhand already runs `up -d --remove-orphans`, so

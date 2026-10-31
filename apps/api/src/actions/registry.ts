@@ -700,12 +700,12 @@ export const actions = {
     name: "world.pregen",
     role: "ADMIN",
     input: z.object({ x: z.number().int().min(-100_000).max(100_000), z: z.number().int().min(-100_000).max(100_000), radius: z.number().int().min(16).max(10_000), world: PREGEN_WORLD.optional() }),
-    // `quiet 30`: one line of progress every half minute instead of every second. `world`: the main world unless
+    // `quiet 10`: one line of progress every ten seconds instead of every second (the admin card's live figures). `world`: the main world unless
     // another is named (Alex, 2026-10-05: every dimension we make can be pre-generated)
-    build: (_ctx, { x, z, radius, world }) => ["chunky quiet 30", `chunky world ${world ?? "minecraft:overworld"}`, "chunky shape square", `chunky center ${x} ${z}`, `chunky radius ${radius}`, "chunky start"],
+    build: (_ctx, { x, z, radius, world }) => ["chunky quiet 10", `chunky world ${world ?? "minecraft:overworld"}`, "chunky shape square", `chunky center ${x} ${z}`, `chunky radius ${radius}`, "chunky start"],
   }),
   // `world`: that world's task alone (status/pregen.ts generates one world at a time since 2026-10-31); without it, every saved task
-  "world.pregenContinue": define({ name: "world.pregenContinue", role: "ADMIN", input: z.object({ world: PREGEN_WORLD.optional() }), build: (_ctx, { world }) => ["chunky quiet 30", world ? `chunky continue ${world}` : "chunky continue"] }),
+  "world.pregenContinue": define({ name: "world.pregenContinue", role: "ADMIN", input: z.object({ world: PREGEN_WORLD.optional() }), build: (_ctx, { world }) => ["chunky quiet 10", world ? `chunky continue ${world}` : "chunky continue"] }),
   // chunky asks "are you sure" and wants `confirm`
   "world.pregenCancel": define({ name: "world.pregenCancel", role: "ADMIN", input: z.object({}), build: () => ["chunky cancel", "chunky confirm"] }),
   // One world's task only, when several worlds generate at once and only one of them changes (chunky asks to confirm either way).

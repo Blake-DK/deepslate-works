@@ -33,6 +33,8 @@ type Task = {
   percent: number | null;
   eta: string | null;
   rate: number | null;
+  /** The chunk chunky was last at, in chunk coordinates (absent from an api before 2026-10-31). */
+  current?: { x: number; z: number } | null;
 };
 /** One world's task, when a plan has several worlds (generated one after the other). */
 export type WorldTask = Task & { world: string; area: Area; total: number; map?: MapView | null };
@@ -44,6 +46,8 @@ export type Pregen = {
   eta: string | null;
   rate: number | null;
   at: string | null;
+  /** The chunk chunky was last at, in chunk coordinates (absent from an api before 2026-10-31). */
+  current?: { x: number; z: number } | null;
   plan: Plan;
   /** What api is doing about it right now. */
   doing: string;
@@ -77,9 +81,28 @@ export function progress(p: Pregen | null): Progress {
   return taskProgress(p, p.total, Boolean(p.plan.area));
 }
 
-/** The same for each world, when a plan has several; empty otherwise. */
+/**
+ * The same for each world, when a plan has several; empty otherwise. The worlds generate one after the other: one
+ * whose turn has not come says so, after the world before it.
+ */
 export function worldsProgress(p: Pregen | null): Array<Progress & { name: string; radius: number; world: string }> {
-  return (p?.worlds ?? []).map((w) => ({ ...taskProgress(w, w.total, true), name: worldName(w.world), radius: w.area.radius, world: w.world }));
+  const worlds = p?.worlds ?? [];
+  const turn = worlds.findIndex((w) => w.status !== "finished");
+  return worlds.map((w, i) => {
+    const base = { name: worldName(w.world), radius: w.area.radius, world: w.world };
+    if (turn < 0 || i <= turn || w.status === "running") return { ...taskProgress(w, w.total, true), ...base };
+    const after = `Waits its turn, after ${worldName(worlds[i - 1]!.world)}`;
+    if (w.chunks === null || w.percent === null) return { line: `${after} (${n(w.total)} chunks).`, percent: null, ...base };
+    return { line: `${after}: ${n(w.chunks)} of ${n(w.total)} chunks so far, ${w.percent.toFixed(1)}%.`, percent: w.percent, ...base };
+  });
+}
+
+/** How old chunky's last word is, for the live figures: "12 s ago", "3 min ago". Null without one. */
+export function saidAgo(at: string | null | undefined, now: number): string | null {
+  if (!at) return null;
+  const s = Math.max(0, Math.round((now - Date.parse(at)) / 1000));
+  if (Number.isNaN(s)) return null;
+  return s < 90 ? `${s} s ago` : s < 90 * 60 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`;
 }
 
 function taskProgress(p: Task, totalIn: number | null, hasArea: boolean): Progress {
@@ -90,7 +113,9 @@ function taskProgress(p: Task, totalIn: number | null, hasArea: boolean): Progre
   }
   const to = p.status === "running" && p.eta ? `, about ${p.eta} to go` : "";
   const rate = p.status === "running" && p.rate ? `, ${p.rate.toFixed(0)} chunks a second` : "";
-  return { line: `${n(p.chunks)} of ${total !== null ? n(total) : "?"} chunks, ${p.percent.toFixed(1)}%${to}${rate}.`, percent: p.percent };
+  // chunky gives chunk coordinates; the block in the middle of that chunk is what F3 shows
+  const at = p.status === "running" && p.current ? `, now at x ${n(p.current.x * 16 + 8)}, z ${n(p.current.z * 16 + 8)}` : "";
+  return { line: `${n(p.chunks)} of ${total !== null ? n(total) : "?"} chunks, ${p.percent.toFixed(1)}%${to}${rate}${at}.`, percent: p.percent };
 }
 
 /**

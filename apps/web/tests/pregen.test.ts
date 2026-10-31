@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapProgress, modeText, pregenCost, progress, sleepText, worldName, worldsProgress, type Pregen } from "@/lib/pregen";
+import { mapProgress, modeText, pregenCost, progress, saidAgo, sleepText, worldName, worldsProgress, type Pregen } from "@/lib/pregen";
 import { describeAction } from "@/shared/events";
 
 const AREA = { x: 0, z: 0, radius: 1500 };
@@ -39,6 +39,38 @@ describe("two worlds at once", () => {
       { name: "Ashmoon", world: "deepslate:moon", radius: 3000, line: "70,688 of 141,376 chunks, 50.0%, about 0:30:00 to go, 40 chunks a second.", percent: 50 },
     ]);
     expect(worldsProgress(base)).toEqual([]);
+  });
+});
+
+// 2026-10-31: one world at a time, and figures that move (Alex: "i want it to live update what its proccess it")
+describe("one world at a time, live", () => {
+  const nether = { x: 0, z: 0, radius: 5000, world: "minecraft:the_nether" };
+  const moon = { x: 0, z: 0, radius: 5000, world: "deepslate:moon" };
+  it("says where chunky is working, in blocks (chunky gives the chunk)", () => {
+    expect(progress({ ...base, total: 1565001, status: "running", chunks: 37633, percent: 2.4, eta: "31:52:47", rate: 13.3, current: { x: 105, z: -94 } }).line).toBe("37,633 of 1,565,001 chunks, 2.4%, about 31:52:47 to go, 13 chunks a second, now at x 1,688, z -1,496.");
+    expect(progress({ ...base, status: "paused", chunks: 100, percent: 0.3, current: { x: 1, z: 1 } }).line).toBe("100 of 35,721 chunks, 0.3%.");
+  });
+  it("a world whose turn has not come says so, after the world before it, with its figures when it has some", () => {
+    const p: Pregen = {
+      ...base,
+      status: "running",
+      worlds: [
+        { world: "minecraft:overworld", area: { ...AREA, radius: 10000 }, total: 1565001, status: "running", chunks: 39332, percent: 2.51, eta: "76:00:30", rate: 5.6 },
+        { world: "minecraft:the_nether", area: nether, total: 391876, status: "none", chunks: null, percent: null, eta: null, rate: null },
+        { world: "deepslate:moon", area: moon, total: 391876, status: "paused", chunks: 99511, percent: 25.31, eta: null, rate: null },
+      ],
+    };
+    expect(worldsProgress(p).map((w) => w.line)).toEqual([
+      "39,332 of 1,565,001 chunks, 2.5%, about 76:00:30 to go, 6 chunks a second.",
+      "Waits its turn, after the main world (391,876 chunks).",
+      "Waits its turn, after the Nether: 99,511 of 391,876 chunks so far, 25.3%.",
+    ]);
+  });
+  it("says how old chunky's last figures are", () => {
+    const now = Date.parse("2026-10-31T15:25:09Z");
+    expect(saidAgo("2026-10-31T15:24:57Z", now)).toBe("12 s ago");
+    expect(saidAgo("2026-10-31T15:20:09Z", now)).toBe("5 min ago");
+    expect(saidAgo(null, now)).toBeNull();
   });
 });
 

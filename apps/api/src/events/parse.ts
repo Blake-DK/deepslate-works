@@ -28,7 +28,8 @@ export type GameEvent =
   | { type: "ping"; name: string; ms: number }
   // `neoforge tps`: one line per dimension, then "Overall" (the Admin → Server → Settings card's TPS and MSPT)
   | { type: "tps"; scope: string; tps: number; mspt: number }
-  | { type: "pregen"; what: "running"; world: string; chunks: number; percent: number; eta: string | null; rate: number | null }
+  // `current`: the chunk chunky is at ("Current: 105, -94", chunk coordinates), when it says
+  | { type: "pregen"; what: "running"; world: string; chunks: number; percent: number; eta: string | null; rate: number | null; current?: { x: number; z: number } | null }
   | { type: "pregen"; what: "started" | "continued" | "paused" | "stopped" | "cancelled"; world: string | null }
   | { type: "pregen"; what: "finished"; world: string; chunks: number | null }
   // "No tasks to continue.": chunky's answer to `chunky continue` when it has nothing left (2026-09-30 06:50, after
@@ -115,7 +116,7 @@ const RE = {
   // (Minecraft, a moment later). Either one means a clean stop.
   stopping: /^Stopping (?:the )?server$/,
   // chunky. AMP hands the lines over without "[Chunky] " in front; the log file has it.
-  pregenRunning: /^(?:\[Chunky\] )?Task running for ([a-z0-9_.:\/-]{1,80})\. Processed: (\d+) chunks \(([\d.]+)%\)(?:, ETA: ([\d:]+))?(?:, Rate: ([\d.]+) cps)?/,
+  pregenRunning: /^(?:\[Chunky\] )?Task running for ([a-z0-9_.:\/-]{1,80})\. Processed: (\d+) chunks \(([\d.]+)%\)(?:, ETA: ([\d:]+))?(?:, Rate: ([\d.]+) cps)?(?:, Current: (-?\d+), (-?\d+))?/,
   pregenNoneLeft: /^(?:\[Chunky\] )?No tasks to continue\.$/,
   pregenNoneRunning: /^(?:\[Chunky\] )?No tasks (?:to pause|running)\.$/,
   pregenFinished: /^(?:\[Chunky\] )?Task finished for ([a-z0-9_.:\/-]{1,80})\.(?: Processed: (\d+) chunks)?/,
@@ -407,7 +408,7 @@ export function parse(text: string, meta: Meta = {}, isPlayer?: (name: string) =
   }
   let m: RegExpExecArray | null;
   if ((m = RE.chat.exec(message))) return [{ type: "chat", name: m[1]!, text: m[2]! }];
-  if ((m = RE.pregenRunning.exec(message))) return [{ type: "pregen", what: "running", world: m[1]!, chunks: Number(m[2]), percent: Number(m[3]), eta: m[4] ?? null, rate: m[5] ? Number(m[5]) : null }];
+  if ((m = RE.pregenRunning.exec(message))) return [{ type: "pregen", what: "running", world: m[1]!, chunks: Number(m[2]), percent: Number(m[3]), eta: m[4] ?? null, rate: m[5] ? Number(m[5]) : null, current: m[6] && m[7] ? { x: Number(m[6]), z: Number(m[7]) } : null }];
   if (RE.pregenNoneLeft.test(message)) return [{ type: "pregen", what: "none-left" }];
   if (RE.pregenNoneRunning.test(message)) return [{ type: "pregen", what: "none-running" }];
   if ((m = RE.pregenFinished.exec(message))) return [{ type: "pregen", what: "finished", world: m[1]!, chunks: m[2] ? Number(m[2]) : null }];

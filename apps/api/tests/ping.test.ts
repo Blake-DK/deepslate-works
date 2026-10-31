@@ -81,7 +81,7 @@ describe("ping rounds", () => {
   });
   it("builds the commands for a new world from checked numbers and names only", () => {
     const ctx = { limbo: parsePlace("deepslate:limbo 0.5 65 0.5"), spawn: null, portalUrl: "https://deepslate.dsw.test" };
-    expect(actions["world.pregen"].build(ctx, { x: 0, z: 0, radius: 1500 })).toEqual(["chunky quiet 30", "chunky world minecraft:overworld", "chunky shape square", "chunky center 0 0", "chunky radius 1500", "chunky start"]);
+    expect(actions["world.pregen"].build(ctx, { x: 0, z: 0, radius: 1500 })).toEqual(["chunky quiet 10", "chunky world minecraft:overworld", "chunky shape square", "chunky center 0 0", "chunky radius 1500", "chunky start"]);
     expect(actions["world.pregen"].input.safeParse({ x: 0, z: 0, radius: 99999 }).success).toBe(false);
     expect(actions["world.locate"].build(ctx, { what: "biome", id: "minecraft:cherry_grove", x: 0, z: 0 })).toEqual(["execute in minecraft:overworld positioned 0 64 0 run locate biome minecraft:cherry_grove"]);
     expect(actions["world.locate"].input.safeParse({ what: "biome", id: "minecraft:plains run op x", x: 0, z: 0 }).success).toBe(false);

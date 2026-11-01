@@ -23,7 +23,7 @@ export function StatusCard({ status, series, address, admin = false }: { status:
           Server <Badge tone={a.state === "waking" ? "waking" : a.tone} data-testid="status-pill">{a.label}</Badge>
         </CardTitle>
         <p className="font-semibold" data-testid="status-line">{a.line}</p>
-        <CardDescription>{a.hint}{a.reason && <> {a.reason}</>}{address && !["off", "crashed", "unreachable"].includes(a.state) && <> Address: <span className="font-mono text-foreground">{address}</span></>}</CardDescription>
+        <CardDescription>{a.hint}{a.reason && <> {a.reason}</>}{address && !["off", "crashed", "unreachable", "unresponsive"].includes(a.state) && <> Address: <span className="font-mono text-foreground">{address}</span></>}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {admin && (a.state === "off" || a.state === "crashed") && (

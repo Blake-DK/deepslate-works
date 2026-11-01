@@ -29,8 +29,13 @@ import { ALL_MAPS, MapWatch, mapOf, rendered } from "./map.js";
 // (For two hours on 2026-09-29 this worked in rounds around AMP's sleep, waking the server itself and ending a
 // stop that hung. That is gone: a stop in the middle of generating is what hung the server that morning.)
 //
-// Several worlds are generated one after the other, in the order of the plan, never side by side: four at once
-// (with BlueMap rendering the new land) ran the server out of memory on 2026-10-31 at 03:47.
+// Several worlds are generated two at a time (AT_ONCE), in the order of the plan: four at once (with BlueMap rendering
+// the new land) ran the server out of memory on 2026-10-31 at 03:47, with 6 GB. With Streams Reflowing each world's
+// task spends most of its time waiting and the cores stay idle (spark, 2026-10-31): two tasks side by side generate
+// about twice as much (measured 2026-11-01, live and test at once), on 10 GB since 2026-10-31.
+
+/** How many worlds' tasks run side by side. */
+export const AT_ONCE = 2;
 
 export const SLEEP_NODE = "MinecraftModule.Limits.SleepMode";
 export const SLEEP_DELAY_NODE = "MinecraftModule.Limits.SleepDelayMinutes";
@@ -141,7 +146,7 @@ export type PregenPlan =
       mode: "empty" | "now";
       what: What;
       area: Area;
-      /** More areas, each in another world, generated after `area`, one at a time (absent in plans before 2026-10-30). */
+      /** More areas, each in another world, generated beside `area`, AT_ONCE at a time in this order (absent in plans before 2026-10-30). */
       also?: Area[];
       /** The worlds of `also` not handed to chunky yet. */
       alsoFresh?: string[];
@@ -241,9 +246,17 @@ export function step(plan: Exclude<PregenPlan, { mode: "off" }>, v: View): Step 
 /** Every area of a plan, in the order they are generated: the first, then the others. */
 export const areasOf = (p: PregenPlan): Area[] => (p.area ? [p.area, ...(p.also ?? [])] : []);
 
+/** Pure: "107:12:52" for so many seconds, as chunky writes its estimate. */
+export function clockOf(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
 /**
  * Pure: one state for several worlds' tasks. Running while any runs, finished when all are; chunks added up, the
- * percentage of all their chunks, the rates added up and the longest estimate.
+ * percentage of all their chunks, the rates added up, and the estimate: every chunk still to do (the worlds waiting
+ * their turn too) at the rate of all together. Without that, the longest estimate of the tasks running; until
+ * 2026-11-01 it was only ever that, and said 107 hours with 184 to go.
  */
 export function combine(states: PregenState[], totals: number[]): PregenState {
   if (states.length === 1) return states[0]!;
@@ -256,13 +269,15 @@ export function combine(states: PregenState[], totals: number[]): PregenState {
   const secs = (eta: string) => eta.split(":").reduce((n, p) => n * 60 + Number(p), 0);
   const etas = states.filter((x) => x.status === "running" && x.eta).map((x) => x.eta!);
   const at = states.map((x) => x.at).filter((x): x is string => x !== null).sort().at(-1) ?? null;
+  const rate = rates.length ? rates.reduce((a, b) => a + b, 0) : null;
+  const longest = etas.length ? etas.reduce((a, b) => (secs(b) > secs(a) ? b : a)) : null;
   return {
     status,
     world: null,
     chunks,
     percent: status === "finished" ? 100 : chunks !== null && total > 0 ? Math.min(100, Math.round((chunks / total) * 10_000) / 100) : null,
-    eta: etas.length ? etas.reduce((a, b) => (secs(b) > secs(a) ? b : a)) : null,
-    rate: rates.length ? rates.reduce((a, b) => a + b, 0) : null,
+    eta: longest !== null && rate && chunks !== null && total > chunks ? clockOf((total - chunks) / rate) : longest,
+    rate,
     at,
     current: states.find((x) => x.status === "running" && x.current)?.current ?? null,
   };
@@ -417,7 +432,7 @@ export class Pregen {
     // of chunky at once when none of what it has is kept. Rendering alone leaves chunky and what it has as they are.
     const drop = gen ? wasAreas.filter((b) => ![input.area, ...also].some((a) => sameArea(a, b))) : [];
     const st = (w: string) => this.watch.worlds[w]?.status ?? (wasAreas.length <= 1 ? this.watch.state.status : "none");
-    // a world whose turn had not come has no task of chunky's yet (one world at a time, since 2026-10-31)
+    // a world whose turn had not come has no task of chunky's yet (worlds take turns since 2026-10-31)
     const unhanded = new Set(was.mode === "off" ? (was.unhanded ?? []) : [...(was.fresh ? [worldOf(was.area)] : []), ...(was.alsoFresh ?? [])]);
     const isFresh = (a: Area) => gen && (!wasAreas.some((b) => sameArea(a, b)) || unhanded.has(worldOf(a)) || ["finished", "cancelled"].includes(st(worldOf(a))));
     if (was.mode !== "off") await this.turnOff("asked", by);
@@ -671,17 +686,20 @@ export class Pregen {
         return;
       }
       case "run": {
-        // One world at a time, in the plan's order: the first that is not finished has its turn, any other is paused.
+        // AT_ONCE worlds side by side, in the plan's order: the first that are not finished have their turn, any other is paused.
         const areas = areasOf(this.plan);
         const of = (a: Area) => this.watch.worlds[worldOf(a)]?.status ?? (areas.length <= 1 ? this.watch.state.status : "none");
-        const turn = areas.find((a) => of(a) !== "finished");
-        if (!turn || now - this.lastCommand < AGAIN_MS) return;
-        const world = worldOf(turn);
-        const others = areas.filter((a) => a !== turn && of(a) === "running").map(worldOf);
-        if (of(turn) === "running" && !others.length) {
+        const turns = areas.filter((a) => of(a) !== "finished").slice(0, AT_ONCE);
+        if (!turns.length || now - this.lastCommand < AGAIN_MS) return;
+        const others = areas.filter((a) => !turns.includes(a) && of(a) === "running").map(worldOf);
+        const turn = turns.find((a) => of(a) !== "running");
+        if (!turn && !others.length) {
           // A task that ended without a word (the server crashed under it) would otherwise be taken to run for ever.
-          const said = this.watch.worlds[world]?.at ?? this.watch.state.at;
-          if (said && now - Date.parse(said) >= QUIET_MS) {
+          const quiet = turns.some((a) => {
+            const said = this.watch.worlds[worldOf(a)]?.at ?? this.watch.state.at;
+            return said !== null && now - Date.parse(said) >= QUIET_MS;
+          });
+          if (quiet) {
             this.lastCommand = now;
             await runAction(this.amp, this.ctx(), "world.pregenProgress", {}, null);
           }
@@ -689,7 +707,9 @@ export class Pregen {
         }
         this.lastCommand = now;
         for (const w of others) await runAction(this.amp, this.ctx(), "world.pregenPause", { world: w }, null);
-        if (of(turn) === "running") return;
+        // One world is begun or carried on per round: "No tasks to continue." is read as the answer about the world asked for.
+        if (!turn) return;
+        const world = worldOf(turn);
         const fresh = turn === this.plan.area ? this.plan.fresh : (this.plan.alsoFresh ?? []).includes(world);
         if (fresh) {
           if (!(await runAction(this.amp, this.ctx(), "world.pregen", turn, this.plan.by)).ok) return;

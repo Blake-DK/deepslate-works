@@ -62,15 +62,21 @@ export type Pregen = {
   map?: MapView | null;
   /** World by world, when the plan has more than one; the figures above are all of them together. */
   worlds?: WorldTask[] | null;
+  /** How many worlds generate side by side (absent from an api before 2026-11-01: one). */
+  atOnce?: number;
 };
 
 const n = (v: number) => v.toLocaleString("en-GB");
 
-/** Rough numbers for a radius: chunks, hours of generating at 50 chunks a second, disk at 13 KB a chunk (both measured on 2026-09-29). */
+/**
+ * Rough numbers for a radius: chunks, hours of generating at 6 chunks a second, disk at 13 KB a chunk. The rate is
+ * one world's task with Streams Reflowing in the pack (measured on live and test, 2026-10-31 and 2026-11-01); it was
+ * 50 before (2026-09-29). Disk was measured on 2026-09-29.
+ */
 export function pregenCost(radius: number): { chunks: number; hours: number; gb: number } {
   const side = Math.ceil((2 * radius) / 16) + 1;
   const chunks = side * side;
-  return { chunks, hours: chunks / 50 / 3600, gb: (chunks * 13) / 1_048_576 };
+  return { chunks, hours: chunks / 6 / 3600, gb: (chunks * 13) / 1_048_576 };
 }
 
 export type Progress = { line: string; percent: number | null };
@@ -81,17 +87,21 @@ export function progress(p: Pregen | null): Progress {
   return taskProgress(p, p.total, Boolean(p.plan.area));
 }
 
+const COUNT = ["none", "one", "two", "three", "four"];
+
 /**
- * The same for each world, when a plan has several; empty otherwise. The worlds generate one after the other: one
- * whose turn has not come says so, after the world before it.
+ * The same for each world, when a plan has several; empty otherwise. The worlds take turns, `atOnce` side by side, in
+ * the order of the list: one whose turn has not come says so.
  */
 export function worldsProgress(p: Pregen | null): Array<Progress & { name: string; radius: number; world: string }> {
   const worlds = p?.worlds ?? [];
-  const turn = worlds.findIndex((w) => w.status !== "finished");
+  const atOnce = Math.max(1, p?.atOnce ?? 1);
+  const turns = worlds.flatMap((w, i) => (w.status !== "finished" ? [i] : [])).slice(0, atOnce);
+  const lastTurn = turns.at(-1) ?? -1;
   return worlds.map((w, i) => {
     const base = { name: worldName(w.world), radius: w.area.radius, world: w.world };
-    if (turn < 0 || i <= turn || w.status === "running") return { ...taskProgress(w, w.total, true), ...base };
-    const after = `Waits its turn, after ${worldName(worlds[i - 1]!.world)}`;
+    if (!turns.length || i <= lastTurn || w.status === "running") return { ...taskProgress(w, w.total, true), ...base };
+    const after = atOnce > 1 ? `Waits its turn: ${COUNT[atOnce] ?? atOnce} worlds generate at a time` : `Waits its turn, after ${worldName(worlds[i - 1]!.world)}`;
     if (w.chunks === null || w.percent === null) return { line: `${after} (${n(w.total)} chunks).`, percent: null, ...base };
     return { line: `${after}: ${n(w.chunks)} of ${n(w.total)} chunks so far, ${w.percent.toFixed(1)}%.`, percent: w.percent, ...base };
   });

@@ -422,6 +422,18 @@ export const CHANGES: Change[] = [
     ],
     onSync: true,
   },
+  {
+    id: "2026-11-01-map-squares",
+    date: "2026-11-01",
+    lines: ["The live map no longer shows dark squares where new land has been made since you last looked. If you still see some, reload the page."],
+  },
+  {
+    id: "2026-11-01-not-answering",
+    date: "2026-11-01",
+    lines: [
+      "When the server is switched on but the game has stopped letting anyone in, the site, the app and the bot's status in Discord now say \"Not answering\" within about two minutes, instead of still saying it is online.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

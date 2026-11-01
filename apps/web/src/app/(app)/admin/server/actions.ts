@@ -59,7 +59,7 @@ const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const blank = (v: FormDataEntryValue | null) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null);
 const PREGEN_WORLD = z.string().regex(/^(minecraft:(overworld|the_nether|the_end)|deepslate:moon|deepslate:frontier_[a-z0-9_]{1,32})$/);
 const pregenOn = z.object({
-  // the ticked worlds, each with its radius (Alex, 2026-10-30); the first is the plan's area, the rest follow it one at a time (status/pregen.ts in api)
+  // the ticked worlds, each with its radius (Alex, 2026-10-30); the first is the plan's area, the rest take turns beside it (status/pregen.ts in api)
   worlds: z.array(z.object({ world: PREGEN_WORLD, radius: z.coerce.number().int().min(16).max(10_000) })).min(1).max(4),
   mode: z.enum(["empty", "now"]),
   what: z.enum(["generate", "render", "both"]),

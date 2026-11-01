@@ -24,6 +24,7 @@ import type { runBuild } from "./modpack/build.js";
 import { serverRoutes } from "./routes/server.js";
 import { fileRoutes } from "./routes/files.js";
 import { StatusPoller } from "./status/poller.js";
+import { GameWatch, gameAddress } from "./status/game-ping.js";
 import { PingWatch } from "./status/ping.js";
 import { PLAN_KEY, Pregen, PregenWatch, type PregenPlan } from "./status/pregen.js";
 import { pregenRoutes } from "./routes/pregen.js";
@@ -132,7 +133,10 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     copied: () => dumpPush.last, serverPack, wake: () => wake.view(),
     addEvent: (e) => prismaRecorderStore.addEvent(e), log, testServer: testMode,
   });
-  const view = new ServerView({ poller, wake, lastDown: () => recorder.lastDown, sleep: () => ({ on: pregen.sleep.on, delayMin: pregen.sleep.delayMin }), tunnelUp: () => tunnelUp });
+  // AMP can say Running while nobody can join (status/game-ping.ts): the game is asked as a player's game asks it
+  const gameAt = env.AMP_MOCK === "1" ? null : gameAddress(env.SERVER_ADDRESS);
+  const game = gameAt ? new GameWatch(gameAt, () => poller.fresh()?.stateCode === 20, log) : null;
+  const view = new ServerView({ poller, wake, lastDown: () => recorder.lastDown, sleep: () => ({ on: pregen.sleep.on, delayMin: pregen.sleep.delayMin }), tunnelUp: () => tunnelUp, answering: () => game?.answering ?? null });
   // docs/22: the bot (only with DISCORD_BOT_TOKEN and DISCORD_GUILD_ID), and docs/21's feed, which posts its votes
   const bot = makeBot({
     app, env, log,
@@ -364,8 +368,13 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
         }
       })().catch((err) => log({ err: String(err) }, "status watch failed"));
     }, 10_000);
+    game?.onChange((answering, error) => void prismaRecorderStore.addEvent(answering
+      ? { at: new Date(), kind: "WARN", actor: null, message: "The game is answering again; players can join", meta: { game: "answering" } }
+      : { at: new Date(), kind: "ERROR", actor: null, message: `AMP says the server is running, but the game is not answering (${error ?? "no answer"}): nobody can join`, meta: { health: "game", error } },
+    ).catch((err) => log({ err: String(err) }, "could not write the game ping event")));
     tail.start();
     poller.start();
+    game?.start();
     if (!testMode) dumpPush.start(); // docs/42 T7: the test server has no dumps to copy
     healthWatch.start();
     limbo.start();
@@ -402,6 +411,7 @@ export function buildServer(env: Env, amp?: Amp, deps: { build?: typeof runBuild
     dumpPush.stop();
     healthWatch.stop();
     poller.stop();
+    game?.stop();
     limbo.stop();
     pings.stop();
     online.stop();

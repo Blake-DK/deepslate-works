@@ -61,7 +61,7 @@ export class Bot {
       const text = this.d.presence();
       if (text !== this.presenceText) {
         this.presenceText = text;
-        this.gateway.setPresence({ text, status: /asleep|switched off|crashed|can't reach/i.test(text) ? "idle" : "online" });
+        this.gateway.setPresence({ text, status: /asleep|switched off|crashed|can't reach|not answering/i.test(text) ? "idle" : "online" });
       }
     };
     tick();

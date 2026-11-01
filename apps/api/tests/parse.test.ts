@@ -89,6 +89,12 @@ describe("parse", () => {
     expect(isKnownHarmless("Tried to load unrecognized recipe: mowziesmobs:spear removed now.")).toBe(true);
     expect(isKnownHarmless("Tried to load unrecognized recipe: cataclysm:stonecutting/chiseled_stone_brick_pillar_from_stonecutting removed now.")).toBe(true);
     expect(isKnownHarmless("Tried to load unrecognized recipe: mowziesmobs:spear")).toBe(false);
+    // what one night of chunk loads printed (the admin channel, 2026-11-01; the entity's id swapped for a made-up one)
+    expect(isKnownHarmless("Block-attached entity at invalid position: BlockPos{x=-222, y=-51, z=-77}")).toBe(true);
+    expect(isKnownHarmless("Block-attached entity at invalid position: BlockPos{x=3, y=-53, z=18}")).toBe(true);
+    expect(isKnownHarmless("Failed to parse vibration listener for Allay: 'No key selector in MapLike[{event_delay:0,event_distance:14.966301f,range:16,source:{source_entity:[I;-1111111111,1222222222,-1333333333,844444444],type:\"minecraft:entity\",y_offset:0.36f}}]'")).toBe(true);
+    expect(isKnownHarmless("Failed to fetch mob spawner entity at (3132, -26, 2591)")).toBe(true);
+    expect(isKnownHarmless("Failed to parse vibration listener for Warden: 'No key selector in MapLike[{}]'")).toBe(false);
     expect(parse(L("example is not a registered slot type!", "Server thread", "ERROR"))).toMatchObject([{ type: "problem", level: "ERROR", text: "example is not a registered slot type!" }]);
   });
   it("reports warnings and errors, but not the mod loader's start-up noise (real lines)", () => {

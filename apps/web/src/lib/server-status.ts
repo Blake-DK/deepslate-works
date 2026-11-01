@@ -49,7 +49,7 @@ export function pillFor(s: StatusLike, admin = false): Pill {
     }
     case "starting": case "restarting": return { line: `Server: ${STATE_LABEL[s.server]}`, dot: "waking" };
     case "asleep": return { line: "Server is asleep", dot: "asleep" };
-    case "crashed": return { line: `Server: ${STATE_LABEL[s.server]}`, dot: "down" };
+    case "crashed": case "unresponsive": return { line: `Server: ${STATE_LABEL[s.server]}`, dot: "down" };
     // the site is up but cannot reach AMP: say so (the app's "Can't reach the site" is the site itself being down)
     case "unreachable": return { line: STATE_LABEL[s.server], dot: "down" };
     default: return { line: `Server: ${STATE_LABEL[s.server]}`, dot: "asleep" };

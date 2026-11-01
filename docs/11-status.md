@@ -33,6 +33,21 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Not answering: the game is pinged while AMP says Running (2026-11-01, on `dev`)
+
+- **Alex:** "the deepslate api should also detect when the amp server is down and the game isnt joinable as it can be
+  down but the status doesnt change in discord". AMP out of reach already read "Can't reach the server" (no fresh status
+  for 30 s); AMP saying Running while the game let nobody in read "Online" everywhere.
+- **Now:** api sends a server-list status request to `SERVER_ADDRESS` every 30 s while AMP says Running
+  (`apps/api/src/status/game-ping.ts`); three misses in a row make a new state `unresponsive`, "Not answering" (both
+  copies of `shared/server-state.ts`), on the site, the app (it takes the site's words) and the bot's Discord status
+  (idle). Play answers it as Crashed. ERROR event to the admin channel, WARN when it answers again. docs/09 "Is the game
+  answering". Change log entry `2026-11-01-not-answering`, without `live`.
+- **Checked by hand from the live api container, 2026-11-01:** a status request to the public address answered in 79 ms
+  (1 online); to the AMP host's LAN address on 25565 it timed out, so the public address it is.
+- **After the deploy:** watch for a false "Not answering" (hairpin NAT, or the status request timing out under the
+  pre-generation); then set `live: true` on the change log entry.
+
 ## Pre-generation: why it is slow, and two worlds at a time (2026-11-01, on `dev`)
 
 - **Alex:** "why is this so slow" (4 chunks a second, about a week for the main world at radius 10,000 and the other

@@ -28,6 +28,8 @@ export type ViewDeps = {
   lastDown: () => "crash" | "stop" | "sleep" | "restart" | null;
   sleep: () => { on: boolean | null; delayMin: number | null };
   tunnelUp: () => boolean | null;
+  /** does the game answer a server-list ping (status/game-ping.ts); absent or null: not looked at */
+  answering?: () => boolean | null;
   now?: () => number;
 };
 
@@ -49,7 +51,7 @@ export class ServerView {
 
   extra(live: LiveStatus | null): StatusExtra {
     const reachable = live !== null;
-    const s = serverState({ stateCode: live?.stateCode ?? null, reachable, waking: this.d.wake.waking, crashed: this.d.lastDown() === "crash" });
+    const s = serverState({ stateCode: live?.stateCode ?? null, reachable, waking: this.d.wake.waking, crashed: this.d.lastDown() === "crash", answering: this.d.answering?.() ?? null });
     const sleep = this.d.sleep();
     return {
       server: s,

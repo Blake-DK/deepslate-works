@@ -2,7 +2,7 @@
 // 2026-09-30, docs/13 §12). Worked out in api from AMP's state plus what only the portal knows (can it reach AMP at
 // all, is a wake running, did the server go down without a stop line); shown the same way everywhere.
 
-export type ServerState = "online" | "asleep" | "waking" | "starting" | "stopping" | "restarting" | "off" | "crashed" | "unreachable";
+export type ServerState = "online" | "asleep" | "waking" | "starting" | "stopping" | "restarting" | "off" | "crashed" | "unreachable" | "unresponsive";
 export type Tone = "good" | "info" | "warn" | "neutral" | "bad";
 
 export type StateInput = {
@@ -14,6 +14,9 @@ export type StateInput = {
   waking: boolean;
   /** the last time it went down, it went down without a stop line (events/recorder.ts decides) */
   crashed: boolean;
+  /** false when AMP says Running but the game has not answered a server-list ping for a while (status/game-ping.ts);
+   * null or absent when it was not looked at */
+  answering?: boolean | null;
 };
 
 /** AMP's states (amp/client.ts, docs/08): 0 Stopped, 5/7/10 starting, 20 Running, 30 Restarting, 40 Stopping,
@@ -21,7 +24,7 @@ export type StateInput = {
 export function serverState(i: StateInput): ServerState {
   const c = i.stateCode;
   if (!i.reachable || c === null || c === -1 || c === 999) return "unreachable";
-  if (c === 20) return "online";
+  if (c === 20) return i.answering === false ? "unresponsive" : "online";
   if (i.waking) return "waking";
   if (c === 45 || c === 50) return "asleep";
   if (c === 5 || c === 7 || c === 10 || c === 60) return "starting";
@@ -33,7 +36,7 @@ export function serverState(i: StateInput): ServerState {
 }
 
 export const TONE: Record<ServerState, Tone> = {
-  online: "good", asleep: "info", waking: "warn", starting: "warn", stopping: "warn", restarting: "warn", off: "neutral", crashed: "bad", unreachable: "bad",
+  online: "good", asleep: "info", waking: "warn", starting: "warn", stopping: "warn", restarting: "warn", off: "neutral", crashed: "bad", unreachable: "bad", unresponsive: "bad",
 };
 
 /** Joinable: a member who connects gets in, or wakes it. Downloads and Play are open in these. */
@@ -57,12 +60,13 @@ export function stateLine(s: ServerState, w: Words = {}): string {
     case "off": return "Switched off";
     case "crashed": return "Crashed";
     case "unreachable": return "Can't reach the server";
+    case "unresponsive": return "Not answering, nobody can join right now";
   }
 }
 
 /** The one-word label for pills and the sidebar. */
 export const STATE_LABEL: Record<ServerState, string> = {
-  online: "Online", asleep: "Asleep", waking: "Waking up", starting: "Starting", stopping: "Stopping", restarting: "Restarting", off: "Switched off", crashed: "Crashed", unreachable: "Can't reach the server",
+  online: "Online", asleep: "Asleep", waking: "Waking up", starting: "Starting", stopping: "Stopping", restarting: "Restarting", off: "Switched off", crashed: "Crashed", unreachable: "Can't reach the server", unresponsive: "Not answering",
 };
 
 /** A sentence under the line, for players; admins get `adminHint` as well where it differs. */
@@ -77,6 +81,7 @@ export function stateHint(s: ServerState, admin: boolean): string {
     case "off": return admin ? "The server is switched off, so joining won't wake it. Start it here." : "The server is switched off. Ask Alex in Discord.";
     case "crashed": return admin ? "The server went down without shutting down first. Start it again, and look at the last console lines." : "The server has crashed. Ask Alex in Discord.";
     case "unreachable": return "The site can't reach the server's control panel right now, so it doesn't know whether the server is up.";
+    case "unresponsive": return admin ? "AMP says the server is running, but the game has not answered for over a minute, so nobody can join. Look at the console, and restart it if it stays like this." : "The server is on but the game isn't answering, so nobody can join right now. Ask Alex in Discord.";
   }
 }
 
@@ -98,6 +103,8 @@ export function wakeDecision(d: { member: boolean; openFor: boolean; state: Serv
     case "online": return "awake";
     case "off": return "off";
     case "crashed": return "crashed";
+    // AMP says Running, so a start would do nothing; "crashed" is what the app and the Play page already say no with
+    case "unresponsive": return "crashed";
     case "unreachable": return "unreachable";
     default: return "busy"; // starting, stopping, restarting: something else is already happening
   }

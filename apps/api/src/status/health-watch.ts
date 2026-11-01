@@ -31,6 +31,8 @@ export type Inputs = {
   dump: { name: string; at: Date; bytes: number } | null | undefined;
   /** The dump api last copied to the AMP host (since api started). */
   copied: { name: string; at: Date } | null;
+  /** When api started: what it copied before is forgotten, so the copy is due again from then. */
+  since?: Date;
   /** AMP's backups, newest first by time; undefined when the list could not be read. */
   backups: Array<{ name: string; at: Date; bytes: number | null }> | undefined;
   /** The pack the site hands out (the checkout's lock) and the pack last synced to the server. */
@@ -54,6 +56,9 @@ export function evaluate(i: Inputs, now: Date): Checks {
   const dumpCopy: Check = !i.dump ? { ok: null, text: "No dump to copy" }
     : i.copied?.name === i.dump.name ? { ok: true, text: `${i.dump.name} is on the AMP host` }
     : t - i.dump.at.getTime() < COPY_GRACE_MIN * 60_000 ? { ok: true, text: `${i.dump.name} is new; its copy is due` }
+    // after a restart (a host reboot on 2026-11-01 04:30 told the admin channel a false alarm): the first copy may
+    // fail while AMP is still coming up, and api tries again every ten minutes
+    : i.since && t - i.since.getTime() < COPY_GRACE_MIN * 60_000 ? { ok: true, text: `api has just started; the copy of ${i.dump.name} is due` }
     : { ok: false, text: `The database dump ${i.dump.name} has not been copied to the AMP host` };
 
   let backup: Check;
@@ -132,10 +137,13 @@ type Deps = {
 export class HealthWatch {
   checks: Checks | null = null;
   lookedAt: Date | null = null;
+  private readonly startedAt: Date;
   private timer: NodeJS.Timeout | null = null;
   private busy = false;
 
-  constructor(private readonly d: Deps) {}
+  constructor(private readonly d: Deps) {
+    this.startedAt = (d.now ?? (() => new Date()))();
+  }
 
   start() {
     this.timer = setInterval(() => void this.round(), 10 * 60_000);
@@ -181,6 +189,7 @@ export class HealthWatch {
     return {
       dump,
       copied: this.d.copied(),
+      since: this.startedAt,
       backups,
       pack: { site: await sitePack(this.d.repoDir), server: await this.d.serverPack() },
       wake: { failed: w.phase === "failed", by: w.by, at: w.endedAt ? new Date(w.endedAt) : null },

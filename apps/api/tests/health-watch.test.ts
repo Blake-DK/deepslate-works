@@ -43,6 +43,9 @@ describe("the health watch: what counts as wrong", () => {
     expect(names(evaluate({ ...well, copied: { name: "deepslate-2026-10-04.sql.gz", at: h(30) } }, now))).toEqual(["dumpCopy"]);
     // a dump made twenty minutes ago is not late yet (api copies within ten)
     expect(evaluate({ ...well, dump: { name: "new.sql.gz", at: h(1 / 3), bytes: 600_000 }, copied: null }, now).dumpCopy.ok).toBe(true);
+    // 2026-11-01: a host reboot at 04:30, api forgot the 00:00 copy and its first try failed while AMP came up
+    expect(evaluate({ ...well, copied: null, since: h(1 / 12) }, now).dumpCopy.ok).toBe(true);
+    expect(names(evaluate({ ...well, copied: null, since: h(1.5) }, now))).toEqual(["dumpCopy"]);
   });
 
   it("docs/28: no world backup for 30 hours, a 22-byte zip, and a backup a third too small", () => {

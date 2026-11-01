@@ -302,6 +302,14 @@ const KNOWN_HARMLESS: RegExp[] = [
   // game drops it from their book, once per recipe and player, and says so as an error. Alex, 2026-10-11, from the
   // admin channel: "Tried to load unrecognized recipe: mowziesmobs:spear removed now."
   /^Tried to load unrecognized recipe: [a-z0-9_.-]+:[a-z0-9_./-]+ removed now\.$/,
+  // Alex, 2026-11-01, from the admin channel (22 of one night's 27 lines). An item frame, painting or leash knot saved
+  // more than 16 blocks from the block it hangs on (a contraption moved it): the game keeps it where it is and says so
+  // each time its chunk loads, so the same few spots came back every hour.
+  /^Block-attached entity at invalid position: BlockPos\{x=-?\d+, y=-?\d+, z=-?\d+\}$/,
+  // A saved Allay whose vibration listener the game cannot read since 1.21; the Allay loads anyway, at every chunk load
+  /^Failed to parse vibration listener for Allay: 'No key selector in MapLike\[/,
+  // A spawner in generated terrain naming no mob the server can make; it stays a spawner that spawns nothing
+  /^Failed to fetch mob spawner entity at \(-?\d+, -?\d+, -?\d+\)$/,
 ];
 export const isKnownHarmless = (message: string): boolean => KNOWN_HARMLESS.some((k) => k.test(message.trim()));
 

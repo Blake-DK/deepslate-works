@@ -51,6 +51,13 @@ http://{$MAP_HOST} {
 		Content-Security-Policy "frame-ancestors https://{$SITE_HOST}"
 		defer
 	}
+	# BlueMap tells browsers to keep a tile for a day, so land generated after someone looked stays dark for them until
+	# then. Ten minutes instead (2026-11-01).
+	@tiles path_regexp ^/maps/[^/]+/tiles/
+	header @tiles {
+		Cache-Control "public, max-age=600"
+		defer
+	}
 	# forward_auth returns the 401 as-is, so spell it out: 2xx from /api/auth/verify -> map, 401 -> portal login.
 	reverse_proxy deepslate-web:3000 {
 		import to_web

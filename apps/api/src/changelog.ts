@@ -422,6 +422,11 @@ export const CHANGES: Change[] = [
     ],
     onSync: true,
   },
+  {
+    id: "2026-11-01-map-squares",
+    date: "2026-11-01",
+    lines: ["The live map no longer shows dark squares where new land has been made since you last looked. If you still see some, reload the page."],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

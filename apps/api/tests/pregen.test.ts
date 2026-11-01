@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parse } from "../src/events/parse.js";
 import { ConsoleTail } from "../src/amp/console.js";
 import { MockAmp } from "../src/amp/client.js";
-import { chunksIn, combine, due, inWindow, nextPregen, Pregen, PregenWatch, Refused, SLEEP_NODE, SLEEP_PERMISSION, step, ukClock, type PregenPlan, type PregenState, type View } from "../src/status/pregen.js";
+import { chunksIn, clockOf, combine, due, inWindow, nextPregen, Pregen, PregenWatch, Refused, SLEEP_NODE, SLEEP_PERMISSION, step, ukClock, type PregenPlan, type PregenState, type View } from "../src/status/pregen.js";
 import { actions, parsePlace } from "../src/actions/registry.js";
 
 const NONE: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, at: null };
@@ -245,13 +245,15 @@ describe("the mode, from turning it on to 100%", () => {
 const MOON = { x: 0, z: 0, radius: 3000, world: "deepslate:moon" };
 const RUN_MAIN = "Task running for minecraft:overworld. Processed: 24500 chunks (68.59%), ETA: 0:03:30, Rate: 50.0 cps, Current: 1, 1";
 const RUN_MOON = "Task running for deepslate:moon. Processed: 1000 chunks (6.96%), ETA: 0:20:00, Rate: 30.0 cps, Current: 1, 1";
-describe("several worlds, one at a time", () => {
-  it("carries the main world on; Ashmoon is begun only when the main world is done; ends when both are", async () => {
+const NETHER = { x: 0, z: 0, radius: 2000, world: "minecraft:the_nether" };
+const RUN_NETHER = "Task running for minecraft:the_nether. Processed: 500 chunks (0.79%), ETA: 1:00:00, Rate: 20.0 cps, Current: 1, 1";
+describe("several worlds, two at a time", () => {
+  it("carries the main world on, begins Ashmoon beside it on the next round, and ends when both are done", async () => {
     const r = rig(true);
     await r.pregen.start(); r.pregen.stop();
     r.tail.state = 20;
     await r.pregen.turnOn({ mode: "now", area: AREA, also: [MOON], window: null, capHours: null }, null);
-    // Ashmoon is new to the portal: whatever chunky may have kept for it is called off; it waits for its turn
+    // Ashmoon is new to the portal: whatever chunky may have kept for it is called off; one world is handed over per round
     expect(r.amp.console).toEqual(["chunky cancel deepslate:moon", "chunky confirm", "chunky quiet 10", "chunky continue minecraft:overworld"]);
     expect(r.saved()).toMatchObject({ mode: "now", also: [MOON], alsoFresh: ["deepslate:moon"] });
     r.tail.ingest(RUN_MAIN);
@@ -259,15 +261,17 @@ describe("several worlds, one at a time", () => {
     const sent = r.amp.console.length;
     r.clock.t += 60_000;
     await r.pregen.tick();
-    expect(r.amp.console.length).toBe(sent); // nothing is sent while the main world runs
-    r.tail.ingest("Task finished for minecraft:overworld. Processed: 35721 chunks (100.00%), Total time: 0:12:40");
-    r.clock.t += 60_000;
-    await r.pregen.tick();
     expect(r.amp.console.slice(sent)).toEqual(["chunky quiet 10", "chunky world deepslate:moon", "chunky shape square", "chunky center 0 0", "chunky radius 3000", "chunky start"]);
     expect(r.saved()).toMatchObject({ mode: "now", alsoFresh: [] });
     r.tail.ingest("Task started in deepslate:moon for the square region centered at 0, 0 with radius 3000.");
+    r.tail.ingest(RUN_MAIN);
     r.tail.ingest(RUN_MOON);
+    expect(r.pregen.status()).toMatchObject({ status: "running", chunks: 25500, rate: 80 });
     const sent2 = r.amp.console.length;
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.length).toBe(sent2); // nothing is sent while both run
+    r.tail.ingest("Task finished for minecraft:overworld. Processed: 35721 chunks (100.00%), Total time: 0:12:40");
     r.clock.t += 60_000;
     await r.pregen.tick();
     expect(r.amp.console.length).toBe(sent2);
@@ -278,13 +282,33 @@ describe("several worlds, one at a time", () => {
     expect(r.pregen.plan).toEqual({ mode: "off", area: null });
   });
 
-  it("two worlds found running side by side (a plan from before): the later one is paused, the first carries on", async () => {
+  it("a third world waits for a turn and begins when one of the first two is done", async () => {
     const r = rig(true);
     await r.pregen.start(); r.pregen.stop();
     r.tail.state = 20;
-    await r.pregen.turnOn({ mode: "now", area: AREA, also: [MOON], window: null, capHours: null }, null);
+    await r.pregen.turnOn({ mode: "now", area: AREA, also: [NETHER, MOON], window: null, capHours: null }, null);
+    r.tail.ingest(RUN_MAIN);
+    r.clock.t += 60_000;
+    await r.pregen.tick(); // the Nether is begun
+    r.tail.ingest(RUN_NETHER);
+    const sent = r.amp.console.length;
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.length).toBe(sent); // Ashmoon waits
+    r.tail.ingest("Task finished for minecraft:the_nether. Processed: 63001 chunks (100.00%), Total time: 1:00:00");
+    r.clock.t += 60_000;
+    await r.pregen.tick();
+    expect(r.amp.console.slice(sent)).toEqual(["chunky quiet 10", "chunky world deepslate:moon", "chunky shape square", "chunky center 0 0", "chunky radius 3000", "chunky start"]);
+  });
+
+  it("three worlds found running at once (a plan from before): the third is paused, the first two carry on", async () => {
+    const r = rig(true);
+    await r.pregen.start(); r.pregen.stop();
+    r.tail.state = 20;
+    await r.pregen.turnOn({ mode: "now", area: AREA, also: [NETHER, MOON], window: null, capHours: null }, null);
     r.pregen.plan = { ...r.pregen.plan, alsoFresh: [] } as PregenPlan; // as live had it: every world handed to chunky
     r.tail.ingest(RUN_MAIN);
+    r.tail.ingest(RUN_NETHER);
     r.tail.ingest(RUN_MOON);
     const sent = r.amp.console.length;
     r.clock.t += 60_000;
@@ -295,7 +319,6 @@ describe("several worlds, one at a time", () => {
     await r.pregen.tick();
     expect(r.amp.console.length).toBe(sent + 2);
   });
-
   it("a world whose turn has not come is still begun, not carried on, after the mode is turned off and on", async () => {
     const r = rig(true);
     await r.pregen.start(); r.pregen.stop();
@@ -377,7 +400,12 @@ describe("several worlds, one at a time", () => {
 
   it("adds the figures up: running while one runs, finished when all are", () => {
     const run = (chunks: number, rate: number, eta: string): PregenState => ({ status: "running", world: null, chunks, percent: 1, eta, rate, at: null });
-    expect(combine([run(100, 50, "0:10:00"), run(300, 30, "1:00:00")], [1000, 1000])).toMatchObject({ status: "running", chunks: 400, percent: 20, rate: 80, eta: "1:00:00" });
+    // every chunk still to do at the rate of both: 1,600 at 80 a second (until 2026-11-01 the longest of the two, "1:00:00")
+    expect(combine([run(100, 50, "0:10:00"), run(300, 30, "1:00:00")], [1000, 1000])).toMatchObject({ status: "running", chunks: 400, percent: 20, rate: 80, eta: "0:00:20" });
+    // a world waiting its turn counts: the main world's own estimate said 107 hours with 184 to go (2026-10-31)
+    const waiting: PregenState = { status: "none", world: null, chunks: null, percent: null, eta: null, rate: null, at: null };
+    expect(combine([run(92211, 4, "107:12:52"), waiting, waiting, waiting], [1565001, 391876, 391876, 391876]).eta).toBe("183:55:05");
+    expect(clockOf(3661)).toBe("1:01:01");
     const done: PregenState = { status: "finished", world: null, chunks: 1000, percent: 100, eta: null, rate: null, at: null };
     expect(combine([done, { ...run(500, 1, "0:01:00"), status: "paused", rate: null, eta: null }], [1000, 1000])).toMatchObject({ status: "paused", chunks: 1500, percent: 75, rate: null });
     expect(combine([done, done], [1000, 1000])).toMatchObject({ status: "finished", percent: 100 });

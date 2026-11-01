@@ -66,6 +66,29 @@ describe("one world at a time, live", () => {
       "Waits its turn, after the Nether: 99,511 of 391,876 chunks so far, 25.3%.",
     ]);
   });
+  // 2026-11-01: two at a time (api's AT_ONCE); an api before then sends no atOnce and means one
+  it("with two at a time, the first two unfinished worlds have their turn and the later ones wait", () => {
+    const end = { x: 0, z: 0, radius: 5000, world: "minecraft:the_end" };
+    const p: Pregen = {
+      ...base,
+      status: "running",
+      atOnce: 2,
+      worlds: [
+        { world: "minecraft:overworld", area: { ...AREA, radius: 10000 }, total: 1565001, status: "running", chunks: 39332, percent: 2.51, eta: "76:00:30", rate: 5.6 },
+        { world: "minecraft:the_nether", area: nether, total: 391876, status: "running", chunks: 1200, percent: 0.31, eta: "18:00:00", rate: 6 },
+        { world: "minecraft:the_end", area: end, total: 391876, status: "none", chunks: null, percent: null, eta: null, rate: null },
+        { world: "deepslate:moon", area: moon, total: 391876, status: "paused", chunks: 99511, percent: 25.31, eta: null, rate: null },
+      ],
+    };
+    expect(worldsProgress(p).map((w) => w.line)).toEqual([
+      "39,332 of 1,565,001 chunks, 2.5%, about 76:00:30 to go, 6 chunks a second.",
+      "1,200 of 391,876 chunks, 0.3%, about 18:00:00 to go, 6 chunks a second.",
+      "Waits its turn: two worlds generate at a time (391,876 chunks).",
+      "Waits its turn: two worlds generate at a time: 99,511 of 391,876 chunks so far, 25.3%.",
+    ]);
+    const mainDone: Pregen = { ...p, worlds: p.worlds!.map((w, i) => (i === 0 ? { ...w, status: "finished", chunks: 1565001, percent: 100, eta: null, rate: null } : w)) };
+    expect(worldsProgress(mainDone)[2]!.line).not.toContain("Waits");
+  });
   it("says how old chunky's last figures are", () => {
     const now = Date.parse("2026-10-31T15:25:09Z");
     expect(saidAgo("2026-10-31T15:24:57Z", now)).toBe("12 s ago");
@@ -110,15 +133,15 @@ describe("sleepText", () => {
 });
 
 describe("pregenCost", () => {
-  it("is about twelve minutes and half a gigabyte for 1500 blocks, and a night for 10000", () => {
+  it("is about an hour and a half and half a gigabyte for 1500 blocks, and three days for 10000 (6 chunks a second, 2026-11-01)", () => {
     const small = pregenCost(1500);
     expect(small.chunks).toBe(35721); // what chunky counted for it on 2026-09-29
-    expect(Math.round(small.hours * 60)).toBe(12);
+    expect(Math.round(small.hours * 60)).toBe(99);
     expect(small.gb).toBeGreaterThan(0.4);
     expect(small.gb).toBeLessThan(0.5);
     const big = pregenCost(10000);
-    expect(big.hours).toBeGreaterThan(8);
-    expect(big.hours).toBeLessThan(9);
+    expect(big.hours).toBeGreaterThan(72);
+    expect(big.hours).toBeLessThan(73);
   });
 });
 

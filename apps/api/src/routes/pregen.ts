@@ -4,7 +4,7 @@ import type { ConsoleTail } from "../amp/console.js";
 import { requireAdmin } from "../auth.js";
 import { mapOf } from "../status/map.js";
 import { PREGEN_WORLD } from "../actions/registry.js";
-import { areasOf, chunksIn, NONE, phase, Refused, worldOf, type Pregen } from "../status/pregen.js";
+import { areasOf, AT_ONCE, chunksIn, NONE, phase, Refused, worldOf, type Pregen } from "../status/pregen.js";
 
 // Admin → Server → Pre-generation. Off unless an admin turns it on; see status/pregen.ts.
 
@@ -39,7 +39,8 @@ export function pregenRoutes(app: FastifyInstance, tail: ConsoleTail, pregen: Pr
       phase: pregen.plan.mode === "off" ? null : phase(pregen.plan.what, st.status, false),
       map: map(pregen.plan.area?.world),
       total: areas.length ? areas.reduce((n, a) => n + chunksIn(a.radius), 0) : null,
-      // world by world, when several generate at once
+      // world by world, when the plan has several; this many of them generate side by side
+      atOnce: AT_ONCE,
       worlds: areas.length > 1 ? areas.map((a) => ({ ...NONE, ...pregen.watch.worlds[worldOf(a)], world: worldOf(a), area: a, total: chunksIn(a.radius), map: map(a.world) })) : null,
       sleep: pregen.sleep,
       serverState: tail.state,

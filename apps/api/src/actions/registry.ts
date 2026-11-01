@@ -704,14 +704,14 @@ export const actions = {
     // another is named (Alex, 2026-10-05: every dimension we make can be pre-generated)
     build: (_ctx, { x, z, radius, world }) => ["chunky quiet 10", `chunky world ${world ?? "minecraft:overworld"}`, "chunky shape square", `chunky center ${x} ${z}`, `chunky radius ${radius}`, "chunky start"],
   }),
-  // `world`: that world's task alone (status/pregen.ts generates one world at a time since 2026-10-31); without it, every saved task
+  // `world`: that world's task alone (status/pregen.ts has worlds take turns, AT_ONCE side by side); without it, every saved task
   "world.pregenContinue": define({ name: "world.pregenContinue", role: "ADMIN", input: z.object({ world: PREGEN_WORLD.optional() }), build: (_ctx, { world }) => ["chunky quiet 10", world ? `chunky continue ${world}` : "chunky continue"] }),
   // chunky asks "are you sure" and wants `confirm`
   "world.pregenCancel": define({ name: "world.pregenCancel", role: "ADMIN", input: z.object({}), build: () => ["chunky cancel", "chunky confirm"] }),
   // One world's task only, when several worlds generate at once and only one of them changes (chunky asks to confirm either way).
   "world.pregenCancelWorld": define({ name: "world.pregenCancelWorld", role: "ADMIN", input: z.object({ world: PREGEN_WORLD }), build: (_ctx, { world }) => [`chunky cancel ${world}`, "chunky confirm"] }),
   // Before the server is stopped: a stop in the middle of generating hung at "Saving worlds" (2026-09-29).
-  // `world`: that world's task alone, when the next world in line is to have its turn.
+  // `world`: that world's task alone, when it is not among the worlds whose turn it is.
   "world.pregenPause": define({ name: "world.pregenPause", role: "ADMIN", input: z.object({ world: PREGEN_WORLD.optional() }), build: (_ctx, { world }) => [world ? `chunky pause ${world}` : "chunky pause", "save-all flush"] }),
   "world.pregenProgress": define({ name: "world.pregenProgress", role: "ADMIN", input: z.object({}), build: () => ["chunky progress"] }),
   "world.locate": define({

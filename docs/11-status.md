@@ -33,6 +33,46 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Pre-generation: why it is slow, and two worlds at a time (2026-11-01, on `dev`)
+
+- **Alex:** "why is this so slow" (4 chunks a second, about a week for the main world at radius 10,000 and the other
+  three at 5,000), then "i want the big area".
+- **What was found (2026-10-31 and 11-01, times UTC):**
+  - The heap was 6 GB, not the 10 GB it should have had; G1's concurrent threads ran flat out. Alex set 10 GB in AMP
+    (live restarted 21:24). That ended the GC load but not the slowness.
+  - spark on every thread while generating: chunky waits on its 50 chunks in flight (`chunky.maxWorkingCount`,
+    default 50, read from the jar), the five worldgen workers are 73 % parked, the server thread 90 %, the IO workers
+    99 %; the VM was about 60 % idle. Each chunk takes about 10 s from asked to done. Worldgen mods cost little CPU
+    (Lithostitched and Streams Reflowing's own features under 1 % each).
+  - `-Dchunky.maxWorkingCount=400` (tried 22:57 to 06:07): about 8 chunks a second instead of 4 to 5, but every
+    pause for a joining player froze the server: 60 s at 23:16 (watchdog crash, crash report
+    `crash-2026-10-31_23.17.34-server.txt`), 45 s at 23:22 (the player was disconnected). Alex removed it; live has
+    run without it since 06:07.
+  - The same radius 10,000 took about 12 hours on 2026-10-01 and 2026-10-03 (35 chunks a second or more). In between,
+    Overhauled Overworld and Streams Reflowing (2026-10-28) and the village mods with Lithostitched (2026-10-29)
+    came in, and the world was regenerated for them (2026-10-30). Streams plans river networks per watershed and holds
+    chunk steps until the plan is ready (its settings: "Watershed size sets how long each pause is").
+  - Live's `config/streamsreflowing.properties`: `terrainAccuracyLevel=MEDIUM`, `watershedSize=BLOCKS_768`,
+    `fastTerrainEstimate=true`, `fastChunkLoading=true`; accuracy, watershed, wetness and branching apply to new
+    worlds only.
+  - On the test server: MEDIUM 5.8 chunks a second (live paused), POTATO in a new world (`streamtest-potato`) 5.0 with
+    live generating beside it at 6.8. POTATO is not faster. Both runs had stalls of several minutes. Live and test
+    side by side made about 12 chunks a second: a task is held up by waiting, not by the cores.
+- **Built:** `status/pregen.ts` runs `AT_ONCE` = 2 worlds' tasks side by side in the plan's order (the first two
+  unfinished; any other is paused); one world is begun or carried on per 45 s round, so "No tasks to continue." still
+  belongs to the world asked for. The combined estimate is now every chunk still to do (waiting worlds too) at the
+  rate of all together (`clockOf`); it was the longest running task's own estimate and said 107 hours with 184 to go.
+  `GET /pregen` says `atOnce`; the card reads "Waits its turn: two worlds generate at a time" for the others, its
+  rough hours are at 6 chunks a second (was 50, measured before Streams), and the ticked-worlds text says two at a
+  time. Not four: that ran the server out of memory on 2026-10-31 (6 GB, with BlueMap rendering beside it). Tests:
+  api 848, web 727.
+- **After the deploy:** the live plan (main world 10,000; the Nether, the End and Ashmoon 5,000) has the main world
+  and the Nether generating together, then the End and Ashmoon as turns come free. Watch the heap the first night
+  (AMP's memory figure, or `spark health`); with BlueMap's render held until generating is done, as now.
+- **Left on the test server:** AMP's level name for DeepslateTEST01 is `streamtest-potato` until Alex sets it back to
+  `world`; that world and about 8,500 more chunks around x 4000, z 4000 in `world` are left from the tests. Its
+  Streams settings are back as they were.
+
 ## Pre-generation card live (2026-10-31, on `dev`)
 
 - **Alex:** "i want it to live update what its proccess it". The World tab refreshed every 15 s already, but chunky only

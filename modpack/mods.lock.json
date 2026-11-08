@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-29T22:30:01.898Z",
+  "generatedAt": "2026-11-08T16:20:45.231Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "c830b7eccc9e3d3ec1d664ead5db7ad85b4a95ab2864ef0d44eb9373a9e31624",
+  "hash": "830b4b58de092c5efa81d99ba5343cffd06763ce831033ce8f013960bd076eb8",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -140,9 +140,11 @@
       "size": 584734,
       "side": "both",
       "requiredBy": [
+        "tacz-turrets",
         "lets-do-meadow",
         "lets-do-vinery",
-        "critters-and-companions"
+        "critters-and-companions",
+        "epic-knights-shields-armor-and-weapons"
       ],
       "modrinth": {
         "client": "required",
@@ -210,14 +212,14 @@
       "slug": "balm",
       "name": "Balm",
       "projectId": "MBAkmtvl",
-      "versionId": "CquiaiDj",
-      "versionNumber": "21.0.66+neoforge-1.21.1",
+      "versionId": "gMedgtzL",
+      "versionNumber": "21.0.67+neoforge-1.21.1",
       "versionType": "release",
-      "filename": "balm-neoforge-1.21.1-21.0.66.jar",
-      "url": "https://cdn.modrinth.com/data/MBAkmtvl/versions/CquiaiDj/balm-neoforge-1.21.1-21.0.66.jar",
-      "sha512": "0262d51c0e931d10c3dccefb3b5426a1622edecab243d4b15dce07a23309641370184776739765067d292d808242d088c6fbf249762689824eff9ba42c2d1e63",
-      "sha1": "dd3606a349f4a3c8fb5bd0ab22905675c02b0d74",
-      "size": 783793,
+      "filename": "balm-neoforge-1.21.1-21.0.67.jar",
+      "url": "https://cdn.modrinth.com/data/MBAkmtvl/versions/gMedgtzL/balm-neoforge-1.21.1-21.0.67.jar",
+      "sha512": "ad4f4df829b1195446486df818c2c1f0bf6738cb1b30cfdbf9eae4855ce62a66b00f2dc5e0a87409f25ce4eba9bd5c94e1b10d1940af451d5ef7dd7f4b3d8ebd",
+      "sha1": "68c95ca8a6a87d26199d43ff6978bc94949329e3",
+      "size": 786010,
       "side": "both",
       "requiredBy": [
         "waystones"
@@ -300,9 +302,10 @@
       "sha512": "aaf9b010955b8cd294e5a92f069985b18729fd5e2cf22d351f1dff9680f15488688803ec41e77e941cbde130ceb535014ca4c868047d80ab69c2d508e216654d",
       "sha1": "c3e5733ba4503b102589a026000fd5ce0212f6f2",
       "size": 1163890,
-      "side": "server",
+      "side": "both",
       "requiredBy": [
-        "cristel-lib"
+        "cristel-lib",
+        "epic-knights-shields-armor-and-weapons"
       ],
       "modrinth": {
         "client": "optional",
@@ -766,6 +769,26 @@
       "channels": "none"
     },
     {
+      "slug": "epic-knights-shields-armor-and-weapons",
+      "name": "Epic Knights",
+      "projectId": "L6jvzao4",
+      "versionId": "Pzhaw0LB",
+      "versionNumber": "10.17",
+      "versionType": "release",
+      "filename": "epic-knights-1.21.1-neoforge-10.17.jar",
+      "url": "https://cdn.modrinth.com/data/L6jvzao4/versions/Pzhaw0LB/epic-knights-1.21.1-neoforge-10.17.jar",
+      "sha512": "919f421c39b0d23ea0b80fcc87e1ce07ae5fbbf060919c7c7456eb0f00aa8487130e9a2512a8d160f6a694bd3b7616b11df494cae44e09e98f69d0fa5fc645fe",
+      "sha1": "10e69babca73fc56a6296ac08ba6b68b06997fd8",
+      "size": 2818926,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "none"
+    },
+    {
       "slug": "fairy-lights-fabric",
       "name": "Fairy Lights",
       "side": "both",
@@ -969,14 +992,14 @@
       "slug": "guideme",
       "name": "GuideME",
       "projectId": "Ck4E7v7R",
-      "versionId": "JBFCgJmg",
-      "versionNumber": "21.1.21",
+      "versionId": "QeYKsstN",
+      "versionNumber": "21.1.22",
       "versionType": "release",
-      "filename": "guideme-21.1.21.jar",
-      "url": "https://cdn.modrinth.com/data/Ck4E7v7R/versions/JBFCgJmg/guideme-21.1.21.jar",
-      "sha512": "ec34f1ac05518ef05399a9a516837f96546e19a75b2b6150d17e01eba7e83b7ce1ac2aac8a2066c0be6e24ecab5b25b16a48939736be700cad8b383388d8b720",
-      "sha1": "36007b739ad2206f5ec2d63e5c8bd6f7e0a43161",
-      "size": 9329830,
+      "filename": "guideme-21.1.22.jar",
+      "url": "https://cdn.modrinth.com/data/Ck4E7v7R/versions/QeYKsstN/guideme-21.1.22.jar",
+      "sha512": "2a7b29143c1bef18375f221c337c6e744d04b79bc3cc10cadac46b7d6bb217ad78c51a3c33cd802b221cc7b38ff04a3f7064bd63d292e53bf9f3e09047eeda24",
+      "sha1": "eb2f531c91566a0f119b4b3a3acd927b48b6b27e",
+      "size": 9332340,
       "side": "both",
       "requiredBy": [
         "ae2"
@@ -1153,14 +1176,14 @@
       "slug": "kotlin-lang-forge",
       "name": "KotlinLangForge",
       "projectId": "1vrSzlao",
-      "versionId": "CSuMh1dl",
-      "versionNumber": "2.16.0-k2.4.21-3.0+neoforge",
+      "versionId": "mGsiLh3q",
+      "versionNumber": "2.18.0-k2.4.21-3.0+neoforge",
       "versionType": "release",
-      "filename": "KotlinLangForge-2.16.0-k2.4.21-3.0+neoforge.jar",
-      "url": "https://cdn.modrinth.com/data/1vrSzlao/versions/CSuMh1dl/KotlinLangForge-2.16.0-k2.4.21-3.0%2Bneoforge.jar",
-      "sha512": "ad3d9d986c794c1859759b92aed9ee7d37c32597e581244defe0f4965deba8d84a6f48b92fd58d346c66ce76eedc7a80bf2600dea80499bafa196196c4d12419",
-      "sha1": "35526546ac29794931c10f1008c466ac65965829",
-      "size": 8250445,
+      "filename": "KotlinLangForge-2.18.0-k2.4.21-3.0+neoforge.jar",
+      "url": "https://cdn.modrinth.com/data/1vrSzlao/versions/mGsiLh3q/KotlinLangForge-2.18.0-k2.4.21-3.0%2Bneoforge.jar",
+      "sha512": "135663be7f90cc941263180251ade89a11ea079eef3b7aad8da30259cc19401f26da0982034eb93102d903e4f328e95a1947f2d23f76e4edbe23827a28e236a4",
+      "sha1": "a28ebd8528947587f02af404ae87cbb70e409f17",
+      "size": 8248587,
       "side": "both",
       "requiredBy": [
         "veinminer"
@@ -1510,7 +1533,9 @@
       "side": "both",
       "requiredBy": [
         "mekanism-generators",
-        "mekanism-tools"
+        "mekanism-tools",
+        "mekanism-missiles",
+        "mekanism-nuclear-weapons-explosives"
       ],
       "modrinth": {
         "client": "required",
@@ -1539,6 +1564,48 @@
       "channels": "none"
     },
     {
+      "slug": "mekanism-missiles",
+      "name": "Mekanism Missiles",
+      "projectId": "mohSajWV",
+      "versionId": "qwMRKydj",
+      "versionNumber": "1.6.0+neoforge-1.21.1",
+      "versionType": "release",
+      "filename": "mekmissiles-NEOFORGE-1.6.0-1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/mohSajWV/versions/qwMRKydj/mekmissiles-NEOFORGE-1.6.0-1.21.1.jar",
+      "sha512": "a3abd182df9be970aa59161f9836d2b11cfc9539ee1df6985ed24e4bcc59bcb1034b5b7988501e6497bc88f6799268e54ecb0741e9146c10bf0617131948bbfe",
+      "sha1": "a4fed84e8e307bcb47ff8dc8b2ac0732b1d98384",
+      "size": 452673,
+      "side": "both",
+      "requiredBy": [],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
+    },
+    {
+      "slug": "mekanism-nuclear-weapons-explosives",
+      "name": "Mekanism Nuclear Weapons & Explosives",
+      "projectId": "ODOnDs1c",
+      "versionId": "WenYcovk",
+      "versionNumber": "1.8.0+neoforge-1.21.1",
+      "versionType": "release",
+      "filename": "mnwe-NEOFORGE-1.8.0-1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/ODOnDs1c/versions/WenYcovk/mnwe-NEOFORGE-1.8.0-1.21.1.jar",
+      "sha512": "3c002cd71e85e90b9ac122388678826280ca341907409e36ad4cdfd5691195f5234db92ba7fe0c0c9fd1ead45ba01b564cbdbae488d419bc778a87f9d3dfd288",
+      "sha1": "c1b577e17f50759d3c3296fe3de22bba5c462697",
+      "size": 399698,
+      "side": "both",
+      "requiredBy": [
+        "mekanism-missiles"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
+    },
+    {
       "slug": "mekanism-tools",
       "name": "Mekanism Tools",
       "projectId": "tqQpq1lt",
@@ -1562,14 +1629,14 @@
       "slug": "mezzconfig",
       "name": "MezzConfig",
       "projectId": "7tEfOcA7",
-      "versionId": "RdGonQpr",
-      "versionNumber": "0.6.9",
+      "versionId": "sPQlt1iR",
+      "versionNumber": "0.6.11",
       "versionType": "beta",
-      "filename": "mezz_config-1.21.1-neoforge-0.6.9-standalone.jar",
-      "url": "https://cdn.modrinth.com/data/7tEfOcA7/versions/RdGonQpr/mezz_config-1.21.1-neoforge-0.6.9-standalone.jar",
-      "sha512": "2a20fdcca268c0f80547806582c94d79de6d339aabd3714af4bc5cf25ce983028f72ae707d52b44786adeb4e4c1976bebd7dbc4a75a3bf4575ec44c2bcd28dc3",
-      "sha1": "a20ecb9978bd8eebd40f4548d14b0a360a63f8a4",
-      "size": 345479,
+      "filename": "mezz_config-1.21.1-neoforge-0.6.11-standalone.jar",
+      "url": "https://cdn.modrinth.com/data/7tEfOcA7/versions/sPQlt1iR/mezz_config-1.21.1-neoforge-0.6.11-standalone.jar",
+      "sha512": "38731fd657625548920c6f30c5d38e88d515888eb7d6f687a8b78d91e5ee18d6c16298432fddb8ae62f05128e560357a7c36f067d1a278c23d44d403534f9b9a",
+      "sha1": "d67b0773b42442a5353d40394479fa760fe9d486",
+      "size": 346826,
       "side": "both",
       "requiredBy": [
         "jei"
@@ -2102,6 +2169,28 @@
       "sha1": "c6ef4976de69a46c4e267bd7f91c730d2dc43a4e",
       "size": 57247579,
       "side": "both",
+      "requiredBy": [
+        "tacz-turrets"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
+    },
+    {
+      "slug": "tacz-turrets",
+      "name": "TACZ Turrets",
+      "projectId": "8k8SjeJB",
+      "versionId": "PWFfJBkj",
+      "versionNumber": "4.2.0",
+      "versionType": "release",
+      "filename": "tacz_turrets-neoforge-4.2.0-1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/8k8SjeJB/versions/PWFfJBkj/tacz_turrets-neoforge-4.2.0-1.21.1.jar",
+      "sha512": "dd0612103a75f7f12954750ce4d78753d433b4baca20cb7a6d5a0d0c63f3d6134b817431aaf182bfa174629a501f9831203fad40e0abc978453cdfe4f203691c",
+      "sha1": "7179a260617db97f60fb14d481d0284c4ff51270",
+      "size": 1639654,
+      "side": "both",
       "requiredBy": [],
       "modrinth": {
         "client": "required",
@@ -2133,14 +2222,14 @@
       "slug": "titanium",
       "name": "Titanium",
       "projectId": "1Ro7m06l",
-      "versionId": "vbCgpf68",
-      "versionNumber": "1.21-4.0.51",
+      "versionId": "ZrffET42",
+      "versionNumber": "1.21-4.0.52",
       "versionType": "beta",
-      "filename": "titanium-1.21-4.0.51.jar",
-      "url": "https://cdn.modrinth.com/data/1Ro7m06l/versions/vbCgpf68/titanium-1.21-4.0.51.jar",
-      "sha512": "59a1470b5b3e103f52fa9c0f2f334bb3b28cdbaba74c95234528a40a558596d598227968e5812502a41a9ee24993b00c748cee913abae8fbb4ab7df79d04ab29",
-      "sha1": "aeb581ba5bdaac3bf3d48bee78488151e9c3dfd1",
-      "size": 608070,
+      "filename": "titanium-1.21-4.0.52.jar",
+      "url": "https://cdn.modrinth.com/data/1Ro7m06l/versions/ZrffET42/titanium-1.21-4.0.52.jar",
+      "sha512": "8fbdc6840c7f670f952018563f2e24b0666de392df2e2753bbd17548f9ea77f3291ee5047c32342a4e7dd017ad5ccc7e66999fbb2cd3693ddc888de5825cb2e2",
+      "sha1": "b46f625333c9c570eed9962a355f37687d39e731",
+      "size": 608119,
       "side": "both",
       "requiredBy": [
         "industrial-foregoing"

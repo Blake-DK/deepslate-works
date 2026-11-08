@@ -1258,6 +1258,47 @@
       "howTo": "Tools and armour from Mekanism's metals (osmium, bronze, steel and more). Craft them like vanilla tools; JEI shows the recipes."
     },
     {
+      "slug": "mekanism-missiles",
+      "name": "Mekanism Missiles",
+      "category": "factories",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Missiles built from parts and launched from a silo, plus radars to see them coming. Late Mekanism.",
+      "note": "Only with Mekanism",
+      "wiki": "https://modrinth.com/mod/mekanism-missiles",
+      "videos": [],
+      "version": "qwMRKydj",
+      "requires": [
+        "mekanism",
+        "mekanism-nuclear-weapons-explosives"
+      ],
+      "guide": "game",
+      "topic": "combat",
+      "howTo": "Build a **silo**: a 3x3 pad with corner pillars 3 tall for tier 1 (Ponder shows it). Put the parts in the **launch controller**: engine, airframe, guidance, fins and a **warhead** (a bomb from the Warhead Assembler). Fuel it, then launch it at a target. A silo destroyed with a fuelled missile in it explodes."
+    },
+    {
+      "slug": "mekanism-nuclear-weapons-explosives",
+      "name": "Mekanism Nuclear Weapons & Explosives",
+      "category": "factories",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": true,
+      "exclusiveGroup": null,
+      "description": "Bombs built in the Warhead Assembler from Mekanism parts. Needed by Mekanism Missiles for its warheads.",
+      "wiki": "https://modrinth.com/mod/mekanism-nuclear-weapons-explosives",
+      "videos": [],
+      "version": "WenYcovk",
+      "requires": [
+        "mekanism"
+      ]
+    },
+    {
       "slug": "industrial-foregoing",
       "name": "Industrial Foregoing",
       "category": "factories",
@@ -1521,6 +1562,29 @@
           "does": "Crawl"
         }
       ]
+    },
+    {
+      "slug": "tacz-turrets",
+      "name": "TACZ Turrets",
+      "category": "guns",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Turrets that shoot TaCZ guns at mobs. Give one a gun and ammo and it guards your base.",
+      "note": "Needs TaCZ",
+      "wiki": "https://modrinth.com/mod/tacz-turrets",
+      "videos": [],
+      "version": "PWFfJBkj",
+      "requires": [
+        "tacz-1.21.1",
+        "architectury-api"
+      ],
+      "guide": "game",
+      "topic": "combat",
+      "howTo": "Right-click a block to place a turret (on a floor, wall or ceiling). Right-click the turret, put a TaCZ **gun** in its gun slot and **ammo** below it. Standing on a chest or barrel, it reloads from it. Leave **Players** on **Never Target** so it only shoots mobs. Crouch and right-click to pick it up, gun and ammo included; iron bars repair it."
     },
     {
       "slug": "vics-point-blank",
@@ -2932,13 +2996,13 @@
       "slug": "cloth-config",
       "name": "Cloth Config",
       "category": "base",
-      "side": "server",
+      "side": "both",
       "enabled": true,
       "load": "L",
       "recommended": false,
       "hidden": true,
       "exclusiveGroup": null,
-      "description": "Library needed by Cristel Lib (for William Wythers' Overhauled Overworld).",
+      "description": "Library needed by Cristel Lib (for William Wythers' Overhauled Overworld) and Epic Knights.",
       "wiki": "https://modrinth.com/mod/cloth-config",
       "videos": [],
       "version": "izKINKFg",
@@ -3155,6 +3219,28 @@
       "guide": "game",
       "topic": "combat",
       "howTo": "Mutant versions of the night's monsters roam **Ashmoon**: bigger, tougher and with new attacks. Keep your distance and fight them in the open."
+    },
+    {
+      "slug": "epic-knights-shields-armor-and-weapons",
+      "name": "Epic Knights",
+      "category": "adventure",
+      "side": "both",
+      "enabled": true,
+      "load": "M",
+      "recommended": false,
+      "hidden": false,
+      "exclusiveGroup": null,
+      "description": "Medieval armour, shields and weapons: lances, halberds, maces, plumes and banners on your armour.",
+      "wiki": "https://modrinth.com/mod/epic-knights-shields-armor-and-weapons",
+      "videos": [],
+      "version": "Pzhaw0LB",
+      "requires": [
+        "architectury-api",
+        "cloth-config"
+      ],
+      "guide": "game",
+      "topic": "combat",
+      "howTo": "Armour and weapons are made at the crafting table from iron, gold, diamond or **steel** (smelt an iron ingot in a **blast furnace**). Weapons differ: some reach further, some pierce armour, some need both hands, some knock riders off horses. Put a banner on armour or horse armour the way you put one on a shield."
     },
     {
       "slug": "nyfs-spiders",
@@ -3454,7 +3540,7 @@
       "recommended": false,
       "hidden": true,
       "exclusiveGroup": null,
-      "description": "Library needed by Critters and Companions, Let's Do Meadow and Let's Do Vinery.",
+      "description": "Library needed by Critters and Companions, Let's Do Meadow, Let's Do Vinery, Epic Knights and TACZ Turrets.",
       "wiki": "https://modrinth.com/mod/architectury-api",
       "videos": [],
       "version": "1IiqEQGl",

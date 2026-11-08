@@ -33,6 +33,27 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Epic Knights, TACZ Turrets and Mekanism Missiles on the test server (2026-11-08, on `dev`, not on `main`)
+
+- **Alex**, from the players' suggestions: TACZ Turrets yes, Mekanism Missiles yes, Epic Knights yes; MythicBotany and
+  Ice and Fire no (neither has a NeoForge 1.21.1 build; Botania has none on Modrinth either). Spartan Weaponry (an
+  unofficial 1.21.1 port only) was not picked.
+- **In the pack:** Epic Knights 10.17 (`Pzhaw0LB`; needs Architectury and Cloth Config, so Cloth Config is `both` now,
+  not server-only); TACZ Turrets **4.2.0** (`PWFfJBkj`): 4.3.0 needs `timeless-and-classics-zero` 1.2.0, and the pack
+  runs the community port `tacz-1.21.1` 1.1.8, which Lock's dependency check caught; Mekanism Missiles 1.6.0
+  (`qwMRKydj`) with Mekanism Nuclear Weapons & Explosives 1.8.0 (`WenYcovk`, hidden, its warheads). Lock `830b4b58`,
+  120 files; the unpinned balm, guideme, kotlin-lang-forge, mezzconfig and titanium moved with it. The Extras lock
+  was left as it was. No videos yet (lint warns).
+- **On the test server:** the test checkout fast-forwarded to this commit; Build all (pack `0.1.0+437dc9a3`, 99
+  server mods) and Sync (4 added, 5 updated) through the test api as the test site's admin; the server was asleep and
+  was woken to load them. It started 16:23:33 UTC with 154 files, `magistuarmory`, `mekmissiles`, `mnwe` and
+  `tacz_turrets` loaded, 0 missing, 0 problems. Not done: a PC joining through Test, anything tried in game.
+- **Before live:** both new Mekanism mods were released 2026-11-07 and MNWE calls itself "in active development". Its
+  nuclear, hydrogen and antimatter bombs break blocks in a radius of 32, 64 and 124 and leave radiation: check that
+  Open Parties and Claims keeps explosions out of claims, and decide whether the big bombs stay. Turrets have a
+  **Players** setting (Never, Retaliate, Always): decide the default before live. These go live with the next `dev` →
+  `main` deploy unless they are switched off first; that PR needs a change log entry for them.
+
 ## Not answering: the game is pinged while AMP says Running (2026-11-01, on `dev`)
 
 - **Alex:** "the deepslate api should also detect when the amp server is down and the game isnt joinable as it can be

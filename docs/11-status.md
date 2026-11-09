@@ -53,6 +53,15 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Open Parties and Claims keeps explosions out of claims, and decide whether the big bombs stay. Turrets have a
   **Players** setting (Never, Retaliate, Always): decide the default before live. These go live with the next `dev` →
   `main` deploy unless they are switched off first; that PR needs a change log entry for them.
+- **2026-11-09, the server crashed on turrets.** Once a tester placed a turret, the test server crashed about a minute
+  after each join (`crash-reports/crash-2026-11-09_16.26.26-server.txt` and four more: "Lithium Class Analysis",
+  then the watchdog), and players saw "internal server error". Lithium's collision and class-group code reflects over
+  each moving entity's methods; `TurretEntity` names the client-only `com.tacz.guns.client.resource.GunDisplayInstance`,
+  which the dedicated server refuses to load. Fix: `modpack/server/config/lithium.properties` switches off
+  `mixin.entity.collisions` and `mixin.chunk.entity_class_groups` on the server only (clients keep all of Lithium).
+  Built (server) and synced on the test server 19:42 UTC. The server log is not in `Event`: the crash reports and
+  `logs/` were read with AMP `FileManagerPlugin.ReadFileChunk` from inside `deepslate-api-test`. "Send to Alex" sends
+  the live profile's game log, not the test profile's.
 
 ## Not answering: the game is pinged while AMP says Running (2026-11-01, on `dev`)
 

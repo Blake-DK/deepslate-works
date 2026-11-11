@@ -61,7 +61,8 @@ say live is stopped, held or to be trimmed in place, this section wins.
   `mixin.entity.collisions` and `mixin.chunk.entity_class_groups` on the server only (clients keep all of Lithium).
   Built (server) and synced on the test server 19:42 UTC. The server log is not in `Event`: the crash reports and
   `logs/` were read with AMP `FileManagerPlugin.ReadFileChunk` from inside `deepslate-api-test`. "Send to Alex" sends
-  the live profile's game log, not the test profile's.
+  the live profile's game log, not the test profile's. Checked: a tester then played 55 min on the test server
+  (20:08 to 21:02 UTC) with the turret placed, no crash; the server went to sleep normally.
 
 ## Not answering: the game is pinged while AMP says Running (2026-11-01, on `dev`)
 

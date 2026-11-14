@@ -63,6 +63,16 @@ say live is stopped, held or to be trimmed in place, this section wins.
   `logs/` were read with AMP `FileManagerPlugin.ReadFileChunk` from inside `deepslate-api-test`. "Send to Alex" sends
   the live profile's game log, not the test profile's. Checked: a tester then played 55 min on the test server
   (20:08 to 21:02 UTC) with the turret placed, no crash; the server went to sleep normally.
+- **2026-11-14, damage limits (Alex: "the safe set").** MNWE's big bombs carve blocks with `setBlock` and check
+  only blast resistance (`BlastCarver`), so Open Parties and Claims does not stop them; the Industrial Bomb and a
+  silo cook-off are vanilla explosions, which claims do stop. Now: `deepslate-tools` has false-condition files
+  for `mnwe:assembling/{nuclear,hydrogen,antimatter,dirty}_bomb` and `seismic_charge`, their only recipes;
+  `modpack/server/config/mnweconfig.properties` has fallout off (`FALLOUT_RADIUS_FRACTION` and `FALLOUT_RADIATION`
+  0), `NAPALM_IGNITES_BLOCKS=false`, `GAS_CLOUD_KILLS_CROPS=false`; `mekmissilesconfig.properties` has
+  `MISSILE_MAX_RANGE=500`; `tacz_turrets-server.toml` has `damagePlayers = false`, which (read from the jar)
+  makes players' turrets never target players and shields players from their fire; wild sentry turrets still
+  attack. Built and synced on the test server 2026-11-14. Still open before live: a claim test in game with the
+  Industrial Bomb, and the change log entry.
 
 ## Not answering: the game is pinged while AMP says Running (2026-11-01, on `dev`)
 

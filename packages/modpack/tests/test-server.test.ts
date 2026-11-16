@@ -61,14 +61,14 @@ describe("modpack/test-overlay (T6)", () => {
     const d = await mkdtemp(path.join(tmpdir(), "overlay-"));
     dirs.push(d);
     await mkdir(path.join(d, "server", "config", "bluemap"), { recursive: true });
-    await writeFile(path.join(d, "server", "config", "bluemap", "webserver.conf"), 'enabled: true\nip: "10.77.0.2"\nport: 8100\n');
+    await writeFile(path.join(d, "server", "config", "bluemap", "webserver.conf"), 'enabled: true\nip: "203.0.113.2"\nport: 8100\n');
     await writeFile(path.join(d, "server", "config", "bluemap", "maps.conf"), "kept\n");
     const lines: string[] = [];
     const files = await applyTestOverlay({ dist: d, testOverlay: OVERLAY }, (l) => void lines.push(l));
     expect(files).toEqual(["config/bluemap/core.conf", "config/bluemap/webserver.conf", "config/voicechat/voicechat-server.properties"]);
     const web = await readFile(path.join(d, "server", "config", "bluemap", "webserver.conf"), "utf8");
     expect(web).toMatch(/^enabled: false$/m);
-    expect(web).not.toContain("10.77.0.2");
+    expect(web).not.toContain("203.0.113.2");
     expect(await readFile(path.join(d, "server", "config", "bluemap", "core.conf"), "utf8")).toMatch(/^accept-download: false$/m);
     expect(await readFile(path.join(d, "server", "config", "voicechat", "voicechat-server.properties"), "utf8")).toMatch(/^port=24464$/m);
     expect(await readFile(path.join(d, "server", "config", "bluemap", "maps.conf"), "utf8")).toBe("kept\n");

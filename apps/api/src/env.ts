@@ -4,7 +4,7 @@ import { z } from "zod";
 const schema = z.object({
   PORT: z.coerce.number().int().default(4000),
   API_SERVICE_TOKEN: z.string().min(32, "API_SERVICE_TOKEN must be at least 32 chars"),
-  AMP_URL: z.string().url().default("http://10.77.0.2:8080"),
+  AMP_URL: z.string().url().default("http://203.0.113.2:8080"),
   AMP_INSTANCE_ID: z.string().default(""),
   AMP_USERNAME: z.string().default("webapp"),
   AMP_PASSWORD: z.string().default(""),
@@ -13,13 +13,13 @@ const schema = z.object({
   // names the host itself. Doc 62: at home it is the LAN address; on the VPS it stays the tunnel's far end, which
   // AMP_TUNNEL_IP still names there, so an empty AMP_HOST falls back to it (loadEnv).
   AMP_HOST: z.string().optional(),
-  AMP_TUNNEL_IP: z.string().default("10.77.0.2"),
+  AMP_TUNNEL_IP: z.string().default("203.0.113.2"),
   // the mc-router dashboard on the AMP host (Admin → Server → Router), over the tunnel; it has no login of its own
-  ROUTER_DASH_URL: z.string().url().default("http://10.77.0.2:8090"),
+  ROUTER_DASH_URL: z.string().url().default("http://203.0.113.2:8090"),
   // the address players join by (also web's); its route is never removed from Admin → Server → Router, and the game
   // is pinged at it while AMP says Running (status/game-ping.ts)
   SERVER_ADDRESS: z.string().optional(),
-  RSYNC_TARGET: z.string().default("amp@10.77.0.2:"),
+  RSYNC_TARGET: z.string().default("amp@203.0.113.2:"),
   DEPLOY_KEY_PATH: z.string().default("/run/keys/deploy.key"),
   DATABASE_URL: z.string().min(1),
   PORTAL_URL: z.string().url().default("https://deepslate.dsw.test"),

@@ -233,7 +233,7 @@ services:
       SITE_HOST: ${SITE_HOST:?SITE_HOST is the site's host name (deepslate.dsw.test); set it in the stack's .env}
       MAP_HOST: ${MAP_HOST:?MAP_HOST is the map's host name (map.deepslate.dsw.test); set it in the stack's .env}
       TEST_HOST: ${TEST_HOST:-test.deepslate.dsw.test}
-      DS_EDGE_SUBNET: ${DS_EDGE_SUBNET:-172.27.0.0/16}
+      DS_EDGE_SUBNET: ${DS_EDGE_SUBNET:?DS_EDGE_SUBNET is the subnet of the network ds-edge (docker network inspect ds-edge shows it); set it in the stack's .env}
     volumes:
       - ${DEEPSLATE_DATA}/caddy/data:/data
       - ${DEEPSLATE_DATA}/caddy/config:/config

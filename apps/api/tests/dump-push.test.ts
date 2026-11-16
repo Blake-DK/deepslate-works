@@ -8,7 +8,7 @@ import { DumpPush, newestDump } from "../src/backup/dump-push.js";
 import { isDbDumps } from "../src/files/browse.js";
 import { sshCommand } from "../src/modpack/ssh.js";
 
-const env = { DEPLOY_KEY_PATH: "/run/keys/deploy.key", RSYNC_TARGET: "amp@10.77.0.2:" };
+const env = { DEPLOY_KEY_PATH: "/run/keys/deploy.key", RSYNC_TARGET: "amp@203.0.113.2:" };
 
 describe("the newest database dump goes to the AMP host (docs/31 B-07)", () => {
   it("newest by the date in the name; pre-* dumps and .part files never count", () => {
@@ -23,7 +23,7 @@ describe("the newest database dump goes to the AMP host (docs/31 B-07)", () => {
     const push = new DumpPush(env, () => undefined, "/dbdumps", async (_cmd, args) => { calls.push(args); return { code: 0, out: "" }; }, async () => names);
     expect(await push.round()).toBe("copied");
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.slice(-2)).toEqual(["/dbdumps/deepslate-2026-10-04.sql.gz", "amp@10.77.0.2:_backup/db/"]);
+    expect(calls[0]!.slice(-2)).toEqual(["/dbdumps/deepslate-2026-10-04.sql.gz", "amp@203.0.113.2:_backup/db/"]);
     expect(calls[0]!).not.toContain("--delete");
     expect(await push.round()).toBe("same");
     expect(calls).toHaveLength(1);
@@ -35,7 +35,7 @@ describe("the newest database dump goes to the AMP host (docs/31 B-07)", () => {
   it("a failed copy is tried again at the next round and says so in the log", async () => {
     const said: string[] = [];
     let code = 255;
-    const push = new DumpPush(env, (_o, m) => said.push(m), "/dbdumps", async () => ({ code, out: "ssh: connect to host 10.77.0.2 port 22: timed out" }), async () => ["deepslate-2026-10-04.sql.gz"]);
+    const push = new DumpPush(env, (_o, m) => said.push(m), "/dbdumps", async () => ({ code, out: "ssh: connect to host 203.0.113.2 port 22: timed out" }), async () => ["deepslate-2026-10-04.sql.gz"]);
     expect(await push.round()).toBe("failed");
     expect(push.last).toBeNull();
     expect(said[0]).toMatch(/NOT copied/);

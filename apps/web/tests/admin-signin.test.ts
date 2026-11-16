@@ -43,7 +43,7 @@ function world(over: Partial<LoginRecord> = {}) {
 }
 const PW = "correct horse battery staple";
 const go = (w: ReturnType<typeof world>, over: Partial<{ username: string; password: string; code: string; ip: string }> = {}) =>
-  checkAdminSignIn({ username: "alex", password: PW, code: w.code(), ip: "1.2.3.4", ...over }, w.deps, w.locks);
+  checkAdminSignIn({ username: "alex", password: PW, code: w.code(), ip: "203.0.113.4", ...over }, w.deps, w.locks);
 
 describe("TOTP (RFC 6238)", () => {
   it("matches the RFC's SHA-1 test vectors (last 6 digits)", () => {
@@ -104,7 +104,7 @@ describe("checkAdminSignIn", () => {
   it("5 failures for a username lock it for 15 minutes, even for the right password and code; then it opens again", async () => {
     const w = world();
     for (let i = 0; i < 4; i++) expect(await go(w, { password: "wrong password!!", ip: `10.0.0.${i}` })).toMatchObject({ why: "failed", lockedNow: false });
-    expect(await go(w, { password: "wrong password!!", ip: "10.0.0.9" })).toMatchObject({ why: "failed", lockedNow: true });
+    expect(await go(w, { password: "wrong password!!", ip: "198.51.100.9" })).toMatchObject({ why: "failed", lockedNow: true });
     expect(await go(w)).toMatchObject({ ok: false, why: "locked" });
     w.setNow(T0 + ADMIN_SIGNIN_LIMITS.perUsername.lockMs + 1000);
     expect(await go(w)).toMatchObject({ ok: true });
@@ -114,7 +114,7 @@ describe("checkAdminSignIn", () => {
     const w = world();
     for (let i = 0; i < 20; i++) await go(w, { username: `guess${i}` });
     expect(await go(w)).toMatchObject({ ok: false, why: "locked" });
-    expect(await go(w, { ip: "5.6.7.8" })).toMatchObject({ ok: true });
+    expect(await go(w, { ip: "203.0.113.8" })).toMatchObject({ ok: true });
   });
   it("only failures count: a success clears the username's count", async () => {
     const w = world();
@@ -170,11 +170,11 @@ describe("the event log", () => {
   const actor = { role: "ADMIN" as const, name: "Alex" };
   const none = { role: null, name: null };
   it("says who, how, from where", () => {
-    expect(describeAction("auth.adminPassword", actor, { via: "code", ip: "1.2.3.4", country: "DE" })).toBe("Alex signed in with password + code from 1.2.3.4 (DE)");
-    expect(describeAction("auth.adminPassword", actor, { via: "recovery", recoveryLeft: 9, ip: "1.2.3.4", country: null })).toBe("Alex signed in with password + a recovery code (9 left) from 1.2.3.4");
-    expect(describeAction("auth.adminPasswordFailed", none, { username: "alex", ip: "1.2.3.4", country: "DE" }, "DENIED")).toBe("Failed admin sign-in for 'alex' from 1.2.3.4 (DE)");
-    expect(describeAction("auth.adminPasswordFailed", none, { username: "alex", ip: "1.2.3.4", country: "DE", lockedNow: true }, "DENIED")).toBe("Failed admin sign-in for 'alex' from 1.2.3.4 (DE); locked for 15 minutes");
-    expect(describeAction("auth.adminPasswordFailed", none, { username: "alex", ip: "1.2.3.4", locked: true }, "DENIED")).toBe("Refused admin sign-in (locked) for 'alex' from 1.2.3.4");
+    expect(describeAction("auth.adminPassword", actor, { via: "code", ip: "203.0.113.4", country: "DE" })).toBe("Alex signed in with password + code from 203.0.113.4 (DE)");
+    expect(describeAction("auth.adminPassword", actor, { via: "recovery", recoveryLeft: 9, ip: "203.0.113.4", country: null })).toBe("Alex signed in with password + a recovery code (9 left) from 203.0.113.4");
+    expect(describeAction("auth.adminPasswordFailed", none, { username: "alex", ip: "203.0.113.4", country: "DE" }, "DENIED")).toBe("Failed admin sign-in for 'alex' from 203.0.113.4 (DE)");
+    expect(describeAction("auth.adminPasswordFailed", none, { username: "alex", ip: "203.0.113.4", country: "DE", lockedNow: true }, "DENIED")).toBe("Failed admin sign-in for 'alex' from 203.0.113.4 (DE); locked for 15 minutes");
+    expect(describeAction("auth.adminPasswordFailed", none, { username: "alex", ip: "203.0.113.4", locked: true }, "DENIED")).toBe("Refused admin sign-in (locked) for 'alex' from 203.0.113.4");
     expect(describeAction("auth.adminOff", actor, { forName: "Rowan" })).toBe("Alex turned password sign-in off for Rowan");
     expect(kindOf("auth.adminPasswordFailed", null)).toBe("ADMIN_ACTION");
   });

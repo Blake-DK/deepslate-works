@@ -45,7 +45,7 @@ describe("whitelist, ops and bans", () => {
 describe("colour", () => {
   const join = (line: string, ext: string) => colour(line, ext).map((t) => t.text).join("");
   it("never changes the text", () => {
-    for (const [line, ext] of [["motd=Deepslate Works # hello", "properties"], ['  "pvp": false, "n": -1.5e3, "s": "a \\"b\\" c"', "json"], ["[29Sep2026 03:46:07.132] [Server thread/WARN] [x/]: Can't keep up!", "log"], ["ip: \"10.77.0.2\"", "conf"], ["", "toml"], ["plain words", "txt"], ["<xml/>", "xml"]] as const) expect(join(line, ext)).toBe(line);
+    for (const [line, ext] of [["motd=Deepslate Works # hello", "properties"], ['  "pvp": false, "n": -1.5e3, "s": "a \\"b\\" c"', "json"], ["[29Sep2026 03:46:07.132] [Server thread/WARN] [x/]: Can't keep up!", "log"], ["ip: \"203.0.113.2\"", "conf"], ["", "toml"], ["plain words", "txt"], ["<xml/>", "xml"]] as const) expect(join(line, ext)).toBe(line);
   });
   it("tells comments, keys and values apart", () => {
     expect(colour("# a comment", "properties")).toEqual([{ text: "# a comment", kind: "comment" }]);

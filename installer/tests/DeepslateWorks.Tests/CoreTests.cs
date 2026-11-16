@@ -40,7 +40,7 @@ namespace DeepslateWorks.Tests
             Assert.Equal("on ~ by ~", Report.Redact("on DESKTOP-42 by player"));
             Assert.Equal("Bearer ~", Report.Redact("Bearer abcdefgh123"));
             Assert.Equal("~@~", Report.Redact("me@example.com"));
-            Assert.Equal("host ~ip~", Report.Redact("host 10.77.0.2", true));
+            Assert.Equal("host ~ip~", Report.Redact("host 203.0.113.2", true));
             Assert.Equal("NeoForge 21.1.252 on Windows 10.0.26100, driver 32.0.15.6094", Report.Redact("NeoForge 21.1.252 on Windows 10.0.26100, driver 32.0.15.6094", true));
         }
         [Fact] public void Consent_decisions()

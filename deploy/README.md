@@ -12,6 +12,7 @@ Dockhand mirror) were removed the same day; git history keeps them.
 | `check.sh` | Typecheck, lint and tests in a memory-capped container, on a host without Node |
 | `backup-loop.sh` | The nightly database dump, built into the `deepslate-backups` image |
 | `git-guard.sh` | The `.git/hooks` check, built into the `deepslate-ops` image for `repo-sync` |
+| `hooks/pre-push` | The pre-push hook for a checkout that pushes to the public repository: refuses a push that adds a real address (below) |
 | `server-mods.sh` | Copies the mods the server loaded at its last start into `modpack/server-loaded.json` |
 | `keys/`, `keys-test/` | Git-ignored, made by hand: the deploy keys (`deploy.key`, uid 1000) and `known_hosts` for the live and test instances |
 
@@ -33,3 +34,25 @@ is yours (a new remote, a credential helper you set), read `.git/config` by eye 
 `(cd /nvme/stacks/deepslate/.git/hooks && sha256sum pre-push) > /root/.config/deepslate/git-hooks.expected`.
 
 Both files must exist and be readable by uid 1000 (`repo-sync` runs as the checkout's owner): mode 644.
+
+## The pre-push hook
+
+The repository is public and holds placeholder addresses only (203.0.113.x, 198.51.100.x, 127.0.0.1). `hooks/pre-push`
+refuses a push when a commit it sends adds a line with any other IPv4 address; its header says exactly what it reads
+and what it takes for a version number. When every line it lists is a version number, push again with
+`PUSH_ADDRESSES_OK=1`. `apps/api/tests/pre-push-hook.test.ts` runs the file as it is.
+
+A checkout's own checks that are not tracked stay beside it as `.git/hooks/pre-push-local`; the hook runs them first.
+Git runs hooks from the main checkout's `.git/hooks`, for every worktree of it. To install or update, as the checkout's
+owner:
+
+```
+git -C /nvme/stacks/deepslate show origin/dev:deploy/hooks/pre-push > /tmp/pre-push.new   # read it by eye
+cd /nvme/stacks/deepslate/.git/hooks
+[ -e pre-push-local ] || mv pre-push pre-push-local     # the first time only: the old hook becomes the local checks
+install -m 755 /tmp/pre-push.new pre-push && rm /tmp/pre-push.new
+```
+
+Then, as root, the copy `repo-sync` compares with (above), now two lines:
+`(cd /nvme/stacks/deepslate/.git/hooks && sha256sum pre-push pre-push-local) > /root/.config/deepslate/git-hooks.expected`.
+Do both in one sitting: between them `repo-sync` finds a hook it was not told about and leaves the checkout as it was.

@@ -1,6 +1,44 @@
 # 11 · Status and handover
 
-## Where live is now, 2026-10-10 (from the planner's handover, docs/47 §1)
+## Where things are now, 2026-11-16
+
+Read this first. It replaces the 2026-10-10 section below as the current state. The open work, in order, is docs/49.
+
+- **Where it runs:** everything at home on docker-01v as the one stack `deepslate` in Dockhand, published through
+  Pangolin (deploy/home/README.md). The VPS is not used.
+- **`main`:** `02df584` (PR #113, 2026-11-01). Live's web and api both run this commit (the images' revision label, and
+  the api's `/version`), up since 2026-11-15 04:31 UTC. Health is green: database, api, AMP, the dump and its copy on
+  the AMP host, the Discord feed and bot, no sign-in check failing (read 2026-11-16 15:40 UTC).
+- **`dev`:** `638383c` (2026-11-14), 12 commits ahead of `main`: Epic Knights, TACZ Turrets and Mekanism Missiles with
+  their limits, on the test server only. The test site's web and api run `638383c`.
+- **Pack on live:** `0.1.0+a58590bd`, 111 files; the api's health says so, and the lock on `main` holds 116 with the
+  five s1 files live does not ship. On `dev` and test: `0.1.0+437dc9a3`, 115 files (120 with s1); the test api's health
+  says the same.
+- **App:** 3.6.8. The download still hands it out: the file in `dist/` has the sha256 `1805fab8…` of 2026-10-28,
+  `installer.json` says 3.6.8, and the last download (2026-11-13) was logged as 3.6.8.
+- **World:** the live regen of docs/64 ran on 2026-10-30 (R1 to R5 PASS). The pre-generation **finished on 2026-11-14
+  08:35 UTC**: all four worlds (the main world to 10,000; the Nether, the End and Ashmoon to 5,000), 2,740,629 chunks,
+  and it is switched off. BlueMap's render is no longer held: Alex asked for the four maps to be brought up to date at
+  08:32 and BlueMap answered twice that the map is updated; nobody has looked at the map by eye for this. With a 10 GB
+  heap, AMP's memory figure peaked at 12.0 GB (2026-11-13) and the server never stopped for memory. One crash in that
+  time, 2026-11-03 22:19 UTC, from Friends & Foes (docs/49). The server sleeps when nobody is on, and was asleep when
+  read.
+- **The site's switches:** "We're live" is on, Maintenance is off, "Play first" is on.
+- **Season 1:** not switched on. It opens Tue 1 December 19:00 UK as a new world, the Frontier (docs/63). Alex's six
+  decisions in docs/63 §6 are not answered and nothing of docs/63 §2 is built or run.
+- **Test server:** AMP's level name is still `streamtest-potato` (the test server's `server.properties`, read through
+  the test api on 2026-11-16), as it has been since 2026-11-01. The testers of 2026-11-09 therefore played in that
+  world, not in `world`.
+- **Change log:** `2026-11-01-map-squares` and `2026-11-01-not-answering` have neither `live` nor `onSync`, so they wait
+  and every later entry waits behind them. The last entry posted in Discord is `2026-10-30-new-land`, with
+  `2026-10-29-arphex-ashmoon`, on 2026-10-30 14:57 UTC (`DiscordPost`).
+- **The move home:** the clean-up of docs/62 §7 is due by 2026-12-06 and its doc edits are not made. On docker-01v
+  nothing of the tunnel is left: no WireGuard link, nothing listening on udp 51820, no `deepslate-wg` container, and
+  live's api has LAN addresses for AMP, the copy and the router's dashboard, with `AMP_TUNNEL_IP` unset. Not checked,
+  because neither host can be seen from docker-01v: the peer and the tunnel's lines on the AMP host, and the VPS's
+  `deepslate-wg`, its udp 51820 and its stopped stack.
+
+## Where live was, 2026-10-10 (from the planner's handover, docs/47 §1)
 
 **2026-10-28:** the VPS is no longer used for Deepslate. Everything runs at home on docker-01v as the one stack
 `deepslate` in Dockhand (deploy/home/README.md); the current-state docs say so. VPS paths, `deploy/deploy.sh` and the
@@ -32,6 +70,78 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Next, with nobody online:** the refill from the site's pre-generation (overworld centre 0 0 radius 10176, then the
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
+
+## Where things are, the leftover list, placeholder addresses (2026-11-16, PR #118 to `dev`; nothing on live or test changed)
+
+- **The planner's brief, 2026-11-16:** a current block at the top of this file, docs/49 redone, three stale headers;
+  every private address out of the repository and a pre-push check that catches a new one. Live, test, every `.env`
+  and the game servers were read, never changed. No `dev` → `main` PR.
+- **One PR, #118** (Alex, the same day: "merge them all into 1 pr"). The brief asked for two; the addresses were
+  opened as #119 and closed again. #118 holds the docs commits and the address commit. Alex then asked the same for
+  Dependabot's two open PRs: #115 (five action updates, each pinned by its commit) and #117 (eight npm patch releases,
+  the lockfile only: fastify, next, tailwindcss, typescript-eslint and four more) are merged into #118's branch and
+  closed.
+- **What each check read** (2026-11-16, 15:30 to 16:00 UTC; the figures are in the block at the top):
+  - *Live's commit and health:* the web and api images' revision label and the api's `/version` both say `02df584`;
+    the api's `/health` is all ok.
+  - *The pack:* health's pack check on live and on test; the file counts from the two locks.
+  - *The app:* `dist/installer.json`, the exe's sha256, and the last download in live's `Event`.
+  - *The world:* live's `Event` (`world.pregenOff` with reason `done`, 2026-11-14 08:35:26) and the `_pregen` setting
+    (off, nothing owed to BlueMap); the heap from the api's `/status`, the memory figure from `ServerSnapshot`.
+  - *The test level name:* `server.properties` through the test api.
+  - *The change log:* `DiscordPost` on live.
+  - *The move home:* docker-01v's links, listeners and containers, and which of the api's settings hold a tunnel
+    address. The AMP host and the VPS: not checked, neither can be seen from docker-01v.
+- **Found on the way, not asked for:**
+  - Live crashed on 2026-11-03 22:19 UTC (Friends & Foes, a copper golem turning into a statue). It is a row in
+    docs/49 and can happen again.
+  - "Not answering" fired once, 2026-11-04 02:57 UTC, for 55 seconds with nobody on.
+  - Live's `server.properties` and `mods.json` disagree on view distance, simulation distance and the MOTD.
+  - Live runs NeoForge 21.1.252; the lock pins 21.1.253.
+  - GitHub lists 31 open dependency alerts on `main` (2 critical, 9 high). Dependabot's two open PRs are now in
+    #118.
+- **docs/49, rows dropped as done:** the pre-generation; a PC through Test with pack `437dc9a3`; app 3.6.8's first
+  report; R-21. From the old list, now recorded as done: the two switches, the health output, removed jars named at
+  Play, the health login. **Rows added:** the copper golem crash, the live map by eye, server settings, the server's
+  mod capture, KaneFinch's items, AMP host noise, the map while asleep, the bot filter of PR #24, the test instance,
+  the logo in the exe, build warnings, the staging-folder apply step, the sides check, dependency alerts, acceptance
+  boxes.
+  **Rows corrected:** Season 1 code (the guide's section and the site's half of the banner are built), the grave mod
+  config (the repo's values do run), review leftovers (what is left of R-06, R-16 and R-43), `architecture.mmd` (it
+  has the home stack), the encrypted dump (the variable is passed and nothing reads it), NeoForge's newest (21.1.266).
+- **The addresses:** the two private networks became 203.0.113.N (the old tunnel) and 198.51.100.N (the LAN)
+  in 19 files, the last number kept; the made-up addresses in tests, one code comment and docs/04 became placeholders
+  as well; docs/17's second home subnet is now described in words. `deploy/home/.env.example` says its addresses are
+  placeholders. **One change that is more than a placeholder:** `DS_EDGE_SUBNET` lost its default in
+  `deploy/home/docker-compose.yml`, because the default was the real subnet; the stack now refuses to start without
+  it. Live is untouched (Dockhand has its own copy of the file). Left as they are, on purpose: version numbers of four
+  parts (Mekanism's, AMP's, Chrome's); the four well-known private blocks named in docs/62 §2; the made-up IPv6
+  examples in two tests and the old PowerShell app. Git history is as it was.
+- **The pre-push check:** the installed hook is in no repository (it names words the repository must not hold), so
+  it stays as it is and a tracked one goes in front of it: `deploy/hooks/pre-push` runs the old one as
+  `pre-push-local`, then refuses a push whose new commits add an IPv4 address outside 203.0.113.0/24,
+  198.51.100.0/24, 127.0.0.0/8 and 0.0.0.0. It reads only the lines a push adds, so what is already public does not
+  stop anyone, and a line that removes an address passes. A bare four-part version reads like an address and is
+  refused too; `PUSH_ADDRESSES_OK=1` lets a push through once its list has been read. Twelve tests
+  (`apps/api/tests/pre-push-hook.test.ts`). The expected hash is not pinned in the repository
+  (`git-guard.test.ts` uses a stand-in), so there was no pin to update: it is in root's `git-hooks.expected`.
+  **Not installed:** that file needs root. The steps are in deploy/README.md, "The pre-push hook".
+- **How the checks were run:** `deploy/check.sh` on docker-01v (typecheck, lint and every test, in a node:22-alpine
+  container capped at 1500 MB): modpack 340 tests, api 859 passed and 12 skipped, web 727. The 12 skipped are the
+  hook's own: that image has no git. They and `git-guard.test.ts` were then run in the same image with git added (busybox awk,
+  git 2.54): 18 passed; by hand the hook answers the same under gawk and mawk. The sides check,
+  `pnpm --filter modpack cli check-sides` in the same container: 120 files in the lock, 101 for PCs, 19 server-only,
+  sides OK. Run against the address commit itself, the new hook lists one line: AMP's four-part version, on a line
+  of this file whose address was replaced. That is the bare-version case, and why the hook has its override. All of
+  it was run a second time on the branch with the dependency updates merged in: the same counts, with next 15.5.29,
+  fastify 5.12.8 and tailwindcss 4.3.5 installed.
+- **Not done, and why:** the hook is not installed (root). The app's one changed test (`CoreTests.cs`) runs only on
+  the Windows runner, so CI is its check. Dockhand's `.env` could not be read, so whether it sets `DS_EDGE_SUBNET` is
+  not known: **before the next time the compose file is pasted into Dockhand, make sure its `.env` has that line**
+  (`docker network inspect ds-edge` shows the value). Nobody looked at the live map by eye.
+- **For the next session:** every worktree on docker-01v shares the live checkout's `.git`. Start a branch with
+  `git switch -c <name> --no-track origin/dev`: a branch with an upstream adds keys to the `.git/config` that
+  `repo-sync` compares. This session set one by mistake and removed it within the hour; no redeploy ran in between.
 
 ## Epic Knights, TACZ Turrets and Mekanism Missiles on the test server (2026-11-08, on `dev`, not on `main`)
 
@@ -745,7 +855,7 @@ section above describes the VPS; from today the site is served from docker-01v t
   in its player lists and proximity voice is heard. Xaero's (on PCs only) shows only players the server sends, so
   nothing there.
 
-## Gun balance: docs/61 (2026-10-14, planned, nothing built)
+## Gun balance: docs/61 (2026-10-14 planned; built in PR #70, live with PR #78)
 
 Players told Alex the guns are too strong. The review (docs/61 §1): TaCZ bullets skip the hit cooldown, so the AK-47
 does 90 a second against a netherite sword's 13, every gun is iron-cheap, and `tacz-server.toml` is at its defaults.
@@ -2367,7 +2477,7 @@ Last updated 2026-10-10, latest: the test site's stripe stays at the top, on `de
 
 ## mc-router on Admin → Server → Router (2026-10-07, on `dev`, not deployed)
 
-- **Brief from the AMP host session:** its mc-router dashboard (`10.77.0.2:8090`: routes, who is connecting, free ports; add and remove routes) should be reachable from the portal, behind its login. The brief suggested Pangolin; Pangolin is out of bounds for this project.
+- **Brief from the AMP host session:** its mc-router dashboard (`203.0.113.2:8090`: routes, who is connecting, free ports; add and remove routes) should be reachable from the portal, behind its login. The brief suggested Pangolin; Pangolin is out of bounds for this project.
 - **The tunnel:** from `deepslate-wg`, 8090 timed out while ping worked. The AMP host's `wg0-acl.nft` ends with a drop on `wg0` and its port set was 22, 8080, 8100; the dashboard's own `inet mc_dash` accept does not stop another table's drop. Alex added 8090 there as root on the AMP host; `/api/health` answers `router_ok: true` from the VPS.
 - **First try, taken out:** a `router.deepslate.dsw.test` host behind Caddy (`/api/auth/verify/admin`, two socat relays like the map's), deployed in `27bfbfda`. Another session switched the relays off (`5630e2af`): the outer one sat on the shared `web` network, so any other site's container could open the dashboard without Caddy's admin check. Right; it was never in the live Caddyfile. Relays, Caddy block and the admin verify route are now removed.
 - **Built instead (Alex, 2026-10-07: "build it in the site through api"):** `api` reads the dashboard over the tunnel (`ROUTER_DASH_URL`, `src/router/client.ts`) and serves `GET /router`, `POST /router/routes`, `DELETE /router/routes/:hostname`, admins only, input checked, both changes in the event log; the route for `SERVER_ADDRESS` is never removed (409). Admin → Server → Router shows the game addresses with their state, players, version and MOTD, adds and removes addresses, who is connected now, and the last 20 joins with their addresses (admins only). DNS and AMP-start from the dashboard are left out (both off on the AMP host).
@@ -2680,7 +2790,7 @@ Everything below is on `dev`, green in CI, **not on `main` and not deployed**. N
 - **The dump from before 0025** is `deepslate-2026-10-04.sql.gz` (661,568 bytes, written by the new `backup-loop.sh` at 14:51:56, two seconds before 0025). Keep it. The old script made no `pre-` dump. api copied it to the AMP host at 14:54:04 ("database dump copied to the AMP host (_backup/db/)"): the first dump to leave the VPS.
 - **The new `deploy.sh` has not run yet.** Tomorrow, on Alex's go, nobody online, CI green: pull as ladm first, then `sudo deploy/deploy.sh` (it brings #98's code and #99, the health fix). The deploy checkout was left at `d202036` on purpose today: a pull would put #98's `mods.json` in front of the live site before that deploy.
 - **B-22, the digests running today:** `lscr.io/linuxserver/wireguard@sha256:216ca1ce9da7bfe26fb752111d952487804bd18933bbd4794970d424bf8adfe9`, `alpine/socat@sha256:82ad20f6f6e29b91ff33b6662d24063522b1378f08fd8569cd3ab412cac13f50`. Not put in the compose file.
-- **B-23:** `deploy/keys/known_hosts` made 15:04 (root, 644): `SHA256:ErlDHsJ18QPTOwzcB7EQbJbKMTSdmyEXruVtRvFroGc 10.77.0.2 (ED25519)`, for Alex to compare on the AMP host. api reads it from its next start.
+- **B-23:** `deploy/keys/known_hosts` made 15:04 (root, 644): `SHA256:ErlDHsJ18QPTOwzcB7EQbJbKMTSdmyEXruVtRvFroGc 203.0.113.2 (ED25519)`, for Alex to compare on the AMP host. api reads it from its next start.
 - **B-07, the restore rehearsal (done once):** `deepslate-2026-10-04.sql.gz` into a throwaway `postgres:16-alpine` (`--memory=256m`, no network of the stack, no port): ready in 3 s, loaded in under 1 s, 0 errors, 4 s in all. Restored / live at 15:04: User 6 / 6, Event 4977 / 4984, InstallReport 108 / 110, `_prisma_migrations` 24 / 25, tables 22 / 23. The differences are what came after 14:51:56 (0025 and `HeldPlayer`, new events and reports).
 - **Checks after the deploy:** `/api/health` short form inside and out (`ok`, `db`, `api.ok`, `pack.same` all true; the detail on the host was PR D's bug, fixed in #99); `/items/icon/…` 401; `HeldPlayer` exists; no errors in web's log; backups folder 755 and dumps 644, readable by uid 1000; the `.env.bak-*` files and `deepslate-%F.sql.gz` kept for Alex.
 - **The first wake after the deploy failed.** m1owl pressed Play 15:03:03; AMP said `Failed` (state 100, no console output) and the wake gave up 15:06:07 ("it didn't wake up"). m1owl pressed start at 15:06:26; online 15:06:57 (1.2 s start). m1_owl joined 15:08:04, "The portal let m1_owl in", `held: false`: PR C's door let a real player in. The last good wake before it was 13:35:14. Why AMP failed is not known; for Alex (AMP's log) and the planner.
@@ -2797,9 +2907,9 @@ AMP's log showed, again and again, "SessionID passed in request body - this is d
 - **Checked against the live AMP before the change** (one-off script in `deepslate-api`, read-only, its own session, logged out after): `Core.GetModuleInfo` and `Core.GetStatus` with the Bearer header and nothing in the body both answered normally.
 - **Versions:** instance `DeepslateWorks01`: AMP **2.8.0.8**, build 20260927.1, API 2.8.0.8, "Proteus", Mainline. Controller (ADS): **v2.8.0.8, built 27/09/2026 01:11** (read by Alex from its About page; `webapp` is an instance user and gets an empty `GetModuleInfo` from the controller). Same version and build: **no mismatch**. Nothing in AMP was updated by us.
 - **Deployed 2026-10-03 20:05 UTC** in `main` `1d3cb5f` (with #83 nightly dump and #85 backup route, both done; and #86). **On the wire after the deploy** (30 s capture of api → AMP on port 8080 at ~20:15 UTC, counts only): 22 requests (`GetStatus`, `GetUpdates`, `GetUserList`), all with `Authorization: Bearer`, **none** with `SESSIONID` in the body.
-- **The warnings after the deploy come from `plex-support-admin` (planner, 2026-10-03 about 20:45 UTC).** The sender is the `plex-support-admin` container on docker-01v, an unrelated app of Alex's. It calls `POST /API/ADSModule/GetInstances` on the AMP controller every **63 seconds** through Traefik with `SESSIONID` in the body, and logs in again by itself when refused; its connection times match the warning lines to the second. The controller's Deployment Log (ADSModule 2.8.0.8, restarted 20:13:29 UTC) shows the warning at 00:14:22, 00:15:25, 00:16:28, 00:17:31, 00:18:34, 00:19:37 Dubai, the first next to "Access denied: … (ADSModule.GetInstances) … requires the Session.Exists permission. (Origin: 10.0.10.111)"; 10.0.10.111 was docker-01v's primary address at the time (that host now sends from 10.0.10.10). The portal polls every 10 s and never calls `GetInstances`. Ruled out: the portal (capture above), an older AMP instance, a controller/instance version mismatch (both 2.8.0.8), and a browser.
+- **The warnings after the deploy come from `plex-support-admin` (planner, 2026-10-03 about 20:45 UTC).** The sender is the `plex-support-admin` container on docker-01v, an unrelated app of Alex's. It calls `POST /API/ADSModule/GetInstances` on the AMP controller every **63 seconds** through Traefik with `SESSIONID` in the body, and logs in again by itself when refused; its connection times match the warning lines to the second. The controller's Deployment Log (ADSModule 2.8.0.8, restarted 20:13:29 UTC) shows the warning at 00:14:22, 00:15:25, 00:16:28, 00:17:31, 00:18:34, 00:19:37 Dubai, the first next to "Access denied: … (ADSModule.GetInstances) … requires the Session.Exists permission. (Origin: 198.51.100.111)"; 198.51.100.111 was docker-01v's primary address at the time (that host now sends from 198.51.100.10). The portal polls every 10 s and never calls `GetInstances`. Ruled out: the portal (capture above), an older AMP instance, a controller/instance version mismatch (both 2.8.0.8), and a browser.
 - **Closed for the portal.** Fix deployed in `main` `1d3cb5f`, capture clean; nothing more to build here. The remaining warnings belong to plex-support and are fixed in that repo, not this one; nobody touches AMP, docker-01v or plex-support from here. Timing of AMP calls stays docs/10 P1 9 (same `AmpClient.post()`).
-- **Observation only, not acted on:** at 00:13:32 Dubai (20:13:32 UTC), during the controller's start, it logged "LIM - Failure to make API call to DeepslateWorks01: Connection refused (10.0.10.8:8083)" twice.
+- **Observation only, not acted on:** at 00:13:32 Dubai (20:13:32 UTC), during the controller's start, it logged "LIM - Failure to make API call to DeepslateWorks01: Connection refused (198.51.100.8:8083)" twice.
 
 ## Spawn adventure mode, follow-up · docs/27 (2026-10-03 evening, job `0c825297`)
 
@@ -3395,7 +3505,7 @@ Refreshed on 2026-10-03 between 21:20 and 21:30 UTC against `main` `bc12ef3` and
 | Repo (git, branch `main`) | `/home/ladm/Minecraft-site` on vps-01v (the folder Alex gave; the original brief files `00-overview.md`, `markdown`, `deepslate-works-design-docs.zip` stay at its root, the repo copy under `docs/` is canonical) |
 | Live site | https://deepslate.dsw.test · map host https://map.deepslate.dsw.test (DNS in place; without a session it sends to the sign-in page and back; BlueMap is served from the game server through the tunnel) |
 | Compose stack `deepslate` | `/home/ladm/Minecraft-site/deploy/docker-compose.yml` → `deepslate-web`, `deepslate-api` (in the tunnel namespace), `deepslate-wg` (WireGuard, udp 51820), `deepslate-map-relay-inner`/`-outer`, `deepslate-db`, `deepslate-backups` |
-| NFS to the NAS | Lives on the AMP host (same LAN as the NAS 10.0.10.122), not the VPS: the tunnel reaches only the AMP host (AllowedIPs `10.77.0.2/32`). VPS fstab lines removed 2026-10-03 (backup `/etc/fstab.bak-2026-10-03`) |
+| NFS to the NAS | Lives on the AMP host (same LAN as the NAS 198.51.100.122), not the VPS: the tunnel reaches only the AMP host (AllowedIPs `203.0.113.2/32`). VPS fstab lines removed 2026-10-03 (backup `/etc/fstab.bak-2026-10-03`) |
 | Secrets | `deploy/.env` (mode 600), `deploy/wireguard/wg_confs/wg0.conf` + `vps.key`, `deploy/keys/deploy.key` (all git-ignored; template `deploy/.env.example`, `deploy/wg0.conf.example`) |
 | Postgres data / dumps | `/root/docker/deepslate/postgres`, `/root/docker/deepslate/backups` (nightly, keep 7) |
 | Dumps before a migration | `/root/docker/deepslate/backups/pre-00NN-*.sql.gz`, the last `pre-0013-download-kind.sql.gz` |
@@ -3451,7 +3561,7 @@ Built and deployed in this order; docs/16 follows (tables and parsers, then its 
 - **api**: status poller (`src/status/poller.ts`, 10 s), `ServerSnapshot` writer with thinning, `/status` served from memory, planned restart with the in-game countdown (`src/status/restart.ts`, lines built in the registry: `server.restartWarning`, `server.restartCancelled`), backup endpoints, console entries numbered and streamed (`/console/stream`), `lastSeenAt` stamped on join and leave.
 - **web**: Home (status pill, players with heads, TPS chip, memory, uptime, 24 h sparkline, News, map), `/map` (full screen, back button), `/players`, Admin → Server (restart with a warning, call it off, backup, announcement composer with "also say it in game", announcement list, live console). Pages refresh themselves every 10 to 15 s while the tab is visible.
 - **"Asleep"** is its own state on the pill. AMP puts the instance to sleep when nobody is on (states 30 and 50) and wakes it on the first connection; the portal says so instead of calling it offline. Downloads follow it since 2026-09-29 (Alex's decision): players can download while the server is running or asleep; starting, stopped or out of reach means no.
-- **BlueMap** was already in the manifest (`bluemap`, server side) with `modpack/server/config/bluemap/webserver.conf` at ip `10.77.0.2`, port `8100`, from the 2026-09-29 server build; nothing to change. The map only answers while the Minecraft server runs, so Home and `/map` show it only when the state is online.
+- **BlueMap** was already in the manifest (`bluemap`, server side) with `modpack/server/config/bluemap/webserver.conf` at ip `203.0.113.2`, port `8100`, from the 2026-09-29 server build; nothing to change. The map only answers while the Minecraft server runs, so Home and `/map` show it only when the state is online.
 - **Backup now** is built but switched off by AMP until `webapp` has `LocalFileBackup.Backup.CreateBackup` (and `LocalFileBackup.Backup.ViewBackupsList` to show the list). The page says so and switches itself on when the permission is there. Alex's to-do 12. (An earlier version of this line named a permission that does not exist.)
 - Tests: api 33, web 27, modpack 9.
 
@@ -3730,7 +3840,7 @@ Alex: "I want an option in the GUI to turn on pregen … run for 8 hours, or alw
 | This stack | `mem_limit` web 768m (was 1g), api 512m (was 256m, it now runs `modpack build`), postgres `shared_buffers=128MB` explicit. Applied to the running containers with `docker update`; the compose file carries them from the next deploy |
 | `modpack build` | moved out of the `web` process into `api` as a child process: 256 MB heap, first to be killed if the container runs out, no secrets in its environment, output streamed line by line; jar downloads streamed to disk (they were read into memory whole). Peak 75 MB for the current pack |
 
-**First pull-only deploy: 2026-09-29 05:09 UTC.** `deploy/deploy.sh` ran clean. `deepslate-web` and `deepslate-api` run `ghcr.io/blake-dk/deepslate-{web,api}:latest`, image revision `ba5decf` = repo HEAD. Checked afterwards: `/api/health` all green; AMP through api (login, `GetStatus`, players) answers in under 100 ms; `rsync --list-only amp@10.77.0.2:` with the deploy key lists the instance's `Minecraft/` tree and a plain shell is still refused by rrsync; Build through `POST /modpack/build` streams its lines and finishes in about a second with the jars cached (api peak 113 MB of 512); `dist/` belongs to uid 1000, web mounts it read-only. The smoke script's `SetConfig` write probe was not re-run (Alex's to run). AMP reported state 50 (`PreparingForSleep`) at the time: the instance sleeps when empty, which matters for the "downloads only while Running" rule; not changed here.
+**First pull-only deploy: 2026-09-29 05:09 UTC.** `deploy/deploy.sh` ran clean. `deepslate-web` and `deepslate-api` run `ghcr.io/blake-dk/deepslate-{web,api}:latest`, image revision `ba5decf` = repo HEAD. Checked afterwards: `/api/health` all green; AMP through api (login, `GetStatus`, players) answers in under 100 ms; `rsync --list-only amp@203.0.113.2:` with the deploy key lists the instance's `Minecraft/` tree and a plain shell is still refused by rrsync; Build through `POST /modpack/build` streams its lines and finishes in about a second with the jars cached (api peak 113 MB of 512); `dist/` belongs to uid 1000, web mounts it read-only. The smoke script's `SetConfig` write probe was not re-run (Alex's to run). AMP reported state 50 (`PreparingForSleep`) at the time: the instance sleeps when empty, which matters for the "downloads only while Running" rule; not changed here.
 
 ## Phase 0 · what was built
 
@@ -3751,7 +3861,7 @@ Matches `docs/10-roadmap.md` Phase 0 "Build" list. Files worth knowing:
 
 1. **Caddy.** docs/02 and docs/09 assume a Caddy of our own. This VPS already has one (stack `web-proxy`) fronting several sites, so the app joins the external `web` network and gets a block in the existing Caddyfile. No second proxy, no published ports. `deploy/Caddyfile.snippet` is the block.
 2. **Rate limiting** lives in the app, not Caddy (module not present in `caddy:2-alpine`).
-3. **Resolved by docs/13.** AMP is on the homelab; `api` reaches the ADS at `10.77.0.2:8080` through the WireGuard container; no bind mount. Original note: **AMP is not on this VPS.** docs/02 and 09 assume a bind mount of the AMP instance directory. Alex: "the users will access the game server via pangolin, the vps has nothing to do with it, you only speak to amp." So: AMP is reached over Tailscale by HTTP API only; `pangolin-01v` is the players' tunnel and is out of bounds. Phase 2's `sync-server` will therefore need the AMP file API (or SSH/rsync to the AMP host) instead of a bind mount; Phase 4's stats reads likewise. Update docs/02, 06, 09 when the AMP host is known.
+3. **Resolved by docs/13.** AMP is on the homelab; `api` reaches the ADS at `203.0.113.2:8080` through the WireGuard container; no bind mount. Original note: **AMP is not on this VPS.** docs/02 and 09 assume a bind mount of the AMP instance directory. Alex: "the users will access the game server via pangolin, the vps has nothing to do with it, you only speak to amp." So: AMP is reached over Tailscale by HTTP API only; `pangolin-01v` is the players' tunnel and is out of bounds. Phase 2's `sync-server` will therefore need the AMP file API (or SSH/rsync to the AMP host) instead of a bind mount; Phase 4's stats reads likewise. Update docs/02, 06, 09 when the AMP host is known.
 4. **Resolved by docs/13:** domain stays `deepslate.dsw.test`, map `map.deepslate.dsw.test`, `COOKIE_DOMAIN=.deepslate.dsw.test` is set. Original note: **Domain** is a placeholder (`deepslate.dsw.test`, wildcard already on this VPS). `COOKIE_DOMAIN` is empty until the map host exists (phase 3), so the session cookie is host-only.
 5. **Prisma 6** pinned (`^6`) rather than 7; the classic migrate workflow, boring on purpose.
 6. **No Dockhand registration** yet (this VPS's other stacks are managed there). Do it when the stack shape settles, or leave it git-driven.
@@ -3765,7 +3875,7 @@ Matches `docs/10-roadmap.md` Phase 0 "Build" list. Files worth knowing:
 
 ## `apps/api` (added this session, docs/13 §4)
 
-Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth.ts` (bearer service token, `X-User-*` headers parsed and re-validated), `src/amp/paths.ts` (ADS proxy path builder), `src/amp/client.ts` (`AmpClient` with login + one re-login on 401, `MockAmp` for `AMP_MOCK=1`), `src/health.ts` (tunnel = TCP to `10.77.0.2:22`, amp = login, rsync = ssh with the deploy key must be *refused by rrsync*, not unreachable; cached 30 s), routes `/health` and `/status`. Tests: 4. No Prisma in `api` yet; add it with the poller in Phase 3 (`prisma generate --schema ../web/prisma/schema.prisma` or a `packages/db` workspace). `web` talks to it only through `src/server/api-client.ts`.
+Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth.ts` (bearer service token, `X-User-*` headers parsed and re-validated), `src/amp/paths.ts` (ADS proxy path builder), `src/amp/client.ts` (`AmpClient` with login + one re-login on 401, `MockAmp` for `AMP_MOCK=1`), `src/health.ts` (tunnel = TCP to `203.0.113.2:22`, amp = login, rsync = ssh with the deploy key must be *refused by rrsync*, not unreachable; cached 30 s), routes `/health` and `/status`. Tests: 4. No Prisma in `api` yet; add it with the poller in Phase 3 (`prisma generate --schema ../web/prisma/schema.prisma` or a `packages/db` workspace). `web` talks to it only through `src/server/api-client.ts`.
 
 ## Discord server gate (added on Alex's request)
 
@@ -3773,7 +3883,7 @@ Fastify 5 skeleton in the tunnel namespace: `src/env.ts` (fails fast), `src/auth
 
 ## AMP smoke test (2026-09-28 night, per planner instructions)
 
-Run from inside `deepslate-api` through the tunnel, `AMP_URL=http://10.77.0.2:8080`, `AMP_INSTANCE_ID` (GUID) and `AMP_PASSWORD` from `deploy/.env` (verified byte-identical inside the container, no shell-special characters).
+Run from inside `deepslate-api` through the tunnel, `AMP_URL=http://203.0.113.2:8080`, `AMP_INSTANCE_ID` (GUID) and `AMP_PASSWORD` from `deploy/.env` (verified byte-identical inside the container, no shell-special characters).
 
 | Step | Result |
 |---|---|
@@ -3787,12 +3897,12 @@ Also recorded (read-only): `GetUpdates` shape, `GetUserList` (`{}` while stopped
 
 Alex: "build the server with the must-have modpacks first and get the wait room working and the discord auth all set up".
 
-- **Server files**: `server.properties` on the instance already matched docs/14 (online-mode on, white-list off, enforce-whitelist off, spawn-protection 0, port 25569 managed by AMP, seed `CubeCodersPowered`), so it is not synced. Shipped `modpack/server/config/bluemap/{core,webserver}.conf` (accept-download, webserver bound to `10.77.0.2:8100`). `eula=true` was already set.
+- **Server files**: `server.properties` on the instance already matched docs/14 (online-mode on, white-list off, enforce-whitelist off, spawn-protection 0, port 25569 managed by AMP, seed `CubeCodersPowered`), so it is not synced. Shipped `modpack/server/config/bluemap/{core,webserver}.conf` (accept-download, webserver bound to `203.0.113.2:8100`). `eula=true` was already set.
 - **api** (`apps/api`, now with Prisma against the shared schema): `amp/console.ts` tails `Core.GetUpdates` (2 s while running, 15 s otherwise) and parses UUID/login/leave/list lines; `actions/registry.ts` holds every console command (`limbo.hold`, `limbo.remind`, `limbo.keep`, `link.release`, `limbo.kickIdle`, `limbo.build`, `player.revoke`, `server.say`, `server.list`) with zod-validated input, `actions/run.ts` sends and audits; `players/limbo.ts` decides on every join (`decideJoin`: release only when the UUID belongs to a user with `verifiedAt` and `guildMember`), holds with a 15-min `LinkCode` (reused while valid), drags held players back every 5 s, reminds every 60 s, kicks after 15 min idle, releases on request from the portal, revokes (kick + unwhitelist), and re-checks guild membership every 5 min **only if `DISCORD_BOT_TOKEN` is set** (otherwise membership is refreshed at each Discord login). Routes: `GET /players`, `POST /link/release`, `POST /player/revoke`, `POST /actions/:name` (admin), `GET /console/tail` (admin), `POST /server/start|stop|restart` (admin).
 - **Portal**: `/link/<code>` (login → Discord → guild check → onboarding keeps the return URL) binds the UUID + username from the `LinkCode` to the account (refuses a second UUID per account and a UUID already owned by someone else), marks the code used, asks api to release. Discord sign-in now sets `guildMember` (false when refused, true on success). Admin → Users "Remove" also kicks. New **Admin → Server** page: state, online/held players, Start/Restart/Stop with an in-page confirmation, "Build the room", revoke by name, `say`, console tail (last 120 lines, reload to refresh).
 - Env: `LIMBO_POS` (default `0 250 0`), `SPAWN_POS` (empty = `spreadplayers` near 0,0 on the surface), `DISCORD_BOT_TOKEN` (optional), `DATABASE_URL` + `PORTAL_URL` passed to api by compose.
 - Tests: api 11 (console parsing incl. a chat line that mimics a join, join decision, action builders and input refusal).
-- **Done on the instance (2026-09-29 03:5x UTC):** first real Sync (11 jars + `config/bluemap`), `Core.Start` via api → `Done (1.756s)`, voice chat on 24454, BlueMap downloaded the client jar and bound its webserver to `10.77.0.2:8100`; **https://map.deepslate.dsw.test works behind the login** (anonymous → login redirect). Wait room built at `LIMBO_POS=0 250 0` (`limbo.build`: 847 + 405 + 81 blocks, 5 lights, chunks force-loaded). Spawn area is around 0,0 so `SPAWN_POS` can stay empty (`spreadplayers` near 0,0). Portal link flow exercised with a seeded `LinkCode` (bind, idempotent re-click, expired code, `/me` shows the link).
+- **Done on the instance (2026-09-29 03:5x UTC):** first real Sync (11 jars + `config/bluemap`), `Core.Start` via api → `Done (1.756s)`, voice chat on 24454, BlueMap downloaded the client jar and bound its webserver to `203.0.113.2:8100`; **https://map.deepslate.dsw.test works behind the login** (anonymous → login redirect). Wait room built at `LIMBO_POS=0 250 0` (`limbo.build`: 847 + 405 + 81 blocks, 5 lights, chunks force-loaded). Spawn area is around 0,0 so `SPAWN_POS` can stay empty (`spreadplayers` near 0,0). Portal link flow exercised with a seeded `LinkCode` (bind, idempotent re-click, expired code, `/me` shows the link).
 - **Not yet exercised:** a real player joining (hold → chat link → release). Needs someone to connect to `mc.dsw.test`; watch Admin → Server (held players + console).
 
 ### docs/14 acceptance · state

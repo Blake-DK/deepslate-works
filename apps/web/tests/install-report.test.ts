@@ -23,7 +23,7 @@ describe("redaction", () => {
     expect(redactText("NeoForge 21.1.252, Windows 10.0.19045, driver 32.0.15.6094")).toBe("NeoForge 21.1.252, Windows 10.0.19045, driver 32.0.15.6094");
   });
   it("takes addresses out of the log", () => {
-    expect(redactLog("connected from 82.10.20.30 via 192.168.1.10:25565")).toBe("connected from ~ip~ via ~ip~:25565");
+    expect(redactLog("connected from 203.0.113.30 via 198.51.100.10:25565")).toBe("connected from ~ip~ via ~ip~:25565");
     expect(redactLog("peer 2a01:4b00:1234::1 and fe80::1ff:fe23:4567:890a")).toBe("peer ~ip~ and ~ip~");
     expect(redactLog("[2026-09-29T07:26:01] STEP Signing in")).toBe("[2026-09-29T07:26:01] STEP Signing in");
     expect(redactLog("NeoForge 21.1.252 on Windows 10.0.19045")).toBe("NeoForge 21.1.252 on Windows 10.0.19045");

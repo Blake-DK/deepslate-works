@@ -15,7 +15,7 @@ It closes `docs/10-roadmap.md` P0 item 1 (the backup route), the BACKUP half of 
 | Thing | Today | Fault |
 |---|---|---|
 | World backup | AMP's `LocalFileBackupPlugin`. The portal has one button (`POST /server/backup`, Admin → Server) | Fixed title, does not wait for AMP to list the backup, says "ok" when AMP later drops it. On 2026-10-03 AMP accepted three requests over its size limit and listed none of them |
-| NFS | The NAS shares (10.0.10.122) are mounted on the AMP host. Alex has pointed backups at one of them | The planner does not know how (AMP's backup folder on the share, or a copy job). Nothing checks that the share is mounted when a backup is written |
+| NFS | The NAS shares (198.51.100.122) are mounted on the AMP host. Alex has pointed backups at one of them | The planner does not know how (AMP's backup folder on the share, or a copy job). Nothing checks that the share is mounted when a backup is written |
 | S3 | Alex has set it up | The planner does not know where (AMP's own S3 settings is the guess). The portal's call sends `S3: false`, so a portal backup never goes there |
 | Schedule | Not checked. AMP may have a trigger of its own | Nobody knows when the last good backup was without opening AMP |
 | Database | `deepslate-backups` dumps nightly to `/root/docker/deepslate/backups` on the VPS, 14 kept | The dumps never leave the VPS. If the VPS is lost, so are the accounts, links, votes and the event log |
@@ -114,7 +114,7 @@ The file, version 1. Field names are fixed; the VPS session parses exactly this:
   "v": 1,
   "at": "2026-10-04T03:45:00Z",
   "host": "amp-01v",
-  "nfs": { "mounted": true, "source": "10.0.10.122:/mnt/…", "path": "/mnt/…", "freeBytes": 0, "totalBytes": 0 },
+  "nfs": { "mounted": true, "source": "198.51.100.122:/mnt/…", "path": "/mnt/…", "freeBytes": 0, "totalBytes": 0 },
   "local": {
     "dir": "/…/Backups", "onNfs": true, "count": 7, "totalBytes": 0,
     "files": [ { "name": "…", "bytes": 0, "mtime": "2026-10-04T03:47:10Z" } ]

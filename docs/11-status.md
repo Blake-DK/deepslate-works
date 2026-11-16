@@ -9,8 +9,10 @@ Read this first. It replaces the 2026-10-10 section below as the current state. 
 - **`main`:** `02df584` (PR #113, 2026-11-01). Live's web and api both run this commit (the images' revision label, and
   the api's `/version`), up since 2026-11-15 04:31 UTC. Health is green: database, api, AMP, the dump and its copy on
   the AMP host, the Discord feed and bot, no sign-in check failing (read 2026-11-16 15:40 UTC).
-- **`dev`:** `638383c` (2026-11-14), 12 commits ahead of `main`: Epic Knights, TACZ Turrets and Mekanism Missiles with
-  their limits, on the test server only. The test site's web and api run `638383c`.
+- **`dev`:** 22 commits ahead of `main` at PR #118's merge (`5c249ac`, 2026-11-16): Epic Knights, TACZ Turrets and
+  Mekanism Missiles with their limits (up to `638383c`, 2026-11-14, on the test server only), then PR #118 (this
+  block, docs/49, placeholder addresses, the pre-push check for them, dependency patch updates). The test site's web
+  and api run `5c249ac` since 17:29 UTC that day.
 - **Pack on live:** `0.1.0+a58590bd`, 111 files; the api's health says so, and the lock on `main` holds 116 with the
   five s1 files live does not ship. On `dev` and test: `0.1.0+437dc9a3`, 115 files (120 with s1); the test api's health
   says the same.
@@ -71,7 +73,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Where things are, the leftover list, placeholder addresses (2026-11-16, PR #118 to `dev`; nothing on live or test changed)
+## Where things are, the leftover list, placeholder addresses (2026-11-16, PR #118, merged into `dev` as `5c249ac`; nothing on live changed)
 
 - **The planner's brief, 2026-11-16:** a current block at the top of this file, docs/49 redone, three stale headers;
   every private address out of the repository and a pre-push check that catches a new one. Live, test, every `.env`
@@ -125,7 +127,9 @@ say live is stopped, held or to be trimmed in place, this section wins.
   refused too; `PUSH_ADDRESSES_OK=1` lets a push through once its list has been read. Twelve tests
   (`apps/api/tests/pre-push-hook.test.ts`). The expected hash is not pinned in the repository
   (`git-guard.test.ts` uses a stand-in), so there was no pin to update: it is in root's `git-hooks.expected`.
-  **Not installed:** that file needs root. The steps are in deploy/README.md, "The pre-push hook".
+  **Not installed by the build session:** that file needs root. The steps are in deploy/README.md, "The pre-push
+  hook". Alex installed the hook after the merge: `pre-push` in the checkout's hooks is the tracked file, byte for
+  byte, with the old one beside it as `pre-push-local`. Whether root's `git-hooks.expected` lists both was not read.
 - **How the checks were run:** `deploy/check.sh` on docker-01v (typecheck, lint and every test, in a node:22-alpine
   container capped at 1500 MB): modpack 340 tests, api 859 passed and 12 skipped, web 727. The 12 skipped are the
   hook's own: that image has no git. They and `git-guard.test.ts` were then run in the same image with git added (busybox awk,

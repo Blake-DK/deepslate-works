@@ -85,7 +85,7 @@ Who it waits on: **Alex**, **planner**, **build** (the build session on docker-0
 
 | Item | What remains | Source | Waits on |
 |---|---|---|---|
-| Next.js 16 | Still on 15 (15.5.29 in the lockfile once PR #118 is in); move to the newest 16.x. | docs/10 item 18 | build |
+| Next.js 16 | Still on 15 (15.5.29 in the lockfile); move to the newest 16.x. | docs/10 item 18 | build |
 | Small gaps | No Origin check in middleware (routes check for themselves); `window.confirm` in three components; the BACKUP event only from the button, so AMP's scheduled backups and the nightly dumps leave none. | docs/10 item 9 | build |
 | AMP call timing | No duration log, no slow-call warning. | docs/10 item 9b | build |
 | R-04 | An AMP refusal returned as HTTP 200 counts as success: the console line, Start, Restart and Sync's calls do not look at the answer; SetConfig and TakeBackup do. | docs/35 | AMP host, build |
@@ -95,7 +95,7 @@ Who it waits on: **Alex**, **planner**, **build** (the build session on docker-0
 | Test instance | The test api still asks AMP every ten minutes for a backup list its role may not see, and ignores the answer; whether "Enforce Whitelist" was unticked on the test instance is not recorded. | docs/46 §7.10 | build, AMP host |
 | Phase 4 self-service | Player actions, homes, "My stats". | docs/10 Phase 4 | Alex's word |
 | Phase 5 and the admin assistant | Not begun. | docs/19 | Alex |
-| Old defaults | `apps/api/src/env.ts` still gives `AMP_URL`, `AMP_TUNNEL_IP`, `ROUTER_DASH_URL` and `RSYNC_TARGET` a default: the retired tunnel's address, a placeholder once PR #118 is in. Live and test set all four themselves. With the tunnel gone they should have none, so a missing one fails at the start. | planner review 2026-11-16 | build |
+| Old defaults | `apps/api/src/env.ts` still gives `AMP_URL`, `AMP_TUNNEL_IP`, `ROUTER_DASH_URL` and `RSYNC_TARGET` a default: the retired tunnel's address, a placeholder since PR #118. Live and test set all four themselves. With the tunnel gone they should have none, so a missing one fails at the start. | planner review 2026-11-16 | build |
 
 ## App (installer and launcher)
 
@@ -116,8 +116,8 @@ Who it waits on: **Alex**, **planner**, **build** (the build session on docker-0
 | The staging-folder apply step | Not built anywhere; docs/38 lists I4 as met and it was never reopened. | docs/46 §7.3 | build, AMP host |
 | Encrypted DB dump | Not built: `BACKUP_PUBLIC_KEY` is handed to the container and nothing reads it. The branch it was on lived only in the old VPS checkout and is in no ref of the repository or of docker-01v's checkout. | docs/43 | Alex, build |
 | Backups package | A restore test into scratch; "Back up now" while asleep; a list-only S3 key. | docs/28 §9 | AMP host |
-| Pre-push check | The installed hook refuses a branch name and old history, nothing else. PR #118 adds a tracked one that refuses a new address (`deploy/hooks/pre-push`); it is **not installed**: that takes Alex and root's `git-hooks.expected` (deploy/README.md, "The pre-push hook"). Still no check for player names: it was put off on 2026-10-09 until live was back, and never came. | planner review 2026-11-16; docs/11, 2026-11-16 | Alex, build |
-| `DS_EDGE_SUBNET` | Once PR #118 is in, the compose file has no default for it. Dockhand's `.env` must have the line before its copy of the compose file is next replaced; whether it has could not be read. | docs/11, 2026-11-16 | Alex |
+| Pre-push check | The installed hook refuses a branch name and old history, nothing else. PR #118 added a tracked one that refuses a new address (`deploy/hooks/pre-push`), and Alex installed it on 2026-11-16; whether root's `git-hooks.expected` lists it and `pre-push-local` was not read (deploy/README.md, "The pre-push hook"). Still no check for player names: it was put off on 2026-10-09 until live was back, and never came. | planner review 2026-11-16; docs/11, 2026-11-16 | Alex, build |
+| `DS_EDGE_SUBNET` | Since PR #118 the compose file has no default for it. Dockhand's `.env` must have the line before its copy of the compose file is next replaced; whether it has could not be read. | docs/11, 2026-11-16 | Alex |
 | The sides check | `deploy/check.sh` does not run it; only CI does. | docs/47 §5.8 | build |
 | Dependency alerts | GitHub lists 31 open dependency alerts on `main` (2 critical, 9 high). Dependabot's two PRs of 2026-11-16 (#115, five action updates; #117, eight npm patch releases) are folded into PR #118. What is left of the 31 once that reaches `main` has not been looked at. | GitHub | Alex, build |
 

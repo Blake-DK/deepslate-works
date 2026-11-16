@@ -95,7 +95,7 @@ Who it waits on: **Alex**, **planner**, **build** (the build session on docker-0
 | Test instance | The test api still asks AMP every ten minutes for a backup list its role may not see, and ignores the answer; whether "Enforce Whitelist" was unticked on the test instance is not recorded. | docs/46 §7.10 | build, AMP host |
 | Phase 4 self-service | Player actions, homes, "My stats". | docs/10 Phase 4 | Alex's word |
 | Phase 5 and the admin assistant | Not begun. | docs/19 | Alex |
-| Old defaults | `apps/api/src/env.ts` still defaults `AMP_URL`, `AMP_TUNNEL_IP`, `ROUTER_DASH_URL` and `RSYNC_TARGET` to the retired tunnel's address. Live sets all four itself. | planner review 2026-11-16 | build |
+| Old defaults | `apps/api/src/env.ts` still gives `AMP_URL`, `AMP_TUNNEL_IP`, `ROUTER_DASH_URL` and `RSYNC_TARGET` a default: the retired tunnel's address, a placeholder once PR #119 is in. Live and test set all four themselves. With the tunnel gone they should have none, so a missing one fails at the start. | planner review 2026-11-16 | build |
 
 ## App (installer and launcher)
 
@@ -116,9 +116,10 @@ Who it waits on: **Alex**, **planner**, **build** (the build session on docker-0
 | The staging-folder apply step | Not built anywhere; docs/38 lists I4 as met and it was never reopened. | docs/46 §7.3 | build, AMP host |
 | Encrypted DB dump | Not built: `BACKUP_PUBLIC_KEY` is handed to the container and nothing reads it. The branch it was on lived only in the old VPS checkout and is in no ref of the repository or of docker-01v's checkout. | docs/43 | Alex, build |
 | Backups package | A restore test into scratch; "Back up now" while asleep; a list-only S3 key. | docs/28 §9 | AMP host |
-| Pre-push check | It refuses a branch name and old history, nothing else: no addresses (see the address clean-up, 2026-11-16) and no player names: the name check was put off on 2026-10-09 until live was back, and never came. The hook is in no repository; its sha256 is pinned in a file only root can read. | planner review 2026-11-16 | build, Alex |
+| Pre-push check | The installed hook refuses a branch name and old history, nothing else. PR #119 adds a tracked one that refuses a new address (`deploy/hooks/pre-push`); it is **not installed**: that takes Alex and root's `git-hooks.expected` (deploy/README.md, "The pre-push hook"). Still no check for player names: it was put off on 2026-10-09 until live was back, and never came. | planner review 2026-11-16; docs/11, 2026-11-16 | Alex, build |
+| `DS_EDGE_SUBNET` | Once PR #119 is in, the compose file has no default for it. Dockhand's `.env` must have the line before its copy of the compose file is next replaced; whether it has could not be read. | docs/11, 2026-11-16 | Alex |
 | The sides check | `deploy/check.sh` does not run it; only CI does. | docs/47 §5.8 | build |
-| Dependabot | PRs #115 (actions) and #117 (npm) are open against `dev`. | GitHub | Alex |
+| Dependabot | PRs #115 (actions) and #117 (npm) are open against `dev`; GitHub lists 31 open dependency alerts on `main` (2 critical, 9 high). | GitHub | Alex |
 
 ## Docs
 

@@ -71,6 +71,69 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Where things are, the leftover list, placeholder addresses (2026-11-16, PRs #118 and #119 to `dev`; nothing on live or test changed)
+
+- **The planner's brief, 2026-11-16:** a current block at the top of this file, docs/49 redone, three stale headers
+  (PR #118, docs only); every private address out of the repository and a pre-push check that catches a new one
+  (PR #119). Live, test, every `.env` and the game servers were read, never changed. No `dev` → `main` PR.
+- **What each check read** (2026-11-16, 15:30 to 16:00 UTC; the figures are in the block at the top):
+  - *Live's commit and health:* the web and api images' revision label and the api's `/version` both say `02df584`;
+    the api's `/health` is all ok.
+  - *The pack:* health's pack check on live and on test; the file counts from the two locks.
+  - *The app:* `dist/installer.json`, the exe's sha256, and the last download in live's `Event`.
+  - *The world:* live's `Event` (`world.pregenOff` with reason `done`, 2026-11-14 08:35:26) and the `_pregen` setting
+    (off, nothing owed to BlueMap); the heap from the api's `/status`, the memory figure from `ServerSnapshot`.
+  - *The test level name:* `server.properties` through the test api.
+  - *The change log:* `DiscordPost` on live.
+  - *The move home:* docker-01v's links, listeners and containers, and which of the api's settings hold a tunnel
+    address. The AMP host and the VPS: not checked, neither can be seen from docker-01v.
+- **Found on the way, not asked for:**
+  - Live crashed on 2026-11-03 22:19 UTC (Friends & Foes, a copper golem turning into a statue). It is a row in
+    docs/49 and can happen again.
+  - "Not answering" fired once, 2026-11-04 02:57 UTC, for 55 seconds with nobody on.
+  - Live's `server.properties` and `mods.json` disagree on view distance, simulation distance and the MOTD.
+  - Live runs NeoForge 21.1.252; the lock pins 21.1.253.
+  - GitHub lists 31 open dependency alerts on `main` (2 critical, 9 high) and two Dependabot PRs are open.
+- **docs/49, rows dropped as done:** the pre-generation; a PC through Test with pack `437dc9a3`; app 3.6.8's first
+  report; R-21. From the old list, now recorded as done: the two switches, the health output, removed jars named at
+  Play, the health login. **Rows added:** the copper golem crash, the live map by eye, server settings, the server's
+  mod capture, KaneFinch's items, AMP host noise, the map while asleep, the bot filter of PR #24, the test instance,
+  the logo in the exe, build warnings, the staging-folder apply step, the sides check, Dependabot, acceptance boxes.
+  **Rows corrected:** Season 1 code (the guide's section and the site's half of the banner are built), the grave mod
+  config (the repo's values do run), review leftovers (what is left of R-06, R-16 and R-43), `architecture.mmd` (it
+  has the home stack), the encrypted dump (the variable is passed and nothing reads it), NeoForge's newest (21.1.266).
+- **PR #119, addresses:** the two private networks became 203.0.113.N (the old tunnel) and 198.51.100.N (the LAN)
+  in 19 files, the last number kept; the made-up addresses in tests, one code comment and docs/04 became placeholders
+  as well; docs/17's second home subnet is now described in words. `deploy/home/.env.example` says its addresses are
+  placeholders. **One change that is more than a placeholder:** `DS_EDGE_SUBNET` lost its default in
+  `deploy/home/docker-compose.yml`, because the default was the real subnet; the stack now refuses to start without
+  it. Live is untouched (Dockhand has its own copy of the file). Left as they are, on purpose: version numbers of four
+  parts (Mekanism's, AMP's, Chrome's); the four well-known private blocks named in docs/62 §2; the made-up IPv6
+  examples in two tests and the old PowerShell app. Git history is as it was.
+- **The pre-push check:** the installed hook is in no repository (it names words the repository must not hold), so
+  it stays as it is and a tracked one goes in front of it: `deploy/hooks/pre-push` runs the old one as
+  `pre-push-local`, then refuses a push whose new commits add an IPv4 address outside 203.0.113.0/24,
+  198.51.100.0/24, 127.0.0.0/8 and 0.0.0.0. It reads only the lines a push adds, so what is already public does not
+  stop anyone, and a line that removes an address passes. A bare four-part version reads like an address and is
+  refused too; `PUSH_ADDRESSES_OK=1` lets a push through once its list has been read. Twelve tests
+  (`apps/api/tests/pre-push-hook.test.ts`). The expected hash is not pinned in the repository
+  (`git-guard.test.ts` uses a stand-in), so there was no pin to update: it is in root's `git-hooks.expected`.
+  **Not installed:** that file needs root. The steps are in deploy/README.md, "The pre-push hook".
+- **How the checks were run:** `deploy/check.sh` on docker-01v (typecheck, lint and every test, in a node:22-alpine
+  container capped at 1500 MB): modpack 340 tests, api 859 passed and 12 skipped, web 727. The 12 skipped are the
+  hook's own: that image has no git. They and `git-guard.test.ts` were then run in the same image with git added (busybox awk,
+  git 2.54): 18 passed; by hand the hook answers the same under gawk and mawk. The sides check,
+  `pnpm --filter modpack cli check-sides` in the same container: 120 files in the lock, 101 for PCs, 19 server-only,
+  sides OK. Run against PR #119's own commit, the new hook lists one line: AMP's four-part version, on a line of
+  this file whose address was replaced. That is the bare-version case, and why the hook has its override.
+- **Not done, and why:** the hook is not installed (root). The app's one changed test (`CoreTests.cs`) runs only on
+  the Windows runner, so CI is its check. Dockhand's `.env` could not be read, so whether it sets `DS_EDGE_SUBNET` is
+  not known: **before the next time the compose file is pasted into Dockhand, make sure its `.env` has that line**
+  (`docker network inspect ds-edge` shows the value). Nobody looked at the live map by eye.
+- **For the next session:** every worktree on docker-01v shares the live checkout's `.git`. Start a branch with
+  `git switch -c <name> --no-track origin/dev`: a branch with an upstream adds keys to the `.git/config` that
+  `repo-sync` compares. This session set one by mistake and removed it within the hour; no redeploy ran in between.
+
 ## Epic Knights, TACZ Turrets and Mekanism Missiles on the test server (2026-11-08, on `dev`, not on `main`)
 
 - **Alex**, from the players' suggestions: TACZ Turrets yes, Mekanism Missiles yes, Epic Knights yes; MythicBotany and

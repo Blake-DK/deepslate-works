@@ -100,8 +100,9 @@ say live is stopped, held or to be trimmed in place, this section wins.
   describe it. The compose file parses with it empty and set. No image changes.
 - **Applied to live, 17:55 UTC** (Alex: "you do it in dockhand"). Dockhand's API wants a login, so the two files
   were changed in its stack folder from inside its own container, without the `.env` being printed: the pin as a
-  last line of `.env`, the `extra_hosts` block under `web` and `web-test` in `compose.yaml`; the files as they were
-  are beside them as `.env.before-pin-20261116` and `compose.yaml.before-pin-20261116`. The new file was parsed with
+  last line of `.env`, the `extra_hosts` block under `web` and `web-test` in `compose.yaml`. Copies of the files as
+  they were stayed beside them until Alex had them removed at 18:02, sign-in being in order; the old state is the
+  new one without those lines. The new file was parsed with
   the new `.env`, then Dockhand's own deploy command (from its log) was dry-run and run with `--pull never`, so no
   image moved: `deepslate-web` and `deepslate-web-test` were recreated, the one-shot steps ran, everything else
   stayed up; exit 0 in eleven seconds, nobody on the game server.

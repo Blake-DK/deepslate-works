@@ -113,6 +113,12 @@ Pangolin: three HTTP resources on the site `deepslate`, `SITE_HOST`, `MAP_HOST` 
 `deepslate-caddy:80`, Pangolin's own login off, CrowdSec's http scenarios bypassed for the hosts. Authentik: the
 provider's redirect URIs for `AUTH_URL` and `TEST_AUTH_URL`.
 
+**Sign-in times out** (`[auth][error] TypeError: fetch failed` in `docker logs deepslate-web`, `DS-FW drop: IN=ds-web`
+in the kernel log): `web` may only reach public https, so it must find Authentik at its public address. When the DNS
+at home answers Authentik's name with a LAN address (it has done so at times), the firewall drops the fetch. Either
+make the home DNS answer with the public address, or set `AUTHENTIK_PIN=<name>:<public address>` in `.env` and redeploy: `web` and `web-test` then carry the
+name in their hosts file. The pin holds one address; when Authentik's public address changes, change the pin.
+
 Since 2026-10-23 everything the VPS ran is here, in the one stack: the test pair (`TEST_STACK=1`; its checkout at
 `TEST_DIR`, on dev, brought forward by `repo-sync-test`) and the designer (`DESIGNER_CMD`
 set; its host user `designer`, uid 1010, with the CLI installed and signed in, docs/39; on `ds-web`, so it reaches public

@@ -73,6 +73,37 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
+## Sign-in through Authentik timed out; the name can be pinned (2026-11-16, on `dev`; live once Dockhand's copy has it)
+
+- **Alex, 17:30 UTC:** "the sign in doesnt seem to work anymore on the site". Discord could still be reached from
+  web, so sign-in with Discord should not have been touched; that was not tried.
+- **What was found:** live's web logged `[auth][error] TypeError: fetch failed` from 17:29:42. From inside
+  `deepslate-web` and `deepslate-web-test` the api and Discord answered and the fetch of Authentik's
+  `/.well-known/openid-configuration` timed out. The home DNS answered Authentik's name with a LAN address (a public
+  resolver still gave the public one; the site's own name still resolved publicly). The host's firewall lets `ds-web`
+  reach public https only (its rule 5: web fetches Authentik "by its public name, through the hairpin NAT"), so the
+  packet went to the LAN address, was handed to traefik and dropped: `DS-FW drop: IN=ds-web … DPT=443` in the kernel
+  log from 17:29 on.
+- **Not the first time.** The kernel log has the same drops on 2026-11-03 from 19:44 to 23:01 (154 of them) and on
+  2026-11-04 at 17:03 (14), and none between. So the home DNS gives the LAN address only at times, and sign-in
+  through Authentik has been failing for those stretches without anyone tying it to DNS.
+- **What it was not:** the merge of PR #118 or the Redeploy of 17:29. Live's web and api were the containers of
+  2026-11-15, the firewall had not changed since boot, and the host's resolver settings were those of nine days
+  earlier. The Redeploy restarted the database; that probably signed people out, so the next sign-in met it. Why
+  the home DNS answers both ways cannot be seen from docker-01v. One more sign that it is unsteady: at 17:42 the DNS
+  server docker-01v uses answered REFUSED when asked directly, while Tailscale's resolver on the host still handed
+  out the LAN address; Tailscale's log has refusals from its upstream at 16:57 and 17:29:32.
+- **Alex chose the pin over removing the record.** Tried first from a throwaway container on `ds-web`: without a pin
+  the fetch times out, with Authentik's name pinned to its public address it answers 200 with the right issuer.
+- **Built:** `AUTHENTIK_PIN` ("<name>:<public address>", empty = no pin) becomes an `extra_hosts` line for `web` and
+  `web-test` in `deploy/home/docker-compose.yml`; `.env.example` and deploy/home/README.md ("Sign-in times out")
+  describe it. The compose file parses with it empty and set. No image changes.
+- **Not done here:** Dockhand's own compose copy and `.env` are Alex's to change, then a Redeploy (web restarts).
+  Until then sign-in through Authentik stays broken on live and test.
+- **Its limit:** the pin holds one address. Authentik's public name is an alias of another name; if the address behind
+  it changes, sign-in times out again until the pin is changed. Pointing the containers at a public DNS server is not
+  a way out: `ds-web` may not send DNS queries out.
+
 ## Where things are, the leftover list, placeholder addresses (2026-11-16, PR #118, merged into `dev` as `5c249ac`; nothing on live changed)
 
 - **The planner's brief, 2026-11-16:** a current block at the top of this file, docs/49 redone, three stale headers;

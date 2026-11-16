@@ -257,6 +257,12 @@ services:
     cap_drop: [ALL]                     # runs as an unprivileged user and needs no Linux capabilities
     mem_limit: 768m
     networks: [ds-web, ds-internal]
+    # ds-web reaches public https only (the host's deepslate-firewall), so web must find Authentik at its public
+    # address. When the DNS at home answers the sign-in name with a LAN address, every sign-in times out
+    # (docs/11, 2026-11-16). AUTHENTIK_PIN="<name>:<public address>" puts that one name in the container's hosts file;
+    # left empty, the line below names a host nobody asks for.
+    extra_hosts:
+      - ${AUTHENTIK_PIN:-sso-not-pinned.invalid:127.0.0.1}
     # docs/31 B-18: the internet-facing container gets the variables it reads and no others. A new variable for web
     # goes here, in apps/web/src/env.ts and in .env.example.
     environment:
@@ -488,6 +494,8 @@ services:
     cap_drop: [ALL]
     mem_limit: 512m
     networks: [ds-web, ds-internal]
+    extra_hosts:                        # as for web: Authentik at its public address
+      - ${AUTHENTIK_PIN:-sso-not-pinned.invalid:127.0.0.1}
     environment:
       DATABASE_URL: postgresql://deepslate:${POSTGRES_PASSWORD}@postgres:5432/deepslate_test
       AUTH_SECRET: ${TEST_AUTH_SECRET:-}

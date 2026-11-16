@@ -240,10 +240,10 @@ describe("the Adv. Quarry's recipe, removed in deepslate-tools", () => {
 
 describe("the big bombs' recipes, removed in deepslate-tools", () => {
   // Alex, 2026-11-14: Mekanism Nuclear Weapons & Explosives carves blocks itself, so land claims do not stop these
-  // five. Their warhead assembler recipes are the only way to make them; each file replaces the jar's and never loads.
+  // five, nor (Alex, 2026-11-16) the shaped charge, bunker buster and incendiary bomb. Their warhead assembler recipes are the only way to make them; each file replaces the jar's and never loads.
   const DIR = path.join(__dirname, "../../../modpack/datapacks/deepslate-tools/data/mnwe/recipe/assembling");
 
-  it.each(["nuclear_bomb", "hydrogen_bomb", "antimatter_bomb", "dirty_bomb", "seismic_charge"])("mnwe:assembling/%s is only a false condition", async (name) => {
+  it.each(["nuclear_bomb", "hydrogen_bomb", "antimatter_bomb", "dirty_bomb", "seismic_charge", "shaped_charge", "bunker_buster", "incendiary_bomb"])("mnwe:assembling/%s is only a false condition", async (name) => {
     expect(JSON.parse(await readFile(path.join(DIR, `${name}.json`), "utf8"))).toEqual({ "neoforge:conditions": [{ type: "neoforge:false" }] });
   });
 });

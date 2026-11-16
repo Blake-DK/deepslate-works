@@ -436,17 +436,18 @@ export const CHANGES: Change[] = [
   },
   {
     // Epic Knights, TACZ Turrets and Mekanism Missiles (docs/11, 2026-11-08 and 2026-11-14), with the limits set for
-    // them. Posted once live's server has started the synced pack in full. Says nothing about claims: three bombs still
-    // break blocks inside them (docs/49).
+    // them, and the mod update of 2026-11-16. Posted once live's server has started the synced pack in full. Says nothing
+    // about claims: no bomb left can be made that breaks blocks inside one, but nobody has tried it in game.
     id: "2026-11-16-knights-turrets-missiles",
     date: "2026-11-16",
     onSync: true,
-    title: "New mods: knights' armour, turrets and missiles",
+    title: "New mods: knights' armour, turrets and missiles, and mod updates",
     lines: [
       "Epic Knights: medieval armour, shields and weapons, from lances, halberds and maces to plumes and banners on your armour.",
       "TACZ Turrets: give a turret one of your guns and some ammo and it guards your base against mobs. Turrets that players place never shoot players.",
       "Mekanism Missiles, for late-game Mekanism: build missiles from parts, launch them from a silo, and set up radars to see them coming. A missile flies 500 blocks at most.",
-      "The biggest warheads (nuclear, hydrogen, antimatter, the dirty bomb and the seismic charge) cannot be made on this server. Nothing leaves fallout, and napalm does not set the land alight.",
+      "The biggest warheads (nuclear, hydrogen, antimatter, the dirty bomb and the seismic charge), the shaped charge, the bunker buster and the incendiary bomb cannot be made on this server. Nothing leaves fallout, and napalm does not set the land alight.",
+      "Also updated: Applied Energistics 2, Amendments, Continuity, Copycats+, Create Crafts & Additions, EntityCulling, Friends & Foes, Sophisticated Backpacks, VeinMiner and Waystones, with a few libraries.",
       "Press Play to update.",
     ],
   },

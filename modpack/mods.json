@@ -244,7 +244,7 @@
           "url": "https://www.youtube.com/watch?v=anQSFxIT_5s"
         }
       ],
-      "version": "eieYbWYb",
+      "version": "DDaDZQ47",
       "requires": [],
       "guide": "behind"
     },
@@ -322,7 +322,7 @@
       "wiki": "https://github.com/aspctt/continuity-neoforge",
       "videos": [],
       "noVideosFound": "2026-10-27",
-      "version": "kgny9dWp",
+      "version": "lpyteeFb",
       "requires": [],
       "guide": "behind",
       "howTo": "Nothing to do: the app switches on its **Default Connected Textures** resource pack the first time you play. To see blocks as before, take it off under **Options** \u2192 **Resource Packs**."
@@ -1083,7 +1083,7 @@
           "url": "https://www.youtube.com/watch?v=AZPL85Olrww"
         }
       ],
-      "version": "qPr8V4G2",
+      "version": "hsjVajlP",
       "requires": [
         "create"
       ],
@@ -1356,7 +1356,7 @@
           "url": "https://www.youtube.com/watch?v=Ngf06CAj4lw"
         }
       ],
-      "version": "KDnFUmMm",
+      "version": "DxZ2waV0",
       "requires": [],
       "guide": "game",
       "topic": "storage",
@@ -1388,7 +1388,7 @@
           "url": "https://www.youtube.com/watch?v=yB9S8XDwBV0"
         }
       ],
-      "version": "syKekkIm",
+      "version": "KXXinkMl",
       "requires": [],
       "guide": "game",
       "topic": "mining",
@@ -1420,7 +1420,7 @@
           "url": "https://www.youtube.com/watch?v=tGMjqovqMxg"
         }
       ],
-      "version": "3SXYeyvp",
+      "version": "tJnK2DE1",
       "requires": [
         "sophisticated-core"
       ],
@@ -1645,7 +1645,7 @@
           "url": "https://www.youtube.com/watch?v=b2WYiZEKQBk"
         }
       ],
-      "version": "6Z6MQ6os",
+      "version": "sE6fMBGR",
       "requires": [],
       "guide": "game",
       "topic": "travel",
@@ -1950,7 +1950,7 @@
           "url": "https://www.youtube.com/watch?v=jrC30auMZls"
         }
       ],
-      "version": "bPYeUWZx",
+      "version": "zLlVJXf0",
       "requires": [
         "create"
       ],
@@ -2588,7 +2588,7 @@
           "url": "https://www.youtube.com/watch?v=Ry8lPMssLAM"
         }
       ],
-      "version": "OLV6Q846",
+      "version": "w19mjFoT",
       "requires": [
         "moonlight"
       ],
@@ -2722,7 +2722,7 @@
           "url": "https://www.youtube.com/watch?v=r-l1_zKgd6g"
         }
       ],
-      "version": "GFgkK01z",
+      "version": "SHNibBGE",
       "requires": [
         "resourceful-lib"
       ],
@@ -2925,7 +2925,7 @@
       "description": "Library needed by Sophisticated Backpacks.",
       "wiki": "https://modrinth.com/mod/sophisticated-core",
       "videos": [],
-      "version": "DqcfpFN9",
+      "version": "hhok4NTk",
       "requires": []
     },
     {
@@ -2973,7 +2973,7 @@
       "description": "Library needed by Amendments (and Supplementaries).",
       "wiki": "https://modrinth.com/mod/moonlight",
       "videos": [],
-      "version": "fAIfWX6M",
+      "version": "yBea1yLM",
       "requires": []
     },
     {
@@ -3543,7 +3543,7 @@
       "description": "Library needed by Critters and Companions, Let's Do Meadow, Let's Do Vinery, Epic Knights and TACZ Turrets.",
       "wiki": "https://modrinth.com/mod/architectury-api",
       "videos": [],
-      "version": "1IiqEQGl",
+      "version": "xGfBrBzj",
       "requires": []
     }
   ]

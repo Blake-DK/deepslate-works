@@ -73,7 +73,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Sign-in through Authentik timed out; the name can be pinned (2026-11-16, on `dev`; live once Dockhand's copy has it)
+## Sign-in through Authentik timed out; the name is pinned (2026-11-16, on `dev`; in Dockhand's copy and live since 17:55 UTC)
 
 - **Alex, 17:30 UTC:** "the sign in doesnt seem to work anymore on the site". Discord could still be reached from
   web, so sign-in with Discord should not have been touched; that was not tried.
@@ -98,8 +98,18 @@ say live is stopped, held or to be trimmed in place, this section wins.
 - **Built:** `AUTHENTIK_PIN` ("<name>:<public address>", empty = no pin) becomes an `extra_hosts` line for `web` and
   `web-test` in `deploy/home/docker-compose.yml`; `.env.example` and deploy/home/README.md ("Sign-in times out")
   describe it. The compose file parses with it empty and set. No image changes.
-- **Not done here:** Dockhand's own compose copy and `.env` are Alex's to change, then a Redeploy (web restarts).
-  Until then sign-in through Authentik stays broken on live and test.
+- **Applied to live, 17:55 UTC** (Alex: "you do it in dockhand"). Dockhand's API wants a login, so the two files
+  were changed in its stack folder from inside its own container, without the `.env` being printed: the pin as a
+  last line of `.env`, the `extra_hosts` block under `web` and `web-test` in `compose.yaml`; the files as they were
+  are beside them as `.env.before-pin-20261116` and `compose.yaml.before-pin-20261116`. The new file was parsed with
+  the new `.env`, then Dockhand's own deploy command (from its log) was dry-run and run with `--pull never`, so no
+  image moved: `deepslate-web` and `deepslate-web-test` were recreated, the one-shot steps ran, everything else
+  stayed up; exit 0 in eleven seconds, nobody on the game server.
+- **Checked after:** from both containers Authentik's discovery document answers 200 with the right issuer and its
+  signing keys answer 200; the site's health is ok; no `[auth][error]` and no `DS-FW drop: IN=ds-web` since. A real
+  sign-in is Alex's to try.
+- **Mind:** Dockhand's compose copy now has two blocks `main`'s reference does not have until the next `dev` →
+  `main` PR. Pasting `main`'s file into Dockhand before then takes the pin out again.
 - **Its limit:** the pin holds one address. Authentik's public name is an alias of another name; if the address behind
   it changes, sign-in times out again until the pin is changed. Pointing the containers at a public DNS server is not
   a way out: `ds-web` may not send DNS queries out.

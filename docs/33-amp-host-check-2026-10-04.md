@@ -184,7 +184,7 @@ No start has happened on 4 October; the 22:23 run lasted until 11:21:00.
 
 ## 5. NFS
 
-- **`findmnt`:** both shares are NFS 4.2 from 10.0.10.122, mounted `rw,hard,proto=tcp,timeo=600,retrans=2`.
+- **`findmnt`:** both shares are NFS 4.2 from 198.51.100.122, mounted `rw,hard,proto=tcp,timeo=600,retrans=2`.
 - **fstab:**
   - `/nfs/filezilla nfs4 defaults,vers=4.2,rw,hard,nofail,_netdev,x-systemd.mount-timeout=30`
   - `/nfs/SharkDrive nfs4 defaults,vers=4.2,rw,nofail,_netdev,x-systemd.mount-timeout=30` (no explicit `hard`, but it mounts hard by default)
@@ -243,22 +243,22 @@ No start has happened on 4 October; the 22:23 run lasted until 11:21:00.
 
 ## 7. The deploy key and rsync
 
-- **authorized_keys** (one key line): `command="/usr/bin/rrsync /home/amp/.ampdata/instances/DeepslateWorks01/Minecraft",restrict,from="10.77.0.1" ssh-ed25519 <key> deploy@portal`. This matches the expected form.
+- **authorized_keys** (one key line): `command="/usr/bin/rrsync /home/amp/.ampdata/instances/DeepslateWorks01/Minecraft",restrict,from="203.0.113.1" ssh-ed25519 <key> deploy@portal`. This matches the expected form.
 - **Modes:** `.ssh` is 700 amp:amp, `authorized_keys` 600 amp:amp, `/home/amp` 755.
-- **`sshd -T -C user=amp,addr=10.77.0.1`:** `passwordauthentication no`, `permitrootlogin prohibit-password`, `allowtcpforwarding yes`. Forwarding is blocked for this key only by its `restrict` option, not by sshd.
+- **`sshd -T -C user=amp,addr=203.0.113.1`:** `passwordauthentication no`, `permitrootlogin prohibit-password`, `allowtcpforwarding yes`. Forwarding is blocked for this key only by its `restrict` option, not by sshd.
 - For the same user from a LAN address, `passwordauthentication` is `yes`.
 - The portal logs in with this key about every 30 seconds.
 
 ## 8. WireGuard
 
-- **`wg show`:** peer endpoint 198.51.100.20:51820, allowed IPs `10.77.0.1/32`, last handshake 55 seconds ago, keepalive 25 s, 660 MiB received and 17.3 GiB sent. This side is 10.77.0.2/24.
+- **`wg show`:** peer endpoint 198.51.100.20:51820, allowed IPs `203.0.113.1/32`, last handshake 55 seconds ago, keepalive 25 s, 660 MiB received and 17.3 GiB sent. This side is 203.0.113.2/24.
 - **`net.ipv4.ip_forward = 1`** (also on for wg0). The iptables FORWARD policy is DROP with only the Docker and Tailscale chains; those chains were not expanded.
 - **Tunnel rules** (table `inet deepslate`, input hook):
   - accept established traffic on wg0;
-  - accept 10.77.0.1 to tcp 22, 8080, 8100;
-  - accept ping from 10.77.0.1;
+  - accept 203.0.113.1 to tcp 22, 8080, 8100;
+  - accept ping from 203.0.113.1;
   - drop everything else arriving on wg0 (counter: 0 packets).
-- No iptables rule names wg0 or 10.77.0.0/24.
+- No iptables rule names wg0 or 203.0.113.0/24.
 
 Listeners the VPS could address, and what the rules allow from wg0:
 
@@ -266,11 +266,11 @@ Listeners the VPS could address, and what the rules allow from wg0:
 |---|---|
 | sshd :22 | yes |
 | AMP ADS :8080 | yes |
-| BlueMap 10.77.0.2:8100 | yes, but not listening while the server sleeps |
+| BlueMap 203.0.113.2:8100 | yes, but not listening while the server sleeps |
 | nginx :80, rpcbind :111, glances :61208 | no |
 | AMP SFTP :2223, :2225, :2226 | no |
 | AMP game port :25569, mc-router :25565, Bedrock :19132 | no |
-| Instance UI 10.0.10.8:8083 | no (LAN address) |
+| Instance UI 198.51.100.8:8083 | no (LAN address) |
 
 ## 9. mc-router
 

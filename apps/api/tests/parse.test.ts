@@ -24,7 +24,7 @@ describe("reduce", () => {
 
 describe("parse", () => {
   it("reads the login line with its address, in both shapes", () => {
-    expect(parse(L("Bramble09[/10.0.0.5:51234] logged in with entity id 123 at (12.5, 64.0, -3.5)", "Server thread", "INFO", "net.minecraft.server.players.PlayerList/"))).toEqual([{ type: "join", name: "Bramble09", ip: "10.0.0.5" }]);
+    expect(parse(L("Bramble09[/198.51.100.5:51234] logged in with entity id 123 at (12.5, 64.0, -3.5)", "Server thread", "INFO", "net.minecraft.server.players.PlayerList/"))).toEqual([{ type: "join", name: "Bramble09", ip: "198.51.100.5" }]);
     expect(parse("Bramble09[/[2a01:4b00::1]:51234] logged in with entity id 5 at (0, 64, 0)", { source: "Server thread/INFO", type: "Console" })).toEqual([{ type: "join", name: "Bramble09", ip: "2a01:4b00::1" }]);
     expect(parse(L("m1_owl[local] logged in with entity id 9 at (0, 64, 0)"))).toEqual([{ type: "join", name: "m1_owl", ip: null }]);
   });
@@ -122,12 +122,12 @@ describe("parse", () => {
 
 describe("addresses", () => {
   it("takes the ip out of an endpoint", () => {
-    expect(ipOf("10.0.0.5:51234")).toBe("10.0.0.5");
+    expect(ipOf("198.51.100.5:51234")).toBe("198.51.100.5");
     expect(ipOf("[2a01::1]:25565")).toBe("2a01::1");
     expect(ipOf("local")).toBeNull();
   });
   it("hides addresses in the raw line kept with an event", () => {
-    expect(redact("Bramble09[/82.10.20.30:51234] logged in with entity id 1")).toBe("Bramble09[address hidden] logged in with entity id 1");
+    expect(redact("Bramble09[/203.0.113.30:51234] logged in with entity id 1")).toBe("Bramble09[address hidden] logged in with entity id 1");
     expect(redact("x[/[2a01::1]:51234] logged in")).toBe("x[address hidden] logged in");
     expect(redact("<Bramble09> meet at [12, 64, -3]")).toBe("<Bramble09> meet at [12, 64, -3]");
   });

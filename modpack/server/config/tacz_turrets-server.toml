@@ -1,0 +1,872 @@
+#Whether turrets need ammo.
+consumeAmmo = true
+#Gun types that use the sniper range.
+sniperGunTypes = ["sniper"]
+#If false, turrets will be immune to damage.
+turretsTakeDamage = true
+#Destroyed turrets drop their gun and ammo.
+dropItemsOnDeath = true
+#Applying a camo to a turret consumes the camo.
+consumeCamos = true
+#Applying a dye to a turret consumes the dye.
+consumeDyes = true
+#Applying a banner to a turret consumes the banner.
+consumeBanners = true
+#Picking up a turret puts its gun and ammo in your inventory. If false, they drop on the ground.
+pickupItemsToInventory = true
+#Picking up a turret puts the turret in your inventory. If false, it drops on the ground.
+pickupTurretToInventory = true
+#Effects turrets are immune to. Accepts effect ids and #effect tags.
+effectBlacklist = ["minecraft:poison", "minecraft:wither", "minecraft:weakness", "minecraft:blindness", "minecraft:darkness", "minecraft:hunger", "minecraft:mining_fatigue", "minecraft:nausea", "minecraft:slowness"]
+#If true, turrets target all living entities (except players, turrets, and the owner). If false, turrets only target vanilla monsters and entities in the tacz_turrets:turret_targets entity type tag.
+targetAllMobs = false
+#Logs turret shoot results when enabled. Only use for debugging purposes.
+logTurretShootResults = false
+#Entities turrets never target. Accepts entity ids and #entity tags.
+targetBlacklist = []
+#Entities turrets always target. Accepts entity ids and #entity tags.
+targetWhitelist = []
+#Entities turret fire can damage, so bullets pass through bystanders. Leave empty to match what turrets target. Accepts entity ids and #entity tags.
+damageableEntities = []
+#How turret inaccuracy is calculated. DISTANCE gets less accurate the further away the target is, RANDOM is the same at any range.
+#Allowed Values: DISTANCE, RANDOM
+inaccuracyMode = "DISTANCE"
+#Distance at which adaptive mode switches from conserving ammo to firing freely.
+# Default: 25
+# Range: 1 ~ 1000
+adaptiveRange = 25
+#Repair particles.
+repairParticles = true
+#Sounds played when a turret is repaired. One is picked at random.
+repairSounds = ["minecraft:entity.iron_golem.repair"]
+#Allies cannot be damaged by turret fire.
+alliesCannotBeDamaged = true
+#How turrets treat a player they are retaliating against. CONTINUE_TARGETING keeps shooting them, CLEAR_ON_DEATH forgets them once they die.
+#Allowed Values: CONTINUE_TARGETING, CLEAR_ON_DEATH
+retaliateTargeting = "CLEAR_ON_DEATH"
+#Grudge time in seconds when Retaliate Targeting type is Continue Targeting.
+# Default: 30
+# Range: 1 ~ 3600
+retaliationTimer = 30
+#Allies can interact with turrets even if they are not owner.
+alliesHavePerms = true
+#Operators can manage any turret.
+opBypass = true
+#Owners cannot be damaged by their own turrets.
+ownerTakesNoDamage = true
+#Enable sounds.
+enableSounds = true
+#Turret reload sound.
+reloadSound = true
+#Turret recoil.
+turretRecoil = true
+#Turrets use the first person gunshot sound. Needed for sound packs that only replace first person sounds.
+firstPersonShootSound = false
+#Better turret targeting. Turrets pick separate targets instead of focusing one.
+betterTargeting = true
+#Turrets with a gun look around when they have no target.
+idleLookAround = true
+#Enable player damage.
+damagePlayers = false
+#Turrets defend their owner.
+protectOwner = true
+#Turrets spare their owner's teammates via vanilla or modded methods such as FTB Teams or Open Parties and Claims.
+respectTeams = true
+#Turret kills count as owner kills.
+creditKillsToOwner = true
+#Passive healing.
+passiveHealing = false
+#Passive healing frequency in ticks.
+# Default: 100
+# Range: 1 ~ 72000
+passiveHealInterval = 100
+#Items that can repair turrets. Accepts item ids and #item tags.
+repairItems = ["minecraft:iron_bars"]
+#Brass turrets fire slower when their cogwheel turns slowly.
+rotationFireRate = true
+#Rotation speed in RPM at which brass turrets reach their full fire rate.
+# Default: 64
+# Range: 1 ~ 256
+fullFireRateRotation = 64
+#Turrets use their type's fireRate stat. If false, turrets fire at their gun's normal speed.
+fireRateStats = false
+#Turrets lock on for a second before firing.
+lockOnDelay = true
+#How many blocks away the turret lock on sound can be heard.
+# Default: 16
+# Range: 1 ~ 256
+lockOnSoundRange = 16
+#Turrets make a sound when they look around.
+panSounds = true
+#Most turrets one player can have placed. 0 means no limit.
+# Default: 0
+# Range: 0 ~ 10000
+maxTurretsPerPlayer = 0
+#Damage multiplier for player turrets.
+# Default: 1.0
+# Range: 0.0 ~ 100.0
+turretDamageMultiplier = 1.0
+#Damage multiplier for player turrets hitting players.
+# Default: 1.0
+# Range: 0.0 ~ 100.0
+pvpDamageMultiplier = 1.0
+#Turrets target invisible mobs and players.
+targetInvisible = false
+#Turrets attack neutral mobs while they're angry.
+targetNeutralMobs = true
+#Turrets ignore mobs with a custom name.
+ignoreNamedMobs = false
+#Turrets take ammo from the storage block under them.
+pullAmmoFromStorage = true
+#Tell the owner when their turret is destroyed.
+notifyOwner = false
+#Destroyed turrets drop themselves.
+dropTurretOnDeath = false
+#Turrets are immune to explosions.
+explosionImmune = false
+#Turrets are immune to fire.
+fireImmune = true
+#Turrets are immune to lava.
+lavaImmune = false
+#Health multiplier for sentry turrets.
+# Default: 1.0
+# Range: 0.01 ~ 100.0
+sentryHealthMultiplier = 1.0
+#Damage multiplier for sentry turrets.
+# Default: 1.0
+# Range: 0.0 ~ 100.0
+sentryDamageMultiplier = 1.0
+#Armor multiplier for sentry turrets.
+# Default: 1.0
+# Range: 0.0 ~ 100.0
+sentryArmorMultiplier = 1.0
+#Accuracy multiplier for sentry turrets.
+# Default: 0.8
+# Range: 0.01 ~ 10.0
+sentryAccuracyMultiplier = 0.8
+#Reload speed multiplier for sentry turrets.
+# Default: 0.8
+# Range: 0.01 ~ 10.0
+sentryReloadSpeedMultiplier = 0.8
+#Fire rate multiplier for sentry turrets.
+# Default: 1.0
+# Range: 0.01 ~ 10.0
+sentryFireRateMultiplier = 1.0
+#Sentry turret health and damage follow the world difficulty.
+sentryDifficultyScaling = false
+#Sentry turrets spot crouching players at a shorter range.
+sentrySneakRange = true
+#Range multiplier for sentry turrets spotting crouching players.
+# Default: 0.5
+# Range: 0.0 ~ 1.0
+sentrySneakRangeMultiplier = 0.5
+#Experience dropped by destroyed sentry turrets.
+# Default: 0
+# Range: 0 ~ 10000
+sentryExperience = 0
+#Chance a destroyed sentry turret drops itself.
+# Default: 0.0
+# Range: 0.0 ~ 1.0
+sentryTurretDropChance = 0.0
+#No surface or cave sentry turrets spawn within this many blocks of world spawn.
+# Default: 0
+# Range: 0 ~ 100000
+sentrySpawnProtection = 0
+#Destroyed sentry turrets drop crafting materials.
+sentryMaterialDrops = true
+#Mod addon turrets can spawn as sentry turrets.
+moddedSentryTurrets = false
+#Sentry turrets heal over time.
+sentryPassiveHealing = false
+#Sentry turrets need to reload.
+sentriesReload = true
+#Sentry turrets spawn on the surface.
+surfaceSentrySpawns = false
+#Sentry turrets spawn in caves.
+caveSentrySpawns = false
+#Sentry turrets attack hostile mobs.
+sentriesTargetMobs = false
+#Sentry turrets attack player turrets.
+sentriesTargetTurrets = true
+#Sniper guns double a sentry turret's range.
+sniperSentryRange = false
+
+[modern]
+	#Needs FE to run.
+	requirePower = false
+	#Health of the turret.
+	# Default: 200
+	# Range: 10 ~ 1000
+	health = 200
+	#Armor points of the turret.
+	# Default: 6.0
+	# Range: 0.0 ~ 1000.0
+	armor = 6.0
+	#Detection and engagement range in blocks.
+	# Default: 64
+	# Range: 8 ~ 1000
+	range = 64
+	#Range for sniper guns.
+	# Default: 128
+	# Range: 8 ~ 1000
+	sniperRange = 128
+	#Distance inaccuracy at maximum range. 0 always hits.
+	# Default: 1.0
+	# Range: 0.0 ~ 45.0
+	distanceInaccuracy = 1.0
+	#Random inaccuracy. 0 always hits.
+	# Default: 1.0
+	# Range: 0.0 ~ 45.0
+	randomInaccuracy = 1.0
+	#Reload speed multiplier. 1.0 is the gun's normal speed.
+	# Default: 1.0
+	# Range: 1.0 ~ 10.0
+	reloadSpeed = 1.0
+	#Fire rate multiplier. 1.0 is the gun's normal speed. Needs fireRateStats.
+	# Default: 1.0
+	# Range: 0.1 ~ 10.0
+	fireRate = 1.0
+	#Rows of ammo slots in the turret screen.
+	# Default: 2
+	# Range: 1 ~ 6
+	slotRows = 2
+	#Ammo slots per row in the turret screen.
+	# Default: 5
+	# Range: 1 ~ 9
+	slotLength = 5
+	#Energy buffer size.
+	# Default: 10000
+	# Range: 1 ~ 1000000000
+	energyCapacity = 10000
+	#Energy accepted per tick.
+	# Default: 200
+	# Range: 1 ~ 1000000000
+	energyTransferRate = 200
+	#Energy used per shot.
+	# Default: 10
+	# Range: 0 ~ 1000000
+	energyPerShot = 10
+	#Energy used per tick.
+	# Default: 1
+	# Range: 0 ~ 1000000
+	energyIdleDrain = 1
+	#Passive healing amount.
+	# Default: 1.0
+	# Range: 0.0 ~ 1000.0
+	passiveHealAmount = 1.0
+	#Health restored per repair item.
+	# Default: 25.0
+	# Range: 0.0 ~ 1000.0
+	repairAmount = 25.0
+
+[industrial]
+	#Needs FE to run.
+	requirePower = false
+	#Health of the turret.
+	# Default: 300
+	# Range: 10 ~ 1000
+	health = 300
+	#Armor points of the turret.
+	# Default: 10.0
+	# Range: 0.0 ~ 1000.0
+	armor = 10.0
+	#Detection and engagement range in blocks.
+	# Default: 56
+	# Range: 8 ~ 1000
+	range = 56
+	#Range for sniper guns.
+	# Default: 112
+	# Range: 8 ~ 1000
+	sniperRange = 112
+	#Distance inaccuracy at maximum range. 0 always hits.
+	# Default: 1.5
+	# Range: 0.0 ~ 45.0
+	distanceInaccuracy = 1.5
+	#Random inaccuracy. 0 always hits.
+	# Default: 1.5
+	# Range: 0.0 ~ 45.0
+	randomInaccuracy = 1.5
+	#Reload speed multiplier. 1.0 is the gun's normal speed.
+	# Default: 1.1
+	# Range: 1.0 ~ 10.0
+	reloadSpeed = 1.1
+	#Fire rate multiplier. 1.0 is the gun's normal speed. Needs fireRateStats.
+	# Default: 0.9
+	# Range: 0.1 ~ 10.0
+	fireRate = 0.9
+	#Rows of ammo slots in the turret screen.
+	# Default: 2
+	# Range: 1 ~ 6
+	slotRows = 2
+	#Ammo slots per row in the turret screen.
+	# Default: 5
+	# Range: 1 ~ 9
+	slotLength = 5
+	#Energy buffer size.
+	# Default: 10000
+	# Range: 1 ~ 1000000000
+	energyCapacity = 10000
+	#Energy accepted per tick.
+	# Default: 200
+	# Range: 1 ~ 1000000000
+	energyTransferRate = 200
+	#Energy used per shot.
+	# Default: 10
+	# Range: 0 ~ 1000000
+	energyPerShot = 10
+	#Energy used per tick.
+	# Default: 1
+	# Range: 0 ~ 1000000
+	energyIdleDrain = 1
+	#Passive healing amount.
+	# Default: 1.0
+	# Range: 0.0 ~ 1000.0
+	passiveHealAmount = 1.0
+	#Health restored per repair item.
+	# Default: 25.0
+	# Range: 0.0 ~ 1000.0
+	repairAmount = 25.0
+
+[scrap]
+	#Needs FE to run.
+	requirePower = false
+	#Health of the turret.
+	# Default: 120
+	# Range: 10 ~ 1000
+	health = 120
+	#Armor points of the turret.
+	# Default: 2.0
+	# Range: 0.0 ~ 1000.0
+	armor = 2.0
+	#Detection and engagement range in blocks.
+	# Default: 48
+	# Range: 8 ~ 1000
+	range = 48
+	#Range for sniper guns.
+	# Default: 96
+	# Range: 8 ~ 1000
+	sniperRange = 96
+	#Distance inaccuracy at maximum range. 0 always hits.
+	# Default: 2.0
+	# Range: 0.0 ~ 45.0
+	distanceInaccuracy = 2.0
+	#Random inaccuracy. 0 always hits.
+	# Default: 2.0
+	# Range: 0.0 ~ 45.0
+	randomInaccuracy = 2.0
+	#Reload speed multiplier. 1.0 is the gun's normal speed.
+	# Default: 1.0
+	# Range: 1.0 ~ 10.0
+	reloadSpeed = 1.0
+	#Fire rate multiplier. 1.0 is the gun's normal speed. Needs fireRateStats.
+	# Default: 0.8
+	# Range: 0.1 ~ 10.0
+	fireRate = 0.8
+	#Rows of ammo slots in the turret screen.
+	# Default: 2
+	# Range: 1 ~ 6
+	slotRows = 2
+	#Ammo slots per row in the turret screen.
+	# Default: 5
+	# Range: 1 ~ 9
+	slotLength = 5
+	#Energy buffer size.
+	# Default: 10000
+	# Range: 1 ~ 1000000000
+	energyCapacity = 10000
+	#Energy accepted per tick.
+	# Default: 200
+	# Range: 1 ~ 1000000000
+	energyTransferRate = 200
+	#Energy used per shot.
+	# Default: 10
+	# Range: 0 ~ 1000000
+	energyPerShot = 10
+	#Energy used per tick.
+	# Default: 1
+	# Range: 0 ~ 1000000
+	energyIdleDrain = 1
+	#Passive healing amount.
+	# Default: 1.0
+	# Range: 0.0 ~ 1000.0
+	passiveHealAmount = 1.0
+	#Health restored per repair item.
+	# Default: 25.0
+	# Range: 0.0 ~ 1000.0
+	repairAmount = 25.0
+
+[tactical]
+	#Needs FE to run.
+	requirePower = false
+	#Health of the turret.
+	# Default: 220
+	# Range: 10 ~ 1000
+	health = 220
+	#Armor points of the turret.
+	# Default: 8.0
+	# Range: 0.0 ~ 1000.0
+	armor = 8.0
+	#Detection and engagement range in blocks.
+	# Default: 72
+	# Range: 8 ~ 1000
+	range = 72
+	#Range for sniper guns.
+	# Default: 144
+	# Range: 8 ~ 1000
+	sniperRange = 144
+	#Distance inaccuracy at maximum range. 0 always hits.
+	# Default: 0.75
+	# Range: 0.0 ~ 45.0
+	distanceInaccuracy = 0.75
+	#Random inaccuracy. 0 always hits.
+	# Default: 0.75
+	# Range: 0.0 ~ 45.0
+	randomInaccuracy = 0.75
+	#Reload speed multiplier. 1.0 is the gun's normal speed.
+	# Default: 1.25
+	# Range: 1.0 ~ 10.0
+	reloadSpeed = 1.25
+	#Fire rate multiplier. 1.0 is the gun's normal speed. Needs fireRateStats.
+	# Default: 1.15
+	# Range: 0.1 ~ 10.0
+	fireRate = 1.15
+	#Rows of ammo slots in the turret screen.
+	# Default: 2
+	# Range: 1 ~ 6
+	slotRows = 2
+	#Ammo slots per row in the turret screen.
+	# Default: 5
+	# Range: 1 ~ 9
+	slotLength = 5
+	#Energy buffer size.
+	# Default: 10000
+	# Range: 1 ~ 1000000000
+	energyCapacity = 10000
+	#Energy accepted per tick.
+	# Default: 200
+	# Range: 1 ~ 1000000000
+	energyTransferRate = 200
+	#Energy used per shot.
+	# Default: 10
+	# Range: 0 ~ 1000000
+	energyPerShot = 10
+	#Energy used per tick.
+	# Default: 1
+	# Range: 0 ~ 1000000
+	energyIdleDrain = 1
+	#Passive healing amount.
+	# Default: 1.0
+	# Range: 0.0 ~ 1000.0
+	passiveHealAmount = 1.0
+	#Health restored per repair item.
+	# Default: 25.0
+	# Range: 0.0 ~ 1000.0
+	repairAmount = 25.0
+
+[brass]
+	#Needs rotational power from a Create small cogwheel placed next to it.
+	requirePower = true
+	#Health of the turret.
+	# Default: 200
+	# Range: 10 ~ 1000
+	health = 200
+	#Armor points of the turret.
+	# Default: 6.0
+	# Range: 0.0 ~ 1000.0
+	armor = 6.0
+	#Detection and engagement range in blocks.
+	# Default: 64
+	# Range: 8 ~ 1000
+	range = 64
+	#Range for sniper guns.
+	# Default: 128
+	# Range: 8 ~ 1000
+	sniperRange = 128
+	#Distance inaccuracy at maximum range. 0 always hits.
+	# Default: 1.0
+	# Range: 0.0 ~ 45.0
+	distanceInaccuracy = 1.0
+	#Random inaccuracy. 0 always hits.
+	# Default: 1.0
+	# Range: 0.0 ~ 45.0
+	randomInaccuracy = 1.0
+	#Reload speed multiplier. 1.0 is the gun's normal speed.
+	# Default: 1.0
+	# Range: 1.0 ~ 10.0
+	reloadSpeed = 1.0
+	#Fire rate multiplier. 1.0 is the gun's normal speed. Needs fireRateStats.
+	# Default: 1.0
+	# Range: 0.1 ~ 10.0
+	fireRate = 1.0
+	#Rows of ammo slots in the turret screen.
+	# Default: 2
+	# Range: 1 ~ 6
+	slotRows = 2
+	#Ammo slots per row in the turret screen.
+	# Default: 5
+	# Range: 1 ~ 9
+	slotLength = 5
+	#Energy buffer size.
+	# Default: 10000
+	# Range: 1 ~ 1000000000
+	energyCapacity = 10000
+	#Energy accepted per tick.
+	# Default: 200
+	# Range: 1 ~ 1000000000
+	energyTransferRate = 200
+	#Energy used per shot.
+	# Default: 10
+	# Range: 0 ~ 1000000
+	energyPerShot = 10
+	#Energy used per tick.
+	# Default: 1
+	# Range: 0 ~ 1000000
+	energyIdleDrain = 1
+	#Passive healing amount.
+	# Default: 1.0
+	# Range: 0.0 ~ 1000.0
+	passiveHealAmount = 1.0
+	#Health restored per repair item.
+	# Default: 25.0
+	# Range: 0.0 ~ 1000.0
+	repairAmount = 25.0
+
+[steel]
+	#Needs FE to run.
+	requirePower = true
+	#Health of the turret.
+	# Default: 200
+	# Range: 10 ~ 1000
+	health = 200
+	#Armor points of the turret.
+	# Default: 6.0
+	# Range: 0.0 ~ 1000.0
+	armor = 6.0
+	#Detection and engagement range in blocks.
+	# Default: 64
+	# Range: 8 ~ 1000
+	range = 64
+	#Range for sniper guns.
+	# Default: 128
+	# Range: 8 ~ 1000
+	sniperRange = 128
+	#Distance inaccuracy at maximum range. 0 always hits.
+	# Default: 1.0
+	# Range: 0.0 ~ 45.0
+	distanceInaccuracy = 1.0
+	#Random inaccuracy. 0 always hits.
+	# Default: 1.0
+	# Range: 0.0 ~ 45.0
+	randomInaccuracy = 1.0
+	#Reload speed multiplier. 1.0 is the gun's normal speed.
+	# Default: 1.0
+	# Range: 1.0 ~ 10.0
+	reloadSpeed = 1.0
+	#Fire rate multiplier. 1.0 is the gun's normal speed. Needs fireRateStats.
+	# Default: 1.0
+	# Range: 0.1 ~ 10.0
+	fireRate = 1.0
+	#Rows of ammo slots in the turret screen.
+	# Default: 2
+	# Range: 1 ~ 6
+	slotRows = 2
+	#Ammo slots per row in the turret screen.
+	# Default: 5
+	# Range: 1 ~ 9
+	slotLength = 5
+	#Energy buffer size.
+	# Default: 10000
+	# Range: 1 ~ 1000000000
+	energyCapacity = 10000
+	#Energy accepted per tick.
+	# Default: 200
+	# Range: 1 ~ 1000000000
+	energyTransferRate = 200
+	#Energy used per shot.
+	# Default: 10
+	# Range: 0 ~ 1000000
+	energyPerShot = 10
+	#Energy used per tick.
+	# Default: 1
+	# Range: 0 ~ 1000000
+	energyIdleDrain = 1
+	#Passive healing amount.
+	# Default: 1.0
+	# Range: 0.0 ~ 1000.0
+	passiveHealAmount = 1.0
+	#Health restored per repair item.
+	# Default: 25.0
+	# Range: 0.0 ~ 1000.0
+	repairAmount = 25.0
+
+[basic]
+	#Needs FE to run.
+	requirePower = true
+	#Health of the turret.
+	# Default: 200
+	# Range: 10 ~ 1000
+	health = 200
+	#Armor points of the turret.
+	# Default: 6.0
+	# Range: 0.0 ~ 1000.0
+	armor = 6.0
+	#Detection and engagement range in blocks.
+	# Default: 64
+	# Range: 8 ~ 1000
+	range = 64
+	#Range for sniper guns.
+	# Default: 128
+	# Range: 8 ~ 1000
+	sniperRange = 128
+	#Distance inaccuracy at maximum range. 0 always hits.
+	# Default: 1.0
+	# Range: 0.0 ~ 45.0
+	distanceInaccuracy = 1.0
+	#Random inaccuracy. 0 always hits.
+	# Default: 1.0
+	# Range: 0.0 ~ 45.0
+	randomInaccuracy = 1.0
+	#Reload speed multiplier. 1.0 is the gun's normal speed.
+	# Default: 1.0
+	# Range: 1.0 ~ 10.0
+	reloadSpeed = 1.0
+	#Fire rate multiplier. 1.0 is the gun's normal speed. Needs fireRateStats.
+	# Default: 1.0
+	# Range: 0.1 ~ 10.0
+	fireRate = 1.0
+	#Rows of ammo slots in the turret screen.
+	# Default: 2
+	# Range: 1 ~ 6
+	slotRows = 2
+	#Ammo slots per row in the turret screen.
+	# Default: 5
+	# Range: 1 ~ 9
+	slotLength = 5
+	#Energy buffer size.
+	# Default: 10000
+	# Range: 1 ~ 1000000000
+	energyCapacity = 10000
+	#Energy accepted per tick.
+	# Default: 200
+	# Range: 1 ~ 1000000000
+	energyTransferRate = 200
+	#Energy used per shot.
+	# Default: 10
+	# Range: 0 ~ 1000000
+	energyPerShot = 10
+	#Energy used per tick.
+	# Default: 1
+	# Range: 0 ~ 1000000
+	energyIdleDrain = 1
+	#Passive healing amount.
+	# Default: 1.0
+	# Range: 0.0 ~ 1000.0
+	passiveHealAmount = 1.0
+	#Health restored per repair item.
+	# Default: 25.0
+	# Range: 0.0 ~ 1000.0
+	repairAmount = 25.0
+
+[advanced]
+	#Needs FE to run.
+	requirePower = true
+	#Health of the turret.
+	# Default: 250
+	# Range: 10 ~ 1000
+	health = 250
+	#Armor points of the turret.
+	# Default: 8.0
+	# Range: 0.0 ~ 1000.0
+	armor = 8.0
+	#Detection and engagement range in blocks.
+	# Default: 72
+	# Range: 8 ~ 1000
+	range = 72
+	#Range for sniper guns.
+	# Default: 144
+	# Range: 8 ~ 1000
+	sniperRange = 144
+	#Distance inaccuracy at maximum range. 0 always hits.
+	# Default: 0.8
+	# Range: 0.0 ~ 45.0
+	distanceInaccuracy = 0.8
+	#Random inaccuracy. 0 always hits.
+	# Default: 0.8
+	# Range: 0.0 ~ 45.0
+	randomInaccuracy = 0.8
+	#Reload speed multiplier. 1.0 is the gun's normal speed.
+	# Default: 1.1
+	# Range: 1.0 ~ 10.0
+	reloadSpeed = 1.1
+	#Fire rate multiplier. 1.0 is the gun's normal speed. Needs fireRateStats.
+	# Default: 1.05
+	# Range: 0.1 ~ 10.0
+	fireRate = 1.05
+	#Rows of ammo slots in the turret screen.
+	# Default: 2
+	# Range: 1 ~ 6
+	slotRows = 2
+	#Ammo slots per row in the turret screen.
+	# Default: 5
+	# Range: 1 ~ 9
+	slotLength = 5
+	#Energy buffer size.
+	# Default: 10000
+	# Range: 1 ~ 1000000000
+	energyCapacity = 10000
+	#Energy accepted per tick.
+	# Default: 200
+	# Range: 1 ~ 1000000000
+	energyTransferRate = 200
+	#Energy used per shot.
+	# Default: 10
+	# Range: 0 ~ 1000000
+	energyPerShot = 10
+	#Energy used per tick.
+	# Default: 1
+	# Range: 0 ~ 1000000
+	energyIdleDrain = 1
+	#Passive healing amount.
+	# Default: 1.0
+	# Range: 0.0 ~ 1000.0
+	passiveHealAmount = 1.0
+	#Health restored per repair item.
+	# Default: 25.0
+	# Range: 0.0 ~ 1000.0
+	repairAmount = 25.0
+
+[elite]
+	#Needs FE to run.
+	requirePower = true
+	#Health of the turret.
+	# Default: 300
+	# Range: 10 ~ 1000
+	health = 300
+	#Armor points of the turret.
+	# Default: 10.0
+	# Range: 0.0 ~ 1000.0
+	armor = 10.0
+	#Detection and engagement range in blocks.
+	# Default: 80
+	# Range: 8 ~ 1000
+	range = 80
+	#Range for sniper guns.
+	# Default: 160
+	# Range: 8 ~ 1000
+	sniperRange = 160
+	#Distance inaccuracy at maximum range. 0 always hits.
+	# Default: 0.6
+	# Range: 0.0 ~ 45.0
+	distanceInaccuracy = 0.6
+	#Random inaccuracy. 0 always hits.
+	# Default: 0.6
+	# Range: 0.0 ~ 45.0
+	randomInaccuracy = 0.6
+	#Reload speed multiplier. 1.0 is the gun's normal speed.
+	# Default: 1.2
+	# Range: 1.0 ~ 10.0
+	reloadSpeed = 1.2
+	#Fire rate multiplier. 1.0 is the gun's normal speed. Needs fireRateStats.
+	# Default: 1.1
+	# Range: 0.1 ~ 10.0
+	fireRate = 1.1
+	#Rows of ammo slots in the turret screen.
+	# Default: 2
+	# Range: 1 ~ 6
+	slotRows = 2
+	#Ammo slots per row in the turret screen.
+	# Default: 5
+	# Range: 1 ~ 9
+	slotLength = 5
+	#Energy buffer size.
+	# Default: 10000
+	# Range: 1 ~ 1000000000
+	energyCapacity = 10000
+	#Energy accepted per tick.
+	# Default: 200
+	# Range: 1 ~ 1000000000
+	energyTransferRate = 200
+	#Energy used per shot.
+	# Default: 10
+	# Range: 0 ~ 1000000
+	energyPerShot = 10
+	#Energy used per tick.
+	# Default: 1
+	# Range: 0 ~ 1000000
+	energyIdleDrain = 1
+	#Passive healing amount.
+	# Default: 1.0
+	# Range: 0.0 ~ 1000.0
+	passiveHealAmount = 1.0
+	#Health restored per repair item.
+	# Default: 25.0
+	# Range: 0.0 ~ 1000.0
+	repairAmount = 25.0
+
+[ultimate]
+	#Needs FE to run.
+	requirePower = true
+	#Health of the turret.
+	# Default: 400
+	# Range: 10 ~ 1000
+	health = 400
+	#Armor points of the turret.
+	# Default: 14.0
+	# Range: 0.0 ~ 1000.0
+	armor = 14.0
+	#Detection and engagement range in blocks.
+	# Default: 96
+	# Range: 8 ~ 1000
+	range = 96
+	#Range for sniper guns.
+	# Default: 192
+	# Range: 8 ~ 1000
+	sniperRange = 192
+	#Distance inaccuracy at maximum range. 0 always hits.
+	# Default: 0.4
+	# Range: 0.0 ~ 45.0
+	distanceInaccuracy = 0.4
+	#Random inaccuracy. 0 always hits.
+	# Default: 0.4
+	# Range: 0.0 ~ 45.0
+	randomInaccuracy = 0.4
+	#Reload speed multiplier. 1.0 is the gun's normal speed.
+	# Default: 1.35
+	# Range: 1.0 ~ 10.0
+	reloadSpeed = 1.35
+	#Fire rate multiplier. 1.0 is the gun's normal speed. Needs fireRateStats.
+	# Default: 1.2
+	# Range: 0.1 ~ 10.0
+	fireRate = 1.2
+	#Rows of ammo slots in the turret screen.
+	# Default: 2
+	# Range: 1 ~ 6
+	slotRows = 2
+	#Ammo slots per row in the turret screen.
+	# Default: 5
+	# Range: 1 ~ 9
+	slotLength = 5
+	#Energy buffer size.
+	# Default: 10000
+	# Range: 1 ~ 1000000000
+	energyCapacity = 10000
+	#Energy accepted per tick.
+	# Default: 200
+	# Range: 1 ~ 1000000000
+	energyTransferRate = 200
+	#Energy used per shot.
+	# Default: 10
+	# Range: 0 ~ 1000000
+	energyPerShot = 10
+	#Energy used per tick.
+	# Default: 1
+	# Range: 0 ~ 1000000
+	energyIdleDrain = 1
+	#Passive healing amount.
+	# Default: 1.0
+	# Range: 0.0 ~ 1000.0
+	passiveHealAmount = 1.0
+	#Health restored per repair item.
+	# Default: 25.0
+	# Range: 0.0 ~ 1000.0
+	repairAmount = 25.0

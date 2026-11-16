@@ -142,7 +142,7 @@ describe("the wait room", () => {
     const limbo = new Limbo(env, amp, tail, noLog);
     const joined: string[] = [];
     limbo.onJoin = async (name: string) => { joined.push(name); };
-    await limbo.onEvent({ type: "join", name: "bramble09", ip: "10.0.0.5" });
+    await limbo.onEvent({ type: "join", name: "bramble09", ip: "198.51.100.5" });
     await limbo.onEvent({ type: "join", name: "bramble09", ip: null });
     expect(joined).toEqual(["bramble09"]);
     await limbo.onEvent({ type: "join", name: "m1_owl", ip: null }, { replay: true });

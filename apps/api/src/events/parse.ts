@@ -384,7 +384,7 @@ const NOISE = [
   /^\.\.\. \d+ more$/,
 ];
 
-/** IP without the port, from "10.0.0.5:51234", "[2a01::1]:51234" or "local". */
+/** IP without the port, from "198.51.100.5:51234", "[2a01::1]:51234" or "local". */
 export function ipOf(endpoint: string): string | null {
   const v6 = /^\[([0-9a-fA-F:.]+)\]:\d+$/.exec(endpoint);
   if (v6) return v6[1] ?? null;

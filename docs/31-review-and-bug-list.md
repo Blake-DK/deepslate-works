@@ -322,12 +322,12 @@ with the reason where you could not.
 
 7. The deploy key and rsync: the authorized_keys line for the portal's key in the amp user's home (print
    the options and the command, not the key): command="/usr/bin/rrsync … /Minecraft", restrict,
-   from="10.77.0.1" expected. File modes and owner of .ssh. sshd -T for that user and address:
+   from="203.0.113.1" expected. File modes and owner of .ssh. sshd -T for that user and address:
    passwordauthentication, permitrootlogin, allowtcpforwarding.
 
-8. WireGuard: wg show (no private key): the peer's allowed IPs (10.77.0.1/32 expected), last handshake,
+8. WireGuard: wg show (no private key): the peer's allowed IPs (203.0.113.1/32 expected), last handshake,
    keepalive. sysctl net.ipv4.ip_forward. The firewall rules that confine the tunnel (nft list ruleset or
-   iptables -S, only the parts naming wg0 or 10.77.0.0/24). What on this host listens on addresses the VPS
+   iptables -S, only the parts naming wg0 or 203.0.113.0/24). What on this host listens on addresses the VPS
    can reach (ss -ltnp), and which of those the rules allow.
 
 9. mc-router (docs/17): image and tag, restart policy, its mappings (mc.dsw.test, boys.dsw.test,

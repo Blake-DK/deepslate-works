@@ -1,5 +1,7 @@
 # 10 · Roadmap and acceptance criteria
 
+2026-11-16: the state line below is the record of 2026-10-03. The current state is the top of docs/11-status.md and the open work is docs/49.
+
 Work top to bottom. A phase is done when every box in its "Done when" list is true and Alex has clicked through it on the live site. Then commit a tag `phase-N`.
 
 **State on 2026-10-03, 19:00 UTC** (checked against `main` `7d0e5be` and the running server; the full check is "Where the build stands" in `docs/11-status.md`). A box is ticked only with what shows it, in italics after it. `phase-0` is the only tag. Phases 0 to 3 are built and in daily use, each with boxes that need a person to click through. The planner's additions are built: docs/14 joining, docs/16 analytics and event log, docs/17 mc-router, docs/18 guide, docs/21 launcher look and Discord feed (steps 1 to 3), docs/22 Discord bot (steps 1 to 6), docs/23 site look (all four steps), docs/25 starter kit. Started: docs/20 seasons (step 1 of 6) and docs/24 world regen (run as Alex amended it). Not begun: Phase 4 and docs/19. Going live is the next milestone; "Open items, by priority" at the end of this file is the order of work.

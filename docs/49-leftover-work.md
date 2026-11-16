@@ -1,134 +1,137 @@
 # 49 · Leftover work, in one place
 
-> **2026-10-28:** the VPS is no longer used; the site runs at home on docker-01v (deploy/home/README.md). "VPS" in the Waits on column now means the session that builds the site. Items that only concerned the VPS are marked obsolete below.
+Collected 2026-11-16 against `dev` `638383c` and `main` `02df584`, from docs/10, 11, 34 to 64. It replaces the list of 2026-10-10. The source docs stay the detail; this file is the list. Every row was checked the same day against git, the code and what can be read from live and test (the api's health, the databases, the servers' files through AMP); a row says so where it could not be checked.
 
-Collected 2026-10-10 against `dev` `ee78660a` and `main` `9c7e673c`, from docs/10, 11, 28, 34 to 48 and the VPS
-session's reports of 2026-10-09 and 2026-10-10. Every item was checked against git, the pull requests (#18 to #29) and
-the code; items found done were dropped. "Unverified" means the doc says open and nothing shows it done, but it could
-not be checked from the VPS. The source docs stay the detail; this file is the list.
+Rows from the old list that were found done are dropped: testers (docs/57), gun balance (docs/61), the site's Maintenance (docs/48 Part B), Admin's rename (docs/48 Part A), the Mods guide by type (docs/52), the season ship mechanism (docs/44), the AMP state names, the live regen (docs/64) and everything that only concerned the VPS checkout. Dropped at the check of 2026-11-16, with what showed them done:
 
-Who it waits on: **Alex**, **planner**, **VPS** (the VPS session), **AMP host** (the AMP host session), **players**.
+- **The pre-generation:** finished 2026-11-14 08:35 UTC, all four worlds, 2,740,629 chunks; BlueMap said the maps are up to date.
+- **A PC through Test with pack `437dc9a3`:** two members' PCs installed it and joined the test server on 2026-11-09.
+- **App 3.6.8's first report:** the report of 2026-10-28 14:46 UTC shows the zoom key added and "connected textures on"; five members' PCs have reported on 3.6.8 since.
+- **The two switches:** "We're live" is on, "Play first" is on, Maintenance is off.
+- **The site's health output:** an anonymous caller gets five yes-or-no fields and no tool's name.
+- **R-21:** a player who is on with no session gets one, marked `inferred`.
+- **Removed jars named at Play:** the app has listed them as "(removed)" since 2026-10-02.
+- **The health login:** the api logs in to AMP only when its session is gone, not at every check.
+
+Who it waits on: **Alex**, **planner**, **build** (the build session on docker-01v), **AMP host** (the AMP host session), **players**.
 
 ## Next up, in order
 
-1. Check the "Play first" and "We're live" switches. (The AMP state fix is live since 2026-10-10.)
-2. The refill with nobody online, then the AMP host's after check.
-3. Live's own mod capture into `server-loaded.json`, and check-sides in `deploy/check.sh`. Today CI checks the sides
-   against the test server's capture.
-4. Prove in real use: the bot filter (PR #24), "Not open yet" with a real player, the "We're live" post. Correct
-   docs/47 §4 on the door fix.
-5. docs/48: prove Part A (on `dev`), then build Part B (Maintenance) before "We're live" is ever switched off again.
+1. Alex answers docs/63 §6 (six decisions). The Frontier's pre-generation on test, its snapshot and the worldgen freeze must all happen before 1 December.
+2. Before the three new mods go to `main`: the claim test, the change log entry and the two waiting entries (table below).
+3. The checks after the 2026-11-01 deploy, and the copper golem crash, which can happen again on any day.
+4. The clean-up of the move home, by 2026-12-06.
 
-## Reopening and deploy
+## Season 1, opening Tue 1 December
 
-| Item | What remains | Source | Status | Waits on |
-|---|---|---|---|---|
-| Door fix proof | The redo passed on the test stack on 2026-10-10 (server branch frozen at `c23ed0d5`); docs/47 §4 still lists it as unproven. Record only. | docs/47 §4 | open | planner |
-| The two switches | "Play first" and "We're live": state never confirmed after the reopening. | docs/47 §1, §6; docs/11 | open | Alex |
-| The refill | Pre-generate the overworld (centre 0 0, radius 10176), then the Nether (centre 64 552, radius 448), nobody online; then the AMP host's after check and the overworld edge check; the map re-renders. | docs/47 §5.1 | open | Alex, AMP host |
-| Live's mod capture | Run `deploy/server-mods.sh` against live; the repo's `server-loaded.json` is still the test server's (`fd58a726`). | docs/47 §5.4 | open | VPS |
-| Deploy `main` | PR #29 (Live/Test switch order) reached `main` after live was last seen on `6b7d71d4`. | docs/11 | unverified | Alex |
-| Unproven in real use | A real PC updating itself from 3.5.5 (the first installs-page row proves it); the Test tab on the `main` build (wake watch, test game check). | docs/47 §4 | open | Alex, players |
+| Item | What remains | Source | Waits on |
+|---|---|---|---|
+| The six decisions | The seal, the order, the worldgen freeze, radius 3,000, the snapshot copied at the opening, when the boss mods reach PCs. A recommendation stands for each. None is answered in docs/63. | docs/63 §6 | Alex |
+| The seal datapack | Empty structure tags so boss structures appear only in the Frontier. Not built: nothing of it is in `modpack/`. | docs/63 §3 | build, after decision 1 |
+| The Frontier on test | s1 back on test, pre-generate, the structure table, the snapshot before anyone enters. Not run. | docs/63 §2 | build, Alex |
+| The copy to live | The snapshot copied at the opening, with a backup first and Alex's yes. | docs/63 §2 | Alex, AMP host |
+| Season 1 code | Not built: the finale gate, the app's banner (W1.6; the site already sends the line), the W1.7 wipe, W1.8 `hall.update`, the T5 portal, `frontier.build`. Built: the guide's Season section (W1.11). | docs/34; docs/43 §3; docs/11, 2026-10-04 | planner, build |
+| docs/41 | Season 1 rewards and the finale rule: the number is reserved, the doc is not written. Alex's decisions of 2026-10-07 are the input. | docs/46 §7.8 | planner |
+| The rehearsal | Kill and first-hit conditions for modded bosses, the reward function, the trophy's components. Never run against the real game. | docs/34 §7 | build, Alex |
+| Finale date | Sat 26 December by the rule, or the 19th. | docs/11, 2026-10-04 | Alex |
+
+## The new mods on `dev` (Epic Knights, TACZ Turrets, Mekanism Missiles)
+
+| Item | What remains | Source | Waits on |
+|---|---|---|---|
+| Claim test | In game on test: an Industrial Bomb against a claim. Nobody has joined the test server since the limits were synced on 2026-11-14 (its last join is 2026-11-09), so the limits themselves have not been seen by a player either. | docs/11, 2026-11-14 | Alex |
+| The limits, seen in game | On test, once someone joins: the warhead assembler offers no nuclear, hydrogen, antimatter or dirty bomb and no seismic charge; a turret set to Players: Always still does not shoot a player; a missile cannot be aimed past 500 blocks; napalm does not spread fire to blocks. All are set (`deepslate-tools`, `modpack/server/config/`) and the server kept every value after its start, but none was tried. | docs/11, 2026-11-14 | Alex, then build |
+| Bombs that still pass claims | The shaped charge, bunker buster and incendiary bomb carve blocks the same way the big bombs did (MNWE's `BlastCarver`, `setBlock`, no explosion event), so claims will not stop them either. Read from the jar, not tried. Decide whether they stay, shrink (`SHAPED_CHARGE_RANGE`, `BUNKER_BUSTER_RADIUS`, `INCENDIARY_BOMB_RADIUS` in `mnweconfig.properties`) or lose their recipes as the big five did. | docs/11, 2026-11-14 | Alex |
+| Turret crash fix | `modpack/server/config/lithium.properties` (server only) stops the crash "Lithium Class Analysis" when a placed turret moves; checked with 55 min of play on 2026-11-09. Keep it while TACZ Turrets is in the pack; it can go if TACZ Turrets is taken out or a release fixes its client-only class in `TurretEntity`. | docs/11, 2026-11-09 | nobody (record) |
+| Change log entry | Written: `2026-11-16-knights-turrets-missiles`, with a title (it tags the players' role) and `onSync`, in the `dev` → `main` PR of 2026-11-16. It says nothing about claims. Change it if the bombs' decision below changes what it says. | docs/11, 2026-11-16 | Alex (read it) |
+| The two waiting entries | `2026-11-01-map-squares` and `2026-11-01-not-answering` have no `live` or `onSync`, so the bot leaves them out; they hold nothing back (only an `onSync` entry waiting for its Sync holds the later ones). The last entry posted is `2026-10-30-new-land`. Mark them `live: true` once Alex is content with "Not answering" (next table); the deploy after that posts them. | `apps/api/src/changelog.ts` | Alex's word, build |
+| The warhead mod's state | It calls itself "in active development". The big bombs are off by recipe, fallout is off, missile range is 500. Decide whether it stays. | docs/11, 2026-11-14 | Alex |
+
+## Live, after the 2026-11-01 deploy
+
+| Item | What remains | Source | Waits on |
+|---|---|---|---|
+| The copper golem crash | Live crashed on 2026-11-03 22:19 UTC and dropped the player who was on: Friends & Foes 5.0.4 sends a client-only packet from the server when a copper golem turns into a statue (`CopperGolemEntity.becomeStatue`); the watchdog then stopped the server and AMP had it back within two minutes. It will happen again when another golem oxidises fully. 5.0.5 came out on 2026-11-16 and its notes do not name this. Report it upstream; until a fix, patch the jar (docs/58) or tell players to wax their golems. | live's `crash-reports/crash-2026-11-03_22.19.42-server.txt` | build, Alex |
+| "Not answering" | One alarm since the deploy: 2026-11-04 02:57:42 to 02:58:37 UTC, 55 seconds, nobody online, during the pre-generation, 20 TPS in the snapshots either side. Whether the game really let nobody in for that minute cannot be told afterwards. None in the twelve days since. | docs/11, 2026-11-01; live's `Event` | Alex's word |
+| Test level name | `streamtest-potato` back to `world` in AMP: still not done on 2026-11-16, so the testers of 2026-11-09 played in the stream-test world. The test world's leftovers from the stream tests. | docs/11, 2026-11-01 | Alex |
+| Sync's "config: 7 file(s) updated" | Reported on every Sync, never looked into. A lead: the server writes some shipped configs anew at its start (the grave mod's is one, below), so Sync may find them changed each time. | docs/11, 2026-10-29 | build |
+| The patched ArPhEx | Never tried in game: the compass on Ashmoon, the two cave spiders, the castle round trip, no such mob in the main world. | docs/11, 2026-10-29 | Alex, players |
+| Village mods | Waystones in the new villages; the three `locate structure` checks. | docs/11, 2026-10-29 | Alex |
+| Voice chat | Can move past 2.6.24 once every PC has Sound Physics 1.5.2. Of the ten members who have ever sent an install report, five have pressed Play on the current pack; the other five are on older ones. | docs/11, 2026-10-26 | build |
+| The Fairy Lights crash | Reported upstream; our patched jar stays until a fixed release. | docs/11, 2026-10-27 | — |
+| The live map | Nobody has looked at the map by eye since the pre-generation ended, for dark squares at the edges. | docs/11, 2026-11-01 | Alex |
+
+## The move home (docs/62)
+
+| Item | What remains | Source | Waits on |
+|---|---|---|---|
+| The clean-up, by 2026-12-06 | The WireGuard peer on the AMP host, `deepslate-wg`, udp 51820, the VPS stack, the tunnel's lines on the AMP host, the old whitelist names, the two dry-run resources, the temporary access. On docker-01v nothing of the tunnel is left (no link, no listener, no container, no tunnel address in live's settings); the AMP host and the VPS cannot be seen from there, so their part is not checked. | docs/62 §7; docs/11, 2026-10-23 | Alex, AMP host |
+| The doc edits | docs 00, 02, 09, 13, 17, 28, 38, 42 and the working rules, as one commit. Not made. | docs/62 §7 | build |
+| Outside monitor | The check on `/api/health/live`. | docs/11, 2026-10-23 | Alex |
+| Offsite dumps | A copy of the home dumps offsite, newer than 24 hours. Health shows the newest dump and its copy on the AMP host; nothing shows one further away. | docs/62 §8 | build, Alex |
+| Old copies | About 180 GB of old worlds on the AMP host; old `.env` and Caddyfile copies; the stopped VPS data. Nothing is deleted without Alex's word. | docs/11, 2026-10-30 | Alex |
 
 ## Server and mods
 
-| Item | What remains | Source | Status | Waits on |
-|---|---|---|---|---|
-| One quiet restart | NeoForge 21.1.253 on live (lock is 253, server is 252), view distance 20, MOTD from Branding, the AMP memory value. Needs the AMP grants in docs/15 §4. | docs/46 §7.6; docs/43 §7.3 | open | AMP host, Alex |
-| Test datapacks off live | The sample Frontier and three worldgen packs need a `level.dat` edit; `work/test-packs-off` is parked for it. | docs/11; docs/47 §3 | open | AMP host, Alex |
-| Grave mod config | It rewrites its config after every Sync start, so the repo's copy is not what runs. | docs/47 §5.12 | open | VPS |
-| Season mods mechanism | The `season` field and `shippedFiles()` are not built; six mods are only `enabled: false`. Must land before more season work goes to test. | docs/44; docs/46 §7.2 | open | VPS |
-| Season 1 code before 30 Nov | Finale gate (docs/41, to be reissued), `finale.groupRadius`, W1.6 banner, W1.7 wipe, W1.8 hall, W1.11 guide section, T5 portal. | docs/34; docs/43 §3 | open | planner |
-| Worlds, builds, designer | Worlds Steps 1 to 3; build import Step 3; designer API-key mode; designer 3c (rest), 3d, 3e and the "design ready" Discord line. | docs/36, 37, 39, 40 | open | Alex's word |
-| KaneFinch's items | Diamond chestplate, diamond sword, totem, from the console while he is online. | docs/47 §5.2 | open | Alex |
+| Item | What remains | Source | Waits on |
+|---|---|---|---|
+| NeoForge | Live runs 21.1.252 (its crash report of 2026-11-03 says so); the lock pins 21.1.253; 21.1.266 is the newest. It moves with the AMP install. | docs/11, 2026-10-26 | AMP host, Alex |
+| Mod updates | Read from Modrinth on 2026-11-16 against `dev`'s lock: 23 of 120 files have a newer NeoForge 1.21.1 build. **Held, with a reason:** QuarryPlus (Quarry Pause accepts 21.1.164 only), Simple Voice Chat (until every PC has Sound Physics 1.5.2), TACZ Turrets 4.3.0 and later (they ask for TaCZ itself, the pack runs the community port `tacz-1.21.1`), Streams Reflowing 2.17.5 and ChoiceTheorem's Overhauled Village 3.6.4 (both change new land: after the Frontier is generated, docs/63 §6 decision 3). **Betas only:** JEI, Industrial Foregoing (Titanium and MezzConfig move with Lock as they already do). **Bug-fix releases, for one update round after the 2026-11-16 deploy:** AE2, Amendments, Architectury, Continuity, Copycats+, Create Crafts & Additions (1.6.0 to 1.7.2: why the 2026-10-26 round left it is not recorded), EntityCulling, Friends & Foes, Kotlin for Forge, Moonlight, Sophisticated Backpacks and Core, VeinMiner, Waystones (a new network version: PCs and server together, as the pack does anyway). **Friends & Foes 5.0.5 does not fix the copper golem crash:** its `CopperGolemEntity` is the same size as 5.0.4's and still calls `sendToServer`. A round is Lock, Build and Sync on test, a server start, a PC through Test, then `server-loaded.json` and the pinned pack hash in the ship tests. | Modrinth, 2026-11-16 | build, Alex |
+| Test datapacks on live | Still there on 2026-11-16: `deepslate-test-probe`, `deepslate-test-t_shift_a` and `deepslate-test-t_shift_b` in the world's `datapacks/`, and the dimension folders `t_shift_a`, `t_shift_b` and `frontier_sample`. The sample Frontier's datapack and its map file are gone; its dimension stays until `level.dat` is edited. | docs/47 §3 | AMP host, Alex |
+| Grave mod config | The values that run are the repo's. But at the first start after every Sync NeoForge sets the repo's file aside as `corpse-server-N.toml.bak` (five so far, the newest 2026-10-30) and writes its own, which leaves out `death_storage_duration` (its default is the same -1). Make the repo's file the one NeoForge writes, so it stops. | docs/47 §5.12 | build |
+| Server settings | Live's `server.properties` reads view distance 16, simulation distance 10 and "Modded Minecraft with friends" as its MOTD; `mods.json` says 20, 8 and "Deepslate Works", and Branding has a third MOTD. Which is meant is not written down; docs/06 and docs/30 still give the old view distance. | docs/47 §5.14; docs/11, 2026-10-12 | Alex, build |
+| The server's mod capture | `server-loaded.json` is the test server's start of 2026-11-08, as it must be while the new mods are only there. After they reach live, take it from live again. | docs/47 §5.4; docs/11, 2026-10-26 | build |
+| Worlds, builds, designer | Worlds Steps 1 to 3; build import Step 3; designer 3c (rest), 3d, 3e, its API-key mode and the "design ready" Discord line. | docs/36, 37, 39, 40 | Alex's word |
+| KaneFinch's items | A diamond chestplate, a diamond sword and a totem, owed since 2026-10-10. Nothing records that they were given. | docs/47 §5.2 | Alex |
+| AMP host noise | The reverse proxy agent, logrotate, pending updates. Nothing records them done; not checked from docker-01v. | docs/46 §7.7 | AMP host |
 
-## Web app
+## Web app, api and AMP
 
-| Item | What remains | Source | Status | Waits on |
-|---|---|---|---|---|
-| docs/48 Part A | On `dev` (`ee78660a`), not deployed; the A6 proof on the test site. | docs/48 | in progress | VPS |
-| docs/48 Part B | Maintenance switch and per-admin tick, not built. Until then, "We're live" off shows players launch wording. | docs/48; docs/47 §5.6 | open | VPS |
-| Tester tick for non-admins | Planned in docs/57 (2026-10-12): one-click Tester switch on live People, app 3.6.3. | docs/45; docs/46 §7.5; docs/57 | planned | VPS |
-| Phase 4 self-service | Player actions, homes, `/me`, "My stats" (its endpoint, docs/12 §4); the registry has no player actions. | docs/10 Phase 4 | open | — |
-| Phase 5 and the admin assistant | Not begun; needs an API key. | docs/19; docs/10 P2.12 | open | Alex |
-| Small gaps | Origin check in middleware; `window.confirm` in 3 components; the BACKUP event only from the button. | docs/10 item 9; docs/43 | open | VPS |
-| Next.js 16 | Still on `^15`; move to 16.3.x. | docs/10 item 18 | open | VPS |
-| Health output | Names a tool; hide it if the page can be read from outside. | docs/47 §5.11 | open | VPS |
-
-## API and AMP
-
-| Item | What remains | Source | Status | Waits on |
-|---|---|---|---|---|
-| AMP state names | Fixed and live 2026-10-10 (PR #30, docs/11). | docs/47 §5.7 | done | — |
-| R-04 | An AMP refusal returned as HTTP 200 counts as success; needs AMP's real answers first. | docs/35 | open | AMP host |
-| AMP call timing | No duration log or slow-call warning. | docs/10 item 9b; docs/43 §3 | open | VPS |
-| Review leftovers | R-06, R-16, R-21, R-43. | docs/35 | open | VPS |
-| Test instance | The test api asks AMP for a backup list it may not see; the test instance's "Enforce Whitelist" tick. | docs/46 §7.10 | unverified | AMP host |
+| Item | What remains | Source | Waits on |
+|---|---|---|---|
+| Next.js 16 | Still on 15 (15.5.29 in the lockfile); move to the newest 16.x. | docs/10 item 18 | build |
+| Small gaps | No Origin check in middleware (routes check for themselves); `window.confirm` in three components; the BACKUP event only from the button, so AMP's scheduled backups and the nightly dumps leave none. | docs/10 item 9 | build |
+| AMP call timing | No duration log, no slow-call warning. | docs/10 item 9b | build |
+| R-04 | An AMP refusal returned as HTTP 200 counts as success: the console line, Start, Restart and Sync's calls do not look at the answer; SetConfig and TakeBackup do. | docs/35 | AMP host, build |
+| Review leftovers | R-06: a forum post the bot could not make is not tried again. R-16: three routes (wake, vote, inventory) still check Origin by themselves instead of with the shared helper. R-43: the site's Lock writes the Extras lock before the pack's. | docs/35 | build |
+| Authentik's pin | Sign-in through Authentik times out whenever the home DNS answers its name with a LAN address: 2026-11-03, 11-04 and 11-16 so far. `AUTHENTIK_PIN` has ended that since 2026-11-16 (it is in Dockhand's compose copy and `.env`; `main`'s reference gets it with the next `dev` → `main` PR), but it holds one address: if Authentik's public address changes, sign-in times out again, and nothing says why. Wanted: a health check that fetches Authentik from web, and the home DNS answering one way. | docs/11, 2026-11-16 | Alex, build |
+| The map while asleep | The site's Map page says the map is only there while the server runs; the map's own address still answers 502. | docs/43 §7.6 | build |
+| The bot filter of PR #24 | Never proven: it needs a private test webhook in the stack's `.env` and a redeploy. | docs/47 §4 | Alex |
+| Test instance | The test api still asks AMP every ten minutes for a backup list its role may not see, and ignores the answer; whether "Enforce Whitelist" was unticked on the test instance is not recorded. | docs/46 §7.10 | build, AMP host |
+| Phase 4 self-service | Player actions, homes, "My stats". | docs/10 Phase 4 | Alex's word |
+| Phase 5 and the admin assistant | Not begun. | docs/19 | Alex |
+| Old defaults | `apps/api/src/env.ts` still gives `AMP_URL`, `AMP_TUNNEL_IP`, `ROUTER_DASH_URL` and `RSYNC_TARGET` a default: the retired tunnel's address, a placeholder since PR #118. Live and test set all four themselves. With the tunnel gone they should have none, so a missing one fails at the start. | planner review 2026-11-16 | build |
 
 ## App (installer and launcher)
 
-| Item | What remains | Source | Status | Waits on |
-|---|---|---|---|---|
-| 3.6.2 | Name removed jars to every player at their next Play. | docs/47 §5.10 | open | VPS |
-| R-10 uninstaller | Deletes saves and schematics; the `launcher_profiles.json` write is unsafe. | docs/35 | open, next release | VPS |
-| R-42 | Checksums for the Java and NeoForge downloads; exe signing (accepted 2026-10-07, where the key lives is undecided). | docs/07 "Signing"; docs/38 §4 | blocked on the key | Alex |
-| Update before the gate | `SelfUpdate` still runs after the gated manifest. | docs/10 item 17 | open | — |
-| Logo in the exe | Stamp the chosen logo into the exe at Build. | docs/21 §12 | open | — |
-| Build warnings | xUnit2029/2031 and the `Buffer()` deprecation. | docs/43 §7.16 | unverified | — |
+| Item | What remains | Source | Waits on |
+|---|---|---|---|
+| R-10 uninstaller | It removes the whole game folder, saves and schematics with it, and moves only the screenshots out, while telling the player their worlds are kept. Its `launcher_profiles.json` write deletes the file and then moves the new one in (the install-time write replaces it in one step); a backup and a read-back check soften that. | docs/35 | build |
+| R-42 | No checksum on the Java and NeoForge downloads; exe signing, blocked on where the key lives. | docs/07; docs/38 §4 | Alex |
+| Update before the gate | `SelfUpdate` still runs after the gated manifest, so a PC the gate refuses cannot update itself. | docs/10 item 17 | build |
+| Send to Alex on Test | It sends the live profile's game log, not the test profile's. | docs/11, 2026-11-09 | build |
+| Logo in the exe | The lantern icon is built in; stamping the logo chosen in Branding into the exe at Build is not. | docs/21 §12 | build |
+| Build warnings | xUnit2029 and xUnit2031 in the app's tests. | docs/43 §7.16 | build |
 
-## Discord bot
+## Security, ops and backups
 
-| Item | What remains | Source | Status | Waits on |
-|---|---|---|---|---|
-| PR #24 proof | Needs a private test webhook in the stack's `.env` (Dockhand) and a redeploy (was: `deploy/.env` and a root `test-up.sh` on the VPS). | docs/47 §4 | open | Alex (`.env` edits need his go) |
-
-## Security
-
-The findings themselves stay in docs/38; this is only what is still to do.
-
-| Item | What remains | Source | Status | Waits on |
-|---|---|---|---|---|
-| Deploy key and the live world | Build the staging-folder apply step, then reopen and close I4. | docs/46 §7.3 | open | VPS, AMP host |
-| Health login | Slow the 30-second health login. | docs/46 §7.3 | open | VPS |
-| Register follow-ups | Rotate the 2026-10-08 test secrets; root read-outs for sshd and the firewall; branch protection strict mode; the Snyk ignores SR-02 and SR-08; SR-20 live checks. | docs/38; docs/43 §7, §10 | open | Alex (root), AMP host |
-
-## Ops and backups
-
-| Item | What remains | Source | Status | Waits on |
-|---|---|---|---|---|
-| Encrypted DB dump | Commit `7f4ddcc5` on the local branch `work/security-a3` (a VPS checkout), not merged. | docs/43; docs/46 §7.4 | open | Alex, VPS |
-| Backups package | Restore test into scratch; the portal's own four-a-day runner and status-file reader; "Back up now" while stopped or asleep; progress on the dashboard; a list-only S3 key. | docs/28 §9; docs/46 §7.4 | open | AMP host |
-| BlueMap while asleep | 502s while the server sleeps. | docs/43 §7.6 | open | AMP host |
-| check-sides locally | `deploy/check.sh` does not run it; only `ci.yml` does. | docs/47 §5.8 | open | VPS |
-| Deploy guard | Refuses after a branch with an upstream changes `.git/config`. | docs/47 §5.9 | obsolete (2026-10-28): `deploy.sh` and the VPS are retired; at home `repo-sync` checks `.git/config` itself | — |
-| Pre-push name check | The installed hook differs from the pending copy; install the pending one as root. | VPS report 2026-10-10 | obsolete (2026-10-28) for the VPS checkout; check the home checkout's hooks instead | Alex (root) |
-| Local git tidy | The old pre-rewrite `phase-0` tag and one wrongly prefixed local branch on the VPS. | VPS report 2026-10-10 | obsolete (2026-10-28): the VPS checkout is no longer used | — |
-| Old copies | About 18.5 GB of old worlds and scratch copies on the AMP host; old `.env` and Caddyfile copies; leftover tables; the stopped VPS stack and its data. Nothing is deleted without Alex's word. | docs/47 §5.15; docs/46 §7.9 | open | Alex |
-| AMP host noise | Reverse proxy agent, logrotate, pending updates. | docs/46 §7.7 | open | AMP host |
-| Must-vote polls | Three close 2026-10-11 19:00 UTC; while open they hold non-voters at the door. | docs/43 §7.15 | unverified | Alex |
+| Item | What remains | Source | Waits on |
+|---|---|---|---|
+| Register follow-ups | The rows still open in docs/38 and Part C of docs/60. Not gone through row by row at this check. | docs/38; docs/60 | Alex, security planner |
+| The staging-folder apply step | Not built anywhere; docs/38 lists I4 as met and it was never reopened. | docs/46 §7.3 | build, AMP host |
+| Encrypted DB dump | Not built: `BACKUP_PUBLIC_KEY` is handed to the container and nothing reads it. The branch it was on lived only in the old VPS checkout and is in no ref of the repository or of docker-01v's checkout. | docs/43 | Alex, build |
+| Backups package | A restore test into scratch; "Back up now" while asleep; a list-only S3 key. | docs/28 §9 | AMP host |
+| Pre-push check | The installed hook refuses a branch name and old history, nothing else. PR #118 added a tracked one that refuses a new address (`deploy/hooks/pre-push`), and Alex installed it on 2026-11-16; whether root's `git-hooks.expected` lists it and `pre-push-local` was not read (deploy/README.md, "The pre-push hook"). Still no check for player names: it was put off on 2026-10-09 until live was back, and never came. | planner review 2026-11-16; docs/11, 2026-11-16 | Alex, build |
+| `DS_EDGE_SUBNET` | Since PR #118 the compose file has no default for it. Dockhand's `.env` must have the line before its copy of the compose file is next replaced; whether it has could not be read. | docs/11, 2026-11-16 | Alex |
+| The sides check | `deploy/check.sh` does not run it; only CI does. | docs/47 §5.8 | build |
+| Dependency alerts | GitHub lists 31 open dependency alerts on `main` (2 critical, 9 high). Dependabot's two PRs of 2026-11-16 (#115, five action updates; #117, eight npm patch releases) are folded into PR #118. What is left of the 31 once that reaches `main` has not been looked at. | GitHub | Alex, build |
 
 ## Docs
 
-| Item | What remains | Source | Status | Waits on |
-|---|---|---|---|---|
-| Missing docs | docs/41 (Season 1 rewards and finale rule) and docs/42a (the AMP host half of the test server). Both numbers are reserved. | docs/46 §7.8 | open | planner, AMP host |
-| Stale docs | docs/02 to 06; the docs/10 header still says "State on 2026-10-03"; `architecture.mmd` lacks the test stack and the build designer. | docs/10 P2.13; docs/43 §6 | open | — |
-| View distance and MOTD | Write view distance 20 and the MOTD from Branding into the docs and `mods.json`. | docs/47 §5.14 | open | VPS |
-| Acceptance boxes | docs/42 §11 (10, likely partly met); docs/10 person checks: invite and refusal, email fallback, phone ballot, one-jar rerun, 5-minute restart. | docs/42; docs/10 item 15 | unverified | Alex, players |
-| Phase tags | Phases 1 to 3 are not tagged. | docs/10 P2.14 | open | Alex |
-
-## Docs that can go later
-
-Reviewed 2026-10-10; none was removed, because each is still the cited source for open work above.
-
-- **docs/12** (planner update, 2026-09-28): superseded by docs/13 except §4, which still defines the `GET /stats/:uuid` endpoint Phase 4 needs,
-  and docs/13 keeps 12 in its reading order. Remove once Phase 4 has its
-  own spec.
-- **docs/15** (AMP host finish): done, but §4 holds the AMP setting keys and `server.properties` values for the quiet
-  restart above. Remove after that restart, moving §4 into docs/09.
-- **docs/43** (audit, 2026-10-08): its open items are all in this file. Remove once docs/46 and docs/11 stop pointing
-  at it.
-- **docs/26** (spawn corpse): fold into docs/27 once its §4 checks are seen in game.
-
-Two files share 21 (`21-discord-feed`, `21-launcher-look`); code cites "docs/21 §N" 82 times without the name, so the
-numbers stay.
+| Item | What remains | Source | Waits on |
+|---|---|---|---|
+| Missing | docs/41 (above) and docs/42a (the AMP host half of the test server). | docs/46 §7.8 | planner, AMP host |
+| Stale | docs/02 to 06 against the home stack; `architecture.mmd` has the home stack but not the test pair or the designer; docs/53's opening list still says Mekanism lost the vote, and it is in the pack; `ROADMAP.md` and the state line of docs/10 describe early October (both now say so); docs/47 §4 still lists the door fix as unproven. | docs/10 P2.13 | build, planner |
+| Test names | The titles of the pack tests in `packages/modpack/tests/ship.test.ts` and `apps/api/tests/pack-ship.test.ts` have grown into a history; move the history to a comment. | planner review 2026-11-16 | build |
+| Acceptance boxes | All ten boxes of docs/42 §11 and the person checks of docs/10 (invite and refusal, email fallback, phone ballot, one-jar rerun, 5-minute restart) are unticked. | docs/42; docs/10 item 15 | Alex, players |
+| Phase tags | Phases 1 to 3 are not tagged; `phase-0` is the only tag. | docs/10 P2.14 | Alex |

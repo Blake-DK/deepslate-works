@@ -16,7 +16,7 @@ read-only check and a reading of the code.
 ## 1. Decisions
 
 1. **The whole stack moves to `docker-01v`** (Alex, 2026-10-22). That's Alex's home Docker VM, on the same Proxmox
-   host as the AMP host (`10.0.10.8`). `api` then reaches AMP, BlueMap, the mc-router dashboard and rrsync over the
+   host as the AMP host (`198.51.100.8`). `api` then reaches AMP, BlueMap, the mc-router dashboard and rrsync over the
    LAN, and the WireGuard tunnel retires.
    - A separate small VM on a DMZ VLAN was offered as the safer place. Alex chose docker-01v.
    - The walls in §2 are what makes that acceptable.
@@ -54,9 +54,9 @@ Internet → 203.0.113.10:443 (UniFi forward, as today) → Pangolin (TLS for de
         → deepslate-newt (own site, no Docker socket)                         network ds-edge
         → deepslate-caddy :80 (forward_auth for the map; sets the client IP)  networks ds-edge, ds-web
         → deepslate-web :3000                                                 networks ds-web, ds-internal
-        → map: caddy → deepslate-map-relay (socat) → BlueMap 10.0.10.8:8100    relay on ds-web and ds-amp
+        → map: caddy → deepslate-map-relay (socat) → BlueMap 198.51.100.8:8100    relay on ds-web and ds-amp
 deepslate-web → deepslate-api :4000 (service token, as now)                   ds-internal
-deepslate-api → 10.0.10.8: 8080, 8100, 8090, 22; Discord, Modrinth, GitHub   ds-internal, ds-amp
+deepslate-api → 198.51.100.8: 8080, 8100, 8090, 22; Discord, Modrinth, GitHub   ds-internal, ds-amp
 deepslate-db, deepslate-backups                                               ds-internal (internal: true)
 ```
 
@@ -69,11 +69,11 @@ deepslate-db, deepslate-backups                                               ds
     Match public addresses on those ports rather than one IP, since the home IP may change.
   - `ds-web` may also reach public addresses on tcp 443: `deepslate-web` fetches Authentik's keys and tokens by its
     public name, through the same hairpin NAT.
-  - `ds-amp` reaches `10.0.10.8` on tcp 8080, 8100, 8090 and 22 and the internet, and nothing else on the LAN or
+  - `ds-amp` reaches `198.51.100.8` on tcp 8080, 8100, 8090 and 22 and the internet, and nothing else on the LAN or
     tailnet.
   - `ds-internal` has no outside access (`internal: true`).
 - **No Deepslate container mounts the Docker socket. No published ports** (docker-01v's house rule).
-- **The AMP host's nftables:** 8090 and 8100 from docker-01v only; 8080 and 22 as they are. The `10.77.0.1` rules go
+- **The AMP host's nftables:** 8090 and 8100 from docker-01v only; 8080 and 22 as they are. The `203.0.113.1` rules go
   in the clean-up.
 
 ## 3. What the code requires (read 2026-10-22)
@@ -138,7 +138,7 @@ and 4 waits until about 2026-11-05. The shared status board (outside the reposit
 2. **The mc-router dashboard (AMP host, 8090) is no longer open to the LAN.** It was open with no login on 2026-10-22,
    showing players' addresses and accepting route changes.
    - **Done 2026-10-22** by the AMP host session, on Alex's yes. The LAN accept for 8090 is gone from the dashboard's
-     nftables table, which a unit loads at boot. 8090 now accepts only `10.77.0.1` on `wg0`, and loopback.
+     nftables table, which a unit loads at boot. 8090 now accepts only `203.0.113.1` on `wg0`, and loopback.
    - Proven: docker-01v can't connect. `api` still reads the router's logins every 2 minutes (`ROUTER_DASH_URL`, for
      where sessions came from) and has logged no failure since.
    - The move-day rule of §2 (8090 and 8100 from docker-01v) goes in only at the cutover.
@@ -226,7 +226,7 @@ One commit at the clean-up: `docs: apply planner decisions 62`. The Pangolin lin
   - the map in one relay;
   - Environments: prod is docker-01v.
 - **09:** deploy and checks on docker-01v (pull-only stays); the VPS paths go; the Dockhand mirror goes.
-- **13:** §2–§3 marked as superseded by 62 (tunnel, 51820, `10.77.0.0/24`).
+- **13:** §2–§3 marked as superseded by 62 (tunnel, 51820, `203.0.113.0/24`).
 - **17:** the portal is published through Pangolin (62); the rest stands.
 - **28:** where the dump and its offsite copy now live.
 - **38:** new entries: the flat LAN and its compensating rules; the self-hosted runner on the same VM; Docker-socket

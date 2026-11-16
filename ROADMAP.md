@@ -2,7 +2,7 @@
 
 A private modded Minecraft server (1.21.1, NeoForge) for a group of friends, with a portal at **deepslate.dsw.test** that handles voting, installing, joining and running the server. Players sign in with Discord; nobody types a Minecraft username or asks for a whitelist.
 
-Last updated 2026-10-04: the server went live, the first review was done and its main fixes are running, and the plan for Seasons 1 to 4 is set. Detail per feature is in `docs/`; where the build actually is lives in `docs/11-status.md`.
+This file describes 2026-10-04: the server went live, the first review was done and its main fixes are running, and the plan for Seasons 1 to 4 is set. It has not been brought up to date since. What is current is in `docs/11-status.md` (where things are now, at its top) and `docs/49-leftover-work.md` (the open work); detail per feature is in `docs/`.
 
 ## What's live
 

@@ -16,7 +16,7 @@ From the planning session, for the VPS build session. Read `docs/11-status.md` f
 
 ## 2. Answers to `11-status.md` open questions
 
-1. *(superseded by docs/13 §4: talk to the ADS on 10.77.0.2:8080 via the instance proxy path, `AMP_INSTANCE_ID`)* **AMP host**: reached at **`10.77.0.2`** over the WireGuard tunnel (VPS side is `10.77.0.1`). The Minecraft **instance API port**, the instance directory and the `webapp` user are being produced by a separate tooling session running on the AMP host from `docs/setup-wireguard-amp-host.md`; its report will give you the port and paths, and Alex will paste the AMP `webapp` password into `deploy/.env`. Until then set `AMP_MOCK=1` and keep building. Do not probe the tunnel for ports; wait for the report.
+1. *(superseded by docs/13 §4: talk to the ADS on 203.0.113.2:8080 via the instance proxy path, `AMP_INSTANCE_ID`)* **AMP host**: reached at **`203.0.113.2`** over the WireGuard tunnel (VPS side is `203.0.113.1`). The Minecraft **instance API port**, the instance directory and the `webapp` user are being produced by a separate tooling session running on the AMP host from `docs/setup-wireguard-amp-host.md`; its report will give you the port and paths, and Alex will paste the AMP `webapp` password into `deploy/.env`. Until then set `AMP_MOCK=1` and keep building. Do not probe the tunnel for ports; wait for the report.
 2. **Discord OAuth app**: Alex to create (checklist in §7). Nothing for you to do until the id and secret arrive.
 3. **Domain**: `portal.dsw.test` / `map.dsw.test`. Re-issue the bootstrap invite on the new host.
 4. **Credentials provider**: keep for now.
@@ -41,7 +41,7 @@ services:
     ports: ["51820:51820/udp"]              # only host-level exposure for this path
     networks: [internal, web]               # web = the existing external proxy network, so Caddy can reach map-relay
     healthcheck:
-      test: ["CMD", "ping", "-c1", "-W2", "10.77.0.2"]
+      test: ["CMD", "ping", "-c1", "-W2", "203.0.113.2"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -59,7 +59,7 @@ services:
     image: alpine/socat:latest
     container_name: deepslate-map-relay
     network_mode: "service:wireguard"
-    command: TCP-LISTEN:8100,fork,reuseaddr TCP:10.77.0.2:8100
+    command: TCP-LISTEN:8100,fork,reuseaddr TCP:203.0.113.2:8100
     depends_on: [wireguard]
     restart: unless-stopped
 ```
@@ -68,17 +68,17 @@ services:
 
 ```
 [Interface]
-Address = 10.77.0.1/24
+Address = 203.0.113.1/24
 ListenPort = 51820
 PrivateKey = <vps private key>
 
 [Peer]
 # AMP host (homelab). It initiates; no Endpoint here.
 PublicKey = <amp-host public key, from the AMP host session's report>
-AllowedIPs = 10.77.0.2/32
+AllowedIPs = 203.0.113.2/32
 ```
 
-Generate the VPS keys with `wg genkey | tee privatekey | wg pubkey > publickey` inside the container or on the host (`apt install wireguard-tools`), never commit them, and give Alex the **public** key to pass to the AMP host session. `web` must **not** be given a route to `10.77.0.0/24`; it reaches AMP only by calling `api`.
+Generate the VPS keys with `wg genkey | tee privatekey | wg pubkey > publickey` inside the container or on the host (`apt install wireguard-tools`), never commit them, and give Alex the **public** key to pass to the AMP host session. `web` must **not** be given a route to `203.0.113.0/24`; it reaches AMP only by calling `api`.
 
 Recreating `wireguard` requires recreating `api` and `map-relay` (shared namespace): always `docker compose up -d` the trio.
 
@@ -138,9 +138,9 @@ The `map.dsw.test` block can go in now; it 502s harmlessly until BlueMap exists 
 - **00-overview**: "The server itself runs on AMP **on Alex's homelab**; the portal runs on the VPS. Players reach the game through Pangolin; the portal reaches AMP through a WireGuard tunnel confined to Docker."
 - **02-architecture**: replace the component diagram and "AMP integration" / "BlueMap behind login" sections with §3, §4, §5 of this file. Repo layout gains `apps/api/`. Stack table: add the `api` row, change Auth row to "Auth.js in `web`; service token between `web` and `api`".
 - **04-auth**: `Domain=.dsw.test`; invite link `https://portal.dsw.test/join/<code>`; note the web→api service token under "Sessions".
-- **06-modpack**: `server_address` = whatever Pangolin publishes (ask Alex; placeholder `mc.dsw.test`). `sync-server` = rsync over SSH from `api` to `amp@10.77.0.2` (rrsync-restricted key), not a bind mount. `verify-links` and `lint` unchanged.
+- **06-modpack**: `server_address` = whatever Pangolin publishes (ask Alex; placeholder `mc.dsw.test`). `sync-server` = rsync over SSH from `api` to `amp@203.0.113.2` (rrsync-restricted key), not a bind mount. `verify-links` and `lint` unchanged.
 - **08-api**: registry path `apps/api/src/actions/registry.ts`; add the web→api route mirror note from §4.
-- **09-ops**: VPS layout as in 11-status (`/home/ladm/Minecraft-site`), compose services `web, api, wireguard, map-relay, postgres, backups`; Caddy from §5; `.env` gains `API_SERVICE_TOKEN`, `AMP_URL=http://10.77.0.2:<instance port>`, `MAP_URL=https://map.dsw.test`, `COOKIE_DOMAIN=.dsw.test`, `AMP_TUNNEL_IP=10.77.0.2`, `RSYNC_TARGET=amp@10.77.0.2:`; drop `AMP_INSTANCE_DIR`. Security checklist: VPS firewall = 80/443, UDP 51820, SSH from home IP; keys in `deploy/wireguard/` and `deploy/keys/`, both git-ignored.
+- **09-ops**: VPS layout as in 11-status (`/home/ladm/Minecraft-site`), compose services `web, api, wireguard, map-relay, postgres, backups`; Caddy from §5; `.env` gains `API_SERVICE_TOKEN`, `AMP_URL=http://203.0.113.2:<instance port>`, `MAP_URL=https://map.dsw.test`, `COOKIE_DOMAIN=.dsw.test`, `AMP_TUNNEL_IP=203.0.113.2`, `RSYNC_TARGET=amp@203.0.113.2:`; drop `AMP_INSTANCE_DIR`. Security checklist: VPS firewall = 80/443, UDP 51820, SSH from home IP; keys in `deploy/wireguard/` and `deploy/keys/`, both git-ignored.
 - **10-roadmap**: mark open questions 1, 2 answered (this file), keep 3 pending the AMP host report, 4 answered (defaults above), 5 pending. Phase 0 "Build" list: add "`apps/api` skeleton with `/health` and the service-token middleware, wired into compose". Phase 0 "Done when": add "`/api/health` reports `tunnel: ok` once the AMP host side is up". Phase 4 grep rule as in §4.
 - **11-status**: update "Where things are" (domain, new containers), deviations 3 and 4 (resolved), and the session log.
 

@@ -1,6 +1,44 @@
 # 11 · Status and handover
 
-## Where live is now, 2026-10-10 (from the planner's handover, docs/47 §1)
+## Where things are now, 2026-11-16
+
+Read this first. It replaces the 2026-10-10 section below as the current state. The open work, in order, is docs/49.
+
+- **Where it runs:** everything at home on docker-01v as the one stack `deepslate` in Dockhand, published through
+  Pangolin (deploy/home/README.md). The VPS is not used.
+- **`main`:** `02df584` (PR #113, 2026-11-01). Live's web and api both run this commit (the images' revision label, and
+  the api's `/version`), up since 2026-11-15 04:31 UTC. Health is green: database, api, AMP, the dump and its copy on
+  the AMP host, the Discord feed and bot, no sign-in check failing (read 2026-11-16 15:40 UTC).
+- **`dev`:** `638383c` (2026-11-14), 12 commits ahead of `main`: Epic Knights, TACZ Turrets and Mekanism Missiles with
+  their limits, on the test server only. The test site's web and api run `638383c`.
+- **Pack on live:** `0.1.0+a58590bd`, 111 files; the api's health says so, and the lock on `main` holds 116 with the
+  five s1 files live does not ship. On `dev` and test: `0.1.0+437dc9a3`, 115 files (120 with s1); the test api's health
+  says the same.
+- **App:** 3.6.8. The download still hands it out: the file in `dist/` has the sha256 `1805fab8…` of 2026-10-28,
+  `installer.json` says 3.6.8, and the last download (2026-11-13) was logged as 3.6.8.
+- **World:** the live regen of docs/64 ran on 2026-10-30 (R1 to R5 PASS). The pre-generation **finished on 2026-11-14
+  08:35 UTC**: all four worlds (the main world to 10,000; the Nether, the End and Ashmoon to 5,000), 2,740,629 chunks,
+  and it is switched off. BlueMap's render is no longer held: Alex asked for the four maps to be brought up to date at
+  08:32 and BlueMap answered twice that the map is updated; nobody has looked at the map by eye for this. With a 10 GB
+  heap, AMP's memory figure peaked at 12.0 GB (2026-11-13) and the server never stopped for memory. One crash in that
+  time, 2026-11-03 22:19 UTC, from Friends & Foes (docs/49). The server sleeps when nobody is on, and was asleep when
+  read.
+- **The site's switches:** "We're live" is on, Maintenance is off, "Play first" is on.
+- **Season 1:** not switched on. It opens Tue 1 December 19:00 UK as a new world, the Frontier (docs/63). Alex's six
+  decisions in docs/63 §6 are not answered and nothing of docs/63 §2 is built or run.
+- **Test server:** AMP's level name is still `streamtest-potato` (the test server's `server.properties`, read through
+  the test api on 2026-11-16), as it has been since 2026-11-01. The testers of 2026-11-09 therefore played in that
+  world, not in `world`.
+- **Change log:** `2026-11-01-map-squares` and `2026-11-01-not-answering` have neither `live` nor `onSync`, so they wait
+  and every later entry waits behind them. The last entry posted in Discord is `2026-10-30-new-land`, with
+  `2026-10-29-arphex-ashmoon`, on 2026-10-30 14:57 UTC (`DiscordPost`).
+- **The move home:** the clean-up of docs/62 §7 is due by 2026-12-06 and its doc edits are not made. On docker-01v
+  nothing of the tunnel is left: no WireGuard link, nothing listening on udp 51820, no `deepslate-wg` container, and
+  live's api has LAN addresses for AMP, the copy and the router's dashboard, with `AMP_TUNNEL_IP` unset. Not checked,
+  because neither host can be seen from docker-01v: the peer and the tunnel's lines on the AMP host, and the VPS's
+  `deepslate-wg`, its udp 51820 and its stopped stack.
+
+## Where live was, 2026-10-10 (from the planner's handover, docs/47 §1)
 
 **2026-10-28:** the VPS is no longer used for Deepslate. Everything runs at home on docker-01v as the one stack
 `deepslate` in Dockhand (deploy/home/README.md); the current-state docs say so. VPS paths, `deploy/deploy.sh` and the
@@ -745,7 +783,7 @@ section above describes the VPS; from today the site is served from docker-01v t
   in its player lists and proximity voice is heard. Xaero's (on PCs only) shows only players the server sends, so
   nothing there.
 
-## Gun balance: docs/61 (2026-10-14, planned, nothing built)
+## Gun balance: docs/61 (2026-10-14 planned; built in PR #70, live with PR #78)
 
 Players told Alex the guns are too strong. The review (docs/61 §1): TaCZ bullets skip the hit cooldown, so the AK-47
 does 90 a second against a netherite sword's 13, every gun is iron-cheap, and `tacz-server.toml` is at its defaults.

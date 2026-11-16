@@ -28,7 +28,7 @@ On the cost of the split: accepted. Two services, one service token, server rout
 ```
 Caddy (web) ──> map-relay-outer (web + internal) ──> deepslate-wg:8100 (internal)
                                                       └─ tunnel namespace: wireguard + api + map-relay-inner
-                                                                              └─> 10.77.0.2:8100 (BlueMap on the AMP host)
+                                                                              └─> 203.0.113.2:8100 (BlueMap on the AMP host)
 web (internal) ──> deepslate-wg:4000 (api, bearer token)
 ```
 
@@ -45,7 +45,7 @@ services:
     ports: ["51820:51820/udp"]
     networks: [internal]                    # NOT on web
     healthcheck:
-      test: ["CMD", "ping", "-c1", "-W2", "10.77.0.2"]
+      test: ["CMD", "ping", "-c1", "-W2", "203.0.113.2"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -63,7 +63,7 @@ services:
     image: alpine/socat:latest
     container_name: deepslate-map-relay-inner
     network_mode: "service:wireguard"
-    command: TCP-LISTEN:8100,fork,reuseaddr TCP:10.77.0.2:8100
+    command: TCP-LISTEN:8100,fork,reuseaddr TCP:203.0.113.2:8100
     depends_on: [wireguard]
     restart: unless-stopped
 
@@ -80,14 +80,14 @@ services:
 
 ```
 [Interface]
-Address = 10.77.0.1/24
+Address = 203.0.113.1/24
 ListenPort = 51820
 PrivateKey = <vps private key>
 
 [Peer]
 # AMP host (homelab). It initiates; no Endpoint here.
 PublicKey = D/ZFt5fGUd+8tLvS+9TbSZ7ZB0SLwmqPBsBEBjOiNg4=
-AllowedIPs = 10.77.0.2/32
+AllowedIPs = 203.0.113.2/32
 ```
 
 Caddy (in the existing `web-proxy` Caddyfile):
@@ -111,29 +111,29 @@ map.deepslate.dsw.test {
 }
 ```
 
-The map block can go in now; it 502s harmlessly until BlueMap exists (Phase 3). `web` must not be given a route to `10.77.0.0/24`; it reaches AMP only through `api`. Recreating `wireguard` requires recreating `api` and `map-relay-inner` (shared namespace).
+The map block can go in now; it 502s harmlessly until BlueMap exists (Phase 3). `web` must not be given a route to `203.0.113.0/24`; it reaches AMP only through `api`. Recreating `wireguard` requires recreating `api` and `map-relay-inner` (shared namespace).
 
 ## 4. AMP host: what exists and how we address it (overrides 12 §2 item 1 and the "instance port" language in 02/08/09/12)
 
 Report from the AMP host session (2026-09-28):
 
 - Ubuntu 26.04, AMP at `/opt/cubecoders/amp`, runs as `amp` (uid 1001, home `/home/amp`).
-- WireGuard peer prepared at **10.77.0.2**, public key **`D/ZFt5fGUd+8tLvS+9TbSZ7ZB0SLwmqPBsBEBjOiNg4=`**. `wg0.conf` written, waiting for our public key before `wg-quick@wg0` is enabled. Homelab initiates; nothing is opened inbound at home.
-- Its firewall (nft table `inet deepslate`, loaded by a oneshot unit) allows from `10.77.0.1` on `wg0`: tcp `{22, 8080, 8100}`, icmp echo, established; drops everything else on `wg0`. LAN untouched.
-- `rrsync` at `/usr/bin/rrsync`. `authorized_keys` for `amp` has a commented placeholder waiting for our `deploy.pub`: `command="/usr/bin/rrsync <instance>/Minecraft",restrict,from="10.77.0.1" ssh-ed25519 <key> deploy@portal`. sshd password auth is off for `10.77.0.1` via a `Match Address` block.
+- WireGuard peer prepared at **203.0.113.2**, public key **`D/ZFt5fGUd+8tLvS+9TbSZ7ZB0SLwmqPBsBEBjOiNg4=`**. `wg0.conf` written, waiting for our public key before `wg-quick@wg0` is enabled. Homelab initiates; nothing is opened inbound at home.
+- Its firewall (nft table `inet deepslate`, loaded by a oneshot unit) allows from `203.0.113.1` on `wg0`: tcp `{22, 8080, 8100}`, icmp echo, established; drops everything else on `wg0`. LAN untouched.
+- `rrsync` at `/usr/bin/rrsync`. `authorized_keys` for `amp` has a commented placeholder waiting for our `deploy.pub`: `command="/usr/bin/rrsync <instance>/Minecraft",restrict,from="203.0.113.1" ssh-ed25519 <key> deploy@portal`. sshd password auth is off for `203.0.113.1` via a `Match Address` block.
 - **The Deepslate Works instance does not exist yet.** Alex is creating it as `DeepslateWorks01` (Minecraft Java, NeoForge, 1.21.1, Java 21, 6 to 8 GB). Instance dir will be `/home/amp/.ampdata/instances/DeepslateWorks01/Minecraft`.
 - Every AMP instance on that box binds its own API to `127.0.0.1`; only the ADS on **8080** is on `0.0.0.0`.
 
 **Decision: talk to the ADS, not the instance.**
 
-- `AMP_URL=http://10.77.0.2:8080`
+- `AMP_URL=http://203.0.113.2:8080`
 - New env `AMP_INSTANCE_ID=<from Alex once the instance exists>`; drop `AMP_INSTANCE_DIR`.
 - Every instance call goes through `/API/ADSModule/Servers/<AMP_INSTANCE_ID>/API/<Module>/<Method>` with the same JSON body and `SESSIONID` as a direct call. Login is `POST /API/Core/Login` against the ADS.
 - `webapp` is an **ADS-level** user with rights only on `DeepslateWorks01` (login, console read/write, player list, start/stop/restart, file manager read). Password → `deploy/.env`.
 - Verify the real method names and shapes against the ADS's `/API` listing once the tunnel is up and record them in docs/08 "AMP methods used". Until then `AMP_MOCK=1`.
-- `api` `/health`: `tunnel` = ping `10.77.0.2`; `amp` = `Core.GetAPISpec` through the proxy; `rsync` = `ssh -i deploy.key amp@10.77.0.2 true` returns non-zero with an rrsync message (expected: the key can't run commands) rather than a connection error.
-- `sync-server` = `rsync -e "ssh -i /run/keys/deploy.key" --delete dist/server/mods/ amp@10.77.0.2:mods/` plus config/BlueMap dirs (rrsync roots at the instance's `Minecraft/`), then `Core.Restart` through the proxy if `mods/` changed. Deploy key mounted read-only from `deploy/keys/` (git-ignored).
-- BlueMap will be configured on the AMP host to listen on `10.77.0.2` only.
+- `api` `/health`: `tunnel` = ping `203.0.113.2`; `amp` = `Core.GetAPISpec` through the proxy; `rsync` = `ssh -i deploy.key amp@203.0.113.2 true` returns non-zero with an rrsync message (expected: the key can't run commands) rather than a connection error.
+- `sync-server` = `rsync -e "ssh -i /run/keys/deploy.key" --delete dist/server/mods/ amp@203.0.113.2:mods/` plus config/BlueMap dirs (rrsync roots at the instance's `Minecraft/`), then `Core.Restart` through the proxy if `mods/` changed. Deploy key mounted read-only from `deploy/keys/` (git-ignored).
+- BlueMap will be configured on the AMP host to listen on `203.0.113.2` only.
 
 ## 5. What the VPS session owes the AMP host session (via Alex)
 
@@ -148,7 +148,7 @@ Print both in `11-status.md` so Alex can copy them:
 - 02: components diagram and tunnel section per §3; AMP integration per §4 (ADS proxy, no instance port); note that `api:4000` is reachable only from `internal`.
 - 04: `Domain=.deepslate.dsw.test`; invite link host `deepslate.dsw.test`; service token note.
 - 08: registry path `apps/api/src/actions/registry.ts`; AMP calls go through the ADS proxy path; `AMP_INSTANCE_ID`.
-- 09: compose services `web, api, wireguard, map-relay-inner, map-relay-outer, postgres, backups`; Caddy per §3; `.env` gains `API_SERVICE_TOKEN`, `AMP_URL=http://10.77.0.2:8080`, `AMP_INSTANCE_ID`, `AMP_TUNNEL_IP=10.77.0.2`, `COOKIE_DOMAIN=.deepslate.dsw.test`, `MAP_URL=https://map.deepslate.dsw.test`, `RSYNC_TARGET=amp@10.77.0.2:`; remove `AMP_INSTANCE_DIR`; firewall line = 51820 in `host-firewall.sh`, SSH unchanged.
+- 09: compose services `web, api, wireguard, map-relay-inner, map-relay-outer, postgres, backups`; Caddy per §3; `.env` gains `API_SERVICE_TOKEN`, `AMP_URL=http://203.0.113.2:8080`, `AMP_INSTANCE_ID`, `AMP_TUNNEL_IP=203.0.113.2`, `COOKIE_DOMAIN=.deepslate.dsw.test`, `MAP_URL=https://map.deepslate.dsw.test`, `RSYNC_TARGET=amp@203.0.113.2:`; remove `AMP_INSTANCE_DIR`; firewall line = 51820 in `host-firewall.sh`, SSH unchanged.
 - 10: open question 1 answered (deepslate.dsw.test / map.deepslate.dsw.test), 2 answered (ADS proxy over the tunnel, id pending), 3 answered (defaults: Normal, Corpse keeps items, PvP off), 5 pending.
 - 11: "Where things are" (new containers, map host), deviations 3 and 4 resolved, keys printed, session log.
 - the working rules: the "no more than this" sentence from §2.
@@ -196,7 +196,7 @@ Print both in `11-status.md` so Alex can copy them:
 - **Kill stays in the api** (Alex's call, overriding the earlier "never expose Kill"). Admin-only, confirm dialog, audited, shown only while the server is in "Stopping". Needed once during pre-generation when a sleep-triggered stop hung at "Saving worlds".
 - **Pre-generation is a mode, not a loop.** Off / when nobody's online / now. The api flips `MinecraftModule.Limits.SleepMode` (permission `Settings.MinecraftModule.Limits.SleepMode` granted to `webapp`) while it runs and restores it after. It never starts or kills the server for pre-generation; before any stop it pauses Chunky and waits for the save.
 - **The white room lives in its own dimension** (`deepslate:limbo`, datapack `modpack/datapacks/deepslate-limbo/`, shipped by Sync). Glass box over the void, End sky, forceloaded. Nothing in the overworld, nothing on BlueMap.
-- **The AMP instance stays unmanaged.** ADS refuses Manage for it; Alex uses `http://10.0.10.8:8083/` directly (see docs/17). Not converting to managed, because that would move `webapp` to ADS auth and rework the api login.
+- **The AMP instance stays unmanaged.** ADS refuses Manage for it; Alex uses `http://198.51.100.8:8083/` directly (see docs/17). Not converting to managed, because that would move `webapp` to ADS auth and rework the api login.
 - **FallingTree is base**, not votable. **TabTPS is dropped** (clashes with BlueMap).
 - **News items may carry a picture** (PNG/JPEG/WebP, 3 MB, members only).
 

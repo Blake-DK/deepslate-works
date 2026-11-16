@@ -25,7 +25,7 @@ function setup(opts: { chat?: boolean; geo?: boolean; users?: Record<string, str
     addEvent: async (e) => { const id = String(events.length + 1); events.push({ ...e, id, count: 1 }); return id; },
     bumpEvent: async (id) => { const e = events.find((x) => x.id === id); if (e) e.count++; },
   };
-  const rec = new Recorder({ store, privacy: async () => ({ chat: opts.chat ?? true, geo: opts.geo ?? true }), country: async (ip) => (ip === "82.10.20.30" ? "GB" : null), uuidOf: (n) => uuids.get(n), log: () => {}, now: () => new Date(clock) });
+  const rec = new Recorder({ store, privacy: async () => ({ chat: opts.chat ?? true, geo: opts.geo ?? true }), country: async (ip) => (ip === "203.0.113.30" ? "GB" : null), uuidOf: (n) => uuids.get(n), log: () => {}, now: () => new Date(clock) });
   const say = async (line: string, meta = {}) => {
     for (const e of parseConsoleLine(line, meta, (n) => uuids.has(n) || sessions.some((s) => s.mcName === n && !s.leftAt))) {
       if (e.type === "uuid") uuids.set(e.name, e.uuid);
@@ -43,10 +43,10 @@ describe("Recorder: a visit from start to finish", () => {
   it("opens one session for the two join lines, records what happens, closes it on the first leave line", async () => {
     const t = setup();
     await t.say(L(`UUID of player Bramble09 is ${UUID}`));
-    await t.say(L("Bramble09[/82.10.20.30:51234] logged in with entity id 12 at (0.5, 64.0, 0.5)"));
+    await t.say(L("Bramble09[/203.0.113.30:51234] logged in with entity id 12 at (0.5, 64.0, 0.5)"));
     await t.say(L("Bramble09 joined the game"));
     expect(t.sessions).toHaveLength(1);
-    expect(t.sessions[0]).toMatchObject({ mcUuid: UUID, mcName: "Bramble09", userId: "user1", ip: "82.10.20.30", country: "GB", leftAt: null });
+    expect(t.sessions[0]).toMatchObject({ mcUuid: UUID, mcName: "Bramble09", userId: "user1", ip: "203.0.113.30", country: "GB", leftAt: null });
     t.tick(60);
     await t.say(L("<Bramble09> evening all"));
     await t.say(L("Bramble09 has made the advancement [Stone Age]"));
@@ -62,10 +62,10 @@ describe("Recorder: a visit from start to finish", () => {
   });
   it("never keeps an address in the event log", async () => {
     const t = setup();
-    await t.say(L("m1_owl[/82.10.20.30:51234] logged in with entity id 12 at (0.5, 64.0, 0.5)"));
+    await t.say(L("m1_owl[/203.0.113.30:51234] logged in with entity id 12 at (0.5, 64.0, 0.5)"));
     expect(t.events[0]?.raw).toContain("m1_owl[address hidden] logged in");
-    expect(JSON.stringify(t.events)).not.toContain("82.10.20.30");
-    expect(t.sessions[0]?.ip).toBe("82.10.20.30");
+    expect(JSON.stringify(t.events)).not.toContain("203.0.113.30");
+    expect(t.sessions[0]?.ip).toBe("203.0.113.30");
   });
   it("uses a placeholder until the uuid is known, then fixes the rows", async () => {
     const t = setup();
@@ -90,10 +90,10 @@ describe("Recorder: a visit from start to finish", () => {
 describe("Recorder: settings", () => {
   it("keeps no chat when chat logging is off, and looks up no country when that is off", async () => {
     const t = setup({ chat: false, geo: false });
-    await t.say(L("m1_owl[/82.10.20.30:51234] logged in with entity id 12 at (0.5, 64.0, 0.5)"));
+    await t.say(L("m1_owl[/203.0.113.30:51234] logged in with entity id 12 at (0.5, 64.0, 0.5)"));
     await t.say(L("<m1_owl> hello"));
     expect(t.events.map((e) => e.kind)).toEqual(["JOIN"]);
-    expect(t.sessions[0]).toMatchObject({ ip: "82.10.20.30", country: null });
+    expect(t.sessions[0]).toMatchObject({ ip: "203.0.113.30", country: null });
   });
 });
 

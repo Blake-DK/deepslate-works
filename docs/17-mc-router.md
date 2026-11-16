@@ -19,7 +19,7 @@ The home connection has a static IP (203.0.113.10) and unifi-01p port-forwards. 
 player -> mc.dsw.test:25565 -> 203.0.113.10 (unifi-01p forward) -> mc-router:25565 (AMP host) -> AMP instance game port
 ```
 
-- unifi-01p: forward 25565/tcp, 24454/udp (Simple Voice Chat) and 19132/udp (Bedrock) to the AMP host at 10.0.10.8. The forwards that pointed at pangolin-01v (10.0.10.7) are repointed.
+- unifi-01p: forward 25565/tcp, 24454/udp (Simple Voice Chat) and 19132/udp (Bedrock) to the AMP host at 198.51.100.8. The forwards that pointed at pangolin-01v (198.51.100.7) are repointed.
 - DNS: `mc.dsw.test`, `boys.dsw.test`, `vanilla.dsw.test` → 203.0.113.10 (not the VPS).
 - Pangolin keeps HTTP resources only. The portal, its WireGuard tunnel and everything on the VPS are unchanged.
 - Why not Caddy or Traefik on the AMP host: their TCP routing matches TLS SNI, and Minecraft's handshake is not TLS, so they cannot see the hostname. mc-router parses the Minecraft handshake itself.
@@ -55,7 +55,7 @@ Because the AMP host is now internet-facing on 25565: no `--default` route in mc
 
 ## Task for Alex
 
-- unifi-01p: port forwards 25565/tcp (`mc-java`), 24454/udp (`mc-voice`), 19132/udp (`mc-bedrock`) → AMP host **10.0.10.8**, WAN1. The old `pang-minecraf-java` and `pang-minecraft-bedrock` rules are repointed from 10.0.10.7 (Pangolin) to 10.0.10.8 and renamed; remove any Minecraft raw resources in Pangolin.
+- unifi-01p: port forwards 25565/tcp (`mc-java`), 24454/udp (`mc-voice`), 19132/udp (`mc-bedrock`) → AMP host **198.51.100.8**, WAN1. The old `pang-minecraf-java` and `pang-minecraft-bedrock` rules are repointed from 198.51.100.7 (Pangolin) to 198.51.100.8 and renamed; remove any Minecraft raw resources in Pangolin.
 - DNS: `mc.dsw.test`, `boys.dsw.test`, `vanilla.dsw.test` → 203.0.113.10.
 - Voice chat: one UDP port per server that runs it; Deepslate Works uses 24454. Another server wanting voice chat needs its own port and forward.
 
@@ -76,12 +76,12 @@ This Bedrock server build refuses RakNet ("NetherNet is the only supported trans
 
 | Rule | Protocol | Forward |
 |---|---|---|
-| `mc-bedrock` | TCP 19132 | 10.0.10.8:19132 |
-| `mc-bedrock-play` | UDP 19134–19153 | 10.0.10.8 same range |
+| `mc-bedrock` | TCP 19132 | 198.51.100.8:19132 |
+| `mc-bedrock-play` | UDP 19134–19153 | 198.51.100.8 same range |
 
-Remove the old UDP 19132 forward. Monitoring: Bedrock is a plain TCP check on 10.0.10.8:19132; Kuma's Bedrock game monitor (UDP ping) will always fail with NetherNet. Config backups: `/root/mc-router-backup-20260929-091926/bedrock/` on the AMP host.
+Remove the old UDP 19132 forward. Monitoring: Bedrock is a plain TCP check on 198.51.100.8:19132; Kuma's Bedrock game monitor (UDP ping) will always fail with NetherNet. Config backups: `/root/mc-router-backup-20260929-091926/bedrock/` on the AMP host.
 
-## Monitoring (Uptime Kuma on 10.0.10.7)
+## Monitoring (Uptime Kuma on 198.51.100.7)
 
 Java: "Minecraft Server" monitors on `mc.dsw.test`, `boys.dsw.test`, `vanilla.dsw.test`, port 25565 (hostnames, because mc-router routes by name and backend ports are localhost-only). A sleeping instance reports up: AMP answers status pings without waking it, so the check means "joinable". Voice chat (UDP 24454) has no usable check; it listens only while Deepslate Works is awake.
 
@@ -89,9 +89,9 @@ Java: "Minecraft Server" monitors on `mc.dsw.test`, `boys.dsw.test`, `vanilla.ds
 
 The instance is **unmanaged** (`Login.UseAuthServer=False`, kept on purpose so `webapp` stays instance-local). ADS therefore refuses Manage ("Unmanaged instances cannot be accessed from within ADS"); the instance UI is opened directly instead.
 
-- **URL:** `http://10.0.10.8:8083/`, local admin `deepslate-adm`. `127.0.0.1:8083` no longer listens.
+- **URL:** `http://198.51.100.8:8083/`, local admin `deepslate-adm`. `127.0.0.1:8083` no longer listens.
 - **How it was bound:** editing `Webserver.IPBinding` in `AMPConfig.conf` is ignored (AMP rewrites it from its registry). The change needed `ampinstmgr rebind`, which requires ADS stopped; ADS was down ~70 s, other instances kept running.
-- **Firewall:** TCP 8083 allowed from `10.0.10.0/24` and `10.0.21.0/24` only (`/etc/amp-acl/instance-ui.nft`, loaded by `amp-ui-acl.service`). Not open on wg0 or WAN.
+- **Firewall:** TCP 8083 allowed from `198.51.100.0/24` and one other home subnet only (`/etc/amp-acl/instance-ui.nft`, loaded by `amp-ui-acl.service`). Not open on wg0 or WAN.
 - **Seed:** `Minecraft.WorldSeed=-3899835130120818196`, Level Name `world`. Applies only to a newly generated world; `server.properties` is rewritten from the setting on the next server start. Old world is moved aside by the VPS session (`world-backup-20260929`).
 - **Portal impact:** the api still reaches the instance through the ADS proxy path on 8080; nothing on the VPS used `127.0.0.1:8083`. The VPS session re-checks the `webapp` login (`result: 10`) after the rebind.
 - **State after the work:** server stopped (not asleep), so 25569 is closed and `mc.dsw.test` is offline until started; Kuma red until then.

@@ -8,9 +8,9 @@ Work through the steps in order. Do not skip the verification. Ask before anythi
 
 | Item | Value |
 |---|---|
-| Tunnel subnet | `10.77.0.0/24` |
-| VPS tunnel IP | `10.77.0.1` |
-| This host's tunnel IP | `10.77.0.2` |
+| Tunnel subnet | `203.0.113.0/24` |
+| VPS tunnel IP | `203.0.113.1` |
+| This host's tunnel IP | `203.0.113.2` |
 | VPS WireGuard endpoint | `198.51.100.20:51820` |
 | VPS WireGuard public key | `<VPS_WG_PUBKEY>` (ask Alex; if not available yet, do steps 1 to 3 and 6 to 7, print this host's public key, and stop) |
 | Interface name | `wg0` |
@@ -53,7 +53,7 @@ Print the **public** key. Never print or log the private key. If the VPS public 
 
 ```
 [Interface]
-Address = 10.77.0.2/24
+Address = 203.0.113.2/24
 PrivateKey = <contents of /etc/wireguard/amp-host.key>
 # No ListenPort: this side only initiates.
 
@@ -61,7 +61,7 @@ PrivateKey = <contents of /etc/wireguard/amp-host.key>
 # portal.dsw.test backend (wireguard container on the VPS)
 PublicKey = <VPS_WG_PUBKEY>
 Endpoint = 198.51.100.20:51820
-AllowedIPs = 10.77.0.1/32
+AllowedIPs = 203.0.113.1/32
 PersistentKeepalive = 25
 ```
 
@@ -74,13 +74,13 @@ sudo systemctl enable --now wg-quick@wg0
 sudo wg show wg0
 ```
 
-Expected: one peer, a `latest handshake` within the last two minutes once the VPS side is up, and transfer counters moving after `ping -c3 10.77.0.1`. If there's no handshake after 60 s, check: keys pasted correctly on both sides, the VPS firewall allows UDP 51820 from the home public IP 203.0.113.10 (or from any), system clock sane. `nc -vzu` is inconclusive for UDP; compare `wg show` on both ends.
+Expected: one peer, a `latest handshake` within the last two minutes once the VPS side is up, and transfer counters moving after `ping -c3 203.0.113.1`. If there's no handshake after 60 s, check: keys pasted correctly on both sides, the VPS firewall allows UDP 51820 from the home public IP 203.0.113.10 (or from any), system clock sane. `nc -vzu` is inconclusive for UDP; compare `wg show` on both ends.
 
 ## 6. Firewall: allow only the VPS tunnel IP, only to the three services
 
 Match the tool already managing the firewall (found in step 1). Do not replace an existing ruleset; add to it. The rules, expressed as intent:
 
-- On interface `wg0`, from `10.77.0.1`:
+- On interface `wg0`, from `203.0.113.1`:
   - allow TCP to the AMP instance API port (from step 1, e.g. 8081)
   - allow TCP 8100 (BlueMap)
   - allow TCP 22 (rsync over SSH)
@@ -94,8 +94,8 @@ nftables example (adapt table/chain names to what exists):
 table inet deepslate {
   chain input {
     type filter hook input priority -10; policy accept;
-    iifname "wg0" ip saddr 10.77.0.1 tcp dport { <AMP_INSTANCE_PORT>, 8100, 22 } accept
-    iifname "wg0" ip saddr 10.77.0.1 icmp type echo-request accept
+    iifname "wg0" ip saddr 203.0.113.1 tcp dport { <AMP_INSTANCE_PORT>, 8100, 22 } accept
+    iifname "wg0" ip saddr 203.0.113.1 icmp type echo-request accept
     iifname "wg0" ct state established,related accept
     iifname "wg0" drop
   }
@@ -105,9 +105,9 @@ table inet deepslate {
 ufw example:
 
 ```
-sudo ufw allow in on wg0 from 10.77.0.1 to any port <AMP_INSTANCE_PORT> proto tcp
-sudo ufw allow in on wg0 from 10.77.0.1 to any port 8100 proto tcp
-sudo ufw allow in on wg0 from 10.77.0.1 to any port 22 proto tcp
+sudo ufw allow in on wg0 from 203.0.113.1 to any port <AMP_INSTANCE_PORT> proto tcp
+sudo ufw allow in on wg0 from 203.0.113.1 to any port 8100 proto tcp
+sudo ufw allow in on wg0 from 203.0.113.1 to any port 22 proto tcp
 sudo ufw deny in on wg0
 ```
 
@@ -124,31 +124,31 @@ The VPS backend will push `mods/`, `config/` and `bluemap/` into the instance's 
 3. Append to `~amp/.ssh/authorized_keys` (create the dir `700`, file `600`, owned by `amp`):
 
 ```
-command="/usr/bin/rrsync <INSTANCE_DIR>/Minecraft",restrict,from="10.77.0.1" ssh-ed25519 AAAA... deploy@portal
+command="/usr/bin/rrsync <INSTANCE_DIR>/Minecraft",restrict,from="203.0.113.1" ssh-ed25519 AAAA... deploy@portal
 ```
 
 `restrict` disables port forwarding, agent forwarding, pty. `from=` ties it to the tunnel IP. `rrsync <dir>` confines rsync to that directory tree.
 
-4. Confirm sshd allows key auth for that user and does not allow password auth from `wg0` (check `PasswordAuthentication` in `/etc/ssh/sshd_config`; if it's `yes` globally, add a `Match Address 10.77.0.1` block with `PasswordAuthentication no`, then `sshd -t` and reload).
+4. Confirm sshd allows key auth for that user and does not allow password auth from `wg0` (check `PasswordAuthentication` in `/etc/ssh/sshd_config`; if it's `yes` globally, add a `Match Address 203.0.113.1` block with `PasswordAuthentication no`, then `sshd -t` and reload).
 
 ## 8. Verify end to end
 
 From this host:
 - `wg show wg0` shows a recent handshake.
-- `ping -c3 10.77.0.1` succeeds.
+- `ping -c3 203.0.113.1` succeeds.
 
 Ask Alex to run, from inside the VPS `wireguard` container (or the backend container):
-- `ping -c3 10.77.0.2`
-- `curl -s -o /dev/null -w '%{http_code}\n' http://10.77.0.2:<AMP_INSTANCE_PORT>/API/Core/GetStatus` → expect `200` or `401`/`403` (reachable, needs login), not a timeout.
-- `curl -s -o /dev/null -w '%{http_code}\n' http://10.77.0.2:8100/` → `200` if BlueMap is running, connection refused if not yet installed (fine), never a timeout.
-- `rsync --dry-run -av -e "ssh -i /path/deploy.key" ./empty/ amp@10.77.0.2:` → lists the instance `Minecraft/` contents without error, and `ssh -i deploy.key amp@10.77.0.2 ls` is refused.
+- `ping -c3 203.0.113.2`
+- `curl -s -o /dev/null -w '%{http_code}\n' http://203.0.113.2:<AMP_INSTANCE_PORT>/API/Core/GetStatus` → expect `200` or `401`/`403` (reachable, needs login), not a timeout.
+- `curl -s -o /dev/null -w '%{http_code}\n' http://203.0.113.2:8100/` → `200` if BlueMap is running, connection refused if not yet installed (fine), never a timeout.
+- `rsync --dry-run -av -e "ssh -i /path/deploy.key" ./empty/ amp@203.0.113.2:` → lists the instance `Minecraft/` contents without error, and `ssh -i deploy.key amp@203.0.113.2 ls` is refused.
 
 Also confirm from a LAN machine that nothing changed for it (AMP web UI still reachable as before).
 
 ## Do not
 
 - Do not add a `ListenPort` or open any UDP port on the router. The homelab initiates.
-- Do not widen `AllowedIPs` beyond `10.77.0.1/32`.
+- Do not widen `AllowedIPs` beyond `203.0.113.1/32`.
 - Do not give the deploy key a shell, or add it to any user other than the AMP user.
 - Do not restart AMP or the Minecraft server unless asked.
 - Do not print private keys.
@@ -158,7 +158,7 @@ Also confirm from a LAN machine that nothing changed for it (AMP web UI still re
 ```
 AMP host WireGuard peer
   OS:                     <os + version>
-  Tunnel IP:              10.77.0.2
+  Tunnel IP:              203.0.113.2
   Public key:             <amp-host.pub>
   Handshake with VPS:     yes/no (<latest handshake age>)
   AMP user:               <user>
@@ -167,7 +167,7 @@ AMP host WireGuard peer
   BlueMap:                installed/not yet, port 8100 (listening on <addr>)
   Firewall tool:          nftables/ufw/iptables, rules persisted: yes/no
   rrsync path:            <path>
-  Deploy key installed:   yes/no (restricted to <dir>, from 10.77.0.1)
+  Deploy key installed:   yes/no (restricted to <dir>, from 203.0.113.1)
   sshd password auth from tunnel: disabled yes/no
   Anything Alex must do:  <list, or "nothing">
 ```

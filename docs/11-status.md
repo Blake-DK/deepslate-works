@@ -71,11 +71,13 @@ say live is stopped, held or to be trimmed in place, this section wins.
   Nether centre 64 552 radius 448; the world lacks 21,752 of the 22,015 overworld set chunks and all 48 Nether ones),
   then the AMP host's after check. The rest of the queue is docs/47 §5.
 
-## Where things are, the leftover list, placeholder addresses (2026-11-16, PRs #118 and #119 to `dev`; nothing on live or test changed)
+## Where things are, the leftover list, placeholder addresses (2026-11-16, PR #118 to `dev`; nothing on live or test changed)
 
-- **The planner's brief, 2026-11-16:** a current block at the top of this file, docs/49 redone, three stale headers
-  (PR #118, docs only); every private address out of the repository and a pre-push check that catches a new one
-  (PR #119). Live, test, every `.env` and the game servers were read, never changed. No `dev` → `main` PR.
+- **The planner's brief, 2026-11-16:** a current block at the top of this file, docs/49 redone, three stale headers;
+  every private address out of the repository and a pre-push check that catches a new one. Live, test, every `.env`
+  and the game servers were read, never changed. No `dev` → `main` PR.
+- **One PR, #118** (Alex, the same day: "merge them all into 1 pr"). The brief asked for two; the addresses were
+  opened as #119 and closed again. #118 holds the docs commits and the address commit.
 - **What each check read** (2026-11-16, 15:30 to 16:00 UTC; the figures are in the block at the top):
   - *Live's commit and health:* the web and api images' revision label and the api's `/version` both say `02df584`;
     the api's `/health` is all ok.
@@ -102,7 +104,7 @@ say live is stopped, held or to be trimmed in place, this section wins.
   **Rows corrected:** Season 1 code (the guide's section and the site's half of the banner are built), the grave mod
   config (the repo's values do run), review leftovers (what is left of R-06, R-16 and R-43), `architecture.mmd` (it
   has the home stack), the encrypted dump (the variable is passed and nothing reads it), NeoForge's newest (21.1.266).
-- **PR #119, addresses:** the two private networks became 203.0.113.N (the old tunnel) and 198.51.100.N (the LAN)
+- **The addresses:** the two private networks became 203.0.113.N (the old tunnel) and 198.51.100.N (the LAN)
   in 19 files, the last number kept; the made-up addresses in tests, one code comment and docs/04 became placeholders
   as well; docs/17's second home subnet is now described in words. `deploy/home/.env.example` says its addresses are
   placeholders. **One change that is more than a placeholder:** `DS_EDGE_SUBNET` lost its default in
@@ -124,8 +126,8 @@ say live is stopped, held or to be trimmed in place, this section wins.
   hook's own: that image has no git. They and `git-guard.test.ts` were then run in the same image with git added (busybox awk,
   git 2.54): 18 passed; by hand the hook answers the same under gawk and mawk. The sides check,
   `pnpm --filter modpack cli check-sides` in the same container: 120 files in the lock, 101 for PCs, 19 server-only,
-  sides OK. Run against PR #119's own commit, the new hook lists one line: AMP's four-part version, on a line of
-  this file whose address was replaced. That is the bare-version case, and why the hook has its override.
+  sides OK. Run against the address commit itself, the new hook lists one line: AMP's four-part version, on a line
+  of this file whose address was replaced. That is the bare-version case, and why the hook has its override.
 - **Not done, and why:** the hook is not installed (root). The app's one changed test (`CoreTests.cs`) runs only on
   the Windows runner, so CI is its check. Dockhand's `.env` could not be read, so whether it sets `DS_EDGE_SUBNET` is
   not known: **before the next time the compose file is pasted into Dockhand, make sure its `.env` has that line**

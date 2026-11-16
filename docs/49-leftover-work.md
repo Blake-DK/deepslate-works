@@ -85,7 +85,7 @@ Who it waits on: **Alex**, **planner**, **build** (the build session on docker-0
 
 | Item | What remains | Source | Waits on |
 |---|---|---|---|
-| Next.js 16 | Still on 15 (15.5.28 in the lockfile); move to the newest 16.x. | docs/10 item 18 | build |
+| Next.js 16 | Still on 15 (15.5.29 in the lockfile once PR #118 is in); move to the newest 16.x. | docs/10 item 18 | build |
 | Small gaps | No Origin check in middleware (routes check for themselves); `window.confirm` in three components; the BACKUP event only from the button, so AMP's scheduled backups and the nightly dumps leave none. | docs/10 item 9 | build |
 | AMP call timing | No duration log, no slow-call warning. | docs/10 item 9b | build |
 | R-04 | An AMP refusal returned as HTTP 200 counts as success: the console line, Start, Restart and Sync's calls do not look at the answer; SetConfig and TakeBackup do. | docs/35 | AMP host, build |
@@ -119,7 +119,7 @@ Who it waits on: **Alex**, **planner**, **build** (the build session on docker-0
 | Pre-push check | The installed hook refuses a branch name and old history, nothing else. PR #118 adds a tracked one that refuses a new address (`deploy/hooks/pre-push`); it is **not installed**: that takes Alex and root's `git-hooks.expected` (deploy/README.md, "The pre-push hook"). Still no check for player names: it was put off on 2026-10-09 until live was back, and never came. | planner review 2026-11-16; docs/11, 2026-11-16 | Alex, build |
 | `DS_EDGE_SUBNET` | Once PR #118 is in, the compose file has no default for it. Dockhand's `.env` must have the line before its copy of the compose file is next replaced; whether it has could not be read. | docs/11, 2026-11-16 | Alex |
 | The sides check | `deploy/check.sh` does not run it; only CI does. | docs/47 §5.8 | build |
-| Dependabot | PRs #115 (actions) and #117 (npm) are open against `dev`; GitHub lists 31 open dependency alerts on `main` (2 critical, 9 high). | GitHub | Alex |
+| Dependency alerts | GitHub lists 31 open dependency alerts on `main` (2 critical, 9 high). Dependabot's two PRs of 2026-11-16 (#115, five action updates; #117, eight npm patch releases) are folded into PR #118. What is left of the 31 once that reaches `main` has not been looked at. | GitHub | Alex, build |
 
 ## Docs
 

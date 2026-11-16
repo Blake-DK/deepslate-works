@@ -77,7 +77,10 @@ say live is stopped, held or to be trimmed in place, this section wins.
   every private address out of the repository and a pre-push check that catches a new one. Live, test, every `.env`
   and the game servers were read, never changed. No `dev` → `main` PR.
 - **One PR, #118** (Alex, the same day: "merge them all into 1 pr"). The brief asked for two; the addresses were
-  opened as #119 and closed again. #118 holds the docs commits and the address commit.
+  opened as #119 and closed again. #118 holds the docs commits and the address commit. Alex then asked the same for
+  Dependabot's two open PRs: #115 (five action updates, each pinned by its commit) and #117 (eight npm patch releases,
+  the lockfile only: fastify, next, tailwindcss, typescript-eslint and four more) are merged into #118's branch and
+  closed.
 - **What each check read** (2026-11-16, 15:30 to 16:00 UTC; the figures are in the block at the top):
   - *Live's commit and health:* the web and api images' revision label and the api's `/version` both say `02df584`;
     the api's `/health` is all ok.
@@ -95,12 +98,14 @@ say live is stopped, held or to be trimmed in place, this section wins.
   - "Not answering" fired once, 2026-11-04 02:57 UTC, for 55 seconds with nobody on.
   - Live's `server.properties` and `mods.json` disagree on view distance, simulation distance and the MOTD.
   - Live runs NeoForge 21.1.252; the lock pins 21.1.253.
-  - GitHub lists 31 open dependency alerts on `main` (2 critical, 9 high) and two Dependabot PRs are open.
+  - GitHub lists 31 open dependency alerts on `main` (2 critical, 9 high). Dependabot's two open PRs are now in
+    #118.
 - **docs/49, rows dropped as done:** the pre-generation; a PC through Test with pack `437dc9a3`; app 3.6.8's first
   report; R-21. From the old list, now recorded as done: the two switches, the health output, removed jars named at
   Play, the health login. **Rows added:** the copper golem crash, the live map by eye, server settings, the server's
   mod capture, KaneFinch's items, AMP host noise, the map while asleep, the bot filter of PR #24, the test instance,
-  the logo in the exe, build warnings, the staging-folder apply step, the sides check, Dependabot, acceptance boxes.
+  the logo in the exe, build warnings, the staging-folder apply step, the sides check, dependency alerts, acceptance
+  boxes.
   **Rows corrected:** Season 1 code (the guide's section and the site's half of the banner are built), the grave mod
   config (the repo's values do run), review leftovers (what is left of R-06, R-16 and R-43), `architecture.mmd` (it
   has the home stack), the encrypted dump (the variable is passed and nothing reads it), NeoForge's newest (21.1.266).
@@ -127,7 +132,9 @@ say live is stopped, held or to be trimmed in place, this section wins.
   git 2.54): 18 passed; by hand the hook answers the same under gawk and mawk. The sides check,
   `pnpm --filter modpack cli check-sides` in the same container: 120 files in the lock, 101 for PCs, 19 server-only,
   sides OK. Run against the address commit itself, the new hook lists one line: AMP's four-part version, on a line
-  of this file whose address was replaced. That is the bare-version case, and why the hook has its override.
+  of this file whose address was replaced. That is the bare-version case, and why the hook has its override. All of
+  it was run a second time on the branch with the dependency updates merged in: the same counts, with next 15.5.29,
+  fastify 5.12.8 and tailwindcss 4.3.5 installed.
 - **Not done, and why:** the hook is not installed (root). The app's one changed test (`CoreTests.cs`) runs only on
   the Windows runner, so CI is its check. Dockhand's `.env` could not be read, so whether it sets `DS_EDGE_SUBNET` is
   not known: **before the next time the compose file is pasted into Dockhand, make sure its `.env` has that line**

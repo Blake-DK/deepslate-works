@@ -434,6 +434,22 @@ export const CHANGES: Change[] = [
       "When the server is switched on but the game has stopped letting anyone in, the site, the app and the bot's status in Discord now say \"Not answering\" within about two minutes, instead of still saying it is online.",
     ],
   },
+  {
+    // Epic Knights, TACZ Turrets and Mekanism Missiles (docs/11, 2026-11-08 and 2026-11-14), with the limits set for
+    // them. Posted once live's server has started the synced pack in full. Says nothing about claims: three bombs still
+    // break blocks inside them (docs/49).
+    id: "2026-11-16-knights-turrets-missiles",
+    date: "2026-11-16",
+    onSync: true,
+    title: "New mods: knights' armour, turrets and missiles",
+    lines: [
+      "Epic Knights: medieval armour, shields and weapons, from lances, halberds and maces to plumes and banners on your armour.",
+      "TACZ Turrets: give a turret one of your guns and some ammo and it guards your base against mobs. Turrets that players place never shoot players.",
+      "Mekanism Missiles, for late-game Mekanism: build missiles from parts, launch them from a silo, and set up radars to see them coming. A missile flies 500 blocks at most.",
+      "The biggest warheads (nuclear, hydrogen, antimatter, the dirty bomb and the seismic charge) cannot be made on this server. Nothing leaves fallout, and napalm does not set the land alight.",
+      "Press Play to update.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

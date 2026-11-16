@@ -31,9 +31,10 @@ Read this first. It replaces the 2026-10-10 section below as the current state. 
 - **Test server:** AMP's level name is still `streamtest-potato` (the test server's `server.properties`, read through
   the test api on 2026-11-16), as it has been since 2026-11-01. The testers of 2026-11-09 therefore played in that
   world, not in `world`.
-- **Change log:** `2026-11-01-map-squares` and `2026-11-01-not-answering` have neither `live` nor `onSync`, so they wait
-  and every later entry waits behind them. The last entry posted in Discord is `2026-10-30-new-land`, with
-  `2026-10-29-arphex-ashmoon`, on 2026-10-30 14:57 UTC (`DiscordPost`).
+- **Change log:** `2026-11-01-map-squares` and `2026-11-01-not-answering` have neither `live` nor `onSync`, so the bot
+  leaves them out until they are marked; they hold nothing back (corrected the same day: only an `onSync` entry that
+  waits for its Sync holds the later ones, `liveChanges` in `apps/api/src/changelog.ts`). The last entry posted in
+  Discord is `2026-10-30-new-land`, with `2026-10-29-arphex-ashmoon`, on 2026-10-30 14:57 UTC (`DiscordPost`).
 - **The move home:** the clean-up of docs/62 §7 is due by 2026-12-06 and its doc edits are not made. On docker-01v
   nothing of the tunnel is left: no WireGuard link, nothing listening on udp 51820, no `deepslate-wg` container, and
   live's api has LAN addresses for AMP, the copy and the router's dashboard, with `AMP_TUNNEL_IP` unset. Not checked,

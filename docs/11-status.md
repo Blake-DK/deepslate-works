@@ -1,6 +1,21 @@
 # 11 · Status and handover
 
-## The held mods updated, the official TaCZ (2026-11-17, on `dev` and test; not on `main`)
+## Deployed: the held mods, the official TaCZ (2026-11-17, `main` `6f60987`, PR #121)
+
+- **Live:** PR #121 merged; images built; Alex redeployed in Dockhand (web and api started 13:44 UTC) and ran Build
+  (15:32) and Sync (15:33). Read at 15:35: web and api on `6f60987`, `/health` all ok, health's pack
+  `0.1.0+d3a83691`, the start of 15:33:26 loaded 154 files, the same list as `server-loaded.json` (test's start), none
+  missing, `dsw-quarry-pause-1.0.1.jar` among them (copied into live's `data/private-jars/` before the Build). The
+  change log entry `2026-11-17-guns-and-held-mods` was posted at 15:34 UTC. Web still reaches Authentik (the pin
+  survived the redeploy). The app is still 3.6.8.
+- **TaCZ's configs on live:** NeoForge "corrected" `tacz-server.toml`, `tacz_turrets-server.toml` and
+  `tacz-common.toml`, as on test; ours are kept (`DamageBaseMultiplier = 0.35`, `damagePlayers = false`).
+- **The health ERROR at 13:49** ("the site hands out d3a83691 but the server runs bcd16694") is the gap between the
+  redeploy and the Build, nearly two hours this time; it cleared at 15:34 ("well again"). The Wares warehouse loot
+  errors are the known ones (docs/49).
+- **Not tried in game on live:** an old gun firing, the gun smith table, a quarry pausing, voice chat.
+
+## The held mods updated, the official TaCZ (2026-11-17, on `dev` and test; deployed the same day, above)
 
 - **Alex:** "we probably should do them all" (the five held back on 2026-11-16), then, for TaCZ's 16 new guns, "No
   recipe for now, do the swap". Before that, live's player files and the backpacks' store were searched for the seven
@@ -9,7 +24,7 @@
 - **QuarryPlus 21.1.170** with **Quarry Pause 1.0.1**: both quarries' `serverTick`, their `storage` field and
   `MachineStorage.itemKeyCounts` read the same in 21.1.170 (javap of both jars), and `QuarryEntity.serverTick`'s code
   is identical; the range moved to `[21.1.170,21.1.171)`, `build.sh` pins 21.1.170 by sha512, jar sha512 `6a0f370d…`.
-  The jar is in the test stack's `private-jars`; **live's `data/private-jars/` needs it before the live Build.**
+  The jar is in the test stack's `private-jars` and, since 2026-11-17, live's.
 - **Simple Voice Chat 2.6.27** (beta): the app updates the Extras on every Play before the game starts (a report of
   2026-11-16 22:33 shows Sound Physics 1.5.2 fetched at Play), so a PC with an old Sound Physics gets 1.5.2 first.
 - **Streams Reflowing 2.17.5, Overhauled Village 3.6.4**: new land only.

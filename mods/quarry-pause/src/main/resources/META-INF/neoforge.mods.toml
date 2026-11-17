@@ -4,7 +4,7 @@ license = "MIT"
 
 [[mods]]
 modId = "dsw_quarry_pause"
-version = "1.0.0"
+version = "1.0.1"
 displayName = "Deepslate Works: quarry pause"
 description = "A quarry (Additional Enchanted Miner) stops digging while its output has nowhere to go, and starts again by itself when there is room. Server only."
 authors = "Deepslate Works"
@@ -24,6 +24,6 @@ side = "SERVER"
 [[dependencies.dsw_quarry_pause]]
 modId = "quarryplus"
 type = "required"
-versionRange = "[21.1.164,21.1.165)"
+versionRange = "[21.1.170,21.1.171)"
 ordering = "AFTER"
 side = "SERVER"

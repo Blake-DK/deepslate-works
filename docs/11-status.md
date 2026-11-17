@@ -1,5 +1,51 @@
 # 11 · Status and handover
 
+## The held mods updated, the official TaCZ (2026-11-17, on `dev` and test; not on `main`)
+
+- **Alex:** "we probably should do them all" (the five held back on 2026-11-16), then, for TaCZ's 16 new guns, "No
+  recipe for now, do the swap". Before that, live's player files and the backpacks' store were searched for the seven
+  attachments TaCZ 1.2.0 drops (three OEM stocks, four rifle sights): nobody holds one; chests in the world were not
+  searched. Four players hold TaCZ guns; the ids are the same, so they keep them.
+- **QuarryPlus 21.1.170** with **Quarry Pause 1.0.1**: both quarries' `serverTick`, their `storage` field and
+  `MachineStorage.itemKeyCounts` read the same in 21.1.170 (javap of both jars), and `QuarryEntity.serverTick`'s code
+  is identical; the range moved to `[21.1.170,21.1.171)`, `build.sh` pins 21.1.170 by sha512, jar sha512 `6a0f370d…`.
+  The jar is in the test stack's `private-jars`; **live's `data/private-jars/` needs it before the live Build.**
+- **Simple Voice Chat 2.6.27** (beta): the app updates the Extras on every Play before the game starts (a report of
+  2026-11-16 22:33 shows Sound Physics 1.5.2 fetched at Play), so a PC with an old Sound Physics gets 1.5.2 first.
+- **Streams Reflowing 2.17.5, Overhauled Village 3.6.4**: new land only.
+- **TaCZ:** `timeless-and-classics-zero` 1.2.0-hotfix for `tacz-1.21.1` 1.1.8-hotfix-r7 (both mod id `tacz`), TACZ
+  Turrets 4.4.0 (needs TaCZ 1.2.0 or newer). `deepslate-tools` has false-condition recipes for the 16 new guns and
+  `ammo/300blk`; every override of docs/61 still names a gun and ammo the new build has. The guide's Guns section
+  points at the new slug. Lock `9bc9fdba`, pack `0.1.0+d3a83691`, 115 files (120 with s1).
+- **On test (Alex's Build 11:00:58 and Sync 11:01:52 UTC):** the start of 11:01:51 loaded 154 files, none missing, no
+  problems, every new jar among them; Alex joined for 3 minutes. NeoForge "corrected" `tacz-server.toml`,
+  `tacz_turrets-server.toml` and `tacz-common.toml` (a `.bak` each): every value of ours is kept, damage 35% and
+  `damagePlayers = false` included; only the new versions' keys were added with their defaults. New start errors:
+  five Wares warehouse loot tables (docs/49). Not tried in game: an old gun firing, the gun smith table without the new
+  guns, a turret and a player, a quarry pausing, voice chat. `server-loaded.json` comes from this start.
+
+## Deployed: the new mods, the bombs' recipes, the mod update (2026-11-16, `main` `2f0b982`, PR #120)
+
+The block below is the state before this deploy; where they differ, this section wins.
+
+- **Alex, 2026-11-16:** "Remove their recipes" (the shaped charge, bunker buster and incendiary bomb, which break
+  blocks inside claims), and "also update the other plugins". `deepslate-tools` has false-condition files for
+  `mnwe:assembling/{shaped_charge,bunker_buster,incendiary_bomb}`, their only recipes in the 1.8.0 jar (read from the
+  locked jar, its sha512 checked). 14 mods to their newest releases (docs/49 "Mod updates" names them and the five
+  held back); Lock `13e092c7`, pack `0.1.0+bcd16694`, 115 files (120 with s1). Friends & Foes 5.0.5 does not fix the
+  copper golem crash.
+- **Test:** Alex ran Build and Sync; the start of 18:39 UTC loaded 154 files, none missing, no problems, and a player
+  joined. `server-loaded.json` comes from that start.
+- **Live:** PR #120 merged; images built; Alex redeployed in Dockhand (19:09 UTC, `repo-sync` 02df584 → 2f0b982, every
+  step exit 0, so root's `git-hooks.expected` matches the new hook) and ran Build (19:13) and Sync (19:15). Read on
+  2026-11-17: web and api on `2f0b982` and healthy, health's pack `0.1.0+bcd16694`, the start of 19:15:45 loaded 154
+  files with none missing and no problems, no crash since, the app is 3.6.8, web still reaches Authentik (the pin
+  survived the redeploy). Alex joined at 19:18. The change log entry `2026-11-16-knights-turrets-missiles` was posted
+  at 19:16 UTC. The ERROR at 19:14 ("the site hands out bcd16694 but the server runs a58590bd") is the minute between
+  Build and Sync.
+- **Still open:** nobody has tried the bomb limits or a claim in game; the two 2026-11-01 change log entries are
+  unmarked; Quarry, voice chat, TACZ Turrets, Streams and the village mod are held (docs/49).
+
 ## Where things are now, 2026-11-16
 
 Read this first. It replaces the 2026-10-10 section below as the current state. The open work, in order, is docs/49.

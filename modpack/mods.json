@@ -734,7 +734,7 @@
           "url": "https://www.youtube.com/watch?v=eJmvbMDr64E"
         }
       ],
-      "version": "qqNx1Yjm",
+      "version": "iR08ksVF",
       "requires": [],
       "guide": "game",
       "topic": "friends",
@@ -1468,7 +1468,7 @@
           "url": "https://www.youtube.com/watch?v=WLfT1gvlGoo"
         }
       ],
-      "version": "p0XlQYuL",
+      "version": "vlvu5FZm",
       "requires": [
         "scalable-cats-force"
       ],
@@ -1495,13 +1495,13 @@
       ],
       "guide": "behind",
       "source": {
-        "private": "dsw-quarry-pause-1.0.0.jar",
-        "sha512": "1ccad65bc346a47c386ddc6be6347f8a84cef676d74a4481f606fbb090263c99e188e56b2631d89620fe43db97a8dc7c1dd18f981dee18525dd738a689dd3ce7",
+        "private": "dsw-quarry-pause-1.0.1.jar",
+        "sha512": "6a0f370de22af011277441612e00ae5197dc7a5887e0317b71046d095775555261371b8b9bc2816cb4dc66da59aac2f80d244ca9c110a8b3d08cb8ddc2352775",
         "note": "docs/56 §3: built by mods/quarry-pause/build.sh"
       }
     },
     {
-      "slug": "tacz-1.21.1",
+      "slug": "timeless-and-classics-zero",
       "name": "TaCZ (Timeless and Classics Zero)",
       "category": "guns",
       "side": "both",
@@ -1510,9 +1510,9 @@
       "recommended": true,
       "hidden": false,
       "exclusiveGroup": "guns",
-      "description": "Modern guns with proper animations, attachments and gun packs. Community NeoForge port.",
+      "description": "Modern guns with proper animations, attachments and gun packs.",
       "note": "Pick this or Vic's, not both",
-      "wiki": "https://modrinth.com/mod/tacz-1.21.1",
+      "wiki": "https://modrinth.com/mod/timeless-and-classics-zero",
       "videos": [
         {
           "title": "TACZ 1.21.1 NeoForge",
@@ -1527,7 +1527,7 @@
           "url": "https://www.youtube.com/watch?v=9xVwyA19bgc"
         }
       ],
-      "version": "62q6mB5Q",
+      "version": "tJiZL0He",
       "requires": [],
       "guide": "game",
       "topic": "combat",
@@ -1577,9 +1577,9 @@
       "note": "Needs TaCZ",
       "wiki": "https://modrinth.com/mod/tacz-turrets",
       "videos": [],
-      "version": "PWFfJBkj",
+      "version": "vHWDIMtn",
       "requires": [
-        "tacz-1.21.1",
+        "timeless-and-classics-zero",
         "architectury-api"
       ],
       "guide": "game",
@@ -1847,7 +1847,7 @@
       "description": "Streams that run downhill through the land, fill lakes and flow out to rivers and the sea. Only in new land.",
       "wiki": "https://modrinth.com/mod/streams-reflowing",
       "videos": [],
-      "version": "vbJ5meb8",
+      "version": "9Phpmmh2",
       "requires": [],
       "guide": "behind"
     },
@@ -1864,7 +1864,7 @@
       "description": "Villages rebuilt to suit where they stand (jungle, swamp, mountain, beach, dark forest, mushroom islands and more) in three sizes, and new pillager outposts. Only in new land. Runs on the server: nothing on your PC.",
       "wiki": "https://modrinth.com/mod/ct-overhaul-village",
       "videos": [],
-      "version": "ztzRUnQ7",
+      "version": "hJfyJvWt",
       "requires": [
         "lithostitched"
       ],

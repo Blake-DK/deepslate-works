@@ -12,6 +12,9 @@ const AMMO = path.join(DATA, "tacz/recipe/ammo");
 const PROJECTILES = path.join(DATA, "createbigcannons/munition_properties/projectiles");
 
 const TIER2 = ["ak47", "aug", "b93r", "cz75", "deagle", "deagle_golden", "fn_fal", "g36k", "hk416d", "hk_g3", "hk_mp5a5", "kar98", "m16a1", "m4a1", "m870", "mk14", "p90", "qbz_191", "qbz_95", "rpk", "scar_l", "sks_tactical", "spr15hb", "taurus500", "timeless50", "type_81", "ump45", "uzi"];
+// Alex, 2026-11-17: the official TaCZ 1.2.0 replaced the community port and brought these 16 guns and .300 Blackout;
+// none has a tier yet, so each has no recipe (a false condition) until docs/61 places it.
+const NO_RECIPE = ["ak12", "ak74m", "hcar", "hk_mp7a1", "hm50b", "m1866", "m1897", "mcx_spear_lt", "mk18", "mrad", "pkm", "qr_24", "scar_mk20", "svd", "taurus943", "tec_9", "urgi"];
 const TIER3 = ["aa12", "ai_awp", "fn_evolys", "m1014", "m107", "m249", "m320", "m95", "minigun", "rpg7", "scar_h", "spas_12", "vector45"];
 
 type Recipe = { materials: Array<{ item: { tag?: string }; count?: number }>; result: { id: string; count?: number } };
@@ -20,8 +23,11 @@ const count = (r: Recipe, tag: string) => r.materials.filter((m) => m.item.tag =
 const names = async (dir: string) => (await readdir(dir)).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5)).sort();
 
 describe("gun tiers (docs/61 §4)", () => {
-  it("overrides exactly the tier 2 and tier 3 guns; tier 1 keeps the gun pack's recipe", async () => {
-    expect(await names(GUNS)).toEqual([...TIER2, ...TIER3].sort());
+  it("overrides exactly the tier 2 and tier 3 guns and the untiered new ones; tier 1 keeps the gun pack's recipe", async () => {
+    expect(await names(GUNS)).toEqual([...TIER2, ...TIER3, ...NO_RECIPE].sort());
+  });
+  it("the guns new in TaCZ 1.2.0 have no recipe yet", async () => {
+    for (const g of NO_RECIPE) expect(JSON.parse(await readFile(path.join(GUNS, `${g}.json`), "utf8")), g).toEqual({ "neoforge:conditions": [{ type: "neoforge:false" }] });
   });
   it("every overridden gun takes steel for half its iron, rounded up", async () => {
     for (const g of [...TIER2, ...TIER3]) {
@@ -52,7 +58,9 @@ describe("gun tiers (docs/61 §4)", () => {
 describe("ammo (docs/61 §4.3)", () => {
   it("every ammo recipe of the gun pack is overridden, with half the rounds (rounded up)", async () => {
     const files = await names(AMMO);
-    expect(files).toHaveLength(24);
+    expect(files).toHaveLength(25);
+    // .300 Blackout, new in TaCZ 1.2.0, has no recipe until a gun that fires it has a tier
+    expect(JSON.parse(await readFile(path.join(AMMO, "300blk.json"), "utf8"))).toEqual({ "neoforge:conditions": [{ type: "neoforge:false" }] });
     // a few counts read from the jar (TaCZ 1.1.8-hotfix-r7): 9mm 50, 7.62×39 35, 12 gauge 18, rockets 3
     const half: Record<string, number> = { "9mm": 25, "762x39": 18, "12g": 9, rpg_rocket: 2 };
     for (const [f, n] of Object.entries(half)) expect((await read(path.join(AMMO, `${f}.json`))).result.count, f).toBe(n);

@@ -22,9 +22,10 @@ fetch() { # name url sha512
   [ "$(sha512sum "$f.part" | cut -d' ' -f1)" = "$3" ] || { rm -f "$f.part"; echo "build: $1 does not match its sha512" >&2; exit 1; }
   mv "$f.part" "$f"
 }
-# the quarry, as in modpack/mods.lock.json; the mixin targets were read from this exact jar
-fetch quarryplus.jar https://cdn.modrinth.com/data/jhxX1zVW/versions/p0XlQYuL/AdditionalEnchantedMiner-1.21.1-neoforge-21.1.164.jar \
-  "$(python3 -c "import json,sys;print([f for f in json.load(open(sys.argv[1]))['files'] if f['filename']=='AdditionalEnchantedMiner-1.21.1-neoforge-21.1.164.jar'][0]['sha512'])" "$here/../../modpack/mods.lock.json")"
+# the quarry, as in modpack/mods.lock.json; the mixin targets were read from 21.1.164 and found the same in this jar
+# (2026-11-16: serverTick of both quarries, their `storage` field, MachineStorage.itemKeyCounts; the tick code unchanged)
+fetch quarryplus.jar https://cdn.modrinth.com/data/jhxX1zVW/versions/vlvu5FZm/AdditionalEnchantedMiner-1.21.1-neoforge-21.1.170.jar \
+  05b4cc6024b7ca34166d8fe0ad3847f65f5200c6c5c255714f80fa3923e5470dcd5f372595ab420d616aa8423f62e2b446d9f6664493648dca6b71545d492159
 # @Mod, from the FancyModLoader the server runs (libraries/ on test: NeoForge 21.1.252, loader 4.0.44), and the mixin
 # annotations, from the Mixin it runs. Both sha512 written here, never fetched next to the file: each was read from the
 # test server's own copy in libraries/ and matched the maven's published value (2026-10-12).

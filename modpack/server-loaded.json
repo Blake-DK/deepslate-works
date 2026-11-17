@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-16T18:39:51.274Z",
+  "at": "2026-11-17T11:01:51.129Z",
   "source": "logs/latest.log",
   "files": [
     {
@@ -11,11 +11,11 @@
       "nested": false
     },
     {
-      "filename": "[Neoforge]ctov-3.6.3.jar",
+      "filename": "[neoforge]ctov-1.21.1-3.6.4.jar",
       "nested": false
     },
     {
-      "filename": "AdditionalEnchantedMiner-1.21.1-neoforge-21.1.164.jar",
+      "filename": "AdditionalEnchantedMiner-1.21.1-neoforge-21.1.170.jar",
       "nested": false
     },
     {
@@ -115,7 +115,7 @@
       "nested": false
     },
     {
-      "filename": "dsw-quarry-pause-1.0.0.jar",
+      "filename": "dsw-quarry-pause-1.0.1.jar",
       "nested": false
     },
     {
@@ -343,15 +343,15 @@
       "nested": false
     },
     {
-      "filename": "StreamsReflowing-1.21.1-neoforge-2.15.2.jar",
+      "filename": "StreamsReflowing-1.21.1-neoforge-2.17.5.jar",
       "nested": false
     },
     {
-      "filename": "tacz-neoforge-1.21.1-1.1.8-hotfix-r7.jar",
+      "filename": "tacz-neoforge-1.21.1-1.2.0-hotfix.jar",
       "nested": false
     },
     {
-      "filename": "tacz_turrets-neoforge-4.2.0-1.21.1.jar",
+      "filename": "tacz_turrets-neoforge-4.4.0-1.21.1.jar",
       "nested": false
     },
     {
@@ -383,7 +383,7 @@
       "nested": false
     },
     {
-      "filename": "voicechat-neoforge-1.21.1-2.6.24.jar",
+      "filename": "voicechat-neoforge-1.21.1-2.6.27.jar",
       "nested": false
     },
     {
@@ -443,7 +443,7 @@
       "nested": true
     },
     {
-      "filename": "mae-1.1.2.jar",
+      "filename": "mae-1.1.4.jar",
       "nested": true
     },
     {
@@ -571,7 +571,7 @@
       "nested": true
     },
     {
-      "filename": "simplebedrockmodel-2.2.1-neoforge+mc1.21.1.jar",
+      "filename": "simplebedrockmodel-2.6.3-neoforge-mc1.21.1.jar",
       "nested": true
     },
     {

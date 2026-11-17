@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-17T09:57:16.111Z",
+  "generatedAt": "2026-11-17T10:22:39.366Z",
   "minecraft": "1.21.1",
   "neoforge": "21.1.253",
-  "hash": "8640ac915abe203f9eb87fee936d323eb1d7a85a3385b3de677cd877bd8067dd",
+  "hash": "9bc9fdbac0fe591591d59b8a875ae03220d09e7bf7cf2ae6dc08635a003198f1",
   "files": [
     {
       "slug": "additional-enchanted-miner",
@@ -2159,39 +2159,17 @@
       "channels": "optional"
     },
     {
-      "slug": "tacz-1.21.1",
-      "name": "TaCZ (Timeless and Classics Zero)",
-      "projectId": "OypNE65K",
-      "versionId": "62q6mB5Q",
-      "versionNumber": "1.1.8-hotfix-r7",
-      "versionType": "release",
-      "filename": "tacz-neoforge-1.21.1-1.1.8-hotfix-r7.jar",
-      "url": "https://cdn.modrinth.com/data/OypNE65K/versions/62q6mB5Q/tacz-neoforge-1.21.1-1.1.8-hotfix-r7.jar",
-      "sha512": "7700ed99a080729c3aa21f9619e018fbe9e2303cfbcaa463175ee5170553a000b692bc4cfa2e8ce0778747eed34dcc0197fb5e4344bb258cff1ba90adc842642",
-      "sha1": "c6ef4976de69a46c4e267bd7f91c730d2dc43a4e",
-      "size": 57247579,
-      "side": "both",
-      "requiredBy": [
-        "tacz-turrets"
-      ],
-      "modrinth": {
-        "client": "required",
-        "server": "required"
-      },
-      "channels": "required"
-    },
-    {
       "slug": "tacz-turrets",
       "name": "TACZ Turrets",
       "projectId": "8k8SjeJB",
-      "versionId": "PWFfJBkj",
-      "versionNumber": "4.2.0",
+      "versionId": "vHWDIMtn",
+      "versionNumber": "4.4.0",
       "versionType": "release",
-      "filename": "tacz_turrets-neoforge-4.2.0-1.21.1.jar",
-      "url": "https://cdn.modrinth.com/data/8k8SjeJB/versions/PWFfJBkj/tacz_turrets-neoforge-4.2.0-1.21.1.jar",
-      "sha512": "dd0612103a75f7f12954750ce4d78753d433b4baca20cb7a6d5a0d0c63f3d6134b817431aaf182bfa174629a501f9831203fad40e0abc978453cdfe4f203691c",
-      "sha1": "7179a260617db97f60fb14d481d0284c4ff51270",
-      "size": 1639654,
+      "filename": "tacz_turrets-neoforge-4.4.0-1.21.1.jar",
+      "url": "https://cdn.modrinth.com/data/8k8SjeJB/versions/vHWDIMtn/tacz_turrets-neoforge-4.4.0-1.21.1.jar",
+      "sha512": "e203210175917beb2c296641b69317b348e12fc954bd52ccb08ee75062e3e08cdbfb68976609c3f1b881315a7b2ddc027820ebfd966633fdfb4ad9888b10211f",
+      "sha1": "c141f9c37b16f99a4490baae8c306d9bd1506abb",
+      "size": 1680846,
       "side": "both",
       "requiredBy": [],
       "modrinth": {
@@ -2219,6 +2197,28 @@
         "server": "required"
       },
       "channels": "none"
+    },
+    {
+      "slug": "timeless-and-classics-zero",
+      "name": "TaCZ (Timeless and Classics Zero)",
+      "projectId": "SzzJttH8",
+      "versionId": "tJiZL0He",
+      "versionNumber": "1.2.0-hotfix",
+      "versionType": "release",
+      "filename": "tacz-neoforge-1.21.1-1.2.0-hotfix.jar",
+      "url": "https://cdn.modrinth.com/data/SzzJttH8/versions/tJiZL0He/tacz-neoforge-1.21.1-1.2.0-hotfix.jar",
+      "sha512": "cd14c1a2711164353c400e620459ca82f3f890e641789e79fa3710eea727973b36a09ec7330652fd52cf92664c7bd867e3df49fadb390da052df0c136b658349",
+      "sha1": "760cfbbd52783213567d4d7b167caafd1654854b",
+      "size": 68558038,
+      "side": "both",
+      "requiredBy": [
+        "tacz-turrets"
+      ],
+      "modrinth": {
+        "client": "required",
+        "server": "required"
+      },
+      "channels": "required"
     },
     {
       "slug": "titanium",

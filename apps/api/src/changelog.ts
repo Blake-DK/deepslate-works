@@ -451,6 +451,22 @@ export const CHANGES: Change[] = [
       "Press Play to update.",
     ],
   },
+  {
+    // The held mods moved (Alex, 2026-11-17: "we probably should do them all"): the official TaCZ for the community
+    // port, TACZ Turrets 4.4.0, QuarryPlus with our Quarry Pause 1.0.1, Simple Voice Chat, Streams Reflowing and
+    // Overhauled Village. TaCZ's 16 new guns have no recipe until docs/61 gives them a tier (Alex: "No recipe for now").
+    id: "2026-11-17-guns-and-held-mods",
+    date: "2026-11-17",
+    onSync: true,
+    title: "The guns mod's own release, and the mods we held back",
+    lines: [
+      "Guns now run on TaCZ's own release instead of a fan-made copy. Your guns, ammo and attachments stay as they are, and recipes and damage are unchanged.",
+      "TaCZ brings 16 new guns. They cannot be crafted yet: each gets a place in the gun tiers first.",
+      "Turrets have a Laser Designator, a laser pointer that tells your turrets what to shoot.",
+      "Also updated: the quarry, voice chat, the streams in new land and the new villages.",
+      "Press Play to update.",
+    ],
+  },
 ];
 
 export const CHANGELOG_TITLE = "Change log";

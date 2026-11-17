@@ -82,7 +82,7 @@ describe("the guide as it ships", () => {
   });
   it("with today's mod list shows the sections of the mods that are on, and no others (docs/18 acceptance)", () => {
     const out = filterGuide(DEFAULT_GUIDE, { mods: on });
-    const want: Array<[string, string]> = [["Power and machines", "create"], ["Electricity", "createaddition"], ["The quarry", "additional-enchanted-miner"], ["Pipes", "pipez"], ["Guns", "tacz-1.21.1"]];
+    const want: Array<[string, string]> = [["Power and machines", "create"], ["Electricity", "createaddition"], ["The quarry", "additional-enchanted-miner"], ["Pipes", "pipez"], ["Guns", "timeless-and-classics-zero"]];
     for (const [title, slug] of want) expect([title, out.includes(`## ${title}`)]).toEqual([title, on.has(slug)]);
     expect(out).toContain("## Getting in");
     expect(out).toContain("**JEI**");

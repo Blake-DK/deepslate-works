@@ -1501,7 +1501,7 @@
       }
     },
     {
-      "slug": "tacz-1.21.1",
+      "slug": "timeless-and-classics-zero",
       "name": "TaCZ (Timeless and Classics Zero)",
       "category": "guns",
       "side": "both",
@@ -1510,9 +1510,9 @@
       "recommended": true,
       "hidden": false,
       "exclusiveGroup": "guns",
-      "description": "Modern guns with proper animations, attachments and gun packs. Community NeoForge port.",
+      "description": "Modern guns with proper animations, attachments and gun packs.",
       "note": "Pick this or Vic's, not both",
-      "wiki": "https://modrinth.com/mod/tacz-1.21.1",
+      "wiki": "https://modrinth.com/mod/timeless-and-classics-zero",
       "videos": [
         {
           "title": "TACZ 1.21.1 NeoForge",
@@ -1527,7 +1527,7 @@
           "url": "https://www.youtube.com/watch?v=9xVwyA19bgc"
         }
       ],
-      "version": "62q6mB5Q",
+      "version": "tJiZL0He",
       "requires": [],
       "guide": "game",
       "topic": "combat",
@@ -1577,9 +1577,9 @@
       "note": "Needs TaCZ",
       "wiki": "https://modrinth.com/mod/tacz-turrets",
       "videos": [],
-      "version": "PWFfJBkj",
+      "version": "vHWDIMtn",
       "requires": [
-        "tacz-1.21.1",
+        "timeless-and-classics-zero",
         "architectury-api"
       ],
       "guide": "game",

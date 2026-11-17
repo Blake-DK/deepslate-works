@@ -1,5 +1,27 @@
 # 11 · Status and handover
 
+## Deployed: the new mods, the bombs' recipes, the mod update (2026-11-16, `main` `2f0b982`, PR #120)
+
+The block below is the state before this deploy; where they differ, this section wins.
+
+- **Alex, 2026-11-16:** "Remove their recipes" (the shaped charge, bunker buster and incendiary bomb, which break
+  blocks inside claims), and "also update the other plugins". `deepslate-tools` has false-condition files for
+  `mnwe:assembling/{shaped_charge,bunker_buster,incendiary_bomb}`, their only recipes in the 1.8.0 jar (read from the
+  locked jar, its sha512 checked). 14 mods to their newest releases (docs/49 "Mod updates" names them and the five
+  held back); Lock `13e092c7`, pack `0.1.0+bcd16694`, 115 files (120 with s1). Friends & Foes 5.0.5 does not fix the
+  copper golem crash.
+- **Test:** Alex ran Build and Sync; the start of 18:39 UTC loaded 154 files, none missing, no problems, and a player
+  joined. `server-loaded.json` comes from that start.
+- **Live:** PR #120 merged; images built; Alex redeployed in Dockhand (19:09 UTC, `repo-sync` 02df584 → 2f0b982, every
+  step exit 0, so root's `git-hooks.expected` matches the new hook) and ran Build (19:13) and Sync (19:15). Read on
+  2026-11-17: web and api on `2f0b982` and healthy, health's pack `0.1.0+bcd16694`, the start of 19:15:45 loaded 154
+  files with none missing and no problems, no crash since, the app is 3.6.8, web still reaches Authentik (the pin
+  survived the redeploy). Alex joined at 19:18. The change log entry `2026-11-16-knights-turrets-missiles` was posted
+  at 19:16 UTC. The ERROR at 19:14 ("the site hands out bcd16694 but the server runs a58590bd") is the minute between
+  Build and Sync.
+- **Still open:** nobody has tried the bomb limits or a claim in game; the two 2026-11-01 change log entries are
+  unmarked; Quarry, voice chat, TACZ Turrets, Streams and the village mod are held (docs/49).
+
 ## Where things are now, 2026-11-16
 
 Read this first. It replaces the 2026-10-10 section below as the current state. The open work, in order, is docs/49.

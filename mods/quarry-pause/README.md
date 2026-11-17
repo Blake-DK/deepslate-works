@@ -12,9 +12,11 @@ and carries on by itself as soon as there is room (a chest emptied, a pipe freed
   broken (a mod that moves blocks, such as a Create contraption, would duplicate it).
 
 How: two mixins skip the machine's `serverTick` (its dig step) while its `storage` holds items. The machine's own
-push into the blocks next to it runs after the dig step every tick and is left alone. They are written against
-21.1.164; the mod refuses to load with any other version of the quarry, so a quarry update means reading its
-`QuarryEntity` and `AdvQuarryEntity` again and moving the version range in `neoforge.mods.toml` and `build.sh`.
+push into the blocks next to it runs after the dig step every tick and is left alone. They were written against
+21.1.164 and, from 1.0.1 (2026-11-17), take 21.1.170, whose two tick methods, `storage` fields and tick code were
+read and found the same; the mod refuses to load with any other version of the quarry, so a quarry update means
+reading its `QuarryEntity` and `AdvQuarryEntity` again and moving the version range in `neoforge.mods.toml` and
+`build.sh`.
 
 Server only (`displayTest = "IGNORE_SERVER_VERSION"`, no network channels): players' games do not need it.
 

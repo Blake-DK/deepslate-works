@@ -4,7 +4,7 @@
 // docs/22 §13: with the forum season-updates (its webhook, or the bot), votes, news and We're live are forum posts there
 // (replies in the same post), and #game-chat (the feed webhook) also carries the game's chat.
 import { CHANGELOG_OPENER, CHANGELOG_TITLE, changeText, DISCORD_MAX, type Change } from "../changelog.js";
-import { aboutModsNoLongerLoaded, isKnownHarmless } from "../events/parse.js";
+import { aboutModsNoLongerLoaded, isHarmlessWhileStopping, isKnownHarmless } from "../events/parse.js";
 import type { Attachment, Message, Sent, Webhook, Where } from "./webhook.js";
 import type { BotMessage, Component } from "./rest.js";
 import {
@@ -488,6 +488,8 @@ export class Announcer {
       }
       case "ERROR": {
         if (isKnownHarmless(e.message)) return true; // known and harmless: in the event log, not in Discord (events/parse.ts)
+        // harmless only while the server is stopping, and read after its stop line (events/parse.ts, recorder.ts)
+        if (metaOf(e).stopping === true && isHarmlessWhileStopping(e.message)) return true;
         // about a mod that is no longer in the pack (events/parse.ts): in the event log and counted, not in Discord
         if (aboutModsNoLongerLoaded(e.message, (await this.d.store.loadedMods?.().catch(() => null)) ?? null)) {
           const was = this.st?.leftOut;

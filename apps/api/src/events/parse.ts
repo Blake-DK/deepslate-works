@@ -314,6 +314,24 @@ const KNOWN_HARMLESS: RegExp[] = [
 export const isKnownHarmless = (message: string): boolean => KNOWN_HARMLESS.some((k) => k.test(message.trim()));
 
 /**
+ * Errors that are harmless only while the server is stopping (Alex, 2026-11-22, from the admin channel). In play the
+ * same line can mean something that matters, so it is posted then as before. The recorder marks a problem line it read
+ * after the server's stop line (`meta.stopping`, recorder.ts); the announcer leaves a line out only when it is marked
+ * and is one of these. Like KNOWN_HARMLESS, the line stays in the event log. Each is the message as the real server
+ * printed it.
+ */
+const HARMLESS_WHILE_STOPPING: RegExp[] = [
+  // Mekanism, live, 2026-10-31 23:00:29 UTC "(255999) than requested (256000)" and 2026-11-17 11:06:15 UTC "(31994)
+  // than requested (31996)", each 12 s after the server went down; twice in 107 stops. Read from Mekanism's source,
+  // not from a stack trace: when a chunk is saved, each pipe or tube takes its share of what its network holds
+  // (MechanicalPipe.takeShare, PressurizedTube.takeShare); the share was worked out a moment earlier, the network holds
+  // 1 or 2 mB less by then, and the pipe saves its share all the same. In play the line can also come from a bin, a
+  // factory or the digital miner, where the count may really be off.
+  /^Stack size changed by a different amount \(\d+\) than requested \(\d+\)\.$/,
+];
+export const isHarmlessWhileStopping = (message: string): boolean => HARMLESS_WHILE_STOPPING.some((k) => k.test(message.trim()));
+
+/**
  * Errors the server prints about things in the world that belong to a mod which is no longer in the pack (Alex,
  * 2026-10-10: after mods came off, every join and every chunk with their content printed one). They are expected and
  * say nothing new, so the admin channel leaves them out; they stay in the event log and are counted (announcer.ts).

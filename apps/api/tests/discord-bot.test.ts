@@ -632,6 +632,15 @@ describe("the admin channel picked on the card (Alex, 2026-10-02)", () => {
     expect(t.botCalls.filter((c) => c.what === "sendTo").map((c) => (c.args[1] as { content: string }).content)).toEqual(["Problem: Something broke"]);
   });
 
+  it("an error that is harmless only while the server stops is left out when it was read after the stop line, and posted in play (Alex, 2026-11-22)", async () => {
+    const t = routed({ bot: true, adminChannel: "900", botState: { inGuild: true, connecting: false } });
+    t.add({ kind: "ERROR", message: "Stack size changed by a different amount (31994) than requested (31996).", meta: { logger: "mekanism.common.Mekanism", stopping: true } });
+    t.add({ kind: "ERROR", message: "Something broke", meta: { stopping: true } }); // any other error is told, stopping or not
+    t.add({ kind: "ERROR", message: "Stack size changed by a different amount (63) than requested (64).", meta: { logger: "mekanism.common.Mekanism" } });
+    await t.a.round();
+    expect(t.botCalls.filter((c) => c.what === "sendTo").map((c) => (c.args[1] as { content: string }).content)).toEqual(["Problem: Something broke", expect.stringMatching(/^Problem: Stack size changed by a different amount .{1,2}63.{1,3} than requested .{1,2}64/)]);
+  });
+
   it("a problem line only about mods that are no longer loaded is left out and counted; one about a loaded mod, and a crash, are posted (Alex, 2026-10-10)", async () => {
     const t = routed({ bot: true, adminChannel: "900", botState: { inGuild: true, connecting: false }, loaded: ["minecraft", "neoforge", "keptmod"] });
     const gone = "Tried to load invalid item: 'Unknown registry key in ResourceKey[minecraft:root / minecraft:item]: oldmod:ember_seed'";

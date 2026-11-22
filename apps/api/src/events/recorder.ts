@@ -51,6 +51,13 @@ export const REJOIN_MS = 60_000;
  * with a clean stop in the log, and it was written down as a crash.
  */
 const SETTLE_MS = 90_000;
+/**
+ * How long after the server's stop line a warning or error still counts as printed while it was stopping
+ * (`meta.stopping`; the announcer leaves a few known lines out then, parse.ts HARMLESS_WHILE_STOPPING). Live's two so
+ * far came 12 s after the server went down. A start line ends it sooner. Only a stop line read as it was printed
+ * counts: one read again after api restarted may be hours old.
+ */
+const STOPPING_MS = 60_000;
 
 export const placeholder = (name: string) => `name:${name.toLowerCase()}`;
 
@@ -71,6 +78,8 @@ export class Recorder {
   private recent = new Map<string, { id: string; at: number }>();
   private raw: string | null = null;
   private lastStopLine = 0;
+  /** The last stop line that was read as it was printed, not from the backlog (STOPPING_MS). */
+  private liveStopLine = 0;
   private lastStart = 0;
   /** The server went down at `at` and what it was is not known yet (see `settle`). */
   /** How the server last went down, once it is known (docs/13 §12: "Crashed" is this, not a guess). Null while up. */
@@ -104,7 +113,7 @@ export class Recorder {
     // A stop line in the backlog counts: api may be restarting just as the server stops (2026-09-30 05:26, a deploy),
     // and without it a clean stop is taken for a crash.
     if (info?.replay && e.type !== "uuid" && e.type !== "line" && e.type !== "stopping") return;
-    this.enqueue(() => this.console(e));
+    this.enqueue(() => this.console(e, info?.replay === true));
   };
 
   onStatus = (next: LiveStatus, prev: LiveStatus | null) => {
@@ -124,7 +133,7 @@ export class Recorder {
     return this.d.uuidOf(name) ?? (await this.d.store.uuidByName(name)) ?? placeholder(name);
   }
 
-  private async console(e: ConsoleEvent) {
+  private async console(e: ConsoleEvent, replay = false) {
     const at = this.now();
     switch (e.type) {
       case "line":
@@ -171,6 +180,7 @@ export class Recorder {
         return;
       case "stopping":
         this.lastStopLine = at.getTime();
+        if (!replay) this.liveStopLine = at.getTime();
         return;
       case "problem": {
         const kind = e.level === "WARN" ? "WARN" : "ERROR";
@@ -180,7 +190,9 @@ export class Recorder {
           await this.d.store.bumpEvent(seen.id);
           return;
         }
-        const id = await this.d.store.addEvent({ at, kind, actor: null, message: e.text, raw: this.raw, meta: e.logger ? { logger: e.logger } : null });
+        const stopping = this.liveStopLine > this.lastStart && at.getTime() - this.liveStopLine < STOPPING_MS;
+        const meta = { ...(e.logger ? { logger: e.logger } : {}), ...(stopping ? { stopping: true } : {}) };
+        const id = await this.d.store.addEvent({ at, kind, actor: null, message: e.text, raw: this.raw, meta: Object.keys(meta).length ? meta : null });
         this.recent.set(key, { id, at: at.getTime() });
         if (this.recent.size > 200) for (const [k, v] of this.recent) if (at.getTime() - v.at >= DEDUPE_MS) this.recent.delete(k);
         return;

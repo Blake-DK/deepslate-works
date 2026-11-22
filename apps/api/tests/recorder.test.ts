@@ -108,6 +108,31 @@ describe("Recorder: warnings and errors", () => {
     await t.say(L("Something else broke", "ERROR"));
     expect(t.events.map((e) => [e.kind, e.count])).toEqual([["WARN", 3], ["WARN", 1], ["ERROR", 1]]);
   });
+
+  it("marks an error read within a minute after the server's stop line, and no other", async () => {
+    const t = setup();
+    const said = (n: number) => `Stack size changed by a different amount (${n}) than requested (31996).`;
+    const marks = () => t.events.filter((e) => e.kind === "ERROR").map((e) => e.meta?.stopping === true);
+    await t.say(L(said(1), "ERROR")); // in play
+    await t.say(L("Stopping the server"));
+    t.tick(12); await t.say(L(said(2), "ERROR")); // as live had it: 12 s after the stop
+    t.tick(61); await t.say(L(said(3), "ERROR")); // too long after it
+    expect(marks()).toEqual([false, true, false]);
+    expect(t.events[1]?.meta).toEqual({ logger: "net.minecraft.server.MinecraftServer", stopping: true });
+
+    await t.say(L("Stopping the server"));
+    t.tick(5); await t.say(L('Done (1.756s)! For help, type "help"')); // up again: no longer stopping
+    t.tick(5); await t.say(L(said(4), "ERROR"));
+    expect(marks()).toEqual([false, true, false, false]);
+  });
+
+  it("does not mark an error after a stop line that was read again from the backlog", async () => {
+    const t = setup();
+    t.rec.onConsole({ type: "stopping" }, { replay: true }); // api restarted: the line may be hours old
+    await t.rec.idle();
+    t.tick(5); await t.say(L("Stack size changed by a different amount (31994) than requested (31996).", "ERROR"));
+    expect(t.events.map((e) => [e.kind, e.meta?.stopping])).toEqual([["ERROR", undefined]]);
+  });
 });
 
 describe("Recorder: the server going up and down", () => {

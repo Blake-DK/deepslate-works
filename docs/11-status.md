@@ -1,5 +1,29 @@
 # 11 · Status and handover
 
+## A Mekanism error at server stop is no longer told in the admin channel (2026-11-22, on `dev`, not deployed)
+
+- **Alex**, from the admin channel: "Stack size changed by a different amount (31994) than requested (31996)." Can it
+  be fixed? No; then, for the line when it comes while the server stops: "Yes, silence it".
+- **What it is:** Mekanism 10.7.19.85 printed it twice, 2026-10-31 23:00:29 and 2026-11-17 11:06:15 UTC, each 12 s
+  after the server went down (a restart, a sleep); 107 stops since 2026-10-14, never in play. Read from Mekanism's
+  source (branch `1.21.x`), not from a stack trace (the server's own log was not read): when a chunk is saved, each
+  pipe or tube takes its share of what its network holds (`MechanicalPipe.takeShare`, `PressurizedTube.takeShare`);
+  the share was worked out a moment earlier, the network holds 1 or 2 mB less by then, and the pipe saves its share all
+  the same. Nothing is lost.
+- **Why it is not fixed:** 10.7.19.85 is the newest Mekanism for 1.21.1 (Modrinth, 2026-11-22) and there is no setting
+  for it. mekanism/Mekanism#7741, closed in 2023, was the large form of it.
+- **Built:** `HARMLESS_WHILE_STOPPING` in `apps/api/src/events/parse.ts` (`isHarmlessWhileStopping`). The recorder
+  writes `meta.stopping` on a WARN or ERROR it reads within 60 s after the server's stop line, with no start line
+  since (`STOPPING_MS`; a stop line read again from the backlog does not count). The announcer leaves an ERROR out
+  only when it is marked and on that list. In play the line is posted as before: there it can come from a bin, a
+  factory or the digital miner having lost count. It stays in the event log and on Activity.
+- **Checked:** `deploy/check.sh api` on docker-01v: typecheck, lint, 863 tests passed (12 skipped), with new cases in
+  `parse.test.ts`, `recorder.test.ts` and `discord-bot.test.ts`.
+- **Not seen on live:** it works from the next deploy of api, and the line has come twice in five weeks.
+- **The Wares warehouse loot errors** (docs/49, corrected): seven tables, not five, and no chest is without its loot,
+  because without Wares the warehouses are never built. They are still told at every start: Alex has not said to
+  leave them out.
+
 ## Deployed: the held mods, the official TaCZ (2026-11-17, `main` `6f60987`, PR #121)
 
 - **Live:** PR #121 merged; images built; Alex redeployed in Dockhand (web and api started 13:44 UTC) and ran Build

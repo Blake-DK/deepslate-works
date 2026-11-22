@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ipOf, isKnownHarmless, parse, redact, reduce } from "../src/events/parse.js";
+import { ipOf, isHarmlessWhileStopping, isKnownHarmless, parse, redact, reduce } from "../src/events/parse.js";
 
 // Lines in the log-file shape were captured from the instance on 2026-09-28/29 (names swapped where a
 // line had none of ours); the AMP-entry shape is the same message with the prefix in `source`.
@@ -96,6 +96,16 @@ describe("parse", () => {
     expect(isKnownHarmless("Failed to fetch mob spawner entity at (3132, -26, 2591)")).toBe(true);
     expect(isKnownHarmless("Failed to parse vibration listener for Warden: 'No key selector in MapLike[{}]'")).toBe(false);
     expect(parse(L("example is not a registered slot type!", "Server thread", "ERROR"))).toMatchObject([{ type: "problem", level: "ERROR", text: "example is not a registered slot type!" }]);
+  });
+  it("knows the errors that are harmless only while the server is stopping (the admin channel, 2026-10-31 and 2026-11-17)", () => {
+    // Mekanism, both times 12 s after the server went down
+    expect(isHarmlessWhileStopping("Stack size changed by a different amount (255999) than requested (256000).")).toBe(true);
+    expect(isHarmlessWhileStopping("Stack size changed by a different amount (31994) than requested (31996).")).toBe(true);
+    expect(isHarmlessWhileStopping("Stack size changed by a different amount than requested.")).toBe(false);
+    expect(isHarmlessWhileStopping("example is not a registered slot type!")).toBe(false);
+    // in play it is told: it is not on the list that is left out whenever it is printed
+    expect(isKnownHarmless("Stack size changed by a different amount (31994) than requested (31996).")).toBe(false);
+    expect(parse(L("Stack size changed by a different amount (31994) than requested (31996).", "Server thread", "ERROR", "mekanism.common.Mekanism/"))).toEqual([{ type: "problem", level: "ERROR", text: "Stack size changed by a different amount (31994) than requested (31996).", logger: "mekanism.common.Mekanism" }]);
   });
   it("reports warnings and errors, but not the mod loader's start-up noise (real lines)", () => {
     expect(parse(L("Can't keep up! Is the server overloaded? Running 2500ms or 50 ticks behind", "Server thread", "WARN"))).toEqual([{ type: "problem", level: "WARN", text: "Can't keep up! Is the server overloaded? Running 2500ms or 50 ticks behind", logger: "net.minecraft.server.MinecraftServer" }]);
